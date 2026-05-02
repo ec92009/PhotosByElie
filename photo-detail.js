@@ -25,8 +25,10 @@ const updateTotal = () => {
 };
 
 const updateBasketCount = () => {
+  const countEl = document.querySelector("[data-basket-count]");
+  if (!countEl) return;
   const basket = basketStore.read();
-  document.querySelector("[data-basket-count]").textContent = String(basket.length);
+  countEl.textContent = String(basket.length);
 };
 
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);

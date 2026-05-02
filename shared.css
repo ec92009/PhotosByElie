@@ -52,7 +52,8 @@ body{
 }
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
-.version-switch,.theme-toggle{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
+.header-controls{display:flex;align-items:center;gap:8px;margin-left:auto}
+.version-switch,.theme-toggle,.language-toggle{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
 .version-switch{display:inline-flex;gap:6px;align-items:center}
 .version-switch a{text-decoration:none;color:var(--muted);font-weight:700}
 .version-switch a.is-active{color:var(--brand)}
@@ -60,7 +61,9 @@ body{
 
 html[data-theme="light"] .mode-dark { display: none; }
 html[data-theme="dark"] .mode-light { display: none; }
-.theme-toggle { font-weight: 700; width: 68px; text-align: center; }
+.theme-toggle,.language-toggle { font-weight: 700; text-align: center; cursor:pointer; }
+.theme-toggle { width: 68px; }
+.language-toggle { min-width: 92px; }
 
 main{padding:clamp(4px,1dvh,10px) 0 clamp(30px,5dvh,42px);display:grid;gap:clamp(8px,1.4dvh,14px)}
 h1{margin:0;line-height:1.08;font-size:clamp(2rem,4vw,3.2rem);max-width:18ch}
@@ -342,8 +345,8 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .about-grid{grid-template-columns:1fr}
   .topbar{flex-wrap:wrap;gap:8px;padding:10px 0;align-items:flex-start}
   .version-switch{flex:1 1 100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
-  .theme-toggle{margin-left:auto}
-  .brand{font-size:.95rem;max-width:calc(100% - 96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .header-controls{margin-left:auto}
+  .brand{font-size:.95rem;max-width:calc(100% - 184px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .panel,.card,.carousel-wrap,.carousel-item{min-width:0}
   .lead,.card p,h1{overflow-wrap:anywhere}
 }

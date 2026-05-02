@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=63.30"/>
-  <link rel="stylesheet" href="./styles.css?v=63.30"/>
-  <link rel="stylesheet" href="./photos.css?v=63.30"/>
+  <link rel="stylesheet" href="./shared.css?v=63.31"/>
+  <link rel="stylesheet" href="./styles.css?v=63.31"/>
+  <link rel="stylesheet" href="./photos.css?v=63.31"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,8 +33,11 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.30</div>
-    <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.31</div>
+    <div class="header-controls">
+      <button class="language-toggle" type="button" data-language-toggle>English</button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    </div>
   </header>
 
   <main id="main-content" class="shell">
@@ -201,6 +204,27 @@
       root.dataset.theme=root.dataset.theme==='light'?'dark':'light';
       localStorage.setItem(key,root.dataset.theme);
     });
+    const languageKey='byelie-language';
+    const languageBtn=document.querySelector('[data-language-toggle]');
+    const languages=[
+      {code:'en',label:'English'},
+      {code:'fr',label:'French'},
+      {code:'es',label:'Spanish'}
+    ];
+    const setLanguage=(language)=>{
+      const next=languages.find((item)=>item.code===language)||languages[0];
+      root.dataset.language=next.code;
+      root.lang=next.code;
+      if(languageBtn) languageBtn.textContent=next.label;
+      localStorage.setItem(languageKey,next.code);
+    };
+    if(languageBtn){
+      setLanguage(localStorage.getItem(languageKey));
+      languageBtn.addEventListener('click',()=>{
+        const currentIndex=languages.findIndex((item)=>item.code===root.dataset.language);
+        setLanguage(languages[(currentIndex+1)%languages.length].code);
+      });
+    }
 
     const offersWrap=document.querySelector('[data-offers-wrap]');
     const offersTrack=document.querySelector('[data-offers-track]');
@@ -563,8 +587,8 @@
       metricEls.forEach((el)=>io.observe(el));
     }
   </script>
-  <script src="./photos-data.js?v=63.30"></script>
-  <script src="./basket-store.js?v=63.30"></script>
-  <script src="./basket-rail.js?v=63.30"></script>
+  <script src="./photos-data.js?v=63.31"></script>
+  <script src="./basket-store.js?v=63.31"></script>
+  <script src="./basket-rail.js?v=63.31"></script>
 </body>
 </html>

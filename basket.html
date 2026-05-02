@@ -7,9 +7,9 @@
   <meta name="description" content="Local basket for selected Photos By Elie mock photo licenses."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=63.30"/>
-  <link rel="stylesheet" href="./styles.css?v=63.30"/>
-  <link rel="stylesheet" href="./photos.css?v=63.30"/>
+  <link rel="stylesheet" href="./shared.css?v=63.31"/>
+  <link rel="stylesheet" href="./styles.css?v=63.31"/>
+  <link rel="stylesheet" href="./photos.css?v=63.31"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,11 +22,17 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./basket.html">Basket</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.30</div>
-    <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.31</div>
+    <div class="header-controls">
+      <button class="language-toggle" type="button" data-language-toggle>English</button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    </div>
   </header>
+  <aside class="basket-total-band shell" aria-live="polite">
+    <span data-basket-total>0 files, $0</span>
+  </aside>
   <main id="main-content" class="shell">
-    <section class="panel gallery-hero">
+    <section class="panel gallery-hero basket-hero">
       <p class="eyebrow">Local browser basket</p>
       <h1>Basket</h1>
       <p class="lead">This static-site basket is saved in this browser only.</p>
@@ -37,13 +43,12 @@
     <section class="panel basket-panel">
       <p class="empty-basket" data-empty-basket>Your basket is empty.</p>
       <div class="basket-list" data-basket-root></div>
-      <p class="basket-total-line" data-basket-total>0 files, $0</p>
       <p class="basket-status" data-basket-status aria-live="polite"></p>
     </section>
   </main>
-  <script src="./photos.js?v=63.30"></script>
-  <script src="./photos-data.js?v=63.30"></script>
-  <script src="./basket-store.js?v=63.30"></script>
-  <script src="./basket.js?v=63.30"></script>
+  <script src="./photos.js?v=63.31"></script>
+  <script src="./photos-data.js?v=63.31"></script>
+  <script src="./basket-store.js?v=63.31"></script>
+  <script src="./basket.js?v=63.31"></script>
 </body>
 </html>

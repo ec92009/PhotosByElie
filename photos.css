@@ -171,6 +171,37 @@
 .gallery-hero h1{
   font-size:clamp(2.8rem,7vw,6.5rem);
 }
+.basket-total-band{
+  position:sticky;
+  top:67px;
+  z-index:18;
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-height:42px;
+  margin-top:0;
+  border:1px solid var(--line);
+  border-top:0;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);
+  backdrop-filter:blur(12px);
+  font-weight:800;
+}
+.basket-total-band span{
+  padding:8px 12px;
+}
+.basket-hero{
+  min-height:clamp(150px,21dvh,260px);
+  padding-block:clamp(18px,3dvh,32px);
+}
+.basket-hero h1{
+  font-size:clamp(2.2rem,4.6vw,4rem);
+}
+.basket-hero .lead{
+  margin-top:6px;
+}
+.basket-hero .cta{
+  margin-top:10px;
+}
 .mock-gallery{
   display:grid;
   grid-template-columns:repeat(6,minmax(0,1fr));
@@ -493,6 +524,9 @@
   .basket-thumb{
     width:62px;
     min-height:62px;
+  }
+  .basket-total-band{
+    top:90px;
   }
   .photo-metadata{
     grid-template-columns:1fr;

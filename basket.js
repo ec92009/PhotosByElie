@@ -1,20 +1,7 @@
-const basketKey = "photosbyelie-basket";
-
-const readBasket = () => {
-  try {
-    return JSON.parse(localStorage.getItem(basketKey) || "[]");
-  } catch {
-    return [];
-  }
-};
-
-const writeBasket = (items) => {
-  localStorage.setItem(basketKey, JSON.stringify(items));
-};
-
 const formatMoney = (value) => `$${value}`;
 const allCollections = window.photosByElieData || {};
 const resolutionOptions = window.photosByElieResolutions || [];
+const basketStore = window.photosByElieBasket;
 
 const photoForItem = (item) => {
   const entry = Object.values(allCollections).find((collection) =>
@@ -33,7 +20,7 @@ const clearButton = document.querySelector("[data-clear-basket]");
 const status = document.querySelector("[data-basket-status]");
 
 const renderBasket = () => {
-  const items = readBasket();
+  const items = basketStore.write(basketStore.read());
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
 
   basketCount.textContent = String(items.length);
@@ -73,9 +60,7 @@ const renderBasket = () => {
 
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {
-      const next = readBasket();
-      next.splice(Number(button.dataset.removeItem), 1);
-      writeBasket(next);
+      basketStore.remove(Number(button.dataset.removeItem));
       status.textContent = "Item removed from basket.";
       renderBasket();
     });
@@ -83,17 +68,12 @@ const renderBasket = () => {
 
   document.querySelectorAll("[data-basket-resolution]").forEach((input) => {
     input.addEventListener("change", () => {
-      const next = readBasket();
       const itemIndex = Number(input.dataset.basketResolution);
-      const item = next[itemIndex];
+      const item = basketStore.read()[itemIndex];
       if (!item) return;
       const checkedIds = Array.from(document.querySelectorAll(`[data-basket-resolution="${itemIndex}"]:checked`))
         .map((checkbox) => checkbox.value);
-      item.options = resolutionOptions
-        .filter((option) => checkedIds.includes(option.id))
-        .map((option) => ({ id: option.id, label: option.label, price: option.price }));
-      item.total = item.options.reduce((sum, option) => sum + option.price, 0);
-      writeBasket(next);
+      basketStore.updateOptions(itemIndex, checkedIds);
       status.textContent = `${item.title} license options updated.`;
       renderBasket();
     });
@@ -101,13 +81,13 @@ const renderBasket = () => {
 };
 
 clearButton.addEventListener("click", () => {
-  writeBasket([]);
+  basketStore.clear();
   status.textContent = "Basket cleared.";
   renderBasket();
 });
 
 checkoutButton.addEventListener("click", () => {
-  const items = readBasket();
+  const items = basketStore.read();
   if (!items.length) return;
   const summary = items.map((item) => {
     const options = (item.options || []).map((option) => option.label).join(", ");

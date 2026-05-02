@@ -7,19 +7,7 @@ const collectionEntry = Object.entries(collections).find(([, collection]) =>
 const [collectionKey, collection] = collectionEntry || ["france", collections.france];
 const photo = collection.photos.find((item) => item.id === photoId) || collection.photos[0];
 const resolutions = window.photosByElieResolutions || [];
-const basketKey = "photosbyelie-basket";
-
-const readBasket = () => {
-  try {
-    return JSON.parse(localStorage.getItem(basketKey) || "[]");
-  } catch {
-    return [];
-  }
-};
-
-const writeBasket = (items) => {
-  localStorage.setItem(basketKey, JSON.stringify(items));
-};
+const basketStore = window.photosByElieBasket;
 
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
@@ -34,7 +22,7 @@ const updateTotal = () => {
 };
 
 const updateBasketCount = () => {
-  const basket = readBasket();
+  const basket = basketStore.read();
   document.querySelector("[data-basket-count]").textContent = String(basket.length);
 };
 
@@ -68,17 +56,22 @@ document.querySelectorAll("[data-resolution]").forEach((input) => {
 document.querySelector("[data-add-basket]").addEventListener("click", () => {
   const options = selectedOptions();
   if (!options.length) return;
-  const basket = readBasket();
-  basket.push({
+  const before = basketStore.read();
+  const existing = before.find((item) => item.photoId === photo.id);
+  const beforeIds = new Set((existing?.options || []).map((option) => option.id));
+  const next = basketStore.add({
     photoId: photo.id,
     title: photo.title,
     collection: collection.title,
-    options,
-    total: options.reduce((sum, option) => sum + option.price, 0)
+    options
   });
-  writeBasket(basket);
   updateBasketCount();
-  document.querySelector("[data-basket-status]").innerHTML = `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}. <a href="./basket.html">View basket</a>`;
+  const updated = next.find((item) => item.photoId === photo.id);
+  const addedCount = (updated?.options || []).filter((option) => !beforeIds.has(option.id)).length;
+  const message = existing
+    ? `${photo.title} updated with ${addedCount} new license option${addedCount === 1 ? "" : "s"}; existing options were not duplicated.`
+    : `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}.`;
+  document.querySelector("[data-basket-status]").innerHTML = `${message} <a href="./basket.html">View basket</a>`;
 });
 
 updateTotal();

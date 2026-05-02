@@ -2,7 +2,7 @@
 
 Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
-`https://ec92009.github.io/byElie/PhotosByElie/`
+`https://ec92009.github.io/PhotosByElie/`
 
 ## Structure
 

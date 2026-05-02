@@ -49,6 +49,14 @@ metadataRoot.replaceChildren(...metadata.map((item) => {
 }));
 
 const preview = document.querySelector("[data-photo-preview]");
+const detailLayout = document.querySelector(".detail-layout");
+const syncLandscapePreviewSize = () => {
+  if (!detailLayout?.classList.contains("is-landscape")) return;
+  const ratio = Number(preview.style.getPropertyValue("--detail-ratio")) || 1.5;
+  const maxWidth = detailLayout.clientWidth;
+  const maxHeight = Math.max(320, window.innerHeight - 240);
+  preview.style.setProperty("--detail-landscape-width", `${Math.min(maxWidth, maxHeight * ratio)}px`);
+};
 preview.classList.add(collection.accent, photo.className);
 if (photo.imageSrc) {
   preview.classList.add("has-image");
@@ -56,6 +64,10 @@ if (photo.imageSrc) {
   const setPreviewAspectRatio = () => {
     if (!img.naturalWidth || !img.naturalHeight) return;
     preview.style.setProperty("--detail-aspect", `${img.naturalWidth} / ${img.naturalHeight}`);
+    preview.style.setProperty("--detail-ratio", img.naturalWidth / img.naturalHeight);
+    detailLayout?.classList.toggle("is-landscape", img.naturalWidth >= img.naturalHeight);
+    detailLayout?.classList.toggle("is-portrait", img.naturalWidth < img.naturalHeight);
+    syncLandscapePreviewSize();
   };
   img.src = photo.imageSrc;
   img.alt = photo.title;
@@ -63,6 +75,7 @@ if (photo.imageSrc) {
   if (img.complete) setPreviewAspectRatio();
   preview.prepend(img);
 }
+window.addEventListener("resize", syncLandscapePreviewSize);
 preview.querySelector("span").textContent = photo.title;
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));

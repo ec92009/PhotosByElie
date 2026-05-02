@@ -1,3 +1,6 @@
+:root{
+  --preview-watermark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='140' viewBox='0 0 260 140'%3E%3Cg transform='rotate(-24 130 70)'%3E%3Ctext x='130' y='72' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='26' font-weight='800' fill='white' fill-opacity='.78' stroke='black' stroke-opacity='.62' stroke-width='4' paint-order='stroke'%3EPhotosByElie%3C/text%3E%3C/g%3E%3C/svg%3E");
+}
 .photo-hero,
 .photo-carousel-panel{
   --polaroid-ratio:3.483 / 4.233;
@@ -128,6 +131,27 @@
     linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.14)),
     var(--photo-image);
 }
+.photo-print.has-photo::after,
+.photo-art.has-photo::after{
+  content:"";
+  position:absolute;
+  inset:var(--polaroid-top) var(--polaroid-side) var(--polaroid-bottom);
+  z-index:2;
+  pointer-events:none;
+  background-image:var(--preview-watermark);
+  background-size:220px 118px;
+  background-position:center;
+  opacity:.58;
+  mix-blend-mode:normal;
+}
+html[data-theme="light"] .photo-print.has-photo::after,
+html[data-theme="light"] .photo-art.has-photo::after{
+  opacity:.54;
+}
+.photo-print .hand-label,
+.photo-art .hand-label{
+  z-index:3;
+}
 .photo-art.france{--photo-scene:linear-gradient(120deg,#232323 0 20%,#e6dfd2 20% 38%,#b64b3c 38% 48%,#f4eee4 48% 62%,#2e5d4f 62% 100%)}
 .photo-art.usa{--photo-scene:linear-gradient(125deg,#edf0f2 0 18%,#1e405d 18% 33%,#bd473b 33% 44%,#d5a145 44% 63%,#202020 63% 100%)}
 .photo-art.spain{--photo-scene:linear-gradient(120deg,#efc35f 0 20%,#d76a3c 20% 35%,#f8edd6 35% 52%,#255c59 52% 100%)}
@@ -253,6 +277,21 @@
   mix-blend-mode:normal;
   opacity:1;
 }
+.mock-photo.has-image::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background-image:var(--preview-watermark);
+  background-size:240px 130px;
+  background-position:center;
+  opacity:.58;
+  mix-blend-mode:normal;
+}
+html[data-theme="light"] .mock-photo.has-image::after{
+  opacity:.54;
+}
 .mock-photo span{
   position:absolute;
   left:14px;
@@ -264,7 +303,7 @@
   border:1px solid color-mix(in srgb,var(--line) 62%,transparent);
   font-weight:800;
   font-size:.86rem;
-  z-index:1;
+  z-index:3;
 }
 .france-gallery .p1,.mock-photo.france-gallery.p1{--mock-scene:linear-gradient(135deg,#222 0 18%,#ede5d8 18% 44%,#8f3530 44% 57%,#314c3d 57% 100%)}
 .france-gallery .p2,.mock-photo.france-gallery.p2{--mock-scene:linear-gradient(145deg,#d8d4cb 0 28%,#272727 28% 36%,#b9926a 36% 60%,#f5eee2 60% 100%)}
@@ -311,11 +350,48 @@
 .detail-preview.has-image::before{
   display:none;
 }
+.detail-preview.has-image::after{
+  background-size:340px 184px;
+  opacity:.54;
+}
 .detail-panel{
   align-self:center;
 }
 .detail-panel h1{
   max-width:14ch;
+}
+.detail-layout.is-landscape{
+  grid-template-columns:minmax(0,1fr);
+  gap:clamp(14px,2.4vw,28px);
+  align-items:start;
+  padding-block:clamp(16px,3dvh,34px);
+}
+.detail-layout.is-landscape .detail-preview{
+  width:min(100%,var(--detail-landscape-width,100%));
+  margin-inline:auto;
+}
+.detail-layout.is-landscape .detail-panel{
+  display:grid;
+  grid-template-columns:minmax(220px,.62fr) minmax(300px,1fr);
+  gap:clamp(14px,3vw,38px);
+  align-items:start;
+  width:100%;
+}
+.detail-layout.is-landscape .detail-panel h1{
+  max-width:none;
+}
+.detail-layout.is-landscape .detail-actions{
+  margin-top:14px;
+}
+.detail-layout.is-landscape .photo-metadata{
+  grid-column:2;
+  grid-row:1 / span 4;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  margin:0;
+  padding-top:0;
+  padding-left:clamp(14px,2vw,24px);
+  border-top:0;
+  border-left:1px solid var(--line);
 }
 .photo-metadata{
   display:grid;
@@ -432,6 +508,10 @@
   aspect-ratio:1;
   align-self:stretch;
 }
+.basket-thumb.has-image::after{
+  background-size:112px 60px;
+  opacity:.62;
+}
 .basket-thumb span{
   display:none;
 }
@@ -494,6 +574,20 @@
   .detail-layout,
   .purchase-panel{
     grid-template-columns:1fr;
+  }
+  .detail-layout.is-landscape .detail-preview{
+    width:100%;
+  }
+  .detail-layout.is-landscape .detail-panel{
+    display:block;
+  }
+  .detail-layout.is-landscape .photo-metadata{
+    grid-template-columns:1fr;
+    margin:18px 0 0;
+    padding-top:14px;
+    padding-left:0;
+    border-top:1px solid var(--line);
+    border-left:0;
   }
   .photo-stack{
     min-height:340px;

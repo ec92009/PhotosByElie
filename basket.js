@@ -32,10 +32,12 @@ const renderBasket = () => {
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
+    const imageSrc = photo?.imageSrc || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
     return `
     <article class="basket-item">
-      <a class="basket-thumb mock-photo ${thumbClasses}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
+      <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
+        ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
       </a>
       <div>

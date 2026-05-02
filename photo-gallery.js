@@ -13,7 +13,8 @@ if (galleryRoot && gallery) {
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${gallery.title} mock photos`);
   galleryRoot.innerHTML = gallery.photos.map((photo) => `
-    <a class="mock-photo ${photo.className}" href="./photo.html?id=${photo.id}" aria-label="Open ${photo.title}">
+    <a class="mock-photo ${photo.className} ${photo.imageSrc ? "has-image" : ""}" href="./photo.html?id=${photo.id}" aria-label="Open ${photo.title}">
+      ${photo.imageSrc ? `<img src="${photo.imageSrc}" alt="${photo.title}"/>` : ""}
       <span>${photo.title}</span>
     </a>
   `).join("");

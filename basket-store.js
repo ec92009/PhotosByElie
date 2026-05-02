@@ -61,6 +61,13 @@
     return write([...read(), { ...item, options }]);
   };
 
+  const setPhotoOptions = (item) => {
+    const options = normalizeOptions(item.options);
+    const items = read().filter((existing) => existing.photoId !== item.photoId);
+    if (!options.length) return write(items);
+    return write([...items, { ...item, options }]);
+  };
+
   const updateOptions = (index, optionIds) => {
     const items = read();
     if (!items[index]) return items;
@@ -79,6 +86,7 @@
     clear: () => write([]),
     read,
     remove,
+    setPhotoOptions,
     updateOptions,
     write
   };

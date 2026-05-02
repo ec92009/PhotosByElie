@@ -54,14 +54,17 @@ window.photosByElieData = {
   ai: {
     number: "05",
     title: "AI",
-    description: "Five mock frames for the AI gallery: generated concepts, composites, restoration studies, and prompt experiments.",
+    description: "Leonardo-generated concepts, composites, restoration studies, and prompt experiments.",
     accent: "ai-gallery",
     photos: [
-      { id: "ai-1", className: "p1", title: "Generated Still Life", caption: "A synthetic still-life study separated from camera originals.", full: "18 MB PNG", megapixels: 12 },
-      { id: "ai-2", className: "p2", title: "Restoration Study", caption: "Mock restoration surface with tonal repair and soft grain.", full: "22 MB PNG", megapixels: 16 },
-      { id: "ai-3", className: "p3", title: "Composite Concept", caption: "Layered generated concept blocks for campaign exploration.", full: "20 MB PNG", megapixels: 14 },
-      { id: "ai-4", className: "p4", title: "Prompt Landscape", caption: "Prompt-driven landscape color bands and atmosphere.", full: "21 MB PNG", megapixels: 16 },
-      { id: "ai-5", className: "p5", title: "Texture Experiment", caption: "Generated texture striping for background and print studies.", full: "16 MB PNG", megapixels: 10 }
+      { id: "ai-1", className: "p1", title: "Adventure Sports", caption: "Leonardo-generated outdoor activity concept with motion and landscape energy.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/adventure-sports.jpg" },
+      { id: "ai-2", className: "p2", title: "Beach Scenes", caption: "Generated beach travel concept with sun, water, and coastal atmosphere.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/beach-scenes.jpg" },
+      { id: "ai-3", className: "p3", title: "City Breaks", caption: "Generated urban travel concept with street-level architecture and transport cues.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/city-breaks.jpg" },
+      { id: "ai-4", className: "p4", title: "Cultural Heritage", caption: "Generated museum and architecture concept for heritage travel themes.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/cultural-heritage.jpg" },
+      { id: "ai-5", className: "p5", title: "E-commerce Concept", caption: "Generated online business concept for web and commerce storytelling.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/ecommerce.jpg" },
+      { id: "ai-6", className: "p6", title: "Forest Study", caption: "Generated forest travel concept with greenery, trail, and nature mood.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/forests.jpg" },
+      { id: "ai-7", className: "p7", title: "Wellness Retreat", caption: "Generated wellness retreat image for calm travel and hospitality concepts.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/wellness-retreats.jpg" },
+      { id: "ai-8", className: "p8", title: "Accounting Concept", caption: "Generated business services concept for finance and accounting storytelling.", full: "Leonardo JPG master", megapixels: 2, imageSrc: "./assets/ai/accounting.jpg" }
     ]
   }
 };

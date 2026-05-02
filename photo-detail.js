@@ -26,6 +26,8 @@ const updateBasketCount = () => {
   document.querySelector("[data-basket-count]").textContent = String(basket.length);
 };
 
+const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
+
 document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;
 document.querySelector("[data-nav-current]").setAttribute("href", `./${collectionKey}.html`);
@@ -36,11 +38,19 @@ document.querySelector("[data-back-link]").setAttribute("href", `./${collectionK
 
 const preview = document.querySelector("[data-photo-preview]");
 preview.classList.add(collection.accent, photo.className);
+if (photo.imageSrc) {
+  preview.classList.add("has-image");
+  preview.insertAdjacentHTML("afterbegin", `<img src="${photo.imageSrc}" alt="${photo.title}"/>`);
+}
 preview.querySelector("span").textContent = photo.title;
 
-document.querySelector("[data-resolution-list]").innerHTML = resolutions.map((option, index) => `
+const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
+const addButton = document.querySelector("[data-add-basket]");
+addButton.textContent = selectedIds.size ? "Update basket" : "Add to basket";
+
+document.querySelector("[data-resolution-list]").innerHTML = resolutions.map((option) => `
   <label class="resolution-row">
-    <input type="checkbox" data-resolution value="${option.id}" ${index === 1 ? "checked" : ""}/>
+    <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
     <span>
       <strong>${option.label}</strong>
       <small>${option.detail}</small>
@@ -53,24 +63,26 @@ document.querySelectorAll("[data-resolution]").forEach((input) => {
   input.addEventListener("change", updateTotal);
 });
 
-document.querySelector("[data-add-basket]").addEventListener("click", () => {
+addButton.addEventListener("click", () => {
   const options = selectedOptions();
-  if (!options.length) return;
-  const before = basketStore.read();
-  const existing = before.find((item) => item.photoId === photo.id);
-  const beforeIds = new Set((existing?.options || []).map((option) => option.id));
-  const next = basketStore.add({
+  const existing = basketItemForPhoto();
+  if (!options.length && !existing) {
+    document.querySelector("[data-basket-status]").textContent = "Choose at least one resolution to add this photo.";
+    return;
+  }
+  basketStore.setPhotoOptions({
     photoId: photo.id,
     title: photo.title,
     collection: collection.title,
     options
   });
   updateBasketCount();
-  const updated = next.find((item) => item.photoId === photo.id);
-  const addedCount = (updated?.options || []).filter((option) => !beforeIds.has(option.id)).length;
-  const message = existing
-    ? `${photo.title} updated with ${addedCount} new license option${addedCount === 1 ? "" : "s"}; existing options were not duplicated.`
-    : `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}.`;
+  addButton.textContent = options.length ? "Update basket" : "Add to basket";
+  const message = !options.length
+    ? `${photo.title} removed from basket.`
+    : (existing
+      ? `${photo.title} basket selections updated.`
+      : `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}.`);
   document.querySelector("[data-basket-status]").innerHTML = `${message} <a href="./basket.html">View basket</a>`;
 });
 

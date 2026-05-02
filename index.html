@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=63.12"/>
-  <link rel="stylesheet" href="./styles.css?v=63.12"/>
-  <link rel="stylesheet" href="./photos.css?v=63.12"/>
+  <link rel="stylesheet" href="./shared.css?v=63.13"/>
+  <link rel="stylesheet" href="./styles.css?v=63.13"/>
+  <link rel="stylesheet" href="./photos.css?v=63.13"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.12</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.13</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
 
@@ -49,36 +49,34 @@
         </div>
       </div>
       <div class="photo-stack" aria-hidden="true">
-        <span class="photo-print france"></span>
-        <span class="photo-print usa"></span>
-        <span class="photo-print spain"></span>
-        <span class="photo-print mexico"></span>
+        <span class="photo-print france has-photo" style="--photo-image:url('./assets/france/france-01.jpg')"></span>
+        <span class="photo-print usa has-photo" style="--photo-image:url('./assets/usa/usa-01.jpg')"></span>
+        <span class="photo-print spain has-photo" style="--photo-image:url('./assets/spain/spain-01.jpg')"></span>
       </div>
     </section>
 
     <section class="panel carousel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
       <div class="carousel-head photo-head">
         <div>
-          <p class="eyebrow">Pooch-powered carousel</p>
           <h2>Collections</h2>
         </div>
       </div>
       <div class="carousel-wrap" data-offers-wrap tabindex="0">
         <div class="carousel-track" data-offers-track>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./france.html">
-            <div class="photo-art france" aria-hidden="true"></div>
+            <div class="photo-art france has-photo" style="--photo-image:url('./assets/france/france-01.jpg')" aria-hidden="true"></div>
             <div class="service-logo" aria-hidden="true">01</div>
             <h3>France</h3>
             <p>Street details, market textures, cafe tables, stone villages, and quiet travel frames prepared for curated galleries.</p>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./usa.html">
-            <div class="photo-art usa" aria-hidden="true"></div>
+            <div class="photo-art usa has-photo" style="--photo-image:url('./assets/usa/usa-01.jpg')" aria-hidden="true"></div>
             <div class="service-logo" aria-hidden="true">02</div>
             <h3>USA</h3>
             <p>Roadside scenes, product setups, workshop documentation, and American everyday moments ready for story-driven sets.</p>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./spain.html">
-            <div class="photo-art spain" aria-hidden="true"></div>
+            <div class="photo-art spain has-photo" style="--photo-image:url('./assets/spain/spain-01.jpg')" aria-hidden="true"></div>
             <div class="service-logo" aria-hidden="true">03</div>
             <h3>Spain</h3>
             <p>Warm streets, architecture, food, coast, and city walks edited into clean web galleries and download packages.</p>
@@ -585,5 +583,8 @@
       metricEls.forEach((el)=>io.observe(el));
     }
   </script>
+  <script src="./photos-data.js?v=63.13"></script>
+  <script src="./basket-store.js?v=63.13"></script>
+  <script src="./basket-rail.js?v=63.13"></script>
 </body>
 </html>

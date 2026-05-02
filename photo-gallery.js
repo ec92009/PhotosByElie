@@ -11,7 +11,7 @@ if (galleryRoot && gallery) {
   document.querySelector("[data-gallery-title]").textContent = gallery.title;
   document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
-  galleryRoot.setAttribute("aria-label", `${gallery.title} mock photos`);
+  galleryRoot.setAttribute("aria-label", `${gallery.title} photos`);
   galleryRoot.innerHTML = gallery.photos.map((photo) => `
     <a class="mock-photo ${photo.className} ${photo.imageSrc ? "has-image" : ""}" href="./photo.html?id=${photo.id}" aria-label="Open ${photo.title}">
       ${photo.imageSrc ? `<img src="${photo.imageSrc}" alt="${photo.title}"/>` : ""}

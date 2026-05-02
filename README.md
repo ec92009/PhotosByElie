@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v63.12`
+- Current visible version: `v63.13`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -16,6 +16,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; resolution checkboxes sync directly to the basket
 - `basket.html`: localStorage-backed static basket page and mock checkout entry point
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
+- `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `photos-data.js`: shared collection, photo, resolution, and mock price data
 - `photo-gallery.js`: shared gallery renderer
 - `photo-detail.js`: shared detail page, real-image preview support, and automatic basket sync
@@ -37,8 +38,11 @@ Use the GitHub Pages URL above after pushing to `main`.
 ## Current Behavior
 
 - Collections are ordered France, USA, Spain, Mexico, AI.
+- The France, USA, and Spain galleries use ten randomized resized JPEG previews from their matching `/Volumes/ecohen/Pictures/LR/` folders.
+- The home carousel and hero stack use the first selected France, USA, and Spain previews.
 - The AI gallery uses eight resized Leonardo-generated JPGs from `~/Pictures/Leonardo/2023/06/08/UPSCALE`.
 - The basket is the source of truth for selected resolutions.
+- Wide screens show a compact right-side basket rail while browsing photos and collections.
 - Detail pages start with no resolution checked unless that photo is already in the basket.
 - Checking or unchecking a resolution on detail immediately updates localStorage.
 - Resolution choices are limited by each photo's source megapixels; 2 MP AI images only offer full/native and JPG 1 MP.

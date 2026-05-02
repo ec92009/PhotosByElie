@@ -69,6 +69,7 @@
   const write = (items) => {
     const normalized = normalizeBasket(items);
     localStorage.setItem(basketKey, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent("photosbyelie:basketchange", { detail: { items: normalized } }));
     return normalized;
   };
 

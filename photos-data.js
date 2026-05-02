@@ -2,40 +2,55 @@ window.photosByElieData = {
   france: {
     number: "01",
     title: "France",
-    description: "Five mock frames for the France gallery: markets, streets, stone, tables, and evening light.",
+    description: "Ten randomized Lightroom selections from the France photo archive.",
     accent: "france-gallery",
     photos: [
-      { id: "france-1", className: "p1", title: "Paris Table Study", caption: "Cafe geometry, glass reflections, and a quiet table edge.", full: "30 MB DNG", megapixels: 24 },
-      { id: "france-2", className: "p2", title: "Village Stone Lane", caption: "A narrow lane study with warm stone and deep shadow.", full: "28 MB DNG", megapixels: 22 },
-      { id: "france-3", className: "p3", title: "Market Morning", caption: "Early produce color blocks and market awning rhythm.", full: "26 MB DNG", megapixels: 20 },
-      { id: "france-4", className: "p4", title: "Window and Shutter", caption: "Painted shutter, plaster texture, and hard afternoon light.", full: "29 MB DNG", megapixels: 24 },
-      { id: "france-5", className: "p5", title: "Late Cafe Light", caption: "Evening table light with warm highlights and dark glass.", full: "30 MB DNG", megapixels: 24 }
+      { id: "france-1", className: "p1", title: "France Frame 01", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-01.jpg" },
+      { id: "france-2", className: "p2", title: "France Frame 02", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-02.jpg" },
+      { id: "france-3", className: "p3", title: "France Frame 03", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-03.jpg" },
+      { id: "france-4", className: "p4", title: "France Frame 04", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-04.jpg" },
+      { id: "france-5", className: "p5", title: "France Frame 05", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-05.jpg" },
+      { id: "france-6", className: "p6", title: "France Frame 06", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-06.jpg" },
+      { id: "france-7", className: "p7", title: "France Frame 07", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-07.jpg" },
+      { id: "france-8", className: "p8", title: "France Frame 08", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-08.jpg" },
+      { id: "france-9", className: "p9", title: "France Frame 09", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-09.jpg" },
+      { id: "france-10", className: "p10", title: "France Frame 10", caption: "Random Lightroom selection from the France archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/france/france-10.jpg" }
     ]
   },
   usa: {
     number: "02",
     title: "USA",
-    description: "Five mock frames for the USA gallery: roads, workshop detail, storefronts, product setups, and dusk color.",
+    description: "Ten randomized Lightroom selections from the USA photo archive.",
     accent: "usa-gallery",
     photos: [
-      { id: "usa-1", className: "p1", title: "Open Road Sign", caption: "Roadside sign shape against clean sky and asphalt bands.", full: "27 MB DNG", megapixels: 22 },
-      { id: "usa-2", className: "p2", title: "Workshop Bench", caption: "Tool marks, wood grain, and a useful shop-light study.", full: "25 MB DNG", megapixels: 20 },
-      { id: "usa-3", className: "p3", title: "Main Street Front", caption: "Storefront color, window reflections, and street-level context.", full: "30 MB DNG", megapixels: 24 },
-      { id: "usa-4", className: "p4", title: "Product Tabletop", caption: "Controlled tabletop blocks for listing-style product use.", full: "24 MB DNG", megapixels: 18 },
-      { id: "usa-5", className: "p5", title: "Dusk Parking Lot", caption: "Low light, empty lanes, and a last warm sky reflection.", full: "29 MB DNG", megapixels: 24 }
+      { id: "usa-1", className: "p1", title: "USA Frame 01", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-01.jpg" },
+      { id: "usa-2", className: "p2", title: "USA Frame 02", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-02.jpg" },
+      { id: "usa-3", className: "p3", title: "USA Frame 03", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-03.jpg" },
+      { id: "usa-4", className: "p4", title: "USA Frame 04", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-04.jpg" },
+      { id: "usa-5", className: "p5", title: "USA Frame 05", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-05.jpg" },
+      { id: "usa-6", className: "p6", title: "USA Frame 06", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-06.jpg" },
+      { id: "usa-7", className: "p7", title: "USA Frame 07", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-07.jpg" },
+      { id: "usa-8", className: "p8", title: "USA Frame 08", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-08.jpg" },
+      { id: "usa-9", className: "p9", title: "USA Frame 09", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-09.jpg" },
+      { id: "usa-10", className: "p10", title: "USA Frame 10", caption: "Random Lightroom selection from the USA archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 24, imageSrc: "./assets/usa/usa-10.jpg" }
     ]
   },
   spain: {
     number: "03",
     title: "Spain",
-    description: "Five mock frames for the Spain gallery: warm streets, tile, coast, food, and quiet architecture.",
+    description: "Ten randomized Lightroom selections from the Spain photo archive.",
     accent: "spain-gallery",
     photos: [
-      { id: "spain-1", className: "p1", title: "Warm Street Corner", caption: "Sunlit corner blocks with ochre walls and compact shadow.", full: "30 MB DNG", megapixels: 24 },
-      { id: "spain-2", className: "p2", title: "Tile and Shadow", caption: "Patterned tile detail with a hard diagonal shadow.", full: "26 MB DNG", megapixels: 20 },
-      { id: "spain-3", className: "p3", title: "Coastal Blue", caption: "Blue horizon bands, pale wall, and a narrow coastal view.", full: "28 MB DNG", megapixels: 22 },
-      { id: "spain-4", className: "p4", title: "Lunch Table", caption: "Table color, food-service texture, and midday warmth.", full: "24 MB DNG", megapixels: 18 },
-      { id: "spain-5", className: "p5", title: "Archway Quiet", caption: "A dark arch shape holding a still patch of warm light.", full: "29 MB DNG", megapixels: 24 }
+      { id: "spain-1", className: "p1", title: "Spain Frame 01", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-01.jpg" },
+      { id: "spain-2", className: "p2", title: "Spain Frame 02", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-02.jpg" },
+      { id: "spain-3", className: "p3", title: "Spain Frame 03", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-03.jpg" },
+      { id: "spain-4", className: "p4", title: "Spain Frame 04", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-04.jpg" },
+      { id: "spain-5", className: "p5", title: "Spain Frame 05", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-05.jpg" },
+      { id: "spain-6", className: "p6", title: "Spain Frame 06", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-06.jpg" },
+      { id: "spain-7", className: "p7", title: "Spain Frame 07", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-07.jpg" },
+      { id: "spain-8", className: "p8", title: "Spain Frame 08", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-08.jpg" },
+      { id: "spain-9", className: "p9", title: "Spain Frame 09", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-09.jpg" },
+      { id: "spain-10", className: "p10", title: "Spain Frame 10", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-10.jpg" }
     ]
   },
   mexico: {

@@ -83,7 +83,9 @@ const renderBasket = () => {
       const checkedIds = Array.from(document.querySelectorAll(`[data-basket-resolution="${itemIndex}"]:checked`))
         .map((checkbox) => checkbox.value);
       basketStore.updateOptions(itemIndex, checkedIds);
-      status.textContent = `${item.title} license options updated.`;
+      status.textContent = checkedIds.length
+        ? `${item.title} license options updated.`
+        : `${item.title} has no selected license options. Use Remove to delete the photo.`;
       renderBasket();
     });
   });
@@ -99,7 +101,7 @@ checkoutButton.addEventListener("click", () => {
   const items = basketStore.read();
   if (!items.length) return;
   const summary = items.map((item) => {
-    const options = (item.options || []).map((option) => option.label).join(", ");
+    const options = (item.options || []).map((option) => option.label).join(", ") || "No resolution selected";
     return `${item.collection}: ${item.title} (${options}) - ${formatMoney(Number(item.total) || 0)}`;
   }).join("\n");
   const subject = encodeURIComponent("Photos By Elie basket request");

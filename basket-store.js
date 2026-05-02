@@ -55,7 +55,7 @@
         options,
         total: options.reduce((sum, option) => sum + option.price, 0)
       };
-    }).filter((item) => item.options.length);
+    });
   };
 
   const read = () => {

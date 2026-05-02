@@ -141,12 +141,12 @@
   background-image:var(--preview-watermark);
   background-size:220px 118px;
   background-position:center;
-  opacity:.58;
+  opacity:.145;
   mix-blend-mode:normal;
 }
 html[data-theme="light"] .photo-print.has-photo::after,
 html[data-theme="light"] .photo-art.has-photo::after{
-  opacity:.54;
+  opacity:.135;
 }
 .photo-print .hand-label,
 .photo-art .hand-label{
@@ -286,11 +286,11 @@ html[data-theme="light"] .photo-art.has-photo::after{
   background-image:var(--preview-watermark);
   background-size:240px 130px;
   background-position:center;
-  opacity:.58;
+  opacity:.145;
   mix-blend-mode:normal;
 }
 html[data-theme="light"] .mock-photo.has-image::after{
-  opacity:.54;
+  opacity:.135;
 }
 .mock-photo span{
   position:absolute;
@@ -352,7 +352,7 @@ html[data-theme="light"] .mock-photo.has-image::after{
 }
 .detail-preview.has-image::after{
   background-size:340px 184px;
-  opacity:.54;
+  opacity:.135;
 }
 .detail-panel{
   align-self:center;
@@ -510,7 +510,7 @@ html[data-theme="light"] .mock-photo.has-image::after{
 }
 .basket-thumb.has-image::after{
   background-size:112px 60px;
-  opacity:.62;
+  opacity:.155;
 }
 .basket-thumb span{
   display:none;

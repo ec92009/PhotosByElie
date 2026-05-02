@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v63.9`
+- Current visible version: `v63.10`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -41,4 +41,5 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The basket is the source of truth for selected resolutions.
 - Detail pages start with no resolution checked unless that photo is already in the basket.
 - Checking or unchecking a resolution on detail immediately updates localStorage.
+- Resolution choices are limited by each photo's source megapixels; 2 MP AI images only offer full/native and JPG 1 MP.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

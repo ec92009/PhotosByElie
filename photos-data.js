@@ -70,8 +70,13 @@ window.photosByElieData = {
 };
 
 window.photosByElieResolutions = [
-  { id: "full", label: "Full resolution", detail: "Original DNG/PNG master", price: 45 },
-  { id: "jpg-6mp", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18 },
-  { id: "jpg-3mp", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 10 },
-  { id: "jpg-1mp", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 5 }
+  { id: "full", label: "Full resolution", detail: "Original source file at native resolution", price: 45 },
+  { id: "jpg-6mp", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18, minMegapixels: 6 },
+  { id: "jpg-3mp", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 10, minMegapixels: 3 },
+  { id: "jpg-1mp", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 5, minMegapixels: 1 }
 ];
+
+window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {
+  const megapixels = Number(photo?.megapixels) || 0;
+  return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);
+};

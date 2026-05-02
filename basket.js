@@ -34,6 +34,9 @@ const renderBasket = () => {
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
     const imageSrc = photo?.imageSrc || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
+    const availableOptions = photo && window.photosByElieAvailableResolutions
+      ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
+      : resolutionOptions;
     return `
     <article class="basket-item">
       <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
@@ -44,7 +47,7 @@ const renderBasket = () => {
         <p class="eyebrow">${item.collection || "Collection"}</p>
         <h3>${item.title}</h3>
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
-          ${resolutionOptions.map((option) => `
+          ${availableOptions.map((option) => `
             <label>
               <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
               <span>${option.label}</span>

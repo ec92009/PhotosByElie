@@ -7,11 +7,14 @@ const collectionEntry = Object.entries(collections).find(([, collection]) =>
 const [collectionKey, collection] = collectionEntry || ["france", collections.france];
 const photo = collection.photos.find((item) => item.id === photoId) || collection.photos[0];
 const resolutions = window.photosByElieResolutions || [];
+const availableResolutions = window.photosByElieAvailableResolutions
+  ? window.photosByElieAvailableResolutions(photo, resolutions)
+  : resolutions;
 const basketStore = window.photosByElieBasket;
 
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
-    const option = resolutions.find((item) => item.id === input.value);
+    const option = availableResolutions.find((item) => item.id === input.value);
     return option ? { id: option.id, label: option.label, price: option.price } : null;
   })
   .filter(Boolean);
@@ -47,7 +50,7 @@ preview.querySelector("span").textContent = photo.title;
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
 
-document.querySelector("[data-resolution-list]").innerHTML = resolutions.map((option) => `
+document.querySelector("[data-resolution-list]").innerHTML = availableResolutions.map((option) => `
   <label class="resolution-row">
     <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
     <span>

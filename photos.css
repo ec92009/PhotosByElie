@@ -26,7 +26,7 @@
 .photo-print{
   position:absolute;
   width:58%;
-  aspect-ratio:4/5;
+  aspect-ratio:1;
   border:1px solid var(--line);
   background:var(--surface);
   box-shadow:0 24px 60px rgba(0,0,0,.18);
@@ -49,6 +49,9 @@
   height:14px;
   background:var(--line);
 }
+.photo-print.has-photo::after{
+  display:none;
+}
 .hand-label{
   position:absolute;
   z-index:2;
@@ -60,24 +63,33 @@
   transform:rotate(-3deg);
 }
 .photo-print .hand-label{
-  top:22px;
-  left:22px;
-  padding:3px 8px;
-  color:var(--bg);
-  background:color-mix(in srgb,var(--text) 86%,transparent);
-  border:1px solid color-mix(in srgb,var(--line) 40%,transparent);
+  left:18px;
+  right:18px;
+  bottom:16px;
+  text-align:right;
+  color:var(--text);
+}
+.photo-print.france .hand-label{
+  text-align:left;
 }
 .photo-art .hand-label{
-  right:14px;
-  bottom:12px;
-  padding:3px 8px;
+  left:12px;
+  right:12px;
+  bottom:8px;
+  text-align:right;
   font-size:clamp(1.45rem,3.8vw,2.35rem);
-  background:color-mix(in srgb,var(--bg) 72%,transparent);
-  border:1px solid color-mix(in srgb,var(--line) 62%,transparent);
+  color:var(--text);
 }
-.photo-print.france{--photo-scene:linear-gradient(135deg,#d8d4cb 0 32%,#1d1d1d 32% 38%,#ede5d8 38% 52%,#9c2f2f 52% 64%,#2d593f 64% 100%);left:5%;top:10%;transform:rotate(-9deg)}
-.photo-print.usa{--photo-scene:linear-gradient(140deg,#f3f4f5 0 20%,#335f7d 20% 38%,#a83b37 38% 50%,#d8a94d 50% 70%,#222 70% 100%);left:32%;top:20%;transform:rotate(7deg);z-index:2}
-.photo-print.spain{--photo-scene:linear-gradient(145deg,#edcf86 0 24%,#c65335 24% 42%,#f4ead7 42% 58%,#24524f 58% 100%);left:18%;top:43%;transform:rotate(-2deg);z-index:3}
+.photo-art.has-photo{
+  padding-bottom:46px;
+  background:var(--surface);
+}
+.photo-art.has-photo::before{
+  bottom:46px;
+}
+.photo-print.france{--photo-scene:linear-gradient(135deg,#d8d4cb 0 32%,#1d1d1d 32% 38%,#ede5d8 38% 52%,#9c2f2f 52% 64%,#2d593f 64% 100%);left:2%;top:7%;transform:rotate(-9deg)}
+.photo-print.usa{--photo-scene:linear-gradient(140deg,#f3f4f5 0 20%,#335f7d 20% 38%,#a83b37 38% 50%,#d8a94d 50% 70%,#222 70% 100%);left:43%;top:16%;transform:rotate(7deg);z-index:2}
+.photo-print.spain{--photo-scene:linear-gradient(145deg,#edcf86 0 24%,#c65335 24% 42%,#f4ead7 42% 58%,#24524f 58% 100%);left:20%;top:46%;transform:rotate(-2deg);z-index:3}
 .photo-print.mexico{--photo-scene:linear-gradient(135deg,#f3c24e 0 20%,#c64637 20% 38%,#1f7770 38% 58%,#f7ead5 58% 76%,#262626 76% 100%);left:48%;top:48%;transform:rotate(10deg);z-index:4}
 .photo-carousel-panel{
   background:var(--surface);
@@ -111,7 +123,8 @@
   position:relative;
   flex:0 0 auto;
   width:100%;
-  min-height:clamp(120px,22vw,170px);
+  aspect-ratio:1;
+  min-height:0;
   border:1px solid var(--line);
   background:var(--bg);
   overflow:hidden;

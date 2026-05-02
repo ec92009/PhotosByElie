@@ -24,13 +24,6 @@ const updateTotal = () => {
   document.querySelector("[data-selection-total]").textContent = `$${total}`;
 };
 
-const updateBasketCount = () => {
-  const countEl = document.querySelector("[data-basket-count]");
-  if (!countEl) return;
-  const basket = basketStore.read();
-  countEl.textContent = String(basket.length);
-};
-
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
 const status = document.querySelector("[data-basket-status]");
 
@@ -73,7 +66,6 @@ const syncSelectionToBasket = () => {
     options
   });
   updateTotal();
-  updateBasketCount();
   if (!options.length) {
     status.textContent = existing ? `${photo.title} removed from basket.` : "No basket selections for this photo.";
     return;
@@ -86,4 +78,3 @@ document.querySelectorAll("[data-resolution]").forEach((input) => {
 });
 
 updateTotal();
-updateBasketCount();

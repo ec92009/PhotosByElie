@@ -78,7 +78,7 @@ document.querySelector("[data-add-basket]").addEventListener("click", () => {
   });
   writeBasket(basket);
   updateBasketCount();
-  document.querySelector("[data-basket-status]").textContent = `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}.`;
+  document.querySelector("[data-basket-status]").innerHTML = `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}. <a href="./basket.html">View basket</a>`;
 });
 
 updateTotal();

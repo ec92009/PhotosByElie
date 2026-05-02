@@ -37,9 +37,9 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 ## Workspace Structure
 
 - Repo root: `/Users/ecohen/Dev/PhotosByElie`
-- Pages: `index.html`, `france.html`, `usa.html`, `spain.html`, `ai.html`, `photo.html`
+- Pages: `index.html`, `france.html`, `usa.html`, `spain.html`, `ai.html`, `photo.html`, `basket.html`
 - Styles: `shared.css`, `styles.css`, `photos.css`
-- Scripts: `photos.js`, `photos-data.js`, `photo-gallery.js`, `photo-detail.js`
+- Scripts: `photos.js`, `photos-data.js`, `photo-gallery.js`, `photo-detail.js`, `basket.js`
 - Assets: `assets/`
 
 ## Local Preview

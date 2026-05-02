@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Gallery</title>
-  <meta name="description" content="Mock photo gallery for Photos By Elie."/>
+  <title>Photos By Elie | Basket</title>
+  <meta name="description" content="Local basket for selected Photos By Elie mock photo licenses."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
   <link rel="stylesheet" href="./shared.css?v=63.2"/>
@@ -14,28 +14,41 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="ai">
+<body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <nav class="version-switch" aria-label="Site navigation">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" data-nav-current href="./ai.html">Gallery</a>
+      <a class="is-active" href="./basket.html">Basket</a>
     </nav>
     <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.2</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
   <main id="main-content" class="shell">
     <section class="panel gallery-hero">
-      <p class="eyebrow" data-gallery-number>Collection</p>
-      <h1 data-gallery-title>Gallery</h1>
-      <p class="lead" data-gallery-description></p>
-      <div class="cta"><a class="btn secondary" href="./">Back to collections</a></div>
+      <p class="eyebrow">Local browser basket</p>
+      <h1>Basket</h1>
+      <p class="lead">This static-site basket is saved in this browser only. Checkout is mocked as an email request.</p>
+      <div class="cta">
+        <a class="btn secondary" href="./">Back to collections</a>
+      </div>
     </section>
-    <section class="panel mock-gallery" data-gallery-root></section>
+    <section class="panel basket-panel">
+      <div class="basket-summary">
+        <strong><span data-basket-count>0</span> item(s)</strong>
+        <strong>Total: <span data-basket-total>$0</span></strong>
+      </div>
+      <p class="empty-basket" data-empty-basket>Your basket is empty.</p>
+      <div class="basket-list" data-basket-root></div>
+      <div class="basket-bar basket-page-actions">
+        <button class="btn secondary" type="button" data-clear-basket>Clear basket</button>
+        <button class="btn primary" type="button" data-checkout>Request checkout</button>
+      </div>
+      <p class="basket-status" data-basket-status aria-live="polite"></p>
+    </section>
   </main>
   <script src="./photos.js?v=63.2"></script>
-  <script src="./photos-data.js?v=63.2"></script>
-  <script src="./photo-gallery.js?v=63.2"></script>
+  <script src="./basket.js?v=63.2"></script>
 </body>
 </html>

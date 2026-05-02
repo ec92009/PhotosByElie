@@ -80,3 +80,13 @@ window.photosByElieAvailableResolutions = (photo, options = window.photosByElieR
   const megapixels = Number(photo?.megapixels) || 0;
   return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);
 };
+
+window.photosByElieOriginalSize = (photo) => {
+  const megapixels = Number(photo?.megapixels);
+  return [photo?.full, megapixels ? `${megapixels} MP source` : ""].filter(Boolean).join(", ");
+};
+
+window.photosByElieResolutionDetail = (photo, option) => {
+  if (option.id !== "full") return option.detail;
+  return `Original: ${window.photosByElieOriginalSize(photo)}`;
+};

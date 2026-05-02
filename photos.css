@@ -394,8 +394,17 @@
   accent-color:var(--text);
 }
 .basket-resolution-grid span{
+  display:grid;
+  gap:2px;
   color:var(--text);
+}
+.basket-resolution-grid strong{
   font-weight:700;
+}
+.basket-resolution-grid small{
+  color:var(--muted);
+  font-weight:600;
+  line-height:1.25;
 }
 .basket-resolution-grid b{
   color:var(--muted);

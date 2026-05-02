@@ -55,7 +55,7 @@ document.querySelector("[data-resolution-list]").innerHTML = availableResolution
     <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
     <span>
       <strong>${option.label}</strong>
-      <small>${option.detail}</small>
+      <small>${window.photosByElieResolutionDetail ? window.photosByElieResolutionDetail(photo, option) : option.detail}</small>
     </span>
     <b>$${option.price}</b>
   </label>

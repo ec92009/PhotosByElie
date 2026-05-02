@@ -25,6 +25,7 @@ Built and iterated on the Photos By Elie static GitHub Pages site at `/Users/eco
 - A photo appears once in the basket; adding or revisiting the same photo cannot duplicate charges.
 - Basket rows show thumbnails, available resolution checkboxes, selected states, per-photo totals, and overall total.
 - Resolution choices are limited by source megapixels; the 2 MP AI images offer full/native and JPG 1 MP, while higher-resolution mock photos keep the larger JPG choices.
+- Full resolution checkboxes show the original source size, such as the source file description and megapixel count.
 - Unchecking all resolutions for a photo removes it from the basket.
 - Checkout remains a mocked email handoff.
 
@@ -38,14 +39,14 @@ Built and iterated on the Photos By Elie static GitHub Pages site at `/Users/eco
 ## Versioning And Deployment
 
 - Versioning follows the MailAssist canonical SOP with local PhotosByElie adaptation.
-- Current visible version after this conversation: `v63.10`.
+- Current visible version after this conversation: `v63.11`.
 - Commits were pushed to both `ec92009/PhotosByElie` and `ec92009/Webapps`.
 - GitHub Pages deployments were checked after each push.
 
 ## Current Live URLs
 
-- PhotosByElie: `https://ec92009.github.io/PhotosByElie/?v=63.10`
-- AI gallery: `https://ec92009.github.io/PhotosByElie/ai.html?v=63.10`
-- Example detail: `https://ec92009.github.io/PhotosByElie/photo.html?id=ai-1&v=63.10`
-- Basket: `https://ec92009.github.io/PhotosByElie/basket.html?v=63.10`
-- Hub: `https://ec92009.github.io/Webapps/?v=63.10`
+- PhotosByElie: `https://ec92009.github.io/PhotosByElie/?v=63.11`
+- AI gallery: `https://ec92009.github.io/PhotosByElie/ai.html?v=63.11`
+- Example detail: `https://ec92009.github.io/PhotosByElie/photo.html?id=ai-1&v=63.11`
+- Basket: `https://ec92009.github.io/PhotosByElie/basket.html?v=63.11`
+- Hub: `https://ec92009.github.io/Webapps/?v=63.11`

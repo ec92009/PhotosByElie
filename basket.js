@@ -37,6 +37,10 @@ const renderBasket = () => {
     const availableOptions = photo && window.photosByElieAvailableResolutions
       ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
       : resolutionOptions;
+    const resolutionDetail = (option) => {
+      if (!photo || !window.photosByElieResolutionDetail) return "";
+      return option.id === "full" ? `<small>${window.photosByElieResolutionDetail(photo, option)}</small>` : "";
+    };
     return `
     <article class="basket-item">
       <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
@@ -50,7 +54,7 @@ const renderBasket = () => {
           ${availableOptions.map((option) => `
             <label>
               <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-              <span>${option.label}</span>
+              <span><strong>${option.label}</strong>${resolutionDetail(option)}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
           `).join("")}

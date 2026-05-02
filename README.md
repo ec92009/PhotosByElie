@@ -6,7 +6,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v0.3`
+- Current visible version: `v63.0`
+- Versioning follows the repo SOP in `AGENTS.md`: day count since `2026-02-28` plus same-day build number.
 
 ## Structure
 
@@ -19,6 +20,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `styles.css`: copied By Elie animation overrides
 - `photos.css`: photo-specific layout and carousel styles
 - `photos.js`: shared theme toggle behavior for subpages
+- `AGENTS.md`: repo-level working preferences and versioning SOP
+- `SHOW_ME_SOP.md`: preview/reporting workflow
+- `VERSION`: current visible version without the leading `v`
 - `assets/`: shared By Elie logo asset
 
 ## Preview

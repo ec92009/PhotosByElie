@@ -50,6 +50,7 @@
 .photo-print.france{--photo-scene:linear-gradient(135deg,#d8d4cb 0 32%,#1d1d1d 32% 38%,#ede5d8 38% 52%,#9c2f2f 52% 64%,#2d593f 64% 100%);left:5%;top:10%;transform:rotate(-9deg)}
 .photo-print.usa{--photo-scene:linear-gradient(140deg,#f3f4f5 0 20%,#335f7d 20% 38%,#a83b37 38% 50%,#d8a94d 50% 70%,#222 70% 100%);left:32%;top:20%;transform:rotate(7deg);z-index:2}
 .photo-print.spain{--photo-scene:linear-gradient(145deg,#edcf86 0 24%,#c65335 24% 42%,#f4ead7 42% 58%,#24524f 58% 100%);left:18%;top:43%;transform:rotate(-2deg);z-index:3}
+.photo-print.mexico{--photo-scene:linear-gradient(135deg,#f3c24e 0 20%,#c64637 20% 38%,#1f7770 38% 58%,#f7ead5 58% 76%,#262626 76% 100%);left:48%;top:48%;transform:rotate(10deg);z-index:4}
 .photo-carousel-panel{
   background:var(--surface);
   border-top:1px solid var(--line);
@@ -103,6 +104,7 @@
 .photo-art.france{--photo-scene:linear-gradient(120deg,#232323 0 20%,#e6dfd2 20% 38%,#b64b3c 38% 48%,#f4eee4 48% 62%,#2e5d4f 62% 100%)}
 .photo-art.usa{--photo-scene:linear-gradient(125deg,#edf0f2 0 18%,#1e405d 18% 33%,#bd473b 33% 44%,#d5a145 44% 63%,#202020 63% 100%)}
 .photo-art.spain{--photo-scene:linear-gradient(120deg,#efc35f 0 20%,#d76a3c 20% 35%,#f8edd6 35% 52%,#255c59 52% 100%)}
+.photo-art.mexico{--photo-scene:linear-gradient(125deg,#f2bd3f 0 19%,#bd4037 19% 35%,#23746d 35% 55%,#f6ead8 55% 72%,#222 72% 100%)}
 .photo-art.ai{--photo-scene:radial-gradient(circle at 26% 28%,#f4f4f4 0 7%,transparent 8%),radial-gradient(circle at 78% 20%,#b9c7d8 0 12%,transparent 13%),linear-gradient(135deg,#191919 0 22%,#724e83 22% 42%,#2e6e70 42% 64%,#e0d8bd 64% 100%)}
 .photo-copy{
   align-self:center;
@@ -219,6 +221,11 @@
 .spain-gallery .p3,.mock-photo.spain-gallery.p3{--mock-scene:linear-gradient(120deg,#22647a 0 38%,#f2d089 38% 48%,#f7f1df 48% 68%,#255c59 68% 100%)}
 .spain-gallery .p4,.mock-photo.spain-gallery.p4{--mock-scene:linear-gradient(145deg,#f6ead6 0 28%,#b94f35 28% 42%,#dba855 42% 60%,#262626 60% 100%)}
 .spain-gallery .p5,.mock-photo.spain-gallery.p5{--mock-scene:linear-gradient(135deg,#1f1f1f 0 26%,#f2d083 26% 44%,#d46d44 44% 58%,#f8eddb 58% 100%)}
+.mexico-gallery .p1,.mock-photo.mexico-gallery.p1{--mock-scene:linear-gradient(130deg,#f3bc42 0 20%,#c74638 20% 40%,#f8ead5 40% 56%,#26746c 56% 100%)}
+.mexico-gallery .p2,.mock-photo.mexico-gallery.p2{--mock-scene:linear-gradient(135deg,#272727 0 20%,#e5a83c 20% 38%,#b83d36 38% 56%,#f4ead7 56% 74%,#246e68 74% 100%)}
+.mexico-gallery .p3,.mock-photo.mexico-gallery.p3{--mock-scene:linear-gradient(120deg,#24776f 0 28%,#f5e7cd 28% 48%,#d4a048 48% 64%,#bf4438 64% 100%)}
+.mexico-gallery .p4,.mock-photo.mexico-gallery.p4{--mock-scene:linear-gradient(145deg,#f6e8d0 0 30%,#1f7770 30% 52%,#d55d3e 52% 68%,#252525 68% 100%)}
+.mexico-gallery .p5,.mock-photo.mexico-gallery.p5{--mock-scene:radial-gradient(circle at 72% 28%,#e8b64a 0 12%,transparent 13%),linear-gradient(130deg,#202020 0 30%,#b93f38 30% 50%,#24736c 50% 100%)}
 .ai-gallery .p1,.mock-photo.ai-gallery.p1{--mock-scene:radial-gradient(circle at 24% 32%,#f4f4f4 0 10%,transparent 11%),linear-gradient(135deg,#191919 0 24%,#6f4b82 24% 48%,#2f6f70 48% 100%)}
 .ai-gallery .p2,.mock-photo.ai-gallery.p2{--mock-scene:radial-gradient(circle at 72% 22%,#e6dac0 0 12%,transparent 13%),linear-gradient(125deg,#252525 0 32%,#8f6c8e 32% 52%,#c4d0d3 52% 100%)}
 .ai-gallery .p3,.mock-photo.ai-gallery.p3{--mock-scene:linear-gradient(135deg,#111 0 22%,#375c77 22% 42%,#76518c 42% 62%,#e2d7bf 62% 100%)}

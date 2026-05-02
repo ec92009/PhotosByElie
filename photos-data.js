@@ -38,8 +38,21 @@ window.photosByElieData = {
       { id: "spain-5", className: "p5", title: "Archway Quiet", caption: "A dark arch shape holding a still patch of warm light.", full: "29 MB DNG", megapixels: 24 }
     ]
   },
-  ai: {
+  mexico: {
     number: "04",
+    title: "Mexico",
+    description: "Five mock frames for the Mexico gallery: color walls, markets, tile, coast, and courtyard shade.",
+    accent: "mexico-gallery",
+    photos: [
+      { id: "mexico-1", className: "p1", title: "Color Wall Study", caption: "Saturated wall color, hard sun, and a quiet architectural edge.", full: "30 MB DNG", megapixels: 24 },
+      { id: "mexico-2", className: "p2", title: "Market Cloth", caption: "Textile pattern, produce color, and compact market rhythm.", full: "28 MB DNG", megapixels: 22 },
+      { id: "mexico-3", className: "p3", title: "Tile Courtyard", caption: "Patterned tile, deep shade, and bright courtyard geometry.", full: "27 MB DNG", megapixels: 22 },
+      { id: "mexico-4", className: "p4", title: "Coastal Doorway", caption: "Blue-green doorway color with warm wall and sea-air light.", full: "29 MB DNG", megapixels: 24 },
+      { id: "mexico-5", className: "p5", title: "Evening Plaza", caption: "Plaza glow, dark silhouettes, and a warm evening color study.", full: "30 MB DNG", megapixels: 24 }
+    ]
+  },
+  ai: {
+    number: "05",
     title: "AI",
     description: "Five mock frames for the AI gallery: generated concepts, composites, restoration studies, and prompt experiments.",
     accent: "ai-gallery",

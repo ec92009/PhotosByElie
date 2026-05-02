@@ -6,12 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v63.5`
+- Current visible version: `v63.6`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
-- `index.html`: one-page photo hub with France, USA, Spain, and AI collections
+- `index.html`: one-page photo hub with France, USA, Spain, Mexico, and AI collections
 - `france.html`, `usa.html`, `spain.html`, `ai.html`: thin gallery shells rendered from shared photo data
 - `photo.html`: reusable photo detail and mock purchase page
 - `basket.html`: localStorage-backed static basket page

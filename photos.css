@@ -1,3 +1,10 @@
+.photo-hero,
+.photo-carousel-panel{
+  --polaroid-ratio:3.483 / 4.233;
+  --polaroid-side:5.38%;
+  --polaroid-top:4.43%;
+  --polaroid-bottom:24.13%;
+}
 .photo-hero{
   min-height:var(--hero-min-height);
   display:grid;
@@ -26,7 +33,7 @@
 .photo-print{
   position:absolute;
   width:58%;
-  aspect-ratio:1;
+  aspect-ratio:var(--polaroid-ratio);
   border:1px solid var(--line);
   background:var(--surface);
   box-shadow:0 24px 60px rgba(0,0,0,.18);
@@ -35,22 +42,10 @@
 .photo-art::before{
   content:"";
   position:absolute;
-  inset:12px 12px 54px;
+  inset:var(--polaroid-top) var(--polaroid-side) var(--polaroid-bottom);
   background:var(--photo-scene);
   background-position:center;
   background-size:cover;
-}
-.photo-print::after{
-  content:"";
-  position:absolute;
-  left:12px;
-  right:12px;
-  bottom:18px;
-  height:14px;
-  background:var(--line);
-}
-.photo-print.has-photo::after{
-  display:none;
 }
 .hand-label{
   position:absolute;
@@ -63,9 +58,9 @@
   transform:rotate(-3deg);
 }
 .photo-print .hand-label{
-  left:18px;
-  right:18px;
-  bottom:16px;
+  left:7%;
+  right:7%;
+  bottom:5.8%;
   text-align:right;
   color:var(--text);
 }
@@ -73,19 +68,15 @@
   text-align:left;
 }
 .photo-art .hand-label{
-  left:12px;
-  right:12px;
-  bottom:8px;
+  left:7%;
+  right:7%;
+  bottom:5.8%;
   text-align:right;
   font-size:clamp(1.45rem,3.8vw,2.35rem);
   color:var(--text);
 }
 .photo-art.has-photo{
-  padding-bottom:46px;
   background:var(--surface);
-}
-.photo-art.has-photo::before{
-  bottom:46px;
 }
 .photo-print.france{--photo-scene:linear-gradient(135deg,#d8d4cb 0 32%,#1d1d1d 32% 38%,#ede5d8 38% 52%,#9c2f2f 52% 64%,#2d593f 64% 100%);left:2%;top:7%;transform:rotate(-9deg)}
 .photo-print.usa{--photo-scene:linear-gradient(140deg,#f3f4f5 0 20%,#335f7d 20% 38%,#a83b37 38% 50%,#d8a94d 50% 70%,#222 70% 100%);left:43%;top:16%;transform:rotate(7deg);z-index:2}
@@ -125,30 +116,17 @@
   position:relative;
   flex:0 0 auto;
   width:100%;
-  aspect-ratio:1;
+  aspect-ratio:var(--polaroid-ratio);
   min-height:0;
   border:1px solid var(--line);
-  background:var(--bg);
+  background:var(--surface);
   overflow:hidden;
-}
-.photo-art::before{
-  inset:0;
 }
 .photo-print.has-photo::before,
 .photo-art.has-photo::before{
   background-image:
     linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.14)),
     var(--photo-image);
-}
-.photo-art::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:
-    linear-gradient(90deg,rgba(255,255,255,.08),transparent 34%),
-    repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 92px);
-  mix-blend-mode:screen;
-  opacity:.55;
 }
 .photo-art.france{--photo-scene:linear-gradient(120deg,#232323 0 20%,#e6dfd2 20% 38%,#b64b3c 38% 48%,#f4eee4 48% 62%,#2e5d4f 62% 100%)}
 .photo-art.usa{--photo-scene:linear-gradient(125deg,#edf0f2 0 18%,#1e405d 18% 33%,#bd473b 33% 44%,#d5a145 44% 63%,#202020 63% 100%)}

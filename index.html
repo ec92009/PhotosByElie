@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=63.20"/>
-  <link rel="stylesheet" href="./styles.css?v=63.20"/>
-  <link rel="stylesheet" href="./photos.css?v=63.20"/>
+  <link rel="stylesheet" href="./shared.css?v=63.22"/>
+  <link rel="stylesheet" href="./styles.css?v=63.22"/>
+  <link rel="stylesheet" href="./photos.css?v=63.22"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.20</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.22</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
 
@@ -75,7 +75,7 @@
             <div class="photo-art mexico" aria-hidden="true"><span class="hand-label">Mexico</span></div>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./ai.html">
-            <div class="photo-art ai" aria-hidden="true"><span class="hand-label">AI</span></div>
+            <div class="photo-art ai has-photo" style="--photo-image:url('./assets/ai/forests.jpg')" aria-hidden="true"><span class="hand-label">AI</span></div>
           </article>
         </div>
         <div class="carousel-companion" data-spaniel data-state="sleeping" data-sleep-pose="false" aria-hidden="true">
@@ -242,11 +242,12 @@
           : medium
             ? Math.min(Math.max(wrapWidth*.32,250),wrapWidth-56)
             : Math.min(Math.max(wrapWidth*.17,220),340);
+        const polaroidHeightRatio=4.233/3.483;
         const cardHeight=Math.round(
           Math.min(
-            Math.max(cardWidth+(compact?32:40),compact?286:304),
-            viewportHeight*(compact?0.52:0.62),
-            medium?440:500
+            Math.max(cardWidth*polaroidHeightRatio+(compact?28:36),compact?360:390),
+            viewportHeight*(compact?0.62:0.7),
+            medium?520:580
           )
         );
         offersWrap.style.setProperty('--carousel-card-width',`${Math.round(cardWidth)}px`);
@@ -567,8 +568,8 @@
       metricEls.forEach((el)=>io.observe(el));
     }
   </script>
-  <script src="./photos-data.js?v=63.20"></script>
-  <script src="./basket-store.js?v=63.20"></script>
-  <script src="./basket-rail.js?v=63.20"></script>
+  <script src="./photos-data.js?v=63.22"></script>
+  <script src="./basket-store.js?v=63.22"></script>
+  <script src="./basket-rail.js?v=63.22"></script>
 </body>
 </html>

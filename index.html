@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=63.19"/>
-  <link rel="stylesheet" href="./styles.css?v=63.19"/>
-  <link rel="stylesheet" href="./photos.css?v=63.19"/>
+  <link rel="stylesheet" href="./shared.css?v=63.20"/>
+  <link rel="stylesheet" href="./styles.css?v=63.20"/>
+  <link rel="stylesheet" href="./photos.css?v=63.20"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.19</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.20</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
 
@@ -64,33 +64,18 @@
         <div class="carousel-track" data-offers-track>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./france.html">
             <div class="photo-art france has-photo" style="--photo-image:url('./assets/france/france-01.jpg')" aria-hidden="true"><span class="hand-label">France</span></div>
-            <div class="service-logo" aria-hidden="true">01</div>
-            <h3>France</h3>
-            <p>Street details, market textures, cafe tables, stone villages, and quiet travel frames prepared for curated galleries.</p>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./usa.html">
             <div class="photo-art usa has-photo" style="--photo-image:url('./assets/usa/usa-01.jpg')" aria-hidden="true"><span class="hand-label">USA</span></div>
-            <div class="service-logo" aria-hidden="true">02</div>
-            <h3>USA</h3>
-            <p>Roadside scenes, product setups, workshop documentation, and American everyday moments ready for story-driven sets.</p>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./spain.html">
             <div class="photo-art spain has-photo" style="--photo-image:url('./assets/spain/spain-01.jpg')" aria-hidden="true"><span class="hand-label">Spain</span></div>
-            <div class="service-logo" aria-hidden="true">03</div>
-            <h3>Spain</h3>
-            <p>Warm streets, architecture, food, coast, and city walks edited into clean web galleries and download packages.</p>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./mexico.html">
-            <div class="photo-art mexico" aria-hidden="true"></div>
-            <div class="service-logo" aria-hidden="true">04</div>
-            <h3>Mexico</h3>
-            <p>Color walls, market texture, tile courtyards, coastal doorways, and plaza light prepared as a distinct collection.</p>
+            <div class="photo-art mexico" aria-hidden="true"><span class="hand-label">Mexico</span></div>
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-href="./ai.html">
-            <div class="photo-art ai" aria-hidden="true"></div>
-            <div class="service-logo" aria-hidden="true">05</div>
-            <h3>AI</h3>
-            <p>Generated concepts, restorations, composites, prompt studies, and visual experiments separated from camera originals.</p>
+            <div class="photo-art ai" aria-hidden="true"><span class="hand-label">AI</span></div>
           </article>
         </div>
         <div class="carousel-companion" data-spaniel data-state="sleeping" data-sleep-pose="false" aria-hidden="true">
@@ -259,9 +244,9 @@
             : Math.min(Math.max(wrapWidth*.17,220),340);
         const cardHeight=Math.round(
           Math.min(
-            Math.max(cardWidth+(compact?210:225),compact?430:460),
-            viewportHeight*(compact?0.66:0.74),
-            medium?560:620
+            Math.max(cardWidth+(compact?32:40),compact?286:304),
+            viewportHeight*(compact?0.52:0.62),
+            medium?440:500
           )
         );
         offersWrap.style.setProperty('--carousel-card-width',`${Math.round(cardWidth)}px`);
@@ -582,8 +567,8 @@
       metricEls.forEach((el)=>io.observe(el));
     }
   </script>
-  <script src="./photos-data.js?v=63.19"></script>
-  <script src="./basket-store.js?v=63.19"></script>
-  <script src="./basket-rail.js?v=63.19"></script>
+  <script src="./photos-data.js?v=63.20"></script>
+  <script src="./basket-store.js?v=63.20"></script>
+  <script src="./basket-rail.js?v=63.20"></script>
 </body>
 </html>

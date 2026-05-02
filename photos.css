@@ -114,9 +114,11 @@
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
-  gap:10px;
   padding:14px;
   overflow:hidden;
+  background:transparent;
+  border-color:transparent;
+  box-shadow:none;
 }
 .photo-art{
   --photo-scene:linear-gradient(135deg,var(--surface-2),var(--line));
@@ -155,17 +157,6 @@
 .photo-art.ai{--photo-scene:radial-gradient(circle at 26% 28%,#f4f4f4 0 7%,transparent 8%),radial-gradient(circle at 78% 20%,#b9c7d8 0 12%,transparent 13%),linear-gradient(135deg,#191919 0 22%,#724e83 22% 42%,#2e6e70 42% 64%,#e0d8bd 64% 100%)}
 .photo-copy{
   align-self:center;
-}
-.photo-collection-card .service-logo{
-  margin-top:2px;
-}
-.photo-collection-card h3{
-  margin:0;
-}
-.photo-collection-card p{
-  margin:0;
-  color:var(--muted);
-  line-height:1.45;
 }
 .photo-number{
   margin:0 0 12px;

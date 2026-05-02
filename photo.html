@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Gallery</title>
-  <meta name="description" content="Mock photo gallery for Photos By Elie."/>
+  <title>Photos By Elie | Photo Detail</title>
+  <meta name="description" content="Mock photo detail and resolution purchase options for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
   <link rel="stylesheet" href="./shared.css?v=63.1"/>
@@ -14,28 +14,45 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="ai">
+<body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <nav class="version-switch" aria-label="Site navigation">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" data-nav-current href="./ai.html">Gallery</a>
+      <a data-nav-current href="./france.html">Gallery</a>
     </nav>
     <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.1</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
   <main id="main-content" class="shell">
-    <section class="panel gallery-hero">
-      <p class="eyebrow" data-gallery-number>Collection</p>
-      <h1 data-gallery-title>Gallery</h1>
-      <p class="lead" data-gallery-description></p>
-      <div class="cta"><a class="btn secondary" href="./">Back to collections</a></div>
+    <section class="panel detail-layout">
+      <div class="detail-preview mock-photo" data-photo-preview><span>Photo</span></div>
+      <div class="detail-panel">
+        <p class="eyebrow" data-photo-meta>Photo detail</p>
+        <h1 data-photo-title>Photo</h1>
+        <p class="lead" data-photo-caption></p>
+        <div class="detail-actions">
+          <a class="btn secondary" data-back-link href="./france.html">Back to gallery</a>
+          <span class="basket-pill">Basket <strong data-basket-count>0</strong></span>
+        </div>
+      </div>
     </section>
-    <section class="panel mock-gallery" data-gallery-root></section>
+    <section class="panel purchase-panel">
+      <div>
+        <p class="eyebrow">Resolution licenses</p>
+        <h2>Choose files</h2>
+      </div>
+      <div class="resolution-list" data-resolution-list></div>
+      <div class="basket-bar">
+        <strong>Total selected: <span data-selection-total>$0</span></strong>
+        <button class="btn primary" type="button" data-add-basket>Add to basket</button>
+      </div>
+      <p class="basket-status" data-basket-status aria-live="polite"></p>
+    </section>
   </main>
   <script src="./photos.js?v=63.1"></script>
   <script src="./photos-data.js?v=63.1"></script>
-  <script src="./photo-gallery.js?v=63.1"></script>
+  <script src="./photo-detail.js?v=63.1"></script>
 </body>
 </html>

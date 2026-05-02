@@ -4,6 +4,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 `https://ec92009.github.io/PhotosByElie/`
 
+## Version
+
+- Current visible version: `v0.3`
+
 ## Structure
 
 - `index.html`: one-page photo hub with France, USA, Spain, and AI collections

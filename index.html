@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=0.2"/>
-  <link rel="stylesheet" href="./styles.css?v=0.2"/>
-  <link rel="stylesheet" href="./photos.css?v=0.2"/>
+  <link rel="stylesheet" href="./shared.css?v=0.3"/>
+  <link rel="stylesheet" href="./styles.css?v=0.3"/>
+  <link rel="stylesheet" href="./photos.css?v=0.3"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v0.2</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v0.3</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
 
@@ -55,58 +55,133 @@
       </div>
     </section>
 
-    <section class="panel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
+    <section class="panel carousel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
       <div class="carousel-head photo-head">
         <div>
-          <p class="eyebrow">Single level carousel</p>
+          <p class="eyebrow">Pooch-powered carousel</p>
           <h2>Collections</h2>
         </div>
-        <div class="photo-controls" aria-label="Carousel controls">
-          <button class="carousel-btn" type="button" data-prev aria-label="Previous collection">‹</button>
-          <button class="carousel-btn" type="button" data-next aria-label="Next collection">›</button>
-        </div>
       </div>
-
-      <div class="photo-carousel" data-photo-carousel tabindex="0">
-        <article class="photo-card is-active" data-slide>
-          <div class="photo-art france" aria-hidden="true"></div>
-          <div class="photo-copy">
-            <p class="photo-number">01</p>
+      <div class="carousel-wrap" data-offers-wrap tabindex="0">
+        <div class="carousel-track" data-offers-track>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./france.html">
+            <div class="photo-art france" aria-hidden="true"></div>
+            <div class="service-logo" aria-hidden="true">01</div>
             <h3>France</h3>
             <p>Street details, market textures, cafe tables, stone villages, and quiet travel frames prepared for curated galleries.</p>
-            <a class="btn secondary" href="./france.html">Open gallery</a>
-          </div>
-        </article>
-        <article class="photo-card" data-slide>
-          <div class="photo-art usa" aria-hidden="true"></div>
-          <div class="photo-copy">
-            <p class="photo-number">02</p>
+          </article>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./usa.html">
+            <div class="photo-art usa" aria-hidden="true"></div>
+            <div class="service-logo" aria-hidden="true">02</div>
             <h3>USA</h3>
             <p>Roadside scenes, product setups, workshop documentation, and American everyday moments ready for story-driven sets.</p>
-            <a class="btn secondary" href="./usa.html">Open gallery</a>
-          </div>
-        </article>
-        <article class="photo-card" data-slide>
-          <div class="photo-art spain" aria-hidden="true"></div>
-          <div class="photo-copy">
-            <p class="photo-number">03</p>
+          </article>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./spain.html">
+            <div class="photo-art spain" aria-hidden="true"></div>
+            <div class="service-logo" aria-hidden="true">03</div>
             <h3>Spain</h3>
             <p>Warm streets, architecture, food, coast, and city walks edited into clean web galleries and download packages.</p>
-            <a class="btn secondary" href="./spain.html">Open gallery</a>
-          </div>
-        </article>
-        <article class="photo-card" data-slide>
-          <div class="photo-art ai" aria-hidden="true"></div>
-          <div class="photo-copy">
-            <p class="photo-number">04</p>
+          </article>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./ai.html">
+            <div class="photo-art ai" aria-hidden="true"></div>
+            <div class="service-logo" aria-hidden="true">04</div>
             <h3>AI</h3>
             <p>Generated concepts, restorations, composites, prompt studies, and visual experiments separated from camera originals.</p>
-            <a class="btn secondary" href="./ai.html">Open gallery</a>
-          </div>
-        </article>
-      </div>
+          </article>
+        </div>
+        <div class="carousel-companion" data-spaniel data-state="sleeping" data-sleep-pose="false" aria-hidden="true">
+          <svg class="spaniel-figure awake-pose" viewBox="0 0 1024 1024" role="presentation" focusable="false" aria-hidden="true">
+            <g class="spaniel-part part-tail">
+              <path d="M770 760 C860 800 875 845 820 860 C775 872 730 835 705 790 Z" fill="#C98534"/>
+            </g>
+            <g class="spaniel-part part-body">
+              <ellipse cx="512" cy="640" rx="250" ry="280" fill="#E5AE61"/>
+              <path d="M420 500 C455 455 570 455 605 500 C650 560 635 720 585 790 C555 835 470 835 440 790 C390 720 375 560 420 500 Z" fill="#F1C57F"/>
+              <ellipse cx="330" cy="845" rx="54" ry="30" fill="#C98534"/>
+              <ellipse cx="694" cy="845" rx="54" ry="30" fill="#C98534"/>
+              <path d="M500 525 L470 600 L505 585 L480 665 L522 648 L510 740" fill="none" stroke="#E5AE61" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M524 525 L554 600 L519 585 L544 665 L502 648 L514 740" fill="none" stroke="#E5AE61" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g class="spaniel-part part-head">
+              <circle cx="512" cy="285" r="175" fill="#E5AE61"/>
+            </g>
+            <g class="spaniel-part part-ears">
+              <g class="spaniel-ear ear-leading">
+                <path d="M325 230 C240 250 210 355 235 470 C250 540 285 585 345 580 C320 540 322 505 322 465 C322 390 338 305 325 230 Z" fill="#D69342"/>
+                <path d="M278 360 C255 400 255 455 285 500" stroke="#C98534" stroke-width="12" fill="none" stroke-linecap="round"/>
+                <path d="M318 335 C290 390 292 470 325 530" stroke="#C98534" stroke-width="12" fill="none" stroke-linecap="round"/>
+              </g>
+              <g class="spaniel-ear ear-trailing">
+                <path d="M699 230 C784 250 814 355 789 470 C774 540 739 585 679 580 C704 540 702 505 702 465 C702 390 686 305 699 230 Z" fill="#D69342"/>
+                <path d="M746 360 C769 400 769 455 739 500" stroke="#C98534" stroke-width="12" fill="none" stroke-linecap="round"/>
+                <path d="M706 335 C734 390 732 470 699 530" stroke="#C98534" stroke-width="12" fill="none" stroke-linecap="round"/>
+              </g>
+            </g>
+            <g class="spaniel-part part-face">
+              <ellipse cx="435" cy="290" rx="34" ry="42" fill="#3C220F"/>
+              <ellipse cx="589" cy="290" rx="34" ry="42" fill="#3C220F"/>
+              <circle cx="448" cy="276" r="10" fill="#ffffff"/>
+              <circle cx="602" cy="276" r="10" fill="#ffffff"/>
+              <path d="M395 220 Q435 190 470 220" stroke="#C98534" stroke-width="12" fill="none" stroke-linecap="round"/>
+              <path d="M554 220 Q589 190 629 220" stroke="#C98534" stroke-width="12" fill="none" stroke-linecap="round"/>
+              <ellipse cx="512" cy="385" rx="98" ry="72" fill="#EDBD74"/>
+              <ellipse cx="512" cy="350" rx="52" ry="38" fill="#1F1B17"/>
+              <path d="M512 388 L512 435" stroke="#3C220F" stroke-width="8" stroke-linecap="round"/>
+              <path d="M512 435 C485 462 445 462 425 435" stroke="#3C220F" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M512 435 C539 462 579 462 599 435" stroke="#3C220F" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M472 430 C475 485 550 485 552 430 C535 448 490 448 472 430 Z" fill="#E9838B"/>
+              <path d="M512 435 C510 450 510 465 512 478" stroke="#C46B73" stroke-width="5" fill="none" stroke-linecap="round"/>
+            </g>
+            <g class="spaniel-part part-front">
+              <rect x="352" y="620" width="92" height="250" rx="42" fill="#E5AE61"/>
+              <rect x="580" y="620" width="92" height="250" rx="42" fill="#E5AE61"/>
+              <ellipse cx="398" cy="870" rx="72" ry="40" fill="#E5AE61"/>
+              <ellipse cx="626" cy="870" rx="72" ry="40" fill="#E5AE61"/>
+              <path d="M365 855 Q355 875 365 892" stroke="#C98534" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M398 852 Q388 875 398 895" stroke="#C98534" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M431 855 Q421 875 431 892" stroke="#C98534" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M593 855 Q583 875 593 892" stroke="#C98534" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M626 852 Q616 875 626 895" stroke="#C98534" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M659 855 Q649 875 659 892" stroke="#C98534" stroke-width="8" fill="none" stroke-linecap="round"/>
+            </g>
+          </svg>
+          <svg class="spaniel-figure sleeping-pose" viewBox="0 0 512 260" role="presentation" focusable="false" aria-hidden="true">
+            <g class="spaniel-part part-body">
+              <path fill="#E5AE61" d="M115 150 C95 95, 125 55, 205 48 C255 44, 290 60, 328 58 C390 54, 450 75, 462 128 C473 175, 452 208, 404 210 L170 210 C130 210, 105 188, 108 165 C110 158, 112 154, 115 150 Z"/>
+            </g>
+            <g class="spaniel-part part-tail">
+              <path fill="#D69342" d="M104 152 C58 162, 42 195, 58 220 C71 239, 111 244, 136 230 C149 222, 153 206, 144 192 C134 177, 122 165, 104 152 Z"/>
+              <path fill="#D69342" d="M70 188 C52 182, 40 184, 31 194 C42 194, 49 198, 57 206 C61 200, 65 194, 70 188 Z"/>
+            </g>
+            <g class="spaniel-part part-head">
+              <circle cx="377" cy="123" r="66" fill="#E5AE61"/>
+            </g>
+            <g class="spaniel-part part-ears">
+              <path fill="#D69342" d="M438 102 C465 104, 485 123, 490 148 C495 170, 491 196, 477 201 C468 205, 457 202, 448 195 C453 179, 455 161, 452 141 C449 126, 444 114, 438 102 Z"/>
+              <path fill="#D69342" d="M309 87 C283 92, 266 112, 263 139 C260 164, 268 196, 284 208 C293 215, 306 214, 320 208 C311 190, 308 170, 309 150 C310 126, 314 106, 309 87 Z"/>
+            </g>
+            <g class="spaniel-part part-face">
+              <ellipse cx="374" cy="155" rx="48" ry="30" fill="#EDBD74"/>
+              <circle cx="352" cy="118" r="12" fill="#3C220F"/>
+              <circle cx="405" cy="118" r="12" fill="#3C220F"/>
+              <circle cx="347" cy="112" r="4" fill="#FFFFFF"/>
+              <circle cx="400" cy="112" r="4" fill="#FFFFFF"/>
+              <ellipse cx="377" cy="145" rx="18" ry="13" fill="#1F1B17"/>
+              <path d="M377 156 L377 168" stroke="#3C220F" stroke-width="5"/>
+              <path d="M377 168 C365 181, 348 181, 339 169" stroke="#3C220F" stroke-width="5" fill="none"/>
+              <path d="M377 168 C389 181, 406 181, 415 169" stroke="#3C220F" stroke-width="5" fill="none"/>
+              <path fill="#E9838B" d="M365 170 C364 188, 390 190, 390 171 C384 176, 371 176, 365 170 Z"/>
+            </g>
+            <g class="spaniel-part part-front">
+              <ellipse cx="320" cy="194" rx="34" ry="20" fill="#EDBD74"/>
+              <ellipse cx="423" cy="194" rx="34" ry="20" fill="#EDBD74"/>
+            </g>
+          </svg>
+          <span class="spaniel-z">z</span>
+        </div>
 
-      <div class="carousel-dots photo-dots" data-dots aria-label="Collection pagination"></div>
+      </div>
+      <div class="carousel-dots photo-dots" data-offers-dots aria-label="Collection pagination"></div>
     </section>
 
     <section class="panel photo-workflow">
@@ -130,48 +205,362 @@
   </footer>
 
   <script>
-    const root = document.documentElement;
-    const key = 'byelie-theme';
-    const btn = document.querySelector('[data-theme-toggle]');
-    btn?.addEventListener('click', () => {
-      root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
-      localStorage.setItem(key, root.dataset.theme);
+    const root=document.documentElement;
+    const key='byelie-theme';
+    const btn=document.querySelector('[data-theme-toggle]');
+    btn?.addEventListener('click',()=>{
+      root.dataset.theme=root.dataset.theme==='light'?'dark':'light';
+      localStorage.setItem(key,root.dataset.theme);
     });
 
-    const slides = Array.from(document.querySelectorAll('[data-slide]'));
-    const dots = document.querySelector('[data-dots]');
-    const carousel = document.querySelector('[data-photo-carousel]');
-    let active = 0;
+    const offersWrap=document.querySelector('[data-offers-wrap]');
+    const offersTrack=document.querySelector('[data-offers-track]');
+    const offerItems=Array.from(document.querySelectorAll('[data-offer-item]'));
+    const offersDots=document.querySelector('[data-offers-dots]');
+    const prevBtn=document.querySelector('[data-offers-prev]');
+    const nextBtn=document.querySelector('[data-offers-next]');
+    const spaniel=document.querySelector('[data-spaniel]');
+    const spanielSleepText=spaniel?.querySelector('.spaniel-z');
 
-    const showSlide = (index) => {
-      active = (index + slides.length) % slides.length;
-      slides.forEach((slide, i) => {
-        slide.classList.toggle('is-active', i === active);
-        slide.setAttribute('aria-hidden', i === active ? 'false' : 'true');
+    if(offersWrap && offersTrack && offerItems.length){
+      offersWrap.classList.add('is-enhanced');
+      let activeIndex=0;
+      const total=offerItems.length;
+      let currentProfile=null;
+      const wrapIndex=(n)=>((n%total)+total)%total;
+      const relOffset=(index)=>{
+        let d=index-activeIndex;
+        if(d>total/2) d-=total;
+        if(d<-total/2) d+=total;
+        return d;
+      };
+
+      const updateDots=()=> {
+        offersDots?.querySelectorAll('.carousel-dot').forEach((dot,i)=>{
+          const on=i===activeIndex;
+          dot.classList.toggle('is-active',on);
+          dot.setAttribute('aria-current',on?'true':'false');
+        });
+      };
+
+      const profile=()=>{
+        const wrapWidth=Math.max(offersWrap.clientWidth,280);
+        const viewportHeight=window.innerHeight||900;
+        const compact=wrapWidth<560;
+        const medium=wrapWidth<900;
+        const cardWidth=compact
+          ? Math.max(210,Math.min(wrapWidth-20,wrapWidth*.56))
+          : medium
+            ? Math.min(Math.max(wrapWidth*.32,250),wrapWidth-56)
+            : Math.min(Math.max(wrapWidth*.17,220),340);
+        const cardHeight=Math.round(
+          Math.min(
+            Math.max(cardWidth*(compact?0.82:0.72),240),
+            viewportHeight*(compact?0.42:0.5),
+            medium?360:430
+          )
+        );
+        offersWrap.style.setProperty('--carousel-card-width',`${Math.round(cardWidth)}px`);
+        offersWrap.style.setProperty('--carousel-card-height',`${cardHeight}px`);
+        offersWrap.style.setProperty('--carousel-height',`${cardHeight}px`);
+        offersWrap.style.setProperty('--carousel-perspective',`${Math.max(1200,Math.round(wrapWidth*2.6))}px`);
+        offersWrap.style.setProperty('--companion-left',compact?'-190px':'14px');
+        return {
+          wrapWidth,
+          companionLeft:compact?-190:14,
+          cardWidth,
+          cardHeight,
+          spanielWidth:Math.round(Math.min(Math.max(cardHeight*.62,84),188)),
+          tx:Math.round(Math.min(wrapWidth*(compact?0.34:medium?0.33:0.29),cardWidth*(compact?0.42:medium?0.56:0.72))),
+          tz:Math.round(Math.min(Math.max(cardWidth*(compact?0.2:medium?0.25:0.33),72),220)),
+          ry:compact?12:medium?16:18,
+          scStep:compact?0.1:medium?0.12:0.15,
+          minScale:compact?0.76:medium?0.68:0.62,
+          minOpacity:compact?0.26:0.2,
+          maxDepth:compact?1:2
+        };
+      };
+
+      const render=()=>{
+        const p=profile();
+        currentProfile=p;
+        offersTrack.style.transform='none';
+        offerItems.forEach((item,index)=>{
+          const off=relOffset(index);
+          const abs=Math.abs(off);
+          const tx=off*p.tx;
+          const tz=-abs*p.tz;
+          const ry=off*-p.ry;
+          const sc=Math.max(p.minScale,1-abs*p.scStep);
+          item.style.transform=`translateX(-50%) translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) scale(${sc})`;
+          item.style.opacity=abs>p.maxDepth?'0':String(Math.max(p.minOpacity,1-abs*.34));
+          item.style.zIndex=String(40-abs*10);
+          item.classList.toggle('is-active',off===0);
+        });
+        updateDots();
+      };
+
+      const motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
+      const sleepMorphDelay=1200;
+      let companionStopped=false;
+      let companionAnimating=false;
+      let companionTimer=null;
+      const companionTimeouts=new Set();
+      const queueCompanion=(fn,delay)=>{
+        const id=window.setTimeout(()=>{
+          companionTimeouts.delete(id);
+          fn();
+        },delay);
+        companionTimeouts.add(id);
+        return id;
+      };
+      const clearCompanionTimeouts=()=>{
+        companionTimeouts.forEach((id)=>window.clearTimeout(id));
+        companionTimeouts.clear();
+      };
+      const setSpanielState=(state)=>{
+        if(!spaniel) return;
+        spaniel.dataset.state=state;
+      };
+      const setSpanielSleepUi=({showText=false,canWake=false,text='Zzzz'}={})=>{
+        if(!spaniel) return;
+        spaniel.dataset.showSleepText=showText?'true':'false';
+        spaniel.dataset.canWake=canWake?'true':'false';
+        if(spanielSleepText) spanielSleepText.textContent=text;
+      };
+      const setSpanielSleepPose=(active)=>{
+        if(!spaniel) return;
+        spaniel.dataset.sleepPose=active?'true':'false';
+      };
+      const setSpanielX=(value)=>{
+        if(!spaniel) return;
+        spaniel.style.setProperty('--companion-x',`${Math.round(value)}px`);
+      };
+      const restSpaniel=({showText=false,canWake=false,useSleepPose=false}={})=>{
+        clearCompanionTimeouts();
+        companionAnimating=false;
+        setSpanielX(0);
+        if(spaniel) spaniel.dataset.compactCycle='false';
+        setSpanielState('sleeping');
+        setSpanielSleepPose(useSleepPose);
+        setSpanielSleepUi({showText,canWake});
+      };
+      const stopSpaniel=()=>{
+        if(companionStopped) return;
+        companionStopped=true;
+        if(companionTimer!==null){
+          window.clearInterval(companionTimer);
+          companionTimer=null;
+        }
+        restSpaniel({showText:true,canWake:true,useSleepPose:true});
+      };
+      const wakeSpaniel=()=>{
+        if(!spaniel || !companionStopped) return;
+        companionStopped=false;
+        setSpanielState('sleeping');
+        setSpanielSleepPose(false);
+        setSpanielSleepUi({showText:false,canWake:false});
+        if(companionTimer===null && !motionQuery.matches){
+          companionTimer=window.setInterval(runSpanielCycle,5000);
+        }
+        queueCompanion(runSpanielCycle,sleepMorphDelay);
+      };
+
+      const setActive=(i)=>{
+        activeIndex=wrapIndex(i);
+        render();
+      };
+
+      /* Build dots */
+      if(offersDots){
+        offersDots.innerHTML='';
+        offerItems.forEach((item,index)=>{
+          const dot=document.createElement('button');
+          dot.type='button';
+          dot.className='carousel-dot';
+          const label=item.querySelector('h3')?.textContent||`offer ${index+1}`;
+          dot.setAttribute('aria-label',`Show ${label}`);
+          dot.addEventListener('click',()=>setActive(index));
+          offersDots.append(dot);
+        });
+      }
+
+      prevBtn?.addEventListener('click',()=>setActive(activeIndex-1));
+      nextBtn?.addEventListener('click',()=>setActive(activeIndex+1));
+
+      /* Keyboard navigation */
+      offersWrap.addEventListener('keydown',(e)=>{
+        if(e.key==='ArrowLeft'){e.preventDefault();setActive(activeIndex-1);}
+        if(e.key==='ArrowRight'){e.preventDefault();setActive(activeIndex+1);}
       });
-      dots?.querySelectorAll('button').forEach((dot, i) => {
-        dot.classList.toggle('is-active', i === active);
-        dot.setAttribute('aria-current', i === active ? 'true' : 'false');
+
+      let wheelDeltaX=0;
+      let wheelResetTimer=null;
+      const carouselInView=()=>{
+        const r=offersWrap.getBoundingClientRect();
+        const vh=window.innerHeight||document.documentElement.clientHeight;
+        return r.top < vh*0.8 && r.bottom > vh*0.2;
+      };
+      const spanielPushX=()=>{
+        const p=currentProfile || profile();
+        const compact=p.wrapWidth<560;
+        const baseLeft=p.companionLeft;
+        const centerCardLeft=(p.wrapWidth-p.cardWidth)/2;
+        const grabEdge=compact?centerCardLeft+p.cardWidth:centerCardLeft;
+        const targetLeft=grabEdge-(p.spanielWidth/2);
+        const maxLeft=p.wrapWidth-p.spanielWidth-baseLeft-8;
+        return Math.round(Math.min(maxLeft,Math.max(0,targetLeft-baseLeft)));
+      };
+      const runSpanielCycle=()=>{
+        if(!spaniel || companionStopped || companionAnimating || motionQuery.matches || document.hidden || !carouselInView()) return;
+        const p=currentProfile || profile();
+        companionAnimating=true;
+        spaniel.dataset.compactCycle=p.wrapWidth<560?'true':'false';
+        setSpanielSleepPose(false);
+        setSpanielSleepUi({showText:false,canWake:false});
+        setSpanielState('pulling');
+        setSpanielX(spanielPushX());
+        const compactCycle=p.wrapWidth<560;
+        const tugDelay=compactCycle?2560:1020;
+        queueCompanion(()=>{
+          if(companionStopped) return;
+          setSpanielState('dragging');
+          setActive(activeIndex+1);
+          setSpanielX(0);
+        },tugDelay);
+        queueCompanion(()=>{
+          companionAnimating=false;
+          restSpaniel();
+        },tugDelay+(compactCycle?1400:700));
+      };
+      spaniel?.addEventListener('pointerdown',(e)=>{
+        if(!companionStopped) return;
+        e.preventDefault();
+        e.stopPropagation();
+        wakeSpaniel();
       });
-    };
+      spaniel?.addEventListener('touchstart',(e)=>{
+        if(!companionStopped) return;
+        e.preventDefault();
+        e.stopPropagation();
+        wakeSpaniel();
+      },{passive:false});
+      offersWrap.addEventListener('wheel',(e)=>{
+        if(!carouselInView()) return;
+        const mostlyHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.35;
+        const horizontalIntent = mostlyHorizontal || (e.shiftKey && Math.abs(e.deltaY)>0);
+        if(!horizontalIntent) return;
+        e.preventDefault();
+        wheelDeltaX += mostlyHorizontal ? e.deltaX : e.deltaY;
+        if(Math.abs(wheelDeltaX) > 34){
+          setActive(activeIndex + (wheelDeltaX > 0 ? 1 : -1));
+          wheelDeltaX = 0;
+        }
+        clearTimeout(wheelResetTimer);
+        wheelResetTimer=setTimeout(()=>{wheelDeltaX=0;},120);
+      },{passive:false});
 
-    slides.forEach((slide, i) => {
-      const dot = document.createElement('button');
-      dot.className = 'carousel-dot';
-      dot.type = 'button';
-      dot.setAttribute('aria-label', `Show collection ${i + 1}`);
-      dot.addEventListener('click', () => showSlide(i));
-      dots?.appendChild(dot);
-    });
+      let touchStartX=null;
+      offersWrap.addEventListener('touchstart',(e)=>{touchStartX=e.touches[0]?.clientX??null;},{passive:true});
+      offersWrap.addEventListener('touchstart',(e)=>{
+        if(!e.target.closest('[data-spaniel]')) stopSpaniel();
+      },{passive:true});
+      offersWrap.addEventListener('touchend',(e)=>{
+        if(touchStartX===null) return;
+        const endX=e.changedTouches[0]?.clientX??touchStartX;
+        const dx=endX-touchStartX;
+        if(Math.abs(dx)>32) setActive(activeIndex+(dx<0?1:-1));
+        touchStartX=null;
+      },{passive:true});
 
-    document.querySelector('[data-prev]')?.addEventListener('click', () => showSlide(active - 1));
-    document.querySelector('[data-next]')?.addEventListener('click', () => showSlide(active + 1));
-    carousel?.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowLeft') showSlide(active - 1);
-      if (event.key === 'ArrowRight') showSlide(active + 1);
-    });
+      /* Mouse / pointer drag (desktop) */
+      let pointerStartX=null;
+      let pointerDragging=false;
+      let dragMoved=false;
+      offersWrap.addEventListener('pointerdown',(e)=>{
+        if(e.pointerType==='mouse' && e.button!==0) return;
+        if(!e.target.closest('[data-spaniel]')) stopSpaniel();
+        pointerStartX=e.clientX;
+        pointerDragging=true;
+        dragMoved=false;
+        offersWrap.classList.add('is-dragging');
+      });
+      offersWrap.addEventListener('pointermove',(e)=>{
+        if(!pointerDragging || pointerStartX===null) return;
+        const dx=e.clientX-pointerStartX;
+        if(Math.abs(dx)>8) dragMoved=true;
+      });
+      offersWrap.addEventListener('pointerup',(e)=>{
+        if(!pointerDragging || pointerStartX===null) return;
+        const dx=e.clientX-pointerStartX;
+        if(Math.abs(dx)>28) setActive(activeIndex+(dx<0?1:-1));
+        pointerStartX=null;
+        pointerDragging=false;
+        offersWrap.classList.remove('is-dragging');
+      });
+      offersWrap.addEventListener('pointerleave',()=>{
+        pointerStartX=null;
+        pointerDragging=false;
+        offersWrap.classList.remove('is-dragging');
+      });
+      offersWrap.addEventListener('pointercancel',()=>{
+        pointerStartX=null;
+        pointerDragging=false;
+        offersWrap.classList.remove('is-dragging');
+      });
 
-    showSlide(0);
+      offerItems.forEach((item, index)=>{
+        item.addEventListener('click',(e)=>{
+          if(dragMoved) return;
+          const off=relOffset(index);
+          if(off !== 0) {
+            e.preventDefault();
+            setActive(index);
+            return;
+          }
+          const interactive=e.target.closest('a,button,input,textarea,select,label');
+          if(interactive) return;
+          const href=item.dataset.href || item.querySelector('a[href]')?.getAttribute('href');
+          if(href) window.location.href=href;
+        });
+      });
+
+      window.addEventListener('resize',render);
+      if('ResizeObserver' in window){
+        const resizeObserver=new ResizeObserver(render);
+        resizeObserver.observe(offersWrap);
+      }
+      render();
+      restSpaniel();
+      if(spaniel && !motionQuery.matches){
+        companionTimer=window.setInterval(runSpanielCycle,5000);
+      }
+    }
+
+    const metricEls=[...document.querySelectorAll('.metric-value[data-count]')];
+    if(metricEls.length){
+      const runCounter=(el)=>{
+        const target=parseInt(el.dataset.count||'0',10);
+        const suffix=el.dataset.suffix||'';
+        const duration=900;
+        const start=performance.now();
+        const tick=(now)=>{
+          const p=Math.min(1,(now-start)/duration);
+          const eased=1-Math.pow(1-p,3);
+          el.textContent=`${Math.round(target*eased)}${suffix}`;
+          if(p<1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      };
+      const io=new IntersectionObserver((entries)=>{
+        entries.forEach((entry)=>{
+          if(!entry.isIntersecting) return;
+          runCounter(entry.target);
+          io.unobserve(entry.target);
+        });
+      },{threshold:.45});
+      metricEls.forEach((el)=>io.observe(el));
+    }
   </script>
 </body>
 </html>

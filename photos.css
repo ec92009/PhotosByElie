@@ -334,12 +334,21 @@
 }
 .basket-item{
   display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-columns:74px minmax(0,1fr) auto;
   gap:14px;
   align-items:start;
   border:1px solid var(--line);
   background:var(--bg);
   padding:14px;
+}
+.basket-thumb{
+  width:74px;
+  min-height:74px;
+  aspect-ratio:1;
+  align-self:stretch;
+}
+.basket-thumb span{
+  display:none;
 }
 .basket-item h3{
   margin:0;
@@ -383,9 +392,14 @@
     grid-column:auto;
   }
   .basket-item{
-    grid-template-columns:1fr;
+    grid-template-columns:62px minmax(0,1fr);
   }
   .basket-item-actions{
+    grid-column:2;
     justify-items:start;
+  }
+  .basket-thumb{
+    width:62px;
+    min-height:62px;
   }
 }

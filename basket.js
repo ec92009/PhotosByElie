@@ -13,6 +13,15 @@ const writeBasket = (items) => {
 };
 
 const formatMoney = (value) => `$${value}`;
+const allCollections = window.photosByElieData || {};
+
+const photoForItem = (item) => {
+  const entry = Object.values(allCollections).find((collection) =>
+    collection.photos.some((photo) => photo.id === item.photoId)
+  );
+  const photo = entry?.photos.find((candidate) => candidate.id === item.photoId);
+  return { collection: entry, photo };
+};
 
 const basketRoot = document.querySelector("[data-basket-root]");
 const emptyState = document.querySelector("[data-empty-basket]");
@@ -32,8 +41,14 @@ const renderBasket = () => {
   checkoutButton.disabled = items.length === 0;
   clearButton.disabled = items.length === 0;
 
-  basketRoot.innerHTML = items.map((item, index) => `
+  basketRoot.innerHTML = items.map((item, index) => {
+    const { collection, photo } = photoForItem(item);
+    const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
+    return `
     <article class="basket-item">
+      <a class="basket-thumb mock-photo ${thumbClasses}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
+        <span>${item.title}</span>
+      </a>
       <div>
         <p class="eyebrow">${item.collection || "Collection"}</p>
         <h3>${item.title}</h3>
@@ -46,7 +61,7 @@ const renderBasket = () => {
         <button class="btn secondary" type="button" data-remove-item="${index}">Remove</button>
       </div>
     </article>
-  `).join("");
+  `}).join("");
 
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {

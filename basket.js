@@ -14,6 +14,7 @@ const writeBasket = (items) => {
 
 const formatMoney = (value) => `$${value}`;
 const allCollections = window.photosByElieData || {};
+const resolutionOptions = window.photosByElieResolutions || [];
 
 const photoForItem = (item) => {
   const entry = Object.values(allCollections).find((collection) =>
@@ -44,6 +45,7 @@ const renderBasket = () => {
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
+    const selectedIds = new Set((item.options || []).map((option) => option.id));
     return `
     <article class="basket-item">
       <a class="basket-thumb mock-photo ${thumbClasses}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
@@ -52,9 +54,15 @@ const renderBasket = () => {
       <div>
         <p class="eyebrow">${item.collection || "Collection"}</p>
         <h3>${item.title}</h3>
-        <ul>
-          ${(item.options || []).map((option) => `<li>${option.label} - ${formatMoney(option.price)}</li>`).join("")}
-        </ul>
+        <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
+          ${resolutionOptions.map((option) => `
+            <label>
+              <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
+              <span>${option.label}</span>
+              <b>${formatMoney(option.price)}</b>
+            </label>
+          `).join("")}
+        </div>
       </div>
       <div class="basket-item-actions">
         <strong>${formatMoney(Number(item.total) || 0)}</strong>
@@ -69,6 +77,24 @@ const renderBasket = () => {
       next.splice(Number(button.dataset.removeItem), 1);
       writeBasket(next);
       status.textContent = "Item removed from basket.";
+      renderBasket();
+    });
+  });
+
+  document.querySelectorAll("[data-basket-resolution]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const next = readBasket();
+      const itemIndex = Number(input.dataset.basketResolution);
+      const item = next[itemIndex];
+      if (!item) return;
+      const checkedIds = Array.from(document.querySelectorAll(`[data-basket-resolution="${itemIndex}"]:checked`))
+        .map((checkbox) => checkbox.value);
+      item.options = resolutionOptions
+        .filter((option) => checkedIds.includes(option.id))
+        .map((option) => ({ id: option.id, label: option.label, price: option.price }));
+      item.total = item.options.reduce((sum, option) => sum + option.price, 0);
+      writeBasket(next);
+      status.textContent = `${item.title} license options updated.`;
       renderBasket();
     });
   });

@@ -353,9 +353,31 @@
 .basket-item h3{
   margin:0;
 }
-.basket-item ul{
-  margin:8px 0 0;
-  padding-left:18px;
+.basket-resolution-grid{
+  display:grid;
+  gap:6px;
+  margin-top:10px;
+}
+.basket-resolution-grid label{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  border:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+  background:var(--surface);
+  padding:7px 9px;
+  cursor:pointer;
+}
+.basket-resolution-grid input{
+  width:16px;
+  height:16px;
+  accent-color:var(--text);
+}
+.basket-resolution-grid span{
+  color:var(--text);
+  font-weight:700;
+}
+.basket-resolution-grid b{
   color:var(--muted);
 }
 .basket-item-actions{

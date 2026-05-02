@@ -14,20 +14,15 @@ const photoForItem = (item) => {
 const basketRoot = document.querySelector("[data-basket-root]");
 const emptyState = document.querySelector("[data-empty-basket]");
 const basketTotal = document.querySelector("[data-basket-total]");
-const basketCount = document.querySelector("[data-basket-count]");
-const checkoutButton = document.querySelector("[data-checkout]");
-const clearButton = document.querySelector("[data-clear-basket]");
 const status = document.querySelector("[data-basket-status]");
 
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const fileCount = items.reduce((sum, item) => sum + (item.options || []).length, 0);
 
-  basketCount.textContent = String(items.length);
-  basketTotal.textContent = formatMoney(total);
+  basketTotal.textContent = `${fileCount} ${fileCount === 1 ? "file" : "files"}, ${formatMoney(total)}`;
   emptyState.hidden = items.length !== 0;
-  checkoutButton.disabled = items.length === 0;
-  clearButton.disabled = items.length === 0;
 
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
@@ -85,28 +80,10 @@ const renderBasket = () => {
       basketStore.updateOptions(itemIndex, checkedIds);
       status.textContent = checkedIds.length
         ? `${item.title} license options updated.`
-        : `${item.title} has no selected license options. Use Remove to delete the photo.`;
+        : `${item.title} has no selected license files. Use Remove to delete the photo.`;
       renderBasket();
     });
   });
 };
-
-clearButton.addEventListener("click", () => {
-  basketStore.clear();
-  status.textContent = "Basket cleared.";
-  renderBasket();
-});
-
-checkoutButton.addEventListener("click", () => {
-  const items = basketStore.read();
-  if (!items.length) return;
-  const summary = items.map((item) => {
-    const options = (item.options || []).map((option) => option.label).join(", ") || "No resolution selected";
-    return `${item.collection}: ${item.title} (${options}) - ${formatMoney(Number(item.total) || 0)}`;
-  }).join("\n");
-  const subject = encodeURIComponent("Photos By Elie basket request");
-  const body = encodeURIComponent(`Please prepare this photo order:\n\n${summary}\n\nTotal: ${basketTotal.textContent}`);
-  window.location.href = `mailto:?subject=${subject}&body=${body}`;
-});
 
 renderBasket();

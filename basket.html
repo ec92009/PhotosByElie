@@ -7,9 +7,9 @@
   <meta name="description" content="Local basket for selected Photos By Elie mock photo licenses."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=63.29"/>
-  <link rel="stylesheet" href="./styles.css?v=63.29"/>
-  <link rel="stylesheet" href="./photos.css?v=63.29"/>
+  <link rel="stylesheet" href="./shared.css?v=63.30"/>
+  <link rel="stylesheet" href="./styles.css?v=63.30"/>
+  <link rel="stylesheet" href="./photos.css?v=63.30"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,37 +22,28 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./basket.html">Basket</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.29</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v63.30</div>
     <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
   </header>
   <main id="main-content" class="shell">
     <section class="panel gallery-hero">
       <p class="eyebrow">Local browser basket</p>
       <h1>Basket</h1>
-      <p class="lead">This static-site basket is saved in this browser only. Checkout is mocked as an email request.</p>
+      <p class="lead">This static-site basket is saved in this browser only.</p>
       <div class="cta">
         <a class="btn secondary" href="./">Back to collections</a>
       </div>
     </section>
     <section class="panel basket-panel">
-      <div class="basket-toolbar">
-        <div class="basket-summary">
-          <strong><span data-basket-count>0</span> item(s)</strong>
-          <strong>Total: <span data-basket-total>$0</span></strong>
-        </div>
-        <div class="basket-page-actions">
-          <button class="btn secondary" type="button" data-clear-basket>Clear basket</button>
-          <button class="btn primary" type="button" data-checkout>Request checkout</button>
-        </div>
-      </div>
       <p class="empty-basket" data-empty-basket>Your basket is empty.</p>
       <div class="basket-list" data-basket-root></div>
+      <p class="basket-total-line" data-basket-total>0 files, $0</p>
       <p class="basket-status" data-basket-status aria-live="polite"></p>
     </section>
   </main>
-  <script src="./photos.js?v=63.29"></script>
-  <script src="./photos-data.js?v=63.29"></script>
-  <script src="./basket-store.js?v=63.29"></script>
-  <script src="./basket.js?v=63.29"></script>
+  <script src="./photos.js?v=63.30"></script>
+  <script src="./photos-data.js?v=63.30"></script>
+  <script src="./basket-store.js?v=63.30"></script>
+  <script src="./basket.js?v=63.30"></script>
 </body>
 </html>

@@ -52,7 +52,16 @@ const preview = document.querySelector("[data-photo-preview]");
 preview.classList.add(collection.accent, photo.className);
 if (photo.imageSrc) {
   preview.classList.add("has-image");
-  preview.insertAdjacentHTML("afterbegin", `<img src="${photo.imageSrc}" alt="${photo.title}"/>`);
+  const img = document.createElement("img");
+  const setPreviewAspectRatio = () => {
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    preview.style.setProperty("--detail-aspect", `${img.naturalWidth} / ${img.naturalHeight}`);
+  };
+  img.src = photo.imageSrc;
+  img.alt = photo.title;
+  img.addEventListener("load", setPreviewAspectRatio);
+  if (img.complete) setPreviewAspectRatio();
+  preview.prepend(img);
 }
 preview.querySelector("span").textContent = photo.title;
 

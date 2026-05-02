@@ -50,7 +50,25 @@ window.photosByElieData = {
       { id: "spain-7", className: "p7", title: "Spain Frame 07", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-07.jpg" },
       { id: "spain-8", className: "p8", title: "Spain Frame 08", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-08.jpg" },
       { id: "spain-9", className: "p9", title: "Spain Frame 09", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-09.jpg" },
-      { id: "spain-10", className: "p10", title: "Spain Frame 10", caption: "Random Lightroom selection from the Spain archive, prepared as a web preview.", full: "DNG/JPG master", megapixels: 21, imageSrc: "./assets/spain/spain-10.jpg" }
+      {
+        id: "spain-10",
+        className: "p10",
+        title: "Between Lisbon, Portugal and Madrid, Spain",
+        caption: "Metadata title from the Lightroom export; preview filename is generic, but the embedded title and keywords place the frame around Madrid, Spain.",
+        full: "DNG/JPG master",
+        megapixels: 21,
+        imageSrc: "./assets/spain/spain-10.jpg",
+        metadata: [
+          { label: "Metadata title", value: "Between Lisbon, Portugal and Madrid, Spain" },
+          { label: "Keywords", value: "Madrid, Spain" },
+          { label: "Captured", value: "May 21, 2018, 09:35:54" },
+          { label: "Preview file", value: "spain-10.jpg / 1800 x 1200 / Display P3" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom 13.0.1 Classic" },
+          { label: "Lens", value: "70.0-300.0 mm f/4.5-6.3" },
+          { label: "Exposure", value: "1/1000 sec at f/4.5, ISO 100" },
+          { label: "Focal length", value: "70 mm / 105 mm equivalent" }
+        ]
+      }
     ]
   },
   mexico: {

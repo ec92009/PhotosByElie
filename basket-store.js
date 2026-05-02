@@ -49,9 +49,11 @@
     });
 
     return Array.from(byPhoto.values()).map((item) => {
+      const photo = photoById(item.photoId);
       const options = normalizeOptions(item.options, item.photoId);
       return {
         ...item,
+        title: photo?.title || item.title,
         options,
         total: options.reduce((sum, option) => sum + option.price, 0)
       };

@@ -35,6 +35,19 @@ document.querySelector("[data-photo-meta]").textContent = `${collection.title} /
 document.querySelector("[data-photo-caption]").textContent = photo.caption;
 document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
 
+const metadataRoot = document.querySelector("[data-photo-metadata]");
+const metadata = Array.isArray(photo.metadata) ? photo.metadata.filter((item) => item.label && item.value) : [];
+metadataRoot.hidden = metadata.length === 0;
+metadataRoot.replaceChildren(...metadata.map((item) => {
+  const row = document.createElement("div");
+  const label = document.createElement("dt");
+  const value = document.createElement("dd");
+  label.textContent = item.label;
+  value.textContent = item.value;
+  row.append(label, value);
+  return row;
+}));
+
 const preview = document.querySelector("[data-photo-preview]");
 preview.classList.add(collection.accent, photo.className);
 if (photo.imageSrc) {

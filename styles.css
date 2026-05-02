@@ -1,0 +1,43 @@
+body .hero{
+  background:var(--bg);
+}
+@keyframes hero-fade-up{
+  from{opacity:0;transform:translateY(18px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.hero h1{animation:hero-fade-up .65s ease both;animation-delay:.14s}
+.hero .lead{animation:hero-fade-up .65s ease both;animation-delay:.28s}
+.hero .cta{animation:hero-fade-up .65s ease both;animation-delay:.42s}
+.hero-home h1{
+  font-size:clamp(1.8rem,4.875vw,4.05rem);
+}
+.hero-home .cta .btn{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease;
+}
+.hero-home .cta .btn::before{
+  content:"";
+  position:absolute;
+  inset:-1px auto -1px -30%;
+  width:40%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+  transform:translateX(-170%) skewX(-18deg);
+  transition:transform .45s ease;
+  pointer-events:none;
+}
+.hero-home .cta .btn:hover{
+  transform:translateY(-3px) scale(1.03);
+  box-shadow:0 14px 28px rgba(0,0,0,.16);
+}
+.hero-home .cta .btn:hover::before{
+  transform:translateX(420%) skewX(-18deg);
+}
+@media (prefers-reduced-motion:reduce){
+  .hero h1,.hero .lead,.hero .cta{animation:none}
+  .hero-home .cta .btn::before{
+    display:none;
+  }
+}
+body .grid{grid-template-columns:repeat(2,minmax(0,1fr));}

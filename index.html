@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie | Travel, Product, and AI Image Work</title>
+  <meta name="description" content="Photos By Elie organizes image collections from France, the USA, Spain, and AI-assisted visual experiments."/>
+  <meta property="og:title" content="Photos By Elie"/>
+  <meta property="og:description" content="Image collections from France, the USA, Spain, and AI-assisted visual experiments."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="./assets/byelie-logo.png"/>
+  <meta name="twitter:card" content="summary"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('byelie-theme');
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+      } catch {}
+    })();
+  </script>
+  <link rel="stylesheet" href="./shared.css?v=0.2"/>
+  <link rel="stylesheet" href="./styles.css?v=0.2"/>
+  <link rel="stylesheet" href="./photos.css?v=0.2"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar shell">
+    <nav class="version-switch" aria-label="Site navigation">
+      <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
+      <a class="is-active" href="./">Photos</a>
+    </nav>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v0.2</div>
+    <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+  </header>
+
+  <main id="main-content" class="shell">
+    <section class="panel photo-hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Image archive and client galleries</p>
+        <h1 id="page-title">Photos By Elie</h1>
+        <p class="lead">A focused home for edited collections, private delivery sets, and image experiments organized by place and method.</p>
+        <div class="cta">
+          <a class="btn primary" href="#collections">View collections</a>
+          <a class="btn secondary" href="mailto:">Request gallery access</a>
+        </div>
+      </div>
+      <div class="photo-stack" aria-hidden="true">
+        <span class="photo-print france"></span>
+        <span class="photo-print usa"></span>
+        <span class="photo-print spain"></span>
+      </div>
+    </section>
+
+    <section class="panel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
+      <div class="carousel-head photo-head">
+        <div>
+          <p class="eyebrow">Single level carousel</p>
+          <h2>Collections</h2>
+        </div>
+        <div class="photo-controls" aria-label="Carousel controls">
+          <button class="carousel-btn" type="button" data-prev aria-label="Previous collection">‹</button>
+          <button class="carousel-btn" type="button" data-next aria-label="Next collection">›</button>
+        </div>
+      </div>
+
+      <div class="photo-carousel" data-photo-carousel tabindex="0">
+        <article class="photo-card is-active" data-slide>
+          <div class="photo-art france" aria-hidden="true"></div>
+          <div class="photo-copy">
+            <p class="photo-number">01</p>
+            <h3>France</h3>
+            <p>Street details, market textures, cafe tables, stone villages, and quiet travel frames prepared for curated galleries.</p>
+            <a class="btn secondary" href="./france.html">Open gallery</a>
+          </div>
+        </article>
+        <article class="photo-card" data-slide>
+          <div class="photo-art usa" aria-hidden="true"></div>
+          <div class="photo-copy">
+            <p class="photo-number">02</p>
+            <h3>USA</h3>
+            <p>Roadside scenes, product setups, workshop documentation, and American everyday moments ready for story-driven sets.</p>
+            <a class="btn secondary" href="./usa.html">Open gallery</a>
+          </div>
+        </article>
+        <article class="photo-card" data-slide>
+          <div class="photo-art spain" aria-hidden="true"></div>
+          <div class="photo-copy">
+            <p class="photo-number">03</p>
+            <h3>Spain</h3>
+            <p>Warm streets, architecture, food, coast, and city walks edited into clean web galleries and download packages.</p>
+            <a class="btn secondary" href="./spain.html">Open gallery</a>
+          </div>
+        </article>
+        <article class="photo-card" data-slide>
+          <div class="photo-art ai" aria-hidden="true"></div>
+          <div class="photo-copy">
+            <p class="photo-number">04</p>
+            <h3>AI</h3>
+            <p>Generated concepts, restorations, composites, prompt studies, and visual experiments separated from camera originals.</p>
+            <a class="btn secondary" href="./ai.html">Open gallery</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="carousel-dots photo-dots" data-dots aria-label="Collection pagination"></div>
+    </section>
+
+    <section class="panel photo-workflow">
+      <h2>Archive shape</h2>
+      <div class="metrics-grid">
+        <article class="metric"><span class="metric-value">200GB</span><span class="metric-label">Initial photo ceiling</span></article>
+        <article class="metric"><span class="metric-value">4</span><span class="metric-label">Collection groups</span></article>
+        <article class="metric"><span class="metric-value">R2</span><span class="metric-label">Planned media vault</span></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      <p class="footer-note">© 2026 Photos By Elie &middot; Built to organize visual work</p>
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="https://ec92009.github.io/byElie/">By Elie</a>
+        <a href="#collections">Collections</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    const root = document.documentElement;
+    const key = 'byelie-theme';
+    const btn = document.querySelector('[data-theme-toggle]');
+    btn?.addEventListener('click', () => {
+      root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+      localStorage.setItem(key, root.dataset.theme);
+    });
+
+    const slides = Array.from(document.querySelectorAll('[data-slide]'));
+    const dots = document.querySelector('[data-dots]');
+    const carousel = document.querySelector('[data-photo-carousel]');
+    let active = 0;
+
+    const showSlide = (index) => {
+      active = (index + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('is-active', i === active);
+        slide.setAttribute('aria-hidden', i === active ? 'false' : 'true');
+      });
+      dots?.querySelectorAll('button').forEach((dot, i) => {
+        dot.classList.toggle('is-active', i === active);
+        dot.setAttribute('aria-current', i === active ? 'true' : 'false');
+      });
+    };
+
+    slides.forEach((slide, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'carousel-dot';
+      dot.type = 'button';
+      dot.setAttribute('aria-label', `Show collection ${i + 1}`);
+      dot.addEventListener('click', () => showSlide(i));
+      dots?.appendChild(dot);
+    });
+
+    document.querySelector('[data-prev]')?.addEventListener('click', () => showSlide(active - 1));
+    document.querySelector('[data-next]')?.addEventListener('click', () => showSlide(active + 1));
+    carousel?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') showSlide(active - 1);
+      if (event.key === 'ArrowRight') showSlide(active + 1);
+    });
+
+    showSlide(0);
+  </script>
+</body>
+</html>

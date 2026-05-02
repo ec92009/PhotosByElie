@@ -27,6 +27,7 @@ const updateBasketCount = () => {
 };
 
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
+const status = document.querySelector("[data-basket-status]");
 
 document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;
@@ -45,8 +46,6 @@ if (photo.imageSrc) {
 preview.querySelector("span").textContent = photo.title;
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
-const addButton = document.querySelector("[data-add-basket]");
-addButton.textContent = selectedIds.size ? "Update basket" : "Add to basket";
 
 document.querySelector("[data-resolution-list]").innerHTML = resolutions.map((option) => `
   <label class="resolution-row">
@@ -59,31 +58,26 @@ document.querySelector("[data-resolution-list]").innerHTML = resolutions.map((op
   </label>
 `).join("");
 
-document.querySelectorAll("[data-resolution]").forEach((input) => {
-  input.addEventListener("change", updateTotal);
-});
-
-addButton.addEventListener("click", () => {
+const syncSelectionToBasket = () => {
   const options = selectedOptions();
   const existing = basketItemForPhoto();
-  if (!options.length && !existing) {
-    document.querySelector("[data-basket-status]").textContent = "Choose at least one resolution to add this photo.";
-    return;
-  }
   basketStore.setPhotoOptions({
     photoId: photo.id,
     title: photo.title,
     collection: collection.title,
     options
   });
+  updateTotal();
   updateBasketCount();
-  addButton.textContent = options.length ? "Update basket" : "Add to basket";
-  const message = !options.length
-    ? `${photo.title} removed from basket.`
-    : (existing
-      ? `${photo.title} basket selections updated.`
-      : `${photo.title} added with ${options.length} license option${options.length === 1 ? "" : "s"}.`);
-  document.querySelector("[data-basket-status]").innerHTML = `${message} <a href="./basket.html">View basket</a>`;
+  if (!options.length) {
+    status.textContent = existing ? `${photo.title} removed from basket.` : "No basket selections for this photo.";
+    return;
+  }
+  status.textContent = `${photo.title} basket selections saved.`;
+};
+
+document.querySelectorAll("[data-resolution]").forEach((input) => {
+  input.addEventListener("change", syncSelectionToBasket);
 });
 
 updateTotal();

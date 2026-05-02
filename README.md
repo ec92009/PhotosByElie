@@ -7,7 +7,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 ## Version
 
 - Current visible version: `v63.0`
-- Versioning follows the repo SOP in `AGENTS.md`: day count since `2026-02-28` plus same-day build number.
+- Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
@@ -23,6 +23,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `AGENTS.md`: repo-level working preferences and versioning SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
+- `docs/sops/`: local SOP copies/adaptations
 - `assets/`: shared By Elie logo asset
 
 ## Preview

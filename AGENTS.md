@@ -26,12 +26,11 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Versioning
 
-- Use visible app versions in the form `vX.Y`.
-- `X` is the number of days since `2026-02-28`.
-- `Y` increments with each build/change on that same day.
-- Example: on `2026-04-18` (day 49), start at `v49.0`, then `v49.1`, `v49.2`, and so on.
-- Always bump `Y` for each new build on the same day.
-- Update the version badge in the topbar.
+- Canonical procedure lives in `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`.
+- Local copy/adaptation lives in [`docs/sops/VERSIONING_SOP.md`](./docs/sops/VERSIONING_SOP.md).
+- Apply the versioning SOP when the public site, gallery pages, carousel behavior, viewer UX, or another user-visible surface changes.
+- Do not treat repo-only documentation changes as automatic visible-version bumps by themselves.
+- Update the version badge in the topbar for every user-visible build.
 - Also bump CSS and JS cache-bust query strings (`?v=X.Y`) on `shared.css`, `styles.css`, `photos.css`, and `photos.js` in every HTML file.
 - Keep `VERSION` as the source of the current visible version number without the leading `v`.
 
@@ -48,6 +47,7 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - Start a local server from the repo root: `python3 -m http.server 8000`
 - Home: `http://localhost:8000/`
 - For "show me" flows, serve the repo root and report the localhost URL, LAN URL, public GitHub Pages URL, and exact visible UI version called for by `SHOW_ME_SOP.md`.
+- Per the canonical versioning SOP, report only URLs for viewer surfaces that are actually active.
 - GitHub Pages serves from `main` at `/`; do not recreate a `docs/` mirror.
 
 ## Execution Discipline

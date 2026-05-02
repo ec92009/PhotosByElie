@@ -37,14 +37,14 @@ Built and iterated on the Photos By Elie static GitHub Pages site at `/Users/eco
 ## Versioning And Deployment
 
 - Versioning follows the MailAssist canonical SOP with local PhotosByElie adaptation.
-- Current visible version after this conversation: `v63.8`.
+- Current visible version after this conversation: `v63.9`.
 - Commits were pushed to both `ec92009/PhotosByElie` and `ec92009/Webapps`.
 - GitHub Pages deployments were checked after each push.
 
 ## Current Live URLs
 
-- PhotosByElie: `https://ec92009.github.io/PhotosByElie/?v=63.8`
-- AI gallery: `https://ec92009.github.io/PhotosByElie/ai.html?v=63.8`
-- Example detail: `https://ec92009.github.io/PhotosByElie/photo.html?id=ai-1&v=63.8`
-- Basket: `https://ec92009.github.io/PhotosByElie/basket.html?v=63.8`
-- Hub: `https://ec92009.github.io/Webapps/?v=63.8`
+- PhotosByElie: `https://ec92009.github.io/PhotosByElie/?v=63.9`
+- AI gallery: `https://ec92009.github.io/PhotosByElie/ai.html?v=63.9`
+- Example detail: `https://ec92009.github.io/PhotosByElie/photo.html?id=ai-1&v=63.9`
+- Basket: `https://ec92009.github.io/PhotosByElie/basket.html?v=63.9`
+- Hub: `https://ec92009.github.io/Webapps/?v=63.9`

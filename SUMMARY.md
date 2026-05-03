@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.10`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.11`.
 
 ## Repositories And Folders
 
@@ -37,6 +37,15 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Basket totals moved into a thin sticky band above the basket content so they remain visible while scrolling.
 - Basket rows keep per-photo resolution checkboxes, item totals, thumbnails, and Remove actions.
 - Unchecking all resolution options keeps the basket row available for reselection; Remove deletes the row.
+- Basket entry points now include a Liked button.
+
+## Liked Photos
+
+- Added a heart-shaped checkbox at the top right of the detail preview.
+- Liked photos persist in browser-local storage separately from basket resolution choices.
+- Added `liked.html`, which mirrors the basket page layout but lists hearted photos.
+- Liked photos can have zero selected resolutions; checking resolutions on the Liked page adds those files to the basket immediately.
+- The Liked page total band counts selected files and dollars for liked photos only.
 
 ## Photo Detail Work
 
@@ -68,7 +77,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.10`.
+- Current visible version: `v64.11`.
 - Recent local commits include:
   - `c014ebe photosbyelie: soften preview watermark`
   - `4caae31 photosbyelie: optimize landscape detail previews`

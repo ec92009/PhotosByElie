@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Gallery</title>
-  <meta name="description" content="Mock photo gallery for Photos By Elie."/>
+  <title>Photos By Elie | Liked</title>
+  <meta name="description" content="Local liked photos list for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
   <link rel="stylesheet" href="./shared.css?v=64.11"/>
@@ -14,13 +14,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="mexico">
+<body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <nav class="version-switch" aria-label="Site navigation">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" data-nav-current href="./mexico.html">Gallery</a>
+      <a href="./basket.html">Basket</a> <span>|</span>
+      <a class="is-active" href="./liked.html">Liked</a>
     </nav>
     <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v64.11</div>
     <div class="header-controls">
@@ -28,19 +29,29 @@
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
     </div>
   </header>
+  <aside class="basket-total-band shell" aria-live="polite">
+    <span data-liked-total>0 files, $0</span>
+  </aside>
   <main id="main-content" class="shell">
-    <section class="panel gallery-hero">
-      <p class="eyebrow" data-gallery-number>Collection</p>
-      <h1 data-gallery-title>Gallery</h1>
-      <p class="lead" data-gallery-description></p>
-      <div class="cta"><a class="btn secondary" href="./">Back to collections</a></div>
+    <section class="panel gallery-hero basket-hero">
+      <p class="eyebrow">Local browser likes</p>
+      <h1>Liked</h1>
+      <p class="lead">Photos you marked with a heart are saved in this browser only.</p>
+      <div class="cta">
+        <a class="btn secondary" href="./">Back to collections</a>
+        <a class="btn secondary" href="./basket.html">Basket</a>
+      </div>
     </section>
-    <section class="panel mock-gallery" data-gallery-root></section>
+    <section class="panel basket-panel">
+      <p class="empty-basket" data-empty-liked>No liked photos yet.</p>
+      <div class="basket-list" data-liked-root></div>
+      <p class="basket-status" data-liked-status aria-live="polite"></p>
+    </section>
   </main>
   <script src="./photos.js?v=64.11"></script>
   <script src="./photos-data.js?v=64.11"></script>
-  <script src="./photo-gallery.js?v=64.11"></script>
   <script src="./basket-store.js?v=64.11"></script>
-  <script src="./basket-rail.js?v=64.11"></script>
+  <script src="./liked-store.js?v=64.11"></script>
+  <script src="./liked.js?v=64.11"></script>
 </body>
 </html>

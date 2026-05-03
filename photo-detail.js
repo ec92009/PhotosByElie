@@ -12,6 +12,7 @@ const availableResolutions = window.photosByElieAvailableResolutions
   ? window.photosByElieAvailableResolutions(photo, resolutions)
   : resolutions;
 const basketStore = window.photosByElieBasket;
+const likedStore = window.photosByElieLiked;
 
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
@@ -29,6 +30,7 @@ const updateTotal = () => {
 
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
 const status = document.querySelector("[data-basket-status]");
+const likeToggle = document.querySelector("[data-like-toggle]");
 
 document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;
@@ -92,7 +94,20 @@ if (photo.imageSrc) {
   preview.prepend(img);
 }
 window.addEventListener("resize", syncLandscapePreviewSize);
-preview.querySelector("span").textContent = photo.title;
+preview.querySelector("[data-photo-preview-title]").textContent = photo.title;
+
+if (likeToggle && likedStore) {
+  likeToggle.checked = likedStore.has(photo.id);
+  likeToggle.addEventListener("change", () => {
+    if (likeToggle.checked) {
+      likedStore.add({ photoId: photo.id });
+      status.textContent = `${photo.title} added to liked photos.`;
+      return;
+    }
+    likedStore.remove(photo.id);
+    status.textContent = `${photo.title} removed from liked photos.`;
+  });
+}
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
 

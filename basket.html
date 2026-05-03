@@ -7,9 +7,9 @@
   <meta name="description" content="Local basket for selected Photos By Elie mock photo licenses."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=64.10"/>
-  <link rel="stylesheet" href="./styles.css?v=64.10"/>
-  <link rel="stylesheet" href="./photos.css?v=64.10"/>
+  <link rel="stylesheet" href="./shared.css?v=64.11"/>
+  <link rel="stylesheet" href="./styles.css?v=64.11"/>
+  <link rel="stylesheet" href="./photos.css?v=64.11"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,9 +20,10 @@
     <nav class="version-switch" aria-label="Site navigation">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" href="./basket.html">Basket</a>
+      <a class="is-active" href="./basket.html">Basket</a> <span>|</span>
+      <a href="./liked.html">Liked</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v64.10</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v64.11</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -38,6 +39,7 @@
       <p class="lead">This static-site basket is saved in this browser only.</p>
       <div class="cta">
         <a class="btn secondary" href="./">Back to collections</a>
+        <a class="btn secondary" href="./liked.html">Liked</a>
       </div>
     </section>
     <section class="panel basket-panel">
@@ -46,9 +48,9 @@
       <p class="basket-status" data-basket-status aria-live="polite"></p>
     </section>
   </main>
-  <script src="./photos.js?v=64.10"></script>
-  <script src="./photos-data.js?v=64.10"></script>
-  <script src="./basket-store.js?v=64.10"></script>
-  <script src="./basket.js?v=64.10"></script>
+  <script src="./photos.js?v=64.11"></script>
+  <script src="./photos-data.js?v=64.11"></script>
+  <script src="./basket-store.js?v=64.11"></script>
+  <script src="./basket.js?v=64.11"></script>
 </body>
 </html>

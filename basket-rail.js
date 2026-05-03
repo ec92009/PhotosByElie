@@ -37,7 +37,10 @@
         <span>Total</span>
         <strong>${formatMoney(total)}</strong>
       </div>
-      <a class="btn primary basket-rail-link" href="./basket.html">Open basket</a>
+      <div class="basket-rail-actions">
+        <a class="btn primary basket-rail-link" href="./basket.html">Open basket</a>
+        <a class="btn secondary basket-rail-link" href="./liked.html">Liked</a>
+      </div>
     `;
   };
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-03T10:53:52+00:00",
+  "generated_at": "2026-05-03T10:55:11+00:00",
   "schema_version": 3,
   "source_root_hint": "/Volumes/Saturn/Pictures/LR/Camera",
   "selection": {
@@ -14,7 +14,7 @@
     "filter": {
       "label": "green",
       "min_rating": 4,
-      "years": "2024"
+      "years": "2023"
     }
   },
   "derivatives": {

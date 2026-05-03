@@ -31,7 +31,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `AGENTS.md`: repo-level working preferences and versioning SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
-- `docs/sops/`: local SOP copies/adaptations
+- `docs/sops/`: local SOP copies/adaptations, including versioning and Lightroom image ingestion
 - `assets/`: shared By Elie logo asset, resized Lightroom gallery previews, and resized Leonardo AI gallery images
 
 ## Preview

@@ -90,7 +90,9 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Current visible version: `v64.20`.
 - Latest visible cycle added the Mexico DNG-backed gallery import and completed the first real-photo replacement TODO.
 - Latest USA visible cycle replaced the older Del Mar sample set with the generated 2014 USA sale candidates.
+- Latest repo-only follow-up synced `main` with GitHub, added `docs/sops/IMAGE_INGESTION_SOP.md`, and narrowed the next TODO to automating manifest promotion into `photos-data.js`.
 - Branch state before this docs refresh: `main` was ahead of `origin/main` by 14 local commits.
+- Branch state after the latest sync: local `main` fast-forwarded to `origin/main` at `b3b394c`, then received the repo-only ingestion SOP update.
 - Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.20`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
 - Latest local commits after `origin/main` before this docs refresh include:
   - `79b3ad3 photosbyelie: use verified preview formats`

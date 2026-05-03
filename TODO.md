@@ -5,13 +5,14 @@ Last updated: 2026-05-03
 ## Completed
 
 - Replaced the remaining mock Mexico gallery with ten DNG-backed Puerto Vallarta selections, including preview exports, source file descriptions, megapixel counts, captions, and available derivative notes in `photos-data.js`.
+- Added a repeatable Lightroom thumbnail builder and documented the ingestion, privacy, promotion, and verification workflow in `docs/sops/IMAGE_INGESTION_SOP.md`.
 
 ## Prioritized Next Steps
 
-1. **Create an image ingestion workflow.**
-   - Define a source folder convention for originals and generated JPG sizes.
-   - Generate web thumbnails and gallery previews from full-size files.
-   - Preserve original filenames and write a repeatable manifest so future imports are not manual.
+1. **Automate manifest promotion into `photos-data.js`.**
+   - Convert selected rows from `assets/lightroom/manifest.json` into collection entries.
+   - Preserve public-safe metadata, source file proof, and verified derivative dimensions.
+   - Keep manual review for titles, captions, pricing, and privacy before publishing.
 
 2. **Improve basket checkout from mock email to real order intent.**
    - Keep the current static basket behavior as the source of truth.

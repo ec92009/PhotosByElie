@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v64.18`
+- Current visible version: `v64.19`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -32,7 +32,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations
-- `assets/`: shared By Elie logo asset and resized Leonardo AI gallery images
+- `assets/`: shared By Elie logo asset, resized Lightroom gallery previews, and resized Leonardo AI gallery images
 
 ## Preview
 
@@ -41,8 +41,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 ## Current Behavior
 
 - Collections are ordered France, USA, Spain, Mexico, AI.
-- The France, USA, and Spain galleries use ten randomized resized JPEG previews from their matching `/Volumes/ecohen/Pictures/LR/` folders.
-- The home carousel and hero stack use the first selected France, USA, and Spain previews.
+- The France, USA, Spain, and Mexico galleries use ten resized JPEG previews from their matching Lightroom source folders under `/Users/ecohen/Pictures/LR/`.
+- The home carousel and hero stack use the first selected France, USA, Spain, and Mexico previews.
 - The AI gallery uses eight resized Leonardo-generated JPGs from `~/Pictures/Leonardo/2023/06/08/UPSCALE`.
 - The basket is the source of truth for selected resolutions.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen.
@@ -59,6 +59,6 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Checking or unchecking a resolution on detail immediately updates localStorage.
 - Tapping the heart on a detail preview immediately updates the browser-local liked list.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
-- Full resolution choices show the verified file format, such as `JPG preview/export`, unless a future source-file map proves RAW, TIFF, or PSD availability.
+- Full resolution choices show the verified file format, such as `JPG preview/export`; Mexico entries now prove DNG source availability through `sourceFiles`.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

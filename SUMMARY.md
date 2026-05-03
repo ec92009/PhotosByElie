@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.18`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.19`.
 
 ## Repositories And Folders
 
@@ -14,6 +14,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
   - France: `/Volumes/ecohen/Pictures/LR/France`
   - USA: `/Volumes/ecohen/Pictures/LR/USA`
   - Spain: `/Volumes/ecohen/Pictures/LR/Spain`
+  - Mexico: `/Users/ecohen/Pictures/LR/Mexico`
   - AI samples: `~/Pictures/Leonardo/2023/06/08/UPSCALE`
 - Archive copy completed during the latest follow-up:
   - Source: `/Volumes/Saturn/Pictures/LR/Camera/2024`
@@ -23,7 +24,8 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Major Site Work
 
 - Added ten randomized Lightroom preview images each for France, USA, and Spain.
-- Kept Mexico as a placeholder collection shell and AI as a Leonardo AI gallery.
+- Replaced the Mexico placeholder shell with ten DNG-backed Puerto Vallarta Lightroom selections.
+- AI remains a Leonardo AI gallery.
 - The homepage hero stack and collection carousel use the same representative collection photos.
 - Collection cards use a classic Polaroid-style frame with the handwritten country name below the image.
 - The carousel and hero stack use the classic Polaroid aspect ratio `3.483 / 4.233`.
@@ -65,8 +67,9 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 
 - Extracted metadata for all current image-backed photos into `photos-data.js`.
 - France, USA, Spain, and AI image entries include preview dimensions and available embedded metadata.
+- Mexico image entries now include DNG source file descriptions, 20.7 MP source counts, preview dimensions, captions, and available derivative notes.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
-- Detail pages and Full resolution choices show verified file formats such as `JPG preview/export`; RAW, TIFF, or PSD should only appear after adding explicit source-file proof.
+- Detail pages and Full resolution choices show verified file formats such as `JPG preview/export`; Mexico Full choices now show DNG source proof via `sourceFiles`.
 
 ## Header And Language
 
@@ -83,9 +86,10 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.18`.
+- Current visible version: `v64.19`.
+- Latest visible cycle added the Mexico DNG-backed gallery import and completed the first real-photo replacement TODO.
 - Branch state before this docs refresh: `main` was ahead of `origin/main` by 14 local commits.
-- Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.18`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
+- Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.19`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
 - Latest local commits after `origin/main` before this docs refresh include:
   - `79b3ad3 photosbyelie: use verified preview formats`
   - `9f87949 photosbyelie: refresh handoff summary`

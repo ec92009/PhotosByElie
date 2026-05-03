@@ -1344,48 +1344,228 @@ window.photosByElieData = {
   mexico: {
     number: "04",
     title: "Mexico",
-    description: "Five mock frames for the Mexico gallery: color walls, markets, tile, coast, and courtyard shade.",
+    description: "Ten Lightroom selections from the Mexico photo archive, sourced from Puerto Vallarta DNG originals.",
     accent: "mexico-gallery",
     photos: [
       {
         id: "mexico-1",
         className: "p1",
-        title: "Color Wall Study",
-        caption: "Saturated wall color, hard sun, and a quiet architectural edge.",
-        full: "30 MB DNG",
-        megapixels: 24
+        title: "Puerto Vallarta Canopy Line",
+        caption: "A shaded canopy crossing from the Puerto Vallarta archive, exported from a verified DNG source.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-01.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 8 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Puerto Vallarta Canopy Line" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 10, 2019, 10:19" },
+          { label: "Source file", value: "sa MEXICO 2019 - 8 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-01.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
+          { label: "Exposure", value: "1/125 sec at f/5.3, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
       },
       {
         id: "mexico-2",
         className: "p2",
-        title: "Market Cloth",
-        caption: "Textile pattern, produce color, and compact market rhythm.",
-        full: "28 MB DNG",
-        megapixels: 22
+        title: "Canopy Path Through Green Shade",
+        caption: "A quiet forest-frame view from the same Puerto Vallarta sequence, kept as a landscape preview export.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-02.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 10 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Canopy Path Through Green Shade" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 10, 2019, 10:19" },
+          { label: "Source file", value: "sa MEXICO 2019 - 10 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-02.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
+          { label: "Exposure", value: "1/125 sec at f/5.6, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
       },
       {
         id: "mexico-3",
         className: "p3",
-        title: "Tile Courtyard",
-        caption: "Patterned tile, deep shade, and bright courtyard geometry.",
-        full: "27 MB DNG",
-        megapixels: 22
+        title: "Tropical Rail And Ferns",
+        caption: "Layered green cover and warm light from the Puerto Vallarta Mexico set.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-03.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 24 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Tropical Rail And Ferns" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 10, 2019, 10:32" },
+          { label: "Source file", value: "sa MEXICO 2019 - 24 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-03.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
+          { label: "Exposure", value: "1/160 sec at f/6.3, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
       },
       {
         id: "mexico-4",
         className: "p4",
-        title: "Coastal Doorway",
-        caption: "Blue-green doorway color with warm wall and sea-air light.",
-        full: "29 MB DNG",
-        megapixels: 24
+        title: "Jungle Outlook",
+        caption: "A wider canopy overlook with warm late-morning haze and dense framing branches.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-04.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 30 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Jungle Outlook" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 10, 2019, 10:37" },
+          { label: "Source file", value: "sa MEXICO 2019 - 30 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-04.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
+          { label: "Exposure", value: "1/250 sec at f/8, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
       },
       {
         id: "mexico-5",
         className: "p5",
-        title: "Evening Plaza",
-        caption: "Plaza glow, dark silhouettes, and a warm evening color study.",
-        full: "30 MB DNG",
-        megapixels: 24
+        title: "Morning Offshore Lines",
+        caption: "Open-water morning light and quiet deck geometry from the Puerto Vallarta set.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-05.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 45 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Morning Offshore Lines" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 11, 2019, 05:18" },
+          { label: "Source file", value: "sa MEXICO 2019 - 45 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-05.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "17-50 mm f/2.8" },
+          { label: "Exposure", value: "1/200 sec at f/7.1, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
+      },
+      {
+        id: "mexico-6",
+        className: "p6",
+        title: "Blue Water Deck Edge",
+        caption: "A bright offshore moment with the horizon held low and the deck cutting through the frame.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-06.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 46 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Blue Water Deck Edge" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 11, 2019, 07:43" },
+          { label: "Source file", value: "sa MEXICO 2019 - 46 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-06.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "17-50 mm f/2.8" },
+          { label: "Exposure", value: "1/400 sec at f/10, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
+      },
+      {
+        id: "mexico-7",
+        className: "p7",
+        title: "White Deck In High Sun",
+        caption: "Strong midday contrast, open water, and clean boat-deck lines from the Mexico archive.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-07.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 52 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "White Deck In High Sun" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 11, 2019, 07:44" },
+          { label: "Source file", value: "sa MEXICO 2019 - 52 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-07.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "17-50 mm f/2.8" },
+          { label: "Exposure", value: "1/500 sec at f/11, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
+      },
+      {
+        id: "mexico-8",
+        className: "p8",
+        title: "Offshore Stern Study",
+        caption: "A second bright-water frame from the same sequence, selected for layout variety and movement.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-08.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 55 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Offshore Stern Study" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 11, 2019, 07:44" },
+          { label: "Source file", value: "sa MEXICO 2019 - 55 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-08.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "17-50 mm f/2.8" },
+          { label: "Exposure", value: "1/500 sec at f/11, ISO 100" },
+          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
+        ]
+      },
+      {
+        id: "mexico-9",
+        className: "p9",
+        title: "Warm Sky Wing Study",
+        caption: "Long-lens profile against a simple warm sky from the Puerto Vallarta morning sequence.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-09.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 63 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Warm Sky Wing Study" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
+          { label: "Captured", value: "June 11, 2019, 09:12" },
+          { label: "Source file", value: "sa MEXICO 2019 - 63 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-09.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "70-300 mm f/4.5-6.3" },
+          { label: "Exposure", value: "1/500 sec at f/9, ISO 100" },
+          { label: "Focal length", value: "300 mm / 450 mm equivalent" }
+        ]
+      },
+      {
+        id: "mexico-10",
+        className: "p10",
+        title: "Iguana In Dappled Shade",
+        caption: "A long-lens wildlife portrait from the Puerto Vallarta Mexico archive.",
+        full: "DNG master",
+        megapixels: 20.7,
+        imageSrc: "./assets/mexico/mexico-10.jpg",
+        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 70 of 70.dng", type: "DNG" }],
+        metadata: [
+          { label: "Metadata title", value: "Iguana In Dappled Shade" },
+          { label: "Keywords", value: "Mexico, Puerto Vallarta, Iguana" },
+          { label: "Captured", value: "June 11, 2019, 11:02" },
+          { label: "Source file", value: "sa MEXICO 2019 - 70 of 70.dng / 5568 x 3712 / 20.7 MP" },
+          { label: "Preview file", value: "mexico-10.jpg / 1800 x 1200 / sRGB" },
+          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
+          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
+          { label: "Lens", value: "70-300 mm f/4.5-6.3" },
+          { label: "Exposure", value: "1/200 sec at f/7.1, ISO 100" },
+          { label: "Focal length", value: "300 mm / 450 mm equivalent" }
+        ]
       }
     ]
   },

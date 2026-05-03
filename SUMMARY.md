@@ -93,6 +93,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Latest repo-only follow-up synced `main` with GitHub, added `docs/sops/IMAGE_INGESTION_SOP.md`, and narrowed the next TODO to automating manifest promotion into `photos-data.js`.
 - Branch state before this docs refresh: `main` was ahead of `origin/main` by 14 local commits.
 - Branch state after the latest sync: local `main` fast-forwarded to `origin/main` at `b3b394c`, then received the repo-only ingestion SOP update.
+- Latest 2024 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2024`, saw 335 images, inspected 335 on the first pass, selected 0 matching green/rating-4+ photos, and left the public manifest at the existing five 2014 USA selected rows. A script fix now records the last run separately from the manifest contents.
 - Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.20`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
 - Latest local commits after `origin/main` before this docs refresh include:
   - `79b3ad3 photosbyelie: use verified preview formats`

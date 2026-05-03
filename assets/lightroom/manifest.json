@@ -1,11 +1,21 @@
 {
-  "generated_at": "2026-05-03T10:09:27+00:00",
+  "generated_at": "2026-05-03T10:53:52+00:00",
   "schema_version": 3,
-  "source_root_hint": "/Volumes/Saturn-1/Pictures/LR/Camera",
+  "source_root_hint": "/Volumes/Saturn/Pictures/LR/Camera",
   "selection": {
     "label": "green",
     "min_rating": 4,
-    "years": "2014"
+    "years": [
+      2014
+    ]
+  },
+  "last_run": {
+    "source_root_hint": "/Volumes/Saturn/Pictures/LR/Camera",
+    "filter": {
+      "label": "green",
+      "min_rating": 4,
+      "years": "2024"
+    }
   },
   "derivatives": {
     "gallery_max": 900,

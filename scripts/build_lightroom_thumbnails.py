@@ -726,13 +726,32 @@ def load_manifest(path: Path) -> dict[str, dict[str, Any]]:
     return {row["relative_path"]: row for row in rows if "relative_path" in row}
 
 
+def manifest_years(rows: dict[str, dict[str, Any]]) -> list[int]:
+    years = {
+        int(year)
+        for row in rows.values()
+        for year in [row.get("capture", {}).get("year")]
+        if isinstance(year, int) or (isinstance(year, str) and year.isdigit())
+    }
+    return sorted(years)
+
+
+def run_filter(args: argparse.Namespace) -> dict[str, Any]:
+    return {"label": args.label, "min_rating": args.min_rating, "years": args.years or None}
+
+
 def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    years = manifest_years(rows)
     payload = {
         "generated_at": now_iso(),
         "schema_version": SCHEMA_VERSION,
         "source_root_hint": str(args.source_root),
-        "selection": {"label": args.label, "min_rating": args.min_rating, "years": args.years or None},
+        "selection": {"label": args.label, "min_rating": args.min_rating, "years": years},
+        "last_run": {
+            "source_root_hint": str(args.source_root),
+            "filter": run_filter(args),
+        },
         "derivatives": {
             "gallery_max": args.gallery_max,
             "detail_max": args.detail_max,

@@ -80,12 +80,20 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 
 - Versioning is intentionally bumped every visible web-page cycle.
 - Current visible version: `v64.17`.
-- Recent local commits include:
-  - `c014ebe photosbyelie: soften preview watermark`
-  - `4caae31 photosbyelie: optimize landscape detail previews`
-  - `d21eef8 photosbyelie: add language toggle and basket total band`
-  - `18643f3 photosbyelie: simplify basket total and preserve detail ratio`
-  - `8f0c343 photosbyelie: add metadata to image-backed photos`
+- Branch state before handoff: `main` is ahead of `origin/main` by 12 local commits.
+- Latest local commits after `origin/main` include:
+  - `e7b2a7a photosbyelie: add liked bulk resolution selectors`
+  - `fe42c6c photosbyelie: show source formats`
+  - `ed3cf99 photosbyelie: simplify detail metadata`
+  - `26a798c photosbyelie: simplify home hero`
+  - `b2f9ed0 photosbyelie: simplify basket hero`
+  - `2ca19cc photosbyelie: simplify liked hero`
+  - `00f26ff photosbyelie: add liked photos flow`
+  - `4135ff3 photosbyelie: restore narrow detail basket actions`
+  - `478fad1 photosbyelie: correct visible version day`
+  - `bb56e19 photosbyelie: move detail resolutions into rail`
+  - `83356e2 photosbyelie: widen basket thumbnails`
+  - `66c89b9 photosbyelie: add detail navigation links`
 
 ## Verification
 
@@ -99,3 +107,4 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
   - Landscape detail layout on `france-7`
   - Watermark visibility and softened opacity on `usa-4`
   - Homepage Polaroid watermark overlays
+  - Liked page heart flow and bulk resolution selectors

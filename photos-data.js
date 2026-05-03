@@ -1626,9 +1626,21 @@ window.photosByElieAvailableResolutions = (photo, options = window.photosByElieR
   return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);
 };
 
+window.photosByElieSourceFormats = (photo) => {
+  const source = String(photo?.full || "");
+  const checks = [
+    { label: "RAW", pattern: /\b(DNG|CR2|CR3|NEF|ARW|RAF|ORF|RW2)\b/i },
+    { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },
+    { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },
+    { label: "PSD", pattern: /\bPSD\b/i },
+  ];
+  const formats = checks.filter((item) => item.pattern.test(source)).map((item) => item.label);
+  return formats.length ? formats.join(" + ") : source;
+};
+
 window.photosByElieOriginalSize = (photo) => {
   const megapixels = Number(photo?.megapixels);
-  return [photo?.full, megapixels ? `${megapixels} MP source` : ""].filter(Boolean).join(", ");
+  return [window.photosByElieSourceFormats(photo), megapixels ? `${megapixels} MP source` : ""].filter(Boolean).join(", ");
 };
 
 window.photosByElieResolutionDetail = (photo, option) => {

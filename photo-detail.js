@@ -36,7 +36,11 @@ document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;
 document.querySelector("[data-nav-current]").setAttribute("href", `./${collectionKey}.html`);
 document.querySelector("[data-photo-title]").textContent = photo.title;
-document.querySelector("[data-photo-meta]").textContent = `${collection.title} / ${photo.megapixels} MP source`;
+document.querySelector("[data-photo-meta]").textContent = [
+  collection.title,
+  window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : photo.full,
+  `${photo.megapixels} MP source`
+].filter(Boolean).join(" / ");
 document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");

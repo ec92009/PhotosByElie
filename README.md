@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v64.15`
+- Current visible version: `v64.16`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -58,6 +58,6 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Checking or unchecking a resolution on detail immediately updates localStorage.
 - Tapping the heart on a detail preview immediately updates the browser-local liked list.
 - Resolution choices are limited by each photo's source megapixels; 2 MP AI images only offer full/native and JPG 1 MP.
-- Full resolution choices show the original source size next to the checkbox.
+- Full resolution choices show the original source format family, such as RAW, JPG, TIFF, or PSD, plus the source megapixels.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

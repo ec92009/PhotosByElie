@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.15`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.16`.
 
 ## Repositories And Folders
 
@@ -61,6 +61,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Extracted metadata for all current image-backed photos into `photos-data.js`.
 - France, USA, Spain, and AI image entries include preview dimensions and available embedded metadata.
 - Resolution choices are limited by each photo's source megapixels; smaller AI images only expose the sensible native/JPG options.
+- Detail pages and Full resolution choices show source format families such as RAW, JPG, TIFF, or PSD based on each photo's source metadata.
 
 ## Header And Language
 
@@ -77,7 +78,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.15`.
+- Current visible version: `v64.16`.
 - Recent local commits include:
   - `c014ebe photosbyelie: soften preview watermark`
   - `4caae31 photosbyelie: optimize landscape detail previews`

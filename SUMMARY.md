@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.14`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.15`.
 
 ## Repositories And Folders
 
@@ -53,7 +53,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Landscape images now use a wide, space-maximizing detail layout with metadata below the image.
 - Portrait treatment remains unchanged.
 - Detail titles prefer useful metadata titles or non-generic filenames instead of generic labels where available.
-- Detail pages surface available metadata including metadata title, description, keywords, capture time, preview file dimensions/color profile, software, lens, exposure, and focal length.
+- Detail pages surface available metadata including metadata title, description, keywords, capture time, software, lens, exposure, and focal length.
 - Exact GPS and personal/family keywords were filtered out of the metadata shown in the app.
 
 ## Metadata
@@ -77,7 +77,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.14`.
+- Current visible version: `v64.15`.
 - Recent local commits include:
   - `c014ebe photosbyelie: soften preview watermark`
   - `4caae31 photosbyelie: optimize landscape detail previews`

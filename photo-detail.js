@@ -36,8 +36,7 @@ document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;
 document.querySelector("[data-nav-current]").setAttribute("href", `./${collectionKey}.html`);
 document.querySelector("[data-photo-title]").textContent = photo.title;
-document.querySelector("[data-photo-meta]").textContent = `${collection.title} / ${photo.full} / ${photo.megapixels} MP source`;
-document.querySelector("[data-photo-caption]").textContent = photo.caption;
+document.querySelector("[data-photo-meta]").textContent = `${collection.title} / ${photo.megapixels} MP source`;
 document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");
@@ -54,7 +53,9 @@ if (prevPhotoLink && nextPhotoLink && collection.photos.length > 1) {
 }
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
-const metadata = Array.isArray(photo.metadata) ? photo.metadata.filter((item) => item.label && item.value) : [];
+const metadata = Array.isArray(photo.metadata)
+  ? photo.metadata.filter((item) => item.label && item.value && item.label !== "Preview file")
+  : [];
 metadataRoot.hidden = metadata.length === 0;
 metadataRoot.replaceChildren(...metadata.map((item) => {
   const row = document.createElement("div");

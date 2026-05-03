@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v64.14`
+- Current visible version: `v64.15`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -53,7 +53,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The header includes a single language button cycling English, French, and Spanish; it persists the selected state for later translation work.
 - Detail pages start with no resolution checked unless that photo is already in the basket.
 - Detail pages preserve the original preview aspect ratio; landscape previews use a wide, space-maximizing layout while portrait previews keep the existing treatment.
-- Detail pages surface available embedded metadata such as metadata title, description, capture time, preview file dimensions, software, lens, exposure, and focal length.
+- Detail pages surface available embedded metadata such as metadata title, description, capture time, software, lens, exposure, and focal length.
 - Visible `PhotosByElie` watermark overlays protect homepage, gallery, basket, and detail preview images.
 - Checking or unchecking a resolution on detail immediately updates localStorage.
 - Tapping the heart on a detail preview immediately updates the browser-local liked list.

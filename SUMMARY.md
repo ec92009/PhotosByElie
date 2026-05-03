@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.9`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.10`.
 
 ## Repositories And Folders
 
@@ -68,7 +68,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.9`.
+- Current visible version: `v64.10`.
 - Recent local commits include:
   - `c014ebe photosbyelie: soften preview watermark`
   - `4caae31 photosbyelie: optimize landscape detail previews`

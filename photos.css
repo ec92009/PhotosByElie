@@ -478,6 +478,9 @@ html[data-theme="light"] .mock-photo.has-image::after{
   margin:0;
   color:var(--muted);
 }
+.detail-mobile-basket{
+  display:none;
+}
 .basket-panel{
   display:flex;
   flex-direction:column;
@@ -625,6 +628,14 @@ html[data-theme="light"] .mock-photo.has-image::after{
   }
   .photo-metadata{
     grid-template-columns:1fr;
+  }
+}
+@media (max-width:959px){
+  .detail-mobile-basket{
+    display:flex;
+  }
+  .purchase-panel .basket-status{
+    grid-column:auto;
   }
 }
 @media (min-width:960px){

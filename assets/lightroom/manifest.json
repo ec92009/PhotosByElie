@@ -1,0 +1,805 @@
+{
+  "generated_at": "2026-05-03T09:54:36+00:00",
+  "schema_version": 2,
+  "source_root_hint": "/Volumes/Saturn-1/Pictures/LR/Camera",
+  "selection": {
+    "label": "green",
+    "min_rating": 4,
+    "years": "2014"
+  },
+  "derivatives": {
+    "gallery_max": 900,
+    "detail_max": 1800,
+    "watermark": "PhotosByElie"
+  },
+  "photos": [
+    {
+      "id": "20140907-1911-06385-5f3a5197a2",
+      "relative_path": "2010-2014/20140907 1911 06385.jpg",
+      "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20140907 1911 06385.jpg",
+      "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20140907 1911 06385.jpg",
+      "derivatives": {
+        "gallery": "gallery/20140907-1911-06385-5f3a5197a2.jpg",
+        "detail": "detail/20140907-1911-06385-5f3a5197a2.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Photo Stream"
+      ],
+      "capture": {
+        "raw": "2014:09:07 19:11:41",
+        "year": 2014,
+        "month": 9,
+        "day": 7,
+        "date": "2014-09-07",
+        "time": "19:11:41",
+        "sort": "2014-09-07T19:11:41"
+      },
+      "dimensions": {
+        "width": 3196,
+        "height": 2397,
+        "aspect_ratio": 1.3333,
+        "orientation": "landscape",
+        "megapixels": 7.7
+      },
+      "location": {
+        "country": "United States",
+        "region": "California",
+        "city": "Carlsbad",
+        "location": null
+      },
+      "source_file": {
+        "name": "20140907 1911 06385.jpg",
+        "extension": "jpg",
+        "bytes": 1575073,
+        "mtime": "2021-11-10T22:00:36+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Photo Stream"
+        },
+        {
+          "label": "Captured",
+          "value": "2014:09:07 19:11:41"
+        },
+        {
+          "label": "Camera",
+          "value": "Apple iPhone 5s"
+        },
+        {
+          "label": "Lens",
+          "value": "iPhone 5s back camera 4.12mm f/2.2"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/30, f/2.2, ISO 80"
+        },
+        {
+          "label": "Focal length",
+          "value": "4.1 mm / 30 mm equivalent"
+        },
+        {
+          "label": "Location",
+          "value": "Carlsbad, California, United States"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Photoshop Lightroom 6.6 (Macintosh)"
+        },
+        {
+          "label": "Color profile",
+          "value": "ProPhoto RGB"
+        },
+        {
+          "label": "Original file",
+          "value": "20140907 1911 06385.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 3196 x 2397 / 7.7 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 3196,
+        "ImageHeight": 2397,
+        "Megapixels": 7.7,
+        "Make": "Apple",
+        "Model": "iPhone 5s",
+        "Lens": "iPhone 5s back camera 4.12mm f/2.2",
+        "LensModel": "iPhone 5s back camera 4.12mm f/2.2",
+        "ExposureTime": "1/30",
+        "FNumber": 2.2,
+        "ISO": 80,
+        "FocalLength": "4.1 mm",
+        "FocalLengthIn35mmFormat": "30 mm",
+        "DateTimeOriginal": "2014:09:07 19:11:41",
+        "CreateDate": "2014:09:07 19:11:41",
+        "Software": "Adobe Photoshop Lightroom 6.6 (Macintosh)",
+        "ColorSpace": "Uncalibrated",
+        "ProfileDescription": "ProPhoto RGB",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": "Photo Stream",
+        "Keywords": "Photo Stream",
+        "City": "Carlsbad",
+        "State": "California",
+        "Province-State": "California",
+        "Country": "United States",
+        "Country-PrimaryLocationName": "United States"
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": "Photo Stream",
+        "DateTimeOriginal": "2014:09:07 19:11:41",
+        "CreateDate": "2014:09:07 19:11:41",
+        "ImageWidth": 3196,
+        "ImageHeight": 2397,
+        "Megapixels": 7.7
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 675,
+          "aspect_ratio": 1.3333,
+          "bytes": 113598,
+          "path": "gallery/20140907-1911-06385-5f3a5197a2.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1350,
+          "aspect_ratio": 1.3333,
+          "bytes": 340874,
+          "path": "detail/20140907-1911-06385-5f3a5197a2.jpg"
+        },
+        "generated_at": "2026-05-03T09:48:43+00:00"
+      }
+    },
+    {
+      "id": "20141221-1313-00111-ee3b408e47",
+      "relative_path": "2010-2014/20141221 1313 00111.jpg",
+      "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 00111.jpg",
+      "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 00111.jpg",
+      "derivatives": {
+        "gallery": "gallery/20141221-1313-00111-ee3b408e47.jpg",
+        "detail": "detail/20141221-1313-00111-ee3b408e47.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Lake Arrowhead",
+        "Lake Forest",
+        "Panoramic",
+        "public"
+      ],
+      "capture": {
+        "raw": "2014:12:21 13:13:36",
+        "year": 2014,
+        "month": 12,
+        "day": 21,
+        "date": "2014-12-21",
+        "time": "13:13:36",
+        "sort": "2014-12-21T13:13:36"
+      },
+      "dimensions": {
+        "width": 3264,
+        "height": 2448,
+        "aspect_ratio": 1.3333,
+        "orientation": "landscape",
+        "megapixels": 8.0
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20141221 1313 00111.jpg",
+        "extension": "jpg",
+        "bytes": 1571946,
+        "mtime": "2023-11-18T16:42:24+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Lake Arrowhead, Lake Forest, Panoramic, public"
+        },
+        {
+          "label": "Captured",
+          "value": "2014:12:21 13:13:36"
+        },
+        {
+          "label": "Camera",
+          "value": "Apple iPhone 6 Plus"
+        },
+        {
+          "label": "Lens",
+          "value": "iPhone 6 Plus back camera 4.15mm f/2.2"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/9901, f/2.2, ISO 32"
+        },
+        {
+          "label": "Focal length",
+          "value": "4.2 mm / 29 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "8.1.2"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB"
+        },
+        {
+          "label": "Original file",
+          "value": "20141221 1313 00111.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 3264 x 2448 / 8.0 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 3264,
+        "ImageHeight": 2448,
+        "Megapixels": 8.0,
+        "Make": "Apple",
+        "Model": "iPhone 6 Plus",
+        "Lens": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "LensModel": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "ExposureTime": "1/9901",
+        "FNumber": 2.2,
+        "ISO": 32,
+        "FocalLength": "4.2 mm",
+        "FocalLengthIn35mmFormat": "29 mm",
+        "DateTimeOriginal": "2014:12:21 13:13:36",
+        "CreateDate": "2014:12:21 13:13:36",
+        "Software": "8.1.2",
+        "ColorSpace": "sRGB",
+        "Orientation": "Rotate 180",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Arrowhead",
+          "Lake Forest",
+          "Panoramic",
+          "public"
+        ],
+        "Keywords": [
+          "Lake Arrowhead",
+          "Lake Forest",
+          "Panoramic",
+          "public"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Arrowhead",
+          "Lake Forest",
+          "Panoramic",
+          "public"
+        ],
+        "DateTimeOriginal": "2014:12:21 13:13:36",
+        "CreateDate": "2014:12:21 13:13:36",
+        "ImageWidth": 3264,
+        "ImageHeight": 2448,
+        "Megapixels": 8.0
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 675,
+          "aspect_ratio": 1.3333,
+          "bytes": 40649,
+          "path": "gallery/20141221-1313-00111-ee3b408e47.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1350,
+          "aspect_ratio": 1.3333,
+          "bytes": 140367,
+          "path": "detail/20141221-1313-00111-ee3b408e47.jpg"
+        },
+        "generated_at": "2026-05-03T09:47:24+00:00"
+      }
+    },
+    {
+      "id": "20141221-1313-06414-1fb7622ae6",
+      "relative_path": "2010-2014/20141221 1313 06414.jpg",
+      "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 06414.jpg",
+      "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 06414.jpg",
+      "derivatives": {
+        "gallery": "gallery/20141221-1313-06414-1fb7622ae6.jpg",
+        "detail": "detail/20141221-1313-06414-1fb7622ae6.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Lake Forest",
+        "Panoramic",
+        "public"
+      ],
+      "capture": {
+        "raw": "2014:12:21 13:13:36",
+        "year": 2014,
+        "month": 12,
+        "day": 21,
+        "date": "2014-12-21",
+        "time": "13:13:36",
+        "sort": "2014-12-21T13:13:36"
+      },
+      "dimensions": {
+        "width": 3263,
+        "height": 1800,
+        "aspect_ratio": 1.8128,
+        "orientation": "landscape",
+        "megapixels": 5.9
+      },
+      "location": {
+        "country": "United States",
+        "region": "California",
+        "city": "San Bernardino",
+        "location": null
+      },
+      "source_file": {
+        "name": "20141221 1313 06414.jpg",
+        "extension": "jpg",
+        "bytes": 1630229,
+        "mtime": "2021-11-10T22:00:32+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Lake Forest, Panoramic, public"
+        },
+        {
+          "label": "Captured",
+          "value": "2014:12:21 13:13:36"
+        },
+        {
+          "label": "Camera",
+          "value": "Apple iPhone 6 Plus"
+        },
+        {
+          "label": "Lens",
+          "value": "iPhone 6 Plus back camera 4.15mm f/2.2"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/10000, f/2.2, ISO 32"
+        },
+        {
+          "label": "Focal length",
+          "value": "4.2 mm / 29 mm equivalent"
+        },
+        {
+          "label": "Location",
+          "value": "San Bernardino, California, United States"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Photoshop Lightroom 6.6 (Macintosh)"
+        },
+        {
+          "label": "Color profile",
+          "value": "ProPhoto RGB"
+        },
+        {
+          "label": "Original file",
+          "value": "20141221 1313 06414.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 3263 x 1800 / 5.9 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 3263,
+        "ImageHeight": 1800,
+        "Megapixels": 5.9,
+        "Make": "Apple",
+        "Model": "iPhone 6 Plus",
+        "Lens": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "LensModel": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "ExposureTime": "1/10000",
+        "FNumber": 2.2,
+        "ISO": 32,
+        "FocalLength": "4.2 mm",
+        "FocalLengthIn35mmFormat": "29 mm",
+        "DateTimeOriginal": "2014:12:21 13:13:36",
+        "CreateDate": "2014:12:21 13:13:36",
+        "Software": "Adobe Photoshop Lightroom 6.6 (Macintosh)",
+        "ColorSpace": "Uncalibrated",
+        "ProfileDescription": "ProPhoto RGB",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Forest",
+          "Panoramic",
+          "public"
+        ],
+        "Keywords": [
+          "Lake Forest",
+          "Panoramic",
+          "public"
+        ],
+        "City": "San Bernardino",
+        "State": "California",
+        "Province-State": "California",
+        "Country": "United States",
+        "Country-PrimaryLocationName": "United States"
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Forest",
+          "Panoramic",
+          "public"
+        ],
+        "DateTimeOriginal": "2014:12:21 13:13:36",
+        "CreateDate": "2014:12:21 13:13:36",
+        "ImageWidth": 3263,
+        "ImageHeight": 1800,
+        "Megapixels": 5.9
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 496,
+          "aspect_ratio": 1.8145,
+          "bytes": 77495,
+          "path": "gallery/20141221-1313-06414-1fb7622ae6.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 993,
+          "aspect_ratio": 1.8127,
+          "bytes": 353850,
+          "path": "detail/20141221-1313-06414-1fb7622ae6.jpg"
+        },
+        "generated_at": "2026-05-03T09:47:23+00:00"
+      }
+    },
+    {
+      "id": "20141221-1443-06347-3544179fa4",
+      "relative_path": "2010-2014/20141221 1443 06347.jpg",
+      "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 06347.jpg",
+      "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 06347.jpg",
+      "derivatives": {
+        "gallery": "gallery/20141221-1443-06347-3544179fa4.jpg",
+        "detail": "detail/20141221-1443-06347-3544179fa4.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Lake Forest",
+        "Panoramic",
+        "architecture",
+        "public"
+      ],
+      "capture": {
+        "raw": "2014:12:21 14:43:05",
+        "year": 2014,
+        "month": 12,
+        "day": 21,
+        "date": "2014-12-21",
+        "time": "14:43:05",
+        "sort": "2014-12-21T14:43:05"
+      },
+      "dimensions": {
+        "width": 9230,
+        "height": 3048,
+        "aspect_ratio": 3.0282,
+        "orientation": "landscape",
+        "megapixels": 28.1
+      },
+      "location": {
+        "country": "United States",
+        "region": "California",
+        "city": "Lake Arrowhead",
+        "location": "Arrowhead Village (Village Green)"
+      },
+      "source_file": {
+        "name": "20141221 1443 06347.jpg",
+        "extension": "jpg",
+        "bytes": 6130836,
+        "mtime": "2021-11-10T22:00:31+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Lake Forest, Panoramic, architecture, public"
+        },
+        {
+          "label": "Captured",
+          "value": "2014:12:21 14:43:05"
+        },
+        {
+          "label": "Camera",
+          "value": "Apple iPhone 6 Plus"
+        },
+        {
+          "label": "Lens",
+          "value": "iPhone 6 Plus back camera 4.15mm f/2.2"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/1700, f/2.2, ISO 32"
+        },
+        {
+          "label": "Focal length",
+          "value": "4.2 mm / 29 mm equivalent"
+        },
+        {
+          "label": "Location",
+          "value": "Arrowhead Village (Village Green), Lake Arrowhead, California, United States"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Photoshop Lightroom 6.6 (Macintosh)"
+        },
+        {
+          "label": "Color profile",
+          "value": "ProPhoto RGB"
+        },
+        {
+          "label": "Original file",
+          "value": "20141221 1443 06347.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 9230 x 3048 / 28.1 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 9230,
+        "ImageHeight": 3048,
+        "Megapixels": 28.1,
+        "Make": "Apple",
+        "Model": "iPhone 6 Plus",
+        "Lens": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "LensModel": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "ExposureTime": "1/1700",
+        "FNumber": 2.2,
+        "ISO": 32,
+        "FocalLength": "4.2 mm",
+        "FocalLengthIn35mmFormat": "29 mm",
+        "DateTimeOriginal": "2014:12:21 14:43:05",
+        "CreateDate": "2014:12:21 14:43:05",
+        "Software": "Adobe Photoshop Lightroom 6.6 (Macintosh)",
+        "ColorSpace": "Uncalibrated",
+        "ProfileDescription": "ProPhoto RGB",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Forest",
+          "Panoramic",
+          "architecture",
+          "public"
+        ],
+        "Keywords": [
+          "Lake Forest",
+          "Panoramic",
+          "architecture",
+          "public"
+        ],
+        "City": "Lake Arrowhead",
+        "State": "California",
+        "Province-State": "California",
+        "Country": "United States",
+        "Country-PrimaryLocationName": "United States",
+        "Location": "Arrowhead Village (Village Green)"
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Forest",
+          "Panoramic",
+          "architecture",
+          "public"
+        ],
+        "DateTimeOriginal": "2014:12:21 14:43:05",
+        "CreateDate": "2014:12:21 14:43:05",
+        "ImageWidth": 9230,
+        "ImageHeight": 3048,
+        "Megapixels": 28.1
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 297,
+          "aspect_ratio": 3.0303,
+          "bytes": 56775,
+          "path": "gallery/20141221-1443-06347-3544179fa4.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 594,
+          "aspect_ratio": 3.0303,
+          "bytes": 191744,
+          "path": "detail/20141221-1443-06347-3544179fa4.jpg"
+        },
+        "generated_at": "2026-05-03T09:47:16+00:00"
+      }
+    },
+    {
+      "id": "20141221-1443-25796-ae3b4eba28",
+      "relative_path": "2010-2014/20141221 1443 25796.jpg",
+      "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 25796.jpg",
+      "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 25796.jpg",
+      "derivatives": {
+        "gallery": "gallery/20141221-1443-25796-ae3b4eba28.jpg",
+        "detail": "detail/20141221-1443-25796-ae3b4eba28.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Lake Arrowhead",
+        "Lake Forest",
+        "Panoramic",
+        "architecture",
+        "public"
+      ],
+      "capture": {
+        "raw": "2014:12:21 14:43:05",
+        "year": 2014,
+        "month": 12,
+        "day": 21,
+        "date": "2014-12-21",
+        "time": "14:43:05",
+        "sort": "2014-12-21T14:43:05"
+      },
+      "dimensions": {
+        "width": 9230,
+        "height": 3048,
+        "aspect_ratio": 3.0282,
+        "orientation": "landscape",
+        "megapixels": 28.1
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20141221 1443 25796.jpg",
+        "extension": "jpg",
+        "bytes": 8653088,
+        "mtime": "2021-11-28T22:50:59+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Lake Arrowhead, Lake Forest, Panoramic, architecture, public"
+        },
+        {
+          "label": "Captured",
+          "value": "2014:12:21 14:43:05"
+        },
+        {
+          "label": "Camera",
+          "value": "Apple iPhone 6 Plus"
+        },
+        {
+          "label": "Lens",
+          "value": "iPhone 6 Plus back camera 4.15mm f/2.2"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/1721, f/2.2, ISO 32"
+        },
+        {
+          "label": "Focal length",
+          "value": "4.2 mm / 29 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "8.1.2"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB"
+        },
+        {
+          "label": "Original file",
+          "value": "20141221 1443 25796.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 9230 x 3048 / 28.1 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 9230,
+        "ImageHeight": 3048,
+        "Megapixels": 28.1,
+        "Make": "Apple",
+        "Model": "iPhone 6 Plus",
+        "Lens": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "LensModel": "iPhone 6 Plus back camera 4.15mm f/2.2",
+        "ExposureTime": "1/1721",
+        "FNumber": 2.2,
+        "ISO": 32,
+        "FocalLength": "4.2 mm",
+        "FocalLengthIn35mmFormat": "29 mm",
+        "DateTimeOriginal": "2014:12:21 14:43:05",
+        "CreateDate": "2014:12:21 14:43:05",
+        "Software": "8.1.2",
+        "ColorSpace": "sRGB",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Arrowhead",
+          "Lake Forest",
+          "Panoramic",
+          "architecture",
+          "public"
+        ],
+        "Keywords": [
+          "Lake Arrowhead",
+          "Lake Forest",
+          "Panoramic",
+          "architecture",
+          "public"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Lake Arrowhead",
+          "Lake Forest",
+          "Panoramic",
+          "architecture",
+          "public"
+        ],
+        "DateTimeOriginal": "2014:12:21 14:43:05",
+        "CreateDate": "2014:12:21 14:43:05",
+        "ImageWidth": 9230,
+        "ImageHeight": 3048,
+        "Megapixels": 28.1
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 297,
+          "aspect_ratio": 3.0303,
+          "bytes": 52164,
+          "path": "gallery/20141221-1443-25796-ae3b4eba28.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 594,
+          "aspect_ratio": 3.0303,
+          "bytes": 179775,
+          "path": "detail/20141221-1443-25796-ae3b4eba28.jpg"
+        },
+        "generated_at": "2026-05-03T09:47:11+00:00"
+      }
+    }
+  ]
+}

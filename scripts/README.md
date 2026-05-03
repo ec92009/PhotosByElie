@@ -17,6 +17,7 @@ python3 scripts/build_lightroom_thumbnails.py \
   --source-root /Volumes/Saturn-1/Pictures/LR/Camera \
   --output-root assets/lightroom \
   --years 2024-2026 \
+  --batch-size 50 \
   --gallery-max 900 \
   --detail-max 1800
 ```
@@ -30,6 +31,9 @@ Outputs:
 - `assets/lightroom/gallery/*.jpg`: watermarked gallery thumbnails.
 - `assets/lightroom/detail/*.jpg`: watermarked detail-page images.
 - `assets/lightroom/manifest.json`: selected photos, derivative paths, full keyword set, Lightroom rating/color label, and web-facing display metadata.
+- `assets/lightroom/keywords.json`: keyword counts and photo references for filter UI.
+- `assets/lightroom/collections.json`: generated indexes for years, countries, regions, cities, orientations, and source formats.
+- `assets/lightroom/failures.json`: render/extraction errors that need attention.
 - `assets/lightroom/gps-metadata.json`: exact GPS coordinates keyed by the same relative photo paths. This file is ignored by Git by default.
 - `assets/lightroom/.build-state.jsonl`: append-only resume checkpoint.
 

@@ -47,7 +47,8 @@ DEFAULT_OUTPUT_ROOT = Path("assets/lightroom")
 DEFAULT_WATERMARK = "PhotosByElie"
 DEFAULT_GALLERY_MAX = 900
 DEFAULT_DETAIL_MAX = 1800
-DEFAULT_BATCH_SIZE = 200
+DEFAULT_BATCH_SIZE = 50
+SCHEMA_VERSION = 2
 PRIVATE_KEYWORD_PATTERN = re.compile(
     r"(^_|family|friends\+family|notmyphoto|onhotel|published adobe)",
     re.IGNORECASE,
@@ -201,8 +202,39 @@ def year_from_relative_path(relative_path: str) -> int | None:
 def matches_year_filter(relative_path: str, year_filter: tuple[int, int] | None) -> bool:
     if not year_filter:
         return True
-    year = year_from_relative_path(relative_path)
-    return year is not None and year_filter[0] <= year <= year_filter[1]
+    wanted_start, wanted_end = year_filter
+    exact_years = []
+    range_matches = []
+    for part in Path(relative_path).parts:
+        ranged = re.match(r"^(\d{4})-(\d{4})$", part)
+        if ranged:
+            part_start, part_end = int(ranged.group(1)), int(ranged.group(2))
+            part_start, part_end = min(part_start, part_end), max(part_start, part_end)
+            range_matches.append(part_start <= wanted_end and wanted_start <= part_end)
+            continue
+        single = re.match(r"^(\d{4})", part)
+        if single:
+            exact_years.append(int(single.group(1)))
+    if exact_years:
+        return any(wanted_start <= year <= wanted_end for year in exact_years)
+    return any(range_matches)
+
+
+def path_could_contain_year(relative_path: str, year_filter: tuple[int, int] | None) -> bool:
+    if not year_filter or not relative_path:
+        return True
+    wanted_start, wanted_end = year_filter
+    for part in Path(relative_path).parts:
+        ranged = re.match(r"^(\d{4})-(\d{4})$", part)
+        if ranged:
+            part_start, part_end = int(ranged.group(1)), int(ranged.group(2))
+            part_start, part_end = min(part_start, part_end), max(part_start, part_end)
+            return part_start <= wanted_end and wanted_start <= part_end
+        single = re.match(r"^(\d{4})", part)
+        if single:
+            year = int(single.group(1))
+            return wanted_start <= year <= wanted_end
+    return True
 
 
 def file_stamp(path: Path | None) -> dict[str, Any] | None:
@@ -214,6 +246,7 @@ def file_stamp(path: Path | None) -> dict[str, Any] | None:
 
 def checkpoint_key(image: Path, sidecar: Path | None) -> str:
     payload = {
+        "schema_version": SCHEMA_VERSION,
         "source": file_stamp(image),
         "metadata": file_stamp(sidecar or image),
     }
@@ -325,6 +358,16 @@ def compact_metadata(meta: dict[str, Any]) -> dict[str, Any]:
     return {key: meta[key] for key in keys if key in meta}
 
 
+def source_file_facts(path: Path) -> dict[str, Any]:
+    stat = path.stat()
+    return {
+        "name": path.name,
+        "extension": path.suffix.lower().lstrip("."),
+        "bytes": stat.st_size,
+        "mtime": datetime.fromtimestamp(stat.st_mtime, timezone.utc).replace(microsecond=0).isoformat(),
+    }
+
+
 def list_value(value: Any) -> list[str]:
     if value is None:
         return []
@@ -358,6 +401,54 @@ def metadata_value(meta: dict[str, Any], *keys: str) -> Any:
     return None
 
 
+def parse_exif_datetime(value: Any) -> dict[str, Any]:
+    if not value:
+        return {}
+    text = str(value)
+    match = re.match(r"^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})", text)
+    if not match:
+        return {"raw": text}
+    year, month, day, hour, minute, second = (int(part) for part in match.groups())
+    return {
+        "raw": text,
+        "year": year,
+        "month": month,
+        "day": day,
+        "date": f"{year:04d}-{month:02d}-{day:02d}",
+        "time": f"{hour:02d}:{minute:02d}:{second:02d}",
+        "sort": f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}",
+    }
+
+
+def number_value(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def dimension_facts(meta: dict[str, Any]) -> dict[str, Any]:
+    width = number_value(metadata_value(meta, "ImageWidth"))
+    height = number_value(metadata_value(meta, "ImageHeight"))
+    facts: dict[str, Any] = {}
+    if width and height:
+        facts["width"] = int(width)
+        facts["height"] = int(height)
+        facts["aspect_ratio"] = round(width / height, 4)
+        if width > height:
+            facts["orientation"] = "landscape"
+        elif height > width:
+            facts["orientation"] = "portrait"
+        else:
+            facts["orientation"] = "square"
+    megapixels = number_value(metadata_value(meta, "Megapixels"))
+    if megapixels is not None:
+        facts["megapixels"] = megapixels
+    elif width and height:
+        facts["megapixels"] = round(width * height / 1000000, 1)
+    return facts
+
+
 def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.Namespace) -> dict[str, Any]:
     extract_gps = args.include_gps or not args.redact_gps
     include_private_keywords = args.include_private_keywords or not args.redact_private_keywords
@@ -369,6 +460,8 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
     merged.pop("SourceFile", None)
     gps = {key: merged.pop(key) for key in gps_tags if key in merged}
     keywords = cleaned_keywords(merged, include_private_keywords)
+    capture = parse_exif_datetime(metadata_value(merged, "DateTimeOriginal", "CreateDate"))
+    dimensions = dimension_facts(merged)
     display = []
     display_specs = [
         ("Metadata title", metadata_value(merged, "Title")),
@@ -392,6 +485,14 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
         "rating": normalize_rating(merged.get("Rating")),
         "label": metadata_value(merged, "Label", "ColorLabel"),
         "keywords": keywords,
+        "capture": capture,
+        "dimensions": dimensions,
+        "location": {
+            "country": metadata_value(merged, "Country", "Country-PrimaryLocationName"),
+            "region": metadata_value(merged, "State", "Province-State"),
+            "city": metadata_value(merged, "City"),
+            "location": metadata_value(merged, "Location"),
+        },
         "raw": merged,
         "gps": gps,
         "display": display,
@@ -514,6 +615,36 @@ def render_derivative(
     return True
 
 
+def image_size(path: Path) -> dict[str, Any]:
+    result = subprocess.run(
+        ["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(path)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return {}
+    width_match = re.search(r"pixelWidth:\s*(\d+)", result.stdout)
+    height_match = re.search(r"pixelHeight:\s*(\d+)", result.stdout)
+    if not width_match or not height_match:
+        return {}
+    width = int(width_match.group(1))
+    height = int(height_match.group(1))
+    return {
+        "width": width,
+        "height": height,
+        "aspect_ratio": round(width / height, 4) if height else None,
+        "bytes": path.stat().st_size if path.exists() else 0,
+    }
+
+
+def derivative_facts(output_root: Path, relative_path: str) -> dict[str, Any]:
+    path = output_root / relative_path
+    facts = image_size(path)
+    facts["path"] = relative_path
+    return facts
+
+
 def load_manifest(path: Path) -> dict[str, dict[str, Any]]:
     if not path.exists():
         return {}
@@ -528,6 +659,7 @@ def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.N
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "generated_at": now_iso(),
+        "schema_version": SCHEMA_VERSION,
         "source_root_hint": str(args.source_root),
         "selection": {"label": args.label, "min_rating": args.min_rating, "years": args.years or None},
         "derivatives": {
@@ -552,14 +684,98 @@ def load_gps_manifest(path: Path) -> dict[str, dict[str, Any]]:
     return {row["relative_path"]: row for row in rows if "relative_path" in row}
 
 
+def load_failures(path: Path) -> dict[str, dict[str, Any]]:
+    if not path.exists():
+        return {}
+    try:
+        rows = json.loads(path.read_text(encoding="utf-8")).get("photos", [])
+    except json.JSONDecodeError:
+        return {}
+    return {row["relative_path"]: row for row in rows if "relative_path" in row}
+
+
 def write_gps_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "generated_at": now_iso(),
+        "schema_version": SCHEMA_VERSION,
         "source_root_hint": str(args.source_root),
         "private": True,
         "note": "Exact GPS metadata kept outside manifest.json so this file can stay untracked.",
         "photos": sorted(rows.values(), key=lambda row: row["relative_path"]),
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def write_failures(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "generated_at": now_iso(),
+        "schema_version": SCHEMA_VERSION,
+        "source_root_hint": str(args.source_root),
+        "count": len(rows),
+        "photos": sorted(rows.values(), key=lambda row: row["relative_path"]),
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def add_index_value(index: dict[str, dict[str, Any]], key: Any, photo_id: str, relative_path: str) -> None:
+    if key in (None, ""):
+        return
+    text = str(key)
+    row = index.setdefault(text, {"value": text, "count": 0, "photos": []})
+    row["count"] += 1
+    row["photos"].append({"id": photo_id, "relative_path": relative_path})
+
+
+def write_keyword_index(path: Path, manifest: dict[str, dict[str, Any]]) -> None:
+    index: dict[str, dict[str, Any]] = {}
+    for photo in manifest.values():
+        for keyword in photo.get("keywords", []):
+            add_index_value(index, keyword, photo["id"], photo["relative_path"])
+    payload = {
+        "generated_at": now_iso(),
+        "schema_version": SCHEMA_VERSION,
+        "photos_count": len(manifest),
+        "keywords": sorted(index.values(), key=lambda row: (-row["count"], row["value"].casefold())),
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def write_collection_index(path: Path, manifest: dict[str, dict[str, Any]]) -> None:
+    indexes = {
+        "years": {},
+        "countries": {},
+        "regions": {},
+        "cities": {},
+        "orientations": {},
+        "formats": {},
+    }
+    for photo in manifest.values():
+        capture = photo.get("capture", {})
+        location = photo.get("location", {})
+        dimensions = photo.get("dimensions", {})
+        source = photo.get("source_file", {})
+        add_index_value(indexes["years"], capture.get("year"), photo["id"], photo["relative_path"])
+        add_index_value(indexes["countries"], location.get("country"), photo["id"], photo["relative_path"])
+        add_index_value(indexes["regions"], location.get("region"), photo["id"], photo["relative_path"])
+        add_index_value(indexes["cities"], location.get("city"), photo["id"], photo["relative_path"])
+        add_index_value(indexes["orientations"], dimensions.get("orientation"), photo["id"], photo["relative_path"])
+        add_index_value(indexes["formats"], source.get("extension"), photo["id"], photo["relative_path"])
+    payload = {
+        "generated_at": now_iso(),
+        "schema_version": SCHEMA_VERSION,
+        "photos_count": len(manifest),
+        "collections": {
+            name: sorted(rows.values(), key=lambda row: (-row["count"], row["value"].casefold()))
+            for name, rows in indexes.items()
+        },
     }
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -583,9 +799,17 @@ def manifest_derivatives_exist(output_root: Path, row: dict[str, Any] | None) ->
     return bool(derivatives) and all((output_root / rel_path).exists() for rel_path in derivatives.values())
 
 
-def discover_images(source_root: Path) -> Any:
+def discover_images(source_root: Path, year_filter: tuple[int, int] | None = None) -> Any:
     for root, dirs, files in os.walk(source_root):
-        dirs[:] = sorted((name for name in dirs if not name.startswith(".")), reverse=True)
+        dirs[:] = sorted(
+            (
+                name
+                for name in dirs
+                if not name.startswith(".")
+                and path_could_contain_year(rel_key(Path(root) / name, source_root), year_filter)
+            ),
+            reverse=True,
+        )
         for name in sorted(files, reverse=True):
             path = Path(root) / name
             if is_image(path):
@@ -598,6 +822,7 @@ def process_batch(
     state_path: Path,
     manifest: dict[str, dict[str, Any]],
     gps_manifest: dict[str, dict[str, Any]],
+    failures: dict[str, dict[str, Any]],
     font: str,
 ) -> int:
     metadata_rows = run_exiftool([item["metadata_path"] for item in batch])
@@ -636,6 +861,10 @@ def process_batch(
             row["rating"] = selected_metadata["rating"]
             row["label"] = selected_metadata["label"]
             row["keywords"] = selected_metadata["keywords"]
+            row["capture"] = selected_metadata["capture"]
+            row["dimensions"] = selected_metadata["dimensions"]
+            row["location"] = selected_metadata["location"]
+            row["source_file"] = source_file_facts(source)
             row["metadata"] = selected_metadata["display"]
             row["raw_metadata"] = selected_metadata["raw"]
             row["selection_metadata"] = compact_metadata(meta)
@@ -649,9 +878,21 @@ def process_batch(
             if not args.dry_run:
                 render_derivative(source, gallery_path, args.gallery_max, args.watermark, font, args.force)
                 render_derivative(source, detail_path, args.detail_max, args.watermark, font, args.force)
+                row["derivative_files"] = {
+                    "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
+                    "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
+                    "generated_at": now_iso(),
+                }
             manifest[relative_path] = row
+            failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
         except Exception as exc:
+            failures[relative_path] = {
+                **base_state,
+                "status": "error",
+                "error": str(exc),
+                "failed_at": now_iso(),
+            }
             append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
             print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
     return selected_count
@@ -671,10 +912,14 @@ def main() -> int:
 
     manifest_path = args.output_root / "manifest.json"
     gps_manifest_path = args.output_root / "gps-metadata.json"
+    keywords_path = args.output_root / "keywords.json"
+    collections_path = args.output_root / "collections.json"
+    failures_path = args.output_root / "failures.json"
     state_path = args.output_root / ".build-state.jsonl"
     args.output_root.mkdir(parents=True, exist_ok=True)
     manifest = load_manifest(manifest_path)
     gps_manifest = load_gps_manifest(gps_manifest_path) if not args.redact_gps else {}
+    failures = load_failures(failures_path)
     state = load_latest_state(state_path) if not args.force else {}
 
     if args.clean_missing:
@@ -686,7 +931,7 @@ def main() -> int:
 
     seen = selected = inspected = 0
     batch: list[dict[str, Any]] = []
-    for source in discover_images(source_root):
+    for source in discover_images(source_root, year_filter):
         relative_path = rel_key(source, source_root)
         if not matches_year_filter(relative_path, year_filter):
             continue
@@ -718,8 +963,12 @@ def main() -> int:
         )
         if len(batch) >= args.batch_size:
             inspected += len(batch)
-            selected += process_batch(batch, args, state_path, manifest, gps_manifest, font)
+            print(f"Processing batch after scanning {seen} files; inspected {inspected}, selected {selected}", flush=True)
+            selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font)
             write_manifest(manifest_path, manifest, args)
+            write_keyword_index(keywords_path, manifest)
+            write_collection_index(collections_path, manifest)
+            write_failures(failures_path, failures, args)
             if not args.redact_gps:
                 write_gps_manifest(gps_manifest_path, gps_manifest, args)
             batch = []
@@ -728,16 +977,26 @@ def main() -> int:
                 break
     if batch and (not args.limit or selected < args.limit):
         inspected += len(batch)
-        selected += process_batch(batch, args, state_path, manifest, gps_manifest, font)
+        print(f"Processing final batch after scanning {seen} files; inspected {inspected}, selected {selected}", flush=True)
+        selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font)
         write_manifest(manifest_path, manifest, args)
+        write_keyword_index(keywords_path, manifest)
+        write_collection_index(collections_path, manifest)
+        write_failures(failures_path, failures, args)
         if not args.redact_gps:
             write_gps_manifest(gps_manifest_path, gps_manifest, args)
 
     write_manifest(manifest_path, manifest, args)
+    write_keyword_index(keywords_path, manifest)
+    write_collection_index(collections_path, manifest)
+    write_failures(failures_path, failures, args)
     if not args.redact_gps:
         write_gps_manifest(gps_manifest_path, gps_manifest, args)
     print(f"Done. Saw {seen} images, inspected {inspected}, manifest contains {len(manifest)} selected photos.")
     print(f"Manifest: {manifest_path}")
+    print(f"Keyword index: {keywords_path}")
+    print(f"Collection index: {collections_path}")
+    print(f"Failures: {failures_path}")
     if not args.redact_gps:
         print(f"Private GPS metadata: {gps_manifest_path}")
     print(f"Checkpoint: {state_path}")

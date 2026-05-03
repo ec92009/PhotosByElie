@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.18`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.18`.
 
 ## Repositories And Folders
 
@@ -15,6 +15,10 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
   - USA: `/Volumes/ecohen/Pictures/LR/USA`
   - Spain: `/Volumes/ecohen/Pictures/LR/Spain`
   - AI samples: `~/Pictures/Leonardo/2023/06/08/UPSCALE`
+- Archive copy completed during the latest follow-up:
+  - Source: `/Volumes/Saturn/Pictures/LR/Camera/2024`
+  - Destination: `/Volumes/ecohen/Pictures/LR/2024`
+  - Verification: `rsync` exited with code 0, source and destination both contained 692 files, and a dry-run `rsync --itemize-changes` reported no pending changes.
 
 ## Major Site Work
 
@@ -80,8 +84,11 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 
 - Versioning is intentionally bumped every visible web-page cycle.
 - Current visible version: `v64.18`.
-- Branch state before handoff: `main` is ahead of `origin/main` by 12 local commits.
-- Latest local commits after `origin/main` include:
+- Branch state before this docs refresh: `main` was ahead of `origin/main` by 14 local commits.
+- Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.18`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
+- Latest local commits after `origin/main` before this docs refresh include:
+  - `79b3ad3 photosbyelie: use verified preview formats`
+  - `9f87949 photosbyelie: refresh handoff summary`
   - `e7b2a7a photosbyelie: add liked bulk resolution selectors`
   - `fe42c6c photosbyelie: show source formats`
   - `ed3cf99 photosbyelie: simplify detail metadata`

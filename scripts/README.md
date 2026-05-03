@@ -16,11 +16,14 @@ Useful options:
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root /Volumes/Saturn-1/Pictures/LR/Camera \
   --output-root assets/lightroom \
+  --years 2024-2026 \
   --gallery-max 900 \
   --detail-max 1800
 ```
 
 Resume on another machine by pointing `--source-root` at that machine's copy of the same `Camera` folder. The script scans folders and files in reverse lexical order so newer year/month/day folders are handled first, tracks photos by relative path, and writes checkpoints to `assets/lightroom/.build-state.jsonl`, so already-inspected files and already-rendered derivatives are skipped.
+
+Use `--years 2024` for one year or `--years 2022-2024` for an inclusive range. The filter uses the first four-digit year found in each photo's path relative to the `Camera` folder.
 
 Outputs:
 

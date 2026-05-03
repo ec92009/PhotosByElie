@@ -108,6 +108,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gallery-max", type=int, default=DEFAULT_GALLERY_MAX)
     parser.add_argument("--detail-max", type=int, default=DEFAULT_DETAIL_MAX)
     parser.add_argument("--watermark", default=DEFAULT_WATERMARK)
+    parser.add_argument(
+        "--years",
+        default="",
+        help="Only scan one year (YYYY) or an inclusive year range (YYYY-YYYY), based on relative path.",
+    )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--limit", type=int, default=0, help="Stop after N selected photos; useful for tests.")
     parser.add_argument("--dry-run", action="store_true", help="Scan and checkpoint, but do not render files.")
@@ -134,6 +139,21 @@ def parse_args() -> argparse.Namespace:
         help="Do not write exact GPS tags to the separate gps-metadata.json file.",
     )
     return parser.parse_args()
+
+
+def parse_year_filter(value: str) -> tuple[int, int] | None:
+    value = value.strip()
+    if not value:
+        return None
+    single = re.fullmatch(r"(\d{4})", value)
+    if single:
+        year = int(single.group(1))
+        return year, year
+    ranged = re.fullmatch(r"(\d{4})-(\d{4})", value)
+    if ranged:
+        start, end = int(ranged.group(1)), int(ranged.group(2))
+        return min(start, end), max(start, end)
+    raise SystemExit(f"Invalid --years value: {value}. Use YYYY or YYYY-YYYY.")
 
 
 def require_tool(name: str) -> str:
@@ -168,6 +188,21 @@ def sidecar_for(image: Path) -> Path | None:
 
 def rel_key(path: Path, source_root: Path) -> str:
     return path.relative_to(source_root).as_posix()
+
+
+def year_from_relative_path(relative_path: str) -> int | None:
+    for part in Path(relative_path).parts:
+        match = re.match(r"^(\d{4})", part)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def matches_year_filter(relative_path: str, year_filter: tuple[int, int] | None) -> bool:
+    if not year_filter:
+        return True
+    year = year_from_relative_path(relative_path)
+    return year is not None and year_filter[0] <= year <= year_filter[1]
 
 
 def file_stamp(path: Path | None) -> dict[str, Any] | None:
@@ -494,7 +529,7 @@ def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.N
     payload = {
         "generated_at": now_iso(),
         "source_root_hint": str(args.source_root),
-        "selection": {"label": args.label, "min_rating": args.min_rating},
+        "selection": {"label": args.label, "min_rating": args.min_rating, "years": args.years or None},
         "derivatives": {
             "gallery_max": args.gallery_max,
             "detail_max": args.detail_max,
@@ -626,6 +661,7 @@ def main() -> int:
     args = parse_args()
     source_root = args.source_root.expanduser().resolve()
     args.output_root = args.output_root.expanduser()
+    year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")
     require_tool("exiftool")
@@ -651,8 +687,10 @@ def main() -> int:
     seen = selected = inspected = 0
     batch: list[dict[str, Any]] = []
     for source in discover_images(source_root):
-        seen += 1
         relative_path = rel_key(source, source_root)
+        if not matches_year_filter(relative_path, year_filter):
+            continue
+        seen += 1
         sidecar = sidecar_for(source)
         metadata_path = sidecar or source
         stamp = checkpoint_key(source, sidecar)

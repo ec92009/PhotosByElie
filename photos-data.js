@@ -1621,26 +1621,48 @@ window.photosByElieResolutions = [
   { id: "jpg-1mp", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 5, minMegapixels: 1 }
 ];
 
+window.photosByEliePreviewMegapixels = (photo) => {
+  const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";
+  const match = preview.match(/(\d+)\s*x\s*(\d+)/i);
+  if (!match) return 0;
+  return Math.round((Number(match[1]) * Number(match[2]) / 1000000) * 10) / 10;
+};
+
+window.photosByElieVerifiedMegapixels = (photo) => {
+  if (Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length) return Number(photo.megapixels) || 0;
+  return window.photosByEliePreviewMegapixels(photo);
+};
+
 window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {
-  const megapixels = Number(photo?.megapixels) || 0;
+  const megapixels = window.photosByElieVerifiedMegapixels(photo);
+  if (!megapixels) return [];
   return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);
 };
 
-window.photosByElieSourceFormats = (photo) => {
-  const source = String(photo?.full || "");
+window.photosByElieFormatLabel = (source) => {
+  const value = String(source || "");
   const checks = [
     { label: "RAW", pattern: /\b(DNG|CR2|CR3|NEF|ARW|RAF|ORF|RW2)\b/i },
     { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },
     { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },
     { label: "PSD", pattern: /\bPSD\b/i },
   ];
-  const formats = checks.filter((item) => item.pattern.test(source)).map((item) => item.label);
-  return formats.length ? formats.join(" + ") : source;
+  const formats = checks.filter((item) => item.pattern.test(value)).map((item) => item.label);
+  return formats.length ? formats.join(" + ") : value;
+};
+
+window.photosByElieSourceFormats = (photo) => {
+  if (Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length) {
+    const formats = [...new Set(photo.sourceFiles.map((file) => file.type || window.photosByElieFormatLabel(file.path)).filter(Boolean))];
+    return formats.join(" + ");
+  }
+  return photo?.imageSrc ? `${window.photosByElieFormatLabel(photo.imageSrc)} preview/export` : "Source file unverified";
 };
 
 window.photosByElieOriginalSize = (photo) => {
-  const megapixels = Number(photo?.megapixels);
-  return [window.photosByElieSourceFormats(photo), megapixels ? `${megapixels} MP source` : ""].filter(Boolean).join(", ");
+  const megapixels = window.photosByElieVerifiedMegapixels(photo);
+  const sizeLabel = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length ? "source" : "verified";
+  return [window.photosByElieSourceFormats(photo), megapixels ? `${megapixels} MP ${sizeLabel}` : ""].filter(Boolean).join(", ");
 };
 
 window.photosByElieResolutionDetail = (photo, option) => {

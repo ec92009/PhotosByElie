@@ -39,7 +39,9 @@ document.querySelector("[data-photo-title]").textContent = photo.title;
 document.querySelector("[data-photo-meta]").textContent = [
   collection.title,
   window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : photo.full,
-  `${photo.megapixels} MP source`
+  window.photosByElieVerifiedMegapixels && window.photosByElieVerifiedMegapixels(photo)
+    ? `${window.photosByElieVerifiedMegapixels(photo)} MP verified`
+    : ""
 ].filter(Boolean).join(" / ");
 document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
 

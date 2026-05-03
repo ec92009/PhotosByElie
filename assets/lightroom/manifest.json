@@ -1,12 +1,13 @@
 {
-  "generated_at": "2026-05-03T10:55:11+00:00",
+  "generated_at": "2026-05-03T11:01:34+00:00",
   "schema_version": 3,
   "source_root_hint": "/Volumes/Saturn/Pictures/LR/Camera",
   "selection": {
     "label": "green",
     "min_rating": 4,
     "years": [
-      2014
+      2014,
+      2022
     ]
   },
   "last_run": {
@@ -14,7 +15,7 @@
     "filter": {
       "label": "green",
       "min_rating": 4,
-      "years": "2023"
+      "years": "2022"
     }
   },
   "derivatives": {
@@ -834,6 +835,2826 @@
           "path": "detail/usa/20141221-1443-25796-ae3b4eba28.jpg"
         },
         "generated_at": "2026-05-03T10:06:45+00:00"
+      }
+    },
+    {
+      "id": "20220619-000102-00258-pano-8f64733ada",
+      "relative_path": "2022/JPG/06/19/20220619 000102 00258-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/19/20220619 000102 00258-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/19/20220619 000102 00258-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220619-000102-00258-pano-8f64733ada.jpg",
+        "detail": "detail/spain/20220619-000102-00258-pano-8f64733ada.jpg"
+      },
+      "rating": 5.0,
+      "label": "Green",
+      "keywords": [
+        "Malaga",
+        "Spain"
+      ],
+      "capture": {
+        "raw": "2022:06:19 01:01:02",
+        "year": 2022,
+        "month": 6,
+        "day": 19,
+        "date": "2022-06-19",
+        "time": "01:01:02",
+        "sort": "2022-06-19T01:01:02"
+      },
+      "dimensions": {
+        "width": 7574,
+        "height": 6117,
+        "aspect_ratio": 1.2382,
+        "orientation": "landscape",
+        "megapixels": 46.3
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220619 000102 00258-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 9576821,
+        "mtime": "2024-02-26T19:26:58+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Malaga, Spain"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:06:19 01:01:02"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "17.0-50.0 mm f/2.8"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/25, f/2.8, ISO 1250"
+        },
+        {
+          "label": "Focal length",
+          "value": "17.0 mm / 25 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220619 000102 00258-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 7574 x 6117 / 46.3 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 7574,
+        "ImageHeight": 6117,
+        "Megapixels": 46.3,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "17.0-50.0 mm f/2.8",
+        "LensModel": "17.0-50.0 mm f/2.8",
+        "ExposureTime": "1/25",
+        "FNumber": 2.8,
+        "ISO": 1250,
+        "FocalLength": "17.0 mm",
+        "FocalLengthIn35mmFormat": "25 mm",
+        "DateTimeOriginal": "2022:06:19 01:01:02",
+        "CreateDate": "2022:06:19 00:01:02.1",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 5,
+        "Label": "Green",
+        "Subject": [
+          "Malaga",
+          "Spain"
+        ],
+        "Keywords": [
+          "Malaga",
+          "Spain"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 5,
+        "Label": "Green",
+        "Subject": [
+          "Malaga",
+          "Spain"
+        ],
+        "DateTimeOriginal": "2022:06:19 01:01:02",
+        "CreateDate": "2022:06:19 00:01:02.1",
+        "ImageWidth": 7574,
+        "ImageHeight": 6117,
+        "Megapixels": 46.3
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 727,
+          "aspect_ratio": 1.238,
+          "bytes": 201259,
+          "path": "gallery/spain/20220619-000102-00258-pano-8f64733ada.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1453,
+          "aspect_ratio": 1.2388,
+          "bytes": 659423,
+          "path": "detail/spain/20220619-000102-00258-pano-8f64733ada.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:34+00:00"
+      }
+    },
+    {
+      "id": "20220620-144527-00117-pano-6e6b630180",
+      "relative_path": "2022/JPG/06/20/20220620 144527 00117-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 144527 00117-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 144527 00117-Pano.jpg",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "derivatives": {
+        "gallery": "gallery/unknown/20220620-144527-00117-pano-6e6b630180.jpg",
+        "detail": "detail/unknown/20220620-144527-00117-pano-6e6b630180.jpg"
+      },
+      "rating": 5.0,
+      "label": "Green",
+      "keywords": [],
+      "capture": {
+        "raw": "2022:06:20 14:45:27",
+        "year": 2022,
+        "month": 6,
+        "day": 20,
+        "date": "2022-06-20",
+        "time": "14:45:27",
+        "sort": "2022-06-20T14:45:27"
+      },
+      "dimensions": {
+        "width": 7668,
+        "height": 7135,
+        "aspect_ratio": 1.0747,
+        "orientation": "landscape",
+        "megapixels": 54.7
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220620 144527 00117-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 11318700,
+        "mtime": "2024-02-26T17:24:14+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Captured",
+          "value": "2022:06:20 14:45:27"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "17.0-50.0 mm f/2.8"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/250, f/8.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "17.0 mm / 25 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220620 144527 00117-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 7668 x 7135 / 54.7 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 7668,
+        "ImageHeight": 7135,
+        "Megapixels": 54.7,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "17.0-50.0 mm f/2.8",
+        "LensModel": "17.0-50.0 mm f/2.8",
+        "ExposureTime": "1/250",
+        "FNumber": 8.0,
+        "ISO": 100,
+        "FocalLength": "17.0 mm",
+        "FocalLengthIn35mmFormat": "25 mm",
+        "DateTimeOriginal": "2022:06:20 14:45:27",
+        "CreateDate": "2022:06:20 14:45:27.671",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 5,
+        "Label": "Green"
+      },
+      "selection_metadata": {
+        "Rating": 5,
+        "Label": "Green",
+        "DateTimeOriginal": "2022:06:20 14:45:27",
+        "CreateDate": "2022:06:20 14:45:27.671",
+        "ImageWidth": 7668,
+        "ImageHeight": 7135,
+        "Megapixels": 54.7
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 837,
+          "aspect_ratio": 1.0753,
+          "bytes": 246311,
+          "path": "gallery/unknown/20220620-144527-00117-pano-6e6b630180.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1675,
+          "aspect_ratio": 1.0746,
+          "bytes": 1020529,
+          "path": "detail/unknown/20220620-144527-00117-pano-6e6b630180.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:34+00:00"
+      }
+    },
+    {
+      "id": "20220620-144601-00127-pano-1a18b2ed13",
+      "relative_path": "2022/JPG/06/20/20220620 144601 00127-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 144601 00127-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 144601 00127-Pano.jpg",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "derivatives": {
+        "gallery": "gallery/unknown/20220620-144601-00127-pano-1a18b2ed13.jpg",
+        "detail": "detail/unknown/20220620-144601-00127-pano-1a18b2ed13.jpg"
+      },
+      "rating": 5.0,
+      "label": "Green",
+      "keywords": [],
+      "capture": {
+        "raw": "2022:06:20 14:46:01",
+        "year": 2022,
+        "month": 6,
+        "day": 20,
+        "date": "2022-06-20",
+        "time": "14:46:01",
+        "sort": "2022-06-20T14:46:01"
+      },
+      "dimensions": {
+        "width": 6092,
+        "height": 5947,
+        "aspect_ratio": 1.0244,
+        "orientation": "landscape",
+        "megapixels": 36.2
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220620 144601 00127-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 9401326,
+        "mtime": "2024-02-26T17:24:23+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Captured",
+          "value": "2022:06:20 14:46:01"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "17.0-50.0 mm f/2.8"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/250, f/8.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "17.0 mm / 25 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220620 144601 00127-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 6092 x 5947 / 36.2 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 6092,
+        "ImageHeight": 5947,
+        "Megapixels": 36.2,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "17.0-50.0 mm f/2.8",
+        "LensModel": "17.0-50.0 mm f/2.8",
+        "ExposureTime": "1/250",
+        "FNumber": 8.0,
+        "ISO": 100,
+        "FocalLength": "17.0 mm",
+        "FocalLengthIn35mmFormat": "25 mm",
+        "DateTimeOriginal": "2022:06:20 14:46:01",
+        "CreateDate": "2022:06:20 14:46:01.501",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 5,
+        "Label": "Green"
+      },
+      "selection_metadata": {
+        "Rating": 5,
+        "Label": "Green",
+        "DateTimeOriginal": "2022:06:20 14:46:01",
+        "CreateDate": "2022:06:20 14:46:01.501",
+        "ImageWidth": 6092,
+        "ImageHeight": 5947,
+        "Megapixels": 36.2
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 878,
+          "aspect_ratio": 1.0251,
+          "bytes": 289851,
+          "path": "gallery/unknown/20220620-144601-00127-pano-1a18b2ed13.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1757,
+          "aspect_ratio": 1.0245,
+          "bytes": 1148414,
+          "path": "detail/unknown/20220620-144601-00127-pano-1a18b2ed13.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:33+00:00"
+      }
+    },
+    {
+      "id": "20220620-144822-00251-57d2611649",
+      "relative_path": "2022/JPG/06/20/20220620 144822 00251.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 144822 00251.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 144822 00251.jpg",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "derivatives": {
+        "gallery": "gallery/unknown/20220620-144822-00251-57d2611649.jpg",
+        "detail": "detail/unknown/20220620-144822-00251-57d2611649.jpg"
+      },
+      "rating": 5.0,
+      "label": "Green",
+      "keywords": [],
+      "capture": {
+        "raw": "2022:06:20 14:48:22",
+        "year": 2022,
+        "month": 6,
+        "day": 20,
+        "date": "2022-06-20",
+        "time": "14:48:22",
+        "sort": "2022-06-20T14:48:22"
+      },
+      "dimensions": {
+        "width": 25606,
+        "height": 8487,
+        "aspect_ratio": 3.0171,
+        "orientation": "landscape",
+        "megapixels": 217.3
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220620 144822 00251.jpg",
+        "extension": "jpg",
+        "bytes": 46367911,
+        "mtime": "2024-02-26T17:24:37+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Captured",
+          "value": "2022:06:20 14:48:22"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "17.0-50.0 mm f/2.8"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/160, f/7.1, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "44.0 mm / 66 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220620 144822 00251.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 25606 x 8487 / 217.3 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 25606,
+        "ImageHeight": 8487,
+        "Megapixels": 217.3,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "17.0-50.0 mm f/2.8",
+        "LensModel": "17.0-50.0 mm f/2.8",
+        "ExposureTime": "1/160",
+        "FNumber": 7.1,
+        "ISO": 100,
+        "FocalLength": "44.0 mm",
+        "FocalLengthIn35mmFormat": "66 mm",
+        "DateTimeOriginal": "2022:06:20 14:48:22",
+        "CreateDate": "2022:06:20 14:48:22.161",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 5,
+        "Label": "Green"
+      },
+      "selection_metadata": {
+        "Rating": 5,
+        "Label": "Green",
+        "DateTimeOriginal": "2022:06:20 14:48:22",
+        "CreateDate": "2022:06:20 14:48:22.161",
+        "ImageWidth": 25606,
+        "ImageHeight": 8487,
+        "Megapixels": 217.3
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 298,
+          "aspect_ratio": 3.0201,
+          "bytes": 101164,
+          "path": "gallery/unknown/20220620-144822-00251-57d2611649.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 596,
+          "aspect_ratio": 3.0201,
+          "bytes": 361911,
+          "path": "detail/unknown/20220620-144822-00251-57d2611649.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:32+00:00"
+      }
+    },
+    {
+      "id": "20220620-165150-00302-pano-1d95a4f7fc",
+      "relative_path": "2022/JPG/06/20/20220620 165150 00302-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 165150 00302-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 165150 00302-Pano.jpg",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "derivatives": {
+        "gallery": "gallery/unknown/20220620-165150-00302-pano-1d95a4f7fc.jpg",
+        "detail": "detail/unknown/20220620-165150-00302-pano-1d95a4f7fc.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [],
+      "capture": {
+        "raw": "2022:06:20 16:51:50",
+        "year": 2022,
+        "month": 6,
+        "day": 20,
+        "date": "2022-06-20",
+        "time": "16:51:50",
+        "sort": "2022-06-20T16:51:50"
+      },
+      "dimensions": {
+        "width": 7327,
+        "height": 5717,
+        "aspect_ratio": 1.2816,
+        "orientation": "landscape",
+        "megapixels": 41.9
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220620 165150 00302-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 8444562,
+        "mtime": "2024-02-26T17:15:07+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Captured",
+          "value": "2022:06:20 16:51:50"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "17.0-50.0 mm f/2.8"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "17.0 mm / 25 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220620 165150 00302-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 7327 x 5717 / 41.9 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 7327,
+        "ImageHeight": 5717,
+        "Megapixels": 41.9,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "17.0-50.0 mm f/2.8",
+        "LensModel": "17.0-50.0 mm f/2.8",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "17.0 mm",
+        "FocalLengthIn35mmFormat": "25 mm",
+        "DateTimeOriginal": "2022:06:20 16:51:50",
+        "CreateDate": "2022:06:20 16:51:50.521",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green"
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "DateTimeOriginal": "2022:06:20 16:51:50",
+        "CreateDate": "2022:06:20 16:51:50.521",
+        "ImageWidth": 7327,
+        "ImageHeight": 5717,
+        "Megapixels": 41.9
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 702,
+          "aspect_ratio": 1.2821,
+          "bytes": 190908,
+          "path": "gallery/unknown/20220620-165150-00302-pano-1d95a4f7fc.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1404,
+          "aspect_ratio": 1.2821,
+          "bytes": 709107,
+          "path": "detail/unknown/20220620-165150-00302-pano-1d95a4f7fc.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:31+00:00"
+      }
+    },
+    {
+      "id": "20220620-165439-00307-pano-37a3caf3f3",
+      "relative_path": "2022/JPG/06/20/20220620 165439 00307-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 165439 00307-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/06/20/20220620 165439 00307-Pano.jpg",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "derivatives": {
+        "gallery": "gallery/unknown/20220620-165439-00307-pano-37a3caf3f3.jpg",
+        "detail": "detail/unknown/20220620-165439-00307-pano-37a3caf3f3.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [],
+      "capture": {
+        "raw": "2022:06:20 16:54:44",
+        "year": 2022,
+        "month": 6,
+        "day": 20,
+        "date": "2022-06-20",
+        "time": "16:54:44",
+        "sort": "2022-06-20T16:54:44"
+      },
+      "dimensions": {
+        "width": 7125,
+        "height": 4262,
+        "aspect_ratio": 1.6718,
+        "orientation": "landscape",
+        "megapixels": 30.4
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220620 165439 00307-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 7251072,
+        "mtime": "2024-02-26T17:24:29+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Captured",
+          "value": "2022:06:20 16:54:44"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "17.0-50.0 mm f/2.8"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/250, f/8.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "17.0 mm / 25 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220620 165439 00307-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 7125 x 4262 / 30.4 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 7125,
+        "ImageHeight": 4262,
+        "Megapixels": 30.4,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "17.0-50.0 mm f/2.8",
+        "LensModel": "17.0-50.0 mm f/2.8",
+        "ExposureTime": "1/250",
+        "FNumber": 8.0,
+        "ISO": 100,
+        "FocalLength": "17.0 mm",
+        "FocalLengthIn35mmFormat": "25 mm",
+        "DateTimeOriginal": "2022:06:20 16:54:44",
+        "CreateDate": "2022:06:20 16:54:44.231",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green"
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "DateTimeOriginal": "2022:06:20 16:54:44",
+        "CreateDate": "2022:06:20 16:54:44.231",
+        "ImageWidth": 7125,
+        "ImageHeight": 4262,
+        "Megapixels": 30.4
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 538,
+          "aspect_ratio": 1.6729,
+          "bytes": 175515,
+          "path": "gallery/unknown/20220620-165439-00307-pano-37a3caf3f3.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1076,
+          "aspect_ratio": 1.6729,
+          "bytes": 644291,
+          "path": "detail/unknown/20220620-165439-00307-pano-37a3caf3f3.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:31+00:00"
+      }
+    },
+    {
+      "id": "20220705-163053-00041-pano-ffda1926ab",
+      "relative_path": "2022/JPG/07/05/20220705 163053 00041-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163053 00041-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163053 00041-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-163053-00041-pano-ffda1926ab.jpg",
+        "detail": "detail/spain/20220705-163053-00041-pano-ffda1926ab.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:31:17",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:31:17",
+        "sort": "2022-07-05T16:31:17"
+      },
+      "dimensions": {
+        "width": 10392,
+        "height": 4471,
+        "aspect_ratio": 2.3243,
+        "orientation": "landscape",
+        "megapixels": 46.5
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 163053 00041-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 8094561,
+        "mtime": "2024-02-26T19:26:10+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:31:17"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/30, f/2.8, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 163053 00041-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 10392 x 4471 / 46.5 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 10392,
+        "ImageHeight": 4471,
+        "Megapixels": 46.5,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/30",
+        "FNumber": 2.8,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:31:17",
+        "CreateDate": "2022:07:05 16:31:17.741",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:31:17",
+        "CreateDate": "2022:07:05 16:31:17.741",
+        "ImageWidth": 10392,
+        "ImageHeight": 4471,
+        "Megapixels": 46.5
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 387,
+          "aspect_ratio": 2.3256,
+          "bytes": 126172,
+          "path": "gallery/spain/20220705-163053-00041-pano-ffda1926ab.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 774,
+          "aspect_ratio": 2.3256,
+          "bytes": 449577,
+          "path": "detail/spain/20220705-163053-00041-pano-ffda1926ab.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:30+00:00"
+      }
+    },
+    {
+      "id": "20220705-163201-00058-pano-fcbc893e0f",
+      "relative_path": "2022/JPG/07/05/20220705 163201 00058-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163201 00058-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163201 00058-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-163201-00058-pano-fcbc893e0f.jpg",
+        "detail": "detail/spain/20220705-163201-00058-pano-fcbc893e0f.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:32:18",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:32:18",
+        "sort": "2022-07-05T16:32:18"
+      },
+      "dimensions": {
+        "width": 14069,
+        "height": 3569,
+        "aspect_ratio": 3.942,
+        "orientation": "landscape",
+        "megapixels": 50.2
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 163201 00058-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 7366516,
+        "mtime": "2024-02-26T18:29:54+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:32:18"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 163201 00058-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 14069 x 3569 / 50.2 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 14069,
+        "ImageHeight": 3569,
+        "Megapixels": 50.2,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:32:18",
+        "CreateDate": "2022:07:05 16:32:18.791",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:32:18",
+        "CreateDate": "2022:07:05 16:32:18.791",
+        "ImageWidth": 14069,
+        "ImageHeight": 3569,
+        "Megapixels": 50.2
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 228,
+          "aspect_ratio": 3.9474,
+          "bytes": 51558,
+          "path": "gallery/spain/20220705-163201-00058-pano-fcbc893e0f.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 456,
+          "aspect_ratio": 3.9474,
+          "bytes": 182534,
+          "path": "detail/spain/20220705-163201-00058-pano-fcbc893e0f.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:30+00:00"
+      }
+    },
+    {
+      "id": "20220705-163205-00060-pano-8068d8fe3f",
+      "relative_path": "2022/JPG/07/05/20220705 163205 00060-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163205 00060-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163205 00060-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-163205-00060-pano-8068d8fe3f.jpg",
+        "detail": "detail/spain/20220705-163205-00060-pano-8068d8fe3f.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:32:05",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:32:05",
+        "sort": "2022-07-05T16:32:05"
+      },
+      "dimensions": {
+        "width": 5957,
+        "height": 3486,
+        "aspect_ratio": 1.7088,
+        "orientation": "landscape",
+        "megapixels": 20.8
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 163205 00060-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 4102084,
+        "mtime": "2024-02-26T19:32:09+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:32:05"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 163205 00060-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 5957 x 3486 / 20.8 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 5957,
+        "ImageHeight": 3486,
+        "Megapixels": 20.8,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:32:05",
+        "CreateDate": "2022:07:05 16:32:05.981",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:32:05",
+        "CreateDate": "2022:07:05 16:32:05.981",
+        "ImageWidth": 5957,
+        "ImageHeight": 3486,
+        "Megapixels": 20.8
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 526,
+          "aspect_ratio": 1.711,
+          "bytes": 122218,
+          "path": "gallery/spain/20220705-163205-00060-pano-8068d8fe3f.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1053,
+          "aspect_ratio": 1.7094,
+          "bytes": 486995,
+          "path": "detail/spain/20220705-163205-00060-pano-8068d8fe3f.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:29+00:00"
+      }
+    },
+    {
+      "id": "20220705-163214-00065-pano-bcd3b6cb72",
+      "relative_path": "2022/JPG/07/05/20220705 163214 00065-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163214 00065-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163214 00065-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-163214-00065-pano-bcd3b6cb72.jpg",
+        "detail": "detail/spain/20220705-163214-00065-pano-bcd3b6cb72.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:32:18",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:32:18",
+        "sort": "2022-07-05T16:32:18"
+      },
+      "dimensions": {
+        "width": 6419,
+        "height": 3354,
+        "aspect_ratio": 1.9138,
+        "orientation": "landscape",
+        "megapixels": 21.5
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 163214 00065-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 3867038,
+        "mtime": "2024-02-26T19:31:54+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:32:18"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/400, f/10.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 163214 00065-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 6419 x 3354 / 21.5 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 6419,
+        "ImageHeight": 3354,
+        "Megapixels": 21.5,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/400",
+        "FNumber": 10.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:32:18",
+        "CreateDate": "2022:07:05 16:32:18.791",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:32:18",
+        "CreateDate": "2022:07:05 16:32:18.791",
+        "ImageWidth": 6419,
+        "ImageHeight": 3354,
+        "Megapixels": 21.5
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 470,
+          "aspect_ratio": 1.9149,
+          "bytes": 108434,
+          "path": "gallery/spain/20220705-163214-00065-pano-bcd3b6cb72.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 940,
+          "aspect_ratio": 1.9149,
+          "bytes": 401537,
+          "path": "detail/spain/20220705-163214-00065-pano-bcd3b6cb72.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:29+00:00"
+      }
+    },
+    {
+      "id": "20220705-163419-00083-pano-3f4486b119",
+      "relative_path": "2022/JPG/07/05/20220705 163419 00083-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163419 00083-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 163419 00083-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-163419-00083-pano-3f4486b119.jpg",
+        "detail": "detail/spain/20220705-163419-00083-pano-3f4486b119.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:34:27",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:34:27",
+        "sort": "2022-07-05T16:34:27"
+      },
+      "dimensions": {
+        "width": 10762,
+        "height": 3326,
+        "aspect_ratio": 3.2357,
+        "orientation": "landscape",
+        "megapixels": 35.8
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 163419 00083-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 5975696,
+        "mtime": "2024-02-26T19:26:00+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:34:27"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "20.0 mm / 30 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 163419 00083-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 10762 x 3326 / 35.8 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 10762,
+        "ImageHeight": 3326,
+        "Megapixels": 35.8,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "20.0 mm",
+        "FocalLengthIn35mmFormat": "30 mm",
+        "DateTimeOriginal": "2022:07:05 16:34:27",
+        "CreateDate": "2022:07:05 16:34:27.351",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:34:27",
+        "CreateDate": "2022:07:05 16:34:27.351",
+        "ImageWidth": 10762,
+        "ImageHeight": 3326,
+        "Megapixels": 35.8
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 278,
+          "aspect_ratio": 3.2374,
+          "bytes": 65448,
+          "path": "gallery/spain/20220705-163419-00083-pano-3f4486b119.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 556,
+          "aspect_ratio": 3.2374,
+          "bytes": 244251,
+          "path": "detail/spain/20220705-163419-00083-pano-3f4486b119.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:29+00:00"
+      }
+    },
+    {
+      "id": "20220705-164226-00105-pano-467f6f472c",
+      "relative_path": "2022/JPG/07/05/20220705 164226 00105-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164226 00105-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164226 00105-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164226-00105-pano-467f6f472c.jpg",
+        "detail": "detail/spain/20220705-164226-00105-pano-467f6f472c.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:43:00",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:43:00",
+        "sort": "2022-07-05T16:43:00"
+      },
+      "dimensions": {
+        "width": 16426,
+        "height": 4429,
+        "aspect_ratio": 3.7087,
+        "orientation": "landscape",
+        "megapixels": 72.8
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164226 00105-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 12634990,
+        "mtime": "2024-02-26T18:28:14+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:43:00"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164226 00105-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 16426 x 4429 / 72.8 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 16426,
+        "ImageHeight": 4429,
+        "Megapixels": 72.8,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:43:00",
+        "CreateDate": "2022:07:05 16:43:00.541",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:43:00",
+        "CreateDate": "2022:07:05 16:43:00.541",
+        "ImageWidth": 16426,
+        "ImageHeight": 4429,
+        "Megapixels": 72.8
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 242,
+          "aspect_ratio": 3.719,
+          "bytes": 62090,
+          "path": "gallery/spain/20220705-164226-00105-pano-467f6f472c.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 485,
+          "aspect_ratio": 3.7113,
+          "bytes": 224039,
+          "path": "detail/spain/20220705-164226-00105-pano-467f6f472c.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:28+00:00"
+      }
+    },
+    {
+      "id": "20220705-164241-00109-pano-c1234d4711",
+      "relative_path": "2022/JPG/07/05/20220705 164241 00109-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164241 00109-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164241 00109-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164241-00109-pano-c1234d4711.jpg",
+        "detail": "detail/spain/20220705-164241-00109-pano-c1234d4711.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:42:55",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:42:55",
+        "sort": "2022-07-05T16:42:55"
+      },
+      "dimensions": {
+        "width": 10758,
+        "height": 4376,
+        "aspect_ratio": 2.4584,
+        "orientation": "landscape",
+        "megapixels": 47.1
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164241 00109-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 8953231,
+        "mtime": "2024-02-26T19:27:02+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:42:55"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164241 00109-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 10758 x 4376 / 47.1 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 10758,
+        "ImageHeight": 4376,
+        "Megapixels": 47.1,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:42:55",
+        "CreateDate": "2022:07:05 16:42:55.841",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:42:55",
+        "CreateDate": "2022:07:05 16:42:55.841",
+        "ImageWidth": 10758,
+        "ImageHeight": 4376,
+        "Megapixels": 47.1
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 366,
+          "aspect_ratio": 2.459,
+          "bytes": 92348,
+          "path": "gallery/spain/20220705-164241-00109-pano-c1234d4711.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 732,
+          "aspect_ratio": 2.459,
+          "bytes": 345797,
+          "path": "detail/spain/20220705-164241-00109-pano-c1234d4711.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:28+00:00"
+      }
+    },
+    {
+      "id": "20220705-164252-00114-pano-77e6201324",
+      "relative_path": "2022/JPG/07/05/20220705 164252 00114-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164252 00114-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164252 00114-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164252-00114-pano-77e6201324.jpg",
+        "detail": "detail/spain/20220705-164252-00114-pano-77e6201324.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:43:00",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:43:00",
+        "sort": "2022-07-05T16:43:00"
+      },
+      "dimensions": {
+        "width": 8024,
+        "height": 4296,
+        "aspect_ratio": 1.8678,
+        "orientation": "landscape",
+        "megapixels": 34.5
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164252 00114-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 5585125,
+        "mtime": "2024-02-26T19:30:27+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:43:00"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164252 00114-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 8024 x 4296 / 34.5 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 8024,
+        "ImageHeight": 4296,
+        "Megapixels": 34.5,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:07:05 16:43:00",
+        "CreateDate": "2022:07:05 16:43:00.541",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:43:00",
+        "CreateDate": "2022:07:05 16:43:00.541",
+        "ImageWidth": 8024,
+        "ImageHeight": 4296,
+        "Megapixels": 34.5
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 482,
+          "aspect_ratio": 1.8672,
+          "bytes": 110177,
+          "path": "gallery/spain/20220705-164252-00114-pano-77e6201324.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 963,
+          "aspect_ratio": 1.8692,
+          "bytes": 371338,
+          "path": "detail/spain/20220705-164252-00114-pano-77e6201324.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:27+00:00"
+      }
+    },
+    {
+      "id": "20220705-164358-00121-pano-28e2885b71",
+      "relative_path": "2022/JPG/07/05/20220705 164358 00121-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164358 00121-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164358 00121-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164358-00121-pano-28e2885b71.jpg",
+        "detail": "detail/spain/20220705-164358-00121-pano-28e2885b71.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:44:34",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:44:34",
+        "sort": "2022-07-05T16:44:34"
+      },
+      "dimensions": {
+        "width": 28818,
+        "height": 5068,
+        "aspect_ratio": 5.6863,
+        "orientation": "landscape",
+        "megapixels": 146.0
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164358 00121-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 22277839,
+        "mtime": "2024-02-26T17:40:45+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:44:34"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/400, f/10.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "20.0 mm / 30 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164358 00121-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 28818 x 5068 / 146.0 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 28818,
+        "ImageHeight": 5068,
+        "Megapixels": 146.0,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/400",
+        "FNumber": 10.0,
+        "ISO": 100,
+        "FocalLength": "20.0 mm",
+        "FocalLengthIn35mmFormat": "30 mm",
+        "DateTimeOriginal": "2022:07:05 16:44:34",
+        "CreateDate": "2022:07:05 16:44:34.341",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:44:34",
+        "CreateDate": "2022:07:05 16:44:34.341",
+        "ImageWidth": 28818,
+        "ImageHeight": 5068,
+        "Megapixels": 146.0
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 158,
+          "aspect_ratio": 5.6962,
+          "bytes": 39447,
+          "path": "gallery/spain/20220705-164358-00121-pano-28e2885b71.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 316,
+          "aspect_ratio": 5.6962,
+          "bytes": 143578,
+          "path": "detail/spain/20220705-164358-00121-pano-28e2885b71.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:27+00:00"
+      }
+    },
+    {
+      "id": "20220705-164409-00126-pano-75c4163f8e",
+      "relative_path": "2022/JPG/07/05/20220705 164409 00126-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164409 00126-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164409 00126-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164409-00126-pano-75c4163f8e.jpg",
+        "detail": "detail/spain/20220705-164409-00126-pano-75c4163f8e.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:44:24",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:44:24",
+        "sort": "2022-07-05T16:44:24"
+      },
+      "dimensions": {
+        "width": 13864,
+        "height": 4039,
+        "aspect_ratio": 3.4325,
+        "orientation": "landscape",
+        "megapixels": 56.0
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164409 00126-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 9989618,
+        "mtime": "2024-02-26T18:27:19+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:44:24"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "20.0 mm / 30 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164409 00126-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 13864 x 4039 / 56.0 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 13864,
+        "ImageHeight": 4039,
+        "Megapixels": 56.0,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "20.0 mm",
+        "FocalLengthIn35mmFormat": "30 mm",
+        "DateTimeOriginal": "2022:07:05 16:44:24",
+        "CreateDate": "2022:07:05 16:44:24.041",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:44:24",
+        "CreateDate": "2022:07:05 16:44:24.041",
+        "ImageWidth": 13864,
+        "ImageHeight": 4039,
+        "Megapixels": 56.0
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 262,
+          "aspect_ratio": 3.4351,
+          "bytes": 67536,
+          "path": "gallery/spain/20220705-164409-00126-pano-75c4163f8e.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 524,
+          "aspect_ratio": 3.4351,
+          "bytes": 249165,
+          "path": "detail/spain/20220705-164409-00126-pano-75c4163f8e.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:26+00:00"
+      }
+    },
+    {
+      "id": "20220705-164412-00127-pano-13a8791aa3",
+      "relative_path": "2022/JPG/07/05/20220705 164412 00127-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164412 00127-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164412 00127-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164412-00127-pano-13a8791aa3.jpg",
+        "detail": "detail/spain/20220705-164412-00127-pano-13a8791aa3.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:44:19",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:44:19",
+        "sort": "2022-07-05T16:44:19"
+      },
+      "dimensions": {
+        "width": 8428,
+        "height": 4616,
+        "aspect_ratio": 1.8258,
+        "orientation": "landscape",
+        "megapixels": 38.9
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164412 00127-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 8038197,
+        "mtime": "2024-02-26T19:25:57+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:44:19"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/320, f/9.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "20.0 mm / 30 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164412 00127-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 8428 x 4616 / 38.9 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 8428,
+        "ImageHeight": 4616,
+        "Megapixels": 38.9,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/320",
+        "FNumber": 9.0,
+        "ISO": 100,
+        "FocalLength": "20.0 mm",
+        "FocalLengthIn35mmFormat": "30 mm",
+        "DateTimeOriginal": "2022:07:05 16:44:19",
+        "CreateDate": "2022:07:05 16:44:19.291",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:44:19",
+        "CreateDate": "2022:07:05 16:44:19.291",
+        "ImageWidth": 8428,
+        "ImageHeight": 4616,
+        "Megapixels": 38.9
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 493,
+          "aspect_ratio": 1.8256,
+          "bytes": 135522,
+          "path": "gallery/spain/20220705-164412-00127-pano-13a8791aa3.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 986,
+          "aspect_ratio": 1.8256,
+          "bytes": 530826,
+          "path": "detail/spain/20220705-164412-00127-pano-13a8791aa3.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:25+00:00"
+      }
+    },
+    {
+      "id": "20220705-164431-00139-pano-92425313d3",
+      "relative_path": "2022/JPG/07/05/20220705 164431 00139-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164431 00139-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/07/05/20220705 164431 00139-Pano.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "derivatives": {
+        "gallery": "gallery/spain/20220705-164431-00139-pano-92425313d3.jpg",
+        "detail": "detail/spain/20220705-164431-00139-pano-92425313d3.jpg"
+      },
+      "rating": 4.0,
+      "label": "Green",
+      "keywords": [
+        "Spain",
+        "seville"
+      ],
+      "capture": {
+        "raw": "2022:07:05 16:44:34",
+        "year": 2022,
+        "month": 7,
+        "day": 5,
+        "date": "2022-07-05",
+        "time": "16:44:34",
+        "sort": "2022-07-05T16:44:34"
+      },
+      "dimensions": {
+        "width": 6368,
+        "height": 4183,
+        "aspect_ratio": 1.5224,
+        "orientation": "landscape",
+        "megapixels": 26.6
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220705 164431 00139-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 3790136,
+        "mtime": "2024-02-26T19:29:14+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Spain, seville"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:07:05 16:44:34"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/400, f/10.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "20.0 mm / 30 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220705 164431 00139-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 6368 x 4183 / 26.6 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 6368,
+        "ImageHeight": 4183,
+        "Megapixels": 26.6,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/400",
+        "FNumber": 10.0,
+        "ISO": 100,
+        "FocalLength": "20.0 mm",
+        "FocalLengthIn35mmFormat": "30 mm",
+        "DateTimeOriginal": "2022:07:05 16:44:34",
+        "CreateDate": "2022:07:05 16:44:34.341",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "Keywords": [
+          "Spain",
+          "seville"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 4,
+        "Label": "Green",
+        "Subject": [
+          "Spain",
+          "seville"
+        ],
+        "DateTimeOriginal": "2022:07:05 16:44:34",
+        "CreateDate": "2022:07:05 16:44:34.341",
+        "ImageWidth": 6368,
+        "ImageHeight": 4183,
+        "Megapixels": 26.6
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 591,
+          "aspect_ratio": 1.5228,
+          "bytes": 120195,
+          "path": "gallery/spain/20220705-164431-00139-pano-92425313d3.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 1182,
+          "aspect_ratio": 1.5228,
+          "bytes": 466794,
+          "path": "detail/spain/20220705-164431-00139-pano-92425313d3.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:25+00:00"
+      }
+    },
+    {
+      "id": "20220802-130003-00136-pano-052608ca90",
+      "relative_path": "2022/JPG/08/02/20220802 130003 00136-Pano.jpg",
+      "source_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/08/02/20220802 130003 00136-Pano.jpg",
+      "metadata_path_hint": "/Volumes/Saturn/Pictures/LR/Camera/2022/JPG/08/02/20220802 130003 00136-Pano.jpg",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "derivatives": {
+        "gallery": "gallery/unknown/20220802-130003-00136-pano-052608ca90.jpg",
+        "detail": "detail/unknown/20220802-130003-00136-pano-052608ca90.jpg"
+      },
+      "rating": 5.0,
+      "label": "Green",
+      "keywords": [
+        "Bacalhoa Buddha Eden",
+        "Jardim do Eden",
+        "Panoramic",
+        "Portugal"
+      ],
+      "capture": {
+        "raw": "2022:08:02 12:00:48",
+        "year": 2022,
+        "month": 8,
+        "day": 2,
+        "date": "2022-08-02",
+        "time": "12:00:48",
+        "sort": "2022-08-02T12:00:48"
+      },
+      "dimensions": {
+        "width": 13512,
+        "height": 6418,
+        "aspect_ratio": 2.1053,
+        "orientation": "landscape",
+        "megapixels": 86.7
+      },
+      "location": {
+        "country": null,
+        "region": null,
+        "city": null,
+        "location": null
+      },
+      "source_file": {
+        "name": "20220802 130003 00136-Pano.jpg",
+        "extension": "jpg",
+        "bytes": 16218220,
+        "mtime": "2024-02-26T18:26:46+00:00"
+      },
+      "metadata": [
+        {
+          "label": "Keywords",
+          "value": "Bacalhoa Buddha Eden, Jardim do Eden, Panoramic, Portugal"
+        },
+        {
+          "label": "Captured",
+          "value": "2022:08:02 12:00:48"
+        },
+        {
+          "label": "Camera",
+          "value": "NIKON CORPORATION NIKON D500"
+        },
+        {
+          "label": "Lens",
+          "value": "Tokina atx-i 11-20mm F2.8 CF"
+        },
+        {
+          "label": "Exposure",
+          "value": "1/1000, f/5.0, ISO 100"
+        },
+        {
+          "label": "Focal length",
+          "value": "11.0 mm / 16 mm equivalent"
+        },
+        {
+          "label": "Software",
+          "value": "Adobe Bridge 2024"
+        },
+        {
+          "label": "Color profile",
+          "value": "sRGB IEC61966-2.1"
+        },
+        {
+          "label": "Original file",
+          "value": "20220802 130003 00136-Pano.jpg"
+        },
+        {
+          "label": "Original size",
+          "value": "JPEG / 13512 x 6418 / 86.7 MP"
+        }
+      ],
+      "raw_metadata": {
+        "FileType": "JPEG",
+        "MIMEType": "image/jpeg",
+        "ImageWidth": 13512,
+        "ImageHeight": 6418,
+        "Megapixels": 86.7,
+        "Make": "NIKON CORPORATION",
+        "Model": "NIKON D500",
+        "Lens": "Tokina atx-i 11-20mm F2.8 CF",
+        "LensModel": "Tokina atx-i 11-20mm F2.8 CF",
+        "ExposureTime": "1/1000",
+        "FNumber": 5.0,
+        "ISO": 100,
+        "FocalLength": "11.0 mm",
+        "FocalLengthIn35mmFormat": "16 mm",
+        "DateTimeOriginal": "2022:08:02 12:00:48",
+        "CreateDate": "2022:08:02 13:00:48.591",
+        "Software": "Adobe Bridge 2024",
+        "ColorSpace": "sRGB",
+        "ProfileDescription": "sRGB IEC61966-2.1",
+        "Orientation": "Horizontal (normal)",
+        "Rating": 5,
+        "Label": "Green",
+        "Subject": [
+          "Bacalhoa Buddha Eden",
+          "Jardim do Eden",
+          "Panoramic",
+          "Portugal"
+        ],
+        "Keywords": [
+          "Bacalhoa Buddha Eden",
+          "Jardim do Eden",
+          "Panoramic",
+          "Portugal"
+        ]
+      },
+      "selection_metadata": {
+        "Rating": 5,
+        "Label": "Green",
+        "Subject": [
+          "Bacalhoa Buddha Eden",
+          "Jardim do Eden",
+          "Panoramic",
+          "Portugal"
+        ],
+        "DateTimeOriginal": "2022:08:02 12:00:48",
+        "CreateDate": "2022:08:02 13:00:48.591",
+        "ImageWidth": 13512,
+        "ImageHeight": 6418,
+        "Megapixels": 86.7
+      },
+      "derivative_files": {
+        "gallery": {
+          "width": 900,
+          "height": 427,
+          "aspect_ratio": 2.1077,
+          "bytes": 119690,
+          "path": "gallery/unknown/20220802-130003-00136-pano-052608ca90.jpg"
+        },
+        "detail": {
+          "width": 1800,
+          "height": 855,
+          "aspect_ratio": 2.1053,
+          "bytes": 488908,
+          "path": "detail/unknown/20220802-130003-00136-pano-052608ca90.jpg"
+        },
+        "generated_at": "2026-05-03T11:01:24+00:00"
       }
     }
   ]

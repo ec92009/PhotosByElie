@@ -4,6 +4,8 @@
 
 `build_lightroom_thumbnails.py` scans the Lightroom camera archive, selects photos with a green Lightroom label and rating 4 or higher, and writes two watermarked JPEG derivatives plus a resumable manifest.
 
+Required tools: `python3`, `exiftool`, `sips`, and `ffmpeg`. If the local `ffmpeg` build does not include the `drawtext` filter, the script falls back to Pillow for watermarking; install it with `python3 -m pip install --user pillow`.
+
 Default source:
 
 ```bash

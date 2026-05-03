@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.20`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.21`.
 
 ## Repositories And Folders
 
@@ -87,7 +87,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.20`.
+- Current visible version: `v64.21`.
 - Latest visible cycle added the Mexico DNG-backed gallery import and completed the first real-photo replacement TODO.
 - Latest USA visible cycle replaced the older Del Mar sample set with the generated 2014 USA sale candidates.
 - Latest repo-only follow-up synced `main` with GitHub, added `docs/sops/IMAGE_INGESTION_SOP.md`, and narrowed the next TODO to automating manifest promotion into `photos-data.js`.
@@ -95,6 +95,8 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Branch state after the latest sync: local `main` fast-forwarded to `origin/main` at `b3b394c`, then received the repo-only ingestion SOP update.
 - Latest 2024 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2024`, saw 335 images, inspected 335 on the first pass, selected 0 matching green/rating-4+ photos, and left the public manifest at the existing five 2014 USA selected rows. A script fix now records the last run separately from the manifest contents.
 - Latest 2023 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2023`, saw and inspected 3,603 images, selected 0 matching green/rating-4+ photos, and recorded no failures.
+- Latest visible gallery update added 18 rendered 2022 Spain-context Lightroom rows to the Spain gallery and bumped the visible version to `v64.21`. One rendered Portugal/Bacalhoa Buddha Eden row remains in the Lightroom manifest but is not public because there is no Portugal gallery yet.
+- The thumbnail builder now falls back to Pillow when the local `ffmpeg` build lacks the `drawtext` filter, and `--limit` now counts successfully rendered rows instead of pre-render candidates.
 - Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.20`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
 - Latest local commits after `origin/main` before this docs refresh include:
   - `79b3ad3 photosbyelie: use verified preview formats`

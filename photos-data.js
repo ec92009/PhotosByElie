@@ -564,7 +564,7 @@ window.photosByElieData = {
   spain: {
     number: "03",
     title: "Spain",
-    description: "Ten randomized Lightroom selections from the Spain photo archive.",
+    description: "Spain gallery with original archive picks plus rendered 2022 Lightroom sale candidates.",
     accent: "spain-gallery",
     photos: [
       {
@@ -996,7 +996,1301 @@ window.photosByElieData = {
             value: "70 mm / 105 mm equivalent"
           }
         ]
-      }
+      },
+{
+        id: "spain-20220619-000102-00258-pano-8f64733ada",
+        className: "p11",
+        title: "Malaga Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Malaga, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 46.3,
+        imageSrc: "./assets/lightroom/detail/spain/20220619-000102-00258-pano-8f64733ada.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/06/19/20220619 000102 00258-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Malaga, Spain"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:06:19 01:01:02"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "17.0-50.0 mm f/2.8"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/25, f/2.8, ISO 1250"
+                },
+                {
+                        label: "Focal length",
+                        value: "17.0 mm / 25 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220619 000102 00258-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 7574 x 6117 / 46.3 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220619 000102 00258-Pano.jpg / 7574 x 6117 / 46.3 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220619-000102-00258-pano-8f64733ada.jpg / 1800 x 1453 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 5 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220620-144527-00117-pano-6e6b630180",
+        className: "p12",
+        title: "Spain Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 54.7,
+        imageSrc: "./assets/lightroom/detail/unknown/20220620-144527-00117-pano-6e6b630180.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/06/20/20220620 144527 00117-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Captured",
+                        value: "2022:06:20 14:45:27"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "17.0-50.0 mm f/2.8"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/250, f/8.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "17.0 mm / 25 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220620 144527 00117-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 7668 x 7135 / 54.7 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220620 144527 00117-Pano.jpg / 7668 x 7135 / 54.7 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220620-144527-00117-pano-6e6b630180.jpg / 1800 x 1675 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 5 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220620-144601-00127-pano-1a18b2ed13",
+        className: "p13",
+        title: "Spain Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 36.2,
+        imageSrc: "./assets/lightroom/detail/unknown/20220620-144601-00127-pano-1a18b2ed13.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/06/20/20220620 144601 00127-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Captured",
+                        value: "2022:06:20 14:46:01"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "17.0-50.0 mm f/2.8"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/250, f/8.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "17.0 mm / 25 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220620 144601 00127-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 6092 x 5947 / 36.2 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220620 144601 00127-Pano.jpg / 6092 x 5947 / 36.2 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220620-144601-00127-pano-1a18b2ed13.jpg / 1800 x 1757 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 5 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220620-144822-00251-57d2611649",
+        className: "p14",
+        title: "Spain Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 217.3,
+        imageSrc: "./assets/lightroom/detail/unknown/20220620-144822-00251-57d2611649.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/06/20/20220620 144822 00251.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Captured",
+                        value: "2022:06:20 14:48:22"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "17.0-50.0 mm f/2.8"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/160, f/7.1, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "44.0 mm / 66 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220620 144822 00251.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 25606 x 8487 / 217.3 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220620 144822 00251.jpg / 25606 x 8487 / 217.3 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220620-144822-00251-57d2611649.jpg / 1800 x 596 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 5 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220620-165150-00302-pano-1d95a4f7fc",
+        className: "p15",
+        title: "Spain Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 41.9,
+        imageSrc: "./assets/lightroom/detail/unknown/20220620-165150-00302-pano-1d95a4f7fc.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/06/20/20220620 165150 00302-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Captured",
+                        value: "2022:06:20 16:51:50"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "17.0-50.0 mm f/2.8"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "17.0 mm / 25 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220620 165150 00302-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 7327 x 5717 / 41.9 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220620 165150 00302-Pano.jpg / 7327 x 5717 / 41.9 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220620-165150-00302-pano-1d95a4f7fc.jpg / 1800 x 1404 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220620-165439-00307-pano-37a3caf3f3",
+        className: "p16",
+        title: "Spain Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 30.4,
+        imageSrc: "./assets/lightroom/detail/unknown/20220620-165439-00307-pano-37a3caf3f3.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/06/20/20220620 165439 00307-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Captured",
+                        value: "2022:06:20 16:54:44"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "17.0-50.0 mm f/2.8"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/250, f/8.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "17.0 mm / 25 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220620 165439 00307-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 7125 x 4262 / 30.4 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220620 165439 00307-Pano.jpg / 7125 x 4262 / 30.4 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220620-165439-00307-pano-37a3caf3f3.jpg / 1800 x 1076 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-163053-00041-pano-ffda1926ab",
+        className: "p17",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 46.5,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-163053-00041-pano-ffda1926ab.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 163053 00041-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:31:17"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/30, f/2.8, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 163053 00041-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 10392 x 4471 / 46.5 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 163053 00041-Pano.jpg / 10392 x 4471 / 46.5 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-163053-00041-pano-ffda1926ab.jpg / 1800 x 774 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-163205-00060-pano-8068d8fe3f",
+        className: "p18",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 20.8,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-163205-00060-pano-8068d8fe3f.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 163205 00060-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:32:05"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 163205 00060-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 5957 x 3486 / 20.8 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 163205 00060-Pano.jpg / 5957 x 3486 / 20.8 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-163205-00060-pano-8068d8fe3f.jpg / 1800 x 1053 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-163201-00058-pano-fcbc893e0f",
+        className: "p19",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 50.2,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-163201-00058-pano-fcbc893e0f.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 163201 00058-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:32:18"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 163201 00058-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 14069 x 3569 / 50.2 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 163201 00058-Pano.jpg / 14069 x 3569 / 50.2 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-163201-00058-pano-fcbc893e0f.jpg / 1800 x 456 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-163214-00065-pano-bcd3b6cb72",
+        className: "p20",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 21.5,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-163214-00065-pano-bcd3b6cb72.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 163214 00065-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:32:18"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/400, f/10.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 163214 00065-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 6419 x 3354 / 21.5 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 163214 00065-Pano.jpg / 6419 x 3354 / 21.5 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-163214-00065-pano-bcd3b6cb72.jpg / 1800 x 940 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-163419-00083-pano-3f4486b119",
+        className: "p21",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 35.8,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-163419-00083-pano-3f4486b119.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 163419 00083-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:34:27"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "20.0 mm / 30 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 163419 00083-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 10762 x 3326 / 35.8 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 163419 00083-Pano.jpg / 10762 x 3326 / 35.8 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-163419-00083-pano-3f4486b119.jpg / 1800 x 556 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164241-00109-pano-c1234d4711",
+        className: "p22",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 47.1,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164241-00109-pano-c1234d4711.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164241 00109-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:42:55"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164241 00109-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 10758 x 4376 / 47.1 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164241 00109-Pano.jpg / 10758 x 4376 / 47.1 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164241-00109-pano-c1234d4711.jpg / 1800 x 732 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164226-00105-pano-467f6f472c",
+        className: "p23",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 72.8,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164226-00105-pano-467f6f472c.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164226 00105-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:43:00"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164226 00105-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 16426 x 4429 / 72.8 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164226 00105-Pano.jpg / 16426 x 4429 / 72.8 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164226-00105-pano-467f6f472c.jpg / 1800 x 485 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164252-00114-pano-77e6201324",
+        className: "p24",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 34.5,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164252-00114-pano-77e6201324.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164252 00114-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:43:00"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "11.0 mm / 16 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164252 00114-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 8024 x 4296 / 34.5 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164252 00114-Pano.jpg / 8024 x 4296 / 34.5 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164252-00114-pano-77e6201324.jpg / 1800 x 963 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164412-00127-pano-13a8791aa3",
+        className: "p25",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 38.9,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164412-00127-pano-13a8791aa3.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164412 00127-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:44:19"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "20.0 mm / 30 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164412 00127-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 8428 x 4616 / 38.9 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164412 00127-Pano.jpg / 8428 x 4616 / 38.9 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164412-00127-pano-13a8791aa3.jpg / 1800 x 986 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164409-00126-pano-75c4163f8e",
+        className: "p26",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 56.0,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164409-00126-pano-75c4163f8e.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164409 00126-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:44:24"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/320, f/9.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "20.0 mm / 30 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164409 00126-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 13864 x 4039 / 56.0 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164409 00126-Pano.jpg / 13864 x 4039 / 56.0 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164409-00126-pano-75c4163f8e.jpg / 1800 x 524 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164358-00121-pano-28e2885b71",
+        className: "p27",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 146.0,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164358-00121-pano-28e2885b71.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164358 00121-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:44:34"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/400, f/10.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "20.0 mm / 30 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164358 00121-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 28818 x 5068 / 146.0 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164358 00121-Pano.jpg / 28818 x 5068 / 146.0 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164358-00121-pano-28e2885b71.jpg / 1800 x 316 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+},
+{
+        id: "spain-20220705-164431-00139-pano-92425313d3",
+        className: "p28",
+        title: "Seville Panorama",
+        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
+        full: "JPG source",
+        megapixels: 26.6,
+        imageSrc: "./assets/lightroom/detail/spain/20220705-164431-00139-pano-92425313d3.jpg",
+        sourceFiles: [
+                {
+                        path: "LR/Camera/2022/JPG/07/05/20220705 164431 00139-Pano.jpg",
+                        type: "JPG"
+                }
+        ],
+        metadata: [
+                {
+                        label: "Keywords",
+                        value: "Spain, seville"
+                },
+                {
+                        label: "Captured",
+                        value: "2022:07:05 16:44:34"
+                },
+                {
+                        label: "Camera",
+                        value: "NIKON CORPORATION NIKON D500"
+                },
+                {
+                        label: "Lens",
+                        value: "Tokina atx-i 11-20mm F2.8 CF"
+                },
+                {
+                        label: "Exposure",
+                        value: "1/400, f/10.0, ISO 100"
+                },
+                {
+                        label: "Focal length",
+                        value: "20.0 mm / 30 mm equivalent"
+                },
+                {
+                        label: "Software",
+                        value: "Adobe Bridge 2024"
+                },
+                {
+                        label: "Color profile",
+                        value: "sRGB IEC61966-2.1"
+                },
+                {
+                        label: "Original file",
+                        value: "20220705 164431 00139-Pano.jpg"
+                },
+                {
+                        label: "Original size",
+                        value: "JPEG / 6368 x 4183 / 26.6 MP"
+                },
+                {
+                        label: "Source file",
+                        value: "20220705 164431 00139-Pano.jpg / 6368 x 4183 / 26.6 MP"
+                },
+                {
+                        label: "Preview file",
+                        value: "20220705-164431-00139-pano-92425313d3.jpg / 1800 x 1182 / watermarked JPG"
+                },
+                {
+                        label: "Lightroom selection",
+                        value: "Green label / 4 stars"
+                },
+                {
+                        label: "Available derivatives",
+                        value: "JPG source; watermarked gallery and detail previews"
+                }
+        ]
+}
     ]
   },
   mexico: {

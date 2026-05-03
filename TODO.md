@@ -6,6 +6,7 @@ Last updated: 2026-05-03
 
 - Replaced the remaining mock Mexico gallery with ten DNG-backed Puerto Vallarta selections, including preview exports, source file descriptions, megapixel counts, captions, and available derivative notes in `photos-data.js`.
 - Added a repeatable Lightroom thumbnail builder and documented the ingestion, privacy, promotion, and verification workflow in `docs/sops/IMAGE_INGESTION_SOP.md`.
+- Added rendered 2022 Spain-context Lightroom sale candidates to the public Spain gallery.
 
 ## Prioritized Next Steps
 

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v64.20`
+- Current visible version: `v64.21`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -41,7 +41,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 ## Current Behavior
 
 - Collections are ordered France, USA, Spain, Mexico, AI.
-- France, Spain, and Mexico use resized JPEG previews from their matching Lightroom source folders under `/Users/ecohen/Pictures/LR/`; the USA gallery now uses five green-rated 2014 sale candidates from `assets/lightroom`.
+- France and Mexico use resized JPEG previews from their matching Lightroom source folders under `/Users/ecohen/Pictures/LR/`; Spain now includes its original previews plus rendered 2022 Lightroom sale candidates from `assets/lightroom`; the USA gallery uses five green-rated 2014 sale candidates from `assets/lightroom`.
 - The home carousel and hero stack use the first selected France, USA, Spain, and Mexico previews.
 - The AI gallery uses eight resized Leonardo-generated JPGs from `~/Pictures/Leonardo/2023/06/08/UPSCALE`.
 - The basket is the source of truth for selected resolutions.

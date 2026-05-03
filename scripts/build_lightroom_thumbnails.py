@@ -66,6 +66,8 @@ COUNTRY_ALIASES = {
     "mexico": ("mexico", "Mexico"),
     "mx": ("mexico", "Mexico"),
     "méxico": ("mexico", "Mexico"),
+    "portugal": ("portugal", "Portugal"),
+    "pt": ("portugal", "Portugal"),
     "italy": ("italy", "Italy"),
     "italia": ("italy", "Italy"),
     "canada": ("canada", "Canada"),
@@ -133,6 +135,7 @@ FONT_CANDIDATES = [
     "/System/Library/Fonts/Supplemental/Arial.ttf",
     "/System/Library/Fonts/Helvetica.ttc",
 ]
+FFMPEG_FILTERS: set[str] | None = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -623,6 +626,51 @@ def ffmpeg_escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
+def ffmpeg_has_filter(name: str) -> bool:
+    global FFMPEG_FILTERS
+    if FFMPEG_FILTERS is None:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-filters"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        FFMPEG_FILTERS = set(re.findall(r"^\s*[TSC.]+\s+(\S+)", result.stdout, re.MULTILINE))
+    return name in FFMPEG_FILTERS
+
+
+def apply_pillow_watermark(source: Path, output: Path, watermark: str, font: str, font_size: int, border_width: int, margin: int) -> None:
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError as exc:
+        raise RuntimeError(
+            "ffmpeg drawtext is unavailable and Pillow is not installed. Run `python3 -m pip install --user pillow`."
+        ) from exc
+
+    with Image.open(source) as image:
+        image = image.convert("RGB")
+        overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(overlay)
+        font_object = ImageFont.truetype(font, font_size)
+        bbox = draw.textbbox((0, 0), watermark, font=font_object, stroke_width=border_width)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        position = (
+            max(margin, image.width - text_width - margin),
+            max(margin, image.height - text_height - margin),
+        )
+        draw.text(
+            position,
+            watermark,
+            font=font_object,
+            fill=(255, 255, 255, 148),
+            stroke_width=border_width,
+            stroke_fill=(0, 0, 0, 92),
+        )
+        watermarked = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
+        watermarked.save(output, format="JPEG", quality=88, optimize=True)
+
+
 def render_derivative(
     source: Path,
     output: Path,
@@ -655,33 +703,36 @@ def render_derivative(
         font_size = max(18, round(max_px / 45))
         border_width = max(1, round(font_size / 14))
         margin = max(18, round(max_px / 36))
-        watermark_filter = (
-            f"drawtext=fontfile='{ffmpeg_escape(font)}':"
-            f"text='{ffmpeg_escape(watermark)}':"
-            "fontcolor=white@0.58:"
-            f"fontsize={font_size}:"
-            f"borderw={border_width}:"
-            "bordercolor=black@0.36:"
-            f"x=w-tw-{margin}:"
-            f"y=h-th-{margin}"
-        )
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-i",
-                str(temp_jpg),
-                "-vf",
-                watermark_filter,
-                "-q:v",
-                "3",
-                str(temp_out),
-            ],
-            check=True,
-        )
+        if ffmpeg_has_filter("drawtext"):
+            watermark_filter = (
+                f"drawtext=fontfile='{ffmpeg_escape(font)}':"
+                f"text='{ffmpeg_escape(watermark)}':"
+                "fontcolor=white@0.58:"
+                f"fontsize={font_size}:"
+                f"borderw={border_width}:"
+                "bordercolor=black@0.36:"
+                f"x=w-tw-{margin}:"
+                f"y=h-th-{margin}"
+            )
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    str(temp_jpg),
+                    "-vf",
+                    watermark_filter,
+                    "-q:v",
+                    "3",
+                    str(temp_out),
+                ],
+                check=True,
+            )
+        else:
+            apply_pillow_watermark(temp_jpg, temp_out, watermark, font, font_size, border_width, margin)
         temp_out.replace(output)
     return True
 
@@ -917,10 +968,11 @@ def process_batch(
     gps_manifest: dict[str, dict[str, Any]],
     failures: dict[str, dict[str, Any]],
     font: str,
+    selection_limit: int | None = None,
 ) -> int:
     metadata_rows = run_exiftool([item["metadata_path"] for item in batch])
     by_source = {Path(row.get("SourceFile", "")).resolve(): row for row in metadata_rows}
-    selected_count = 0
+    rendered_count = 0
     for item in batch:
         relative_path = item["relative_path"]
         source = item["source_path"]
@@ -936,7 +988,6 @@ def process_batch(
             append_state(state_path, {**base_state, "status": "skipped"})
             continue
 
-        selected_count += 1
         try:
             slug = slug_for(relative_path)
             selected_metadata = merged_selected_metadata(source, metadata_path, args)
@@ -981,6 +1032,9 @@ def process_batch(
             manifest[relative_path] = row
             failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
+            rendered_count += 1
+            if selection_limit and rendered_count >= selection_limit:
+                break
         except Exception as exc:
             failures[relative_path] = {
                 **base_state,
@@ -990,7 +1044,7 @@ def process_batch(
             }
             append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
             print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
-    return selected_count
+    return rendered_count
 
 
 def main() -> int:
@@ -1042,6 +1096,8 @@ def main() -> int:
             if prior_status in {"rendered", "selected"} and relative_path in manifest:
                 if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)):
                     selected += 1
+                    if args.limit and selected >= args.limit:
+                        break
                     continue
                 # Metadata is known, but a derivative is missing. Re-render from the original.
             elif prior_status == "error":
@@ -1059,7 +1115,8 @@ def main() -> int:
         if len(batch) >= args.batch_size:
             inspected += len(batch)
             print(f"Processing batch after scanning {seen} files; inspected {inspected}, selected {selected}", flush=True)
-            selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font)
+            selection_limit = max(0, args.limit - selected) if args.limit else None
+            selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font, selection_limit)
             write_manifest(manifest_path, manifest, args)
             write_keyword_index(keywords_path, manifest)
             write_collection_index(collections_path, manifest)
@@ -1073,7 +1130,8 @@ def main() -> int:
     if batch and (not args.limit or selected < args.limit):
         inspected += len(batch)
         print(f"Processing final batch after scanning {seen} files; inspected {inspected}, selected {selected}", flush=True)
-        selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font)
+        selection_limit = max(0, args.limit - selected) if args.limit else None
+        selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font, selection_limit)
         write_manifest(manifest_path, manifest, args)
         write_keyword_index(keywords_path, manifest)
         write_collection_index(collections_path, manifest)

@@ -6,6 +6,7 @@ const collectionEntry = Object.entries(collections).find(([, collection]) =>
 );
 const [collectionKey, collection] = collectionEntry || ["france", collections.france];
 const photo = collection.photos.find((item) => item.id === photoId) || collection.photos[0];
+const photoIndex = collection.photos.findIndex((item) => item.id === photo.id);
 const resolutions = window.photosByElieResolutions || [];
 const availableResolutions = window.photosByElieAvailableResolutions
   ? window.photosByElieAvailableResolutions(photo, resolutions)
@@ -34,6 +35,19 @@ document.querySelector("[data-photo-title]").textContent = photo.title;
 document.querySelector("[data-photo-meta]").textContent = `${collection.title} / ${photo.full} / ${photo.megapixels} MP source`;
 document.querySelector("[data-photo-caption]").textContent = photo.caption;
 document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
+
+const prevPhotoLink = document.querySelector("[data-prev-photo]");
+const nextPhotoLink = document.querySelector("[data-next-photo]");
+if (prevPhotoLink && nextPhotoLink && collection.photos.length > 1) {
+  const previousPhoto = collection.photos[(photoIndex - 1 + collection.photos.length) % collection.photos.length];
+  const nextPhoto = collection.photos[(photoIndex + 1) % collection.photos.length];
+  prevPhotoLink.setAttribute("href", `./photo.html?id=${previousPhoto.id}`);
+  prevPhotoLink.setAttribute("aria-label", `Previous photo: ${previousPhoto.title}`);
+  nextPhotoLink.setAttribute("href", `./photo.html?id=${nextPhoto.id}`);
+  nextPhotoLink.setAttribute("aria-label", `Next photo: ${nextPhoto.title}`);
+} else {
+  document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
+}
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
 const metadata = Array.isArray(photo.metadata) ? photo.metadata.filter((item) => item.label && item.value) : [];

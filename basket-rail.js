@@ -15,11 +15,14 @@
     const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
     const lines = items.slice(0, 5).map((item) => {
       const options = (item.options || []).map((option) => option.label).join(", ") || "No resolution selected";
+      const detailHref = `./photo.html?id=${encodeURIComponent(item.photoId)}`;
       return `
         <li class="basket-rail-item">
-          <span>${item.title}</span>
-          <small>${options}</small>
-          <strong>${formatMoney(Number(item.total) || 0)}</strong>
+          <a class="basket-rail-item-link" href="${detailHref}" aria-label="Open ${item.title}">
+            <span>${item.title}</span>
+            <small>${options}</small>
+            <strong>${formatMoney(Number(item.total) || 0)}</strong>
+          </a>
         </li>
       `;
     }).join("");

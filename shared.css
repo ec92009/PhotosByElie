@@ -53,6 +53,11 @@ body{
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
 .header-controls{display:flex;align-items:center;gap:8px;margin-left:auto}
+.mode-controls{display:flex;align-items:center;gap:8px}
+.detail-header-controls{flex-direction:column;align-items:flex-end;gap:6px}
+.detail-cycle{display:flex;gap:6px}
+.detail-cycle-btn{display:inline-flex;align-items:center;justify-content:center;min-width:82px;border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:6px 10px;font-size:.78rem;font-weight:800;color:var(--text);text-decoration:none}
+.detail-cycle-btn:hover{background:var(--surface-2)}
 .version-switch,.theme-toggle,.language-toggle{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
 .version-switch{display:inline-flex;gap:6px;align-items:center}
 .version-switch a{text-decoration:none;color:var(--muted);font-weight:700}
@@ -346,6 +351,7 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .topbar{flex-wrap:wrap;gap:8px;padding:10px 0;align-items:flex-start}
   .version-switch{flex:1 1 100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
   .header-controls{margin-left:auto}
+  .detail-cycle-btn{min-width:74px;padding:6px 9px}
   .brand{font-size:.95rem;max-width:calc(100% - 184px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .panel,.card,.carousel-wrap,.carousel-item{min-width:0}
   .lead,.card p,h1{overflow-wrap:anywhere}

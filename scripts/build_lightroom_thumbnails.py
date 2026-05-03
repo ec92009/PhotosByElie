@@ -550,8 +550,8 @@ def manifest_derivatives_exist(output_root: Path, row: dict[str, Any] | None) ->
 
 def discover_images(source_root: Path) -> Any:
     for root, dirs, files in os.walk(source_root):
-        dirs[:] = [name for name in dirs if not name.startswith(".")]
-        for name in sorted(files):
+        dirs[:] = sorted((name for name in dirs if not name.startswith(".")), reverse=True)
+        for name in sorted(files, reverse=True):
             path = Path(root) / name
             if is_image(path):
                 yield path

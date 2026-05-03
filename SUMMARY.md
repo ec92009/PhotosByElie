@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.19`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.20`.
 
 ## Repositories And Folders
 
@@ -68,6 +68,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Extracted metadata for all current image-backed photos into `photos-data.js`.
 - France, USA, Spain, and AI image entries include preview dimensions and available embedded metadata.
 - Mexico image entries now include DNG source file descriptions, 20.7 MP source counts, preview dimensions, captions, and available derivative notes.
+- The USA gallery was refreshed to show the five generated 2014 green-rated sale candidates from `assets/lightroom/gallery/usa` and `assets/lightroom/detail/usa`.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
 - Detail pages and Full resolution choices show verified file formats such as `JPG preview/export`; Mexico Full choices now show DNG source proof via `sourceFiles`.
 
@@ -86,10 +87,11 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.19`.
+- Current visible version: `v64.20`.
 - Latest visible cycle added the Mexico DNG-backed gallery import and completed the first real-photo replacement TODO.
+- Latest USA visible cycle replaced the older Del Mar sample set with the generated 2014 USA sale candidates.
 - Branch state before this docs refresh: `main` was ahead of `origin/main` by 14 local commits.
-- Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.19`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
+- Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.20`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
 - Latest local commits after `origin/main` before this docs refresh include:
   - `79b3ad3 photosbyelie: use verified preview formats`
   - `9f87949 photosbyelie: refresh handoff summary`

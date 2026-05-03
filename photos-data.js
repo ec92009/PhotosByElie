@@ -428,477 +428,135 @@ window.photosByElieData = {
   usa: {
     number: "02",
     title: "USA",
-    description: "Ten randomized Lightroom selections from the USA photo archive.",
+    description: "Five green-rated 2014 Lightroom selections from the USA archive.",
     accent: "usa-gallery",
     photos: [
       {
-        id: "usa-1",
+        id: "usa-20140907-1911-06385-5f3a5197a2",
         className: "p1",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-01.jpg",
+        title: "Carlsbad Photo Stream",
+        caption: "Green-rated Lightroom selection from Carlsbad, California, captured 2014-09-07.",
+        full: "JPG source",
+        megapixels: 7.7,
+        imageSrc: "./assets/lightroom/detail/usa/20140907-1911-06385-5f3a5197a2.jpg",
+        sourceFiles: [{ path: "LR/Camera/2010-2014/20140907 1911 06385.jpg", type: "JPG" }],
         metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:11"
-          },
-          {
-            label: "Preview file",
-            value: "usa-01.jpg / 1200 x 1800 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/50 sec at f/5, ISO 400"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
+          { label: "Keywords", value: "Photo Stream" },
+          { label: "Captured", value: "2014:09:07 19:11:41" },
+          { label: "Camera", value: "Apple iPhone 5s" },
+          { label: "Lens", value: "iPhone 5s back camera 4.12mm f/2.2" },
+          { label: "Exposure", value: "1/30, f/2.2, ISO 80" },
+          { label: "Focal length", value: "4.1 mm / 30 mm equivalent" },
+          { label: "Location", value: "Carlsbad, California, United States" },
+          { label: "Software", value: "Adobe Photoshop Lightroom 6.6 (Macintosh)" },
+          { label: "Color profile", value: "ProPhoto RGB" },
+          { label: "Original file", value: "20140907 1911 06385.jpg" },
+          { label: "Original size", value: "JPEG / 3196 x 2397 / 7.7 MP" },
+          { label: "Source file", value: "20140907 1911 06385.jpg / 3196 x 2397 / 7.7 MP" },
+          { label: "Preview file", value: "20140907-1911-06385-5f3a5197a2.jpg / 1800 x 1350 / watermarked JPG" },
+          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
         ]
       },
       {
-        id: "usa-2",
+        id: "usa-20141221-1313-00111-ee3b408e47",
         className: "p2",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-02.jpg",
+        title: "Lake Arrowhead Panorama",
+        caption: "Green-rated Lightroom selection from the USA archive, captured 2014-12-21.",
+        full: "JPG source",
+        megapixels: 8.0,
+        imageSrc: "./assets/lightroom/detail/usa/20141221-1313-00111-ee3b408e47.jpg",
+        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1313 00111.jpg", type: "JPG" }],
         metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:20"
-          },
-          {
-            label: "Preview file",
-            value: "usa-02.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/30 sec at f/4.5, ISO 1250"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
+          { label: "Keywords", value: "Lake Arrowhead, Lake Forest, Panoramic, public" },
+          { label: "Captured", value: "2014:12:21 13:13:36" },
+          { label: "Camera", value: "Apple iPhone 6 Plus" },
+          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
+          { label: "Exposure", value: "1/9901, f/2.2, ISO 32" },
+          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
+          { label: "Software", value: "8.1.2" },
+          { label: "Color profile", value: "sRGB" },
+          { label: "Original file", value: "20141221 1313 00111.jpg" },
+          { label: "Original size", value: "JPEG / 3264 x 2448 / 8.0 MP" },
+          { label: "Source file", value: "20141221 1313 00111.jpg / 3264 x 2448 / 8.0 MP" },
+          { label: "Preview file", value: "20141221-1313-00111-ee3b408e47.jpg / 1800 x 1350 / watermarked JPG" },
+          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
         ]
       },
       {
-        id: "usa-3",
+        id: "usa-20141221-1313-06414-1fb7622ae6",
         className: "p3",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-03.jpg",
+        title: "San Bernardino Landscape",
+        caption: "Green-rated Lightroom selection from San Bernardino, California, captured 2014-12-21.",
+        full: "JPG source",
+        megapixels: 5.9,
+        imageSrc: "./assets/lightroom/detail/usa/20141221-1313-06414-1fb7622ae6.jpg",
+        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1313 06414.jpg", type: "JPG" }],
         metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:09"
-          },
-          {
-            label: "Preview file",
-            value: "usa-03.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/50 sec at f/4.5, ISO 200"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
+          { label: "Keywords", value: "Lake Forest, Panoramic, public" },
+          { label: "Captured", value: "2014:12:21 13:13:36" },
+          { label: "Camera", value: "Apple iPhone 6 Plus" },
+          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
+          { label: "Exposure", value: "1/10000, f/2.2, ISO 32" },
+          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
+          { label: "Location", value: "San Bernardino, California, United States" },
+          { label: "Software", value: "Adobe Photoshop Lightroom 6.6 (Macintosh)" },
+          { label: "Color profile", value: "ProPhoto RGB" },
+          { label: "Original file", value: "20141221 1313 06414.jpg" },
+          { label: "Original size", value: "JPEG / 3263 x 1800 / 5.9 MP" },
+          { label: "Source file", value: "20141221 1313 06414.jpg / 3263 x 1800 / 5.9 MP" },
+          { label: "Preview file", value: "20141221-1313-06414-1fb7622ae6.jpg / 1800 x 993 / watermarked JPG" },
+          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
         ]
       },
       {
-        id: "usa-4",
+        id: "usa-20141221-1443-06347-3544179fa4",
         className: "p4",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-04.jpg",
+        title: "Lake Arrowhead Landscape",
+        caption: "Green-rated Lightroom selection from Arrowhead Village (Village Green), Lake Arrowhead, California, captured 2014-12-21.",
+        full: "JPG source",
+        megapixels: 28.1,
+        imageSrc: "./assets/lightroom/detail/usa/20141221-1443-06347-3544179fa4.jpg",
+        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1443 06347.jpg", type: "JPG" }],
         metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:20"
-          },
-          {
-            label: "Preview file",
-            value: "usa-04.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/30 sec at f/4.5, ISO 900"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
+          { label: "Keywords", value: "Lake Forest, Panoramic, architecture, public" },
+          { label: "Captured", value: "2014:12:21 14:43:05" },
+          { label: "Camera", value: "Apple iPhone 6 Plus" },
+          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
+          { label: "Exposure", value: "1/1700, f/2.2, ISO 32" },
+          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
+          { label: "Location", value: "Arrowhead Village (Village Green), Lake Arrowhead, California, United States" },
+          { label: "Software", value: "Adobe Photoshop Lightroom 6.6 (Macintosh)" },
+          { label: "Color profile", value: "ProPhoto RGB" },
+          { label: "Original file", value: "20141221 1443 06347.jpg" },
+          { label: "Original size", value: "JPEG / 9230 x 3048 / 28.1 MP" },
+          { label: "Source file", value: "20141221 1443 06347.jpg / 9230 x 3048 / 28.1 MP" },
+          { label: "Preview file", value: "20141221-1443-06347-3544179fa4.jpg / 1800 x 594 / watermarked JPG" },
+          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
         ]
       },
       {
-        id: "usa-5",
+        id: "usa-20141221-1443-25796-ae3b4eba28",
         className: "p5",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-05.jpg",
+        title: "Lake Arrowhead Panorama",
+        caption: "Green-rated Lightroom selection from the USA archive, captured 2014-12-21.",
+        full: "JPG source",
+        megapixels: 28.1,
+        imageSrc: "./assets/lightroom/detail/usa/20141221-1443-25796-ae3b4eba28.jpg",
+        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1443 25796.jpg", type: "JPG" }],
         metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:10"
-          },
-          {
-            label: "Preview file",
-            value: "usa-05.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/50 sec at f/4.5, ISO 450"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
-        ]
-      },
-      {
-        id: "usa-6",
-        className: "p6",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-06.jpg",
-        metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:22"
-          },
-          {
-            label: "Preview file",
-            value: "usa-06.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/125 sec at f/4.5, ISO 640"
-          },
-          {
-            label: "Focal length",
-            value: "38 mm / 57 mm equivalent"
-          }
-        ]
-      },
-      {
-        id: "usa-7",
-        className: "p7",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-07.jpg",
-        metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:19"
-          },
-          {
-            label: "Preview file",
-            value: "usa-07.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/30 sec at f/4.5, ISO 250"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
-        ]
-      },
-      {
-        id: "usa-8",
-        className: "p8",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-08.jpg",
-        metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:07"
-          },
-          {
-            label: "Preview file",
-            value: "usa-08.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.3.1"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/250 sec at f/4.5, ISO 1400"
-          },
-          {
-            label: "Focal length",
-            value: "48 mm / 72 mm equivalent"
-          }
-        ]
-      },
-      {
-        id: "usa-9",
-        className: "p9",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-09.jpg",
-        metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:21"
-          },
-          {
-            label: "Preview file",
-            value: "usa-09.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/8 sec at f/4.5, ISO 560"
-          },
-          {
-            label: "Focal length",
-            value: "18 mm / 27 mm equivalent"
-          }
-        ]
-      },
-      {
-        id: "usa-10",
-        className: "p10",
-        title: "Del Mar Dog Beach at Sunset",
-        caption: "Del Mar Dog Beach at Sunset",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/usa/usa-10.jpg",
-        metadata: [
-          {
-            label: "Metadata title",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Description",
-            value: "Del Mar Dog Beach at Sunset"
-          },
-          {
-            label: "Keywords",
-            value: "CA, California, Del Mar, Del Mar Dog Beach, Landscape, Ocean, Sand, Sea, Sky, Sunset, USA"
-          },
-          {
-            label: "Captured",
-            value: "Jan 30, 2018, 17:23"
-          },
-          {
-            label: "Preview file",
-            value: "usa-10.jpg / 1800 x 1200 / Display P3"
-          },
-          {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
-          },
-          {
-            label: "Lens",
-            value: "18.0-300.0 mm f/3.5-6.3"
-          },
-          {
-            label: "Exposure",
-            value: "1/2 sec at f/4.5, ISO 400"
-          },
-          {
-            label: "Focal length",
-            value: "21 mm / 31 mm equivalent"
-          }
+          { label: "Keywords", value: "Lake Arrowhead, Lake Forest, Panoramic, architecture, public" },
+          { label: "Captured", value: "2014:12:21 14:43:05" },
+          { label: "Camera", value: "Apple iPhone 6 Plus" },
+          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
+          { label: "Exposure", value: "1/1721, f/2.2, ISO 32" },
+          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
+          { label: "Software", value: "8.1.2" },
+          { label: "Color profile", value: "sRGB" },
+          { label: "Original file", value: "20141221 1443 25796.jpg" },
+          { label: "Original size", value: "JPEG / 9230 x 3048 / 28.1 MP" },
+          { label: "Source file", value: "20141221 1443 25796.jpg / 9230 x 3048 / 28.1 MP" },
+          { label: "Preview file", value: "20141221-1443-25796-ae3b4eba28.jpg / 1800 x 594 / watermarked JPG" },
+          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
         ]
       }
     ]

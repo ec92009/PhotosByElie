@@ -21,8 +21,10 @@ const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolu
   .filter(Boolean);
 
 const updateTotal = () => {
+  const totalTarget = document.querySelector("[data-selection-total]");
+  if (!totalTarget) return;
   const total = selectedOptions().reduce((sum, option) => sum + option.price, 0);
-  document.querySelector("[data-selection-total]").textContent = `$${total}`;
+  totalTarget.textContent = `$${total}`;
 };
 
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);

@@ -30,6 +30,7 @@ Outputs:
 
 - `assets/lightroom/gallery/*.jpg`: watermarked gallery thumbnails.
 - `assets/lightroom/detail/*.jpg`: watermarked detail-page images.
+- Gallery and detail derivatives are grouped by inferred country, e.g. `assets/lightroom/gallery/usa/*.jpg` and `assets/lightroom/detail/usa/*.jpg`.
 - `assets/lightroom/manifest.json`: selected photos, derivative paths, full keyword set, Lightroom rating/color label, and web-facing display metadata.
 - `assets/lightroom/keywords.json`: keyword counts and photo references for filter UI.
 - `assets/lightroom/collections.json`: generated indexes for years, countries, regions, cities, orientations, and source formats.

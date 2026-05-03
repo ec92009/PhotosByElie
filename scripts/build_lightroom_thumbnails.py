@@ -48,7 +48,44 @@ DEFAULT_WATERMARK = "PhotosByElie"
 DEFAULT_GALLERY_MAX = 900
 DEFAULT_DETAIL_MAX = 1800
 DEFAULT_BATCH_SIZE = 50
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+COUNTRY_ALIASES = {
+    "fr": ("france", "France"),
+    "france": ("france", "France"),
+    "usa": ("usa", "United States"),
+    "us": ("usa", "United States"),
+    "u.s.": ("usa", "United States"),
+    "u.s.a.": ("usa", "United States"),
+    "united states": ("usa", "United States"),
+    "united states of america": ("usa", "United States"),
+    "america": ("usa", "United States"),
+    "spain": ("spain", "Spain"),
+    "es": ("spain", "Spain"),
+    "espana": ("spain", "Spain"),
+    "españa": ("spain", "Spain"),
+    "mexico": ("mexico", "Mexico"),
+    "mx": ("mexico", "Mexico"),
+    "méxico": ("mexico", "Mexico"),
+    "italy": ("italy", "Italy"),
+    "italia": ("italy", "Italy"),
+    "canada": ("canada", "Canada"),
+    "united kingdom": ("uk", "United Kingdom"),
+    "uk": ("uk", "United Kingdom"),
+    "england": ("uk", "United Kingdom"),
+}
+COUNTRY_HINTS = {
+    "california": ("usa", "United States"),
+    "carlsbad": ("usa", "United States"),
+    "lake arrowhead": ("usa", "United States"),
+    "lake forest": ("usa", "United States"),
+    "san bernardino": ("usa", "United States"),
+    "new york": ("usa", "United States"),
+    "florida": ("usa", "United States"),
+    "paris": ("france", "France"),
+    "madrid": ("spain", "Spain"),
+    "barcelona": ("spain", "Spain"),
+    "puerto vallarta": ("mexico", "Mexico"),
+}
 PRIVATE_KEYWORD_PATTERN = re.compile(
     r"(^_|family|friends\+family|notmyphoto|onhotel|published adobe)",
     re.IGNORECASE,
@@ -401,6 +438,38 @@ def metadata_value(meta: dict[str, Any], *keys: str) -> Any:
     return None
 
 
+def normalize_country(value: Any) -> tuple[str, str] | None:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    key = text.casefold()
+    if key in COUNTRY_ALIASES:
+        return COUNTRY_ALIASES[key]
+    slug = re.sub(r"[^a-z0-9]+", "-", key).strip("-")
+    return (slug or "unknown", text)
+
+
+def infer_gallery_country(location: dict[str, Any], keywords: list[str]) -> dict[str, str]:
+    explicit = normalize_country(location.get("country"))
+    if explicit:
+        slug, label = explicit
+        return {"slug": slug, "label": label, "source": "country"}
+    for keyword in keywords:
+        normalized = normalize_country(keyword)
+        if normalized and normalized[0] in {value[0] for value in COUNTRY_ALIASES.values()}:
+            slug, label = normalized
+            return {"slug": slug, "label": label, "source": "keyword"}
+    for value in [location.get("region"), location.get("city"), location.get("location"), *keywords]:
+        if not value:
+            continue
+        text = str(value).casefold()
+        for hint, country in COUNTRY_HINTS.items():
+            if hint in text:
+                slug, label = country
+                return {"slug": slug, "label": label, "source": "location_hint"}
+    return {"slug": "unknown", "label": "Unknown", "source": "unresolved"}
+
+
 def parse_exif_datetime(value: Any) -> dict[str, Any]:
     if not value:
         return {}
@@ -481,18 +550,20 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
     for label, value in display_specs:
         if value:
             display.append({"label": label, "value": str(value)})
+    location = {
+        "country": metadata_value(merged, "Country", "Country-PrimaryLocationName"),
+        "region": metadata_value(merged, "State", "Province-State"),
+        "city": metadata_value(merged, "City"),
+        "location": metadata_value(merged, "Location"),
+    }
     return {
         "rating": normalize_rating(merged.get("Rating")),
         "label": metadata_value(merged, "Label", "ColorLabel"),
         "keywords": keywords,
         "capture": capture,
         "dimensions": dimensions,
-        "location": {
-            "country": metadata_value(merged, "Country", "Country-PrimaryLocationName"),
-            "region": metadata_value(merged, "State", "Province-State"),
-            "city": metadata_value(merged, "City"),
-            "location": metadata_value(merged, "Location"),
-        },
+        "location": location,
+        "gallery_country": infer_gallery_country(location, keywords),
         "raw": merged,
         "gps": gps,
         "display": display,
@@ -752,6 +823,7 @@ def write_collection_index(path: Path, manifest: dict[str, dict[str, Any]]) -> N
     indexes = {
         "years": {},
         "countries": {},
+        "gallery_countries": {},
         "regions": {},
         "cities": {},
         "orientations": {},
@@ -760,10 +832,12 @@ def write_collection_index(path: Path, manifest: dict[str, dict[str, Any]]) -> N
     for photo in manifest.values():
         capture = photo.get("capture", {})
         location = photo.get("location", {})
+        gallery_country = photo.get("gallery_country", {})
         dimensions = photo.get("dimensions", {})
         source = photo.get("source_file", {})
         add_index_value(indexes["years"], capture.get("year"), photo["id"], photo["relative_path"])
         add_index_value(indexes["countries"], location.get("country"), photo["id"], photo["relative_path"])
+        add_index_value(indexes["gallery_countries"], gallery_country.get("slug"), photo["id"], photo["relative_path"])
         add_index_value(indexes["regions"], location.get("region"), photo["id"], photo["relative_path"])
         add_index_value(indexes["cities"], location.get("city"), photo["id"], photo["relative_path"])
         add_index_value(indexes["orientations"], dimensions.get("orientation"), photo["id"], photo["relative_path"])
@@ -782,8 +856,8 @@ def write_collection_index(path: Path, manifest: dict[str, dict[str, Any]]) -> N
     tmp.replace(path)
 
 
-def derivative_paths(output_root: Path, slug: str) -> tuple[Path, Path]:
-    return output_root / "gallery" / f"{slug}.jpg", output_root / "detail" / f"{slug}.jpg"
+def derivative_paths(output_root: Path, country_slug: str, slug: str) -> tuple[Path, Path]:
+    return output_root / "gallery" / country_slug / f"{slug}.jpg", output_root / "detail" / country_slug / f"{slug}.jpg"
 
 
 def should_skip_metadata(row: dict[str, Any] | None, stamp: str, force: bool) -> bool:
@@ -844,20 +918,22 @@ def process_batch(
             continue
 
         selected_count += 1
-        slug = slug_for(relative_path)
-        gallery_path, detail_path = derivative_paths(args.output_root, slug)
-        row = {
-            "id": slug,
-            "relative_path": relative_path,
-            "source_path_hint": str(source),
-            "metadata_path_hint": str(metadata_path),
-            "derivatives": {
-                "gallery": gallery_path.relative_to(args.output_root).as_posix(),
-                "detail": detail_path.relative_to(args.output_root).as_posix(),
-            },
-        }
         try:
+            slug = slug_for(relative_path)
             selected_metadata = merged_selected_metadata(source, metadata_path, args)
+            gallery_country = selected_metadata["gallery_country"]
+            gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug)
+            row = {
+                "id": slug,
+                "relative_path": relative_path,
+                "source_path_hint": str(source),
+                "metadata_path_hint": str(metadata_path),
+                "gallery_country": gallery_country,
+                "derivatives": {
+                    "gallery": gallery_path.relative_to(args.output_root).as_posix(),
+                    "detail": detail_path.relative_to(args.output_root).as_posix(),
+                },
+            }
             row["rating"] = selected_metadata["rating"]
             row["label"] = selected_metadata["label"]
             row["keywords"] = selected_metadata["keywords"]

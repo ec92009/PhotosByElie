@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-05-03T09:54:36+00:00",
-  "schema_version": 2,
+  "generated_at": "2026-05-03T10:09:27+00:00",
+  "schema_version": 3,
   "source_root_hint": "/Volumes/Saturn-1/Pictures/LR/Camera",
   "selection": {
     "label": "green",
@@ -18,9 +18,14 @@
       "relative_path": "2010-2014/20140907 1911 06385.jpg",
       "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20140907 1911 06385.jpg",
       "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20140907 1911 06385.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
       "derivatives": {
-        "gallery": "gallery/20140907-1911-06385-5f3a5197a2.jpg",
-        "detail": "detail/20140907-1911-06385-5f3a5197a2.jpg"
+        "gallery": "gallery/usa/20140907-1911-06385-5f3a5197a2.jpg",
+        "detail": "detail/usa/20140907-1911-06385-5f3a5197a2.jpg"
       },
       "rating": 4.0,
       "label": "Green",
@@ -148,16 +153,16 @@
           "height": 675,
           "aspect_ratio": 1.3333,
           "bytes": 113598,
-          "path": "gallery/20140907-1911-06385-5f3a5197a2.jpg"
+          "path": "gallery/usa/20140907-1911-06385-5f3a5197a2.jpg"
         },
         "detail": {
           "width": 1800,
           "height": 1350,
           "aspect_ratio": 1.3333,
           "bytes": 340874,
-          "path": "detail/20140907-1911-06385-5f3a5197a2.jpg"
+          "path": "detail/usa/20140907-1911-06385-5f3a5197a2.jpg"
         },
-        "generated_at": "2026-05-03T09:48:43+00:00"
+        "generated_at": "2026-05-03T10:09:00+00:00"
       }
     },
     {
@@ -165,9 +170,14 @@
       "relative_path": "2010-2014/20141221 1313 00111.jpg",
       "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 00111.jpg",
       "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 00111.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "location_hint"
+      },
       "derivatives": {
-        "gallery": "gallery/20141221-1313-00111-ee3b408e47.jpg",
-        "detail": "detail/20141221-1313-00111-ee3b408e47.jpg"
+        "gallery": "gallery/usa/20141221-1313-00111-ee3b408e47.jpg",
+        "detail": "detail/usa/20141221-1313-00111-ee3b408e47.jpg"
       },
       "rating": 4.0,
       "label": "Green",
@@ -303,16 +313,16 @@
           "height": 675,
           "aspect_ratio": 1.3333,
           "bytes": 40649,
-          "path": "gallery/20141221-1313-00111-ee3b408e47.jpg"
+          "path": "gallery/usa/20141221-1313-00111-ee3b408e47.jpg"
         },
         "detail": {
           "width": 1800,
           "height": 1350,
           "aspect_ratio": 1.3333,
           "bytes": 140367,
-          "path": "detail/20141221-1313-00111-ee3b408e47.jpg"
+          "path": "detail/usa/20141221-1313-00111-ee3b408e47.jpg"
         },
-        "generated_at": "2026-05-03T09:47:24+00:00"
+        "generated_at": "2026-05-03T10:07:07+00:00"
       }
     },
     {
@@ -320,9 +330,14 @@
       "relative_path": "2010-2014/20141221 1313 06414.jpg",
       "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 06414.jpg",
       "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1313 06414.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
       "derivatives": {
-        "gallery": "gallery/20141221-1313-06414-1fb7622ae6.jpg",
-        "detail": "detail/20141221-1313-06414-1fb7622ae6.jpg"
+        "gallery": "gallery/usa/20141221-1313-06414-1fb7622ae6.jpg",
+        "detail": "detail/usa/20141221-1313-06414-1fb7622ae6.jpg"
       },
       "rating": 4.0,
       "label": "Green",
@@ -464,16 +479,16 @@
           "height": 496,
           "aspect_ratio": 1.8145,
           "bytes": 77495,
-          "path": "gallery/20141221-1313-06414-1fb7622ae6.jpg"
+          "path": "gallery/usa/20141221-1313-06414-1fb7622ae6.jpg"
         },
         "detail": {
           "width": 1800,
           "height": 993,
           "aspect_ratio": 1.8127,
           "bytes": 353850,
-          "path": "detail/20141221-1313-06414-1fb7622ae6.jpg"
+          "path": "detail/usa/20141221-1313-06414-1fb7622ae6.jpg"
         },
-        "generated_at": "2026-05-03T09:47:23+00:00"
+        "generated_at": "2026-05-03T10:07:05+00:00"
       }
     },
     {
@@ -481,9 +496,14 @@
       "relative_path": "2010-2014/20141221 1443 06347.jpg",
       "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 06347.jpg",
       "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 06347.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
       "derivatives": {
-        "gallery": "gallery/20141221-1443-06347-3544179fa4.jpg",
-        "detail": "detail/20141221-1443-06347-3544179fa4.jpg"
+        "gallery": "gallery/usa/20141221-1443-06347-3544179fa4.jpg",
+        "detail": "detail/usa/20141221-1443-06347-3544179fa4.jpg"
       },
       "rating": 4.0,
       "label": "Green",
@@ -630,16 +650,16 @@
           "height": 297,
           "aspect_ratio": 3.0303,
           "bytes": 56775,
-          "path": "gallery/20141221-1443-06347-3544179fa4.jpg"
+          "path": "gallery/usa/20141221-1443-06347-3544179fa4.jpg"
         },
         "detail": {
           "width": 1800,
           "height": 594,
           "aspect_ratio": 3.0303,
           "bytes": 191744,
-          "path": "detail/20141221-1443-06347-3544179fa4.jpg"
+          "path": "detail/usa/20141221-1443-06347-3544179fa4.jpg"
         },
-        "generated_at": "2026-05-03T09:47:16+00:00"
+        "generated_at": "2026-05-03T10:06:48+00:00"
       }
     },
     {
@@ -647,9 +667,14 @@
       "relative_path": "2010-2014/20141221 1443 25796.jpg",
       "source_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 25796.jpg",
       "metadata_path_hint": "/Volumes/Saturn-1/Pictures/LR/Camera/2010-2014/20141221 1443 25796.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "location_hint"
+      },
       "derivatives": {
-        "gallery": "gallery/20141221-1443-25796-ae3b4eba28.jpg",
-        "detail": "detail/20141221-1443-25796-ae3b4eba28.jpg"
+        "gallery": "gallery/usa/20141221-1443-25796-ae3b4eba28.jpg",
+        "detail": "detail/usa/20141221-1443-25796-ae3b4eba28.jpg"
       },
       "rating": 4.0,
       "label": "Green",
@@ -789,16 +814,16 @@
           "height": 297,
           "aspect_ratio": 3.0303,
           "bytes": 52164,
-          "path": "gallery/20141221-1443-25796-ae3b4eba28.jpg"
+          "path": "gallery/usa/20141221-1443-25796-ae3b4eba28.jpg"
         },
         "detail": {
           "width": 1800,
           "height": 594,
           "aspect_ratio": 3.0303,
           "bytes": 179775,
-          "path": "detail/20141221-1443-25796-ae3b4eba28.jpg"
+          "path": "detail/usa/20141221-1443-25796-ae3b4eba28.jpg"
         },
-        "generated_at": "2026-05-03T09:47:11+00:00"
+        "generated_at": "2026-05-03T10:06:45+00:00"
       }
     }
   ]

@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.16`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/photosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v64.17`.
 
 ## Repositories And Folders
 
@@ -46,6 +46,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Added `liked.html`, which mirrors the basket page layout but lists hearted photos.
 - Liked photos can have zero selected resolutions; checking resolutions on the Liked page adds those files to the basket immediately.
 - The Liked page total band counts selected files and dollars for liked photos only.
+- The Liked page total band includes bulk selectors for Full, 6 MP, 3 MP, and 1 MP resolution choices across all liked photos.
 
 ## Photo Detail Work
 
@@ -78,7 +79,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v64.16`.
+- Current visible version: `v64.17`.
 - Recent local commits include:
   - `c014ebe photosbyelie: soften preview watermark`
   - `4caae31 photosbyelie: optimize landscape detail previews`

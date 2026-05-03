@@ -16,16 +16,55 @@ const likedRoot = document.querySelector("[data-liked-root]");
 const emptyState = document.querySelector("[data-empty-liked]");
 const likedTotal = document.querySelector("[data-liked-total]");
 const status = document.querySelector("[data-liked-status]");
+const bulkResolutionButtons = document.querySelectorAll("[data-liked-select-resolution]");
+
+const availableOptionsForPhoto = (photo) => photo && window.photosByElieAvailableResolutions
+  ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
+  : resolutionOptions;
 
 const optionPayload = (optionIds, photoId) => {
   const { photo } = photoForLikedItem({ photoId });
-  const availableOptions = photo && window.photosByElieAvailableResolutions
-    ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
-    : resolutionOptions;
+  const availableOptions = availableOptionsForPhoto(photo);
   return optionIds
     .map((id) => availableOptions.find((option) => option.id === id))
     .filter(Boolean)
     .map((option) => ({ id: option.id, label: option.label, price: option.price }));
+};
+
+const selectResolutionForAllLiked = (resolutionId) => {
+  const likedItems = likedStore.read();
+  if (!likedItems.length) {
+    status.textContent = "No liked photos yet.";
+    return;
+  }
+
+  let selectedCount = 0;
+  let unavailableCount = 0;
+  likedItems.forEach((item) => {
+    const { photo } = photoForLikedItem(item);
+    const targetOption = availableOptionsForPhoto(photo).find((option) => option.id === resolutionId);
+    if (!targetOption) {
+      unavailableCount += 1;
+      return;
+    }
+
+    const existing = basketStore.read().find((basketItem) => basketItem.photoId === item.photoId);
+    const checkedIds = new Set((existing?.options || []).map((option) => option.id));
+    checkedIds.add(resolutionId);
+    basketStore.setPhotoOptions({
+      photoId: item.photoId,
+      title: item.title,
+      collection: item.collection,
+      options: optionPayload([...checkedIds], item.photoId),
+    });
+    selectedCount += 1;
+  });
+
+  const optionLabel = resolutionOptions.find((option) => option.id === resolutionId)?.label || "resolution";
+  status.textContent = unavailableCount
+    ? `${optionLabel} selected for ${selectedCount} liked photo(s); ${unavailableCount} unavailable.`
+    : `${optionLabel} selected for ${selectedCount} liked photo(s).`;
+  renderLiked();
 };
 
 const renderLiked = () => {
@@ -38,6 +77,9 @@ const renderLiked = () => {
 
   likedTotal.textContent = `${fileCount} ${fileCount === 1 ? "file" : "files"}, ${formatMoney(total)}`;
   emptyState.hidden = likedItems.length !== 0;
+  bulkResolutionButtons.forEach((button) => {
+    button.disabled = likedItems.length === 0;
+  });
 
   likedRoot.innerHTML = likedItems.map((item, index) => {
     const { collection, photo } = photoForLikedItem(item);
@@ -46,9 +88,7 @@ const renderLiked = () => {
     const imageSrc = photo?.imageSrc || "";
     const selectedIds = new Set((basketItem?.options || []).map((option) => option.id));
     const itemTotal = (basketItem?.options || []).reduce((sum, option) => sum + (Number(option.price) || 0), 0);
-    const availableOptions = photo && window.photosByElieAvailableResolutions
-      ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
-      : resolutionOptions;
+    const availableOptions = availableOptionsForPhoto(photo);
     const resolutionDetail = (option) => {
       if (!photo || !window.photosByElieResolutionDetail) return "";
       return option.id === "full" ? `<small>${window.photosByElieResolutionDetail(photo, option)}</small>` : "";
@@ -109,5 +149,11 @@ const renderLiked = () => {
     });
   });
 };
+
+bulkResolutionButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectResolutionForAllLiked(button.dataset.likedSelectResolution);
+  });
+});
 
 renderLiked();

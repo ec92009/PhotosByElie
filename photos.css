@@ -213,6 +213,25 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .basket-total-band span{
   padding:8px 12px;
 }
+.liked-total-band{
+  justify-content:space-between;
+  gap:10px;
+}
+.liked-bulk-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:6px 0;
+}
+.liked-bulk-actions .btn{
+  min-height:0;
+  padding:7px 10px;
+  font-size:.82rem;
+}
+.liked-bulk-actions .btn:disabled{
+  cursor:not-allowed;
+  opacity:.5;
+}
 .basket-hero{
   min-height:clamp(150px,21dvh,260px);
   padding-block:clamp(18px,3dvh,32px);

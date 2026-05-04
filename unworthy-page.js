@@ -3,6 +3,7 @@
   const reserveStore = window.photosByElieReserve;
   const galleryRoot = document.querySelector("[data-unworthy-root]");
   const status = document.querySelector("[data-unworthy-status]");
+  const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
   let selectedIndex = 0;
 
   const setStatus = (message) => {
@@ -91,7 +92,7 @@
 
     galleryRoot.innerHTML = photos.map((photo, index) => {
       const src = photo.gallerySrc || photo.imageSrc || "";
-      const href = photo.source === "missing" ? "" : `./photo.html?id=${encodeURIComponent(photo.id)}`;
+      const href = photo.source === "missing" ? "" : versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
       return `
         <article
           class="mock-photo ${photo.collectionAccent} ${photo.className} ${src ? "has-image" : ""}"
@@ -111,9 +112,10 @@
         updateSelection();
       });
       card.addEventListener("dblclick", () => {
-        if (card.dataset.photoHref) window.location.assign(card.dataset.photoHref);
+        if (card.dataset.photoHref) window.location.assign(versionedHref(card.dataset.photoHref));
       });
     });
+    window.photosByElieVersionInternalLinks?.(galleryRoot);
 
     updateSelection();
     setStatus(`${photos.length} hidden photo${photos.length === 1 ? "" : "s"}.`);

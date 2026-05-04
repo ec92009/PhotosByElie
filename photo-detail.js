@@ -40,8 +40,9 @@ const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const unworthyStore = window.photosByElieUnworthy;
 const localModerationEnabled = Boolean(unworthyStore?.enabled);
+const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 if (isOwnerCollection && !localModerationEnabled) {
-  window.location.replace("./");
+  window.location.replace(versionedHref("./"));
   return;
 }
 const promotedPhotosFor = (galleryKey) => {
@@ -96,7 +97,7 @@ const navigateAfterHide = () => {
   const remainingPhotos = visibleCollectionPhotos();
   if (!remainingPhotos.length) {
     const remainingSequence = detailSequence().filter((item) => item.photo.id !== photo.id);
-    window.location.replace(remainingSequence.length ? `./photo.html?id=${remainingSequence[0].photo.id}` : `./${collectionKey}.html`);
+    window.location.replace(versionedHref(remainingSequence.length ? `./photo.html?id=${remainingSequence[0].photo.id}` : `./${collectionKey}.html`));
     return true;
   }
 
@@ -108,7 +109,7 @@ const navigateAfterHide = () => {
     .concat(collection.photos.slice(0, photoIndex))
     .find((item) => remainingPhotos.some((candidate) => candidate.id === item.id));
 
-  window.location.replace(`./photo.html?id=${(nextPhoto || remainingPhotos[0]).id}`);
+  window.location.replace(versionedHref(`./photo.html?id=${(nextPhoto || remainingPhotos[0]).id}`));
   return true;
 };
 
@@ -133,10 +134,10 @@ const likeToggle = document.querySelector("[data-like-toggle]");
 if (!photo) {
   document.title = `Photos By Elie | ${collection.title}`;
   document.querySelector("[data-nav-current]").textContent = collection.title;
-  document.querySelector("[data-nav-current]").setAttribute("href", `./${collectionKey}.html`);
+  document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
   document.querySelector("[data-photo-title]").textContent = "Archive reset in progress";
   document.querySelector("[data-photo-meta]").textContent = `${collection.title} / No published photos yet`;
-  document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
+  document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
   document.querySelector("[data-resolution-list]").innerHTML = "";
   document.querySelector("[data-selection-total]").textContent = "$0";
@@ -152,7 +153,7 @@ if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id 
 } else {
 document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;
-document.querySelector("[data-nav-current]").setAttribute("href", `./${collectionKey}.html`);
+document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
 document.querySelector("[data-photo-title]").textContent = photo.title;
 document.querySelector("[data-photo-meta]").textContent = [
   collection.title,
@@ -161,13 +162,13 @@ document.querySelector("[data-photo-meta]").textContent = [
     ? `${window.photosByElieVerifiedMegapixels(photo)} MP verified`
     : ""
 ].filter(Boolean).join(" / ");
-document.querySelector("[data-back-link]").setAttribute("href", `./${collectionKey}.html`);
+document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");
 const nextPhotoLink = document.querySelector("[data-next-photo]");
 const navigateToPhotoLink = (link) => {
   const href = link?.getAttribute("href");
-  if (href) window.location.assign(href);
+  if (href) window.location.assign(versionedHref(href));
 };
 
 const ensureDetailBottomActions = () => {
@@ -185,6 +186,7 @@ const ensureDetailBottomActions = () => {
     <a class="btn secondary" href="./liked.html">Liked</a>
   `;
   detailMain.append(bottomActions);
+  window.photosByElieVersionInternalLinks?.(bottomActions);
 };
 
 const syncDetailBottomActions = () => {
@@ -197,9 +199,9 @@ const syncDetailBottomActions = () => {
   const prevHref = prevPhotoLink?.getAttribute("href");
   const nextHref = nextPhotoLink?.getAttribute("href");
   const backHref = document.querySelector("[data-back-link]")?.getAttribute("href") || `./${collectionKey}.html`;
-  if (prevHref) bottomPrev?.setAttribute("href", prevHref);
-  if (nextHref) bottomNext?.setAttribute("href", nextHref);
-  if (bottomBack) bottomBack.setAttribute("href", backHref);
+  if (prevHref) bottomPrev?.setAttribute("href", versionedHref(prevHref));
+  if (nextHref) bottomNext?.setAttribute("href", versionedHref(nextHref));
+  if (bottomBack) bottomBack.setAttribute("href", versionedHref(backHref));
   bottomPrev?.toggleAttribute("hidden", !prevHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
   bottomNext?.toggleAttribute("hidden", !nextHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
 };
@@ -210,9 +212,9 @@ if (prevPhotoLink && nextPhotoLink) {
   if (detailPhotos.length > 1 && detailIndex >= 0) {
     const previousEntry = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
     const nextEntry = detailPhotos[(detailIndex + 1) % detailPhotos.length];
-    prevPhotoLink.setAttribute("href", `./photo.html?id=${previousEntry.photo.id}`);
+    prevPhotoLink.setAttribute("href", versionedHref(`./photo.html?id=${previousEntry.photo.id}`));
     prevPhotoLink.setAttribute("aria-label", `Previous photo: ${previousEntry.photo.title} in ${previousEntry.collection.title}`);
-    nextPhotoLink.setAttribute("href", `./photo.html?id=${nextEntry.photo.id}`);
+    nextPhotoLink.setAttribute("href", versionedHref(`./photo.html?id=${nextEntry.photo.id}`));
     nextPhotoLink.setAttribute("aria-label", `Next photo: ${nextEntry.photo.title} in ${nextEntry.collection.title}`);
   } else {
     document.querySelector(".detail-cycle")?.setAttribute("hidden", "");

@@ -7,7 +7,7 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build prepared for publish: `v65.20`
+- Current local visible build prepared for publish: `v65.21`
 - Local `main` is ahead of `origin/main`; GitHub Pages is stale until the current commit is pushed.
 
 ## Latest Decisions
@@ -46,6 +46,7 @@ Verification found `0` missing local image references. The publishable `assets/r
   - Trigger a `.pbe-curation` download.
   - Show the generated filename.
   - Show the generated JSON payload in a textarea as a fallback when browser downloads are silent.
+- Added `site-version.js` so same-site page links and carousel `data-href` navigation receive the current `?v=` query string. This avoids navigating from a fresh homepage into stale cached gallery/detail HTML.
 - Moved Unknown out of public collection surfaces and into a localhost-only classification workflow.
 - Unknown classification assigns every loaded unknown photo from the same capture day and removes assigned photos from the queue immediately.
 - Added H/U moderation to Unknown.
@@ -69,7 +70,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Python `HTMLParser` over all root HTML files
 - Node data scan for missing local `gallerySrc` and `imageSrc` references
 - `git diff --check`
-- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.20` and cache-bust strings use `?v=65.20`.
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.21` and cache-bust strings use `?v=65.21`.
 
 ## Important Notes
 

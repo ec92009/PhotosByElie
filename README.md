@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.20`
+- Current visible version: `v65.21`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -31,6 +31,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `styles.css`: copied By Elie animation overrides
 - `photos.css`: photo-specific layout and carousel styles
 - `photos.js`: shared theme and language toggle behavior for subpages
+- `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
 - `AGENTS.md`: repo-level working preferences and versioning SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`

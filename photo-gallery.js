@@ -7,6 +7,7 @@ const reserveStore = window.photosByElieReserve;
 const localModerationEnabled = Boolean(unworthyStore?.enabled);
 const reserveFillEnabled = Boolean(localModerationEnabled && reserveStore?.enabled);
 const galleryActions = document.querySelector("[data-gallery-actions]");
+const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
 let restoreButton = null;
 const densityKey = "photosbyelie-gallery-columns";
@@ -378,7 +379,7 @@ const renderGallery = () => {
   galleryRoot.innerHTML = photos.map((photo, index) => `
     <a
       class="mock-photo ${photo.className} ${(photo.gallerySrc || photo.imageSrc) ? "has-image" : ""}"
-      href="./photo.html?id=${photo.id}"
+      href="${versionedHref(`./photo.html?id=${photo.id}`)}"
       aria-label="Open ${photo.title}"
       data-photo-index="${index}"
       data-photo-id="${photo.id}"
@@ -395,10 +396,11 @@ const renderGallery = () => {
       });
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
-        window.location.assign(card.getAttribute("href"));
+        window.location.assign(versionedHref(card.getAttribute("href")));
       });
     });
   }
+  window.photosByElieVersionInternalLinks?.(galleryRoot);
   applyGalleryDensity();
   updateSelection();
   const filterStatus = activeFilterCount() ? `Showing ${photos.length} of ${allPhotos.length} after filters.` : `Showing ${photos.length} photos.`;
@@ -416,7 +418,7 @@ const renderGallery = () => {
 if (galleryRoot && gallery) {
   document.title = `Photos By Elie | ${gallery.title} Gallery`;
   document.querySelector("[data-nav-current]").textContent = gallery.title;
-  document.querySelector("[data-nav-current]").setAttribute("href", `./${galleryKey}.html`);
+  document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${galleryKey}.html`));
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
   document.querySelector("[data-gallery-title]").textContent = gallery.title;
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;

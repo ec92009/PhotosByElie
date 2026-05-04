@@ -56,7 +56,7 @@
 
   exportButton?.addEventListener("click", () => {
     const filename = unworthyStore.exportBlacklist();
-    setStatus(filename ? `${filename} downloaded.` : "Blacklist export unavailable.");
+    setStatus(filename ? `${filename} downloaded.` : "Curation Pass export unavailable.");
     renderCounts();
   });
 

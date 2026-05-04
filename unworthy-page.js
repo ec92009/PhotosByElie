@@ -3,7 +3,6 @@
   const reserveStore = window.photosByElieReserve;
   const galleryRoot = document.querySelector("[data-unworthy-root]");
   const status = document.querySelector("[data-unworthy-status]");
-  const exportButton = document.querySelector("[data-unworthy-export]");
   let selectedIndex = 0;
 
   const setStatus = (message) => {
@@ -75,7 +74,6 @@
           <span>Owner controls are only available on localhost</span>
         </article>
       `;
-      if (exportButton) exportButton.hidden = true;
       setStatus("Unworthy review is locked on the public site.");
       return;
     }
@@ -120,11 +118,6 @@
     updateSelection();
     setStatus(`${photos.length} hidden photo${photos.length === 1 ? "" : "s"}.`);
   };
-
-  exportButton?.addEventListener("click", () => {
-    const filename = unworthyStore?.exportBlacklist?.();
-    setStatus(filename ? `${filename} downloaded.` : "Blacklist export unavailable.");
-  });
 
   window.addEventListener("keydown", (event) => {
     if (!unworthyStore?.enabled || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;

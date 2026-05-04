@@ -182,16 +182,6 @@ if (galleryRoot && gallery) {
 
   if (localModerationEnabled) {
     if (galleryActions) {
-      const exportButton = document.createElement("button");
-      exportButton.className = "btn secondary";
-      exportButton.type = "button";
-      exportButton.textContent = "Export blacklist";
-      exportButton.addEventListener("click", () => {
-        const filename = unworthyStore.exportBlacklist();
-        setGalleryStatus(filename ? `${filename} downloaded.` : "Blacklist export unavailable.");
-      });
-      galleryActions.prepend(exportButton);
-
       restoreButton = document.createElement("button");
       restoreButton.className = "btn secondary";
       restoreButton.type = "button";
@@ -202,7 +192,7 @@ if (galleryRoot && gallery) {
         renderGallery();
         setGalleryStatus(restored ? `${restored} local hides restored for ${gallery.title}.` : "No local hides to restore.");
       });
-      exportButton.after(restoreButton);
+      galleryActions.prepend(restoreButton);
       updateRestoreAction();
 
       const densityControl = document.createElement("label");

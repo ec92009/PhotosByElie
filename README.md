@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.8`
+- Current visible version: `v65.9`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -46,7 +46,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Gallery pages currently load a capped `Regular` subset of 10 photos per collection from `assets/regular`.
 - The larger Lightroom and Leonardo ingest outputs live under ignored local folders `assets/lightroom` and `assets/lightroom-ai` and act as the reserve pool.
 - On localhost, `H` marks a live-gallery photo unworthy, `U` undoes that hide, and `P` on the Unworthy page returns a hidden photo to Reserve rather than directly to the Regular gallery.
-- The localhost Owner page exports `.pbe-blacklist` files and stores the intended Regular gallery cap for the cleaner.
+- The localhost Owner page exports Curation Pass files, currently saved as `.pbe-blacklist` for compatibility, and stores the intended Regular gallery cap for the cleaner.
 - On localhost gallery pages, single click moves the selection rectangle, double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - `scripts/export_photos_data.py --regular-cap 10` regenerates `photos-data.js` and syncs the small publishable regular asset set.
 - The basket is the source of truth for selected resolutions.

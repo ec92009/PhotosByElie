@@ -101,18 +101,23 @@ Last updated: 2026-05-04
    - Restrict navigation to the active/foreground card, or otherwise make background cards non-clickable.
    - Retest keyboard and pointer behavior after the carousel hit target fix.
 
-8. **Add the bottom band everywhere.**
+8. **Refresh homepage samples on each pooch turn.**
+   - When the main-page carousel/pooch advances, pick fresh representative sample photos instead of keeping the same page-load random picks.
+   - Keep the hero stack and carousel cards in sync so each turn feels like a new browseable sample set.
+   - Avoid jarring layout shifts while images refresh.
+
+9. **Add the bottom band everywhere.**
    - Use the footer/bottom band consistently across home, gallery, detail, owner, unworthy, basket, and liked pages.
    - Show owner-only links such as `Owner` and `Export blacklist` only on localhost.
    - Keep published footer contents public-safe, likely `By Elie`, `Collections`, and other public navigation only.
    - Make the band responsive so it stays readable on narrow screens.
 
-9. **Give the homepage archive stats something worth saying.**
+10. **Give the homepage archive stats something worth saying.**
    - Revisit the `Archive shape` band and replace placeholder-feeling stats/copy with something more meaningful.
    - Keep the section compact, useful, and visually balanced with the rest of the homepage.
    - Consider whether the values should describe the public Regular set, the local archive, the reserve workflow, or the broader By Elie media vault.
 
-10. **Backburner: add GitHub branch protection.**
+11. **Backburner: add GitHub branch protection.**
    - Revisit rulesets after the lightweight publish workflow has settled.
    - Protect `main` from force-pushes and accidental deletion.
    - Avoid blocking the solo publishing loop until the release path is smooth.

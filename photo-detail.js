@@ -342,7 +342,7 @@ if (localModerationEnabled) {
     const key = event.key.toLowerCase();
     if (key === "h") {
       if (unworthyStore.has(photo.id)) {
-        status.textContent = `${photo.title} is already marked unworthy on this localhost browser.`;
+        status.textContent = `${photo.title} is already hidden on this localhost browser.`;
         return;
       }
       unworthyStore.mark(photo.id);
@@ -353,7 +353,7 @@ if (localModerationEnabled) {
     const undoneId = unworthyStore.undo(photo.id);
     status.textContent = undoneId
       ? `${photo.title} restored on this localhost browser.`
-      : "No local unworthy mark to undo.";
+      : "No local hidden mark to undo.";
   });
 
   window.addEventListener("photosbyelie:unworthychange", () => {

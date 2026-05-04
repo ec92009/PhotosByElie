@@ -74,15 +74,15 @@
           <span>Owner controls are only available on localhost</span>
         </article>
       `;
-      setStatus("Unworthy review is locked on the public site.");
+      setStatus("Hidden review is locked on the public site.");
       return;
     }
 
     const photos = hiddenPhotos();
     if (!photos.length) {
       galleryRoot.innerHTML = `
-        <article class="mock-photo empty-gallery-card" aria-label="No unworthy photos">
-          <span>No unworthy photos</span>
+        <article class="mock-photo empty-gallery-card" aria-label="No hidden photos">
+          <span>No hidden photos</span>
         </article>
       `;
       setStatus("The hidden gallery is empty.");

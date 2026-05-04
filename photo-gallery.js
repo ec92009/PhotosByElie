@@ -508,14 +508,14 @@ if (galleryRoot && gallery) {
       const undoneId = unworthyStore.undo();
       renderGallery();
       if (!undoneId) {
-        setGalleryStatus("No local unworthy mark to undo.");
+        setGalleryStatus("No local hidden mark to undo.");
         return;
       }
       const nextPhotos = filteredVisiblePhotos();
       const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
       if (restoredIndex >= 0) selectedIndex = restoredIndex;
       updateSelection();
-      setGalleryStatus("Last local unworthy mark undone.");
+      setGalleryStatus("Last local hidden mark undone.");
       event.preventDefault();
     });
 

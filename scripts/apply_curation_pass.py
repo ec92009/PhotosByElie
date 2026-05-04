@@ -286,6 +286,26 @@ def reserve_return_rel(photo: dict, derivative: str, slug: str) -> str:
     return f"assets/reserve/regular-returned/{derivative}/{slug}/{photo['id']}.jpg"
 
 
+def photo_has_assets(photo: dict, roots: list[Path]) -> bool:
+    return all(
+        find_asset_path(photo.get(key), roots)
+        for key in ("gallerySrc", "imageSrc")
+    )
+
+
+def photo_has_regular_source_assets(repo_root: Path, photo: dict, slug: str, roots: list[Path]) -> bool:
+    for derivative, key, original_key in [
+        ("gallery", "gallerySrc", "_originalGallerySrc"),
+        ("detail", "imageSrc", "_originalImageSrc"),
+    ]:
+        source_rel = clean_site_src(photo.get(original_key) or photo.get(key))
+        target_rel = regular_asset_rel(photo, derivative, slug)
+        if find_asset_path(source_rel, roots) or (repo_root / target_rel).exists():
+            continue
+        return False
+    return True
+
+
 def copy_photo(photo: dict) -> dict:
     return json.loads(json.dumps(photo, ensure_ascii=False))
 
@@ -312,7 +332,7 @@ def photo_object_lines(photo: dict, index: int) -> list[str]:
 def collection_lines(slug: str, photos: list[dict], reserve_count: int | None = None) -> list[str]:
     number, title, accent, description = LABELS[slug]
     if reserve_count is not None:
-        description = f"{description} {len(photos)} regular photos currently loaded; {reserve_count} in local reserve."
+        description = f"{description} {len(photos)} expo photos currently loaded; {reserve_count} in local reserve."
     lines = [
         f"  {slug}: {{",
         f"    number: {json.dumps(number, ensure_ascii=False)},",
@@ -525,6 +545,21 @@ def apply_asset_curation(
 
     regular_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
     missing_ids = []
+    unavailable_regular_ids: set[str] = set()
+
+    def add_regular_photo(slug: str, source_photo: dict) -> bool:
+        photo = copy_photo(source_photo)
+        photo["_originalGallerySrc"] = photo.get("gallerySrc")
+        photo["_originalImageSrc"] = photo.get("imageSrc")
+        if not photo_has_regular_source_assets(repo_root, photo, slug, roots):
+            if photo.get("id"):
+                unavailable_regular_ids.add(photo.get("id"))
+            return False
+        photo["gallerySrc"] = f"./{regular_asset_rel(photo, 'gallery', slug)}"
+        photo["imageSrc"] = f"./{regular_asset_rel(photo, 'detail', slug)}"
+        regular_groups[slug].append(photo)
+        return True
+
     for slug in ORDER:
         if slug == "unknown":
             continue
@@ -536,12 +571,17 @@ def apply_asset_curation(
                 missing_ids.append(photo_id)
                 continue
             _source_slug, source_photo = found
-            photo = copy_photo(source_photo)
-            photo["_originalGallerySrc"] = photo.get("gallerySrc")
-            photo["_originalImageSrc"] = photo.get("imageSrc")
-            photo["gallerySrc"] = f"./{regular_asset_rel(photo, 'gallery', slug)}"
-            photo["imageSrc"] = f"./{regular_asset_rel(photo, 'detail', slug)}"
-            regular_groups[slug].append(photo)
+            add_regular_photo(slug, source_photo)
+
+        selected_ids = {photo.get("id") for photo in regular_groups[slug]}
+        for source_photo in reserve_groups_input.get(slug, []):
+            photo_id = source_photo.get("id")
+            if len(regular_groups[slug]) >= regular_cap:
+                break
+            if not photo_id or photo_id in selected_ids or photo_id in hidden_ids or photo_id in reserve_only_ids:
+                continue
+            if add_regular_photo(slug, source_photo):
+                selected_ids.add(photo_id)
 
     assigned_ids = set(country_assignments)
     regular_groups["unknown"] = [
@@ -586,6 +626,7 @@ def apply_asset_curation(
         shutil.copy2(source_path, target_path)
 
     reserve_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
+    skipped_missing_reserve: set[str] = set()
     for slug, photos in reserve_groups_input.items():
         for source_photo in photos:
             photo_id = source_photo.get("id")
@@ -594,7 +635,10 @@ def apply_asset_curation(
             target_slug = country_assignments.get(photo_id, slug)
             if target_slug not in reserve_groups:
                 target_slug = slug if slug in reserve_groups else "unknown"
-            reserve_groups[target_slug].append(copy_photo(source_photo))
+            if photo_has_assets(source_photo, roots):
+                reserve_groups[target_slug].append(copy_photo(source_photo))
+            else:
+                skipped_missing_reserve.add(photo_id)
 
     moved_regular = []
     for slug, photos in current_groups.items():
@@ -603,20 +647,23 @@ def apply_asset_curation(
             if not photo_id or photo_id in target_ids:
                 continue
             is_hidden = photo_id in hidden_ids
+            target_slug = country_assignments.get(photo_id, slug)
+            if target_slug not in reserve_groups:
+                target_slug = slug if slug in reserve_groups else "unknown"
             demoted = copy_photo(source_photo)
             for derivative, key in [("gallery", "gallerySrc"), ("detail", "imageSrc")]:
                 source_rel = clean_site_src(source_photo.get(key))
                 if is_hidden:
                     moved = move_derivative(repo_root, source_rel)
                 else:
-                    target_rel = reserve_return_rel(source_photo, derivative, slug)
+                    target_rel = reserve_return_rel(source_photo, derivative, target_slug)
                     moved = move_asset(repo_root, source_rel, target_rel)
                     if moved:
                         demoted[key] = f"./{target_rel}"
                 if moved:
                     moved_regular.append({"id": photo_id, "asset": moved})
             if not is_hidden:
-                reserve_groups[slug].append(demoted)
+                reserve_groups[target_slug].append(demoted)
 
     write_photos_data_from_site(repo_root, regular_groups, reserve_groups)
     write_regular_manifest_from_site(repo_root, regular_groups, reserve_groups, regular_cap, hidden_ids)
@@ -626,6 +673,8 @@ def apply_asset_curation(
         "regular": [{"slug": slug, "count": len(photos)} for slug, photos in regular_groups.items()],
         "reserve": [{"slug": slug, "count": len(photos)} for slug, photos in reserve_groups.items()],
         "moved_regular": moved_regular,
+        "unavailable_regular_ids": sorted(unavailable_regular_ids),
+        "skipped_missing_reserve_count": len(skipped_missing_reserve),
         "asset_roots": [str(root) for root in roots],
     }
 

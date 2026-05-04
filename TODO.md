@@ -7,37 +7,47 @@ Last updated: 2026-05-04
 - Replaced the remaining mock Mexico gallery with ten DNG-backed Puerto Vallarta selections, including preview exports, source file descriptions, megapixel counts, captions, and available derivative notes in `photos-data.js`.
 - Added a repeatable Lightroom thumbnail builder and documented the ingestion, privacy, promotion, and verification workflow in `docs/sops/IMAGE_INGESTION_SOP.md`.
 - Added rendered 2022 Spain-context Lightroom sale candidates to the public Spain gallery.
-- Published the first capped `Regular` subset to GitHub Pages and added the local Owner and Unworthy review surfaces.
-- Added localhost moderation semantics where `H` hides in the live gallery, `U` undoes there, and `P` on the Unworthy page returns a hidden photo to `Reserve` rather than straight back into `Regular`.
+- Published the first capped Expo subset to GitHub Pages and added the local Owner and Hidden review surfaces.
+- Added localhost moderation semantics where `H` hides in the live gallery, `U` undoes there, and `P` on the Hidden page returns a hidden photo to `Reserve` rather than straight back into Expo.
 - Added localhost gallery single-click selection, double-click detail navigation, and a viewport-limited Grid density slider.
 - Removed the collection number and archive blurb from gallery heroes.
 - Renamed owner-facing blacklist export to Curation Pass, including `.pbe-curation` downloads and the Apply Curation Pass helper while keeping old payload compatibility.
-- Expanded Owner into the curation command center with Curation Pass export, Regular cap, Unworthy review, Unknown classification, and state counts.
+- Expanded Owner into the curation command center with Curation Pass export, Expo cap, Hidden review, Unknown classification, and state counts.
 - Moved Unknown out of the public homepage carousel and into a localhost-only owner classification queue.
 - Polished the homepage by keeping only public collection cards, limiting carousel navigation to the active card, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
 - Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
 - Made basket selections automatically feed the Liked list, pruned stale catalog entries from basket rendering, and expanded Unknown classification with same-day assignment plus H/U moderation.
 - Removed assigned photos from the Unknown classification queue immediately after country assignment.
+- Exercised a synthetic Curation Pass against a disposable local copy and hardened the direct-assets cleaner so missing Reserve derivatives are skipped, Expo fills up to the configured cap from available assets, and assigned visible Unknown photos move into the target country Reserve.
+- Pruned the local Reserve index to physical JPEGs and cache-busted localhost Reserve loading so refills do not show stale broken previews.
 
 ## Current Priority Stack
 
 1. **Finish the browser-to-disk curation loop.**
    - Ensure H/U/P actions, reserve-only state, cap changes, replacements, and future country assignments export cleanly and can be applied by the off-browser cleaner.
+   - Apply a real exported Curation Pass and verify the disk state, generated manifests, local browser, and publishable asset set agree.
 
-2. **Harden Regular/Reserve publishing.**
-   - Keep Regular small and publishable, keep Reserve and Unworthy ignored/local, and preserve the safe GitHub Pages path without archive churn.
+2. **Harden Expo/Reserve/Hidden publishing.**
+   - Keep Expo small and publishable, keep Reserve and Hidden ignored/local, and preserve the safe GitHub Pages path without archive churn.
+   - Keep treating the Owner-selected Expo cap as an upper bound from the Curation Pass, not as a fixed global default.
 
-3. **Improve live curation speed.**
-   - Refine gallery density/zoom, aspect-preserving thumbnails, hover metadata, arrow movement, selection behavior, cross-country detail navigation, and mobile retesting so reviewing photos feels fast.
+3. **Improve live review ergonomics.**
+   - Show gallery photos at their real aspect ratio inside stable square cells, using neutral/white bars where needed.
+   - Add detail-page full-screen preview toggling with single click/tap, then click/tap again to dismiss.
+   - Refine gallery density/zoom, hover metadata, arrow movement, selection behavior, cross-country detail navigation, and mobile retesting so reviewing photos feels fast.
 
-4. **Scale gallery generation.**
+4. **Polish homepage sampling behavior.**
+   - Refresh representative homepage samples after every full carousel cycle, where the cycle length is the number of public country collections.
+   - Keep carousel and hero-stack samples feeling fresh without changing the public collection order.
+
+5. **Scale gallery generation.**
    - Automate manifest promotion into `photos-data.js` once the curation states and publishing rules are stable.
    - Update the import pipeline later so publishable inventory comes from developed Lightroom JPG exports only, not raw DNG/NEF files.
 
-5. **Round out buyer-facing product basics.**
+6. **Round out buyer-facing product basics.**
    - Add licensing, checkout/order intent, filtering/sorting, favorites polish, mobile navigation, and SEO/social metadata.
 
-6. **Keep operations steady.**
+7. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
 
 ## Product Backlog
@@ -72,21 +82,27 @@ Last updated: 2026-05-04
    - Add visible previous/next controls near gallery grids.
    - On narrow screens, duplicate primary CTA buttons and previous/next navigation at the bottom of each page, above the footer.
    - On phone-sized detail pages, horizontal swipes should trigger previous/next photo navigation.
+   - On detail pages, single click/tap on the photo should enter full-screen preview; click/tap again should dismiss it.
    - Retest detail-page cross-collection previous/next navigation on mobile.
    - Consider a compact thumbnail strip for detail pages.
    - Retest swiping on phone after every carousel or gallery interaction change.
 
-7. **Add SEO and social sharing metadata per collection and photo.**
+7. **Polish homepage collection sampling.**
+   - Refresh the random representative photos after every full carousel cycle.
+   - Use the number of public country collections as the cycle length so the samples rotate at a predictable pace.
+   - Keep clicked cards navigating to their collection regardless of whether they are visually foregrounded.
+
+8. **Add SEO and social sharing metadata per collection and photo.**
    - Give each collection a stronger title and description.
    - Add share-ready preview images once real photos are imported.
    - Consider static generated detail pages later if search indexing becomes important.
 
-8. **Decide when to leave pure GitHub Pages.**
+9. **Decide when to leave pure GitHub Pages.**
    - Stay static while localStorage basket, email checkout, and manual fulfillment are enough.
    - Move to a backend when logins, customer accounts, paid downloads, private galleries, or inventory/order tracking become required.
    - Likely budget-conscious path: GitHub Pages plus Stripe links first, then a small hosted backend only when proven necessary.
 
-9. **Document operating procedures.**
+10. **Document operating procedures.**
    - Add SOPs for importing photos, resizing derivatives, updating prices, testing basket behavior, and publishing.
    - Keep versioning under the existing MailAssist SOP.
    - Include a short recovery note for clearing localStorage during testing.
@@ -96,22 +112,22 @@ Last updated: 2026-05-04
 1. **Re-establish publishing away from one-machine dependence.**
    - Publish a lightweight, repeatable subset instead of relying on the current single-computer local archive.
    - Separate publishable web assets from the heavyweight local ingest and moderation workspace.
-   - Decide whether the public site should ship only the curated `Regular` set while `Reserve` remains local or external.
+   - Decide whether the public site should ship only the curated Expo set while `Reserve` remains local or external.
    - Define a safe path for syncing publishable assets to GitHub without dragging the full Saturn archive into normal Git history.
 
 2. **Introduce a third moderation state: Reserve.**
-   - Keep `Regular`, `Reserve`, and `Unworthy` as distinct states.
-   - Start with a much smaller regular cap such as `10` per country, then raise it progressively during curation.
+   - Keep Expo, `Reserve`, and Hidden as distinct states.
+   - Use the Owner-selected Expo cap from each Curation Pass, treating it as an upper bound rather than a required count.
    - Store reserve assets in a location that can be ignored from Git when appropriate.
-   - When a regular photo becomes unworthy on localhost, replace it with a random reserve photo from the same country.
+   - When an Expo photo is hidden on localhost, replace it with a random reserve photo from the same country when one is available.
    - Decide whether reserve promotion should be deterministic per session or reshuffled after each applied moderation pass.
 
 3. **Add a localhost-only Owner surface.**
    - Keep refining the new `Owner` page as moderation needs become clearer.
    - Keep `Export Curation Pass` there as a primary action.
-   - Verify the `Regular` cap control against a real exported Curation Pass and cleaner pass.
-   - Keep the `Unworthy` page collection-like and localhost-only.
-   - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to `Regular`.
+   - Verify the Expo cap control against a real exported Curation Pass and cleaner pass.
+   - Keep the Hidden page collection-like and localhost-only.
+   - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to Expo.
 
 4. **Move Unknown into an Owner classification workflow.**
    - Remove `Unknown` from the public country-style collection list and treat it as an owner-only curation queue.
@@ -131,7 +147,7 @@ Last updated: 2026-05-04
 7. **Show real photo aspect ratios in square gallery cells.**
    - Keep each gallery slot as a stable square background so the grid stays tidy.
    - Render the photo inside that square at its real aspect ratio instead of cropping or stretching it.
-   - Pick a neutral background treatment that makes portrait, landscape, panorama, and square images all feel intentional.
+   - Use neutral/white bars where necessary so portrait, landscape, panorama, and square images all feel intentional.
 
 8. **Add gallery hover metadata.**
    - Show a lightweight tooltip when hovering over a gallery photo.

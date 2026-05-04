@@ -1,28 +1,28 @@
 {
   "schema_version": 1,
-  "regular_cap": 10,
-  "selection_mode": "random",
-  "seed": 1344563728,
-  "photos_count": 80,
+  "regular_cap": 25,
+  "selection_mode": "curation-pass",
+  "seed": null,
+  "photos_count": 131,
   "reserve_counts": {
-    "ai": 90,
-    "france": 1713,
-    "mexico": 1,
-    "portugal": 693,
-    "slovakia": 16,
-    "spain": 873,
-    "unknown": 1547,
-    "usa": 552
+    "france": 18,
+    "usa": 0,
+    "spain": 54,
+    "mexico": 0,
+    "ai": 0,
+    "portugal": 0,
+    "slovakia": 1,
+    "unknown": 0
   },
   "unworthy_counts": {
-    "ai": 0,
     "france": 0,
+    "usa": 0,
+    "spain": 0,
     "mexico": 0,
+    "ai": 0,
     "portugal": 0,
     "slovakia": 0,
-    "spain": 0,
-    "unknown": 0,
-    "usa": 0
+    "unknown": 0
   },
   "photos": [
     {
@@ -31,7 +31,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -45,7 +45,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -59,7 +59,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -73,7 +73,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -87,7 +87,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -96,26 +96,12 @@
       }
     },
     {
-      "id": "20191114-125616-00142-cd4d1d0e7b",
-      "relative_path": "2015-2019/20191114 125616 00142.dng",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "lightroom",
-      "derivatives": {
-        "gallery": "assets/regular/gallery/france/20191114-125616-00142-cd4d1d0e7b.jpg",
-        "detail": "assets/regular/detail/france/20191114-125616-00142-cd4d1d0e7b.jpg"
-      }
-    },
-    {
       "id": "20180528-1422-14867-2d462ff9d1",
       "relative_path": "2015-2019/20180528 1422 14867.dng",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -129,7 +115,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -143,7 +129,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -157,7 +143,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "gps_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -166,12 +152,236 @@
       }
     },
     {
+      "id": "20220504-0546-00317-b09b8ba670",
+      "relative_path": "2022/05/04/20220504 0546 00317.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00317-b09b8ba670.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00317-b09b8ba670.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00316-c71778af80",
+      "relative_path": "2022/05/04/20220504 0546 00316.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00316-c71778af80.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00316-c71778af80.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00315-fc131f78ae",
+      "relative_path": "2022/05/04/20220504 0546 00315.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00315-fc131f78ae.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00315-fc131f78ae.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00314-33041b7ef0",
+      "relative_path": "2022/05/04/20220504 0546 00314.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00314-33041b7ef0.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00314-33041b7ef0.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00313-5b74a6a849",
+      "relative_path": "2022/05/04/20220504 0546 00313.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00313-5b74a6a849.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00313-5b74a6a849.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00312-3480d1432a",
+      "relative_path": "2022/05/04/20220504 0546 00312.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00312-3480d1432a.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00312-3480d1432a.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00311-422cfbe6ca",
+      "relative_path": "2022/05/04/20220504 0546 00311.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00311-422cfbe6ca.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00311-422cfbe6ca.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00310-9978926177",
+      "relative_path": "2022/05/04/20220504 0546 00310.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00310-9978926177.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00310-9978926177.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00309-00783c9871",
+      "relative_path": "2022/05/04/20220504 0546 00309.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00309-00783c9871.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00309-00783c9871.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00308-3d99840be5",
+      "relative_path": "2022/05/04/20220504 0546 00308.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00308-3d99840be5.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00308-3d99840be5.jpg"
+      }
+    },
+    {
+      "id": "20220504-0546-00307-62ba271991",
+      "relative_path": "2022/05/04/20220504 0546 00307.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-0546-00307-62ba271991.jpg",
+        "detail": "assets/regular/detail/france/20220504-0546-00307-62ba271991.jpg"
+      }
+    },
+    {
+      "id": "20220504-054618-02623-1f90e3bf59",
+      "relative_path": "2022/05/04/20220504 054618 02623.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-054618-02623-1f90e3bf59.jpg",
+        "detail": "assets/regular/detail/france/20220504-054618-02623-1f90e3bf59.jpg"
+      }
+    },
+    {
+      "id": "20191115-1720-20008-0870e1bf15",
+      "relative_path": "2015-2019/20191115 1720 20008.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20191115-1720-20008-0870e1bf15.jpg",
+        "detail": "assets/regular/detail/france/20191115-1720-20008-0870e1bf15.jpg"
+      }
+    },
+    {
+      "id": "20191115-1720-17391-065f4f4297",
+      "relative_path": "2015-2019/20191115 1720 17391.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20191115-1720-17391-065f4f4297.jpg",
+        "detail": "assets/regular/detail/france/20191115-1720-17391-065f4f4297.jpg"
+      }
+    },
+    {
+      "id": "20191115-1720-17311-e4707e84e3",
+      "relative_path": "2015-2019/20191115 1720 17311.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20191115-1720-17311-e4707e84e3.jpg",
+        "detail": "assets/regular/detail/france/20191115-1720-17311-e4707e84e3.jpg"
+      }
+    },
+    {
+      "id": "20191115-1720-17435-3f9c1330fb",
+      "relative_path": "2015-2019/20191115 1720 17435.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20191115-1720-17435-3f9c1330fb.jpg",
+        "detail": "assets/regular/detail/france/20191115-1720-17435-3f9c1330fb.jpg"
+      }
+    },
+    {
       "id": "20190811-1659-15966-b7f2257aba",
       "relative_path": "2015-2019/20190811 1659 15966.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -184,8 +394,8 @@
       "relative_path": "2015-2019/20180731 122748 00119.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -198,8 +408,8 @@
       "relative_path": "2015-2019/20180731 122652 00118.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -212,8 +422,8 @@
       "relative_path": "2015-2019/20180624 1822 16658.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -226,8 +436,8 @@
       "relative_path": "2015-2019/20180407 1710 18268.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -240,8 +450,8 @@
       "relative_path": "2015-2019/20180407 1706 18149.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -254,8 +464,8 @@
       "relative_path": "2015-2019/20180304 174646 00094.jpg",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "country"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -268,8 +478,8 @@
       "relative_path": "2015-2019/20180224 1451 00100.jpg",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "country"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -282,8 +492,8 @@
       "relative_path": "2015-2019/20171210 153658 00085.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -296,8 +506,8 @@
       "relative_path": "2015-2019/20160821 1553 07153.dng",
       "gallery_country": {
         "slug": "usa",
-        "label": "United States",
-        "source": "keyword"
+        "label": "USA",
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -306,12 +516,96 @@
       }
     },
     {
+      "id": "20161105-1531-03783-1741c68dcd",
+      "relative_path": "2015-2019/20161105 1531 03783.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "USA",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20161105-1531-03783-1741c68dcd.jpg",
+        "detail": "assets/regular/detail/usa/20161105-1531-03783-1741c68dcd.jpg"
+      }
+    },
+    {
+      "id": "20161105-1519-04446-470300fb52",
+      "relative_path": "2015-2019/20161105 1519 04446.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "USA",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20161105-1519-04446-470300fb52.jpg",
+        "detail": "assets/regular/detail/usa/20161105-1519-04446-470300fb52.jpg"
+      }
+    },
+    {
+      "id": "20130211-1800-17578-e65c19d874",
+      "relative_path": "2010-2014/20130211 1800 17578.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "USA",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20130211-1800-17578-e65c19d874.jpg",
+        "detail": "assets/regular/detail/usa/20130211-1800-17578-e65c19d874.jpg"
+      }
+    },
+    {
+      "id": "20130211-1740-17640-241340077b",
+      "relative_path": "2010-2014/20130211 1740 17640.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "USA",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20130211-1740-17640-241340077b.jpg",
+        "detail": "assets/regular/detail/usa/20130211-1740-17640-241340077b.jpg"
+      }
+    },
+    {
+      "id": "20130211-1730-17597-816d33ac1e",
+      "relative_path": "2010-2014/20130211 1730 17597.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "USA",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20130211-1730-17597-816d33ac1e.jpg",
+        "detail": "assets/regular/detail/usa/20130211-1730-17597-816d33ac1e.jpg"
+      }
+    },
+    {
+      "id": "20130211-1715-17883-615b550789",
+      "relative_path": "2010-2014/20130211 1715 17883.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "USA",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20130211-1715-17883-615b550789.jpg",
+        "detail": "assets/regular/detail/usa/20130211-1715-17883-615b550789.jpg"
+      }
+    },
+    {
       "id": "20220705-165008-00151-1073587e96",
       "relative_path": "2022/07/05/20220705 165008 00151.dng",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -325,7 +619,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -339,7 +633,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -353,7 +647,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -367,7 +661,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -381,7 +675,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "country"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -395,7 +689,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "country"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -409,7 +703,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -423,7 +717,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "country"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -437,7 +731,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -446,12 +740,222 @@
       }
     },
     {
+      "id": "20220510-194042-00773-2596ab77b7",
+      "relative_path": "2022/05/10/20220510 194042 00773.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-194042-00773-2596ab77b7.jpg",
+        "detail": "assets/regular/detail/spain/20220510-194042-00773-2596ab77b7.jpg"
+      }
+    },
+    {
+      "id": "20220510-194015-00763-864ad13b51",
+      "relative_path": "2022/05/10/20220510 194015 00763.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-194015-00763-864ad13b51.jpg",
+        "detail": "assets/regular/detail/spain/20220510-194015-00763-864ad13b51.jpg"
+      }
+    },
+    {
+      "id": "20220510-194015-00762-1de83635dd",
+      "relative_path": "2022/05/10/20220510 194015 00762.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-194015-00762-1de83635dd.jpg",
+        "detail": "assets/regular/detail/spain/20220510-194015-00762-1de83635dd.jpg"
+      }
+    },
+    {
+      "id": "20220510-193951-00761-602c14ee04",
+      "relative_path": "2022/05/10/20220510 193951 00761.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193951-00761-602c14ee04.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193951-00761-602c14ee04.jpg"
+      }
+    },
+    {
+      "id": "20220510-193950-00760-9211b8e1f0",
+      "relative_path": "2022/05/10/20220510 193950 00760.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193950-00760-9211b8e1f0.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193950-00760-9211b8e1f0.jpg"
+      }
+    },
+    {
+      "id": "20220510-193721-00750-c2e8b809c2",
+      "relative_path": "2022/05/10/20220510 193721 00750.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193721-00750-c2e8b809c2.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193721-00750-c2e8b809c2.jpg"
+      }
+    },
+    {
+      "id": "20220510-193719-00749-1d20f33f43",
+      "relative_path": "2022/05/10/20220510 193719 00749.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193719-00749-1d20f33f43.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193719-00749-1d20f33f43.jpg"
+      }
+    },
+    {
+      "id": "20220510-193704-00748-3998d6789b",
+      "relative_path": "2022/05/10/20220510 193704 00748.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193704-00748-3998d6789b.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193704-00748-3998d6789b.jpg"
+      }
+    },
+    {
+      "id": "20220510-193703-00747-b82951df9a",
+      "relative_path": "2022/05/10/20220510 193703 00747.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193703-00747-b82951df9a.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193703-00747-b82951df9a.jpg"
+      }
+    },
+    {
+      "id": "20220510-193647-00746-4ff1bf459b",
+      "relative_path": "2022/05/10/20220510 193647 00746.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193647-00746-4ff1bf459b.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193647-00746-4ff1bf459b.jpg"
+      }
+    },
+    {
+      "id": "20220510-193632-00744-034d848bac",
+      "relative_path": "2022/05/10/20220510 193632 00744.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193632-00744-034d848bac.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193632-00744-034d848bac.jpg"
+      }
+    },
+    {
+      "id": "20220510-193610-00741-246e0e684e",
+      "relative_path": "2022/JPG/05/10/20220510 193610 00741.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-193610-00741-246e0e684e.jpg",
+        "detail": "assets/regular/detail/spain/20220510-193610-00741-246e0e684e.jpg"
+      }
+    },
+    {
+      "id": "20220510-185354-00738-30bc7d535c",
+      "relative_path": "2022/05/10/20220510 185354 00738.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-185354-00738-30bc7d535c.jpg",
+        "detail": "assets/regular/detail/spain/20220510-185354-00738-30bc7d535c.jpg"
+      }
+    },
+    {
+      "id": "20220510-185352-00737-c18fd56f74",
+      "relative_path": "2022/05/10/20220510 185352 00737.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-185352-00737-c18fd56f74.jpg",
+        "detail": "assets/regular/detail/spain/20220510-185352-00737-c18fd56f74.jpg"
+      }
+    },
+    {
+      "id": "20220510-185350-00736-4e29f31e9f",
+      "relative_path": "2022/05/10/20220510 185350 00736.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-185350-00736-4e29f31e9f.jpg",
+        "detail": "assets/regular/detail/spain/20220510-185350-00736-4e29f31e9f.jpg"
+      }
+    },
+    {
       "id": "20190611-1102-16493-b74d8ca77a",
       "relative_path": "2015-2019/20190611 1102 16493.dng",
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -465,7 +969,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -479,7 +983,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -493,7 +997,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -507,7 +1011,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -521,7 +1025,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -535,7 +1039,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -549,7 +1053,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -563,7 +1067,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -577,7 +1081,7 @@
       "gallery_country": {
         "slug": "mexico",
         "label": "Mexico",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -591,7 +1095,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -605,7 +1109,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -619,7 +1123,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -633,7 +1137,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -647,7 +1151,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -661,7 +1165,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -675,7 +1179,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -689,7 +1193,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -703,7 +1207,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -717,7 +1221,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "forced"
+        "source": "curation-pass"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -731,7 +1235,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -745,7 +1249,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -759,7 +1263,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -773,7 +1277,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -787,7 +1291,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -801,7 +1305,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -815,7 +1319,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "country"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -829,7 +1333,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -843,7 +1347,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -857,7 +1361,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "country"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -871,7 +1375,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -885,7 +1389,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -899,7 +1403,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -913,7 +1417,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -927,7 +1431,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -941,7 +1445,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "keyword_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -955,7 +1459,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "gps_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -969,7 +1473,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "gps_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -983,7 +1487,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "gps_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -997,7 +1501,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "gps_reclass"
+        "source": "curation-pass"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1006,12 +1510,222 @@
       }
     },
     {
+      "id": "20190624-1827-16232-feef5b78f4",
+      "relative_path": "2015-2019/20190624 1827 16232.jpg",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1827-16232-feef5b78f4.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1827-16232-feef5b78f4.jpg"
+      }
+    },
+    {
+      "id": "20190624-1826-16542-1eb5098247",
+      "relative_path": "2015-2019/20190624 1826 16542.jpg",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1826-16542-1eb5098247.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1826-16542-1eb5098247.jpg"
+      }
+    },
+    {
+      "id": "20190624-1821-15204-9084914169",
+      "relative_path": "2015-2019/20190624 1821 15204.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1821-15204-9084914169.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1821-15204-9084914169.jpg"
+      }
+    },
+    {
+      "id": "20190624-1818-15218-72670e97f5",
+      "relative_path": "2015-2019/20190624 1818 15218.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1818-15218-72670e97f5.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1818-15218-72670e97f5.jpg"
+      }
+    },
+    {
+      "id": "20190624-1808-15882-bc06654b80",
+      "relative_path": "2015-2019/20190624 1808 15882.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1808-15882-bc06654b80.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1808-15882-bc06654b80.jpg"
+      }
+    },
+    {
+      "id": "20190624-1753-14720-1509f716c6",
+      "relative_path": "2015-2019/20190624 1753 14720.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1753-14720-1509f716c6.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1753-14720-1509f716c6.jpg"
+      }
+    },
+    {
+      "id": "20190624-1753-14686-fe2daf004d",
+      "relative_path": "2015-2019/20190624 1753 14686.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1753-14686-fe2daf004d.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1753-14686-fe2daf004d.jpg"
+      }
+    },
+    {
+      "id": "20190624-1625-16086-00b7acf7f1",
+      "relative_path": "2015-2019/20190624 1625 16086.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1625-16086-00b7acf7f1.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1625-16086-00b7acf7f1.jpg"
+      }
+    },
+    {
+      "id": "20190624-1621-15020-f802baab5c",
+      "relative_path": "2015-2019/20190624 1621 15020.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1621-15020-f802baab5c.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1621-15020-f802baab5c.jpg"
+      }
+    },
+    {
+      "id": "20190624-1619-14607-b8753edd22",
+      "relative_path": "2015-2019/20190624 1619 14607.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1619-14607-b8753edd22.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1619-14607-b8753edd22.jpg"
+      }
+    },
+    {
+      "id": "20190624-1618-15776-b102bc8378",
+      "relative_path": "2015-2019/20190624 1618 15776.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1618-15776-b102bc8378.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1618-15776-b102bc8378.jpg"
+      }
+    },
+    {
+      "id": "20190624-1613-14606-24c553e17e",
+      "relative_path": "2015-2019/20190624 1613 14606.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1613-14606-24c553e17e.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1613-14606-24c553e17e.jpg"
+      }
+    },
+    {
+      "id": "20190623-1448-14711-90c05e1c04",
+      "relative_path": "2015-2019/20190623 1448 14711.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1448-14711-90c05e1c04.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1448-14711-90c05e1c04.jpg"
+      }
+    },
+    {
+      "id": "20190623-1447-14601-3f5aa823f7",
+      "relative_path": "2015-2019/20190623 1447 14601.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1447-14601-3f5aa823f7.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1447-14601-3f5aa823f7.jpg"
+      }
+    },
+    {
+      "id": "20190623-1327-14677-584cd243e5",
+      "relative_path": "2015-2019/20190623 1327 14677.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "curation-pass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1327-14677-584cd243e5.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1327-14677-584cd243e5.jpg"
+      }
+    },
+    {
       "id": "20220505-0352-00089-a67e196477",
       "relative_path": "2022/05/05/20220505 0352 00089.dng",
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1025,7 +1739,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1039,7 +1753,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1053,7 +1767,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1067,7 +1781,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1081,7 +1795,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1095,7 +1809,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1109,7 +1823,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1123,7 +1837,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {
@@ -1137,7 +1851,7 @@
       "gallery_country": {
         "slug": "unknown",
         "label": "Unknown",
-        "source": "unresolved"
+        "source": "owner"
       },
       "source_mode": "lightroom",
       "derivatives": {

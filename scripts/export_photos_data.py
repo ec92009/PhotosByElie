@@ -428,7 +428,7 @@ def write_photos_data(
             f"  {slug}: {{",
             f"    number: {js(number)},",
             f"    title: {js(title)},",
-            f"    description: {js(f'{description} {len(rows)} regular photos currently loaded; {reserve_count} in local reserve.')},",
+            f"    description: {js(f'{description} {len(rows)} expo photos currently loaded; {reserve_count} in local reserve.')},",
             f"    accent: {js(accent)},",
             "    photos: [",
         ]

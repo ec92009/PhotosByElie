@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.15`
+- Current visible version: `v65.20`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -17,7 +17,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; resolution checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
-- `owner.html`: localhost-only owner controls for Curation Pass export, Unknown classification, Unworthy review, and the Regular gallery cap
+- `owner.html`: localhost-only owner controls for Curation Pass export, Unknown classification, Hidden review, and the Expo cap
 - `unworthy.html`: localhost-only review surface for hidden photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
@@ -46,14 +46,15 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Public collections are ordered France, USA, Spain, Mexico, AI, Portugal, and Slovakia.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
-- Gallery pages currently load a capped `Regular` subset of 10 photos per collection from `assets/regular`.
+- Gallery pages load the publishable Expo subset from `assets/regular`; the cap is a maximum, so collections publish fewer photos when fewer valid JPEG pairs are available.
 - The larger Lightroom and Leonardo ingest outputs live under ignored local folders `assets/lightroom` and `assets/lightroom-ai` and act as the reserve pool.
-- On localhost, `H` marks a live-gallery photo unworthy, `U` undoes that hide, and `P` on the Unworthy page returns a hidden photo to Reserve rather than directly to the Regular gallery.
+- On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
 - On the localhost Unknown page, arrow keys move the selected card, `H` hides it, and `U` undoes the last hide.
 - The localhost Owner page exports Curation Pass files as `.pbe-curation`; the cleaner still accepts older `.pbe-blacklist` payloads for compatibility.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On localhost gallery pages, single click moves the selection rectangle, double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
-- `scripts/export_photos_data.py --regular-cap 10` regenerates `photos-data.js` and syncs the small publishable regular asset set.
+- Curation Pass exports include the current Owner-selected Expo cap so the cleaner can apply the browser's active maximum.
+- `scripts/export_photos_data.py --regular-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set up to that maximum.
 - The basket is the source of truth for selected resolutions.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.

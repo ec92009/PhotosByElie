@@ -7,6 +7,7 @@
   const reserveOnlyKey = "photosbyelie-reserve-only";
   const countryAssignmentsKey = "photosbyelie-country-assignments";
   const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
+  let lastCurationPass = null;
 
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
@@ -79,6 +80,13 @@
     if (!enabled) return null;
     const value = Number(localStorage.getItem(regularCapKey));
     return Number.isInteger(value) && value > 0 ? value : null;
+  };
+
+  const effectiveRegularCap = () => {
+    const savedCap = readRegularCap();
+    if (savedCap) return savedCap;
+    const collections = window.photosByElieData || {};
+    return Math.max(1, ...Object.values(collections).map((collection) => collection.photos?.length || 0));
   };
 
   const readCountryAssignments = () => {
@@ -237,7 +245,7 @@
           .filter((photoId) => !hidden.has(photoId) && !reserveOnly.has(photoId));
         const promotedIds = (promotions[galleryKey] || [])
           .filter((photoId) => !hidden.has(photoId));
-        const targetCount = readRegularCap() || collection.photos?.length || 0;
+        const targetCount = effectiveRegularCap();
         return [galleryKey, [...new Set(regularIds.concat(promotedIds))].slice(0, targetCount)];
       })
     );
@@ -251,26 +259,31 @@
       version: 3,
       exported_at: new Date().toISOString(),
       photo_ids: photoIds,
-      regular_cap: readRegularCap(),
+      regular_cap: effectiveRegularCap(),
       reserve_only: readReserveOnly(),
       reserve_promotions: readPromotions(),
       regular_state: activeRegularState(),
       country_assignments: readCountryAssignments(),
     };
     const stamp = payload.exported_at.replace(/[:.]/g, "-");
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/octet-stream" });
+    const text = JSON.stringify(payload, null, 2);
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
+    const filename = `photosbyelie-${stamp}.pbe-curation`;
+    lastCurationPass = { filename, payload, text, url };
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `photosbyelie-${stamp}.pbe-curation`;
+    anchor.download = filename;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     return anchor.download;
   };
 
   const exportBlacklist = exportCurationPass;
+
+  const readLastCurationPass = () => lastCurationPass;
 
   const filterPhotos = (photos = [], options = {}) => {
     if (!enabled) return photos;
@@ -289,8 +302,10 @@
     mark,
     read,
     readCountryAssignments,
+    readLastCurationPass,
     readReserveOnly,
     readRegularCap,
+    effectiveRegularCap,
     exportBlacklist,
     exportCurationPass,
     returnToReserve,

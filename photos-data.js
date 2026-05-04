@@ -2,7 +2,7 @@ window.photosByElieData = {
   france: {
     number: "01",
     title: "France",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 1713 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 25 expo photos currently loaded; 18 in local reserve.",
     accent: "france-gallery",
     photos: [
       {
@@ -133,7 +133,7 @@ window.photosByElieData = {
         title: "20220504 144539 02782",
         caption: "France / 2022-05-04",
         full: "DNG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/regular/gallery/france/20220504-144539-02782-1836f461c0.jpg",
         imageSrc: "./assets/regular/detail/france/20220504-144539-02782-1836f461c0.jpg",
         metadata: [
@@ -313,67 +313,8 @@ window.photosByElieData = {
 ]
       },
       {
-        id: "20191114-125616-00142-cd4d1d0e7b",
-        className: "p1",
-        title: "20191114 125616 00142",
-        caption: "France / 2019-11-14",
-        full: "DNG master",
-        megapixels: 44.9,
-        gallerySrc: "./assets/regular/gallery/france/20191114-125616-00142-cd4d1d0e7b.jpg",
-        imageSrc: "./assets/regular/detail/france/20191114-125616-00142-cd4d1d0e7b.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Musee Jacquemart Andre, Paris"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2019:11:14 12:56:16"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "17.0-50.0 mm f/2.8"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/25, f/2.8, ISO 180"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "17.0 mm / 25 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20191114 125616 00142.dng"
-          },
-          {
-                    "label": "Original size",
-                    "value": "DNG / 8535 x 5258 / 44.9 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20191114-125616-00142-cd4d1d0e7b.jpg / 1800 x 1109 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20191114 125616 00142.dng",
-                    "type": "DNG",
-                    "bytes": 143747881
-          }
-]
-      },
-      {
         id: "20180528-1422-14867-2d462ff9d1",
-        className: "p2",
+        className: "p1",
         title: "Palais Royal de Blois, France",
         caption: "France / 2018-05-28",
         full: "DNG master",
@@ -440,7 +381,7 @@ window.photosByElieData = {
       },
       {
         id: "20180528-1403-16611-a1a78366af",
-        className: "p3",
+        className: "p2",
         title: "Palais Royal de Blois, France",
         caption: "France / 2018-05-28",
         full: "DNG master",
@@ -507,11 +448,11 @@ window.photosByElieData = {
       },
       {
         id: "20160717-1431-00765-4fd597c7c6",
-        className: "p4",
+        className: "p3",
         title: "Giverny, Impressionists Museum, Monet House",
         caption: "France / 2016-07-17",
         full: "DNG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/regular/gallery/france/20160717-1431-00765-4fd597c7c6.jpg",
         imageSrc: "./assets/regular/detail/france/20160717-1431-00765-4fd597c7c6.jpg",
         metadata: [
@@ -574,7 +515,7 @@ window.photosByElieData = {
       },
       {
         id: "20160714-135740-00061-c1f1ea97df",
-        className: "p5",
+        className: "p4",
         title: "Paris, Misc",
         caption: "France / 2016-07-14",
         full: "DNG master",
@@ -631,12 +572,988 @@ window.photosByElieData = {
           }
 ]
       },
+      {
+        id: "20220504-0546-00317-b09b8ba670",
+        className: "p5",
+        title: "20220504 0546 00317",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00317-b09b8ba670.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00317-b09b8ba670.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:39"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00317.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00317-b09b8ba670.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00317.dng",
+                    "type": "DNG",
+                    "bytes": 8723180
+          }
+]
+      },
+      {
+        id: "20220504-0546-00316-c71778af80",
+        className: "p1",
+        title: "20220504 0546 00316",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00316-c71778af80.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00316-c71778af80.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:37"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00316.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00316-c71778af80.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00316.dng",
+                    "type": "DNG",
+                    "bytes": 8721738
+          }
+]
+      },
+      {
+        id: "20220504-0546-00315-fc131f78ae",
+        className: "p2",
+        title: "20220504 0546 00315",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00315-fc131f78ae.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00315-fc131f78ae.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:35"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00315.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00315-fc131f78ae.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00315.dng",
+                    "type": "DNG",
+                    "bytes": 8804574
+          }
+]
+      },
+      {
+        id: "20220504-0546-00314-33041b7ef0",
+        className: "p3",
+        title: "20220504 0546 00314",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00314-33041b7ef0.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00314-33041b7ef0.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:34"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00314.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00314-33041b7ef0.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00314.dng",
+                    "type": "DNG",
+                    "bytes": 8870302
+          }
+]
+      },
+      {
+        id: "20220504-0546-00313-5b74a6a849",
+        className: "p4",
+        title: "20220504 0546 00313",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00313-5b74a6a849.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00313-5b74a6a849.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:32"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00313.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00313-5b74a6a849.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00313.dng",
+                    "type": "DNG",
+                    "bytes": 9083398
+          }
+]
+      },
+      {
+        id: "20220504-0546-00312-3480d1432a",
+        className: "p5",
+        title: "20220504 0546 00312",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00312-3480d1432a.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00312-3480d1432a.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:30"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00312.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00312-3480d1432a.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00312.dng",
+                    "type": "DNG",
+                    "bytes": 8993518
+          }
+]
+      },
+      {
+        id: "20220504-0546-00311-422cfbe6ca",
+        className: "p1",
+        title: "20220504 0546 00311",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00311-422cfbe6ca.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00311-422cfbe6ca.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:25"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00311.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00311-422cfbe6ca.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00311.dng",
+                    "type": "DNG",
+                    "bytes": 8976412
+          }
+]
+      },
+      {
+        id: "20220504-0546-00310-9978926177",
+        className: "p2",
+        title: "20220504 0546 00310",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00310-9978926177.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00310-9978926177.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:24"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00310.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00310-9978926177.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00310.dng",
+                    "type": "DNG",
+                    "bytes": 9192264
+          }
+]
+      },
+      {
+        id: "20220504-0546-00309-00783c9871",
+        className: "p3",
+        title: "20220504 0546 00309",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00309-00783c9871.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00309-00783c9871.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:22"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00309.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00309-00783c9871.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00309.dng",
+                    "type": "DNG",
+                    "bytes": 9031610
+          }
+]
+      },
+      {
+        id: "20220504-0546-00308-3d99840be5",
+        className: "p4",
+        title: "20220504 0546 00308",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00308-3d99840be5.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00308-3d99840be5.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:21"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00308.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00308-3d99840be5.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00308.dng",
+                    "type": "DNG",
+                    "bytes": 8850336
+          }
+]
+      },
+      {
+        id: "20220504-0546-00307-62ba271991",
+        className: "p5",
+        title: "20220504 0546 00307",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-0546-00307-62ba271991.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-0546-00307-62ba271991.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:19"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 0546 00307.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-0546-00307-62ba271991.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 0546 00307.dng",
+                    "type": "DNG",
+                    "bytes": 8733498
+          }
+]
+      },
+      {
+        id: "20220504-054618-02623-1f90e3bf59",
+        className: "p1",
+        title: "20220504 054618 02623",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220504-054618-02623-1f90e3bf59.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-054618-02623-1f90e3bf59.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Versailles"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:04 05:46:18"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220504 054618 02623.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-054618-02623-1f90e3bf59.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 054618 02623.dng",
+                    "type": "DNG",
+                    "bytes": 8650588
+          }
+]
+      },
+      {
+        id: "20191115-1720-20008-0870e1bf15",
+        className: "p2",
+        title: "20191115 1720 20008",
+        caption: "France / 2019-11-15",
+        full: "DNG master",
+        megapixels: 12.2,
+        gallerySrc: "./assets/regular/gallery/france/20191115-1720-20008-0870e1bf15.jpg",
+        imageSrc: "./assets/regular/detail/france/20191115-1720-20008-0870e1bf15.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:11:15 17:20:58"
+          },
+          {
+                    "label": "Camera",
+                    "value": "Apple iPhone XR"
+          },
+          {
+                    "label": "Lens",
+                    "value": "iPhone XR back camera 4.25mm f/1.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/100, f/1.8, ISO 50"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "4.2 mm / 26 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.2 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191115 1720 20008.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191115-1720-20008-0870e1bf15.jpg / 1350 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191115 1720 20008.dng",
+                    "type": "DNG",
+                    "bytes": 8760363
+          }
+]
+      },
+      {
+        id: "20191115-1720-17391-065f4f4297",
+        className: "p3",
+        title: "20191115 1720 17391",
+        caption: "France / 2019-11-15",
+        full: "DNG master",
+        megapixels: 12.2,
+        gallerySrc: "./assets/regular/gallery/france/20191115-1720-17391-065f4f4297.jpg",
+        imageSrc: "./assets/regular/detail/france/20191115-1720-17391-065f4f4297.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:11:15 17:20:33"
+          },
+          {
+                    "label": "Camera",
+                    "value": "Apple iPhone XR"
+          },
+          {
+                    "label": "Lens",
+                    "value": "iPhone XR back camera 4.25mm f/1.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/100, f/1.8, ISO 64"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "4.2 mm / 26 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.2 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191115 1720 17391.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191115-1720-17391-065f4f4297.jpg / 1350 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191115 1720 17391.dng",
+                    "type": "DNG",
+                    "bytes": 9597538
+          }
+]
+      },
+      {
+        id: "20191115-1720-17311-e4707e84e3",
+        className: "p4",
+        title: "20191115 1720 17311",
+        caption: "France / 2019-11-15",
+        full: "DNG master",
+        megapixels: 12.2,
+        gallerySrc: "./assets/regular/gallery/france/20191115-1720-17311-e4707e84e3.jpg",
+        imageSrc: "./assets/regular/detail/france/20191115-1720-17311-e4707e84e3.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:11:15 17:20:31"
+          },
+          {
+                    "label": "Camera",
+                    "value": "Apple iPhone XR"
+          },
+          {
+                    "label": "Lens",
+                    "value": "iPhone XR back camera 4.25mm f/1.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/100, f/1.8, ISO 64"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "4.2 mm / 26 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.2 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191115 1720 17311.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191115-1720-17311-e4707e84e3.jpg / 1350 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191115 1720 17311.dng",
+                    "type": "DNG",
+                    "bytes": 9788366
+          }
+]
+      },
+      {
+        id: "20191115-1720-17435-3f9c1330fb",
+        className: "p5",
+        title: "20191115 1720 17435",
+        caption: "France / 2019-11-15",
+        full: "DNG master",
+        megapixels: 12.2,
+        gallerySrc: "./assets/regular/gallery/france/20191115-1720-17435-3f9c1330fb.jpg",
+        imageSrc: "./assets/regular/detail/france/20191115-1720-17435-3f9c1330fb.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:11:15 17:20:29"
+          },
+          {
+                    "label": "Camera",
+                    "value": "Apple iPhone XR"
+          },
+          {
+                    "label": "Lens",
+                    "value": "iPhone XR back camera 4.25mm f/1.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/100, f/1.8, ISO 80"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "4.2 mm / 26 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.2 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191115 1720 17435.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191115-1720-17435-3f9c1330fb.jpg / 1350 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191115 1720 17435.dng",
+                    "type": "DNG",
+                    "bytes": 9831956
+          }
+]
+      },
     ]
   },
   usa: {
     number: "02",
     title: "USA",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 552 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 16 expo photos currently loaded; 0 in local reserve.",
     accent: "usa-gallery",
     photos: [
       {
@@ -893,7 +1810,7 @@ window.photosByElieData = {
         title: "20180407 1710 18268",
         caption: "USA / 2018-04-07",
         full: "DNG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/regular/gallery/usa/20180407-1710-18268-553d0da4bb.jpg",
         imageSrc: "./assets/regular/detail/usa/20180407-1710-18268-553d0da4bb.jpg",
         metadata: [
@@ -956,7 +1873,7 @@ window.photosByElieData = {
         title: "20180407 1706 18149",
         caption: "USA / 2018-04-07",
         full: "DNG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/regular/gallery/usa/20180407-1706-18149-b20009ccb8.jpg",
         imageSrc: "./assets/regular/detail/usa/20180407-1706-18149-b20009ccb8.jpg",
         metadata: [
@@ -1165,7 +2082,7 @@ window.photosByElieData = {
         title: "20171210 Horse Mom and Child, Pauma Valley, California, USA",
         caption: "USA / 2017-12-10",
         full: "DNG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/regular/gallery/usa/20171210-153658-00085-06c44d4e8a.jpg",
         imageSrc: "./assets/regular/detail/usa/20171210-153658-00085-06c44d4e8a.jpg",
         metadata: [
@@ -1232,7 +2149,7 @@ window.photosByElieData = {
         title: "SDMArt",
         caption: "USA / 2016-08-21",
         full: "DNG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/regular/gallery/usa/20160821-1553-07153-d8136ffa49.jpg",
         imageSrc: "./assets/regular/detail/usa/20160821-1553-07153-d8136ffa49.jpg",
         metadata: [
@@ -1293,12 +2210,382 @@ window.photosByElieData = {
           }
 ]
       },
+      {
+        id: "20161105-1531-03783-1741c68dcd",
+        className: "p1",
+        title: "Self-Realization Fellowship Meditation Gardens",
+        caption: "USA / 2016-11-05",
+        full: "DNG master",
+        megapixels: 24,
+        gallerySrc: "./assets/regular/gallery/usa/20161105-1531-03783-1741c68dcd.jpg",
+        imageSrc: "./assets/regular/detail/usa/20161105-1531-03783-1741c68dcd.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Self-Realization Fellowship Meditation Gardens"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Beach, Encinitas, Landscape, Ocean, Sky, Sun, _Places, garden"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2016:11:05 15:31:20"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/800, f/2.8, ISO 400"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20161105 1531 03783.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20161105-1531-03783-1741c68dcd.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20161105 1531 03783.dng",
+                    "type": "DNG",
+                    "bytes": 10634889
+          }
+]
+      },
+      {
+        id: "20161105-1519-04446-470300fb52",
+        className: "p2",
+        title: "Self-Realization Fellowship Meditation Gardens",
+        caption: "USA / 2016-11-05",
+        full: "DNG master",
+        megapixels: 24,
+        gallerySrc: "./assets/regular/gallery/usa/20161105-1519-04446-470300fb52.jpg",
+        imageSrc: "./assets/regular/detail/usa/20161105-1519-04446-470300fb52.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Self-Realization Fellowship Meditation Gardens"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Beach, Encinitas, Landscape, Ocean, Sky, Sun, _Places, garden"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2016:11:05 15:19:47"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/1600, f/2.8, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20161105 1519 04446.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20161105-1519-04446-470300fb52.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20161105 1519 04446.dng",
+                    "type": "DNG",
+                    "bytes": 11607271
+          }
+]
+      },
+      {
+        id: "20130211-1800-17578-e65c19d874",
+        className: "p3",
+        title: "20130211 1800 17578",
+        caption: "USA / 2013-02-11",
+        full: "DNG master",
+        megapixels: 6,
+        gallerySrc: "./assets/regular/gallery/usa/20130211-1800-17578-e65c19d874.jpg",
+        imageSrc: "./assets/regular/detail/usa/20130211-1800-17578-e65c19d874.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "San Diego"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2013:02:11 18:00:12"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D70s"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18-200mm f/3.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/5, f/3.5, ISO 400"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "18.0 mm / 27 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20130211 1800 17578.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 3008 x 2000 / 6.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20130211-1800-17578-e65c19d874.jpg / 1800 x 1197 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2010-2014/20130211 1800 17578.dng",
+                    "type": "DNG",
+                    "bytes": 3326238
+          }
+]
+      },
+      {
+        id: "20130211-1740-17640-241340077b",
+        className: "p4",
+        title: "20130211 1740 17640",
+        caption: "USA / 2013-02-11",
+        full: "DNG master",
+        megapixels: 6,
+        gallerySrc: "./assets/regular/gallery/usa/20130211-1740-17640-241340077b.jpg",
+        imageSrc: "./assets/regular/detail/usa/20130211-1740-17640-241340077b.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "San Diego"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2013:02:11 17:40:34"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D70s"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18-200mm f/3.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/6, f/4.5, ISO 200"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "44.0 mm / 66 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20130211 1740 17640.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 3008 x 2000 / 6.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20130211-1740-17640-241340077b.jpg / 1800 x 1197 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2010-2014/20130211 1740 17640.dng",
+                    "type": "DNG",
+                    "bytes": 2728218
+          }
+]
+      },
+      {
+        id: "20130211-1730-17597-816d33ac1e",
+        className: "p5",
+        title: "20130211 1730 17597",
+        caption: "USA / 2013-02-11",
+        full: "DNG master",
+        megapixels: 6,
+        gallerySrc: "./assets/regular/gallery/usa/20130211-1730-17597-816d33ac1e.jpg",
+        imageSrc: "./assets/regular/detail/usa/20130211-1730-17597-816d33ac1e.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "San Diego"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2013:02:11 17:30:50"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D70s"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18-200mm f/3.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/4.2, ISO 200"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "35.0 mm / 52 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20130211 1730 17597.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 3008 x 2000 / 6.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20130211-1730-17597-816d33ac1e.jpg / 1800 x 1197 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2010-2014/20130211 1730 17597.dng",
+                    "type": "DNG",
+                    "bytes": 3622140
+          }
+]
+      },
+      {
+        id: "20130211-1715-17883-615b550789",
+        className: "p1",
+        title: "20130211 1715 17883",
+        caption: "USA / 2013-02-11",
+        full: "DNG master",
+        megapixels: 6,
+        gallerySrc: "./assets/regular/gallery/usa/20130211-1715-17883-615b550789.jpg",
+        imageSrc: "./assets/regular/detail/usa/20130211-1715-17883-615b550789.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "San Diego"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2013:02:11 17:15:35"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D70s"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18-200mm f/3.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/50, f/4.8, ISO 200"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "52.0 mm / 78 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20130211 1715 17883.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 3008 x 2000 / 6.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20130211-1715-17883-615b550789.jpg / 1800 x 1197 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2010-2014/20130211 1715 17883.dng",
+                    "type": "DNG",
+                    "bytes": 3859420
+          }
+]
+      },
     ]
   },
   spain: {
     number: "03",
     title: "Spain",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 873 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 25 expo photos currently loaded; 54 in local reserve.",
     accent: "spain-gallery",
     photos: [
       {
@@ -1951,12 +3238,953 @@ window.photosByElieData = {
           }
 ]
       },
+      {
+        id: "20220510-194042-00773-2596ab77b7",
+        className: "p1",
+        title: "20220510 194042 00773",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 55.4,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-194042-00773-2596ab77b7.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-194042-00773-2596ab77b7.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:40:42"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "Tokina atx-i 11-20mm F2.8 CF"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 1000"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 194042 00773.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 10127 x 5469 / 55.4 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-194042-00773-2596ab77b7.jpg / 1800 x 972 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 194042 00773.dng",
+                    "type": "DNG",
+                    "bytes": 25670712
+          }
+]
+      },
+      {
+        id: "20220510-194015-00763-864ad13b51",
+        className: "p2",
+        title: "20220510 194015 00763",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-194015-00763-864ad13b51.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-194015-00763-864ad13b51.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:40:15"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 400"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 194015 00763.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-194015-00763-864ad13b51.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 194015 00763.dng",
+                    "type": "DNG",
+                    "bytes": 12099556
+          }
+]
+      },
+      {
+        id: "20220510-194015-00762-1de83635dd",
+        className: "p3",
+        title: "20220510 194015 00762",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-194015-00762-1de83635dd.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-194015-00762-1de83635dd.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:40:15"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 400"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 194015 00762.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-194015-00762-1de83635dd.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 194015 00762.dng",
+                    "type": "DNG",
+                    "bytes": 10887132
+          }
+]
+      },
+      {
+        id: "20220510-193951-00761-602c14ee04",
+        className: "p4",
+        title: "20220510 193951 00761",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193951-00761-602c14ee04.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193951-00761-602c14ee04.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:39:51"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 720"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193951 00761.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193951-00761-602c14ee04.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193951 00761.dng",
+                    "type": "DNG",
+                    "bytes": 13012194
+          }
+]
+      },
+      {
+        id: "20220510-193950-00760-9211b8e1f0",
+        className: "p5",
+        title: "20220510 193950 00760",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193950-00760-9211b8e1f0.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193950-00760-9211b8e1f0.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:39:50"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 720"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193950 00760.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193950-00760-9211b8e1f0.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193950 00760.dng",
+                    "type": "DNG",
+                    "bytes": 12170414
+          }
+]
+      },
+      {
+        id: "20220510-193721-00750-c2e8b809c2",
+        className: "p1",
+        title: "20220510 193721 00750",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193721-00750-c2e8b809c2.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193721-00750-c2e8b809c2.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:37:21"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/25, f/2.8, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193721 00750.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193721-00750-c2e8b809c2.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193721 00750.dng",
+                    "type": "DNG",
+                    "bytes": 7422292
+          }
+]
+      },
+      {
+        id: "20220510-193719-00749-1d20f33f43",
+        className: "p2",
+        title: "20220510 193719 00749",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193719-00749-1d20f33f43.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193719-00749-1d20f33f43.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:37:19"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/25, f/2.8, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193719 00749.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193719-00749-1d20f33f43.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193719 00749.dng",
+                    "type": "DNG",
+                    "bytes": 7725700
+          }
+]
+      },
+      {
+        id: "20220510-193704-00748-3998d6789b",
+        className: "p3",
+        title: "20220510 193704 00748",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193704-00748-3998d6789b.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193704-00748-3998d6789b.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:37:04"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/40, f/2.8, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193704 00748.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193704-00748-3998d6789b.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193704 00748.dng",
+                    "type": "DNG",
+                    "bytes": 8094940
+          }
+]
+      },
+      {
+        id: "20220510-193703-00747-b82951df9a",
+        className: "p4",
+        title: "20220510 193703 00747",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193703-00747-b82951df9a.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193703-00747-b82951df9a.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:37:03"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/40, f/3.2, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193703 00747.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193703-00747-b82951df9a.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193703 00747.dng",
+                    "type": "DNG",
+                    "bytes": 7906162
+          }
+]
+      },
+      {
+        id: "20220510-193647-00746-4ff1bf459b",
+        className: "p5",
+        title: "20220510 193647 00746",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193647-00746-4ff1bf459b.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193647-00746-4ff1bf459b.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:36:47"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 140"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193647 00746.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193647-00746-4ff1bf459b.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193647 00746.dng",
+                    "type": "DNG",
+                    "bytes": 7412522
+          }
+]
+      },
+      {
+        id: "20220510-193632-00744-034d848bac",
+        className: "p1",
+        title: "20220510 193632 00744",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193632-00744-034d848bac.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193632-00744-034d848bac.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:36:32"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 160"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193632 00744.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193632-00744-034d848bac.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 193632 00744.dng",
+                    "type": "DNG",
+                    "bytes": 7512555
+          }
+]
+      },
+      {
+        id: "20220510-193610-00741-246e0e684e",
+        className: "p2",
+        title: "20220510 193610 00741",
+        caption: "Spain / 2022-05-10",
+        full: "JPG master",
+        megapixels: 17.6,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-193610-00741-246e0e684e.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-193610-00741-246e0e684e.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Biblioteca Municipal de Bibebarrieta, Euzkadi, Pays Basque"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 19:36:10"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "Tokina atx-i 11-20mm F2.8 CF"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Pixelmator 3.9.9"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB IEC61966-2.1"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 193610 00741.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 4754 x 3712 / 17.6 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-193610-00741-246e0e684e.jpg / 1800 x 1405 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/JPG/05/10/20220510 193610 00741.jpg",
+                    "type": "JPG",
+                    "bytes": 3664612
+          }
+]
+      },
+      {
+        id: "20220510-185354-00738-30bc7d535c",
+        className: "p3",
+        title: "20220510 185354 00738",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-185354-00738-30bc7d535c.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-185354-00738-30bc7d535c.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Catedral de Santiago, Euzkadi, Pays Basque, St James Cathedral"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 18:53:54"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/160, f/6.3, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 185354 00738.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-185354-00738-30bc7d535c.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 185354 00738.dng",
+                    "type": "DNG",
+                    "bytes": 8548948
+          }
+]
+      },
+      {
+        id: "20220510-185352-00737-c18fd56f74",
+        className: "p4",
+        title: "20220510 185352 00737",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-185352-00737-c18fd56f74.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-185352-00737-c18fd56f74.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Catedral de Santiago, Euzkadi, Pays Basque, St James Cathedral"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 18:53:52"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/160, f/6.3, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 185352 00737.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-185352-00737-c18fd56f74.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 185352 00737.dng",
+                    "type": "DNG",
+                    "bytes": 8919224
+          }
+]
+      },
+      {
+        id: "20220510-185350-00736-4e29f31e9f",
+        className: "p5",
+        title: "20220510 185350 00736",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-185350-00736-4e29f31e9f.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-185350-00736-4e29f31e9f.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Basque Country, Catedral de Santiago, Euzkadi, Pays Basque, St James Cathedral"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:10 18:53:50"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/125, f/5.6, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 185350 00736.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-185350-00736-4e29f31e9f.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 185350 00736.dng",
+                    "type": "DNG",
+                    "bytes": 8937498
+          }
+]
+      },
     ]
   },
   mexico: {
     number: "04",
     title: "Mexico",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 1 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 expo photos currently loaded; 0 in local reserve.",
     accent: "mexico-gallery",
     photos: [
       {
@@ -2598,7 +4826,7 @@ window.photosByElieData = {
   ai: {
     number: "05",
     title: "AI",
-    description: "Leonardo archive selections prepared from the Saturn Lightroom AI source. 10 regular photos currently loaded; 90 in local reserve.",
+    description: "Leonardo archive selections prepared from the Saturn Lightroom AI source. 10 expo photos currently loaded; 0 in local reserve.",
     accent: "ai-gallery",
     photos: [
       {
@@ -2996,7 +5224,7 @@ window.photosByElieData = {
   portugal: {
     number: "06",
     title: "Portugal",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 693 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 expo photos currently loaded; 0 in local reserve.",
     accent: "portugal-gallery",
     photos: [
       {
@@ -3662,7 +5890,7 @@ window.photosByElieData = {
   slovakia: {
     number: "07",
     title: "Slovakia",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 16 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 25 expo photos currently loaded; 1 in local reserve.",
     accent: "slovakia-gallery",
     photos: [
       {
@@ -4303,12 +6531,945 @@ window.photosByElieData = {
           }
 ]
       },
+      {
+        id: "20190624-1827-16232-feef5b78f4",
+        className: "p1",
+        title: "20190624 1827 16232",
+        caption: "Slovakia / 2019-06-24",
+        full: "JPG master",
+        megapixels: 21.6,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1827-16232-feef5b78f4.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1827-16232-feef5b78f4.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:27:17"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB IEC61966-2.1"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1827 16232.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 3793 x 5689 / 21.6 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1827-16232-feef5b78f4.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1827 16232.jpg",
+                    "type": "JPG",
+                    "bytes": 7888615
+          }
+]
+      },
+      {
+        id: "20190624-1826-16542-1eb5098247",
+        className: "p2",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "JPG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1826-16542-1eb5098247.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1826-16542-1eb5098247.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:26:33"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1826 16542.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1826-16542-1eb5098247.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1826 16542.jpg",
+                    "type": "JPG",
+                    "bytes": 12040240
+          }
+]
+      },
+      {
+        id: "20190624-1821-15204-9084914169",
+        className: "p3",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1821-15204-9084914169.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1821-15204-9084914169.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:21:45"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1821 15204.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1821-15204-9084914169.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1821 15204.dng",
+                    "type": "DNG",
+                    "bytes": 7389643
+          }
+]
+      },
+      {
+        id: "20190624-1818-15218-72670e97f5",
+        className: "p4",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1818-15218-72670e97f5.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1818-15218-72670e97f5.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:18:10"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/160, f/6.3, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1818 15218.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1818-15218-72670e97f5.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1818 15218.dng",
+                    "type": "DNG",
+                    "bytes": 5872703
+          }
+]
+      },
+      {
+        id: "20190624-1808-15882-bc06654b80",
+        className: "p5",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1808-15882-bc06654b80.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1808-15882-bc06654b80.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:08:00"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/160, f/6.3, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1808 15882.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1808-15882-bc06654b80.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1808 15882.dng",
+                    "type": "DNG",
+                    "bytes": 5670576
+          }
+]
+      },
+      {
+        id: "20190624-1753-14720-1509f716c6",
+        className: "p1",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1753-14720-1509f716c6.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1753-14720-1509f716c6.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 17:53:32"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/50, f/5.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "15.0 mm / 22 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1753 14720.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1753-14720-1509f716c6.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1753 14720.dng",
+                    "type": "DNG",
+                    "bytes": 7836648
+          }
+]
+      },
+      {
+        id: "20190624-1753-14686-fe2daf004d",
+        className: "p2",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1753-14686-fe2daf004d.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1753-14686-fe2daf004d.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 17:53:04"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/50, f/5.6, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1753 14686.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1753-14686-fe2daf004d.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1753 14686.dng",
+                    "type": "DNG",
+                    "bytes": 8499207
+          }
+]
+      },
+      {
+        id: "20190624-1625-16086-00b7acf7f1",
+        className: "p3",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1625-16086-00b7acf7f1.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1625-16086-00b7acf7f1.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 16:25:24"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "12.0 mm / 18 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1625 16086.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1625-16086-00b7acf7f1.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1625 16086.dng",
+                    "type": "DNG",
+                    "bytes": 7902118
+          }
+]
+      },
+      {
+        id: "20190624-1621-15020-f802baab5c",
+        className: "p4",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1621-15020-f802baab5c.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1621-15020-f802baab5c.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 16:21:15"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1621 15020.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1621-15020-f802baab5c.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1621 15020.dng",
+                    "type": "DNG",
+                    "bytes": 7026423
+          }
+]
+      },
+      {
+        id: "20190624-1619-14607-b8753edd22",
+        className: "p5",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1619-14607-b8753edd22.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1619-14607-b8753edd22.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 16:19:16"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/100, f/6.3, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1619 14607.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1619-14607-b8753edd22.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1619 14607.dng",
+                    "type": "DNG",
+                    "bytes": 6491879
+          }
+]
+      },
+      {
+        id: "20190624-1618-15776-b102bc8378",
+        className: "p1",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1618-15776-b102bc8378.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1618-15776-b102bc8378.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 16:18:21"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/30, f/5.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1618 15776.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1618-15776-b102bc8378.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1618 15776.dng",
+                    "type": "DNG",
+                    "bytes": 4880709
+          }
+]
+      },
+      {
+        id: "20190624-1613-14606-24c553e17e",
+        className: "p2",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1613-14606-24c553e17e.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1613-14606-24c553e17e.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 16:13:45"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1613 14606.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1613-14606-24c553e17e.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1613 14606.dng",
+                    "type": "DNG",
+                    "bytes": 5766375
+          }
+]
+      },
+      {
+        id: "20190623-1448-14711-90c05e1c04",
+        className: "p3",
+        title: "20190623 1448 14711",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1448-14711-90c05e1c04.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1448-14711-90c05e1c04.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 14:48:02"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1448 14711.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1448-14711-90c05e1c04.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1448 14711.dng",
+                    "type": "DNG",
+                    "bytes": 6148384
+          }
+]
+      },
+      {
+        id: "20190623-1447-14601-3f5aa823f7",
+        className: "p4",
+        title: "20190623 1447 14601",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1447-14601-3f5aa823f7.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1447-14601-3f5aa823f7.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 14:47:07"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1447 14601.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1447-14601-3f5aa823f7.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1447 14601.dng",
+                    "type": "DNG",
+                    "bytes": 8211917
+          }
+]
+      },
+      {
+        id: "20190623-1327-14677-584cd243e5",
+        className: "p5",
+        title: "20190623 1327 14677",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1327-14677-584cd243e5.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1327-14677-584cd243e5.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 13:27:26"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/320, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1327 14677.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1327-14677-584cd243e5.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1327 14677.dng",
+                    "type": "DNG",
+                    "bytes": 6982428
+          }
+]
+      },
     ]
   },
   unknown: {
     number: "08",
     title: "Unknown",
-    description: "Saturn Lightroom selections that still need a final gallery assignment. 10 regular photos currently loaded; 1547 in local reserve.",
+    description: "Saturn Lightroom selections that still need a final gallery assignment. 10 expo photos currently loaded; 0 in local reserve.",
     accent: "unknown-gallery",
     photos: [
       {
@@ -4848,7 +8009,7 @@ window.photosByElieData = {
         title: "Wild Animals at the zoo",
         caption: "Unknown / 2016-10-09",
         full: "DNG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/regular/gallery/unknown/20161009-1619-01513-dcdb2fc0ec.jpg",
         imageSrc: "./assets/regular/detail/unknown/20161009-1619-01513-dcdb2fc0ec.jpg",
         metadata: [

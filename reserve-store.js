@@ -5,7 +5,10 @@
 
   const currentVersionQuery = () => {
     const script = [...document.scripts].find((item) => item.src.includes("reserve-store.js"));
-    return script?.src.includes("?") ? `?${script.src.split("?").pop()}` : "";
+    const params = new URLSearchParams(script?.src.includes("?") ? script.src.split("?").pop() : "");
+    if (enabled) params.set("localReserve", String(Date.now()));
+    const query = params.toString();
+    return query ? `?${query}` : "";
   };
 
   const normalizeState = (value) => {

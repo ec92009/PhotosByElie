@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=65.15"/>
-  <link rel="stylesheet" href="./styles.css?v=65.15"/>
-  <link rel="stylesheet" href="./photos.css?v=65.15"/>
+  <link rel="stylesheet" href="./shared.css?v=65.20"/>
+  <link rel="stylesheet" href="./styles.css?v=65.20"/>
+  <link rel="stylesheet" href="./photos.css?v=65.20"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v65.15</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v65.20</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -36,7 +36,7 @@
       <div class="cta">
         <a class="btn secondary" href="./">Back to collections</a>
         <a class="btn secondary" href="./unknown.html">Classify unknown</a>
-        <a class="btn secondary" href="./unworthy.html">Unworthy</a>
+        <a class="btn secondary" href="./unworthy.html">Hidden</a>
       </div>
     </section>
     <section class="panel owner-panel" data-owner-root>
@@ -47,6 +47,10 @@
           <h2>Curation Pass</h2>
           <p>Download the off-browser work order for hidden photos, reserve returns, cap changes, and country assignments.</p>
           <button class="btn primary" type="button" data-owner-export>Export Curation Pass</button>
+          <div class="owner-export-result" data-owner-export-result hidden>
+            <a class="btn secondary" href="#" data-owner-export-link>Download again</a>
+            <textarea readonly spellcheck="false" data-owner-export-text aria-label="Latest Curation Pass payload"></textarea>
+          </div>
         </article>
         <article class="owner-card">
           <p class="eyebrow">Classification</p>
@@ -56,15 +60,15 @@
         </article>
         <article class="owner-card">
           <p class="eyebrow">Review</p>
-          <h2>Unworthy</h2>
+          <h2>Hidden</h2>
           <p><span data-owner-unworthy-count>0</span> photos are hidden locally.</p>
           <a class="btn secondary" href="./unworthy.html">Review</a>
         </article>
         <article class="owner-card">
-          <p class="eyebrow">Regular</p>
-          <h2>Gallery cap</h2>
+          <p class="eyebrow">Expo</p>
+          <h2>Expo cap</h2>
           <label class="owner-number-control">
-            <span>Photos per collection</span>
+            <span>Max photos per collection</span>
             <input type="number" min="1" max="100" step="1" data-owner-regular-cap/>
           </label>
           <button class="btn secondary" type="button" data-owner-save-cap>Save cap</button>
@@ -91,11 +95,11 @@
     </div>
   </footer>
 
-  <script src="./photos.js?v=65.15"></script>
-  <script src="./owner-tools.js?v=65.15"></script>
-  <script src="./photos-data.js?v=65.15"></script>
-  <script src="./unworthy-store.js?v=65.15"></script>
-  <script src="./reserve-store.js?v=65.15"></script>
-  <script src="./owner.js?v=65.15"></script>
+  <script src="./photos.js?v=65.20"></script>
+  <script src="./owner-tools.js?v=65.20"></script>
+  <script src="./photos-data.js?v=65.20"></script>
+  <script src="./unworthy-store.js?v=65.20"></script>
+  <script src="./reserve-store.js?v=65.20"></script>
+  <script src="./owner.js?v=65.20"></script>
 </body>
 </html>

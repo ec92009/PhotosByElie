@@ -2,154 +2,77 @@
 
 Date: 2026-05-04
 
-## Scope
+## Current State
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v65.8`.
+- Repo: `/Users/ecohen/Dev/photosByElie`
+- Local preview: `http://localhost:8000/`
+- Public site: `https://ec92009.github.io/PhotosByElie/`
+- Current local visible build prepared for publish: `v65.20`
+- Local `main` is ahead of `origin/main`; GitHub Pages is stale until the current commit is pushed.
 
-## Latest Conversation Snapshot
+## Latest Decisions
 
-- Merged PR #1, `codex/publish-regular-v65-6`, into GitHub `main`, so the public GitHub Pages site is live at `v65.6` with the lightweight `assets/regular` subset.
-- Kept the heavier local archive worktree separate from publishing because it still contains tracked Lightroom ingest churn and local archive deletions that should not be pushed blindly.
-- Continued local development to `v65.8` on `http://localhost:8000/`.
-- Added localhost-only Owner and Unworthy surfaces:
-  - `owner.html` exposes blacklist export, Regular gallery cap control, and current Regular/Reserve/Unworthy counts.
-  - `unworthy.html` renders hidden photos as a collection-like review grid.
-- Clarified moderation semantics:
-  - `H` hides from a live gallery.
-  - `U` undoes a live-gallery hide.
-  - `P` exists only on the Unworthy page and returns a hidden photo to Reserve, not directly to the always-full Regular gallery.
-- Added browser-local `reserve_only` state so a forgiven photo can leave Unworthy without re-entering Regular until the cleaner/export workflow reshuffles disk state.
-- Updated blacklist export and cleaner scripts so exported payloads include `regular_cap`, `reserve_promotions`, `regular_state`, and `reserve_only`, and `scripts/apply_blacklist.py` can honor the exported cap and Reserve-only state.
-- Added local gallery controls:
-  - Gallery hero copy was reduced to the title plus status/actions.
-  - Localhost galleries now have a Grid density slider bounded by viewport capacity.
-  - Single-click selection and double-click detail opening are working in the latest local curation pass.
-- Added/updated backlog items for:
-  - Gallery hover metadata tooltip, starting with title.
-  - Continuing to retest localhost single-click/double-click selection on mobile and during live curation.
-  - Preventing background homepage carousel cards from navigating.
-  - Adding the bottom footer band consistently across all pages, with localhost-only Owner/Export controls and public-safe published contents.
-  - GitHub branch protection/rulesets later.
-- The in-app browser is currently using the local server at `http://localhost:8000/`; localhost-only controls are enabled there and hidden/disabled on the public GitHub Pages domain.
+- Use the terms `Expo`, `Reserve`, and `Hidden` for the three curation states.
+- `assets/regular` remains the publishable Expo asset root.
+- `assets/reserve` and `assets/.moderation-hidden` are local/ignored working areas.
+- The Owner-selected Expo cap travels inside each `.pbe-curation` file.
+- The cap is an upper bound, not a required fill count. Collections with fewer valid JPEG pairs publish fewer photos.
+- Hidden photos promoted with `P` go back to Reserve, not directly to Expo.
+- Future import work should use developed Lightroom JPG exports, not raw DNG/NEF files.
 
-## Repositories And Folders
+## Current Publish Set
 
-- Primary repo worked from: `/Users/ecohen/Dev/photosByElie`.
-- Related copy observed but not updated during the latest cycles: `/Users/ecohen/Dev/Webapps/PhotosByElie`.
-- Source photo folders used earlier in the session:
-  - France: `/Volumes/ecohen/Pictures/LR/France`
-  - USA: `/Volumes/ecohen/Pictures/LR/USA`
-  - Spain: `/Volumes/ecohen/Pictures/LR/Spain`
-  - Mexico: `/Users/ecohen/Pictures/LR/Mexico`
-  - AI samples: `~/Pictures/Leonardo/2023/06/08/UPSCALE`
-- Archive copy completed during the latest follow-up:
-  - Source: `/Volumes/Saturn/Pictures/LR/Camera/2024`
-  - Destination: `/Volumes/ecohen/Pictures/LR/2024`
-  - Verification: `rsync` exited with code 0, source and destination both contained 692 files, and a dry-run `rsync --itemize-changes` reported no pending changes.
+The latest cap-25 Curation Pass was applied locally. `photos-data.js` now publishes:
 
-## Major Site Work
+- France: 25
+- USA: 16
+- Spain: 25
+- Mexico: 10
+- AI: 10
+- Portugal: 10
+- Slovakia: 25
 
-- Added ten randomized Lightroom preview images each for France, USA, and Spain.
-- Replaced the Mexico placeholder shell with ten DNG-backed Puerto Vallarta Lightroom selections.
-- AI remains a Leonardo AI gallery.
-- The homepage hero stack and collection carousel use the same representative collection photos.
-- Collection cards use a classic Polaroid-style frame with the handwritten country name below the image.
-- The carousel and hero stack use the classic Polaroid aspect ratio `3.483 / 4.233`.
-- The carousel height was tuned so the spaniel companion aligns with the lower edge of the photos.
-- Removed extra card copy and numeric labels from collection cards.
-- Removed the "Pooch-powered carousel" comment.
-- Updated hero language to say the live-shot galleries are the user's DSLR photos, while the AI gallery is built with Leonardo AI.
+Verification found `0` missing local image references. The publishable `assets/regular` set contains 262 JPG derivatives, about 67 MB total, and sample inspection confirmed the visible `PhotosByElie` watermark is present on generated previews.
 
-## Basket Work
+## Recent Work Completed
 
-- Removed the unnecessary Request access button and the detail-page Basket count pill.
-- Removed the large left rail from the basket page.
-- Basket totals now render as `N files, $M`.
-- Basket page hero was reduced substantially to avoid unused vertical space.
-- Basket totals moved into a thin sticky band above the basket content so they remain visible while scrolling.
-- Basket rows keep per-photo resolution checkboxes, item totals, thumbnails, and Remove actions.
-- Unchecking all resolution options keeps the basket row available for reselection; Remove deletes the row.
-- Basket entry points now include a Liked button.
+- Added direct-assets Curation Pass support so the cleaner can operate from site data and physical assets when local Lightroom manifests are unavailable.
+- Pruned stale Reserve entries so localhost refills no longer promote missing preview files.
+- Added cache-busting for localhost Reserve data.
+- Renamed owner-facing blacklist export to Curation Pass while preserving compatibility with older `.pbe-blacklist` payloads.
+- Expanded Owner into a localhost-only command center with Curation Pass export, Expo cap, Hidden review, Unknown classification, and state counts.
+- Fixed Owner export feedback:
+  - Save the current Expo cap before exporting.
+  - Trigger a `.pbe-curation` download.
+  - Show the generated filename.
+  - Show the generated JSON payload in a textarea as a fallback when browser downloads are silent.
+- Moved Unknown out of public collection surfaces and into a localhost-only classification workflow.
+- Unknown classification assigns every loaded unknown photo from the same capture day and removes assigned photos from the queue immediately.
+- Added H/U moderation to Unknown.
+- Detail previous/next buttons and left/right arrows now continue across collection boundaries on public and localhost builds.
+- Gallery pages support local keyboard selection, H/U moderation, Reserve refill, and a viewport-limited Grid slider.
+- Footer band is present across pages, with the Owner link only on localhost.
+- Homepage carousel and hero samples refresh from collection photos.
+- The TODO was reprioritized around:
+  - finishing the browser-to-disk curation loop,
+  - hardening Expo/Reserve/Hidden publishing,
+  - live review ergonomics,
+  - homepage sampling,
+  - gallery generation,
+  - buyer-facing basics,
+  - operations.
 
-## Liked Photos
+## Verification Run
 
-- Added a heart-shaped checkbox at the top right of the detail preview.
-- Liked photos persist in browser-local storage separately from basket resolution choices.
-- Added `liked.html`, which mirrors the basket page layout but lists hearted photos.
-- Liked photos can have zero selected resolutions; checking resolutions on the Liked page adds those files to the basket immediately.
-- The Liked page total band counts selected files and dollars for liked photos only.
-- The Liked page total band includes bulk selectors for Full, 6 MP, 3 MP, and 1 MP resolution choices across all liked photos.
+- `node --check owner.js unworthy-store.js photo-gallery.js photo-detail.js unworthy-page.js reserve-store.js`
+- `python3 -m py_compile scripts/export_photos_data.py scripts/apply_curation_pass.py`
+- Python `HTMLParser` over all root HTML files
+- Node data scan for missing local `gallerySrc` and `imageSrc` references
+- `git diff --check`
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.20` and cache-bust strings use `?v=65.20`.
 
-## Photo Detail Work
+## Important Notes
 
-- Detail previews preserve the original image aspect ratio.
-- Landscape images now use a wide, space-maximizing detail layout with metadata below the image.
-- Portrait treatment remains unchanged.
-- Detail titles prefer useful metadata titles or non-generic filenames instead of generic labels where available.
-- Detail pages surface available metadata including metadata title, description, keywords, capture time, software, lens, exposure, and focal length.
-- Exact GPS and personal/family keywords were filtered out of the metadata shown in the app.
-
-## Metadata
-
-- Extracted metadata for all current image-backed photos into `photos-data.js`.
-- France, USA, Spain, and AI image entries include preview dimensions and available embedded metadata.
-- Mexico image entries now include DNG source file descriptions, 20.7 MP source counts, preview dimensions, captions, and available derivative notes.
-- The USA gallery was refreshed to show the five generated 2014 green-rated sale candidates from `assets/lightroom/gallery/usa` and `assets/lightroom/detail/usa`.
-- Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
-- Detail pages and Full resolution choices show verified file formats such as `JPG preview/export`; Mexico Full choices now show DNG source proof via `sourceFiles`.
-
-## Header And Language
-
-- Added a single language button next to the Day/Night button.
-- The language button cycles through English, French, and Spanish on each click.
-- The selected language is persisted in `localStorage` and mirrored to `document.documentElement.lang` and `data-language`.
-- This is UI/state plumbing only; full text translation has not yet been implemented.
-
-## Preview Protection
-
-- Added visible `PhotosByElie` watermark overlays to homepage Polaroids, gallery cards, basket thumbnails, and detail previews.
-- The watermark opacity was later reduced by 75% so it remains present without dominating the photos.
-
-## Versioning And Commits
-
-- Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v65.8`.
-- Latest visible cycle added the Mexico DNG-backed gallery import and completed the first real-photo replacement TODO.
-- Latest USA visible cycle replaced the older Del Mar sample set with the generated 2014 USA sale candidates.
-- Latest repo-only follow-up synced `main` with GitHub, added `docs/sops/IMAGE_INGESTION_SOP.md`, and narrowed the next TODO to automating manifest promotion into `photos-data.js`.
-- Branch state before this docs refresh: `main` was ahead of `origin/main` by 14 local commits.
-- Branch state after the latest sync: local `main` fast-forwarded to `origin/main` at `b3b394c`, then received the repo-only ingestion SOP update.
-- Latest 2024 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2024`, saw 335 images, inspected 335 on the first pass, selected 0 matching green/rating-4+ photos, and left the public manifest at the existing five 2014 USA selected rows. A script fix now records the last run separately from the manifest contents.
-- Latest 2023 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2023`, saw and inspected 3,603 images, selected 0 matching green/rating-4+ photos, and recorded no failures.
-- Latest visible local build promotes a capped Regular subset of 10 photos per collection into `assets/regular`, treats the full Lightroom and Leonardo ingest outputs as ignored local reserve material, adds localhost Owner/Unworthy moderation pages, adds local gallery selection and density controls, and bumps the visible version to `v65.8`.
-- The thumbnail builder now falls back to Pillow when the local `ffmpeg` build lacks the `drawtext` filter, and `--limit` now counts successfully rendered rows instead of pre-render candidates.
-- Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.20`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
-- Latest local commits after `origin/main` before this docs refresh include:
-  - `79b3ad3 photosbyelie: use verified preview formats`
-  - `9f87949 photosbyelie: refresh handoff summary`
-  - `e7b2a7a photosbyelie: add liked bulk resolution selectors`
-  - `fe42c6c photosbyelie: show source formats`
-  - `ed3cf99 photosbyelie: simplify detail metadata`
-  - `26a798c photosbyelie: simplify home hero`
-  - `b2f9ed0 photosbyelie: simplify basket hero`
-  - `2ca19cc photosbyelie: simplify liked hero`
-  - `00f26ff photosbyelie: add liked photos flow`
-  - `4135ff3 photosbyelie: restore narrow detail basket actions`
-  - `478fad1 photosbyelie: correct visible version day`
-  - `bb56e19 photosbyelie: move detail resolutions into rail`
-  - `83356e2 photosbyelie: widen basket thumbnails`
-  - `66c89b9 photosbyelie: add detail navigation links`
-
-## Verification
-
-- Local static checks have been run repeatedly:
-  - `node --check` for the JS files
-  - Python `HTMLParser` over all `.html` files
-  - `git diff --check`
-- Browser verification was performed in the in-app browser for:
-  - Basket page sticky total band and language toggle
-  - Detail page original aspect ratio
-  - Landscape detail layout on `france-7`
-  - Watermark visibility and softened opacity on `usa-4`
-  - Homepage Polaroid watermark overlays
-  - Liked page heart flow and bulk resolution selectors
+- The in-app browser downloads `.pbe-curation` files into `.playwright-mcp`, while the user's external browser may save elsewhere.
+- `~/Downloads` did not show the expected curation file during the latest check; Owner now exposes the payload directly so this is not a blocker.
+- The public GitHub Pages site still showed `v65.15` with 10 pictures per gallery before the current push because the local build had not yet been pushed to `origin/main`.

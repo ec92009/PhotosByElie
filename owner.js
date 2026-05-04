@@ -8,6 +8,9 @@
   const capInput = document.querySelector("[data-owner-regular-cap]");
   const saveCapButton = document.querySelector("[data-owner-save-cap]");
   const exportButton = document.querySelector("[data-owner-export]");
+  const exportResult = document.querySelector("[data-owner-export-result]");
+  const exportLink = document.querySelector("[data-owner-export-link]");
+  const exportText = document.querySelector("[data-owner-export-text]");
   const countsRoot = document.querySelector("[data-owner-counts]");
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const unworthyCountRoot = document.querySelector("[data-owner-unworthy-count]");
@@ -21,7 +24,21 @@
     ...Object.values(collections).map((collection) => collection.photos?.length || 0)
   );
 
-  const currentCap = () => unworthyStore?.readRegularCap?.() || collectionCap();
+  const currentCap = () => unworthyStore?.effectiveRegularCap?.() || collectionCap();
+
+  const normalizedInputCap = () => {
+    const rawValue = Number(capInput?.value || currentCap());
+    return Math.max(1, Math.min(100, Math.round(rawValue)));
+  };
+
+  const saveCurrentCap = () => {
+    const nextCap = normalizedInputCap();
+    const savedCap = unworthyStore.setRegularCap(nextCap);
+    const resolvedCap = savedCap || nextCap;
+    if (capInput) capInput.value = String(resolvedCap);
+    renderCounts();
+    return resolvedCap;
+  };
 
   const countPhotos = (data) => Object.values(data || {})
     .reduce((sum, collection) => sum + (collection.photos?.length || 0), 0);
@@ -43,14 +60,14 @@
     if (unknownCountRoot) unknownCountRoot.textContent = String(Math.max(0, unknownCount - assignmentCount));
     if (unworthyCountRoot) unworthyCountRoot.textContent = String(unworthyCount);
     const counts = [
-      ["Regular", countPhotos(collections)],
+      ["Expo", countPhotos(collections)],
       ["Reserve", countPhotos(window.photosByElieReserveData || {})],
-      ["Unworthy", unworthyCount],
+      ["Hidden", unworthyCount],
       ["Unknown queue", unknownCount],
       ["Country assignments", assignmentCount],
       ["Returned to Reserve", unworthyStore.readReserveOnly?.().length || 0],
       ["Reserve replacements", countPromotions()],
-      ["Gallery cap", currentCap()],
+      ["Expo cap", currentCap()],
     ];
     countsRoot.innerHTML = counts.map(([label, value]) => `
       <div>
@@ -58,6 +75,18 @@
         <dd>${value}</dd>
       </div>
     `).join("");
+  };
+
+  const showExportResult = () => {
+    const curationPass = unworthyStore.readLastCurationPass?.();
+    if (!curationPass?.filename || !curationPass?.text) return;
+    if (exportResult) exportResult.hidden = false;
+    if (exportText) exportText.value = curationPass.text;
+    if (exportLink) {
+      exportLink.href = curationPass.url || "#";
+      exportLink.download = curationPass.filename;
+      exportLink.textContent = curationPass.filename;
+    }
   };
 
   if (!unworthyStore?.enabled) {
@@ -70,18 +99,16 @@
   if (capInput) capInput.value = String(currentCap());
 
   exportButton?.addEventListener("click", () => {
+    const exportedCap = saveCurrentCap();
     const filename = unworthyStore.exportCurationPass?.() || unworthyStore.exportBlacklist();
-    setStatus(filename ? `${filename} downloaded.` : "Curation Pass export unavailable.");
+    showExportResult();
+    setStatus(filename ? `${filename} downloaded with Expo cap ${exportedCap}.` : "Curation Pass export unavailable.");
     renderCounts();
   });
 
   saveCapButton?.addEventListener("click", () => {
-    const rawValue = Number(capInput?.value || 0);
-    const nextCap = Math.max(1, Math.min(100, Math.round(rawValue)));
-    const savedCap = unworthyStore.setRegularCap(nextCap);
-    if (capInput) capInput.value = String(savedCap || nextCap);
-    setStatus(`Regular gallery cap set to ${savedCap || nextCap}.`);
-    renderCounts();
+    const savedCap = saveCurrentCap();
+    setStatus(`Expo cap set to ${savedCap}.`);
   });
 
   window.addEventListener("photosbyelie:unworthychange", renderCounts);

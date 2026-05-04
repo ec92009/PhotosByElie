@@ -242,6 +242,24 @@ html[data-theme="light"] .photo-art.has-photo::after{
   color:var(--muted);
   line-height:1.45;
 }
+.owner-export-result{
+  display:grid;
+  gap:10px;
+}
+.owner-export-result[hidden]{
+  display:none;
+}
+.owner-export-result textarea{
+  width:100%;
+  min-height:160px;
+  resize:vertical;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--surface);
+  color:var(--text);
+  font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  padding:10px;
+}
 .owner-card-wide{
   grid-column:span 1;
 }

@@ -46,25 +46,38 @@
   const countPromotions = () => Object.values(reserveStore?.readPromotions?.() || {})
     .reduce((sum, ids) => sum + (Array.isArray(ids) ? ids.length : 0), 0);
 
-  const unknownPhotos = () => {
+  const allUnknownPhotos = () => {
     const regular = window.photosByElieOwnerData?.unknown?.photos || [];
     const reserve = window.photosByElieReserveData?.unknown?.photos || [];
-    return regular.concat(reserve);
+    const byId = new Map();
+    regular.concat(reserve).forEach((photo) => {
+      if (!byId.has(photo.id)) byId.set(photo.id, photo);
+    });
+    return [...byId.values()];
+  };
+
+  const unknownQueueState = () => {
+    const hidden = new Set(unworthyStore.read?.() || []);
+    const assignments = unworthyStore.readCountryAssignments?.() || {};
+    const photos = allUnknownPhotos();
+    const visible = photos.filter((photo) => !hidden.has(photo.id) && !assignments[photo.id]);
+    const assigned = photos.filter((photo) => assignments[photo.id]);
+    return { photos, visible, assigned };
   };
 
   const renderCounts = () => {
     if (!countsRoot || !unworthyStore?.enabled) return;
     const unworthyCount = unworthyStore.read().length;
-    const assignmentCount = Object.keys(unworthyStore.readCountryAssignments?.() || {}).length;
-    const unknownCount = unknownPhotos().length;
-    if (unknownCountRoot) unknownCountRoot.textContent = String(Math.max(0, unknownCount - assignmentCount));
+    const queue = unknownQueueState();
+    if (unknownCountRoot) unknownCountRoot.textContent = String(queue.visible.length);
     if (unworthyCountRoot) unworthyCountRoot.textContent = String(unworthyCount);
     const counts = [
       ["Expo", countPhotos(collections)],
       ["Reserve", countPhotos(window.photosByElieReserveData || {})],
       ["Hidden", unworthyCount],
-      ["Unknown queue", unknownCount],
-      ["Country assignments", assignmentCount],
+      ["Unknown queue", queue.visible.length],
+      ["Unknown loaded", queue.photos.length],
+      ["Unknown assigned", queue.assigned.length],
       ["Returned to Reserve", unworthyStore.readReserveOnly?.().length || 0],
       ["Reserve replacements", countPromotions()],
       ["Expo cap", currentCap()],

@@ -50,6 +50,10 @@
     return allUnknownPhotos().filter((photo) => !hidden.has(photo.id) && !assigned[photo.id]);
   };
 
+  const countAssignedUnknown = (assignments) => allUnknownPhotos()
+    .filter((photo) => assignments[photo.id])
+    .length;
+
   const sameDayPhotos = (photo) => {
     const day = captureDay(photo);
     if (!day) return [photo];
@@ -163,20 +167,20 @@
           affectedPhotos.map((item) => item.id),
           select.value
         ) || {};
-        const assignedCount = Object.keys(assignmentsNow).length;
+        const assignedCount = countAssignedUnknown(assignmentsNow);
         selectedPhotoId = photoId || selectedPhotoId;
         render();
         const affectedCount = affectedPhotos.length || 1;
         setStatus(select.value
-          ? `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} assigned and removed from this queue; ${assignedCount} assigned total. Export a Curation Pass from Owner to apply them on disk.`
-          : `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} returned to the Unknown queue; ${assignedCount} assigned total.`
+          ? `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} assigned and removed from this queue; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}. Export a Curation Pass from Owner to apply them on disk.`
+          : `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} returned to the Unknown queue; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}.`
         );
       });
     });
 
-    const assignedCount = Object.keys(assignments).length;
+    const assignedCount = countAssignedUnknown(assignments);
     updateSelection();
-    setStatus(`${photos.length} unassigned unknown photo${photos.length === 1 ? "" : "s"} visible; ${assignedCount} already assigned. Use arrows to move, H to hide, U to undo.`);
+    setStatus(`${photos.length} unassigned unknown photo${photos.length === 1 ? "" : "s"} visible; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}. Use arrows to move, H to hide, U to undo.`);
   };
 
   window.addEventListener("keydown", (event) => {

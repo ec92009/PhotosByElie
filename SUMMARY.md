@@ -7,8 +7,8 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build prepared for publish: `v65.26`
-- Local `main` contains verified v65.26 owner-mode collection Enter-key navigation and detail preview/like shortcut updates and is ready for commit and push.
+- Current local visible build prepared for publish: `v65.27`
+- Local `main` contains verified v65.27 Owner/Unknown queue count alignment and is ready for commit and push.
 
 ## Latest Decisions
 
@@ -56,6 +56,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Added `site-version.js` so same-site page links and carousel `data-href` navigation receive the current `?v=` query string. This avoids navigating from a fresh homepage into stale cached gallery/detail HTML.
 - Moved Unknown out of public collection surfaces and into a localhost-only classification workflow.
 - Unknown classification assigns every loaded unknown photo from the same capture day and removes assigned photos from the queue immediately.
+- Owner now counts the Unknown queue with the same rules as the Unknown page: current unknown photos only, excluding current hidden IDs and current country assignments.
 - Added H/U moderation to Unknown.
 - Detail previous/next buttons and left/right arrows now continue across collection boundaries on public and localhost builds.
 - Detail pages support double-click full-screen preview overlays, click/double-click dismissal, and `L` to like/unlike.
@@ -64,6 +65,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Footer band is present across pages, with the Owner link only on localhost.
 - Homepage carousel and hero samples refresh from collection photos after every full public-country carousel cycle.
 - Visible carousel side cards now navigate directly to their galleries rather than first moving to the foreground.
+- User promoted the browser-local Hidden queue back toward Reserve to start the next moderation pass from a fresh hidden baseline.
 - The TODO was reprioritized around:
   - starting buyer-side product basics,
   - hardening Expo/Reserve/Hidden publishing,
@@ -78,8 +80,9 @@ Verification found `0` missing local image references. The publishable `assets/r
 - `python3 -m py_compile scripts/export_photos_data.py scripts/apply_curation_pass.py`
 - Python `HTMLParser` over all root HTML files
 - Node data scan for missing local `gallerySrc` and `imageSrc` references
+- Node smoke test confirmed Owner ignores unrelated old country assignments when counting the current Unknown queue.
 - `git diff --check`
-- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.26`, cache-bust strings use `?v=65.26`, and `unworthy.html` loads `hidden-store.js?v=65.26`.
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.27`, cache-bust strings use `?v=65.27`, and `unworthy.html` loads `hidden-store.js?v=65.27`.
 
 ## Important Notes
 

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie | Gallery</title>
+  <meta name="description" content="Mock photo gallery for Photos By Elie."/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
+  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
+  <link rel="stylesheet" href="./shared.css?v=65.6"/>
+  <link rel="stylesheet" href="./styles.css?v=65.6"/>
+  <link rel="stylesheet" href="./photos.css?v=65.6"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body data-gallery="slovakia">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar shell">
+    <nav class="version-switch" aria-label="Site navigation">
+      <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
+      <a href="./">Photos</a> <span>|</span>
+      <a class="is-active" data-nav-current href="./slovakia.html">Gallery</a>
+    </nav>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v65.6</div>
+    <div class="header-controls">
+      <button class="language-toggle" type="button" data-language-toggle>English</button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+    </div>
+  </header>
+  <main id="main-content" class="shell">
+    <section class="panel gallery-hero">
+      <p class="eyebrow" data-gallery-number>Collection</p>
+      <h1 data-gallery-title>Gallery</h1>
+      <p class="lead" data-gallery-description></p>
+      <p class="gallery-status" data-gallery-status aria-live="polite"></p>
+      <div class="cta" data-gallery-actions><a class="btn secondary" href="./">Back to collections</a></div>
+    </section>
+    <section class="panel mock-gallery" data-gallery-root></section>
+  </main>
+  <script src="./photos.js?v=65.6"></script>
+  <script src="./photos-data.js?v=65.6"></script>
+  <script src="./unworthy-store.js?v=65.6"></script>
+  <script src="./reserve-store.js?v=65.6"></script>
+  <script src="./photo-gallery.js?v=65.6"></script>
+  <script src="./basket-store.js?v=65.6"></script>
+  <script src="./basket-rail.js?v=65.6"></script>
+</body>
+</html>

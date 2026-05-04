@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Completed
 
@@ -54,3 +54,36 @@ Last updated: 2026-05-03
    - Add SOPs for importing photos, resizing derivatives, updating prices, testing basket behavior, and publishing.
    - Keep versioning under the existing MailAssist SOP.
    - Include a short recovery note for clearing localStorage during testing.
+
+## Backlog: Archive Curation And Publishing
+
+1. **Re-establish publishing away from one-machine dependence.**
+   - Publish a lightweight, repeatable subset instead of relying on the current single-computer local archive.
+   - Separate publishable web assets from the heavyweight local ingest and moderation workspace.
+   - Decide whether the public site should ship only the curated `Regular` set while `Reserve` remains local or external.
+   - Define a safe path for syncing publishable assets to GitHub without dragging the full Saturn archive into normal Git history.
+
+2. **Introduce a third moderation state: Reserve.**
+   - Keep `Regular`, `Reserve`, and `Unworthy` as distinct states.
+   - Start with a much smaller regular cap such as `10` per country, then raise it progressively during curation.
+   - Store reserve assets in a location that can be ignored from Git when appropriate.
+   - When a regular photo becomes unworthy on localhost, replace it with a random reserve photo from the same country.
+   - Decide whether reserve promotion should be deterministic per session or reshuffled after each applied moderation pass.
+
+3. **Add a localhost-only Owner surface.**
+   - Add an `Owner` page for moderation and curation controls rather than spreading them across public collection pages.
+   - Keep `Export blacklist` there as a primary action.
+   - Add a control for the current `Regular` versus `Reserve` target size per country.
+   - Add access to an `Unworthy` page that behaves like a collection page for review.
+   - On the localhost `Unworthy` page, allow `P` to re-promote a photo out of unworthy status.
+
+4. **Refine localhost gallery selection behavior.**
+   - On localhost, single click should move the selection rectangle only.
+   - Double click should open the detail page.
+   - Preserve keyboard-first moderation flow and avoid making accidental navigation too easy while curating.
+   - Keep `Export blacklist` accessible from the homepage footer for localhost owner workflows until a dedicated owner surface exists.
+
+5. **Add zoom control for gallery density.**
+   - Let the gallery page change thumbnail density without leaving the collection.
+   - Keep keyboard navigation aligned with the current rendered grid.
+   - Remove the collection number and descriptive archive blurb from the gallery hero entirely.

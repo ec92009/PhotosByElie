@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Travel, Product, and AI Image Work</title>
-  <meta name="description" content="Photos By Elie organizes image collections from France, the USA, Spain, Mexico, and AI-assisted visual experiments."/>
+  <title>Photos By Elie | Saturn Archive Build</title>
+  <meta name="description" content="Photos By Elie now serves the local Saturn Lightroom archive, including country buckets, AI-generated work, and a shrinking unknown bucket."/>
   <meta property="og:title" content="Photos By Elie"/>
-  <meta property="og:description" content="Image collections from France, the USA, Spain, Mexico, and AI-assisted visual experiments."/>
+  <meta property="og:description" content="Local Saturn Lightroom archive build with country buckets, AI-generated work, and a shrinking unknown bucket."/>
   <meta property="og:type" content="website"/>
   <meta property="og:image" content="./assets/byelie-logo.png"/>
   <meta name="twitter:card" content="summary"/>
@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=64.21"/>
-  <link rel="stylesheet" href="./styles.css?v=64.21"/>
-  <link rel="stylesheet" href="./photos.css?v=64.21"/>
+  <link rel="stylesheet" href="./shared.css?v=65.6"/>
+  <link rel="stylesheet" href="./styles.css?v=65.6"/>
+  <link rel="stylesheet" href="./photos.css?v=65.6"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v64.21</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v65.6</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -44,17 +44,12 @@
     <section class="panel photo-hero" aria-labelledby="page-title">
       <div>
         <h1 id="page-title">Photos By Elie</h1>
-        <p class="lead">A focused home for my live-shot DSLR photo collections, with the AI gallery kept separate as Leonardo AI-built image work.</p>
+        <p class="lead">A local archive build of the Saturn Lightroom collection, grouped into country buckets with AI work kept separate and unknowns actively being reclassified.</p>
         <div class="cta">
           <a class="btn primary" href="#collections">View collections</a>
         </div>
       </div>
-      <div class="photo-stack" aria-hidden="true">
-        <span class="photo-print france has-photo" style="--photo-image:url('./assets/france/france-01.jpg')"><span class="hand-label">France</span></span>
-        <span class="photo-print usa has-photo" style="--photo-image:url('./assets/lightroom/gallery/usa/20140907-1911-06385-5f3a5197a2.jpg')"><span class="hand-label">USA</span></span>
-        <span class="photo-print spain has-photo" style="--photo-image:url('./assets/spain/spain-01.jpg')"><span class="hand-label">Spain</span></span>
-        <span class="photo-print mexico has-photo" style="--photo-image:url('./assets/mexico/mexico-01.jpg')"><span class="hand-label">Mexico</span></span>
-      </div>
+      <div class="photo-stack" data-home-stack aria-hidden="true"></div>
     </section>
 
     <section class="panel carousel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
@@ -65,20 +60,29 @@
       </div>
       <div class="carousel-wrap" data-offers-wrap tabindex="0">
         <div class="carousel-track" data-offers-track>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./france.html">
-            <div class="photo-art france has-photo" style="--photo-image:url('./assets/france/france-01.jpg')" aria-hidden="true"><span class="hand-label">France</span></div>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="france" data-href="./france.html">
+            <div class="photo-art france" aria-hidden="true"><span class="hand-label">France</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./usa.html">
-            <div class="photo-art usa has-photo" style="--photo-image:url('./assets/lightroom/gallery/usa/20140907-1911-06385-5f3a5197a2.jpg')" aria-hidden="true"><span class="hand-label">USA</span></div>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="usa" data-href="./usa.html">
+            <div class="photo-art usa" aria-hidden="true"><span class="hand-label">USA</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./spain.html">
-            <div class="photo-art spain has-photo" style="--photo-image:url('./assets/spain/spain-01.jpg')" aria-hidden="true"><span class="hand-label">Spain</span></div>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="spain" data-href="./spain.html">
+            <div class="photo-art spain" aria-hidden="true"><span class="hand-label">Spain</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./mexico.html">
-            <div class="photo-art mexico has-photo" style="--photo-image:url('./assets/mexico/mexico-01.jpg')" aria-hidden="true"><span class="hand-label">Mexico</span></div>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="mexico" data-href="./mexico.html">
+            <div class="photo-art mexico" aria-hidden="true"><span class="hand-label">Mexico</span></div>
           </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-href="./ai.html">
-            <div class="photo-art ai has-photo" style="--photo-image:url('./assets/ai/forests.jpg')" aria-hidden="true"><span class="hand-label">AI</span></div>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="ai" data-href="./ai.html">
+            <div class="photo-art ai" aria-hidden="true"><span class="hand-label">AI</span></div>
+          </article>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="portugal" data-href="./portugal.html">
+            <div class="photo-art portugal" aria-hidden="true"><span class="hand-label">Portugal</span></div>
+          </article>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="slovakia" data-href="./slovakia.html">
+            <div class="photo-art slovakia" aria-hidden="true"><span class="hand-label">Slovakia</span></div>
+          </article>
+          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="unknown" data-href="./unknown.html">
+            <div class="photo-art unknown" aria-hidden="true"><span class="hand-label">Unknown</span></div>
           </article>
         </div>
         <div class="carousel-companion" data-spaniel data-state="sleeping" data-sleep-pose="false" aria-hidden="true">
@@ -180,7 +184,7 @@
       <h2>Archive shape</h2>
       <div class="metrics-grid">
         <article class="metric"><span class="metric-value">200GB</span><span class="metric-label">Initial photo ceiling</span></article>
-        <article class="metric"><span class="metric-value">4</span><span class="metric-label">Collection groups</span></article>
+        <article class="metric"><span class="metric-value">8</span><span class="metric-label">Collection groups</span></article>
         <article class="metric"><span class="metric-value">R2</span><span class="metric-label">Planned media vault</span></article>
       </div>
     </section>
@@ -587,8 +591,10 @@
       metricEls.forEach((el)=>io.observe(el));
     }
   </script>
-  <script src="./photos-data.js?v=64.21"></script>
-  <script src="./basket-store.js?v=64.21"></script>
-  <script src="./basket-rail.js?v=64.21"></script>
+  <script src="./photos-data.js?v=65.6"></script>
+  <script src="./unworthy-store.js?v=65.6"></script>
+  <script src="./home-gallery-randomizer.js?v=65.6"></script>
+  <script src="./basket-store.js?v=65.6"></script>
+  <script src="./basket-rail.js?v=65.6"></script>
 </body>
 </html>

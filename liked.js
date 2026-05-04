@@ -85,7 +85,7 @@ const renderLiked = () => {
     const { collection, photo } = photoForLikedItem(item);
     const basketItem = basketByPhoto.get(item.photoId);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
-    const imageSrc = photo?.imageSrc || "";
+    const imageSrc = photo?.gallerySrc || photo?.imageSrc || "";
     const selectedIds = new Set((basketItem?.options || []).map((option) => option.id));
     const itemTotal = (basketItem?.options || []).reduce((sum, option) => sum + (Number(option.price) || 0), 0);
     const availableOptions = availableOptionsForPhoto(photo);

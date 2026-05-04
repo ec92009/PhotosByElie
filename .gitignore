@@ -1,2 +1,11 @@
 assets/lightroom/gps-metadata.json
+assets/lightroom-ai/gps-metadata.json
 .playwright-mcp/
+.DS_Store
+
+# Local ingest/reserve outputs. Publishable copies live under assets/regular/.
+assets/lightroom/
+assets/lightroom-ai/
+assets/reserve/
+assets/.moderation-hidden/
+PhotosByElie Blacklist.app/

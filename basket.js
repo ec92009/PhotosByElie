@@ -27,7 +27,7 @@ const renderBasket = () => {
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
-    const imageSrc = photo?.imageSrc || "";
+    const imageSrc = photo?.gallerySrc || photo?.imageSrc || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
     const availableOptions = photo && window.photosByElieAvailableResolutions
       ? window.photosByElieAvailableResolutions(photo, resolutionOptions)

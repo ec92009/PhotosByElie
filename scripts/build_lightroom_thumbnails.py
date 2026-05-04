@@ -40,6 +40,18 @@ IMAGE_EXTENSIONS = {
     ".raf",
     ".orf",
     ".rw2",
+    ".png",
+    ".webp",
+}
+RAW_EXTENSIONS = {
+    ".dng",
+    ".cr2",
+    ".cr3",
+    ".nef",
+    ".arw",
+    ".raf",
+    ".orf",
+    ".rw2",
 }
 
 DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn-1/Pictures/LR/Camera")
@@ -74,6 +86,12 @@ COUNTRY_ALIASES = {
     "united kingdom": ("uk", "United Kingdom"),
     "uk": ("uk", "United Kingdom"),
     "england": ("uk", "United Kingdom"),
+    "slovakia": ("slovakia", "Slovakia"),
+    "slovak republic": ("slovakia", "Slovakia"),
+    "sk": ("slovakia", "Slovakia"),
+    "ai": ("ai", "AI"),
+    "leonardo": ("ai", "AI"),
+    "leonardo ai": ("ai", "AI"),
 }
 COUNTRY_HINTS = {
     "california": ("usa", "United States"),
@@ -81,12 +99,28 @@ COUNTRY_HINTS = {
     "lake arrowhead": ("usa", "United States"),
     "lake forest": ("usa", "United States"),
     "san bernardino": ("usa", "United States"),
+    "san diego": ("usa", "United States"),
+    "encinitas": ("usa", "United States"),
     "new york": ("usa", "United States"),
     "florida": ("usa", "United States"),
     "paris": ("france", "France"),
+    "versailles": ("france", "France"),
     "madrid": ("spain", "Spain"),
     "barcelona": ("spain", "Spain"),
+    "bilbao": ("spain", "Spain"),
+    "basque country": ("spain", "Spain"),
+    "euzkadi": ("spain", "Spain"),
+    "pays basque": ("spain", "Spain"),
     "puerto vallarta": ("mexico", "Mexico"),
+    "bratislava": ("slovakia", "Slovakia"),
+}
+GPS_COUNTRY_BOUNDS = {
+    "usa": ((24.0, 49.5), (-125.0, -66.0), "United States"),
+    "mexico": ((14.0, 33.5), (-118.5, -86.0), "Mexico"),
+    "spain": ((27.0, 44.5), (-18.5, 4.9), "Spain"),
+    "portugal": ((30.0, 42.5), (-10.5, -6.0), "Portugal"),
+    "france": ((41.0, 51.8), (-5.7, 9.8), "France"),
+    "slovakia": ((47.5, 49.7), (16.8, 22.7), "Slovakia"),
 }
 PRIVATE_KEYWORD_PATTERN = re.compile(
     r"(^_|family|friends\+family|notmyphoto|onhotel|published adobe)",
@@ -143,12 +177,31 @@ def parse_args() -> argparse.Namespace:
         description="Create watermarked gallery/detail thumbnails from green 4+ Lightroom photos."
     )
     parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
+    parser.add_argument(
+        "--developed-root",
+        type=Path,
+        default=None,
+        help="Optional Lightroom-export root containing developed JPEG companions such as *_1800.jpg and *_900.jpg.",
+    )
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--label", default="green", help="Lightroom color label to include.")
     parser.add_argument("--min-rating", type=float, default=4)
+    parser.add_argument(
+        "--select",
+        choices=("lightroom", "all"),
+        default="lightroom",
+        help="Use Lightroom rating/label selection, or select every image file.",
+    )
+    parser.add_argument(
+        "--force-country",
+        default="",
+        help="Force all derivatives into a gallery country bucket, e.g. ai for Leonardo images.",
+    )
     parser.add_argument("--gallery-max", type=int, default=DEFAULT_GALLERY_MAX)
     parser.add_argument("--detail-max", type=int, default=DEFAULT_DETAIL_MAX)
     parser.add_argument("--watermark", default=DEFAULT_WATERMARK)
+    parser.add_argument("--developed-detail-suffix", default="_1800.jpg")
+    parser.add_argument("--developed-gallery-suffix", default="_900.jpg")
     parser.add_argument(
         "--years",
         default="",
@@ -215,6 +268,10 @@ def is_image(path: Path) -> bool:
     return path.suffix.lower() in IMAGE_EXTENSIONS
 
 
+def is_raw_source(path: Path) -> bool:
+    return path.suffix.lower() in RAW_EXTENSIONS
+
+
 def sidecar_for(image: Path) -> Path | None:
     candidates = [
         Path(str(image) + ".xmp"),
@@ -225,6 +282,38 @@ def sidecar_for(image: Path) -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
+
+def developed_jpeg_path(
+    source: Path,
+    source_root: Path,
+    developed_root: Path,
+    suffix: str,
+) -> Path:
+    relative = source.relative_to(source_root)
+    return developed_root / relative.parent / f"{source.stem}{suffix}"
+
+
+def ensure_gallery_jpeg(detail_jpeg: Path, gallery_jpeg: Path, gallery_max: int) -> Path:
+    if gallery_jpeg.exists():
+        return gallery_jpeg
+    gallery_jpeg.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            "sips",
+            "-s",
+            "format",
+            "jpeg",
+            "--resampleHeightWidthMax",
+            str(gallery_max),
+            str(detail_jpeg),
+            "--out",
+            str(gallery_jpeg),
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+    return gallery_jpeg
 
 
 def rel_key(path: Path, source_root: Path) -> str:
@@ -381,6 +470,12 @@ def is_selected(meta: dict[str, Any], expected_label: str, min_rating: float) ->
     return normalize_rating(meta.get("Rating")) >= min_rating and metadata_label(meta) == expected_label.lower()
 
 
+def selected_by_args(meta: dict[str, Any], args: argparse.Namespace) -> bool:
+    if args.select == "all":
+        return True
+    return is_selected(meta, args.label, args.min_rating)
+
+
 def compact_metadata(meta: dict[str, Any]) -> dict[str, Any]:
     keys = [
         "Rating",
@@ -473,6 +568,45 @@ def infer_gallery_country(location: dict[str, Any], keywords: list[str]) -> dict
     return {"slug": "unknown", "label": "Unknown", "source": "unresolved"}
 
 
+def dms_to_decimal(value: Any) -> float | None:
+    text = str(value or "").strip()
+    match = re.match(r'^(\d+) deg (\d+)\' ([\d.]+)" ([NSEW])$', text)
+    if not match:
+        return None
+    degrees, minutes, seconds, hemisphere = match.groups()
+    decimal = int(degrees) + int(minutes) / 60 + float(seconds) / 3600
+    if hemisphere in {"S", "W"}:
+        decimal *= -1
+    return decimal
+
+
+def infer_gallery_country_from_gps(gps: dict[str, Any]) -> dict[str, str] | None:
+    latitude = dms_to_decimal(gps.get("GPSLatitude"))
+    longitude = dms_to_decimal(gps.get("GPSLongitude"))
+    if latitude is None or longitude is None:
+        return None
+    matches = []
+    for slug, ((min_lat, max_lat), (min_lon, max_lon), label) in GPS_COUNTRY_BOUNDS.items():
+        if min_lat <= latitude <= max_lat and min_lon <= longitude <= max_lon:
+            matches.append((slug, label))
+    if len(matches) != 1:
+        return None
+    slug, label = matches[0]
+    return {"slug": slug, "label": label, "source": "gps_hint"}
+
+
+def forced_gallery_country(value: str) -> dict[str, str] | None:
+    if not value:
+        return None
+    normalized = normalize_country(value)
+    if normalized:
+        slug, label = normalized
+    else:
+        slug = re.sub(r"[^a-z0-9]+", "-", value.strip().casefold()).strip("-") or "forced"
+        label = value.strip() or slug.title()
+    return {"slug": slug, "label": label, "source": "forced"}
+
+
 def parse_exif_datetime(value: Any) -> dict[str, Any]:
     if not value:
         return {}
@@ -502,6 +636,9 @@ def number_value(value: Any) -> float | None:
 def dimension_facts(meta: dict[str, Any]) -> dict[str, Any]:
     width = number_value(metadata_value(meta, "ImageWidth"))
     height = number_value(metadata_value(meta, "ImageHeight"))
+    orientation = metadata_value(meta, "Orientation")
+    if width and height and orientation_rotates_sideways(orientation):
+        width, height = height, width
     facts: dict[str, Any] = {}
     if width and height:
         facts["width"] = int(width)
@@ -559,6 +696,12 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
         "city": metadata_value(merged, "City"),
         "location": metadata_value(merged, "Location"),
     }
+    gallery_country = (
+        forced_gallery_country(args.force_country)
+        or infer_gallery_country(location, keywords)
+    )
+    if gallery_country["slug"] == "unknown" and gps:
+        gallery_country = infer_gallery_country_from_gps(gps) or gallery_country
     return {
         "rating": normalize_rating(merged.get("Rating")),
         "label": metadata_value(merged, "Label", "ColorLabel"),
@@ -566,7 +709,7 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
         "capture": capture,
         "dimensions": dimensions,
         "location": location,
-        "gallery_country": infer_gallery_country(location, keywords),
+        "gallery_country": gallery_country,
         "raw": merged,
         "gps": gps,
         "display": display,
@@ -626,6 +769,37 @@ def ffmpeg_escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
+def orientation_rotation_degrees(value: Any) -> int:
+    text = str(value or "").casefold()
+    if "90" in text and "270" not in text:
+        return -90
+    if "270" in text:
+        return 90
+    if "180" in text:
+        return 180
+    return 0
+
+
+def orientation_rotates_sideways(value: Any) -> bool:
+    return abs(orientation_rotation_degrees(value)) in {90, 270}
+
+
+def normalize_jpeg_orientation(path: Path, orientation: Any) -> None:
+    rotation = orientation_rotation_degrees(orientation)
+    if not rotation:
+        return
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError(
+            "Pillow is required to normalize rotated source photos. Run `python3 -m pip install --user pillow`."
+        ) from exc
+
+    with Image.open(path) as image:
+        normalized = image.convert("RGB").rotate(rotation, expand=True)
+        normalized.save(path, format="JPEG", quality=95)
+
+
 def ffmpeg_has_filter(name: str) -> bool:
     global FFMPEG_FILTERS
     if FFMPEG_FILTERS is None:
@@ -678,6 +852,7 @@ def render_derivative(
     watermark: str,
     font: str,
     force: bool,
+    orientation: Any = None,
 ) -> bool:
     if output.exists() and not force:
         return False
@@ -700,6 +875,7 @@ def render_derivative(
             check=True,
             stdout=subprocess.DEVNULL,
         )
+        normalize_jpeg_orientation(temp_jpg, orientation)
         font_size = max(18, round(max_px / 45))
         border_width = max(1, round(font_size / 14))
         margin = max(18, round(max_px / 36))
@@ -788,7 +964,13 @@ def manifest_years(rows: dict[str, dict[str, Any]]) -> list[int]:
 
 
 def run_filter(args: argparse.Namespace) -> dict[str, Any]:
-    return {"label": args.label, "min_rating": args.min_rating, "years": args.years or None}
+    return {
+        "select": args.select,
+        "label": args.label,
+        "min_rating": args.min_rating,
+        "years": args.years or None,
+        "force_country": args.force_country or None,
+    }
 
 
 def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
@@ -798,7 +980,13 @@ def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.N
         "generated_at": now_iso(),
         "schema_version": SCHEMA_VERSION,
         "source_root_hint": str(args.source_root),
-        "selection": {"label": args.label, "min_rating": args.min_rating, "years": years},
+        "selection": {
+            "select": args.select,
+            "label": args.label,
+            "min_rating": args.min_rating,
+            "years": years,
+            "force_country": args.force_country or None,
+        },
         "last_run": {
             "source_root_hint": str(args.source_root),
             "filter": run_filter(args),
@@ -930,6 +1118,38 @@ def derivative_paths(output_root: Path, country_slug: str, slug: str) -> tuple[P
     return output_root / "gallery" / country_slug / f"{slug}.jpg", output_root / "detail" / country_slug / f"{slug}.jpg"
 
 
+def render_sources_for(
+    source: Path,
+    args: argparse.Namespace,
+) -> tuple[Path, Path, dict[str, Any] | None, Any]:
+    if not args.developed_root or not is_raw_source(source):
+        return source, source, None, None
+
+    detail_source = developed_jpeg_path(
+        source,
+        args.source_root,
+        args.developed_root,
+        args.developed_detail_suffix,
+    )
+    if not detail_source.exists():
+        raise FileNotFoundError(
+            f"Missing developed detail JPEG for {source.name}: expected {detail_source.name}"
+        )
+
+    gallery_source = developed_jpeg_path(
+        source,
+        args.source_root,
+        args.developed_root,
+        args.developed_gallery_suffix,
+    )
+    gallery_source = ensure_gallery_jpeg(detail_source, gallery_source, args.gallery_max)
+    developed_files = {
+        "detail_source": source_file_facts(detail_source),
+        "gallery_source": source_file_facts(gallery_source),
+    }
+    return gallery_source, detail_source, developed_files, "already-oriented"
+
+
 def should_skip_metadata(row: dict[str, Any] | None, stamp: str, force: bool) -> bool:
     if force or not row:
         return False
@@ -984,7 +1204,7 @@ def process_batch(
             "source_path_hint": str(source),
             "metadata_path_hint": str(metadata_path),
         }
-        if not is_selected(meta, args.label, args.min_rating):
+        if not selected_by_args(meta, args):
             append_state(state_path, {**base_state, "status": "skipped"})
             continue
 
@@ -1020,10 +1240,14 @@ def process_batch(
                     "relative_path": relative_path,
                     "source_path_hint": str(source),
                     "gps": selected_metadata["gps"],
-                }
+            }
             if not args.dry_run:
-                render_derivative(source, gallery_path, args.gallery_max, args.watermark, font, args.force)
-                render_derivative(source, detail_path, args.detail_max, args.watermark, font, args.force)
+                gallery_source, detail_source, developed_files, orientation_override = render_sources_for(source, args)
+                source_orientation = orientation_override or selected_metadata["raw"].get("Orientation")
+                render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
+                render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
+                if developed_files:
+                    row["developed_files"] = developed_files
                 row["derivative_files"] = {
                     "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
                     "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
@@ -1050,10 +1274,14 @@ def process_batch(
 def main() -> int:
     args = parse_args()
     source_root = args.source_root.expanduser().resolve()
+    args.source_root = source_root
+    args.developed_root = args.developed_root.expanduser().resolve() if args.developed_root else None
     args.output_root = args.output_root.expanduser()
     year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")
+    if args.developed_root and not args.developed_root.exists():
+        raise SystemExit(f"Developed root does not exist: {args.developed_root}")
     require_tool("exiftool")
     require_tool("sips")
     require_tool("ffmpeg")
@@ -1082,12 +1310,27 @@ def main() -> int:
     batch: list[dict[str, Any]] = []
     for source in discover_images(source_root, year_filter):
         relative_path = rel_key(source, source_root)
+        if args.developed_root and not is_raw_source(source):
+            continue
         if not matches_year_filter(relative_path, year_filter):
             continue
         seen += 1
         sidecar = sidecar_for(source)
         metadata_path = sidecar or source
         stamp = checkpoint_key(source, sidecar)
+        if source.stat().st_size == 0:
+            append_state(
+                state_path,
+                {
+                    "relative_path": relative_path,
+                    "checkpoint": stamp,
+                    "source_path_hint": str(source),
+                    "metadata_path_hint": str(metadata_path),
+                    "status": "skipped",
+                    "reason": "empty source file",
+                },
+            )
+            continue
         prior = state.get(relative_path)
         if should_skip_metadata(prior, stamp, args.force):
             prior_status = prior.get("status")

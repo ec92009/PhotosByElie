@@ -14,7 +14,7 @@ Last updated: 2026-05-04
 - Renamed owner-facing blacklist export to Curation Pass, including `.pbe-curation` downloads and the Apply Curation Pass helper while keeping old payload compatibility.
 - Expanded Owner into the curation command center with Curation Pass export, Expo cap, Hidden review, Unknown classification, and state counts.
 - Moved Unknown out of the public homepage carousel and into a localhost-only owner classification queue.
-- Polished the homepage by keeping only public collection cards, limiting carousel navigation to the active card, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
+- Polished the homepage by keeping only public collection cards, making every visible carousel card navigate to its collection, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
 - Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
 - Made basket selections automatically feed the Liked list, pruned stale catalog entries from basket rendering, and expanded Unknown classification with same-day assignment plus H/U moderation.
 - Removed assigned photos from the Unknown classification queue immediately after country assignment.
@@ -24,6 +24,7 @@ Last updated: 2026-05-04
 - Updated public gallery cells to show real photo aspect ratios inside square slots, reserving strong selection framing for localhost curation.
 - Tightened homepage sampling so representative photos refresh after a full public-country carousel cycle, not every single card change.
 - Re-ran the Curation Pass cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
+- Let visible side cards in the collection carousel navigate directly to their galleries instead of requiring a foregrounding click first.
 
 ## Current Priority Stack
 
@@ -91,7 +92,7 @@ Last updated: 2026-05-04
 7. **Polish homepage collection sampling.**
    - Refresh the random representative photos after every full carousel cycle.
    - Use the number of public country collections as the cycle length so the samples rotate at a predictable pace.
-   - Keep clicked cards navigating to their collection regardless of whether they are visually foregrounded.
+   - Retest visible side-card navigation after carousel layout changes.
 
 8. **Add SEO and social sharing metadata per collection and photo.**
    - Give each collection a stronger title and description.

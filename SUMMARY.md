@@ -7,7 +7,7 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build prepared for publish: `v65.23`
+- Current local visible build prepared for publish: `v65.24`
 - Local `main` is currently clean and synced before the next visible build commit.
 
 ## Latest Decisions
@@ -59,6 +59,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Public gallery cells now show photos at their real aspect ratio inside stable square slots, with strong selection outlines limited to localhost owner mode.
 - Footer band is present across pages, with the Owner link only on localhost.
 - Homepage carousel and hero samples refresh from collection photos after every full public-country carousel cycle.
+- Visible carousel side cards now navigate directly to their galleries rather than first moving to the foreground.
 - The TODO was reprioritized around:
   - starting buyer-side product basics,
   - hardening Expo/Reserve/Hidden publishing,
@@ -74,7 +75,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Python `HTMLParser` over all root HTML files
 - Node data scan for missing local `gallerySrc` and `imageSrc` references
 - `git diff --check`
-- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.23` and cache-bust strings use `?v=65.23`.
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.24` and cache-bust strings use `?v=65.24`.
 
 ## Important Notes
 

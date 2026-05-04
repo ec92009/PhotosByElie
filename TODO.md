@@ -15,6 +15,7 @@ Last updated: 2026-05-04
 - Expanded Owner into the curation command center with Curation Pass export, Regular cap, Unworthy review, Unknown classification, and state counts.
 - Moved Unknown out of the public homepage carousel and into a localhost-only owner classification queue.
 - Polished the homepage by keeping only public collection cards, limiting carousel navigation to the active card, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
+- Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
 
 ## Current Priority Stack
 
@@ -64,8 +65,8 @@ Last updated: 2026-05-04
    - Decide whether favorites need collection-level affordances beyond the detail-page heart.
 
 6. **Improve mobile gallery navigation.**
-   - Add visible previous/next controls near gallery grids and detail pages.
-   - Let detail-page previous/next navigation continue into the neighboring country instead of looping only within the current country.
+   - Add visible previous/next controls near gallery grids.
+   - Retest detail-page cross-collection previous/next navigation on mobile.
    - Consider a compact thumbnail strip for detail pages.
    - Retest swiping on phone after every carousel or gallery interaction change.
 

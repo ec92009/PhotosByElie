@@ -10,10 +10,17 @@ const reserveCollections = window.photosByElieReserveData || {};
 const fallbackCollection = Object.values(collections).find((collection) => Array.isArray(collection.photos) && collection.photos.length)
   || collections.france
   || { title: "Gallery", accent: "", photos: [] };
-const regularCollectionEntry = Object.entries(collections).find(([, collection]) =>
+const originalRegularCollectionEntry = Object.entries(collections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
-const reserveCollectionEntry = Object.entries(reserveCollections).find(([, collection]) =>
+const promotedCollectionEntry = originalRegularCollectionEntry ? null : Object.entries(collections).find(([galleryKey]) =>
+  window.photosByElieReserve?.promotedIds?.(galleryKey)?.includes(photoId)
+);
+const promotedPhoto = promotedCollectionEntry
+  ? (reserveCollections[promotedCollectionEntry[0]]?.photos || []).find((item) => item.id === photoId)
+  : null;
+const regularCollectionEntry = originalRegularCollectionEntry || (promotedPhoto ? promotedCollectionEntry : null);
+const reserveCollectionEntry = regularCollectionEntry ? null : Object.entries(reserveCollections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
 const ownerCollectionEntry = Object.entries(ownerCollections).find(([, collection]) =>
@@ -23,7 +30,7 @@ const collectionEntry = regularCollectionEntry || reserveCollectionEntry || owne
 const isReserveCollection = Boolean(!regularCollectionEntry && reserveCollectionEntry);
 const isOwnerCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && ownerCollectionEntry);
 const [collectionKey, collection] = collectionEntry || ["france", fallbackCollection];
-const photo = collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
+const photo = promotedPhoto || collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
 const photoIndex = photo ? collection.photos.findIndex((item) => item.id === photo.id) : -1;
 const resolutions = window.photosByElieResolutions || [];
 const availableResolutions = photo && window.photosByElieAvailableResolutions
@@ -37,16 +44,59 @@ if (isOwnerCollection && !localModerationEnabled) {
   window.location.replace("./");
   return;
 }
-const visibleCollectionPhotos = () => (
-  unworthyStore?.filterPhotos
-    ? unworthyStore.filterPhotos(collection.photos, { includeReserveOnly: isReserveCollection })
-    : collection.photos
+const promotedPhotosFor = (galleryKey) => {
+  if (!localModerationEnabled || !window.photosByElieReserve?.enabled) return [];
+  const reserveById = new Map((reserveCollections[galleryKey]?.photos || []).map((item) => [item.id, item]));
+  return window.photosByElieReserve.promotedIds(galleryKey)
+    .map((promotedId) => reserveById.get(promotedId))
+    .filter(Boolean);
+};
+
+const regularCapFor = (targetCollection) => (
+  unworthyStore?.readRegularCap?.() || targetCollection?.photos?.length || 0
+);
+
+const visiblePhotosFor = (galleryKey, targetCollection, options = {}) => {
+  const basePhotos = targetCollection?.photos || [];
+  if (!localModerationEnabled || !unworthyStore?.filterPhotos) return basePhotos;
+  const photos = unworthyStore.filterPhotos(basePhotos, { includeReserveOnly: options.includeReserveOnly });
+  if (!options.includePromotions) return photos;
+  const promoted = unworthyStore.filterPhotos(promotedPhotosFor(galleryKey), { includeReserveOnly: true });
+  return photos.concat(promoted).slice(0, regularCapFor(targetCollection));
+};
+
+const visibleCollectionPhotos = () => visiblePhotosFor(collectionKey, collection, {
+  includeReserveOnly: isReserveCollection,
+  includePromotions: !isReserveCollection && !isOwnerCollection,
+});
+
+const detailScopeEntries = () => {
+  const scope = isOwnerCollection
+    ? ownerCollections
+    : isReserveCollection
+      ? reserveCollections
+      : collections;
+  return Object.entries(scope).filter(([, scopeCollection]) =>
+    Array.isArray(scopeCollection.photos) && scopeCollection.photos.length
+  );
+};
+
+const detailSequence = () => detailScopeEntries().flatMap(([scopeKey, scopeCollection]) =>
+  visiblePhotosFor(scopeKey, scopeCollection, {
+    includeReserveOnly: isReserveCollection,
+    includePromotions: !isReserveCollection && !isOwnerCollection,
+  }).map((scopePhoto) => ({
+    collection: scopeCollection,
+    collectionKey: scopeKey,
+    photo: scopePhoto,
+  }))
 );
 
 const navigateAfterHide = () => {
   const remainingPhotos = visibleCollectionPhotos();
   if (!remainingPhotos.length) {
-    window.location.replace(`./${collectionKey}.html`);
+    const remainingSequence = detailSequence().filter((item) => item.photo.id !== photo.id);
+    window.location.replace(remainingSequence.length ? `./photo.html?id=${remainingSequence[0].photo.id}` : `./${collectionKey}.html`);
     return true;
   }
 
@@ -115,15 +165,19 @@ document.querySelector("[data-back-link]").setAttribute("href", `./${collectionK
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");
 const nextPhotoLink = document.querySelector("[data-next-photo]");
-if (prevPhotoLink && nextPhotoLink && collection.photos.length > 1) {
-  const detailPhotos = visibleCollectionPhotos();
-  const detailIndex = detailPhotos.findIndex((item) => item.id === photo.id);
-  const previousPhoto = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
-  const nextPhoto = detailPhotos[(detailIndex + 1) % detailPhotos.length];
-  prevPhotoLink.setAttribute("href", `./photo.html?id=${previousPhoto.id}`);
-  prevPhotoLink.setAttribute("aria-label", `Previous photo: ${previousPhoto.title}`);
-  nextPhotoLink.setAttribute("href", `./photo.html?id=${nextPhoto.id}`);
-  nextPhotoLink.setAttribute("aria-label", `Next photo: ${nextPhoto.title}`);
+if (prevPhotoLink && nextPhotoLink) {
+  const detailPhotos = detailSequence();
+  const detailIndex = detailPhotos.findIndex((item) => item.photo.id === photo.id);
+  if (detailPhotos.length > 1 && detailIndex >= 0) {
+    const previousEntry = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
+    const nextEntry = detailPhotos[(detailIndex + 1) % detailPhotos.length];
+    prevPhotoLink.setAttribute("href", `./photo.html?id=${previousEntry.photo.id}`);
+    prevPhotoLink.setAttribute("aria-label", `Previous photo: ${previousEntry.photo.title} in ${previousEntry.collection.title}`);
+    nextPhotoLink.setAttribute("href", `./photo.html?id=${nextEntry.photo.id}`);
+    nextPhotoLink.setAttribute("aria-label", `Next photo: ${nextEntry.photo.title} in ${nextEntry.collection.title}`);
+  } else {
+    document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
+  }
 } else {
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
 }

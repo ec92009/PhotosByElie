@@ -333,6 +333,9 @@ html[data-theme="light"] .photo-art.has-photo::after{
   background:color-mix(in srgb,var(--surface-2) 82%,var(--bg) 18%);
   overflow:hidden;
 }
+.unknown-thumb.has-image{
+  cursor:zoom-in;
+}
 .unknown-thumb img{
   width:100%;
   height:100%;

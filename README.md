@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.30`
+- Current visible version: `v65.31`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -53,7 +53,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The three asset states are explicit on disk: `assets/expo` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
 - Reserve import now scans developed JPG/TIFF exports only, keeps Camera photos at Lightroom green label/rating 4+, infers country/AI/Unknown buckets, writes watermarked `*_900.jpg` and `*_1800.jpg` pairs into `assets/reserve/<country>/`, and never scans DNG/NEF/raw files.
 - On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
-- On the localhost Unknown page, arrow keys move the selected card, `H` hides it, and `U` undoes the last hide.
+- On the localhost Unknown page, arrow keys move the selected card, `H` hides it, `U` undoes the last hide, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
 - The localhost Owner page exports Curation Pass files as `.pbe-curation`; the cleaner still accepts older `.pbe-blacklist` payloads for compatibility.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On localhost gallery pages, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.

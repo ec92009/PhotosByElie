@@ -6,6 +6,7 @@
   const targetCountries = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
   let selectedPhotoId = "";
   let lastHiddenPhotoId = "";
+  let fullscreenPreview = null;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -58,6 +59,36 @@
     const day = captureDay(photo);
     if (!day) return [photo];
     return allUnknownPhotos().filter((candidate) => captureDay(candidate) === day);
+  };
+
+  const closeFullscreenPreview = () => {
+    fullscreenPreview?.remove();
+    fullscreenPreview = null;
+    document.body.classList.remove("detail-fullscreen-active");
+  };
+
+  const openFullscreenPreview = (photo) => {
+    const image = photo?.imageSrc || photo?.gallerySrc || "";
+    if (!image || fullscreenPreview) return;
+    fullscreenPreview = document.createElement("div");
+    fullscreenPreview.className = "detail-fullscreen-preview";
+    fullscreenPreview.setAttribute("role", "button");
+    fullscreenPreview.setAttribute("aria-label", `Close full screen preview for ${photo.title}`);
+    fullscreenPreview.tabIndex = 0;
+    const fullscreenImage = document.createElement("img");
+    fullscreenImage.src = image;
+    fullscreenImage.alt = photo.title;
+    fullscreenPreview.append(fullscreenImage);
+    fullscreenPreview.addEventListener("click", closeFullscreenPreview);
+    fullscreenPreview.addEventListener("dblclick", closeFullscreenPreview);
+    fullscreenPreview.addEventListener("keydown", (event) => {
+      if (!["Escape", "Enter", " "].includes(event.key)) return;
+      closeFullscreenPreview();
+      event.preventDefault();
+    });
+    document.body.append(fullscreenPreview);
+    document.body.classList.add("detail-fullscreen-active");
+    fullscreenPreview.focus({ preventScroll: true });
   };
 
   const updateSelection = () => {
@@ -154,6 +185,15 @@
       card.addEventListener("click", () => {
         selectedPhotoId = card.dataset.photoId || "";
         updateSelection();
+      });
+      card.querySelector(".unknown-thumb.has-image")?.addEventListener("dblclick", (event) => {
+        const photo = unknownPhotos().find((item) => item.id === card.dataset.photoId);
+        if (!photo) return;
+        selectedPhotoId = photo.id;
+        updateSelection();
+        openFullscreenPreview(photo);
+        event.preventDefault();
+        event.stopPropagation();
       });
     });
 

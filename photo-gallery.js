@@ -12,6 +12,231 @@ let restoreButton = null;
 const densityKey = "photosbyelie-gallery-columns";
 let densityInput = null;
 let densityValue = null;
+const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
+const defaultFilterState = {
+  orientation: "all",
+  mood: "all",
+  subject: "all",
+  source: "all",
+  availability: "all",
+  sort: "collection"
+};
+let filterBar = null;
+
+const readFilterState = () => {
+  try {
+    return { ...defaultFilterState, ...JSON.parse(localStorage.getItem(filterStateKey) || "{}") };
+  } catch {
+    return { ...defaultFilterState };
+  }
+};
+
+let filterState = readFilterState();
+
+const writeFilterState = () => {
+  localStorage.setItem(filterStateKey, JSON.stringify(filterState));
+};
+
+const metadataValue = (photo, label) => (
+  (photo?.metadata || []).find((item) => item.label === label)?.value || ""
+);
+
+const photoSearchText = (photo) => [
+  photo?.title,
+  photo?.caption,
+  photo?.full,
+  metadataValue(photo, "Keywords"),
+  metadataValue(photo, "Description"),
+  metadataValue(photo, "Original file"),
+  metadataValue(photo, "Original size"),
+  metadataValue(photo, "Preview file")
+].filter(Boolean).join(" ").toLowerCase();
+
+const previewDimensions = (photo) => {
+  const value = metadataValue(photo, "Preview file") || metadataValue(photo, "Original size");
+  const match = value.match(/(\d+)\s*x\s*(\d+)/i);
+  if (!match) return null;
+  return { width: Number(match[1]), height: Number(match[2]) };
+};
+
+const photoOrientation = (photo) => {
+  const dimensions = previewDimensions(photo);
+  if (!dimensions?.width || !dimensions?.height) return "unknown";
+  const ratio = dimensions.width / dimensions.height;
+  if (ratio > 1.12) return "landscape";
+  if (ratio < .9) return "portrait";
+  return "square";
+};
+
+const photoMoodTags = (photo) => {
+  const text = photoSearchText(photo);
+  const tags = new Set();
+  if (/(sunset|sunrise|gold|yellow|orange|red|beach|desert|summer|warm)/.test(text)) tags.add("warm");
+  if (/(ocean|sea|river|water|blue|snow|winter|harbor|harbour|atlantic|seine|cool)/.test(text)) tags.add("cool");
+  if (/(gray|grey|unsaturated|black|white|interior|church|museum|palace|castle|architecture)/.test(text)) tags.add("neutral");
+  if (/(art|garden|flower|green|color|colour|vivid|market|festival)/.test(text)) tags.add("vivid");
+  return tags.size ? tags : new Set(["neutral"]);
+};
+
+const photoSubjectTags = (photo) => {
+  const text = photoSearchText(photo);
+  const tags = new Set();
+  if (/(architecture|church|castle|chateau|fortress|palace|monastery|building|interior|invalides|versailles)/.test(text)) tags.add("architecture");
+  if (/(ocean|sea|river|water|beach|harbor|harbour|coast|atlantic|seine|boat|bateau)/.test(text)) tags.add("water");
+  if (/(art|museum|statue|monet|painting|gallery|sculpture)/.test(text)) tags.add("art");
+  if (/(family|person|people|child|mom|bar mitzvah|portrait)/.test(text)) tags.add("people");
+  if (/(garden|park|flower|tree|mountain|animal|nature|landscape)/.test(text)) tags.add("nature");
+  if (/(city|street|travel|paris|lisbon|lisboa|mexico|slovakia|france|usa|portugal|spain)/.test(text)) tags.add("city");
+  return tags.size ? tags : new Set(["other"]);
+};
+
+const photoSourceTags = (photo) => {
+  const text = `${photoSearchText(photo)} ${window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : ""}`.toLowerCase();
+  const tags = new Set();
+  if (galleryKey === "ai" || /ai|leonardo/.test(text)) tags.add("ai");
+  if (/\b(dng|nef|raw|cr2|cr3|arw|raf|orf|rw2)\b/.test(text)) tags.add("raw");
+  if (/\b(jpg|jpeg)\b/.test(text)) tags.add("jpg");
+  if (/\b(tif|tiff|psd)\b/.test(text)) tags.add("tiff-psd");
+  return tags.size ? tags : new Set(["unknown"]);
+};
+
+const availableResolutionsFor = (photo) => (
+  window.photosByElieAvailableResolutions
+    ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
+    : []
+);
+
+const photoAvailabilityTags = (photo) => {
+  const ids = new Set(availableResolutionsFor(photo).map((option) => option.id));
+  const tags = new Set();
+  if (ids.has("full")) tags.add("full");
+  if (ids.has("jpg-6mp")) tags.add("print");
+  if (ids.has("jpg-1mp") || ids.has("jpg-3mp")) tags.add("web");
+  return tags.size ? tags : new Set(["unverified"]);
+};
+
+const captureTime = (photo) => {
+  const raw = metadataValue(photo, "Captured");
+  const match = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
+  if (!match) return 0;
+  return Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}`) || 0;
+};
+
+const verifiedMegapixels = (photo) => (
+  window.photosByElieVerifiedMegapixels ? window.photosByElieVerifiedMegapixels(photo) : Number(photo?.megapixels) || 0
+);
+
+const maxAvailablePrice = (photo) => Math.max(0, ...availableResolutionsFor(photo).map((option) => option.price || 0));
+
+const activeFilterCount = () => ["orientation", "mood", "subject", "source", "availability"]
+  .filter((key) => filterState[key] && filterState[key] !== "all").length;
+
+const matchesFilterState = (photo) => {
+  if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
+  if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
+  if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
+  if (filterState.source !== "all" && !photoSourceTags(photo).has(filterState.source)) return false;
+  if (filterState.availability !== "all" && !photoAvailabilityTags(photo).has(filterState.availability)) return false;
+  return true;
+};
+
+const sortPhotos = (photos) => {
+  const sorted = [...photos];
+  if (filterState.sort === "newest") sorted.sort((a, b) => captureTime(b) - captureTime(a));
+  if (filterState.sort === "oldest") sorted.sort((a, b) => captureTime(a) - captureTime(b));
+  if (filterState.sort === "title") sorted.sort((a, b) => a.title.localeCompare(b.title));
+  if (filterState.sort === "megapixels-desc") sorted.sort((a, b) => verifiedMegapixels(b) - verifiedMegapixels(a));
+  if (filterState.sort === "megapixels-asc") sorted.sort((a, b) => verifiedMegapixels(a) - verifiedMegapixels(b));
+  if (filterState.sort === "price-desc") sorted.sort((a, b) => maxAvailablePrice(b) - maxAvailablePrice(a));
+  if (filterState.sort === "price-asc") sorted.sort((a, b) => maxAvailablePrice(a) - maxAvailablePrice(b));
+  return sorted;
+};
+
+const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
+
+const syncFilterControls = () => {
+  if (!filterBar) return;
+  filterBar.querySelectorAll("[data-gallery-filter]").forEach((control) => {
+    control.value = filterState[control.dataset.galleryFilter] || "all";
+  });
+};
+
+const ensureGalleryFilterControls = () => {
+  if (filterBar || !gallery) return;
+  const filterTarget = galleryActions || document.querySelector(".gallery-hero");
+  if (!filterTarget) return;
+  filterBar = document.createElement("form");
+  filterBar.className = "gallery-filter-bar";
+  filterBar.setAttribute("aria-label", "Gallery filters and sorting");
+  filterBar.innerHTML = `
+    <label><span>Orientation</span><select data-gallery-filter="orientation">
+      <option value="all">All</option>
+      <option value="landscape">Landscape</option>
+      <option value="portrait">Portrait</option>
+      <option value="square">Square</option>
+    </select></label>
+    <label><span>Color mood</span><select data-gallery-filter="mood">
+      <option value="all">All</option>
+      <option value="warm">Warm</option>
+      <option value="cool">Cool</option>
+      <option value="neutral">Neutral</option>
+      <option value="vivid">Vivid</option>
+    </select></label>
+    <label><span>Subject</span><select data-gallery-filter="subject">
+      <option value="all">All</option>
+      <option value="architecture">Architecture</option>
+      <option value="water">Water/coast</option>
+      <option value="art">Art/museum</option>
+      <option value="people">People</option>
+      <option value="nature">Nature</option>
+      <option value="city">City/travel</option>
+    </select></label>
+    <label><span>Source</span><select data-gallery-filter="source">
+      <option value="all">All</option>
+      <option value="raw">RAW</option>
+      <option value="jpg">JPG</option>
+      <option value="ai">AI</option>
+      <option value="tiff-psd">TIFF/PSD</option>
+    </select></label>
+    <label><span>Availability</span><select data-gallery-filter="availability">
+      <option value="all">All</option>
+      <option value="full">Full source</option>
+      <option value="print">Print-ready</option>
+      <option value="web">Web-ready</option>
+    </select></label>
+    <label><span>Sort</span><select data-gallery-filter="sort">
+      <option value="collection">Collection order</option>
+      <option value="newest">Newest</option>
+      <option value="oldest">Oldest</option>
+      <option value="title">Title</option>
+      <option value="megapixels-desc">Largest MP</option>
+      <option value="megapixels-asc">Smallest MP</option>
+      <option value="price-desc">Highest price</option>
+      <option value="price-asc">Lowest price</option>
+    </select></label>
+    <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters>Clear</button>
+  `;
+  filterTarget.after(filterBar);
+  syncFilterControls();
+  filterBar.addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+  filterBar.addEventListener("change", (event) => {
+    const control = event.target;
+    if (!(control instanceof HTMLSelectElement) || !control.dataset.galleryFilter) return;
+    filterState = { ...filterState, [control.dataset.galleryFilter]: control.value };
+    writeFilterState();
+    selectedIndex = 0;
+    renderGallery();
+  });
+  filterBar.querySelector("[data-clear-gallery-filters]")?.addEventListener("click", () => {
+    filterState = { ...defaultFilterState };
+    writeFilterState();
+    syncFilterControls();
+    selectedIndex = 0;
+    renderGallery();
+  });
+};
 
 const regularCap = () => unworthyStore?.readRegularCap?.() || gallery?.photos?.length || 0;
 
@@ -117,15 +342,25 @@ const applyGalleryDensity = () => {
 };
 
 const renderGallery = () => {
-  const photos = visiblePhotos();
+  const allPhotos = visiblePhotos();
+  const photos = filteredVisiblePhotos(allPhotos);
   if (!photos.length) {
+    const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
     const canRestoreCollection = localModerationEnabled && Boolean(gallery?.photos?.length);
     galleryRoot.innerHTML = `
-      <article class="mock-photo empty-gallery-card" aria-label="${gallery.title} archive reset">
-        <span>No locally visible photos in this collection</span>
-        ${canRestoreCollection ? '<button class="btn secondary" type="button" data-restore-collection>Restore collection</button>' : ""}
+      <article class="mock-photo empty-gallery-card" aria-label="${gallery.title} gallery empty state">
+        <span>${filteredOut ? "No photos match the current filters" : "No locally visible photos in this collection"}</span>
+        ${filteredOut ? '<button class="btn secondary" type="button" data-clear-gallery-empty>Clear filters</button>' : ""}
+        ${!filteredOut && canRestoreCollection ? '<button class="btn secondary" type="button" data-restore-collection>Restore collection</button>' : ""}
       </article>
     `;
+    galleryRoot.querySelector("[data-clear-gallery-empty]")?.addEventListener("click", () => {
+      filterState = { ...defaultFilterState };
+      writeFilterState();
+      syncFilterControls();
+      selectedIndex = 0;
+      renderGallery();
+    });
     galleryRoot.querySelector("[data-restore-collection]")?.addEventListener("click", () => {
       const restored = restoreCollectionHides();
       selectedIndex = 0;
@@ -133,7 +368,11 @@ const renderGallery = () => {
       setGalleryStatus(restored ? `${restored} local hides restored for ${gallery.title}.` : "No local hides to restore.");
     });
     updateRestoreAction();
-    setGalleryStatus(canRestoreCollection ? "All regular photos in this collection are currently hidden locally." : "");
+    setGalleryStatus(filteredOut
+      ? "Adjust or clear filters to show this collection again."
+      : canRestoreCollection
+        ? "All regular photos in this collection are currently hidden locally."
+        : "");
     return;
   }
   galleryRoot.innerHTML = photos.map((photo, index) => `
@@ -162,10 +401,15 @@ const renderGallery = () => {
   }
   applyGalleryDensity();
   updateSelection();
+  const filterStatus = activeFilterCount() ? `Showing ${photos.length} of ${allPhotos.length} after filters.` : `Showing ${photos.length} photos.`;
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
-    setGalleryStatus(reserveCount ? "Use arrow keys to move, H to hide and refill from reserve, U to undo." : "Use arrow keys to move, H to hide, U to undo.");
+    setGalleryStatus(reserveCount
+      ? `${filterStatus} Use arrow keys to move, H to hide and refill from reserve, U to undo.`
+      : `${filterStatus} Use arrow keys to move, H to hide, U to undo.`);
     updateRestoreAction();
+  } else {
+    setGalleryStatus(filterStatus);
   }
 };
 
@@ -178,6 +422,7 @@ if (galleryRoot && gallery) {
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${gallery.title} photos`);
+  ensureGalleryFilterControls();
   renderGallery();
 
   if (localModerationEnabled) {
@@ -223,7 +468,7 @@ if (galleryRoot && gallery) {
         if (target.isContentEditable) return;
         if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
       }
-      const photos = visiblePhotos();
+      const photos = filteredVisiblePhotos();
       if (!photos.length) return;
       if (event.key === "ArrowRight") {
         selectedIndex = Math.min(selectedIndex + 1, photos.length - 1);
@@ -266,7 +511,7 @@ if (galleryRoot && gallery) {
         setGalleryStatus("No local unworthy mark to undo.");
         return;
       }
-      const nextPhotos = visiblePhotos();
+      const nextPhotos = filteredVisiblePhotos();
       const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
       if (restoredIndex >= 0) selectedIndex = restoredIndex;
       updateSelection();

@@ -70,6 +70,8 @@ Last updated: 2026-05-04
 
 6. **Improve mobile gallery navigation.**
    - Add visible previous/next controls near gallery grids.
+   - On narrow screens, duplicate primary CTA buttons and previous/next navigation at the bottom of each page, above the footer.
+   - On phone-sized detail pages, horizontal swipes should trigger previous/next photo navigation.
    - Retest detail-page cross-collection previous/next navigation on mobile.
    - Consider a compact thumbnail strip for detail pages.
    - Retest swiping on phone after every carousel or gallery interaction change.

@@ -165,6 +165,45 @@ document.querySelector("[data-back-link]").setAttribute("href", `./${collectionK
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");
 const nextPhotoLink = document.querySelector("[data-next-photo]");
+const navigateToPhotoLink = (link) => {
+  const href = link?.getAttribute("href");
+  if (href) window.location.assign(href);
+};
+
+const ensureDetailBottomActions = () => {
+  const detailMain = document.querySelector(".detail-main");
+  if (!detailMain || document.querySelector("[data-detail-bottom-actions]")) return;
+  const bottomActions = document.createElement("nav");
+  bottomActions.className = "panel mobile-bottom-actions detail-bottom-actions";
+  bottomActions.dataset.detailBottomActions = "";
+  bottomActions.setAttribute("aria-label", "Bottom photo actions");
+  bottomActions.innerHTML = `
+    <a class="btn secondary" data-bottom-prev-photo href="./photo.html">Previous</a>
+    <a class="btn secondary" data-bottom-back-link href="./${collectionKey}.html">Back to gallery</a>
+    <a class="btn secondary" data-bottom-next-photo href="./photo.html">Next</a>
+    <a class="btn primary" href="./basket.html">Basket</a>
+    <a class="btn secondary" href="./liked.html">Liked</a>
+  `;
+  detailMain.append(bottomActions);
+};
+
+const syncDetailBottomActions = () => {
+  ensureDetailBottomActions();
+  const bottomActions = document.querySelector("[data-detail-bottom-actions]");
+  if (!bottomActions) return;
+  const bottomPrev = bottomActions.querySelector("[data-bottom-prev-photo]");
+  const bottomNext = bottomActions.querySelector("[data-bottom-next-photo]");
+  const bottomBack = bottomActions.querySelector("[data-bottom-back-link]");
+  const prevHref = prevPhotoLink?.getAttribute("href");
+  const nextHref = nextPhotoLink?.getAttribute("href");
+  const backHref = document.querySelector("[data-back-link]")?.getAttribute("href") || `./${collectionKey}.html`;
+  if (prevHref) bottomPrev?.setAttribute("href", prevHref);
+  if (nextHref) bottomNext?.setAttribute("href", nextHref);
+  if (bottomBack) bottomBack.setAttribute("href", backHref);
+  bottomPrev?.toggleAttribute("hidden", !prevHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
+  bottomNext?.toggleAttribute("hidden", !nextHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
+};
+
 if (prevPhotoLink && nextPhotoLink) {
   const detailPhotos = detailSequence();
   const detailIndex = detailPhotos.findIndex((item) => item.photo.id === photo.id);
@@ -181,6 +220,7 @@ if (prevPhotoLink && nextPhotoLink) {
 } else {
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
 }
+syncDetailBottomActions();
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
 const metadata = Array.isArray(photo.metadata)
@@ -251,15 +291,50 @@ const shouldIgnoreShortcut = (event) => {
 window.addEventListener("keydown", (event) => {
   if (shouldIgnoreShortcut(event)) return;
   if (event.key === "ArrowLeft" && prevPhotoLink?.getAttribute("href")) {
-    window.location.assign(prevPhotoLink.getAttribute("href"));
+    navigateToPhotoLink(prevPhotoLink);
     event.preventDefault();
     return;
   }
   if (event.key === "ArrowRight" && nextPhotoLink?.getAttribute("href")) {
-    window.location.assign(nextPhotoLink.getAttribute("href"));
+    navigateToPhotoLink(nextPhotoLink);
     event.preventDefault();
   }
 });
+
+const swipeTarget = document.querySelector(".detail-layout");
+let swipeStart = null;
+const isInteractiveSwipeTarget = (target) => (
+  target instanceof Element
+  && Boolean(target.closest("a,button,input,label,select,textarea,[contenteditable='true']"))
+);
+swipeTarget?.addEventListener("touchstart", (event) => {
+  if (!window.matchMedia("(max-width: 760px)").matches) return;
+  if (event.touches.length !== 1 || isInteractiveSwipeTarget(event.target)) return;
+  const touch = event.touches[0];
+  swipeStart = {
+    x: touch.clientX,
+    y: touch.clientY,
+    time: Date.now()
+  };
+}, { passive: true });
+
+swipeTarget?.addEventListener("touchend", (event) => {
+  if (!swipeStart || !window.matchMedia("(max-width: 760px)").matches) {
+    swipeStart = null;
+    return;
+  }
+  const touch = event.changedTouches[0];
+  const deltaX = touch.clientX - swipeStart.x;
+  const deltaY = touch.clientY - swipeStart.y;
+  const elapsed = Date.now() - swipeStart.time;
+  swipeStart = null;
+  if (elapsed > 650 || Math.abs(deltaX) < 52 || Math.abs(deltaX) < Math.abs(deltaY) * 1.35) return;
+  if (deltaX < 0) {
+    navigateToPhotoLink(nextPhotoLink);
+    return;
+  }
+  navigateToPhotoLink(prevPhotoLink);
+}, { passive: true });
 
 if (localModerationEnabled) {
   window.addEventListener("keydown", (event) => {

@@ -16,6 +16,7 @@ Last updated: 2026-05-04
 - Moved Unknown out of the public homepage carousel and into a localhost-only owner classification queue.
 - Polished the homepage by keeping only public collection cards, limiting carousel navigation to the active card, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
 - Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
+- Made basket selections automatically feed the Liked list, pruned stale catalog entries from basket rendering, and expanded Unknown classification with same-day assignment plus H/U moderation.
 
 ## Current Priority Stack
 
@@ -30,6 +31,7 @@ Last updated: 2026-05-04
 
 4. **Scale gallery generation.**
    - Automate manifest promotion into `photos-data.js` once the curation states and publishing rules are stable.
+   - Update the import pipeline later so publishable inventory comes from developed Lightroom JPG exports only, not raw DNG/NEF files.
 
 5. **Round out buyer-facing product basics.**
    - Add licensing, checkout/order intent, filtering/sorting, favorites polish, mobile navigation, and SEO/social metadata.
@@ -43,6 +45,7 @@ Last updated: 2026-05-04
    - Convert selected rows from `assets/lightroom/manifest.json` into collection entries.
    - Preserve public-safe metadata, source file proof, and verified derivative dimensions.
    - Keep manual review for titles, captions, pricing, and privacy before publishing.
+   - Replace raw-first assumptions with a developed-JPG-only import path before the next real import run.
 
 2. **Improve basket checkout from mock email to real order intent.**
    - Keep the current static basket behavior as the source of truth.

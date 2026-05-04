@@ -108,6 +108,19 @@
     return writeCountryAssignments(assignments);
   };
 
+  const setCountryAssignments = (photoIds = [], galleryKey) => {
+    if (!enabled) return readCountryAssignments();
+    const assignments = readCountryAssignments();
+    normalize(photoIds).forEach((photoId) => {
+      if (countryAssignmentTargets.includes(galleryKey)) {
+        assignments[photoId] = galleryKey;
+      } else {
+        delete assignments[photoId];
+      }
+    });
+    return writeCountryAssignments(assignments);
+  };
+
   const setRegularCap = (value) => {
     if (!enabled) return null;
     const nextValue = Number(value);
@@ -282,6 +295,7 @@
     exportCurationPass,
     returnToReserve,
     setCountryAssignment,
+    setCountryAssignments,
     setRegularCap,
     undo,
     unmark,

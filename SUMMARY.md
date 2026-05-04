@@ -24,6 +24,7 @@ Date: 2026-05-04
 
 - The importer is now a Reserve builder, not a publisher.
 - It scans only developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files.
+- For Camera imports, it keeps only Lightroom green label/rating 4+ files.
 - It no longer scans DNG, NEF, or other raw camera formats.
 - It infers country/AI/Unknown buckets, writes watermarked Reserve JPEGs, and updates the ignored Reserve manifest/catalog.
 - Expo is populated only by `scripts/export_photos_data.py` or `scripts/apply_curation_pass.py`.
@@ -38,5 +39,5 @@ Date: 2026-05-04
 ## Recent Decisions
 
 - We are rebuilding the precious generated JPGs after the next real import.
-- The next import should dump every eligible developed photo into Reserve and only try to classify countries.
+- The next Camera import should dump every eligible developed green/4+ photo into Reserve and only try to classify countries.
 - Published GitHub assets should include only the curated Expo set, never Reserve/Hidden.

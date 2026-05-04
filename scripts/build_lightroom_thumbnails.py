@@ -8,8 +8,9 @@ The script is intentionally interrupt/resume friendly:
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
 
-By default every developed JPG/TIFF source is imported into Reserve. Expo is
-filled later by the curation/export scripts.
+By default, developed JPG/TIFF sources are imported into Reserve only when
+Lightroom marks them green with rating 4 or higher. Expo is filled later by the
+curation/export scripts.
 """
 
 from __future__ import annotations
@@ -181,8 +182,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--select",
         choices=("lightroom", "all"),
-        default="all",
-        help="Select every developed image file, or require Lightroom rating/label metadata.",
+        default="lightroom",
+        help="Require Lightroom rating/label metadata, or select every developed image file.",
     )
     parser.add_argument(
         "--force-country",
@@ -930,6 +931,14 @@ def manifest_years(rows: dict[str, dict[str, Any]]) -> list[int]:
     return sorted(years)
 
 
+def requested_years(value: str) -> list[int]:
+    parsed = parse_year_filter(value)
+    if not parsed:
+        return []
+    start, end = parsed
+    return list(range(start, end + 1))
+
+
 def run_filter(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "select": args.select,
@@ -942,7 +951,7 @@ def run_filter(args: argparse.Namespace) -> dict[str, Any]:
 
 def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    years = manifest_years(rows)
+    years = requested_years(args.years) or manifest_years(rows)
     payload = {
         "generated_at": now_iso(),
         "schema_version": SCHEMA_VERSION,

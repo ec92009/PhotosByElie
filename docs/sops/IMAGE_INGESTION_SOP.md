@@ -14,7 +14,7 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, or `.tiff`.
 - Do not import DNG, NEF, or other raw camera files. Develop/export them first.
 - Lightroom sidecars should sit next to the image files as `.xmp` files when metadata is not embedded.
-- The default importer selects all developed files in the source tree. Use `--select lightroom` only when the developed files carry reliable Lightroom label/rating metadata.
+- The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly curated folders such as Leonardo/AI.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites

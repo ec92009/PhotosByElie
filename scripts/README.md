@@ -2,7 +2,7 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo exports, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable Reserve manifest. It no longer imports raw files; use Lightroom or another editor to develop/export the photos first.
+`build_lightroom_thumbnails.py` scans developed photo exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable Reserve manifest. It no longer imports raw files; use Lightroom or another editor to develop/export the photos first.
 
 Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, and Pillow. Pillow is used to normalize rotated source photos; if the local `ffmpeg` build does not include the `drawtext` filter, the script also falls back to Pillow for watermarking. Install it with `python3 -m pip install --user pillow`.
 
@@ -30,7 +30,7 @@ Resume on another machine by pointing `--source-root` at that machine's develope
 
 Use `--years 2024` for one year or `--years 2022-2024` for an inclusive range. The filter uses the first four-digit year found in each photo's path relative to the `Camera` folder.
 
-For Leonardo/AI folders where files are already curated by presence rather than Lightroom rating, select every image and force the gallery bucket to AI:
+For Leonardo/AI folders where files are already curated by presence rather than Lightroom rating, opt into every image and force the gallery bucket to AI:
 
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \

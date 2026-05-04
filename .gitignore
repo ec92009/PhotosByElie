@@ -1,12 +1,17 @@
 .playwright-mcp/
 .DS_Store
 
-# Local/generated photo workspaces. Publishable Expo copies live under assets/regular/.
-assets/lightroom/
-assets/lightroom-ai/
-assets/reserve/
-assets/hidden/
-assets/.moderation-hidden/
+# Local/generated photo workspaces.
+# assets/expo is publishable and tracked. Reserve and Hidden are local vault states.
+assets/reserve/**
+!assets/reserve/
+!assets/reserve/*/
+!assets/reserve/*/.gitkeep
+assets/hidden/**
+!assets/hidden/
+!assets/hidden/*/
+!assets/hidden/*/.gitkeep
+.curation-logs/
 
 # Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.27`
+- Current visible version: `v65.28`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -49,9 +49,9 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts use the same current-queue filter as the Unknown page, so old browser assignment history does not subtract unrelated photos.
-- Gallery pages load the publishable Expo subset from `assets/regular`; the cap is a maximum, so collections publish fewer photos when fewer valid JPEG pairs are available.
-- The three asset states are explicit on disk: `assets/regular` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
-- Legacy Lightroom and Leonardo ingest outputs are disposable staging folders; active local curation reads Reserve from `assets/reserve` and Hidden from `assets/hidden`.
+- Gallery pages load the publishable Expo subset from tracked `assets/expo`; the cap is a maximum, so collections publish fewer photos when fewer valid JPEG pairs are available.
+- The three asset states are explicit on disk: `assets/expo` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
+- Reserve import now scans developed JPG/TIFF exports only, infers country/AI/Unknown buckets, writes watermarked `*_900.jpg` and `*_1800.jpg` pairs into `assets/reserve/<country>/`, and never scans DNG/NEF/raw files.
 - On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
 - On the localhost Unknown page, arrow keys move the selected card, `H` hides it, and `U` undoes the last hide.
 - The localhost Owner page exports Curation Pass files as `.pbe-curation`; the cleaner still accepts older `.pbe-blacklist` payloads for compatibility.
@@ -61,8 +61,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - Curation Pass exports include the current Owner-selected Expo cap so the cleaner can apply the browser's active maximum.
-- Curation Pass application fills each public Expo collection from a randomized eligible Expo/Reserve pool, writes `assets/hidden/hidden-data.js` for local Hidden review, and keeps Reserve promotions from preserving archive sequence order.
-- `scripts/export_photos_data.py --regular-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set up to that maximum.
+- Curation Pass application fills each public Expo collection from a randomized eligible Expo/Reserve pool, writes ignored JSON catalogs for local Reserve/Hidden review, and keeps Reserve promotions from preserving archive sequence order.
+- `scripts/export_photos_data.py --regular-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set under `assets/expo` up to that maximum.
 - The basket is the source of truth for selected resolutions.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.
@@ -80,6 +80,6 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Checking or unchecking a resolution on detail immediately updates localStorage.
 - Tapping the heart on a detail preview immediately updates the browser-local liked list.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
-- Full resolution choices show the verified file format, such as `JPG preview/export`; Mexico entries now prove DNG source availability through `sourceFiles`.
+- Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

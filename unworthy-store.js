@@ -254,16 +254,20 @@
   const exportCurationPass = () => {
     if (!enabled) return null;
     const photoIds = read();
+    const expoCap = effectiveRegularCap();
+    const expoState = activeRegularState();
     const payload = {
       format: "photosbyelie-curation-pass",
       version: 3,
       exported_at: new Date().toISOString(),
       photo_ids: photoIds,
-      regular_cap: effectiveRegularCap(),
+      expo_cap: expoCap,
+      regular_cap: expoCap,
       selection_mode: "random",
       reserve_only: readReserveOnly(),
       reserve_promotions: readPromotions(),
-      regular_state: activeRegularState(),
+      expo_state: expoState,
+      regular_state: expoState,
       country_assignments: readCountryAssignments(),
     };
     const stamp = payload.exported_at.replace(/[:.]/g, "-");

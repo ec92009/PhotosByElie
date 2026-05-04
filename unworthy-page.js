@@ -33,7 +33,7 @@
         });
       });
     };
-    addCollection(window.photosByElieData, "regular");
+    addCollection(window.photosByElieData, "expo");
     addCollection(window.photosByElieReserveData, "reserve");
     addCollection(window.photosByElieHiddenData, "hidden");
     return byId;

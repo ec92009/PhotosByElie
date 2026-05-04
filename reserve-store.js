@@ -49,13 +49,13 @@
     if (!enabled) return Promise.resolve({});
     if (window.photosByElieReserveData) return Promise.resolve(window.photosByElieReserveData);
     if (loadPromise) return loadPromise;
-    loadPromise = new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = `./assets/reserve/reserve-data.js${currentVersionQuery()}`;
-      script.onload = () => resolve(window.photosByElieReserveData || {});
-      script.onerror = () => resolve({});
-      document.head.append(script);
-    });
+    loadPromise = fetch(`./assets/reserve/reserve-data.json${currentVersionQuery()}`)
+      .then((response) => (response.ok ? response.json() : {}))
+      .then((payload) => {
+        window.photosByElieReserveData = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+        return window.photosByElieReserveData;
+      })
+      .catch(() => ({}));
     return loadPromise;
   };
 

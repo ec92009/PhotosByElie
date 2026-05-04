@@ -14,6 +14,7 @@ const densityKey = "photosbyelie-gallery-columns";
 let densityInput = null;
 let densityValue = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
+const diversityBucketMinutes = 10;
 const defaultFilterState = {
   orientation: "all",
   mood: "all",
@@ -95,7 +96,6 @@ const photoSourceTags = (photo) => {
   const text = `${photoSearchText(photo)} ${window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : ""}`.toLowerCase();
   const tags = new Set();
   if (galleryKey === "ai" || /ai|leonardo/.test(text)) tags.add("ai");
-  if (/\b(dng|nef|raw|cr2|cr3|arw|raf|orf|rw2)\b/.test(text)) tags.add("raw");
   if (/\b(jpg|jpeg)\b/.test(text)) tags.add("jpg");
   if (/\b(tif|tiff|psd)\b/.test(text)) tags.add("tiff-psd");
   return tags.size ? tags : new Set(["unknown"]);
@@ -194,7 +194,6 @@ const ensureGalleryFilterControls = () => {
     </select></label>
     <label><span>Source</span><select data-gallery-filter="source">
       <option value="all">All</option>
-      <option value="raw">RAW</option>
       <option value="jpg">JPG</option>
       <option value="ai">AI</option>
       <option value="tiff-psd">TIFF/PSD</option>
@@ -241,7 +240,28 @@ const ensureGalleryFilterControls = () => {
 
 const regularCap = () => unworthyStore?.readRegularCap?.() || gallery?.photos?.length || 0;
 
-const randomItem = (items) => items[Math.floor(Math.random() * items.length)];
+const randomInteger = (max) => {
+  if (!max) return 0;
+  const cryptoObject = window.crypto || window.msCrypto;
+  if (!cryptoObject?.getRandomValues) return Math.floor(Math.random() * max);
+  const values = new Uint32Array(1);
+  cryptoObject.getRandomValues(values);
+  return values[0] % max;
+};
+
+const cryptoRandomItem = (items) => items[randomInteger(items.length)];
+
+const diversityBucket = (photo) => {
+  const captured = metadataValue(photo, "Captured");
+  const text = [captured, photo?.caption, photo?.title, photo?.id].filter(Boolean).join(" ");
+  const match = text.match(/\b(\d{4})[:/-]?(\d{2})[:/-]?(\d{2})(?:[ T:]+(\d{2}):?(\d{2}))?/);
+  if (match?.[4] && match?.[5]) {
+    const minutes = (Number(match[4]) * 60) + Number(match[5]);
+    return `${match[1]}-${match[2]}-${match[3]}:${Math.floor(minutes / diversityBucketMinutes)}`;
+  }
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  return `id:${photo?.id || ""}`;
+};
 
 const promotedPhotos = () => {
   if (!reserveFillEnabled) return [];
@@ -264,6 +284,29 @@ const eligibleReservePhotos = (selectedIds) => {
   );
 };
 
+const reserveReplacementPhoto = (selected, selectedIds) => {
+  const candidates = eligibleReservePhotos(selectedIds);
+  if (!candidates.length) return null;
+  const selectedBucketCounts = selected.reduce((counts, photo) => {
+    const bucket = diversityBucket(photo);
+    counts.set(bucket, (counts.get(bucket) || 0) + 1);
+    return counts;
+  }, new Map());
+  const candidatesByBucket = candidates.reduce((groups, photo) => {
+    const bucket = diversityBucket(photo);
+    if (!groups.has(bucket)) groups.set(bucket, []);
+    groups.get(bucket).push(photo);
+    return groups;
+  }, new Map());
+  const lowestCount = Math.min(
+    ...[...candidatesByBucket].map(([bucket]) => selectedBucketCounts.get(bucket) || 0)
+  );
+  const leastRepresentedBuckets = [...candidatesByBucket]
+    .filter(([bucket]) => (selectedBucketCounts.get(bucket) || 0) === lowestCount)
+    .map(([bucket, photos]) => ({ bucket, photos }));
+  return cryptoRandomItem(cryptoRandomItem(leastRepresentedBuckets).photos);
+};
+
 const visiblePhotos = () => {
   const basePhotos = gallery?.photos || [];
   if (!localModerationEnabled) return basePhotos;
@@ -273,7 +316,7 @@ const visiblePhotos = () => {
     .concat(unworthyStore.filterPhotos(promotedPhotos(), { includeReserveOnly: true }));
   const selectedIds = new Set(selected.map((photo) => photo.id));
   while (reserveFillEnabled && selected.length < regularCap()) {
-    const nextPhoto = randomItem(eligibleReservePhotos(selectedIds));
+    const nextPhoto = reserveReplacementPhoto(selected, selectedIds);
     if (!nextPhoto) break;
     reserveStore.addPromotion(galleryKey, nextPhoto.id);
     selected.push(nextPhoto);
@@ -372,7 +415,7 @@ const renderGallery = () => {
     setGalleryStatus(filteredOut
       ? "Adjust or clear filters to show this collection again."
       : canRestoreCollection
-        ? "All regular photos in this collection are currently hidden locally."
+        ? "All Expo photos in this collection are currently hidden locally."
         : "");
     return;
   }

@@ -4,17 +4,17 @@ Repeatable workflow for importing Lightroom-selected photos into the static Phot
 
 ## Scope
 
-Use this SOP when adding or refreshing real-photo galleries from a Lightroom camera archive. The current automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests from green-labeled, 4-star-or-better source photos.
+Use this SOP when adding or refreshing real-photo galleries from developed Lightroom exports. The automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests into local Reserve; Expo is filled later by Curation Pass/export tooling.
 
 Do not use this SOP for repo-only documentation edits, CSS-only page polish, or manual one-off fixes to existing gallery data.
 
 ## Source Convention
 
-- Canonical Lightroom camera archive: `/Volumes/Saturn-1/Pictures/LR/Camera`
-- Local archive copy used in the latest handoff: `/Volumes/ecohen/Pictures/LR/2024`
-- Source files may be JPG, DNG, TIFF, or common camera raw formats supported by `exiftool` and `ffmpeg`.
+- Canonical Lightroom camera archive: `/Volumes/Saturn/Pictures/LR/Camera`
+- Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, or `.tiff`.
+- Do not import DNG, NEF, or other raw camera files. Develop/export them first.
 - Lightroom sidecars should sit next to the image files as `.xmp` files when metadata is not embedded.
-- Sale candidates are selected by Lightroom green label and rating 4 or higher.
+- The default importer selects all developed files in the source tree. Use `--select lightroom` only when the developed files carry reliable Lightroom label/rating metadata.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites
@@ -49,8 +49,8 @@ Recommended focused scan for a year or year range:
 
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \
-  --source-root /Volumes/Saturn-1/Pictures/LR/Camera \
-  --output-root assets/lightroom \
+  --source-root /Volumes/Saturn/Pictures/LR/Camera \
+  --output-root assets/reserve \
   --years 2024 \
   --batch-size 50
 ```
@@ -61,24 +61,24 @@ Use `--limit N` for a small trial and `--dry-run` when checking selection behavi
 
 The builder is designed to be interrupted and resumed.
 
-- `assets/lightroom/.build-state.jsonl` records inspected and selected source paths.
+- `assets/reserve/.build-state.jsonl` records inspected and selected source paths.
 - Existing derivatives are skipped unless `--force` is used.
 - If a manifest row exists but a derivative is missing, rerunning from a source archive can regenerate that derivative.
 - Use the same `--output-root` when resuming so checkpoints and manifests stay aligned.
 
 ## Outputs
 
-- `assets/lightroom/gallery/<country>/*.jpg`: watermarked gallery thumbnails.
-- `assets/lightroom/detail/<country>/*.jpg`: watermarked detail-page images.
-- `assets/lightroom/manifest.json`: selected photo metadata and derivative references.
-- `assets/lightroom/keywords.json`: keyword counts and photo references for future filtering.
-- `assets/lightroom/collections.json`: generated indexes for years, locations, orientation, source formats, and gallery countries.
-- `assets/lightroom/failures.json`: extraction or render failures to inspect before publishing.
-- `assets/lightroom/gps-metadata.json`: exact GPS metadata, ignored by Git.
+- `assets/reserve/<country>/*_900.jpg`: watermarked gallery thumbnails.
+- `assets/reserve/<country>/*_1800.jpg`: watermarked detail-page images.
+- `assets/reserve/manifest.json`: selected photo metadata and derivative references.
+- `assets/reserve/keywords.json`: keyword counts and photo references for future filtering.
+- `assets/reserve/collections.json`: generated indexes for years, locations, orientation, source formats, and gallery countries.
+- `assets/reserve/failures.json`: extraction or render failures to inspect before publishing.
+- `assets/reserve/gps-metadata.json`: exact GPS metadata, ignored by Git.
 
 ## Privacy Rules
 
-- Keep `assets/lightroom/gps-metadata.json` untracked.
+- Keep `assets/reserve` and `assets/hidden` untracked except for their `.gitkeep` folder placeholders.
 - Do not paste exact GPS coordinates into public site data.
 - Review public keywords before promoting them into `photos-data.js`.
 - Use `--redact-private-keywords` if generating a sanitized manifest for publishing or review.
@@ -86,15 +86,13 @@ The builder is designed to be interrupted and resumed.
 
 ## Promote To Site Data
 
-Until manifest-to-site-data generation is automated, promotion is manual:
+Promotion is automated by the Expo exporter/curation pass:
 
-1. Choose the intended gallery country rows from `assets/lightroom/manifest.json`.
-2. Confirm each row has both gallery and detail derivative files.
-3. Copy only public-safe metadata into `photos-data.js`.
-4. Set `imageSrc` to the detail derivative and `thumbnailSrc` to the gallery derivative when both are available.
-5. Preserve source proof in `sourceFiles` and verified format labels in resolution notes.
-6. Keep resolution choices limited to verified available megapixels and file formats.
-7. Run the visible versioning SOP when the public gallery changes.
+1. Build or refresh `assets/reserve/manifest.json`.
+2. Export a Curation Pass from the localhost Owner page when applying browser review decisions.
+3. Run `scripts/apply_curation_pass.py` or `scripts/export_photos_data.py --regular-cap N`.
+4. Confirm Expo contains only publishable watermarked JPEGs under `assets/expo/<country>/`.
+5. Run the visible versioning SOP when the public gallery changes.
 
 ## Verification
 
@@ -114,7 +112,7 @@ PY
 git diff --check
 ```
 
-Also inspect `assets/lightroom/failures.json`. Empty `failures` means the latest build did not record outstanding extraction or render errors.
+Also inspect `assets/reserve/failures.json`. Empty `failures` means the latest build did not record outstanding extraction or render errors.
 
 For user-visible gallery changes, preview the active pages locally and follow `SHOW_ME_SOP.md` for reporting URLs and the visible version.
 

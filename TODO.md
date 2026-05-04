@@ -26,6 +26,8 @@ Last updated: 2026-05-04
 - Re-ran the Curation Pass cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
 - Let visible side cards in the collection carousel navigate directly to their galleries instead of requiring a foregrounding click first.
 - Added the visible ignored `assets/hidden` folder and a local Hidden catalog so the three physical asset states are now Expo, Reserve, and Hidden.
+- Reset the asset contract to tracked `assets/expo` plus ignored `assets/reserve` and `assets/hidden`, with one country/AI/Unknown subfolder per state.
+- Retired raw-first ingest assumptions: future imports scan developed JPG/TIFF exports into Reserve and leave Expo to curation.
 
 ## Current Priority Stack
 
@@ -35,7 +37,7 @@ Last updated: 2026-05-04
    - Defer sold-photo pinning until checkout/sales tracking exists; when implemented, sold photos sit outside the Expo cap.
 
 2. **Harden Expo/Reserve/Hidden publishing.**
-   - Keep Expo small and publishable, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
+   - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
    - Keep treating the Owner-selected Expo cap as an upper bound from the Curation Pass, not as a fixed global default.
 
 3. **Improve live review ergonomics.**
@@ -47,8 +49,8 @@ Last updated: 2026-05-04
    - Keep carousel and hero-stack samples feeling fresh without changing the public collection order.
 
 5. **Scale gallery generation.**
-   - Automate manifest promotion into `photos-data.js` once the curation states and publishing rules are stable.
-   - Update the import pipeline later so publishable inventory comes from developed Lightroom JPG exports only, not raw DNG/NEF files.
+   - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use Curation Pass/export tooling to fill Expo.
+   - Keep importer country classification improving, but do not let import write directly to Expo.
 
 6. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
@@ -56,10 +58,10 @@ Last updated: 2026-05-04
 ## Product Backlog
 
 1. **Automate manifest promotion into `photos-data.js`.**
-   - Convert selected rows from `assets/lightroom/manifest.json` into collection entries.
+   - Convert selected rows from `assets/reserve/manifest.json` into collection entries.
    - Preserve public-safe metadata, source file proof, and verified derivative dimensions.
    - Keep manual review for titles, captions, pricing, and privacy before publishing.
-   - Replace raw-first assumptions with a developed-JPG-only import path before the next real import run.
+   - Preserve the physical-state contract: importer fills Reserve, curation fills Expo, Hidden stays local.
 
 2. **Improve basket checkout from mock email to real order intent.**
    - Keep the current static basket behavior as the source of truth.

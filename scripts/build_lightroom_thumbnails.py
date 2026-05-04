@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build watermarked web thumbnails from Lightroom-rated originals.
+Build watermarked web thumbnails from developed photo exports.
 
 The script is intentionally interrupt/resume friendly:
 - source files are tracked by their path relative to --source-root
@@ -8,7 +8,8 @@ The script is intentionally interrupt/resume friendly:
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
 
-Default selection is Lightroom green label with rating >= 4.
+By default every developed JPG/TIFF source is imported into Reserve. Expo is
+filled later by the curation/export scripts.
 """
 
 from __future__ import annotations
@@ -32,26 +33,6 @@ IMAGE_EXTENSIONS = {
     ".jpeg",
     ".tif",
     ".tiff",
-    ".dng",
-    ".cr2",
-    ".cr3",
-    ".nef",
-    ".arw",
-    ".raf",
-    ".orf",
-    ".rw2",
-    ".png",
-    ".webp",
-}
-RAW_EXTENSIONS = {
-    ".dng",
-    ".cr2",
-    ".cr3",
-    ".nef",
-    ".arw",
-    ".raf",
-    ".orf",
-    ".rw2",
 }
 
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
@@ -61,7 +42,7 @@ DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path.home() / "Pictures/LR/2024",
 ]
 DEFAULT_SOURCE_ROOT = DEFAULT_SOURCE_ROOT_CANDIDATES[0]
-DEFAULT_OUTPUT_ROOT = Path("assets/lightroom")
+DEFAULT_OUTPUT_ROOT = Path("assets/reserve")
 DEFAULT_WATERMARK = "PhotosByElie"
 DEFAULT_GALLERY_MAX = 900
 DEFAULT_DETAIL_MAX = 1800
@@ -180,7 +161,7 @@ FFMPEG_FILTERS: set[str] | None = None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Create watermarked gallery/detail thumbnails from green 4+ Lightroom photos."
+        description="Create watermarked Reserve thumbnails from developed JPG/TIFF photo exports."
     )
     parser.add_argument(
         "--source-root",
@@ -192,7 +173,7 @@ def parse_args() -> argparse.Namespace:
         "--developed-root",
         type=Path,
         default=None,
-        help="Optional Lightroom-export root containing developed JPEG companions such as *_1800.jpg and *_900.jpg.",
+        help="Deprecated no-op. The importer now scans developed JPG/TIFF sources directly.",
     )
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--label", default="green", help="Lightroom color label to include.")
@@ -200,8 +181,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--select",
         choices=("lightroom", "all"),
-        default="lightroom",
-        help="Use Lightroom rating/label selection, or select every image file.",
+        default="all",
+        help="Select every developed image file, or require Lightroom rating/label metadata.",
     )
     parser.add_argument(
         "--force-country",
@@ -290,10 +271,6 @@ def is_image(path: Path) -> bool:
     return path.suffix.lower() in IMAGE_EXTENSIONS
 
 
-def is_raw_source(path: Path) -> bool:
-    return path.suffix.lower() in RAW_EXTENSIONS
-
-
 def sidecar_for(image: Path) -> Path | None:
     candidates = [
         Path(str(image) + ".xmp"),
@@ -304,38 +281,6 @@ def sidecar_for(image: Path) -> Path | None:
         if candidate.exists():
             return candidate
     return None
-
-
-def developed_jpeg_path(
-    source: Path,
-    source_root: Path,
-    developed_root: Path,
-    suffix: str,
-) -> Path:
-    relative = source.relative_to(source_root)
-    return developed_root / relative.parent / f"{source.stem}{suffix}"
-
-
-def ensure_gallery_jpeg(detail_jpeg: Path, gallery_jpeg: Path, gallery_max: int) -> Path:
-    if gallery_jpeg.exists():
-        return gallery_jpeg
-    gallery_jpeg.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            "sips",
-            "-s",
-            "format",
-            "jpeg",
-            "--resampleHeightWidthMax",
-            str(gallery_max),
-            str(detail_jpeg),
-            "--out",
-            str(gallery_jpeg),
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-    )
-    return gallery_jpeg
 
 
 def rel_key(path: Path, source_root: Path) -> str:
@@ -1137,39 +1082,14 @@ def write_collection_index(path: Path, manifest: dict[str, dict[str, Any]]) -> N
 
 
 def derivative_paths(output_root: Path, country_slug: str, slug: str) -> tuple[Path, Path]:
-    return output_root / "gallery" / country_slug / f"{slug}.jpg", output_root / "detail" / country_slug / f"{slug}.jpg"
+    return output_root / country_slug / f"{slug}_900.jpg", output_root / country_slug / f"{slug}_1800.jpg"
 
 
 def render_sources_for(
     source: Path,
     args: argparse.Namespace,
 ) -> tuple[Path, Path, dict[str, Any] | None, Any]:
-    if not args.developed_root or not is_raw_source(source):
-        return source, source, None, None
-
-    detail_source = developed_jpeg_path(
-        source,
-        args.source_root,
-        args.developed_root,
-        args.developed_detail_suffix,
-    )
-    if not detail_source.exists():
-        raise FileNotFoundError(
-            f"Missing developed detail JPEG for {source.name}: expected {detail_source.name}"
-        )
-
-    gallery_source = developed_jpeg_path(
-        source,
-        args.source_root,
-        args.developed_root,
-        args.developed_gallery_suffix,
-    )
-    gallery_source = ensure_gallery_jpeg(detail_source, gallery_source, args.gallery_max)
-    developed_files = {
-        "detail_source": source_file_facts(detail_source),
-        "gallery_source": source_file_facts(gallery_source),
-    }
-    return gallery_source, detail_source, developed_files, "already-oriented"
+    return source, source, None, None
 
 
 def should_skip_metadata(row: dict[str, Any] | None, stamp: str, force: bool) -> bool:
@@ -1302,8 +1222,6 @@ def main() -> int:
     year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")
-    if args.developed_root and not args.developed_root.exists():
-        raise SystemExit(f"Developed root does not exist: {args.developed_root}")
     require_tool("exiftool")
     require_tool("sips")
     require_tool("ffmpeg")
@@ -1332,8 +1250,6 @@ def main() -> int:
     batch: list[dict[str, Any]] = []
     for source in discover_images(source_root, year_filter):
         relative_path = rel_key(source, source_root)
-        if args.developed_root and not is_raw_source(source):
-            continue
         if not matches_year_filter(relative_path, year_filter):
             continue
         seen += 1

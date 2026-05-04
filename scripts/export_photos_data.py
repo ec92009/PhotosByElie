@@ -26,14 +26,24 @@ OWNER_ORDER = ["unknown"]
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
 DEFAULT_REGULAR_CAP = 10
 DEFAULT_SELECTION_MODE = "random"
-REGULAR_ASSET_ROOT = Path("assets/regular")
+DIVERSITY_BUCKET_MINUTES = 10
+REGULAR_ASSET_ROOT = Path("assets/expo")
 RESERVE_ASSET_ROOT = Path("assets/reserve")
+EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
+
+
+def ensure_state_folders(root: Path) -> None:
+    for slug in ORDER:
+        folder = root / slug
+        folder.mkdir(parents=True, exist_ok=True)
+        keep = folder / ".gitkeep"
+        if not keep.exists():
+            keep.write_text("\n", encoding="utf-8")
 
 
 def manifest_specs(repo_root: Path) -> list[tuple[Path, str]]:
     return [
-        (repo_root / "assets/lightroom/manifest.json", "lightroom"),
-        (repo_root / "assets/lightroom-ai/manifest.json", "ai"),
+        (repo_root / "assets/reserve/manifest.json", "reserve"),
     ]
 
 
@@ -109,17 +119,40 @@ def source_files(row: dict) -> list[dict]:
 
 
 def source_asset_root(repo_root: Path, mode: str) -> Path:
-    return repo_root / ("assets/lightroom-ai" if mode == "ai" else "assets/lightroom")
+    return repo_root / RESERVE_ASSET_ROOT
 
 
 def regular_asset_rel(row: dict, derivative: str) -> str:
     country = (row.get("gallery_country") or {}).get("slug") or "unknown"
-    return (REGULAR_ASSET_ROOT / derivative / country / f"{row['id']}.jpg").as_posix()
+    suffix = "900" if derivative == "gallery" else "1800"
+    return (REGULAR_ASSET_ROOT / country / f"{row['id']}_{suffix}.jpg").as_posix()
 
 
 def source_derivative_rel(row: dict, mode: str, derivative: str) -> str:
-    root = "assets/lightroom-ai" if mode == "ai" else "assets/lightroom"
-    return f"./{root}/{row['derivatives'][derivative]}"
+    return f"./{RESERVE_ASSET_ROOT.as_posix()}/{row['derivatives'][derivative]}"
+
+
+def photo_object_data(
+    row: dict,
+    mode: str,
+    index: int,
+    gallery_title: str,
+    gallery_rel: str,
+    detail_rel: str,
+) -> dict:
+    full_label = f"{source_files(row)[0]['type']} master" if source_files(row) else "Source file"
+    return {
+        "id": row["id"],
+        "className": f"p{(index % 5) + 1}",
+        "title": title_from_row(row),
+        "caption": caption_from_row(row, gallery_title),
+        "full": full_label,
+        "megapixels": (row.get("dimensions") or {}).get("megapixels") or 0,
+        "gallerySrc": gallery_rel,
+        "imageSrc": detail_rel,
+        "metadata": normalize_metadata(row),
+        "sourceFiles": source_files(row),
+    }
 
 
 def photo_object_lines(
@@ -130,19 +163,19 @@ def photo_object_lines(
     gallery_rel: str,
     detail_rel: str,
 ) -> list[str]:
-    full_label = f"{source_files(row)[0]['type']} master" if source_files(row) else "Source file"
+    photo = photo_object_data(row, mode, index, gallery_title, gallery_rel, detail_rel)
     return [
         "      {",
-        f"        id: {js(row['id'])},",
-        f"        className: {js('p' + str((index % 5) + 1))},",
-        f"        title: {js(title_from_row(row))},",
-        f"        caption: {js(caption_from_row(row, gallery_title))},",
-        f"        full: {js(full_label)},",
-        f"        megapixels: {json.dumps((row.get('dimensions') or {}).get('megapixels') or 0)},",
-        f"        gallerySrc: {js(gallery_rel)},",
-        f"        imageSrc: {js(detail_rel)},",
-        f"        metadata: {json.dumps(normalize_metadata(row), ensure_ascii=False, indent=10)},",
-        f"        sourceFiles: {json.dumps(source_files(row), ensure_ascii=False, indent=10)}",
+        f"        id: {js(photo['id'])},",
+        f"        className: {js(photo['className'])},",
+        f"        title: {js(photo['title'])},",
+        f"        caption: {js(photo['caption'])},",
+        f"        full: {js(photo['full'])},",
+        f"        megapixels: {json.dumps(photo['megapixels'])},",
+        f"        gallerySrc: {js(photo['gallerySrc'])},",
+        f"        imageSrc: {js(photo['imageSrc'])},",
+        f"        metadata: {json.dumps(photo['metadata'], ensure_ascii=False, indent=10)},",
+        f"        sourceFiles: {json.dumps(photo['sourceFiles'], ensure_ascii=False, indent=10)}",
         "      },",
     ]
 
@@ -151,6 +184,7 @@ def copy_regular_assets(repo_root: Path, regular_rows: list[tuple[dict, str]]) -
     publish_root = repo_root / REGULAR_ASSET_ROOT
     if publish_root.exists():
         shutil.rmtree(publish_root)
+    ensure_state_folders(publish_root)
 
     copied = {"gallery": 0, "detail": 0}
     for row, mode in regular_rows:
@@ -177,6 +211,7 @@ def write_regular_manifest(
 ) -> None:
     payload = {
         "schema_version": 1,
+        "state": "expo",
         "regular_cap": regular_cap,
         "selection_mode": selection_mode,
         "seed": seed,
@@ -197,38 +232,36 @@ def write_regular_manifest(
             for row, mode in regular_rows
         ],
     }
-    output = repo_root / REGULAR_ASSET_ROOT / "manifest.json"
+    output = repo_root / EXPO_MANIFEST_PATH
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def write_reserve_data(repo_root: Path, reserve_groups: dict[str, list[tuple[dict, str]]]) -> Path:
-    lines: list[str] = ["window.photosByElieReserveData = {"]
+    payload = {}
     for slug in ORDER:
         number, title, accent, description = LABELS[slug]
         rows = reserve_groups.get(slug, [])
-        lines += [
-            f"  {slug}: {{",
-            f"    number: {js(number)},",
-            f"    title: {js(title)},",
-            f"    description: {js(description)},",
-            f"    accent: {js(accent)},",
-            "    photos: [",
-        ]
-        for index, (row, mode) in enumerate(rows):
-            lines += photo_object_lines(
-                row,
-                mode,
-                index,
-                title,
-                source_derivative_rel(row, mode, "gallery"),
-                source_derivative_rel(row, mode, "detail"),
-            )
-        lines += ["    ]", "  },"]
-    lines.append("};")
-    output = repo_root / RESERVE_ASSET_ROOT / "reserve-data.js"
+        payload[slug] = {
+            "number": number,
+            "title": title,
+            "description": description,
+            "accent": accent,
+            "photos": [
+                photo_object_data(
+                    row,
+                    mode,
+                    index,
+                    title,
+                    source_derivative_rel(row, mode, "gallery"),
+                    source_derivative_rel(row, mode, "detail"),
+                )
+                for index, (row, mode) in enumerate(rows)
+            ],
+        }
+    output = repo_root / RESERVE_ASSET_ROOT / "reserve-data.json"
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return output
 
 
@@ -238,6 +271,46 @@ def sort_rows(rows: list[tuple[dict, str]]) -> list[tuple[dict, str]]:
         key=lambda item: (((item[0].get("capture") or {}).get("sort") or ""), item[0].get("id", "")),
         reverse=True,
     )
+
+
+def diversity_bucket(row: dict) -> str:
+    capture = row.get("capture") or {}
+    value = str(capture.get("sort") or capture.get("datetime") or "")
+    match = re.match(r"^(\d{4})[-:]?(\d{2})[-:]?(\d{2})[ T:]?(\d{2})?:?(\d{2})?", value)
+    if match and match.group(4) and match.group(5):
+        year, month, day, hour, minute = (int(part) for part in match.groups()[:5])
+        bucket = ((hour * 60) + minute) // DIVERSITY_BUCKET_MINUTES
+        return f"{year:04d}-{month:02d}-{day:02d}:{bucket:02d}"
+    if match:
+        return f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
+    fallback = str(row.get("relative_path") or row.get("id") or "")
+    compact = re.search(r"\b(\d{4})(\d{2})(\d{2})", fallback)
+    if compact:
+        return f"{compact.group(1)}-{compact.group(2)}-{compact.group(3)}"
+    return f"id:{row.get('id', '')}"
+
+
+def diversified_random_order(rows: list[tuple[dict, str]], rng: random.Random) -> list[tuple[dict, str]]:
+    buckets: dict[str, list[tuple[dict, str]]] = defaultdict(list)
+    for item in rows:
+        buckets[diversity_bucket(item[0])].append(item)
+
+    for bucket_rows in buckets.values():
+        rng.shuffle(bucket_rows)
+
+    ordered: list[tuple[dict, str]] = []
+    active = list(buckets)
+    while active:
+        rng.shuffle(active)
+        next_active = []
+        for bucket in active:
+            bucket_rows = buckets[bucket]
+            if bucket_rows:
+                ordered.append(bucket_rows.pop())
+            if bucket_rows:
+                next_active.append(bucket)
+        active = next_active
+    return ordered
 
 
 def load_blacklist_payload(path: Path | None) -> dict:
@@ -251,7 +324,7 @@ def blacklist_ids_from_payload(payload: dict) -> set[str]:
 
 
 def regular_state_from_payload(payload: dict) -> dict[str, list[str]]:
-    value = payload.get("regular_state")
+    value = payload.get("expo_state") or payload.get("regular_state")
     if not isinstance(value, dict):
         return {}
     state: dict[str, list[str]] = {}
@@ -356,7 +429,7 @@ def select_regular_groups(
 
         fill_pool = [item for item in regular_eligible if item[0].get("id") not in selected_ids]
         if selection_mode == "random":
-            rng.shuffle(fill_pool)
+            fill_pool = diversified_random_order(fill_pool, rng)
         selected.extend(fill_pool[: max(0, regular_cap - len(selected))])
 
         if pinned_regular_ids.get(slug) or selection_mode == "random":
@@ -477,7 +550,6 @@ def write_photos_data(
         'window.photosByElieFormatLabel = (source) => {',
         '  const value = String(source || "");',
         '  const checks = [',
-        r'    { label: "RAW", pattern: /\b(DNG|CR2|CR3|NEF|ARW|RAF|ORF|RW2)\b/i },',
         r'    { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },',
         r'    { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },',
         r'    { label: "PSD", pattern: /\bPSD\b/i },',

@@ -14,13 +14,13 @@
     if (!enabled) return Promise.resolve({});
     if (window.photosByElieHiddenData) return Promise.resolve(window.photosByElieHiddenData);
     if (loadPromise) return loadPromise;
-    loadPromise = new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = `./assets/hidden/hidden-data.js${currentVersionQuery()}`;
-      script.onload = () => resolve(window.photosByElieHiddenData || {});
-      script.onerror = () => resolve({});
-      document.head.append(script);
-    });
+    loadPromise = fetch(`./assets/hidden/hidden-data.json${currentVersionQuery()}`)
+      .then((response) => (response.ok ? response.json() : {}))
+      .then((payload) => {
+        window.photosByElieHiddenData = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+        return window.photosByElieHiddenData;
+      })
+      .catch(() => ({}));
     return loadPromise;
   };
 

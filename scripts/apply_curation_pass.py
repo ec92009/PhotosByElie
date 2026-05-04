@@ -5,6 +5,7 @@ import argparse
 import importlib.util
 import json
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -12,11 +13,13 @@ from pathlib import Path
 
 from export_photos_data import (
     DEFAULT_REGULAR_CAP,
+    EXPO_MANIFEST_PATH,
     LABELS,
     ORDER,
     blacklist_ids_from_payload,
     country_assignments_from_payload,
     existing_manifest_specs,
+    ensure_state_folders,
     manifest_specs as source_manifest_specs,
     regular_state_from_payload,
     reserve_only_ids_from_payload,
@@ -39,7 +42,8 @@ AI_SOURCE_ROOT_CANDIDATES = [
 ]
 
 HIDDEN_ASSET_ROOT = Path("assets/hidden")
-MODERATION_LOG_ROOT = Path("assets/.moderation-hidden")
+MODERATION_LOG_ROOT = Path(".curation-logs")
+DIVERSITY_BUCKET_MINUTES = 10
 
 
 def load_builder(repo_root: Path):
@@ -75,8 +79,8 @@ def rebuild_missing_manifests(
 
     jobs = [
         {
-            "manifest": repo_root / "assets/lightroom/manifest.json",
-            "output": "assets/lightroom",
+            "manifest": repo_root / "assets/reserve/manifest.json",
+            "output": "assets/reserve",
             "args": [],
             "source": resolve_optional_source_root(
                 source_root,
@@ -85,15 +89,21 @@ def rebuild_missing_manifests(
             ),
         },
         {
-            "manifest": repo_root / "assets/lightroom-ai/manifest.json",
-            "output": "assets/lightroom-ai",
+            "manifest": repo_root / "assets/reserve/manifest.json",
+            "output": "assets/reserve",
             "args": ["--select", "all", "--force-country", "ai"],
             "source": resolve_optional_source_root(ai_source_root, AI_SOURCE_ROOT_CANDIDATES, "AI"),
+            "append_after_camera": True,
         },
     ]
 
+    rebuilt_manifest_paths = set()
     for job in jobs:
-        if job["manifest"].exists() or not job["source"]:
+        if not job["source"]:
+            continue
+        if job["manifest"].exists() and job["manifest"] not in rebuilt_manifest_paths:
+            continue
+        if job.get("append_after_camera") and not rebuilt_manifest_paths and job["manifest"].exists():
             continue
         command = [
             sys.executable,
@@ -111,6 +121,7 @@ def rebuild_missing_manifests(
                 "source_root": str(job["source"]),
             }
         )
+        rebuilt_manifest_paths.add(job["manifest"])
     return rebuilt
 
 
@@ -141,7 +152,8 @@ def clean_site_src(value: str | None) -> str:
 
 
 def hidden_asset_rel(photo: dict, derivative: str, slug: str) -> str:
-    return f"{HIDDEN_ASSET_ROOT.as_posix()}/{derivative}/{slug}/{photo['id']}.jpg"
+    suffix = "900" if derivative == "gallery" else "1800"
+    return f"{HIDDEN_ASSET_ROOT.as_posix()}/{slug}/{photo['id']}_{suffix}.jpg"
 
 
 def move_derivative(repo_root: Path, relative_path: str, destination_rel: str | None = None) -> dict | None:
@@ -173,7 +185,7 @@ def move_derivative(repo_root: Path, relative_path: str, destination_rel: str | 
 
 
 def move_regular_derivatives(repo_root: Path, photo_ids: set[str]) -> list[dict]:
-    regular_manifest = repo_root / "assets/regular/manifest.json"
+    regular_manifest = repo_root / EXPO_MANIFEST_PATH
     if not regular_manifest.exists():
         return []
     payload = json.loads(regular_manifest.read_text())
@@ -192,7 +204,7 @@ def move_regular_derivatives(repo_root: Path, photo_ids: set[str]) -> list[dict]
 
 
 def regular_cap_from_payload(payload: dict, fallback: int = DEFAULT_REGULAR_CAP) -> int:
-    value = payload.get("regular_cap")
+    value = payload.get("expo_cap") or payload.get("regular_cap")
     if isinstance(value, int) and value > 0:
         return value
     return fallback
@@ -229,13 +241,13 @@ const root = process.argv[1];
 const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "photos-data.js"), "utf8"), context);
-const reservePath = path.join(root, "assets/reserve/reserve-data.js");
+const reservePath = path.join(root, "assets/reserve/reserve-data.json");
 if (fs.existsSync(reservePath)) {
-  vm.runInContext(fs.readFileSync(reservePath, "utf8"), context);
+  context.window.photosByElieReserveData = JSON.parse(fs.readFileSync(reservePath, "utf8"));
 }
-const hiddenPath = path.join(root, "assets/hidden/hidden-data.js");
+const hiddenPath = path.join(root, "assets/hidden/hidden-data.json");
 if (fs.existsSync(hiddenPath)) {
-  vm.runInContext(fs.readFileSync(hiddenPath, "utf8"), context);
+  context.window.photosByElieHiddenData = JSON.parse(fs.readFileSync(hiddenPath, "utf8"));
 }
 process.stdout.write(JSON.stringify({
   data: context.window.photosByElieData || {},
@@ -251,6 +263,56 @@ process.stdout.write(JSON.stringify({
         text=True,
     )
     return json.loads(result.stdout)
+
+
+def metadata_value(photo: dict, label: str) -> str:
+    for item in photo.get("metadata") or []:
+        if item.get("label") == label and item.get("value"):
+            return str(item["value"])
+    return ""
+
+
+def diversity_bucket(photo: dict) -> str:
+    value = " ".join(
+        item for item in [
+            metadata_value(photo, "Captured"),
+            str(photo.get("caption") or ""),
+            str(photo.get("title") or ""),
+            str(photo.get("id") or ""),
+        ]
+        if item
+    )
+    match = re.search(r"\b(\d{4})[:/-]?(\d{2})[:/-]?(\d{2})(?:[ T:]+(\d{2}):?(\d{2}))?", value)
+    if match and match.group(4) and match.group(5):
+        year, month, day, hour, minute = (int(part) for part in match.groups()[:5])
+        bucket = ((hour * 60) + minute) // DIVERSITY_BUCKET_MINUTES
+        return f"{year:04d}-{month:02d}-{day:02d}:{bucket:02d}"
+    if match:
+        return f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
+    return f"id:{photo.get('id', '')}"
+
+
+def diversified_random_order(photos: list[dict], rng: random.Random) -> list[dict]:
+    buckets: dict[str, list[dict]] = {}
+    for photo in photos:
+        buckets.setdefault(diversity_bucket(photo), []).append(photo)
+
+    for bucket_photos in buckets.values():
+        rng.shuffle(bucket_photos)
+
+    ordered: list[dict] = []
+    active = list(buckets)
+    while active:
+        rng.shuffle(active)
+        next_active = []
+        for bucket in active:
+            bucket_photos = buckets[bucket]
+            if bucket_photos:
+                ordered.append(bucket_photos.pop())
+            if bucket_photos:
+                next_active.append(bucket)
+        active = next_active
+    return ordered
 
 
 def candidate_asset_roots(repo_root: Path, asset_sources: list[Path] | None = None) -> list[Path]:
@@ -309,15 +371,18 @@ def find_asset_path(relative_path: str, roots: list[Path]) -> Path | None:
 
 
 def regular_asset_rel(photo: dict, derivative: str, slug: str) -> str:
-    return f"assets/regular/{derivative}/{slug}/{photo['id']}.jpg"
+    suffix = "900" if derivative == "gallery" else "1800"
+    return f"assets/expo/{slug}/{photo['id']}_{suffix}.jpg"
 
 
 def reserve_return_rel(photo: dict, derivative: str, slug: str) -> str:
-    return f"assets/reserve/regular-returned/{derivative}/{slug}/{photo['id']}.jpg"
+    suffix = "900" if derivative == "gallery" else "1800"
+    return f"assets/reserve/{slug}/{photo['id']}_{suffix}.jpg"
 
 
 def reserve_hidden_return_rel(photo: dict, derivative: str, slug: str) -> str:
-    return f"assets/reserve/hidden-returned/{derivative}/{slug}/{photo['id']}.jpg"
+    suffix = "900" if derivative == "gallery" else "1800"
+    return f"assets/reserve/{slug}/{photo['id']}_{suffix}.jpg"
 
 
 def photo_has_assets(photo: dict, roots: list[Path]) -> bool:
@@ -411,7 +476,6 @@ def helper_lines() -> list[str]:
         "window.photosByElieFormatLabel = (source) => {",
         '  const value = String(source || "");',
         "  const checks = [",
-        r'    { label: "RAW", pattern: /\b(DNG|CR2|CR3|NEF|ARW|RAF|ORF|RW2)\b/i },',
         r'    { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },',
         r'    { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },',
         r'    { label: "PSD", pattern: /\bPSD\b/i },',
@@ -457,28 +521,40 @@ def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[
 
 
 def write_reserve_data_from_site(repo_root: Path, reserve_groups: dict[str, list[dict]]) -> None:
-    lines = ["window.photosByElieReserveData = {"]
+    payload = {}
     for slug in ORDER:
-        lines += collection_lines(slug, reserve_groups.get(slug, []))
-    lines.append("};")
-    output = repo_root / "assets/reserve/reserve-data.js"
+        number, title, accent, description = LABELS[slug]
+        payload[slug] = {
+            "number": number,
+            "title": title,
+            "description": description,
+            "accent": accent,
+            "photos": reserve_groups.get(slug, []),
+        }
+    output = repo_root / "assets/reserve/reserve-data.json"
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def write_hidden_data_from_site(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> None:
-    lines = ["window.photosByElieHiddenData = {"]
+    payload = {}
     for slug in ORDER:
-        lines += collection_lines(slug, hidden_groups.get(slug, []))
-    lines.append("};")
-    output = repo_root / HIDDEN_ASSET_ROOT / "hidden-data.js"
+        number, title, accent, description = LABELS[slug]
+        payload[slug] = {
+            "number": number,
+            "title": title,
+            "description": description,
+            "accent": accent,
+            "photos": hidden_groups.get(slug, []),
+        }
+    output = repo_root / HIDDEN_ASSET_ROOT / "hidden-data.json"
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def source_mode_for(photo: dict, slug: str) -> str:
     src = clean_site_src(photo.get("_originalGallerySrc") or photo.get("gallerySrc"))
-    return "ai" if "assets/lightroom-ai/" in src or slug == "ai" else "lightroom"
+    return "ai" if slug == "ai" else "reserve"
 
 
 def write_regular_manifest_from_site(
@@ -492,6 +568,7 @@ def write_regular_manifest_from_site(
     regular_rows = [(slug, photo) for slug in ORDER for photo in regular_groups.get(slug, [])]
     payload = {
         "schema_version": 1,
+        "state": "expo",
         "regular_cap": regular_cap,
         "selection_mode": selection_mode,
         "seed": None,
@@ -519,7 +596,7 @@ def write_regular_manifest_from_site(
     for slug, photos in regular_groups.items():
         hidden_in_slug = hidden_ids.intersection({photo["id"] for photo in photos})
         payload["unworthy_counts"][slug] = len(hidden_in_slug)
-    output = repo_root / "assets/regular/manifest.json"
+    output = repo_root / EXPO_MANIFEST_PATH
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -650,8 +727,7 @@ def apply_asset_curation(
                         continue
                     candidates.append(source_photo)
                     seen_ids.add(photo_id)
-        rng.shuffle(candidates)
-        return candidates
+        return diversified_random_order(candidates, rng)
 
     for slug in ORDER:
         if slug == "unknown":
@@ -694,10 +770,6 @@ def apply_asset_curation(
         and photo.get("id") not in assigned_ids
     ][:regular_cap]
 
-    for slug in ORDER:
-        if slug != "unknown":
-            rng.shuffle(regular_groups[slug])
-
     if missing_ids:
         raise FileNotFoundError(f"Curation Pass referenced photos not found in Regular or Reserve data: {', '.join(missing_ids[:20])}")
 
@@ -730,6 +802,7 @@ def apply_asset_curation(
             continue
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
+    ensure_state_folders(repo_root / "assets/expo")
 
     reserve_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
     hidden_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
@@ -857,6 +930,8 @@ def apply_asset_curation(
                     reserve_groups[target_slug].append(demoted)
                     reserve_added_ids.add(photo_id)
 
+    ensure_state_folders(repo_root / "assets/reserve")
+    ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     write_photos_data_from_site(repo_root, regular_groups, reserve_groups)
     write_regular_manifest_from_site(
         repo_root,
@@ -900,7 +975,11 @@ def apply_curation_pass(
     if rebuild_manifests:
         rebuilt_manifests = rebuild_missing_manifests(repo_root, source_root, ai_source_root)
     manifest_specs = [(path, mode) for path, mode in source_manifest_specs(repo_root) if path.exists()]
-    if not manifest_specs:
+    has_site_asset_catalog = (
+        (repo_root / "assets/reserve/reserve-data.json").exists()
+        or (repo_root / "assets/hidden/hidden-data.json").exists()
+    )
+    if has_site_asset_catalog or not manifest_specs:
         curation_log = apply_asset_curation(repo_root, payload, resolved_regular_cap, asset_sources)
         curation_log["rebuilt_manifests"] = rebuilt_manifests
         log_dir = repo_root / MODERATION_LOG_ROOT
@@ -929,7 +1008,7 @@ def apply_curation_pass(
             if slug not in ORDER:
                 slug = "unknown"
             for derivative, derivative_rel in row.get("derivatives", {}).items():
-                asset_root = "assets/lightroom-ai/" if mode == "ai" else "assets/lightroom/"
+                asset_root = "assets/reserve/"
                 moved_row = move_derivative(repo_root, asset_root + derivative_rel, hidden_asset_rel(row, derivative, slug))
                 if moved_row:
                     moved.append(moved_row)

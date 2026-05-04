@@ -35,7 +35,7 @@
   };
 
   const allUnknownPhotos = () => {
-    const regular = (window.photosByElieOwnerData?.unknown?.photos || []).map((photo) => ({ ...photo, source: "Regular" }));
+    const regular = (window.photosByElieOwnerData?.unknown?.photos || []).map((photo) => ({ ...photo, source: "Expo" }));
     const reserve = (window.photosByElieReserveData?.unknown?.photos || []).map((photo) => ({ ...photo, source: "Reserve" }));
     const byId = new Map();
     regular.concat(reserve).forEach((photo) => {

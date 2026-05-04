@@ -2,11 +2,15 @@
 if (window.photosByElieReserve?.enabled) {
   await window.photosByElieReserve.load();
 }
+if (window.photosByElieHidden?.enabled) {
+  await window.photosByElieHidden.load();
+}
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
 const collections = window.photosByElieData || {};
 const ownerCollections = window.photosByElieOwnerData || {};
 const reserveCollections = window.photosByElieReserveData || {};
+const hiddenCollections = window.photosByElieHiddenData || {};
 const fallbackCollection = Object.values(collections).find((collection) => Array.isArray(collection.photos) && collection.photos.length)
   || collections.france
   || { title: "Gallery", accent: "", photos: [] };
@@ -26,9 +30,13 @@ const reserveCollectionEntry = regularCollectionEntry ? null : Object.entries(re
 const ownerCollectionEntry = Object.entries(ownerCollections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
-const collectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry;
+const hiddenCollectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry ? null : Object.entries(hiddenCollections).find(([, collection]) =>
+  collection.photos.some((photo) => photo.id === photoId)
+);
+const collectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry || hiddenCollectionEntry;
 const isReserveCollection = Boolean(!regularCollectionEntry && reserveCollectionEntry);
 const isOwnerCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && ownerCollectionEntry);
+const isHiddenCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && !ownerCollectionEntry && hiddenCollectionEntry);
 const [collectionKey, collection] = collectionEntry || ["france", fallbackCollection];
 const photo = promotedPhoto || collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
 const photoIndex = photo ? collection.photos.findIndex((item) => item.id === photo.id) : -1;
@@ -41,7 +49,7 @@ const likedStore = window.photosByElieLiked;
 const unworthyStore = window.photosByElieUnworthy;
 const localModerationEnabled = Boolean(unworthyStore?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
-if (isOwnerCollection && !localModerationEnabled) {
+if ((isOwnerCollection || isHiddenCollection) && !localModerationEnabled) {
   window.location.replace(versionedHref("./"));
   return;
 }
@@ -74,6 +82,8 @@ const visibleCollectionPhotos = () => visiblePhotosFor(collectionKey, collection
 const detailScopeEntries = () => {
   const scope = isOwnerCollection
     ? ownerCollections
+    : isHiddenCollection
+      ? hiddenCollections
     : isReserveCollection
       ? reserveCollections
       : collections;

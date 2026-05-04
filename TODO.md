@@ -25,6 +25,7 @@ Last updated: 2026-05-04
 - Tightened homepage sampling so representative photos refresh after a full public-country carousel cycle, not every single card change.
 - Re-ran the Curation Pass cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
 - Let visible side cards in the collection carousel navigate directly to their galleries instead of requiring a foregrounding click first.
+- Added the visible ignored `assets/hidden` folder and a local Hidden catalog so the three physical asset states are now Expo, Reserve, and Hidden.
 
 ## Current Priority Stack
 
@@ -34,7 +35,7 @@ Last updated: 2026-05-04
    - Defer sold-photo pinning until checkout/sales tracking exists; when implemented, sold photos sit outside the Expo cap.
 
 2. **Harden Expo/Reserve/Hidden publishing.**
-   - Keep Expo small and publishable, keep Reserve and Hidden ignored/local, and preserve the safe GitHub Pages path without archive churn.
+   - Keep Expo small and publishable, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
    - Keep treating the Owner-selected Expo cap as an upper bound from the Curation Pass, not as a fixed global default.
 
 3. **Improve live review ergonomics.**
@@ -121,7 +122,7 @@ Last updated: 2026-05-04
    - Keep Expo, `Reserve`, and Hidden as distinct states.
    - Use the Owner-selected Expo cap from each Curation Pass, treating it as an upper bound rather than a required count.
    - Future sold/pinned photos should be added on top of the Owner cap, not counted inside it.
-   - Store reserve assets in a location that can be ignored from Git when appropriate.
+   - Store Reserve and Hidden assets in visible local folders that are ignored from Git.
    - When an Expo photo is hidden on localhost, replace it with a random reserve photo from the same country when one is available.
    - Keep applied Curation Pass fills randomized so Reserve promotions do not publish as chronological sequences.
 

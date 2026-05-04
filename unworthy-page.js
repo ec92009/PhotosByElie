@@ -1,6 +1,7 @@
 (() => {
   const unworthyStore = window.photosByElieUnworthy;
   const reserveStore = window.photosByElieReserve;
+  const hiddenStore = window.photosByElieHidden;
   const galleryRoot = document.querySelector("[data-unworthy-root]");
   const status = document.querySelector("[data-unworthy-status]");
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
@@ -34,6 +35,7 @@
     };
     addCollection(window.photosByElieData, "regular");
     addCollection(window.photosByElieReserveData, "reserve");
+    addCollection(window.photosByElieHiddenData, "hidden");
     return byId;
   };
 
@@ -166,6 +168,9 @@
 
   window.addEventListener("photosbyelie:unworthychange", render);
 
-  reserveStore?.load?.().then(render);
+  Promise.all([
+    reserveStore?.load?.() || Promise.resolve({}),
+    hiddenStore?.load?.() || Promise.resolve({}),
+  ]).then(render);
   render();
 })();

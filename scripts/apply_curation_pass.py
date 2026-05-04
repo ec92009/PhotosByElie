@@ -38,6 +38,9 @@ AI_SOURCE_ROOT_CANDIDATES = [
     Path.home() / "Pictures/LR/_All Leonardo",
 ]
 
+HIDDEN_ASSET_ROOT = Path("assets/hidden")
+MODERATION_LOG_ROOT = Path("assets/.moderation-hidden")
+
 
 def load_builder(repo_root: Path):
     script_path = repo_root / "scripts" / "build_lightroom_thumbnails.py"
@@ -133,15 +136,38 @@ def args_from_manifest(payload: dict):
     )
 
 
-def move_derivative(repo_root: Path, relative_path: str) -> dict | None:
-    source = repo_root / relative_path
+def clean_site_src(value: str | None) -> str:
+    return str(value or "").removeprefix("./")
+
+
+def hidden_asset_rel(photo: dict, derivative: str, slug: str) -> str:
+    return f"{HIDDEN_ASSET_ROOT.as_posix()}/{derivative}/{slug}/{photo['id']}.jpg"
+
+
+def move_derivative(repo_root: Path, relative_path: str, destination_rel: str | None = None) -> dict | None:
+    source_rel = clean_site_src(relative_path)
+    if not source_rel:
+        return None
+    source = repo_root / source_rel
+    destination = repo_root / (destination_rel or (HIDDEN_ASSET_ROOT / source_rel).as_posix())
+    if destination.exists() and not source.exists():
+        return {
+            "from": source_rel,
+            "to": destination.relative_to(repo_root).as_posix(),
+            "already": True,
+        }
     if not source.exists():
         return None
-    destination = repo_root / "assets" / ".moderation-hidden" / relative_path
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.resolve() == destination.resolve():
+        return {
+            "from": source.relative_to(repo_root).as_posix(),
+            "to": destination.relative_to(repo_root).as_posix(),
+            "already": True,
+        }
     source.replace(destination)
     return {
-        "from": relative_path,
+        "from": source_rel,
         "to": destination.relative_to(repo_root).as_posix(),
     }
 
@@ -155,8 +181,11 @@ def move_regular_derivatives(repo_root: Path, photo_ids: set[str]) -> list[dict]
     for row in payload.get("photos", []):
         if row.get("id") not in photo_ids:
             continue
-        for derivative_rel in (row.get("derivatives") or {}).values():
-            moved_row = move_derivative(repo_root, derivative_rel)
+        slug = ((row.get("gallery_country") or {}).get("slug") or "unknown")
+        if slug not in ORDER:
+            slug = "unknown"
+        for derivative, derivative_rel in (row.get("derivatives") or {}).items():
+            moved_row = move_derivative(repo_root, derivative_rel, hidden_asset_rel(row, derivative, slug))
             if moved_row:
                 moved.append({"id": row.get("id"), "asset": moved_row})
     return moved
@@ -191,11 +220,6 @@ def apply_country_assignments(rows: dict[str, dict], assignments: dict[str, str]
         })
     return changed
 
-
-def clean_site_src(value: str | None) -> str:
-    return str(value or "").removeprefix("./")
-
-
 def load_site_data(repo_root: Path) -> dict:
     script = r"""
 const fs = require("fs");
@@ -209,10 +233,15 @@ const reservePath = path.join(root, "assets/reserve/reserve-data.js");
 if (fs.existsSync(reservePath)) {
   vm.runInContext(fs.readFileSync(reservePath, "utf8"), context);
 }
+const hiddenPath = path.join(root, "assets/hidden/hidden-data.js");
+if (fs.existsSync(hiddenPath)) {
+  vm.runInContext(fs.readFileSync(hiddenPath, "utf8"), context);
+}
 process.stdout.write(JSON.stringify({
   data: context.window.photosByElieData || {},
   owner: context.window.photosByElieOwnerData || {},
-  reserve: context.window.photosByElieReserveData || {}
+  reserve: context.window.photosByElieReserveData || {},
+  hidden: context.window.photosByElieHiddenData || {}
 }));
 """
     result = subprocess.run(
@@ -285,6 +314,10 @@ def regular_asset_rel(photo: dict, derivative: str, slug: str) -> str:
 
 def reserve_return_rel(photo: dict, derivative: str, slug: str) -> str:
     return f"assets/reserve/regular-returned/{derivative}/{slug}/{photo['id']}.jpg"
+
+
+def reserve_hidden_return_rel(photo: dict, derivative: str, slug: str) -> str:
+    return f"assets/reserve/hidden-returned/{derivative}/{slug}/{photo['id']}.jpg"
 
 
 def photo_has_assets(photo: dict, roots: list[Path]) -> bool:
@@ -433,6 +466,16 @@ def write_reserve_data_from_site(repo_root: Path, reserve_groups: dict[str, list
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_hidden_data_from_site(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> None:
+    lines = ["window.photosByElieHiddenData = {"]
+    for slug in ORDER:
+        lines += collection_lines(slug, hidden_groups.get(slug, []))
+    lines.append("};")
+    output = repo_root / HIDDEN_ASSET_ROOT / "hidden-data.js"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def source_mode_for(photo: dict, slug: str) -> str:
     src = clean_site_src(photo.get("_originalGallerySrc") or photo.get("gallerySrc"))
     return "ai" if "assets/lightroom-ai/" in src or slug == "ai" else "lightroom"
@@ -482,11 +525,26 @@ def write_regular_manifest_from_site(
 
 
 def move_asset(repo_root: Path, relative_path: str, destination_rel: str) -> dict | None:
-    source = repo_root / clean_site_src(relative_path)
+    source_rel = clean_site_src(relative_path)
+    if not source_rel:
+        return None
+    source = repo_root / source_rel
+    destination = repo_root / destination_rel
+    if destination.exists() and not source.exists():
+        return {
+            "from": source_rel,
+            "to": destination.relative_to(repo_root).as_posix(),
+            "already": True,
+        }
     if not source.exists():
         return None
-    destination = repo_root / destination_rel
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.resolve() == destination.resolve():
+        return {
+            "from": source.relative_to(repo_root).as_posix(),
+            "to": destination.relative_to(repo_root).as_posix(),
+            "already": True,
+        }
     source.replace(destination)
     return {"from": source.relative_to(repo_root).as_posix(), "to": destination.relative_to(repo_root).as_posix()}
 
@@ -512,6 +570,10 @@ def apply_asset_curation(
     current_groups["unknown"] = list((site.get("owner", {}).get("unknown") or {}).get("photos") or [])
     reserve_groups_input = {
         slug: list((site.get("reserve", {}).get(slug) or {}).get("photos") or [])
+        for slug in ORDER
+    }
+    hidden_groups_input = {
+        slug: list((site.get("hidden", {}).get(slug) or {}).get("photos") or [])
         for slug in ORDER
     }
 
@@ -670,17 +732,90 @@ def apply_asset_curation(
         shutil.copy2(source_path, target_path)
 
     reserve_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
+    hidden_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
     skipped_missing_reserve: set[str] = set()
+    missing_hidden_assets: set[str] = set()
+    moved_hidden_ids: set[str] = set()
+    reserve_added_ids: set[str] = set()
+
+    def move_photo_to_hidden(source_slug: str, source_photo: dict) -> list[dict]:
+        photo_id = source_photo.get("id")
+        if not photo_id:
+            return []
+        target_slug = country_assignments.get(photo_id, source_slug)
+        if target_slug not in hidden_groups:
+            target_slug = source_slug if source_slug in hidden_groups else "unknown"
+        hidden_photo = copy_photo(source_photo)
+        moves: list[dict] = []
+        usable = False
+        for derivative, key in [("gallery", "gallerySrc"), ("detail", "imageSrc")]:
+            target_rel = hidden_asset_rel(source_photo, derivative, target_slug)
+            moved = move_asset(repo_root, source_photo.get(key), target_rel)
+            if moved:
+                hidden_photo[key] = f"./{target_rel}"
+                moves.append(moved)
+                usable = True
+            elif (repo_root / target_rel).exists():
+                hidden_photo[key] = f"./{target_rel}"
+                usable = True
+            else:
+                missing_hidden_assets.add(clean_site_src(source_photo.get(key)))
+        if usable and photo_id not in moved_hidden_ids:
+            hidden_groups[target_slug].append(hidden_photo)
+            moved_hidden_ids.add(photo_id)
+        return moves
+
+    def move_hidden_photo_to_reserve(source_slug: str, source_photo: dict) -> list[dict]:
+        photo_id = source_photo.get("id")
+        if not photo_id:
+            return []
+        target_slug = country_assignments.get(photo_id, source_slug)
+        if target_slug not in reserve_groups:
+            target_slug = source_slug if source_slug in reserve_groups else "unknown"
+        reserve_photo = copy_photo(source_photo)
+        moves: list[dict] = []
+        usable = False
+        for derivative, key in [("gallery", "gallerySrc"), ("detail", "imageSrc")]:
+            target_rel = reserve_hidden_return_rel(source_photo, derivative, target_slug)
+            moved = move_asset(repo_root, source_photo.get(key), target_rel)
+            if moved:
+                reserve_photo[key] = f"./{target_rel}"
+                moves.append(moved)
+                usable = True
+            elif (repo_root / target_rel).exists():
+                reserve_photo[key] = f"./{target_rel}"
+                usable = True
+        if usable and photo_id not in reserve_added_ids:
+            reserve_groups[target_slug].append(reserve_photo)
+            reserve_added_ids.add(photo_id)
+        return moves
+
+    for slug, photos in hidden_groups_input.items():
+        for source_photo in photos:
+            photo_id = source_photo.get("id")
+            if not photo_id or photo_id in target_ids:
+                continue
+            if photo_id in hidden_ids:
+                move_photo_to_hidden(slug, source_photo)
+                continue
+            move_hidden_photo_to_reserve(slug, source_photo)
+
     for slug, photos in reserve_groups_input.items():
         for source_photo in photos:
             photo_id = source_photo.get("id")
-            if not photo_id or photo_id in hidden_ids or photo_id in target_ids:
+            if not photo_id or photo_id in target_ids:
+                continue
+            if photo_id in hidden_ids:
+                move_photo_to_hidden(slug, source_photo)
                 continue
             target_slug = country_assignments.get(photo_id, slug)
             if target_slug not in reserve_groups:
                 target_slug = slug if slug in reserve_groups else "unknown"
+            if photo_id in reserve_added_ids:
+                continue
             if photo_has_assets(source_photo, roots):
                 reserve_groups[target_slug].append(copy_photo(source_photo))
+                reserve_added_ids.add(photo_id)
             else:
                 skipped_missing_reserve.add(photo_id)
 
@@ -698,7 +833,14 @@ def apply_asset_curation(
             for derivative, key in [("gallery", "gallerySrc"), ("detail", "imageSrc")]:
                 source_rel = clean_site_src(source_photo.get(key))
                 if is_hidden:
-                    moved = move_derivative(repo_root, source_rel)
+                    target_rel = hidden_asset_rel(source_photo, derivative, target_slug)
+                    moved = move_asset(repo_root, source_rel, target_rel)
+                    if moved:
+                        demoted[key] = f"./{target_rel}"
+                    elif (repo_root / target_rel).exists():
+                        demoted[key] = f"./{target_rel}"
+                    else:
+                        missing_hidden_assets.add(source_rel)
                 else:
                     target_rel = reserve_return_rel(source_photo, derivative, target_slug)
                     moved = move_asset(repo_root, source_rel, target_rel)
@@ -706,8 +848,14 @@ def apply_asset_curation(
                         demoted[key] = f"./{target_rel}"
                 if moved:
                     moved_regular.append({"id": photo_id, "asset": moved})
-            if not is_hidden:
-                reserve_groups[target_slug].append(demoted)
+            if is_hidden:
+                if photo_id not in moved_hidden_ids:
+                    hidden_groups[target_slug].append(demoted)
+                    moved_hidden_ids.add(photo_id)
+            else:
+                if photo_id not in reserve_added_ids:
+                    reserve_groups[target_slug].append(demoted)
+                    reserve_added_ids.add(photo_id)
 
     write_photos_data_from_site(repo_root, regular_groups, reserve_groups)
     write_regular_manifest_from_site(
@@ -719,11 +867,14 @@ def apply_asset_curation(
         "random-curation-pass" if randomize_expo_selection else "curation-pass",
     )
     write_reserve_data_from_site(repo_root, reserve_groups)
+    write_hidden_data_from_site(repo_root, hidden_groups)
     return {
         "mode": "direct-assets",
         "regular": [{"slug": slug, "count": len(photos)} for slug, photos in regular_groups.items()],
         "reserve": [{"slug": slug, "count": len(photos)} for slug, photos in reserve_groups.items()],
+        "hidden": [{"slug": slug, "count": len(photos)} for slug, photos in hidden_groups.items()],
         "moved_regular": moved_regular,
+        "hidden_asset_missing_count": len(missing_hidden_assets),
         "unavailable_regular_ids": sorted(unavailable_regular_ids),
         "skipped_missing_reserve_count": len(skipped_missing_reserve),
         "asset_roots": [str(root) for root in roots],
@@ -752,7 +903,7 @@ def apply_curation_pass(
     if not manifest_specs:
         curation_log = apply_asset_curation(repo_root, payload, resolved_regular_cap, asset_sources)
         curation_log["rebuilt_manifests"] = rebuilt_manifests
-        log_dir = repo_root / "assets" / ".moderation-hidden"
+        log_dir = repo_root / MODERATION_LOG_ROOT
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / f"{curation_path.stem}.applied.json"
         log_path.write_text(json.dumps({"curation_pass": str(curation_path), "applied": curation_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -774,9 +925,12 @@ def apply_curation_pass(
             if row.get("id") not in photo_ids:
                 continue
             moved = []
-            for derivative_rel in row.get("derivatives", {}).values():
+            slug = ((row.get("gallery_country") or {}).get("slug") or "unknown")
+            if slug not in ORDER:
+                slug = "unknown"
+            for derivative, derivative_rel in row.get("derivatives", {}).items():
                 asset_root = "assets/lightroom-ai/" if mode == "ai" else "assets/lightroom/"
-                moved_row = move_derivative(repo_root, asset_root + derivative_rel)
+                moved_row = move_derivative(repo_root, asset_root + derivative_rel, hidden_asset_rel(row, derivative, slug))
                 if moved_row:
                     moved.append(moved_row)
             curation_log["ingest"].append({
@@ -790,7 +944,7 @@ def apply_curation_pass(
         builder.write_keyword_index(manifest_path.with_name("keywords.json"), rows)
         builder.write_collection_index(manifest_path.with_name("collections.json"), rows)
 
-    log_dir = repo_root / "assets" / ".moderation-hidden"
+    log_dir = repo_root / MODERATION_LOG_ROOT
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"{curation_path.stem}.applied.json"
     log_path.write_text(json.dumps({"curation_pass": str(curation_path), "applied": curation_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -7,14 +7,15 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build prepared for publish: `v65.24`
-- Local `main` is currently clean and synced before the next visible build commit.
+- Current local visible build prepared for publish: `v65.25`
+- Local `main` contains the verified v65.25 Hidden-folder fix and is ready for commit and push.
 
 ## Latest Decisions
 
 - Use the terms `Expo`, `Reserve`, and `Hidden` for the three curation states.
 - `assets/regular` remains the publishable Expo asset root.
-- `assets/reserve` and `assets/.moderation-hidden` are local/ignored working areas.
+- `assets/reserve` and `assets/hidden` are visible local/ignored working folders for Reserve and Hidden.
+- `assets/.moderation-hidden` remains only for local Curation Pass apply logs.
 - The Owner-selected Expo cap travels inside each `.pbe-curation` file.
 - The cap is an upper bound, not a required fill count. Collections with fewer valid JPEG pairs publish fewer photos.
 - Applied Curation Passes use random Expo selection from the eligible Expo/Reserve pool, so Reserve fills do not preserve archive sequence order.
@@ -43,6 +44,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Added cache-busting for localhost Reserve data.
 - Made random selection stay random in the manifest export path and in direct-assets Curation Pass application.
 - Re-ran the latest real Curation Pass in a disposable copy after the randomization change; publish counts matched expectations and missing image references stayed at `0`.
+- Added the visible ignored `assets/hidden` folder and `hidden-store.js`; direct-assets Curation Pass application now moves hidden JPEG derivatives there and writes `assets/hidden/hidden-data.js` for localhost Hidden review.
 - Renamed owner-facing blacklist export to Curation Pass while preserving compatibility with older `.pbe-blacklist` payloads.
 - Expanded Owner into a localhost-only command center with Curation Pass export, Expo cap, Hidden review, Unknown classification, and state counts.
 - Fixed Owner export feedback:
@@ -75,7 +77,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Python `HTMLParser` over all root HTML files
 - Node data scan for missing local `gallerySrc` and `imageSrc` references
 - `git diff --check`
-- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.24` and cache-bust strings use `?v=65.24`.
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.25`, cache-bust strings use `?v=65.25`, and `unworthy.html` loads `hidden-store.js?v=65.25`.
 
 ## Important Notes
 

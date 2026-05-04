@@ -9,6 +9,8 @@
   const saveCapButton = document.querySelector("[data-owner-save-cap]");
   const exportButton = document.querySelector("[data-owner-export]");
   const countsRoot = document.querySelector("[data-owner-counts]");
+  const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
+  const unworthyCountRoot = document.querySelector("[data-owner-unworthy-count]");
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -27,12 +29,25 @@
   const countPromotions = () => Object.values(reserveStore?.readPromotions?.() || {})
     .reduce((sum, ids) => sum + (Array.isArray(ids) ? ids.length : 0), 0);
 
+  const unknownPhotos = () => {
+    const regular = window.photosByElieOwnerData?.unknown?.photos || [];
+    const reserve = window.photosByElieReserveData?.unknown?.photos || [];
+    return regular.concat(reserve);
+  };
+
   const renderCounts = () => {
     if (!countsRoot || !unworthyStore?.enabled) return;
+    const unworthyCount = unworthyStore.read().length;
+    const assignmentCount = Object.keys(unworthyStore.readCountryAssignments?.() || {}).length;
+    const unknownCount = unknownPhotos().length;
+    if (unknownCountRoot) unknownCountRoot.textContent = String(Math.max(0, unknownCount - assignmentCount));
+    if (unworthyCountRoot) unworthyCountRoot.textContent = String(unworthyCount);
     const counts = [
       ["Regular", countPhotos(collections)],
       ["Reserve", countPhotos(window.photosByElieReserveData || {})],
-      ["Unworthy", unworthyStore.read().length],
+      ["Unworthy", unworthyCount],
+      ["Unknown queue", unknownCount],
+      ["Country assignments", assignmentCount],
       ["Returned to Reserve", unworthyStore.readReserveOnly?.().length || 0],
       ["Reserve replacements", countPromotions()],
       ["Gallery cap", currentCap()],
@@ -55,7 +70,7 @@
   if (capInput) capInput.value = String(currentCap());
 
   exportButton?.addEventListener("click", () => {
-    const filename = unworthyStore.exportBlacklist();
+    const filename = unworthyStore.exportCurationPass?.() || unworthyStore.exportBlacklist();
     setStatus(filename ? `${filename} downloaded.` : "Curation Pass export unavailable.");
     renderCounts();
   });

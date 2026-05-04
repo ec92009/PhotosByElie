@@ -5,6 +5,7 @@ if (window.photosByElieReserve?.enabled) {
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
 const collections = window.photosByElieData || {};
+const ownerCollections = window.photosByElieOwnerData || {};
 const reserveCollections = window.photosByElieReserveData || {};
 const fallbackCollection = Object.values(collections).find((collection) => Array.isArray(collection.photos) && collection.photos.length)
   || collections.france
@@ -15,8 +16,12 @@ const regularCollectionEntry = Object.entries(collections).find(([, collection])
 const reserveCollectionEntry = Object.entries(reserveCollections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
-const collectionEntry = regularCollectionEntry || reserveCollectionEntry;
+const ownerCollectionEntry = Object.entries(ownerCollections).find(([, collection]) =>
+  collection.photos.some((photo) => photo.id === photoId)
+);
+const collectionEntry = regularCollectionEntry || reserveCollectionEntry || ownerCollectionEntry;
 const isReserveCollection = Boolean(!regularCollectionEntry && reserveCollectionEntry);
+const isOwnerCollection = Boolean(!regularCollectionEntry && !reserveCollectionEntry && ownerCollectionEntry);
 const [collectionKey, collection] = collectionEntry || ["france", fallbackCollection];
 const photo = collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
 const photoIndex = photo ? collection.photos.findIndex((item) => item.id === photo.id) : -1;
@@ -28,6 +33,10 @@ const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const unworthyStore = window.photosByElieUnworthy;
 const localModerationEnabled = Boolean(unworthyStore?.enabled);
+if (isOwnerCollection && !localModerationEnabled) {
+  window.location.replace("./");
+  return;
+}
 const visibleCollectionPhotos = () => (
   unworthyStore?.filterPhotos
     ? unworthyStore.filterPhotos(collection.photos, { includeReserveOnly: isReserveCollection })

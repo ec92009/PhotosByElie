@@ -4912,6 +4912,10 @@ window.photosByElieData = {
     ]
   },
 };
+window.photosByElieOwnerData = {
+  unknown: window.photosByElieData.unknown,
+};
+delete window.photosByElieData.unknown;
 window.photosByElieResolutions = [
   { id: "full", label: "Full resolution", detail: "Original source file at native resolution", price: 45 },
   { id: "jpg-6mp", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18, minMegapixels: 6 },

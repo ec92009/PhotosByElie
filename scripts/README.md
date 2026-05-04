@@ -81,16 +81,16 @@ The current starting cap is 10 photos per collection. By default the exporter ra
 python3 scripts/export_photos_data.py --regular-cap 10
 ```
 
-To physically remove photos marked unworthy during local review, export the blacklist from the localhost app and apply it with the cleaner:
+To physically apply local review decisions, export a Curation Pass from the localhost Owner page and apply it with the cleaner:
 
 ```bash
-python3 scripts/apply_blacklist.py \
-  ~/Downloads/photosbyelie-review.pbe-blacklist \
+python3 scripts/apply_curation_pass.py \
+  ~/Downloads/photosbyelie-review.pbe-curation \
   --regular-cap 10
 ```
 
-The exported blacklist also records the browser's current `Regular` state after reserve replacements. The cleaner moves matching derivatives into the ignored `assets/.moderation-hidden/` folder, removes those rows from the local ingest manifests, and regenerates `Regular` while preserving those browser-reviewed picks when they still exist.
+The exported Curation Pass records hidden photos, the browser's current `Regular` state after reserve replacements, reserve-only returns, the Regular cap, and owner country assignments from the Unknown queue. The cleaner moves hidden derivatives into the ignored `assets/.moderation-hidden/` folder, removes those rows from the local ingest manifests, applies country assignments, and regenerates `Regular` while preserving browser-reviewed picks when they still exist.
 
-For a dry curation preview without moving files, `export_photos_data.py` can still take `--blacklist`. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
+For a dry curation preview without moving files, `export_photos_data.py` can take `--curation-pass` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
 
 The larger `assets/lightroom` and `assets/lightroom-ai` folders are treated as local reserve material and are ignored by Git. The public site should point at `assets/regular` until the owner workflow can promote replacements from reserve.

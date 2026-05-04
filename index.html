@@ -4,9 +4,9 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie | Saturn Archive Build</title>
-  <meta name="description" content="Photos By Elie now serves the local Saturn Lightroom archive, including country buckets, AI-generated work, and a shrinking unknown bucket."/>
+  <meta name="description" content="Photos By Elie serves a curated Saturn Lightroom archive with country galleries, AI-generated work, and localhost owner tools for classification."/>
   <meta property="og:title" content="Photos By Elie"/>
-  <meta property="og:description" content="Local Saturn Lightroom archive build with country buckets, AI-generated work, and a shrinking unknown bucket."/>
+  <meta property="og:description" content="Curated Saturn Lightroom archive build with country galleries, AI-generated work, and owner-only classification tools."/>
   <meta property="og:type" content="website"/>
   <meta property="og:image" content="./assets/byelie-logo.png"/>
   <meta name="twitter:card" content="summary"/>
@@ -19,9 +19,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=65.9"/>
-  <link rel="stylesheet" href="./styles.css?v=65.9"/>
-  <link rel="stylesheet" href="./photos.css?v=65.9"/>
+  <link rel="stylesheet" href="./shared.css?v=65.10"/>
+  <link rel="stylesheet" href="./styles.css?v=65.10"/>
+  <link rel="stylesheet" href="./photos.css?v=65.10"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a class="is-active" href="./">Photos</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v65.9</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v65.10</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -44,7 +44,7 @@
     <section class="panel photo-hero" aria-labelledby="page-title">
       <div>
         <h1 id="page-title">Photos By Elie</h1>
-        <p class="lead">A local archive build of the Saturn Lightroom collection, grouped into country buckets with AI work kept separate and unknowns actively being reclassified.</p>
+        <p class="lead">A curated Saturn Lightroom archive with country galleries, AI work kept separate, and localhost Owner tools for the quiet sorting work behind the scenes.</p>
         <div class="cta">
           <a class="btn primary" href="#collections">View collections</a>
         </div>
@@ -80,9 +80,6 @@
           </article>
           <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="slovakia" data-href="./slovakia.html">
             <div class="photo-art slovakia" aria-hidden="true"><span class="hand-label">Slovakia</span></div>
-          </article>
-          <article class="card carousel-item photo-collection-card" data-offer-item data-gallery-key="unknown" data-href="./unknown.html">
-            <div class="photo-art unknown" aria-hidden="true"><span class="hand-label">Unknown</span></div>
           </article>
         </div>
         <div class="carousel-companion" data-spaniel data-state="sleeping" data-sleep-pose="false" aria-hidden="true">
@@ -183,9 +180,9 @@
     <section class="panel photo-workflow">
       <h2>Archive shape</h2>
       <div class="metrics-grid">
-        <article class="metric"><span class="metric-value">200GB</span><span class="metric-label">Initial photo ceiling</span></article>
-        <article class="metric"><span class="metric-value">8</span><span class="metric-label">Collection groups</span></article>
-        <article class="metric"><span class="metric-value">R2</span><span class="metric-label">Planned media vault</span></article>
+        <article class="metric"><span class="metric-value">70</span><span class="metric-label">Regular photos on the public rail</span></article>
+        <article class="metric"><span class="metric-value">7</span><span class="metric-label">Public collection groups</span></article>
+        <article class="metric"><span class="metric-value">Owner</span><span class="metric-label">Local curation and classification queue</span></article>
       </div>
     </section>
   </main>
@@ -385,6 +382,7 @@
       const setActive=(i)=>{
         activeIndex=wrapIndex(i);
         render();
+        window.dispatchEvent(new CustomEvent('photosbyelie:carouselturn',{detail:{activeIndex}}));
       };
 
       /* Build dots */
@@ -594,11 +592,11 @@
       metricEls.forEach((el)=>io.observe(el));
     }
   </script>
-  <script src="./photos-data.js?v=65.9"></script>
-  <script src="./unworthy-store.js?v=65.9"></script>
-  <script src="./owner-tools.js?v=65.9"></script>
-  <script src="./home-gallery-randomizer.js?v=65.9"></script>
-  <script src="./basket-store.js?v=65.9"></script>
-  <script src="./basket-rail.js?v=65.9"></script>
+  <script src="./photos-data.js?v=65.10"></script>
+  <script src="./unworthy-store.js?v=65.10"></script>
+  <script src="./owner-tools.js?v=65.10"></script>
+  <script src="./home-gallery-randomizer.js?v=65.10"></script>
+  <script src="./basket-store.js?v=65.10"></script>
+  <script src="./basket-rail.js?v=65.10"></script>
 </body>
 </html>

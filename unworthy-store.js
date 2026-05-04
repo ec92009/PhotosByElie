@@ -5,6 +5,8 @@
   const reservePromotionsKey = "photosbyelie-reserve-promotions";
   const regularCapKey = "photosbyelie-regular-cap";
   const reserveOnlyKey = "photosbyelie-reserve-only";
+  const countryAssignmentsKey = "photosbyelie-country-assignments";
+  const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
 
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
@@ -45,6 +47,17 @@
     );
   };
 
+  const normalizeCountryAssignments = (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(
+      Object.entries(value).filter(([photoId, galleryKey]) =>
+        typeof photoId === "string"
+        && photoId
+        && countryAssignmentTargets.includes(galleryKey)
+      )
+    );
+  };
+
   const readPromotions = () => {
     if (!enabled) return {};
     const fromStore = window.photosByElieReserve?.readPromotions?.();
@@ -66,6 +79,33 @@
     if (!enabled) return null;
     const value = Number(localStorage.getItem(regularCapKey));
     return Number.isInteger(value) && value > 0 ? value : null;
+  };
+
+  const readCountryAssignments = () => {
+    if (!enabled) return {};
+    try {
+      return normalizeCountryAssignments(JSON.parse(localStorage.getItem(countryAssignmentsKey) || "{}"));
+    } catch {
+      return {};
+    }
+  };
+
+  const writeCountryAssignments = (state) => {
+    const normalized = normalizeCountryAssignments(state);
+    if (enabled) localStorage.setItem(countryAssignmentsKey, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent("photosbyelie:unworthychange", { detail: { items: read() } }));
+    return normalized;
+  };
+
+  const setCountryAssignment = (photoId, galleryKey) => {
+    if (!enabled || !photoId) return readCountryAssignments();
+    const assignments = readCountryAssignments();
+    if (countryAssignmentTargets.includes(galleryKey)) {
+      assignments[photoId] = galleryKey;
+    } else {
+      delete assignments[photoId];
+    }
+    return writeCountryAssignments(assignments);
   };
 
   const setRegularCap = (value) => {
@@ -190,31 +230,34 @@
     );
   };
 
-  const exportBlacklist = () => {
+  const exportCurationPass = () => {
     if (!enabled) return null;
     const photoIds = read();
     const payload = {
-      format: "photosbyelie-blacklist",
-      version: 2,
+      format: "photosbyelie-curation-pass",
+      version: 3,
       exported_at: new Date().toISOString(),
       photo_ids: photoIds,
       regular_cap: readRegularCap(),
       reserve_only: readReserveOnly(),
       reserve_promotions: readPromotions(),
       regular_state: activeRegularState(),
+      country_assignments: readCountryAssignments(),
     };
     const stamp = payload.exported_at.replace(/[:.]/g, "-");
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `photosbyelie-${stamp}.pbe-blacklist`;
+    anchor.download = `photosbyelie-${stamp}.pbe-curation`;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
     return anchor.download;
   };
+
+  const exportBlacklist = exportCurationPass;
 
   const filterPhotos = (photos = [], options = {}) => {
     if (!enabled) return photos;
@@ -232,10 +275,13 @@
     has,
     mark,
     read,
+    readCountryAssignments,
     readReserveOnly,
     readRegularCap,
     exportBlacklist,
+    exportCurationPass,
     returnToReserve,
+    setCountryAssignment,
     setRegularCap,
     undo,
     unmark,

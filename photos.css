@@ -237,6 +237,11 @@ html[data-theme="light"] .photo-art.has-photo::after{
   margin:0;
   font-size:clamp(1.25rem,2vw,1.8rem);
 }
+.owner-card p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.45;
+}
 .owner-card-wide{
   grid-column:span 1;
 }
@@ -249,7 +254,8 @@ html[data-theme="light"] .photo-art.has-photo::after{
   letter-spacing:.08em;
   text-transform:uppercase;
 }
-.owner-number-control input{
+.owner-number-control input,
+.owner-number-control select{
   width:100%;
   min-height:42px;
   border:1px solid var(--line);
@@ -260,6 +266,9 @@ html[data-theme="light"] .photo-art.has-photo::after{
   font-size:1.15rem;
   font-weight:800;
   padding:8px 10px;
+}
+.owner-number-control select{
+  appearance:none;
 }
 .owner-counts{
   display:grid;
@@ -282,6 +291,45 @@ html[data-theme="light"] .photo-art.has-photo::after{
   margin:2px 0 0;
   font-size:1.45rem;
   font-weight:800;
+}
+.unknown-classifier{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px;
+}
+.unknown-card{
+  display:grid;
+  grid-template-rows:auto 1fr;
+  border:1px solid var(--line);
+  background:var(--surface);
+}
+.unknown-thumb{
+  display:grid;
+  place-items:center;
+  aspect-ratio:1;
+  background:color-mix(in srgb,var(--surface-2) 82%,var(--bg) 18%);
+  overflow:hidden;
+}
+.unknown-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.unknown-card-body{
+  display:grid;
+  gap:10px;
+  padding:12px;
+}
+.unknown-card-body h2{
+  margin:0;
+  font-size:1rem;
+  line-height:1.2;
+}
+.unknown-card-body p{
+  margin:0;
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.35;
 }
 .basket-total-band{
   position:sticky;

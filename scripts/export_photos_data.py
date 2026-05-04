@@ -21,6 +21,9 @@ LABELS = {
 }
 
 ORDER = ["france", "usa", "spain", "mexico", "ai", "portugal", "slovakia", "unknown"]
+PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown"]
+OWNER_ORDER = ["unknown"]
+COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
 DEFAULT_REGULAR_CAP = 10
 DEFAULT_SELECTION_MODE = "random"
 REGULAR_ASSET_ROOT = Path("assets/regular")
@@ -251,12 +254,40 @@ def reserve_only_ids_from_payload(payload: dict) -> set[str]:
     return {photo_id for photo_id in payload.get("reserve_only", []) if isinstance(photo_id, str)}
 
 
+def country_assignments_from_payload(payload: dict) -> dict[str, str]:
+    value = payload.get("country_assignments")
+    if not isinstance(value, dict):
+        return {}
+    return {
+        photo_id: slug
+        for photo_id, slug in value.items()
+        if isinstance(photo_id, str) and photo_id and slug in COUNTRY_ASSIGNMENT_TARGETS
+    }
+
+
 def load_blacklist(path: Path | None) -> set[str]:
     return blacklist_ids_from_payload(load_blacklist_payload(path))
 
 
 def load_blacklist_regular_state(path: Path | None) -> dict[str, list[str]]:
     return regular_state_from_payload(load_blacklist_payload(path))
+
+
+def apply_country_assignment(row: dict, slug: str | None) -> dict:
+    if slug not in COUNTRY_ASSIGNMENT_TARGETS:
+        return row
+    row = dict(row)
+    number, title, _accent, _description = LABELS[slug]
+    row["gallery_country"] = {
+        "slug": slug,
+        "label": title,
+        "source": "owner",
+    }
+    row["owner_classification"] = {
+        "gallery_country": slug,
+        "collection_number": number,
+    }
+    return row
 
 
 def select_regular_groups(
@@ -331,16 +362,19 @@ def write_photos_data(
     seed: int | None = None,
     pinned_regular_ids: dict[str, list[str]] | None = None,
     reserve_only_ids: set[str] | None = None,
+    country_assignments: dict[str, str] | None = None,
 ) -> Path:
     manifest_specs = [
         (repo_root / "assets/lightroom/manifest.json", "lightroom"),
         (repo_root / "assets/lightroom-ai/manifest.json", "ai"),
     ]
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
+    country_assignments = country_assignments or {}
     for path, mode in manifest_specs:
         if not path.exists():
             continue
         for row in json.loads(path.read_text())["photos"]:
+            row = apply_country_assignment(row, country_assignments.get(row.get("id")))
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)
             if slug not in LABELS:
@@ -373,12 +407,11 @@ def write_photos_data(
         )
         write_reserve_data(repo_root, reserve_groups)
 
-    lines: list[str] = ["window.photosByElieData = {"]
-    for slug in ORDER:
+    def collection_lines(slug: str) -> list[str]:
         number, title, accent, description = LABELS[slug]
         rows = regular_groups.get(slug, [])
         reserve_count = reserve_counts.get(slug, 0)
-        lines += [
+        next_lines = [
             f"  {slug}: {{",
             f"    number: {js(number)},",
             f"    title: {js(title)},",
@@ -389,8 +422,17 @@ def write_photos_data(
         for index, (row, mode) in enumerate(rows):
             gallery_rel = f"./{regular_asset_rel(row, 'gallery')}"
             detail_rel = f"./{regular_asset_rel(row, 'detail')}"
-            lines += photo_object_lines(row, mode, index, title, gallery_rel, detail_rel)
-        lines += ["    ]", "  },"]
+            next_lines += photo_object_lines(row, mode, index, title, gallery_rel, detail_rel)
+        next_lines += ["    ]", "  },"]
+        return next_lines
+
+    lines: list[str] = ["window.photosByElieData = {"]
+    for slug in PUBLIC_ORDER:
+        lines += collection_lines(slug)
+
+    lines += ["};", "window.photosByElieOwnerData = {"]
+    for slug in OWNER_ORDER:
+        lines += collection_lines(slug)
 
     lines += [
         "};",
@@ -461,19 +503,20 @@ if __name__ == "__main__":
     parser.add_argument("--regular-cap", type=int, default=DEFAULT_REGULAR_CAP)
     parser.add_argument("--selection", choices=("random", "newest"), default=DEFAULT_SELECTION_MODE)
     parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--blacklist", type=Path, default=None, help="Optional .pbe-blacklist file to exclude unworthy photo IDs.")
+    parser.add_argument("--curation-pass", "--blacklist", dest="curation_pass", type=Path, default=None, help="Optional Curation Pass file to apply hidden, reserve, and classification choices.")
     parser.add_argument("--no-sync-assets", action="store_true")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
-    blacklist_payload = load_blacklist_payload(args.blacklist)
+    curation_payload = load_blacklist_payload(args.curation_pass)
     result = write_photos_data(
         repo_root,
         regular_cap=args.regular_cap,
         sync_regular_assets=not args.no_sync_assets,
         selection_mode=args.selection,
-        blacklist_ids=blacklist_ids_from_payload(blacklist_payload),
+        blacklist_ids=blacklist_ids_from_payload(curation_payload),
         seed=args.seed,
-        pinned_regular_ids=regular_state_from_payload(blacklist_payload),
-        reserve_only_ids=reserve_only_ids_from_payload(blacklist_payload),
+        pinned_regular_ids=regular_state_from_payload(curation_payload),
+        reserve_only_ids=reserve_only_ids_from_payload(curation_payload),
+        country_assignments=country_assignments_from_payload(curation_payload),
     )
     print(result)

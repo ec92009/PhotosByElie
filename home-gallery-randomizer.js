@@ -6,7 +6,6 @@ const homeCollections = [
   "ai",
   "portugal",
   "slovakia",
-  "unknown",
 ];
 
 const randomPhotoForCollection = (collection) => {
@@ -51,5 +50,11 @@ const applyCarouselPhotos = () => {
   });
 };
 
-buildHeroStack();
-applyCarouselPhotos();
+const refreshSamples = () => {
+  buildHeroStack();
+  applyCarouselPhotos();
+};
+
+window.photosByElieHomeRandomizer = { refreshSamples };
+window.addEventListener("photosbyelie:carouselturn", refreshSamples);
+refreshSamples();

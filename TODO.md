@@ -30,7 +30,7 @@ Last updated: 2026-05-04
    - Keep Regular small and publishable, keep Reserve and Unworthy ignored/local, and preserve the safe GitHub Pages path without archive churn.
 
 6. **Improve live curation speed.**
-   - Refine gallery density/zoom, hover metadata, arrow movement, selection behavior, and mobile retesting so reviewing photos feels fast.
+   - Refine gallery density/zoom, aspect-preserving thumbnails, hover metadata, arrow movement, selection behavior, and mobile retesting so reviewing photos feels fast.
 
 7. **Polish the homepage experience.**
    - Fix carousel hit targets, refresh samples on each carousel turn, add the bottom band everywhere, and give the Archive shape section better copy.
@@ -135,33 +135,38 @@ Last updated: 2026-05-04
    - Refine the new Grid slider after live curation use.
    - Consider whether density should be local-only forever or become a public browsing preference.
 
-8. **Add gallery hover metadata.**
+8. **Show real photo aspect ratios in square gallery cells.**
+   - Keep each gallery slot as a stable square background so the grid stays tidy.
+   - Render the photo inside that square at its real aspect ratio instead of cropping or stretching it.
+   - Pick a neutral background treatment that makes portrait, landscape, panorama, and square images all feel intentional.
+
+9. **Add gallery hover metadata.**
    - Show a lightweight tooltip when hovering over a gallery photo.
    - Start with the photo title, then consider adding capture date, country, source type, or other safe metadata.
    - Keep touch devices clean; the tooltip should not block curation controls or accidental-tap prevention.
 
-9. **Fix homepage carousel card hit targets.**
+10. **Fix homepage carousel card hit targets.**
    - Clicking a collection card currently navigates even when that card is not the foreground carousel item.
    - Restrict navigation to the active/foreground card, or otherwise make background cards non-clickable.
    - Retest keyboard and pointer behavior after the carousel hit target fix.
 
-10. **Refresh homepage samples on each pooch turn.**
+11. **Refresh homepage samples on each pooch turn.**
    - When the main-page carousel/pooch advances, pick fresh representative sample photos instead of keeping the same page-load random picks.
    - Keep the hero stack and carousel cards in sync so each turn feels like a new browseable sample set.
    - Avoid jarring layout shifts while images refresh.
 
-11. **Add the bottom band everywhere.**
+12. **Add the bottom band everywhere.**
    - Use the footer/bottom band consistently across home, gallery, detail, owner, unworthy, basket, and liked pages.
    - Show owner-only links such as `Owner` and `Export blacklist` only on localhost.
    - Keep published footer contents public-safe, likely `By Elie`, `Collections`, and other public navigation only.
    - Make the band responsive so it stays readable on narrow screens.
 
-12. **Give the homepage archive stats something worth saying.**
+13. **Give the homepage archive stats something worth saying.**
    - Revisit the `Archive shape` band and replace placeholder-feeling stats/copy with something more meaningful.
    - Keep the section compact, useful, and visually balanced with the rest of the homepage.
    - Consider whether the values should describe the public Regular set, the local archive, the reserve workflow, or the broader By Elie media vault.
 
-13. **Backburner: add GitHub branch protection.**
+14. **Backburner: add GitHub branch protection.**
    - Revisit rulesets after the lightweight publish workflow has settled.
    - Protect `main` from force-pushes and accidental deletion.
    - Avoid blocking the solo publishing loop until the release path is smooth.

@@ -91,7 +91,7 @@ python3 scripts/apply_curation_pass.py \
   --rebuild-missing-manifests
 ```
 
-The exported Curation Pass records hidden photos, the browser's current Expo state after reserve replacements, reserve-only returns, the Expo cap, and owner country assignments from the Unknown queue. The cleaner moves hidden derivatives into the ignored `assets/.moderation-hidden/` folder, removes those rows from the local ingest manifests, applies country assignments, and regenerates Expo while preserving browser-reviewed picks when they still exist and valid assets are available.
+The exported Curation Pass records hidden photos, the browser's current Expo state after reserve replacements, reserve-only returns, the Expo cap, and owner country assignments from the Unknown queue. The cleaner moves hidden derivatives into the ignored `assets/hidden/` folder, removes those rows from the local ingest manifests when present, applies country assignments, and regenerates Expo while preserving browser-reviewed picks when they still exist and valid assets are available.
 
 Because the local ingest folders are ignored by Git, a fresh sync may have `photos-data.js` and `reserve-data.js` but no `manifest.json`. In that case the cleaner applies the pass directly from the site data: it copies promoted Reserve derivatives into `assets/regular`, moves removed Expo derivatives out of the public set, and rewrites `photos-data.js`, `assets/regular/manifest.json`, and `assets/reserve/reserve-data.js`. If the Reserve derivatives live in another checkout or worktree, add it as a search root:
 

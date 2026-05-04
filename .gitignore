@@ -1,13 +1,12 @@
-assets/lightroom/gps-metadata.json
-assets/lightroom-ai/gps-metadata.json
 .playwright-mcp/
 .DS_Store
 
-# Local ingest/reserve outputs. Publishable copies live under assets/regular/.
+# Local/generated photo workspaces. Publishable Expo copies live under assets/regular/.
 assets/lightroom/
 assets/lightroom-ai/
 assets/reserve/
 assets/hidden/
 assets/.moderation-hidden/
+
+# Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/
-PhotosByElie Curation Pass.app/

@@ -3,24 +3,30 @@
   "state": "expo",
   "regular_cap": 25,
   "selection_mode": "random",
-  "seed": 1982518881,
-  "photos_count": 63,
+  "seed": 869324999,
+  "photos_count": 127,
   "reserve_counts": {
-    "france": 2,
-    "portugal": 0,
-    "spain": 0,
-    "unknown": 10
+    "ai": 9228,
+    "france": 293,
+    "portugal": 182,
+    "slovakia": 0,
+    "spain": 137,
+    "unknown": 96,
+    "usa": 87
   },
   "unworthy_counts": {
+    "ai": 0,
     "france": 0,
     "portugal": 0,
+    "slovakia": 0,
     "spain": 0,
-    "unknown": 0
+    "unknown": 0,
+    "usa": 0
   },
   "photos": [
     {
-      "id": "20220506-054409-03193-8303575241",
-      "relative_path": "2022/JPG/05/06/20220506 054409 03193.jpg",
+      "id": "20180529-1739-15441-c012616b8d",
+      "relative_path": "2015-2019/20180529 1739 15441.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -28,92 +34,8 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-054409-03193-8303575241_900.jpg",
-        "detail": "assets/expo/france/20220506-054409-03193-8303575241_1800.jpg"
-      }
-    },
-    {
-      "id": "20220506-154558-03388-a887904b4b",
-      "relative_path": "2022/JPG/05/06/20220506 154558 03388.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-154558-03388-a887904b4b_900.jpg",
-        "detail": "assets/expo/france/20220506-154558-03388-a887904b4b_1800.jpg"
-      }
-    },
-    {
-      "id": "20220506-151024-03375-3e4d581417",
-      "relative_path": "2022/JPG/05/06/20220506 151024 03375.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-151024-03375-3e4d581417_900.jpg",
-        "detail": "assets/expo/france/20220506-151024-03375-3e4d581417_1800.jpg"
-      }
-    },
-    {
-      "id": "20220506-141127-03238-6a809a3d2d",
-      "relative_path": "2022/JPG/05/06/20220506 141127 03238.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-141127-03238-6a809a3d2d_900.jpg",
-        "detail": "assets/expo/france/20220506-141127-03238-6a809a3d2d_1800.jpg"
-      }
-    },
-    {
-      "id": "20220506-060627-03224-86e5202fb1",
-      "relative_path": "2022/JPG/05/06/20220506 060627 03224.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-060627-03224-86e5202fb1_900.jpg",
-        "detail": "assets/expo/france/20220506-060627-03224-86e5202fb1_1800.jpg"
-      }
-    },
-    {
-      "id": "20220506-145149-03333-e92838da6f",
-      "relative_path": "2022/JPG/05/06/20220506 145149 03333.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-145149-03333-e92838da6f_900.jpg",
-        "detail": "assets/expo/france/20220506-145149-03333-e92838da6f_1800.jpg"
-      }
-    },
-    {
-      "id": "20220506-045149-03144-fd662a4a41",
-      "relative_path": "2022/JPG/05/06/20220506 045149 03144.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-045149-03144-fd662a4a41_900.jpg",
-        "detail": "assets/expo/france/20220506-045149-03144-fd662a4a41_1800.jpg"
+        "gallery": "assets/expo/france/20180529-1739-15441-c012616b8d_900.jpg",
+        "detail": "assets/expo/france/20180529-1739-15441-c012616b8d_1800.jpg"
       }
     },
     {
@@ -131,8 +53,8 @@
       }
     },
     {
-      "id": "20220506-044820-03115-d18397db96",
-      "relative_path": "2022/JPG/05/06/20220506 044820 03115.jpg",
+      "id": "20180530-1458-15730-b90327218e",
+      "relative_path": "2015-2019/20180530 1458 15730.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -140,27 +62,27 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-044820-03115-d18397db96_900.jpg",
-        "detail": "assets/expo/france/20220506-044820-03115-d18397db96_1800.jpg"
+        "gallery": "assets/expo/france/20180530-1458-15730-b90327218e_900.jpg",
+        "detail": "assets/expo/france/20180530-1458-15730-b90327218e_1800.jpg"
       }
     },
     {
-      "id": "20220506-144820-03318-ab367598c9",
-      "relative_path": "2022/JPG/05/06/20220506 144820 03318.jpg",
+      "id": "20180525-1439-00945-c37d4fa644",
+      "relative_path": "2015-2019/20180525 1439 00945.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-144820-03318-ab367598c9_900.jpg",
-        "detail": "assets/expo/france/20220506-144820-03318-ab367598c9_1800.jpg"
+        "gallery": "assets/expo/france/20180525-1439-00945-c37d4fa644_900.jpg",
+        "detail": "assets/expo/france/20180525-1439-00945-c37d4fa644_1800.jpg"
       }
     },
     {
-      "id": "20220505-153639-03083-3ded4343e5",
-      "relative_path": "2022/JPG/05/05/20220505 153639 03083.jpg",
+      "id": "20180511-1140-00367-8ba499e834",
+      "relative_path": "2015-2019/20180511 1140 00367.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -168,41 +90,41 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220505-153639-03083-3ded4343e5_900.jpg",
-        "detail": "assets/expo/france/20220505-153639-03083-3ded4343e5_1800.jpg"
+        "gallery": "assets/expo/france/20180511-1140-00367-8ba499e834_900.jpg",
+        "detail": "assets/expo/france/20180511-1140-00367-8ba499e834_1800.jpg"
       }
     },
     {
-      "id": "20220506-051024-03188-26c219176a",
-      "relative_path": "2022/JPG/05/06/20220506 051024 03188.jpg",
+      "id": "20160702-1256-20261-pano-b090c16a17",
+      "relative_path": "2015-2019/20160702 1256 20261-Pano.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "gps_hint"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-051024-03188-26c219176a_900.jpg",
-        "detail": "assets/expo/france/20220506-051024-03188-26c219176a_1800.jpg"
+        "gallery": "assets/expo/france/20160702-1256-20261-pano-b090c16a17_900.jpg",
+        "detail": "assets/expo/france/20160702-1256-20261-pano-b090c16a17_1800.jpg"
       }
     },
     {
-      "id": "20220504-141310-00203-231d78d849",
-      "relative_path": "2022/05/04/20220504 141310 00203.tif",
+      "id": "20180524-1746-00940-636b34659d",
+      "relative_path": "2015-2019/20180524 1746 00940.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220504-141310-00203-231d78d849_900.jpg",
-        "detail": "assets/expo/france/20220504-141310-00203-231d78d849_1800.jpg"
+        "gallery": "assets/expo/france/20180524-1746-00940-636b34659d_900.jpg",
+        "detail": "assets/expo/france/20180524-1746-00940-636b34659d_1800.jpg"
       }
     },
     {
-      "id": "20220506-041124-03096-fad0dd9f78",
-      "relative_path": "2022/JPG/05/06/20220506 041124 03096.jpg",
+      "id": "20110104-0617-28094-bf4d7a32a1",
+      "relative_path": "2010-2014/20110104 0617 28094.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -210,13 +132,13 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-041124-03096-fad0dd9f78_900.jpg",
-        "detail": "assets/expo/france/20220506-041124-03096-fad0dd9f78_1800.jpg"
+        "gallery": "assets/expo/france/20110104-0617-28094-bf4d7a32a1_900.jpg",
+        "detail": "assets/expo/france/20110104-0617-28094-bf4d7a32a1_1800.jpg"
       }
     },
     {
-      "id": "20220505-135205-02993-c098de9740",
-      "relative_path": "2022/JPG/05/05/20220505 135205 02993.jpg",
+      "id": "20110106-0551-15640-caf2ed4c38",
+      "relative_path": "2010-2014/20110106 0551 15640.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -224,8 +146,120 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220505-135205-02993-c098de9740_900.jpg",
-        "detail": "assets/expo/france/20220505-135205-02993-c098de9740_1800.jpg"
+        "gallery": "assets/expo/france/20110106-0551-15640-caf2ed4c38_900.jpg",
+        "detail": "assets/expo/france/20110106-0551-15640-caf2ed4c38_1800.jpg"
+      }
+    },
+    {
+      "id": "20180511-1205-00368-3481c74f91",
+      "relative_path": "2015-2019/20180511 1205 00368.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20180511-1205-00368-3481c74f91_900.jpg",
+        "detail": "assets/expo/france/20180511-1205-00368-3481c74f91_1800.jpg"
+      }
+    },
+    {
+      "id": "20111102-1226-07867-136188a2c1",
+      "relative_path": "2010-2014/20111102 1226 07867.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20111102-1226-07867-136188a2c1_900.jpg",
+        "detail": "assets/expo/france/20111102-1226-07867-136188a2c1_1800.jpg"
+      }
+    },
+    {
+      "id": "20180509-2319-00263-ada5a380a3",
+      "relative_path": "2015-2019/20180509 2319 00263.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20180509-2319-00263-ada5a380a3_900.jpg",
+        "detail": "assets/expo/france/20180509-2319-00263-ada5a380a3_1800.jpg"
+      }
+    },
+    {
+      "id": "20110105-0224-16002-8bfdc2da47",
+      "relative_path": "2010-2014/20110105 0224 16002.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20110105-0224-16002-8bfdc2da47_900.jpg",
+        "detail": "assets/expo/france/20110105-0224-16002-8bfdc2da47_1800.jpg"
+      }
+    },
+    {
+      "id": "20110106-0604-14854-8e7f792f7e",
+      "relative_path": "2010-2014/20110106 0604 14854.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20110106-0604-14854-8e7f792f7e_900.jpg",
+        "detail": "assets/expo/france/20110106-0604-14854-8e7f792f7e_1800.jpg"
+      }
+    },
+    {
+      "id": "20111106-0808-27995-c4cfb5f5c1",
+      "relative_path": "2010-2014/20111106 0808 27995.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20111106-0808-27995-c4cfb5f5c1_900.jpg",
+        "detail": "assets/expo/france/20111106-0808-27995-c4cfb5f5c1_1800.jpg"
+      }
+    },
+    {
+      "id": "20180509-2326-00266-3402cc9833",
+      "relative_path": "2015-2019/20180509 2326 00266.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20180509-2326-00266-3402cc9833_900.jpg",
+        "detail": "assets/expo/france/20180509-2326-00266-3402cc9833_1800.jpg"
+      }
+    },
+    {
+      "id": "20160717-1424-03649-pano-c6d8818d93",
+      "relative_path": "2015-2019/20160717 1424 03649-Pano.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "gps_hint"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20160717-1424-03649-pano-c6d8818d93_900.jpg",
+        "detail": "assets/expo/france/20160717-1424-03649-pano-c6d8818d93_1800.jpg"
       }
     },
     {
@@ -243,8 +277,8 @@
       }
     },
     {
-      "id": "20220506-145037-03329-9100ee8314",
-      "relative_path": "2022/JPG/05/06/20220506 145037 03329.jpg",
+      "id": "20110104-0637-28099-116604bf45",
+      "relative_path": "2010-2014/20110104 0637 28099.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -252,13 +286,27 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-145037-03329-9100ee8314_900.jpg",
-        "detail": "assets/expo/france/20220506-145037-03329-9100ee8314_1800.jpg"
+        "gallery": "assets/expo/france/20110104-0637-28099-116604bf45_900.jpg",
+        "detail": "assets/expo/france/20110104-0637-28099-116604bf45_1800.jpg"
       }
     },
     {
-      "id": "20220506-144147-03314-497e126421",
-      "relative_path": "2022/JPG/05/06/20220506 144147 03314.jpg",
+      "id": "20180525-1441-00952-0be82ccc8d",
+      "relative_path": "2015-2019/20180525 1441 00952.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20180525-1441-00952-0be82ccc8d_900.jpg",
+        "detail": "assets/expo/france/20180525-1441-00952-0be82ccc8d_1800.jpg"
+      }
+    },
+    {
+      "id": "20180511-1443-00382-346dfde4a7",
+      "relative_path": "2015-2019/20180511 1443 00382.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -266,13 +314,27 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-144147-03314-497e126421_900.jpg",
-        "detail": "assets/expo/france/20220506-144147-03314-497e126421_1800.jpg"
+        "gallery": "assets/expo/france/20180511-1443-00382-346dfde4a7_900.jpg",
+        "detail": "assets/expo/france/20180511-1443-00382-346dfde4a7_1800.jpg"
       }
     },
     {
-      "id": "20220506-044147-03105-2f7a1843b4",
-      "relative_path": "2022/JPG/05/06/20220506 044147 03105.jpg",
+      "id": "20180525-1420-00944-6079776b41",
+      "relative_path": "2015-2019/20180525 1420 00944.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/france/20180525-1420-00944-6079776b41_900.jpg",
+        "detail": "assets/expo/france/20180525-1420-00944-6079776b41_1800.jpg"
+      }
+    },
+    {
+      "id": "20110106-0545-28053-8bb340ff47",
+      "relative_path": "2010-2014/20110106 0545 28053.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -280,13 +342,13 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-044147-03105-2f7a1843b4_900.jpg",
-        "detail": "assets/expo/france/20220506-044147-03105-2f7a1843b4_1800.jpg"
+        "gallery": "assets/expo/france/20110106-0545-28053-8bb340ff47_900.jpg",
+        "detail": "assets/expo/france/20110106-0545-28053-8bb340ff47_1800.jpg"
       }
     },
     {
-      "id": "20220506-060627-03223-2c5e854c02",
-      "relative_path": "2022/JPG/05/06/20220506 060627 03223.jpg",
+      "id": "20110104-0705-15135-88467c3cfe",
+      "relative_path": "2010-2014/20110104 0705 15135.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -294,13 +356,13 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-060627-03223-2c5e854c02_900.jpg",
-        "detail": "assets/expo/france/20220506-060627-03223-2c5e854c02_1800.jpg"
+        "gallery": "assets/expo/france/20110104-0705-15135-88467c3cfe_900.jpg",
+        "detail": "assets/expo/france/20110104-0705-15135-88467c3cfe_1800.jpg"
       }
     },
     {
-      "id": "20220506-045942-03172-b368612e02",
-      "relative_path": "2022/JPG/05/06/20220506 045942 03172.jpg",
+      "id": "20110104-0723-16703-6059a0763e",
+      "relative_path": "2010-2014/20110104 0723 16703.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
@@ -308,106 +370,400 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-045942-03172-b368612e02_900.jpg",
-        "detail": "assets/expo/france/20220506-045942-03172-b368612e02_1800.jpg"
+        "gallery": "assets/expo/france/20110104-0723-16703-6059a0763e_900.jpg",
+        "detail": "assets/expo/france/20110104-0723-16703-6059a0763e_1800.jpg"
       }
     },
     {
-      "id": "20220505-135231-03007-a5d4711305",
-      "relative_path": "2022/JPG/05/05/20220505 135231 03007.jpg",
+      "id": "20180130-1830-10861-hdr-f722e85795",
+      "relative_path": "2015-2019/20180130 1830 10861-HDR.jpg",
       "gallery_country": {
-        "slug": "france",
-        "label": "France",
+        "slug": "usa",
+        "label": "United States",
         "source": "keyword"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220505-135231-03007-a5d4711305_900.jpg",
-        "detail": "assets/expo/france/20220505-135231-03007-a5d4711305_1800.jpg"
+        "gallery": "assets/expo/usa/20180130-1830-10861-hdr-f722e85795_900.jpg",
+        "detail": "assets/expo/usa/20180130-1830-10861-hdr-f722e85795_1800.jpg"
       }
     },
     {
-      "id": "20220505-135009-02982-38775df02a",
-      "relative_path": "2022/JPG/05/05/20220505 135009 02982.jpg",
+      "id": "20180505-1814-00238-2ad3a506a8",
+      "relative_path": "2015-2019/20180505 1814 00238.jpg",
       "gallery_country": {
-        "slug": "france",
-        "label": "France",
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180505-1814-00238-2ad3a506a8_900.jpg",
+        "detail": "assets/expo/usa/20180505-1814-00238-2ad3a506a8_1800.jpg"
+      }
+    },
+    {
+      "id": "20180130-1807-00056-ce796ea795",
+      "relative_path": "2015-2019/20180130 1807 00056.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180130-1807-00056-ce796ea795_900.jpg",
+        "detail": "assets/expo/usa/20180130-1807-00056-ce796ea795_1800.jpg"
+      }
+    },
+    {
+      "id": "20180304-1733-00110-843be79aa4",
+      "relative_path": "2015-2019/20180304 1733 00110.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180304-1733-00110-843be79aa4_900.jpg",
+        "detail": "assets/expo/usa/20180304-1733-00110-843be79aa4_1800.jpg"
+      }
+    },
+    {
+      "id": "20161106-1557-28005-3d1ee36f82",
+      "relative_path": "2015-2019/20161106 1557 28005.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20161106-1557-28005-3d1ee36f82_900.jpg",
+        "detail": "assets/expo/usa/20161106-1557-28005-3d1ee36f82_1800.jpg"
+      }
+    },
+    {
+      "id": "20180731-1156-42014-420ac2b2d2",
+      "relative_path": "2015-2019/20180731 1156 42014.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
         "source": "keyword"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220505-135009-02982-38775df02a_900.jpg",
-        "detail": "assets/expo/france/20220505-135009-02982-38775df02a_1800.jpg"
+        "gallery": "assets/expo/usa/20180731-1156-42014-420ac2b2d2_900.jpg",
+        "detail": "assets/expo/usa/20180731-1156-42014-420ac2b2d2_1800.jpg"
       }
     },
     {
-      "id": "20220506-145248-03337-8deb7b57a5",
-      "relative_path": "2022/JPG/05/06/20220506 145248 03337.jpg",
+      "id": "20180414-152504-00098-fef5ae1efc",
+      "relative_path": "2015-2019/20180414 152504 00098.jpg",
       "gallery_country": {
-        "slug": "france",
-        "label": "France",
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180414-152504-00098-fef5ae1efc_900.jpg",
+        "detail": "assets/expo/usa/20180414-152504-00098-fef5ae1efc_1800.jpg"
+      }
+    },
+    {
+      "id": "20141221-1443-06347-3544179fa4",
+      "relative_path": "2010-2014/20141221 1443 06347.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20141221-1443-06347-3544179fa4_900.jpg",
+        "detail": "assets/expo/usa/20141221-1443-06347-3544179fa4_1800.jpg"
+      }
+    },
+    {
+      "id": "20180302-1936-00107-40a8e4a3f3",
+      "relative_path": "2015-2019/20180302 1936 00107.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180302-1936-00107-40a8e4a3f3_900.jpg",
+        "detail": "assets/expo/usa/20180302-1936-00107-40a8e4a3f3_1800.jpg"
+      }
+    },
+    {
+      "id": "20180130-1816-00063-1-fa94814078",
+      "relative_path": "2015-2019/20180130 1816 00063_1.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180130-1816-00063-1-fa94814078_900.jpg",
+        "detail": "assets/expo/usa/20180130-1816-00063-1-fa94814078_1800.jpg"
+      }
+    },
+    {
+      "id": "20161018-1611-15583-ebcf17ac43",
+      "relative_path": "2015-2019/20161018 1611 15583.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20161018-1611-15583-ebcf17ac43_900.jpg",
+        "detail": "assets/expo/usa/20161018-1611-15583-ebcf17ac43_1800.jpg"
+      }
+    },
+    {
+      "id": "20180731-1238-42139-523fc863bd",
+      "relative_path": "2015-2019/20180731 1238 42139.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
         "source": "keyword"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-145248-03337-8deb7b57a5_900.jpg",
-        "detail": "assets/expo/france/20220506-145248-03337-8deb7b57a5_1800.jpg"
+        "gallery": "assets/expo/usa/20180731-1238-42139-523fc863bd_900.jpg",
+        "detail": "assets/expo/usa/20180731-1238-42139-523fc863bd_1800.jpg"
       }
     },
     {
-      "id": "20220506-045037-03123-3dd017d077",
-      "relative_path": "2022/JPG/05/06/20220506 045037 03123.jpg",
+      "id": "20180224-1451-00100-07b4f7fb87",
+      "relative_path": "2015-2019/20180224 1451 00100.jpg",
       "gallery_country": {
-        "slug": "france",
-        "label": "France",
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180224-1451-00100-07b4f7fb87_900.jpg",
+        "detail": "assets/expo/usa/20180224-1451-00100-07b4f7fb87_1800.jpg"
+      }
+    },
+    {
+      "id": "20180304-1745-00117-1ceb19d795",
+      "relative_path": "2015-2019/20180304 1745 00117.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180304-1745-00117-1ceb19d795_900.jpg",
+        "detail": "assets/expo/usa/20180304-1745-00117-1ceb19d795_1800.jpg"
+      }
+    },
+    {
+      "id": "20160927-1606-16583-39cfdc87d1",
+      "relative_path": "2015-2019/20160927 1606 16583.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20160927-1606-16583-39cfdc87d1_900.jpg",
+        "detail": "assets/expo/usa/20160927-1606-16583-39cfdc87d1_1800.jpg"
+      }
+    },
+    {
+      "id": "20180217-1831-00092-4ec7e19319",
+      "relative_path": "2015-2019/20180217 1831 00092.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180217-1831-00092-4ec7e19319_900.jpg",
+        "detail": "assets/expo/usa/20180217-1831-00092-4ec7e19319_1800.jpg"
+      }
+    },
+    {
+      "id": "20180306-1738-00124-e901cb1d49",
+      "relative_path": "2015-2019/20180306 1738 00124.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180306-1738-00124-e901cb1d49_900.jpg",
+        "detail": "assets/expo/usa/20180306-1738-00124-e901cb1d49_1800.jpg"
+      }
+    },
+    {
+      "id": "20120509-1910-26961-f0cbd541fa",
+      "relative_path": "2010-2014/20120509 1910 26961.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
         "source": "keyword"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/france/20220506-045037-03123-3dd017d077_900.jpg",
-        "detail": "assets/expo/france/20220506-045037-03123-3dd017d077_1800.jpg"
+        "gallery": "assets/expo/usa/20120509-1910-26961-f0cbd541fa_900.jpg",
+        "detail": "assets/expo/usa/20120509-1910-26961-f0cbd541fa_1800.jpg"
       }
     },
     {
-      "id": "20220509-205254-03573-fd98e07ecc",
-      "relative_path": "2022/JPG/05/09/20220509 205254 03573.jpg",
+      "id": "20180505-1822-00244-d9950f99e1",
+      "relative_path": "2015-2019/20180505 1822 00244.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180505-1822-00244-d9950f99e1_900.jpg",
+        "detail": "assets/expo/usa/20180505-1822-00244-d9950f99e1_1800.jpg"
+      }
+    },
+    {
+      "id": "20180227-1742-00106-b685903cde",
+      "relative_path": "2015-2019/20180227 1742 00106.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180227-1742-00106-b685903cde_900.jpg",
+        "detail": "assets/expo/usa/20180227-1742-00106-b685903cde_1800.jpg"
+      }
+    },
+    {
+      "id": "20180405-1909-00199-2cb05463d8",
+      "relative_path": "2015-2019/20180405 1909 00199.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180405-1909-00199-2cb05463d8_900.jpg",
+        "detail": "assets/expo/usa/20180405-1909-00199-2cb05463d8_1800.jpg"
+      }
+    },
+    {
+      "id": "20140907-1911-06385-5f3a5197a2",
+      "relative_path": "2010-2014/20140907 1911 06385.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20140907-1911-06385-5f3a5197a2_900.jpg",
+        "detail": "assets/expo/usa/20140907-1911-06385-5f3a5197a2_1800.jpg"
+      }
+    },
+    {
+      "id": "20161106-1606-28008-8c99b39494",
+      "relative_path": "2015-2019/20161106 1606 28008.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20161106-1606-28008-8c99b39494_900.jpg",
+        "detail": "assets/expo/usa/20161106-1606-28008-8c99b39494_1800.jpg"
+      }
+    },
+    {
+      "id": "20180306-1740-00126-5f3bf3a4cb",
+      "relative_path": "2015-2019/20180306 1740 00126.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20180306-1740-00126-5f3bf3a4cb_900.jpg",
+        "detail": "assets/expo/usa/20180306-1740-00126-5f3bf3a4cb_1800.jpg"
+      }
+    },
+    {
+      "id": "20160925-1524-00041-f21924756f",
+      "relative_path": "2015-2019/20160925 1524 00041.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/usa/20160925-1524-00041-f21924756f_900.jpg",
+        "detail": "assets/expo/usa/20160925-1524-00041-f21924756f_1800.jpg"
+      }
+    },
+    {
+      "id": "20180522-1006-00785-bb9fe59c25",
+      "relative_path": "2015-2019/20180522 1006 00785.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220509-205254-03573-fd98e07ecc_900.jpg",
-        "detail": "assets/expo/spain/20220509-205254-03573-fd98e07ecc_1800.jpg"
+        "gallery": "assets/expo/spain/20180522-1006-00785-bb9fe59c25_900.jpg",
+        "detail": "assets/expo/spain/20180522-1006-00785-bb9fe59c25_1800.jpg"
       }
     },
     {
-      "id": "20220510-113828-00196-ce33a9710c",
-      "relative_path": "2022/JPG/05/10/20220510 113828 00196.jpg",
+      "id": "20180522-0958-00781-483ad21c71",
+      "relative_path": "2015-2019/20180522 0958 00781.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220510-113828-00196-ce33a9710c_900.jpg",
-        "detail": "assets/expo/spain/20220510-113828-00196-ce33a9710c_1800.jpg"
+        "gallery": "assets/expo/spain/20180522-0958-00781-483ad21c71_900.jpg",
+        "detail": "assets/expo/spain/20180522-0958-00781-483ad21c71_1800.jpg"
       }
     },
     {
-      "id": "20220618-235625-00229-pano-8b1f8f8e76",
-      "relative_path": "2022/JPG/06/19/20220618 235625 00229-Pano.jpg",
+      "id": "20180515-1617-00426-96dc06c36e",
+      "relative_path": "2015-2019/20180515 1617 00426.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220618-235625-00229-pano-8b1f8f8e76_900.jpg",
-        "detail": "assets/expo/spain/20220618-235625-00229-pano-8b1f8f8e76_1800.jpg"
+        "gallery": "assets/expo/spain/20180515-1617-00426-96dc06c36e_900.jpg",
+        "detail": "assets/expo/spain/20180515-1617-00426-96dc06c36e_1800.jpg"
       }
     },
     {
@@ -425,31 +781,87 @@
       }
     },
     {
-      "id": "20220511-101524-04347-16cfbebb6e",
-      "relative_path": "2022/JPG/05/11/20220511 101524 04347.jpg",
+      "id": "20180522-1053-00829-6b0491a51f",
+      "relative_path": "2015-2019/20180522 1053 00829.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220511-101524-04347-16cfbebb6e_900.jpg",
-        "detail": "assets/expo/spain/20220511-101524-04347-16cfbebb6e_1800.jpg"
+        "gallery": "assets/expo/spain/20180522-1053-00829-6b0491a51f_900.jpg",
+        "detail": "assets/expo/spain/20180522-1053-00829-6b0491a51f_1800.jpg"
       }
     },
     {
-      "id": "20220510-122144-00336-60a76e48f0",
-      "relative_path": "2022/JPG/05/10/20220510 122144 00336.JPG",
+      "id": "20180523-1054-00904-0d99c36c72",
+      "relative_path": "2015-2019/20180523 1054 00904.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220510-122144-00336-60a76e48f0_900.jpg",
-        "detail": "assets/expo/spain/20220510-122144-00336-60a76e48f0_1800.jpg"
+        "gallery": "assets/expo/spain/20180523-1054-00904-0d99c36c72_900.jpg",
+        "detail": "assets/expo/spain/20180523-1054-00904-0d99c36c72_1800.jpg"
+      }
+    },
+    {
+      "id": "20180522-1014-00789-9901434b9a",
+      "relative_path": "2015-2019/20180522 1014 00789.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/spain/20180522-1014-00789-9901434b9a_900.jpg",
+        "detail": "assets/expo/spain/20180522-1014-00789-9901434b9a_1800.jpg"
+      }
+    },
+    {
+      "id": "20180522-1033-00799-03b029177d",
+      "relative_path": "2015-2019/20180522 1033 00799.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/spain/20180522-1033-00799-03b029177d_900.jpg",
+        "detail": "assets/expo/spain/20180522-1033-00799-03b029177d_1800.jpg"
+      }
+    },
+    {
+      "id": "20180521-1203-00749-f072c45c97",
+      "relative_path": "2015-2019/20180521 1203 00749.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/spain/20180521-1203-00749-f072c45c97_900.jpg",
+        "detail": "assets/expo/spain/20180521-1203-00749-f072c45c97_1800.jpg"
+      }
+    },
+    {
+      "id": "20180521-1154-00747-3d7a397110",
+      "relative_path": "2015-2019/20180521 1154 00747.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/spain/20180521-1154-00747-3d7a397110_900.jpg",
+        "detail": "assets/expo/spain/20180521-1154-00747-3d7a397110_1800.jpg"
       }
     },
     {
@@ -467,22 +879,8 @@
       }
     },
     {
-      "id": "20220510-193610-00741-246e0e684e",
-      "relative_path": "2022/JPG/05/10/20220510 193610 00741.jpg",
-      "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "location_hint"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/spain/20220510-193610-00741-246e0e684e_900.jpg",
-        "detail": "assets/expo/spain/20220510-193610-00741-246e0e684e_1800.jpg"
-      }
-    },
-    {
-      "id": "20220705-164358-00121-pano-28e2885b71",
-      "relative_path": "2022/JPG/07/05/20220705 164358 00121-Pano.jpg",
+      "id": "20220618-235625-00229-pano-8b1f8f8e76",
+      "relative_path": "2022/JPG/06/19/20220618 235625 00229-Pano.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
@@ -490,22 +888,8 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164358-00121-pano-28e2885b71_900.jpg",
-        "detail": "assets/expo/spain/20220705-164358-00121-pano-28e2885b71_1800.jpg"
-      }
-    },
-    {
-      "id": "20220619-000102-00258-pano-8f64733ada",
-      "relative_path": "2022/JPG/06/19/20220619 000102 00258-Pano.jpg",
-      "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/spain/20220619-000102-00258-pano-8f64733ada_900.jpg",
-        "detail": "assets/expo/spain/20220619-000102-00258-pano-8f64733ada_1800.jpg"
+        "gallery": "assets/expo/spain/20220618-235625-00229-pano-8b1f8f8e76_900.jpg",
+        "detail": "assets/expo/spain/20220618-235625-00229-pano-8b1f8f8e76_1800.jpg"
       }
     },
     {
@@ -523,8 +907,22 @@
       }
     },
     {
-      "id": "20220509-205521-03579-aeeda6b4a4",
-      "relative_path": "2022/JPG/05/09/20220509 205521 03579.jpg",
+      "id": "20180522-1042-00817-442053ee3d",
+      "relative_path": "2015-2019/20180522 1042 00817.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/spain/20180522-1042-00817-442053ee3d_900.jpg",
+        "detail": "assets/expo/spain/20180522-1042-00817-442053ee3d_1800.jpg"
+      }
+    },
+    {
+      "id": "20220510-113828-00196-ce33a9710c",
+      "relative_path": "2022/JPG/05/10/20220510 113828 00196.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
@@ -532,316 +930,540 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220509-205521-03579-aeeda6b4a4_900.jpg",
-        "detail": "assets/expo/spain/20220509-205521-03579-aeeda6b4a4_1800.jpg"
+        "gallery": "assets/expo/spain/20220510-113828-00196-ce33a9710c_900.jpg",
+        "detail": "assets/expo/spain/20220510-113828-00196-ce33a9710c_1800.jpg"
       }
     },
     {
-      "id": "20220511-101210-04342-d9757c336f",
-      "relative_path": "2022/JPG/05/11/20220511 101210 04342.jpg",
+      "id": "20180522-1259-00877-3bb003eb2d",
+      "relative_path": "2015-2019/20180522 1259 00877.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220511-101210-04342-d9757c336f_900.jpg",
-        "detail": "assets/expo/spain/20220511-101210-04342-d9757c336f_1800.jpg"
+        "gallery": "assets/expo/spain/20180522-1259-00877-3bb003eb2d_900.jpg",
+        "detail": "assets/expo/spain/20180522-1259-00877-3bb003eb2d_1800.jpg"
       }
     },
     {
-      "id": "20220705-164409-00126-pano-75c4163f8e",
-      "relative_path": "2022/JPG/07/05/20220705 164409 00126-Pano.jpg",
+      "id": "20180522-1300-00879-eea199db6c",
+      "relative_path": "2015-2019/20180522 1300 00879.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164409-00126-pano-75c4163f8e_900.jpg",
-        "detail": "assets/expo/spain/20220705-164409-00126-pano-75c4163f8e_1800.jpg"
+        "gallery": "assets/expo/spain/20180522-1300-00879-eea199db6c_900.jpg",
+        "detail": "assets/expo/spain/20180522-1300-00879-eea199db6c_1800.jpg"
       }
     },
     {
-      "id": "20220705-163419-00083-pano-3f4486b119",
-      "relative_path": "2022/JPG/07/05/20220705 163419 00083-Pano.jpg",
+      "id": "20180515-1633-00437-f9e3bd9336",
+      "relative_path": "2015-2019/20180515 1633 00437.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-163419-00083-pano-3f4486b119_900.jpg",
-        "detail": "assets/expo/spain/20220705-163419-00083-pano-3f4486b119_1800.jpg"
+        "gallery": "assets/expo/spain/20180515-1633-00437-f9e3bd9336_900.jpg",
+        "detail": "assets/expo/spain/20180515-1633-00437-f9e3bd9336_1800.jpg"
       }
     },
     {
-      "id": "20220511-101037-04339-de0f00382f",
-      "relative_path": "2022/JPG/05/11/20220511 101037 04339.jpg",
+      "id": "20180521-1548-00754-b563d15503",
+      "relative_path": "2015-2019/20180521 1548 00754.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220511-101037-04339-de0f00382f_900.jpg",
-        "detail": "assets/expo/spain/20220511-101037-04339-de0f00382f_1800.jpg"
+        "gallery": "assets/expo/spain/20180521-1548-00754-b563d15503_900.jpg",
+        "detail": "assets/expo/spain/20180521-1548-00754-b563d15503_1800.jpg"
       }
     },
     {
-      "id": "20220705-163201-00058-pano-fcbc893e0f",
-      "relative_path": "2022/JPG/07/05/20220705 163201 00058-Pano.jpg",
+      "id": "20180523-1232-00922-a14269681d",
+      "relative_path": "2015-2019/20180523 1232 00922.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-163201-00058-pano-fcbc893e0f_900.jpg",
-        "detail": "assets/expo/spain/20220705-163201-00058-pano-fcbc893e0f_1800.jpg"
+        "gallery": "assets/expo/spain/20180523-1232-00922-a14269681d_900.jpg",
+        "detail": "assets/expo/spain/20180523-1232-00922-a14269681d_1800.jpg"
       }
     },
     {
-      "id": "20220705-164241-00109-pano-c1234d4711",
-      "relative_path": "2022/JPG/07/05/20220705 164241 00109-Pano.jpg",
+      "id": "20180521-1927-00772-736a518350",
+      "relative_path": "2015-2019/20180521 1927 00772.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164241-00109-pano-c1234d4711_900.jpg",
-        "detail": "assets/expo/spain/20220705-164241-00109-pano-c1234d4711_1800.jpg"
+        "gallery": "assets/expo/spain/20180521-1927-00772-736a518350_900.jpg",
+        "detail": "assets/expo/spain/20180521-1927-00772-736a518350_1800.jpg"
       }
     },
     {
-      "id": "20220705-164252-00114-pano-77e6201324",
-      "relative_path": "2022/JPG/07/05/20220705 164252 00114-Pano.jpg",
+      "id": "20180521-1833-00759-89403bba93",
+      "relative_path": "2015-2019/20180521 1833 00759.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164252-00114-pano-77e6201324_900.jpg",
-        "detail": "assets/expo/spain/20220705-164252-00114-pano-77e6201324_1800.jpg"
+        "gallery": "assets/expo/spain/20180521-1833-00759-89403bba93_900.jpg",
+        "detail": "assets/expo/spain/20180521-1833-00759-89403bba93_1800.jpg"
       }
     },
     {
-      "id": "20220705-163205-00060-pano-8068d8fe3f",
-      "relative_path": "2022/JPG/07/05/20220705 163205 00060-Pano.jpg",
+      "id": "20180515-1510-00397-3fdd5ba3db",
+      "relative_path": "2015-2019/20180515 1510 00397.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-163205-00060-pano-8068d8fe3f_900.jpg",
-        "detail": "assets/expo/spain/20220705-163205-00060-pano-8068d8fe3f_1800.jpg"
+        "gallery": "assets/expo/spain/20180515-1510-00397-3fdd5ba3db_900.jpg",
+        "detail": "assets/expo/spain/20180515-1510-00397-3fdd5ba3db_1800.jpg"
       }
     },
     {
-      "id": "20220705-164431-00139-pano-92425313d3",
-      "relative_path": "2022/JPG/07/05/20220705 164431 00139-Pano.jpg",
+      "id": "20180521-1954-00774-a43eaf6e85",
+      "relative_path": "2015-2019/20180521 1954 00774.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164431-00139-pano-92425313d3_900.jpg",
-        "detail": "assets/expo/spain/20220705-164431-00139-pano-92425313d3_1800.jpg"
+        "gallery": "assets/expo/spain/20180521-1954-00774-a43eaf6e85_900.jpg",
+        "detail": "assets/expo/spain/20180521-1954-00774-a43eaf6e85_1800.jpg"
       }
     },
     {
-      "id": "20220705-163214-00065-pano-bcd3b6cb72",
-      "relative_path": "2022/JPG/07/05/20220705 163214 00065-Pano.jpg",
+      "id": "20180523-1202-00912-a00fe362d5",
+      "relative_path": "2015-2019/20180523 1202 00912.jpg",
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-163214-00065-pano-bcd3b6cb72_900.jpg",
-        "detail": "assets/expo/spain/20220705-163214-00065-pano-bcd3b6cb72_1800.jpg"
+        "gallery": "assets/expo/spain/20180523-1202-00912-a00fe362d5_900.jpg",
+        "detail": "assets/expo/spain/20180523-1202-00912-a00fe362d5_1800.jpg"
       }
     },
     {
-      "id": "20220705-164412-00127-pano-13a8791aa3",
-      "relative_path": "2022/JPG/07/05/20220705 164412 00127-Pano.jpg",
+      "id": "3-vermilon-fractal-by-nomeradona-paper-quilling-audrey-kaw-1-upscale-575b5cd3-ef34-49dc-ac7d-64dd90fbe1ea-9c335afe04",
+      "relative_path": "2023/04/26/UPSCALE/3 Vermilon fractal by Nomeradona. Paper Quilling, Audrey Kaw-1-UPSCALE_575b5cd3-ef34-49dc-ac7d-64dd90fbe1ea.jpg",
       "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "keyword"
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164412-00127-pano-13a8791aa3_900.jpg",
-        "detail": "assets/expo/spain/20220705-164412-00127-pano-13a8791aa3_1800.jpg"
+        "gallery": "assets/expo/ai/3-vermilon-fractal-by-nomeradona-paper-quilling-audrey-kaw-1-upscale-575b5cd3-ef34-49dc-ac7d-64dd90fbe1ea-9c335afe04_900.jpg",
+        "detail": "assets/expo/ai/3-vermilon-fractal-by-nomeradona-paper-quilling-audrey-kaw-1-upscale-575b5cd3-ef34-49dc-ac7d-64dd90fbe1ea-9c335afe04_1800.jpg"
       }
     },
     {
-      "id": "20220705-164226-00105-pano-467f6f472c",
-      "relative_path": "2022/JPG/07/05/20220705 164226 00105-Pano.jpg",
+      "id": "beautiful-lady-freckles-dark-makeup-hyperdetailed-photogr-2-unzoom-fc881a26-9a08-4dd0-833c-213963638b35-827e8fb1bd",
+      "relative_path": "2023/02/28/UNZOOM/beautiful lady, freckles, dark makeup, hyperdetailed photogr-2-UNZOOM_fc881a26-9a08-4dd0-833c-213963638b35.jpg",
       "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "keyword"
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/spain/20220705-164226-00105-pano-467f6f472c_900.jpg",
-        "detail": "assets/expo/spain/20220705-164226-00105-pano-467f6f472c_1800.jpg"
+        "gallery": "assets/expo/ai/beautiful-lady-freckles-dark-makeup-hyperdetailed-photogr-2-unzoom-fc881a26-9a08-4dd0-833c-213963638b35-827e8fb1bd_900.jpg",
+        "detail": "assets/expo/ai/beautiful-lady-freckles-dark-makeup-hyperdetailed-photogr-2-unzoom-fc881a26-9a08-4dd0-833c-213963638b35-827e8fb1bd_1800.jpg"
       }
     },
     {
-      "id": "20220521-145332-04573-0742e2b77c",
-      "relative_path": "2022/JPG/05/21/20220521 145332 04573.jpg",
+      "id": "pandora-the-first-woman-created-by-the-gods-who-was-given-3-upscale-e61768a7-0ad8-42f3-8c6b-0748b75c4220-22ddb65109",
+      "relative_path": "2023/03/17/UPSCALE/Pandora - The first woman created by the gods, who was given-3-UPSCALE_e61768a7-0ad8-42f3-8c6b-0748b75c4220.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/pandora-the-first-woman-created-by-the-gods-who-was-given-3-upscale-e61768a7-0ad8-42f3-8c6b-0748b75c4220-22ddb65109_900.jpg",
+        "detail": "assets/expo/ai/pandora-the-first-woman-created-by-the-gods-who-was-given-3-upscale-e61768a7-0ad8-42f3-8c6b-0748b75c4220-22ddb65109_1800.jpg"
+      }
+    },
+    {
+      "id": "white-cut-paper-sculpture-wolf-2-upscale-7343c572-3fc5-4ade-8739-f73d911091b5-3-2bfe878717",
+      "relative_path": "2023/04/02/UPSCALE/White cut Paper sculpture wolf-2-UPSCALE_7343c572-3fc5-4ade-8739-f73d911091b5 3.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/white-cut-paper-sculpture-wolf-2-upscale-7343c572-3fc5-4ade-8739-f73d911091b5-3-2bfe878717_900.jpg",
+        "detail": "assets/expo/ai/white-cut-paper-sculpture-wolf-2-upscale-7343c572-3fc5-4ade-8739-f73d911091b5-3-2bfe878717_1800.jpg"
+      }
+    },
+    {
+      "id": "cloud-computing-and-virtualization-cloud-virtualization-s-3-upscale-348227bd-9c9b-403b-8362-a51227f2f952-jpgx2-33ce876979",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Cloud Computing and Virtualization- Cloud, Virtualization, S-3-UPSCALE_348227bd-9c9b-403b-8362-a51227f2f952.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/cloud-computing-and-virtualization-cloud-virtualization-s-3-upscale-348227bd-9c9b-403b-8362-a51227f2f952-jpgx2-33ce876979_900.jpg",
+        "detail": "assets/expo/ai/cloud-computing-and-virtualization-cloud-virtualization-s-3-upscale-348227bd-9c9b-403b-8362-a51227f2f952-jpgx2-33ce876979_1800.jpg"
+      }
+    },
+    {
+      "id": "black-and-white-picture-of-barack-obama-age-30-cartoon-sty-0-upscale-7f8e7c2f-e815-4f87-8964-0ffb6de30eb4-jpgx2-281d5f7e45",
+      "relative_path": "2023/04/24/UPSCALE/Scaled/Black and white picture of Barack obama, age 30, Cartoon sty-0-UPSCALE_7f8e7c2f-e815-4f87-8964-0ffb6de30eb4.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/black-and-white-picture-of-barack-obama-age-30-cartoon-sty-0-upscale-7f8e7c2f-e815-4f87-8964-0ffb6de30eb4-jpgx2-281d5f7e45_900.jpg",
+        "detail": "assets/expo/ai/black-and-white-picture-of-barack-obama-age-30-cartoon-sty-0-upscale-7f8e7c2f-e815-4f87-8964-0ffb6de30eb4-jpgx2-281d5f7e45_1800.jpg"
+      }
+    },
+    {
+      "id": "backpacking-hostels-budget-travel-camping-backpacks-tr-6-upscale-96ac701c-6a4f-451f-9c5f-2e92593e9593-510e636a0e",
+      "relative_path": "2023/05/29/UPSCALE/Backpacking - Hostels, budget travel, camping, backpacks, tr-6-UPSCALE_96ac701c-6a4f-451f-9c5f-2e92593e9593.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/backpacking-hostels-budget-travel-camping-backpacks-tr-6-upscale-96ac701c-6a4f-451f-9c5f-2e92593e9593-510e636a0e_900.jpg",
+        "detail": "assets/expo/ai/backpacking-hostels-budget-travel-camping-backpacks-tr-6-upscale-96ac701c-6a4f-451f-9c5f-2e92593e9593-510e636a0e_1800.jpg"
+      }
+    },
+    {
+      "id": "myriad-layers-of-intricately-cut-paper-sculpture-of-pandora-3-upscale-caab2ced-fb12-4561-ada3-4453f601304e-jpgx2-fe6b442721",
+      "relative_path": "2023/04/02/UPSCALE/Scaled/Myriad Layers of Intricately Cut Paper sculpture of Pandora -3-UPSCALE_caab2ced-fb12-4561-ada3-4453f601304e.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/myriad-layers-of-intricately-cut-paper-sculpture-of-pandora-3-upscale-caab2ced-fb12-4561-ada3-4453f601304e-jpgx2-fe6b442721_900.jpg",
+        "detail": "assets/expo/ai/myriad-layers-of-intricately-cut-paper-sculpture-of-pandora-3-upscale-caab2ced-fb12-4561-ada3-4453f601304e-jpgx2-fe6b442721_1800.jpg"
+      }
+    },
+    {
+      "id": "a-modern-abstract-background-made-of-shiniest-cut-aluminum-1-upscale-2e3e2f8e-7bf7-4d23-8caa-1c033d643415-6ea440cda3",
+      "relative_path": "2023/04/25/UPSCALE/A modern abstract background, made of shiniest cut aluminum -1-UPSCALE_2e3e2f8e-7bf7-4d23-8caa-1c033d643415.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/a-modern-abstract-background-made-of-shiniest-cut-aluminum-1-upscale-2e3e2f8e-7bf7-4d23-8caa-1c033d643415-6ea440cda3_900.jpg",
+        "detail": "assets/expo/ai/a-modern-abstract-background-made-of-shiniest-cut-aluminum-1-upscale-2e3e2f8e-7bf7-4d23-8caa-1c033d643415-6ea440cda3_1800.jpg"
+      }
+    },
+    {
+      "id": "green-technology-sustainable-architecture-green-building-3-upscale-c4a4a6c3-b715-45ba-ae90-8edd581b7a91-jpgx2-bf13641f9e",
+      "relative_path": "2023/06/07/UPSCALE/Scaled/Green technology- Sustainable Architecture, Green Building, -3-UPSCALE_c4a4a6c3-b715-45ba-ae90-8edd581b7a91.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/green-technology-sustainable-architecture-green-building-3-upscale-c4a4a6c3-b715-45ba-ae90-8edd581b7a91-jpgx2-bf13641f9e_900.jpg",
+        "detail": "assets/expo/ai/green-technology-sustainable-architecture-green-building-3-upscale-c4a4a6c3-b715-45ba-ae90-8edd581b7a91-jpgx2-bf13641f9e_1800.jpg"
+      }
+    },
+    {
+      "id": "guava-on-a-fruit-tray-in-the-foreground-abstract-backgroun-0-upscale-d19b4378-f8af-44d7-8c27-7f3a4e8efa8f-jpgx2-1e3375f094",
+      "relative_path": "2023/03/19/UPSCALE/Scaled/Guava on a fruit tray, in the foreground, Abstract backgroun-0-UPSCALE_d19b4378-f8af-44d7-8c27-7f3a4e8efa8f.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/guava-on-a-fruit-tray-in-the-foreground-abstract-backgroun-0-upscale-d19b4378-f8af-44d7-8c27-7f3a4e8efa8f-jpgx2-1e3375f094_900.jpg",
+        "detail": "assets/expo/ai/guava-on-a-fruit-tray-in-the-foreground-abstract-backgroun-0-upscale-d19b4378-f8af-44d7-8c27-7f3a4e8efa8f-jpgx2-1e3375f094_1800.jpg"
+      }
+    },
+    {
+      "id": "a-scenic-view-of-a-sunflower-field-with-blue-sky-and-white-c-0-upscale-71b20ea2-25a6-4411-b840-12519f728634-e01dfe5ca2",
+      "relative_path": "2023/05/14/UPSCALE/A scenic view of a sunflower field with blue sky and white c-0-UPSCALE_71b20ea2-25a6-4411-b840-12519f728634.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/a-scenic-view-of-a-sunflower-field-with-blue-sky-and-white-c-0-upscale-71b20ea2-25a6-4411-b840-12519f728634-e01dfe5ca2_900.jpg",
+        "detail": "assets/expo/ai/a-scenic-view-of-a-sunflower-field-with-blue-sky-and-white-c-0-upscale-71b20ea2-25a6-4411-b840-12519f728634-e01dfe5ca2_1800.jpg"
+      }
+    },
+    {
+      "id": "financial-and-investment-concepts-finance-investment-mone-0-upscale-1a75cd95-7353-4098-9175-e0526f8daade-c4f113b160",
+      "relative_path": "2023/05/23/UPSCALE/Financial and investment concepts, Finance, Investment, Mone-0-UPSCALE_1a75cd95-7353-4098-9175-e0526f8daade.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/financial-and-investment-concepts-finance-investment-mone-0-upscale-1a75cd95-7353-4098-9175-e0526f8daade-c4f113b160_900.jpg",
+        "detail": "assets/expo/ai/financial-and-investment-concepts-finance-investment-mone-0-upscale-1a75cd95-7353-4098-9175-e0526f8daade-c4f113b160_1800.jpg"
+      }
+    },
+    {
+      "id": "10-saturated-colors-fractal-paper-quilling-paris-quarter-l-3-upscale-3b3f1bc4-93f3-4e22-8499-82d771bd327a-84ee38b94d",
+      "relative_path": "2023/04/26/UPSCALE/10 Saturated Colors fractal. Paper Quilling. Paris quarter l-3-UPSCALE_3b3f1bc4-93f3-4e22-8499-82d771bd327a.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/10-saturated-colors-fractal-paper-quilling-paris-quarter-l-3-upscale-3b3f1bc4-93f3-4e22-8499-82d771bd327a-84ee38b94d_900.jpg",
+        "detail": "assets/expo/ai/10-saturated-colors-fractal-paper-quilling-paris-quarter-l-3-upscale-3b3f1bc4-93f3-4e22-8499-82d771bd327a-84ee38b94d_1800.jpg"
+      }
+    },
+    {
+      "id": "eagle-white-cut-paper-intricate-sculpture-on-uniform-grey-6-upscale-2abec886-9670-491b-ad37-cc18193e660b-9ebb2292d1",
+      "relative_path": "2023/04/03/UPSCALE/eagle - White cut Paper intricate sculpture on uniform grey -6-UPSCALE_2abec886-9670-491b-ad37-cc18193e660b.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/eagle-white-cut-paper-intricate-sculpture-on-uniform-grey-6-upscale-2abec886-9670-491b-ad37-cc18193e660b-9ebb2292d1_900.jpg",
+        "detail": "assets/expo/ai/eagle-white-cut-paper-intricate-sculpture-on-uniform-grey-6-upscale-2abec886-9670-491b-ad37-cc18193e660b-9ebb2292d1_1800.jpg"
+      }
+    },
+    {
+      "id": "cherry-tree-van-gogh-style-1-upscale-7b7f6efe-cb6b-483f-a93f-59a6d529f193-37c353c1a6",
+      "relative_path": "2023/04/19/UPSCALE/Cherry tree, Van Gogh style-1-UPSCALE_7b7f6efe-cb6b-483f-a93f-59a6d529f193.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/cherry-tree-van-gogh-style-1-upscale-7b7f6efe-cb6b-483f-a93f-59a6d529f193-37c353c1a6_900.jpg",
+        "detail": "assets/expo/ai/cherry-tree-van-gogh-style-1-upscale-7b7f6efe-cb6b-483f-a93f-59a6d529f193-37c353c1a6_1800.jpg"
+      }
+    },
+    {
+      "id": "a-vibrant-ever-changing-spread-of-hyper-realistic-fruits-e-2-upscale-60edd412-c840-4c5e-9036-a8e8db253904-e2e3635308",
+      "relative_path": "2023/05/03/UPSCALE/A vibrant, ever-changing spread of hyper-realistic fruits, e-2-UPSCALE_60edd412-c840-4c5e-9036-a8e8db253904.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/a-vibrant-ever-changing-spread-of-hyper-realistic-fruits-e-2-upscale-60edd412-c840-4c5e-9036-a8e8db253904-e2e3635308_900.jpg",
+        "detail": "assets/expo/ai/a-vibrant-ever-changing-spread-of-hyper-realistic-fruits-e-2-upscale-60edd412-c840-4c5e-9036-a8e8db253904-e2e3635308_1800.jpg"
+      }
+    },
+    {
+      "id": "financial-planning-and-analysis-budgeting-forecasting-da-0-upscale-d59c8cc9-014f-4cce-8888-590057ba602a-4fc3c3bd9c",
+      "relative_path": "2023/06/08/UPSCALE/Financial planning and analysis - budgeting, forecasting, da-0-UPSCALE_d59c8cc9-014f-4cce-8888-590057ba602a.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/financial-planning-and-analysis-budgeting-forecasting-da-0-upscale-d59c8cc9-014f-4cce-8888-590057ba602a-4fc3c3bd9c_900.jpg",
+        "detail": "assets/expo/ai/financial-planning-and-analysis-budgeting-forecasting-da-0-upscale-d59c8cc9-014f-4cce-8888-590057ba602a-4fc3c3bd9c_1800.jpg"
+      }
+    },
+    {
+      "id": "hand-drawn-flowers-on-colorful-background-vivid-1-upscale-9088a994-d1d8-4311-b123-d1626ebb91fd-jpgx2-3544849738",
+      "relative_path": "2023/05/02/UPSCALE/Scaled/hand drawn flowers on  colorful background vivid-1-UPSCALE_9088a994-d1d8-4311-b123-d1626ebb91fd.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/hand-drawn-flowers-on-colorful-background-vivid-1-upscale-9088a994-d1d8-4311-b123-d1626ebb91fd-jpgx2-3544849738_900.jpg",
+        "detail": "assets/expo/ai/hand-drawn-flowers-on-colorful-background-vivid-1-upscale-9088a994-d1d8-4311-b123-d1626ebb91fd-jpgx2-3544849738_1800.jpg"
+      }
+    },
+    {
+      "id": "futuristic-technology-artificial-intelligence-robotics-au-1-upscale-1fcc9261-be97-4d5f-b812-4701e1bf123b-jpgx2-92fcdca78b",
+      "relative_path": "2023/06/07/UPSCALE/Scaled/Futuristic technology- Artificial Intelligence, Robotics, Au-1-UPSCALE_1fcc9261-be97-4d5f-b812-4701e1bf123b.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/futuristic-technology-artificial-intelligence-robotics-au-1-upscale-1fcc9261-be97-4d5f-b812-4701e1bf123b-jpgx2-92fcdca78b_900.jpg",
+        "detail": "assets/expo/ai/futuristic-technology-artificial-intelligence-robotics-au-1-upscale-1fcc9261-be97-4d5f-b812-4701e1bf123b-jpgx2-92fcdca78b_1800.jpg"
+      }
+    },
+    {
+      "id": "skiing-and-snowboarding-snow-slopes-ski-lift-goggles-h-6-upscale-4a9bdf32-2332-4d84-9a78-d01489d93354-18373d9e12",
+      "relative_path": "2023/06/07/UPSCALE/Skiing and Snowboarding - Snow, Slopes, Ski Lift, Goggles, H-6-UPSCALE_4a9bdf32-2332-4d84-9a78-d01489d93354.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/skiing-and-snowboarding-snow-slopes-ski-lift-goggles-h-6-upscale-4a9bdf32-2332-4d84-9a78-d01489d93354-18373d9e12_900.jpg",
+        "detail": "assets/expo/ai/skiing-and-snowboarding-snow-slopes-ski-lift-goggles-h-6-upscale-4a9bdf32-2332-4d84-9a78-d01489d93354-18373d9e12_1800.jpg"
+      }
+    },
+    {
+      "id": "renewable-energy-solar-power-wind-power-hydro-power-geot-6-upscale-5beef6e5-92b4-4c31-953a-1ee451a088c0-fe21a3b194",
+      "relative_path": "2023/06/07/UPSCALE/Renewable energy- Solar Power, Wind Power, Hydro Power, Geot-6-UPSCALE_5beef6e5-92b4-4c31-953a-1ee451a088c0.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/renewable-energy-solar-power-wind-power-hydro-power-geot-6-upscale-5beef6e5-92b4-4c31-953a-1ee451a088c0-fe21a3b194_900.jpg",
+        "detail": "assets/expo/ai/renewable-energy-solar-power-wind-power-hydro-power-geot-6-upscale-5beef6e5-92b4-4c31-953a-1ee451a088c0-fe21a3b194_1800.jpg"
+      }
+    },
+    {
+      "id": "hospitals-and-medical-facilities-doctor-nurse-patient-e-0-upscale-7d97d17d-0099-4003-966b-faa4adcf2579-ebfaa5c38f",
+      "relative_path": "2023/06/06/UPSCALE/Hospitals and medical facilities - Doctor, nurse, patient, e-0-UPSCALE_7d97d17d-0099-4003-966b-faa4adcf2579.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/hospitals-and-medical-facilities-doctor-nurse-patient-e-0-upscale-7d97d17d-0099-4003-966b-faa4adcf2579-ebfaa5c38f_900.jpg",
+        "detail": "assets/expo/ai/hospitals-and-medical-facilities-doctor-nurse-patient-e-0-upscale-7d97d17d-0099-4003-966b-faa4adcf2579-ebfaa5c38f_1800.jpg"
+      }
+    },
+    {
+      "id": "modern-backyard-barbecue-kitchen-pool-concrete-and-grass-1-upscale-f7d55a16-8fa3-41dc-95a1-38f011397ca5-2519812ab8",
+      "relative_path": "2023/03/07/UPSCALE/modern backyard, barbecue kitchen, pool, concrete and grass -1-UPSCALE_f7d55a16-8fa3-41dc-95a1-38f011397ca5.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/modern-backyard-barbecue-kitchen-pool-concrete-and-grass-1-upscale-f7d55a16-8fa3-41dc-95a1-38f011397ca5-2519812ab8_900.jpg",
+        "detail": "assets/expo/ai/modern-backyard-barbecue-kitchen-pool-concrete-and-grass-1-upscale-f7d55a16-8fa3-41dc-95a1-38f011397ca5-2519812ab8_1800.jpg"
+      }
+    },
+    {
+      "id": "breakfast-spread-bacon-eggs-toast-yogurt-cereal-milk-4-upscale-0a228691-cb2d-4a98-95d9-481af521bc22-jpgx2-c04b91687a",
+      "relative_path": "2023/06/06/UPSCALE/Scaled/Breakfast spread -bacon, eggs, toast, yogurt, cereal, milk, -4-UPSCALE_0a228691-cb2d-4a98-95d9-481af521bc22.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/ai/breakfast-spread-bacon-eggs-toast-yogurt-cereal-milk-4-upscale-0a228691-cb2d-4a98-95d9-481af521bc22-jpgx2-c04b91687a_900.jpg",
+        "detail": "assets/expo/ai/breakfast-spread-bacon-eggs-toast-yogurt-cereal-milk-4-upscale-0a228691-cb2d-4a98-95d9-481af521bc22-jpgx2-c04b91687a_1800.jpg"
+      }
+    },
+    {
+      "id": "20180519-1303-00590-5a73dfed14",
+      "relative_path": "2015-2019/20180519 1303 00590.jpg",
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/portugal/20220521-145332-04573-0742e2b77c_900.jpg",
-        "detail": "assets/expo/portugal/20220521-145332-04573-0742e2b77c_1800.jpg"
+        "gallery": "assets/expo/portugal/20180519-1303-00590-5a73dfed14_900.jpg",
+        "detail": "assets/expo/portugal/20180519-1303-00590-5a73dfed14_1800.jpg"
       }
     },
     {
-      "id": "20220802-130003-00136-pano-052608ca90",
-      "relative_path": "2022/JPG/08/02/20220802 130003 00136-Pano.jpg",
+      "id": "20180519-1418-00629-8386a780e8",
+      "relative_path": "2015-2019/20180519 1418 00629.jpg",
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/portugal/20220802-130003-00136-pano-052608ca90_900.jpg",
-        "detail": "assets/expo/portugal/20220802-130003-00136-pano-052608ca90_1800.jpg"
+        "gallery": "assets/expo/portugal/20180519-1418-00629-8386a780e8_900.jpg",
+        "detail": "assets/expo/portugal/20180519-1418-00629-8386a780e8_1800.jpg"
       }
     },
     {
-      "id": "20220521-144247-04519-1ce1498825",
-      "relative_path": "2022/JPG/05/21/20220521 144247 04519.jpg",
+      "id": "20180518-1340-00504-13096677a9",
+      "relative_path": "2015-2019/20180518 1340 00504.jpg",
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/portugal/20220521-144247-04519-1ce1498825_900.jpg",
-        "detail": "assets/expo/portugal/20220521-144247-04519-1ce1498825_1800.jpg"
-      }
-    },
-    {
-      "id": "20220519-144849-04394-d3e2b2fff3",
-      "relative_path": "2022/JPG/05/19/20220519 144849 04394.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-144849-04394-d3e2b2fff3_900.jpg",
-        "detail": "assets/expo/portugal/20220519-144849-04394-d3e2b2fff3_1800.jpg"
-      }
-    },
-    {
-      "id": "20220519-145011-04398-926891f8aa",
-      "relative_path": "2022/JPG/05/19/20220519 145011 04398.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-145011-04398-926891f8aa_900.jpg",
-        "detail": "assets/expo/portugal/20220519-145011-04398-926891f8aa_1800.jpg"
-      }
-    },
-    {
-      "id": "20220519-150002-04473-673b0d617b",
-      "relative_path": "2022/JPG/05/19/20220519 150002 04473.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-150002-04473-673b0d617b_900.jpg",
-        "detail": "assets/expo/portugal/20220519-150002-04473-673b0d617b_1800.jpg"
-      }
-    },
-    {
-      "id": "20220519-145733-04458-46544e9a62",
-      "relative_path": "2022/JPG/05/19/20220519 145733 04458.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-145733-04458-46544e9a62_900.jpg",
-        "detail": "assets/expo/portugal/20220519-145733-04458-46544e9a62_1800.jpg"
-      }
-    },
-    {
-      "id": "20220519-150855-04494-23ca28ef26",
-      "relative_path": "2022/JPG/05/19/20220519 150855 04494.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-150855-04494-23ca28ef26_900.jpg",
-        "detail": "assets/expo/portugal/20220519-150855-04494-23ca28ef26_1800.jpg"
-      }
-    },
-    {
-      "id": "20220519-144628-04390-10c96e02d3",
-      "relative_path": "2022/JPG/05/19/20220519 144628 04390.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-144628-04390-10c96e02d3_900.jpg",
-        "detail": "assets/expo/portugal/20220519-144628-04390-10c96e02d3_1800.jpg"
-      }
-    },
-    {
-      "id": "20220521-145324-04568-1c242c532c",
-      "relative_path": "2022/JPG/05/21/20220521 145324 04568.jpg",
-      "gallery_country": {
-        "slug": "portugal",
-        "label": "Portugal",
-        "source": "keyword"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/portugal/20220521-145324-04568-1c242c532c_900.jpg",
-        "detail": "assets/expo/portugal/20220521-145324-04568-1c242c532c_1800.jpg"
+        "gallery": "assets/expo/portugal/20180518-1340-00504-13096677a9_900.jpg",
+        "detail": "assets/expo/portugal/20180518-1340-00504-13096677a9_1800.jpg"
       }
     },
     {
@@ -859,36 +1481,134 @@
       }
     },
     {
-      "id": "20220519-144910-04396-092ac31b87",
-      "relative_path": "2022/JPG/05/19/20220519 144910 04396.jpg",
+      "id": "20180520-1216-00713-83bd0a4ab5",
+      "relative_path": "2015-2019/20180520 1216 00713.jpg",
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-144910-04396-092ac31b87_900.jpg",
-        "detail": "assets/expo/portugal/20220519-144910-04396-092ac31b87_1800.jpg"
+        "gallery": "assets/expo/portugal/20180520-1216-00713-83bd0a4ab5_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1216-00713-83bd0a4ab5_1800.jpg"
       }
     },
     {
-      "id": "20220519-150528-04477-0e4b4e9c19",
-      "relative_path": "2022/JPG/05/19/20220519 150528 04477.jpg",
+      "id": "20180519-1713-00675-d22d0fadd7",
+      "relative_path": "2015-2019/20180519 1713 00675.jpg",
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "keyword"
+        "source": "country"
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-150528-04477-0e4b4e9c19_900.jpg",
-        "detail": "assets/expo/portugal/20220519-150528-04477-0e4b4e9c19_1800.jpg"
+        "gallery": "assets/expo/portugal/20180519-1713-00675-d22d0fadd7_900.jpg",
+        "detail": "assets/expo/portugal/20180519-1713-00675-d22d0fadd7_1800.jpg"
       }
     },
     {
-      "id": "20220519-145241-04418-3f31ab4dce",
-      "relative_path": "2022/JPG/05/19/20220519 145241 04418.jpg",
+      "id": "20180520-1701-00737-a4a3b7e860",
+      "relative_path": "2015-2019/20180520 1701 00737.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1701-00737-a4a3b7e860_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1701-00737-a4a3b7e860_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1731-00738-1d66a4c1ca",
+      "relative_path": "2015-2019/20180520 1731 00738.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1731-00738-1d66a4c1ca_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1731-00738-1d66a4c1ca_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1200-00686-c6eba24915",
+      "relative_path": "2015-2019/20180520 1200 00686.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1200-00686-c6eba24915_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1200-00686-c6eba24915_1800.jpg"
+      }
+    },
+    {
+      "id": "20180517-1157-00468-cccce40ef1",
+      "relative_path": "2015-2019/20180517 1157 00468.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180517-1157-00468-cccce40ef1_900.jpg",
+        "detail": "assets/expo/portugal/20180517-1157-00468-cccce40ef1_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1154-00684-fc9320d34c",
+      "relative_path": "2015-2019/20180520 1154 00684.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1154-00684-fc9320d34c_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1154-00684-fc9320d34c_1800.jpg"
+      }
+    },
+    {
+      "id": "20180516-1200-00455-4c4be1568e",
+      "relative_path": "2015-2019/20180516 1200 00455.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180516-1200-00455-4c4be1568e_900.jpg",
+        "detail": "assets/expo/portugal/20180516-1200-00455-4c4be1568e_1800.jpg"
+      }
+    },
+    {
+      "id": "20180518-1455-00538-42841411e1",
+      "relative_path": "2015-2019/20180518 1455 00538.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180518-1455-00538-42841411e1_900.jpg",
+        "detail": "assets/expo/portugal/20180518-1455-00538-42841411e1_1800.jpg"
+      }
+    },
+    {
+      "id": "20220519-150002-04473-673b0d617b",
+      "relative_path": "2022/JPG/05/19/20220519 150002 04473.jpg",
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
@@ -896,8 +1616,190 @@
       },
       "source_mode": "reserve",
       "derivatives": {
-        "gallery": "assets/expo/portugal/20220519-145241-04418-3f31ab4dce_900.jpg",
-        "detail": "assets/expo/portugal/20220519-145241-04418-3f31ab4dce_1800.jpg"
+        "gallery": "assets/expo/portugal/20220519-150002-04473-673b0d617b_900.jpg",
+        "detail": "assets/expo/portugal/20220519-150002-04473-673b0d617b_1800.jpg"
+      }
+    },
+    {
+      "id": "20180517-1438-00480-f357ee72c1",
+      "relative_path": "2015-2019/20180517 1438 00480.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180517-1438-00480-f357ee72c1_900.jpg",
+        "detail": "assets/expo/portugal/20180517-1438-00480-f357ee72c1_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1545-00719-e98749030b",
+      "relative_path": "2015-2019/20180520 1545 00719.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1545-00719-e98749030b_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1545-00719-e98749030b_1800.jpg"
+      }
+    },
+    {
+      "id": "20180517-2140-00499-bdffe517ce",
+      "relative_path": "2015-2019/20180517 2140 00499.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180517-2140-00499-bdffe517ce_900.jpg",
+        "detail": "assets/expo/portugal/20180517-2140-00499-bdffe517ce_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1607-00725-b30b83b198",
+      "relative_path": "2015-2019/20180520 1607 00725.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1607-00725-b30b83b198_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1607-00725-b30b83b198_1800.jpg"
+      }
+    },
+    {
+      "id": "20180518-1913-00585-250cb95ac6",
+      "relative_path": "2015-2019/20180518 1913 00585.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180518-1913-00585-250cb95ac6_900.jpg",
+        "detail": "assets/expo/portugal/20180518-1913-00585-250cb95ac6_1800.jpg"
+      }
+    },
+    {
+      "id": "20220521-145324-04568-1c242c532c",
+      "relative_path": "2022/JPG/05/21/20220521 145324 04568.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20220521-145324-04568-1c242c532c_900.jpg",
+        "detail": "assets/expo/portugal/20220521-145324-04568-1c242c532c_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1627-00732-0df4ba1830",
+      "relative_path": "2015-2019/20180520 1627 00732.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1627-00732-0df4ba1830_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1627-00732-0df4ba1830_1800.jpg"
+      }
+    },
+    {
+      "id": "20180520-1559-00722-c5fc561a78",
+      "relative_path": "2015-2019/20180520 1559 00722.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180520-1559-00722-c5fc561a78_900.jpg",
+        "detail": "assets/expo/portugal/20180520-1559-00722-c5fc561a78_1800.jpg"
+      }
+    },
+    {
+      "id": "20220519-144849-04394-d3e2b2fff3",
+      "relative_path": "2022/JPG/05/19/20220519 144849 04394.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20220519-144849-04394-d3e2b2fff3_900.jpg",
+        "detail": "assets/expo/portugal/20220519-144849-04394-d3e2b2fff3_1800.jpg"
+      }
+    },
+    {
+      "id": "20180516-1159-00454-f6c81b2b52",
+      "relative_path": "2015-2019/20180516 1159 00454.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180516-1159-00454-f6c81b2b52_900.jpg",
+        "detail": "assets/expo/portugal/20180516-1159-00454-f6c81b2b52_1800.jpg"
+      }
+    },
+    {
+      "id": "20180518-1909-00583-cbdb3185f0",
+      "relative_path": "2015-2019/20180518 1909 00583.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/portugal/20180518-1909-00583-cbdb3185f0_900.jpg",
+        "detail": "assets/expo/portugal/20180518-1909-00583-cbdb3185f0_1800.jpg"
+      }
+    },
+    {
+      "id": "20190624-1827-16232-feef5b78f4",
+      "relative_path": "2015-2019/20190624 1827 16232.jpg",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/slovakia/20190624-1827-16232-feef5b78f4_900.jpg",
+        "detail": "assets/expo/slovakia/20190624-1827-16232-feef5b78f4_1800.jpg"
+      }
+    },
+    {
+      "id": "20190624-1826-16542-1eb5098247",
+      "relative_path": "2015-2019/20190624 1826 16542.jpg",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword"
+      },
+      "source_mode": "reserve",
+      "derivatives": {
+        "gallery": "assets/expo/slovakia/20190624-1826-16542-1eb5098247_900.jpg",
+        "detail": "assets/expo/slovakia/20190624-1826-16542-1eb5098247_1800.jpg"
       }
     }
   ]

@@ -7,8 +7,10 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v65.29`
-- The old generated photo derivatives have been removed from the active asset tree so the next import starts clean.
+- Current local visible build: `v65.30`
+- Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been curated for the public build.
+- The current public Expo set has 127 photos: 25 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos.
+- The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
 
 ## Asset Contract
 
@@ -38,6 +40,6 @@ Date: 2026-05-04
 
 ## Recent Decisions
 
-- We are rebuilding the precious generated JPGs after the next real import.
-- The next Camera import should dump every eligible developed green/4+ photo into Reserve and only try to classify countries.
+- Generated JPGs are precious again after the Saturn rebuild.
+- Camera imports dump every eligible developed green/4+ photo into Reserve and only try to classify countries.
 - Published GitHub assets should include only the curated Expo set, never Reserve/Hidden.

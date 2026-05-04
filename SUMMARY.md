@@ -7,7 +7,7 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v65.28`
+- Current local visible build: `v65.29`
 - The old generated photo derivatives have been removed from the active asset tree so the next import starts clean.
 
 ## Asset Contract

@@ -411,6 +411,12 @@ def select_regular_groups(
     for slug, rows in groups.items():
         blocked = [item for item in rows if item[0].get("id") in blacklist_ids]
         eligible = [item for item in rows if item[0].get("id") not in blacklist_ids]
+        if slug == "unknown":
+            regular_groups[slug] = []
+            reserve_groups[slug] = sort_rows(eligible)
+            reserve_counts[slug] = len(reserve_groups[slug])
+            unworthy_counts[slug] = len(blocked)
+            continue
         regular_eligible = [item for item in eligible if item[0].get("id") not in reserve_only_ids]
         eligible_by_id = {item[0].get("id"): item for item in regular_eligible}
         selected: list[tuple[dict, str]] = []
@@ -479,7 +485,7 @@ def write_photos_data(
         pinned_regular_ids=pinned_regular_ids,
         reserve_only_ids=reserve_only_ids,
     )
-    regular_rows = [item for slug in ORDER for item in regular_groups.get(slug, [])]
+    regular_rows = [item for slug in PUBLIC_ORDER for item in regular_groups.get(slug, [])]
     if sync_regular_assets:
         copy_regular_assets(repo_root, regular_rows)
         write_regular_manifest(

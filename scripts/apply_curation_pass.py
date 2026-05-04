@@ -761,14 +761,7 @@ def apply_asset_curation(
             if add_regular_photo(slug, source_photo):
                 selected_ids.add(photo_id)
 
-    assigned_ids = set(country_assignments)
-    regular_groups["unknown"] = [
-        copy_photo(photo)
-        for photo in current_groups.get("unknown", [])
-        if photo.get("id") not in hidden_ids
-        and photo.get("id") not in reserve_only_ids
-        and photo.get("id") not in assigned_ids
-    ][:regular_cap]
+    regular_groups["unknown"] = []
 
     if missing_ids:
         raise FileNotFoundError(f"Curation Pass referenced photos not found in Regular or Reserve data: {', '.join(missing_ids[:20])}")

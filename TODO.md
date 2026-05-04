@@ -12,7 +12,39 @@ Last updated: 2026-05-04
 - Added localhost gallery single-click selection, double-click detail navigation, and a viewport-limited Grid density slider.
 - Removed the collection number and archive blurb from gallery heroes.
 
-## Prioritized Next Steps
+## Current Priority Stack
+
+1. **Rename blacklist to Curation Pass.**
+   - The export now carries hides, reserve returns, cap changes, and future classification decisions, so the owner-facing name should match the broader job before the workflow grows further.
+
+2. **Make Owner the curation command center.**
+   - Keep the cap control, Curation Pass export, Unworthy review, and future Unknown classification tools together on localhost.
+
+3. **Move Unknown into Owner classification.**
+   - Remove Unknown from public country-style galleries and create a manual path to classify each item into a real country with useful metadata context.
+
+4. **Finish the browser-to-disk curation loop.**
+   - Ensure H/U/P actions, reserve-only state, cap changes, replacements, and future country assignments export cleanly and can be applied by the off-browser cleaner.
+
+5. **Harden Regular/Reserve publishing.**
+   - Keep Regular small and publishable, keep Reserve and Unworthy ignored/local, and preserve the safe GitHub Pages path without archive churn.
+
+6. **Improve live curation speed.**
+   - Refine gallery density/zoom, hover metadata, arrow movement, selection behavior, and mobile retesting so reviewing photos feels fast.
+
+7. **Polish the homepage experience.**
+   - Fix carousel hit targets, refresh samples on each carousel turn, add the bottom band everywhere, and give the Archive shape section better copy.
+
+8. **Scale gallery generation.**
+   - Automate manifest promotion into `photos-data.js` once the curation states and publishing rules are stable.
+
+9. **Round out buyer-facing product basics.**
+   - Add licensing, checkout/order intent, filtering/sorting, favorites polish, mobile navigation, and SEO/social metadata.
+
+10. **Keep operations steady.**
+   - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
+
+## Product Backlog
 
 1. **Automate manifest promotion into `photos-data.js`.**
    - Convert selected rows from `assets/lightroom/manifest.json` into collection entries.

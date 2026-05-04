@@ -81,43 +81,55 @@ Last updated: 2026-05-04
    - Keep the `Unworthy` page collection-like and localhost-only.
    - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to `Regular`.
 
-4. **Refine localhost gallery selection behavior.**
+4. **Move Unknown into an Owner classification workflow.**
+   - Remove `Unknown` from the public country-style collection list and treat it as an owner-only curation queue.
+   - Add a manual classification path for assigning an unknown photo to a real country.
+   - Decide whether classification writes a small owner export, updates the Lightroom manifest, or feeds directly into the cleaner script.
+   - Preserve enough context while classifying, such as filename, capture time, GPS metadata, keywords, and nearby shoot folders.
+
+5. **Rename the blacklist workflow to Curation Pass.**
+   - Replace owner-facing `blacklist` wording with `Curation Pass`, since the export now carries hides, reserve returns, cap changes, and future classification decisions.
+   - Consider renaming the downloadable extension from `.pbe-blacklist` to something like `.pbe-curation`.
+   - Consider renaming scripts/buttons around the same concept, for example `Export Curation Pass` and `Apply Curation Pass`.
+   - Keep the old blacklist name as a compatibility alias until existing exports are no longer useful.
+
+6. **Refine localhost gallery selection behavior.**
    - Keep retesting single-click selection and double-click detail opening during live curation.
    - Preserve keyboard-first moderation flow and avoid making accidental navigation too easy while curating.
    - Keep `Export blacklist` accessible from the homepage footer for localhost owner workflows.
    - Retest single-click, double-click, arrow movement, and hide/undo on a phone-sized viewport.
 
-5. **Add zoom control for gallery density.**
+7. **Add zoom control for gallery density.**
    - Refine the new Grid slider after live curation use.
    - Consider whether density should be local-only forever or become a public browsing preference.
 
-6. **Add gallery hover metadata.**
+8. **Add gallery hover metadata.**
    - Show a lightweight tooltip when hovering over a gallery photo.
    - Start with the photo title, then consider adding capture date, country, source type, or other safe metadata.
    - Keep touch devices clean; the tooltip should not block curation controls or accidental-tap prevention.
 
-7. **Fix homepage carousel card hit targets.**
+9. **Fix homepage carousel card hit targets.**
    - Clicking a collection card currently navigates even when that card is not the foreground carousel item.
    - Restrict navigation to the active/foreground card, or otherwise make background cards non-clickable.
    - Retest keyboard and pointer behavior after the carousel hit target fix.
 
-8. **Refresh homepage samples on each pooch turn.**
+10. **Refresh homepage samples on each pooch turn.**
    - When the main-page carousel/pooch advances, pick fresh representative sample photos instead of keeping the same page-load random picks.
    - Keep the hero stack and carousel cards in sync so each turn feels like a new browseable sample set.
    - Avoid jarring layout shifts while images refresh.
 
-9. **Add the bottom band everywhere.**
+11. **Add the bottom band everywhere.**
    - Use the footer/bottom band consistently across home, gallery, detail, owner, unworthy, basket, and liked pages.
    - Show owner-only links such as `Owner` and `Export blacklist` only on localhost.
    - Keep published footer contents public-safe, likely `By Elie`, `Collections`, and other public navigation only.
    - Make the band responsive so it stays readable on narrow screens.
 
-10. **Give the homepage archive stats something worth saying.**
+12. **Give the homepage archive stats something worth saying.**
    - Revisit the `Archive shape` band and replace placeholder-feeling stats/copy with something more meaningful.
    - Keep the section compact, useful, and visually balanced with the rest of the homepage.
    - Consider whether the values should describe the public Regular set, the local archive, the reserve workflow, or the broader By Elie media vault.
 
-11. **Backburner: add GitHub branch protection.**
+13. **Backburner: add GitHub branch protection.**
    - Revisit rulesets after the lightweight publish workflow has settled.
    - Protect `main` from force-pushes and accidental deletion.
    - Avoid blocking the solo publishing loop until the release path is smooth.

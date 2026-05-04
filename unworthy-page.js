@@ -6,6 +6,7 @@
   const status = document.querySelector("[data-unworthy-status]");
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
   let selectedIndex = 0;
+  let catalogsLoaded = false;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -82,6 +83,15 @@
     }
 
     const photos = hiddenPhotos();
+    if (!catalogsLoaded) {
+      galleryRoot.innerHTML = `
+        <article class="mock-photo empty-gallery-card" aria-label="Loading hidden photos">
+          <span>Loading hidden photos</span>
+        </article>
+      `;
+      setStatus("Loading hidden photo catalogs.");
+      return;
+    }
     if (!photos.length) {
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="No hidden photos">
@@ -103,7 +113,7 @@
           data-photo-id="${escapeHtml(photo.id)}"
           data-photo-href="${href}"
         >
-          ${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(photo.title)}"/>` : ""}
+          ${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(photo.title)}"/>` : `<span>${escapeHtml(photo.title)}</span>`}
         </article>
       `;
     }).join("");
@@ -171,6 +181,9 @@
   Promise.all([
     reserveStore?.load?.() || Promise.resolve({}),
     hiddenStore?.load?.() || Promise.resolve({}),
-  ]).then(render);
+  ]).then(() => {
+    catalogsLoaded = true;
+    render();
+  });
   render();
 })();

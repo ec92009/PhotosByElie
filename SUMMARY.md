@@ -7,7 +7,7 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v65.31`
+- Current local visible build: `v65.32`
 - Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been curated for the public build.
 - The current public Expo set has 127 photos: 25 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos.
 - The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.

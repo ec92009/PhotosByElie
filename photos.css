@@ -357,6 +357,38 @@ html[data-theme="light"] .photo-art.has-photo::after{
   font-size:.82rem;
   line-height:1.35;
 }
+.unknown-metadata{
+  display:grid;
+  gap:8px;
+  margin:0;
+}
+.unknown-metadata div{
+  display:grid;
+  gap:3px;
+}
+.unknown-metadata dt{
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.unknown-metadata dd{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+  margin:0;
+  color:var(--text);
+  font-size:.78rem;
+  line-height:1.35;
+}
+.unknown-metadata span,
+.unknown-metadata em{
+  padding:2px 6px;
+  border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface-2) 70%,var(--surface) 30%);
+  font-style:normal;
+}
 .basket-total-band{
   position:sticky;
   top:67px;

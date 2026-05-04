@@ -61,6 +61,33 @@
     return allUnknownPhotos().filter((candidate) => captureDay(candidate) === day);
   };
 
+  const splitKeywordText = (value) => String(value || "")
+    .split(/[;,]/)
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+
+  const keywordsFor = (photo) => {
+    const keywords = [];
+    const add = (value) => {
+      if (Array.isArray(value)) {
+        value.forEach(add);
+        return;
+      }
+      splitKeywordText(value).forEach((keyword) => {
+        if (!keywords.some((existing) => existing.toLowerCase() === keyword.toLowerCase())) {
+          keywords.push(keyword);
+        }
+      });
+    };
+    add(photo?.keywords);
+    add((photo?.metadata || []).find((item) => item.label === "Keywords")?.value);
+    add(photo?.selection_metadata?.Subject);
+    add(photo?.selection_metadata?.Keywords);
+    add(photo?.raw_metadata?.Subject);
+    add(photo?.raw_metadata?.Keywords);
+    return keywords;
+  };
+
   const closeFullscreenPreview = () => {
     fullscreenPreview?.remove();
     fullscreenPreview = null;
@@ -123,6 +150,13 @@
     return ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
   };
 
+  const shouldIgnoreUnknownActionShortcut = (event) => {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return true;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return false;
+    return target.isContentEditable || ["INPUT", "TEXTAREA"].includes(target.tagName);
+  };
+
   const render = () => {
     if (!root) return;
     if (!unworthyStore?.enabled) {
@@ -160,6 +194,7 @@
       const assigned = assignments[photo.id] || "";
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;
+      const keywords = keywordsFor(photo);
       return `
         <article class="unknown-card" data-photo-id="${escapeHtml(photo.id)}">
           <div class="unknown-thumb ${image ? "has-image" : ""}">
@@ -169,6 +204,16 @@
             <p class="eyebrow">${escapeHtml(photo.source)}</p>
             <h2>${escapeHtml(photo.title)}</h2>
             <p>${escapeHtml(capture || photo.caption || photo.id)}</p>
+            <dl class="unknown-metadata">
+              <div>
+                <dt>Title</dt>
+                <dd>${escapeHtml(photo.title || photo.id)}</dd>
+              </div>
+              <div>
+                <dt>Keywords</dt>
+                <dd>${keywords.length ? keywords.map((keyword) => `<span>${escapeHtml(keyword)}</span>`).join("") : '<em>None</em>'}</dd>
+              </div>
+            </dl>
             ${dayCount > 1 ? `<p>${dayCount} photos from the same day</p>` : ""}
             <label class="owner-number-control">
               <span>Country</span>
@@ -224,7 +269,11 @@
   };
 
   window.addEventListener("keydown", (event) => {
-    if (!unworthyStore?.enabled || shouldIgnoreShortcut(event)) return;
+    if (!unworthyStore?.enabled) return;
+    const key = event.key.toLowerCase();
+    const hOrU = key === "h" || key === "u";
+    if (hOrU && shouldIgnoreUnknownActionShortcut(event)) return;
+    if (!hOrU && shouldIgnoreShortcut(event)) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
       moveSelection(-1);
@@ -235,8 +284,8 @@
       moveSelection(1);
       return;
     }
-    const key = event.key.toLowerCase();
     if (key === "h") {
+      event.preventDefault();
       const photo = unknownPhotos().find((item) => item.id === selectedPhotoId) || unknownPhotos()[0];
       if (!photo) return;
       lastHiddenPhotoId = photo.id;
@@ -247,6 +296,7 @@
       return;
     }
     if (key !== "u") return;
+    event.preventDefault();
     const restoredId = unworthyStore.undo(lastHiddenPhotoId);
     if (restoredId) selectedPhotoId = restoredId;
     render();

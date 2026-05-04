@@ -186,25 +186,31 @@ if (likeToggle && likedStore) {
   });
 }
 
+const shouldIgnoreShortcut = (event) => {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return true;
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  return ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+};
+
+window.addEventListener("keydown", (event) => {
+  if (shouldIgnoreShortcut(event)) return;
+  if (event.key === "ArrowLeft" && prevPhotoLink?.getAttribute("href")) {
+    window.location.assign(prevPhotoLink.getAttribute("href"));
+    event.preventDefault();
+    return;
+  }
+  if (event.key === "ArrowRight" && nextPhotoLink?.getAttribute("href")) {
+    window.location.assign(nextPhotoLink.getAttribute("href"));
+    event.preventDefault();
+  }
+});
+
 if (localModerationEnabled) {
   window.addEventListener("keydown", (event) => {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
-    const target = event.target;
-    if (target instanceof HTMLElement) {
-      if (target.isContentEditable) return;
-      if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
-    }
+    if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
-    if (key === "arrowleft" && prevPhotoLink?.getAttribute("href")) {
-      window.location.assign(prevPhotoLink.getAttribute("href"));
-      event.preventDefault();
-      return;
-    }
-    if (key === "arrowright" && nextPhotoLink?.getAttribute("href")) {
-      window.location.assign(nextPhotoLink.getAttribute("href"));
-      event.preventDefault();
-      return;
-    }
     if (key === "h") {
       if (unworthyStore.has(photo.id)) {
         status.textContent = `${photo.title} is already marked unworthy on this localhost browser.`;

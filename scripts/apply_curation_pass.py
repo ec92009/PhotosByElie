@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import random
 import shutil
 import subprocess
 import sys
@@ -443,12 +444,13 @@ def write_regular_manifest_from_site(
     reserve_groups: dict[str, list[dict]],
     regular_cap: int,
     hidden_ids: set[str],
+    selection_mode: str = "curation-pass",
 ) -> None:
     regular_rows = [(slug, photo) for slug in ORDER for photo in regular_groups.get(slug, [])]
     payload = {
         "schema_version": 1,
         "regular_cap": regular_cap,
-        "selection_mode": "curation-pass",
+        "selection_mode": selection_mode,
         "seed": None,
         "photos_count": len(regular_rows),
         "reserve_counts": {slug: len(reserve_groups.get(slug, [])) for slug in ORDER},
@@ -496,11 +498,14 @@ def apply_asset_curation(
     asset_sources: list[Path] | None = None,
 ) -> dict:
     site = load_site_data(repo_root)
+    rng = random.SystemRandom()
     hidden_ids = blacklist_ids_from_payload(payload)
     reserve_only_ids = reserve_only_ids_from_payload(payload)
     country_assignments = country_assignments_from_payload(payload)
     regular_state = regular_state_from_payload(payload)
     reserve_promotions = payload.get("reserve_promotions") if isinstance(payload.get("reserve_promotions"), dict) else {}
+    selection_mode = str(payload.get("selection_mode") or "random")
+    randomize_expo_selection = selection_mode == "random"
     roots = candidate_asset_roots(repo_root, asset_sources)
 
     current_groups = {slug: list((site.get("data", {}).get(slug) or {}).get("photos") or []) for slug in ORDER}
@@ -525,6 +530,12 @@ def apply_asset_curation(
 
     def lookup(photo_id: str) -> tuple[str, dict] | None:
         return current_by_id.get(photo_id) or reserve_by_id.get(photo_id)
+
+    def target_slug_for(source_slug: str, photo: dict) -> str:
+        assigned_slug = country_assignments.get(photo.get("id"))
+        if assigned_slug in ORDER:
+            return assigned_slug
+        return source_slug if source_slug in ORDER else "unknown"
 
     if not regular_state:
         regular_state = {}
@@ -560,9 +571,36 @@ def apply_asset_curation(
         regular_groups[slug].append(photo)
         return True
 
+    def randomized_regular_candidates(slug: str) -> list[dict]:
+        candidates: list[dict] = []
+        seen_ids: set[str] = set()
+        for groups in (current_groups, reserve_groups_input):
+            for source_slug, photos in groups.items():
+                if source_slug == "unknown":
+                    continue
+                for source_photo in photos:
+                    photo_id = source_photo.get("id")
+                    if not photo_id or photo_id in seen_ids:
+                        continue
+                    if photo_id in hidden_ids or photo_id in reserve_only_ids:
+                        continue
+                    if target_slug_for(source_slug, source_photo) != slug:
+                        continue
+                    candidates.append(source_photo)
+                    seen_ids.add(photo_id)
+        rng.shuffle(candidates)
+        return candidates
+
     for slug in ORDER:
         if slug == "unknown":
             continue
+        if randomize_expo_selection:
+            for source_photo in randomized_regular_candidates(slug):
+                if len(regular_groups[slug]) >= regular_cap:
+                    break
+                add_regular_photo(slug, source_photo)
+            continue
+
         for photo_id in regular_state.get(slug, [])[:regular_cap]:
             if photo_id in hidden_ids or photo_id in reserve_only_ids:
                 continue
@@ -574,7 +612,9 @@ def apply_asset_curation(
             add_regular_photo(slug, source_photo)
 
         selected_ids = {photo.get("id") for photo in regular_groups[slug]}
-        for source_photo in reserve_groups_input.get(slug, []):
+        reserve_candidates = list(reserve_groups_input.get(slug, []))
+        rng.shuffle(reserve_candidates)
+        for source_photo in reserve_candidates:
             photo_id = source_photo.get("id")
             if len(regular_groups[slug]) >= regular_cap:
                 break
@@ -591,6 +631,10 @@ def apply_asset_curation(
         and photo.get("id") not in reserve_only_ids
         and photo.get("id") not in assigned_ids
     ][:regular_cap]
+
+    for slug in ORDER:
+        if slug != "unknown":
+            rng.shuffle(regular_groups[slug])
 
     if missing_ids:
         raise FileNotFoundError(f"Curation Pass referenced photos not found in Regular or Reserve data: {', '.join(missing_ids[:20])}")
@@ -666,7 +710,14 @@ def apply_asset_curation(
                 reserve_groups[target_slug].append(demoted)
 
     write_photos_data_from_site(repo_root, regular_groups, reserve_groups)
-    write_regular_manifest_from_site(repo_root, regular_groups, reserve_groups, regular_cap, hidden_ids)
+    write_regular_manifest_from_site(
+        repo_root,
+        regular_groups,
+        reserve_groups,
+        regular_cap,
+        hidden_ids,
+        "random-curation-pass" if randomize_expo_selection else "curation-pass",
+    )
     write_reserve_data_from_site(repo_root, reserve_groups)
     return {
         "mode": "direct-assets",

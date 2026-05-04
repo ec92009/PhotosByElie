@@ -359,7 +359,7 @@ def select_regular_groups(
             rng.shuffle(fill_pool)
         selected.extend(fill_pool[: max(0, regular_cap - len(selected))])
 
-        if pinned_regular_ids.get(slug):
+        if pinned_regular_ids.get(slug) or selection_mode == "random":
             regular_groups[slug] = selected[:regular_cap]
         else:
             regular_groups[slug] = sort_rows(selected[:regular_cap])

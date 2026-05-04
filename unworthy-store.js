@@ -260,6 +260,7 @@
       exported_at: new Date().toISOString(),
       photo_ids: photoIds,
       regular_cap: effectiveRegularCap(),
+      selection_mode: "random",
       reserve_only: readReserveOnly(),
       reserve_promotions: readPromotions(),
       regular_state: activeRegularState(),

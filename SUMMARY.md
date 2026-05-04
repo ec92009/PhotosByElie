@@ -7,7 +7,7 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build prepared for publish: `v65.21`
+- Current local visible build prepared for publish: `v65.22`
 - Local `main` is ahead of `origin/main`; GitHub Pages is stale until the current commit is pushed.
 
 ## Latest Decisions
@@ -17,6 +17,7 @@ Date: 2026-05-04
 - `assets/reserve` and `assets/.moderation-hidden` are local/ignored working areas.
 - The Owner-selected Expo cap travels inside each `.pbe-curation` file.
 - The cap is an upper bound, not a required fill count. Collections with fewer valid JPEG pairs publish fewer photos.
+- Applied Curation Passes use random Expo selection from the eligible Expo/Reserve pool, so Reserve fills do not preserve archive sequence order.
 - Hidden photos promoted with `P` go back to Reserve, not directly to Expo.
 - Future import work should use developed Lightroom JPG exports, not raw DNG/NEF files.
 
@@ -39,6 +40,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Added direct-assets Curation Pass support so the cleaner can operate from site data and physical assets when local Lightroom manifests are unavailable.
 - Pruned stale Reserve entries so localhost refills no longer promote missing preview files.
 - Added cache-busting for localhost Reserve data.
+- Made random selection stay random in the manifest export path and in direct-assets Curation Pass application.
 - Renamed owner-facing blacklist export to Curation Pass while preserving compatibility with older `.pbe-blacklist` payloads.
 - Expanded Owner into a localhost-only command center with Curation Pass export, Expo cap, Hidden review, Unknown classification, and state counts.
 - Fixed Owner export feedback:
@@ -70,7 +72,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Python `HTMLParser` over all root HTML files
 - Node data scan for missing local `gallerySrc` and `imageSrc` references
 - `git diff --check`
-- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.21` and cache-bust strings use `?v=65.21`.
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.22` and cache-bust strings use `?v=65.22`.
 
 ## Important Notes
 

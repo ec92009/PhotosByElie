@@ -20,6 +20,7 @@ Last updated: 2026-05-04
 - Removed assigned photos from the Unknown classification queue immediately after country assignment.
 - Exercised a synthetic Curation Pass against a disposable local copy and hardened the direct-assets cleaner so missing Reserve derivatives are skipped, Expo fills up to the configured cap from available assets, and assigned visible Unknown photos move into the target country Reserve.
 - Pruned the local Reserve index to physical JPEGs and cache-busted localhost Reserve loading so refills do not show stale broken previews.
+- Made Expo selection random through the export and Curation Pass paths so Reserve fills do not preserve chronological archive runs.
 
 ## Current Priority Stack
 
@@ -33,6 +34,7 @@ Last updated: 2026-05-04
 
 3. **Improve live review ergonomics.**
    - Show gallery photos at their real aspect ratio inside stable square cells, using neutral/white bars where needed.
+   - Remove or quiet public gallery picture rectangles/frames so visitors see photos first; keep stronger selection affordances only where localhost curation needs them.
    - Add detail-page full-screen preview toggling with single click/tap, then click/tap again to dismiss.
    - Refine gallery density/zoom, hover metadata, arrow movement, selection behavior, cross-country detail navigation, and mobile retesting so reviewing photos feels fast.
 
@@ -120,7 +122,7 @@ Last updated: 2026-05-04
    - Use the Owner-selected Expo cap from each Curation Pass, treating it as an upper bound rather than a required count.
    - Store reserve assets in a location that can be ignored from Git when appropriate.
    - When an Expo photo is hidden on localhost, replace it with a random reserve photo from the same country when one is available.
-   - Decide whether reserve promotion should be deterministic per session or reshuffled after each applied moderation pass.
+   - Keep applied Curation Pass fills randomized so Reserve promotions do not publish as chronological sequences.
 
 3. **Add a localhost-only Owner surface.**
    - Keep refining the new `Owner` page as moderation needs become clearer.
@@ -148,6 +150,7 @@ Last updated: 2026-05-04
    - Keep each gallery slot as a stable square background so the grid stays tidy.
    - Render the photo inside that square at its real aspect ratio instead of cropping or stretching it.
    - Use neutral/white bars where necessary so portrait, landscape, panorama, and square images all feel intentional.
+   - Remove or soften public gallery borders/rectangles; reserve obvious selection framing for localhost curation mode.
 
 8. **Add gallery hover metadata.**
    - Show a lightweight tooltip when hovering over a gallery photo.

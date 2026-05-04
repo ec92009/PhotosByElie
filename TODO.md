@@ -17,6 +17,7 @@ Last updated: 2026-05-04
 - Polished the homepage by keeping only public collection cards, limiting carousel navigation to the active card, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
 - Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
 - Made basket selections automatically feed the Liked list, pruned stale catalog entries from basket rendering, and expanded Unknown classification with same-day assignment plus H/U moderation.
+- Removed assigned photos from the Unknown classification queue immediately after country assignment.
 
 ## Current Priority Stack
 

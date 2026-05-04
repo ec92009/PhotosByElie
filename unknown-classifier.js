@@ -46,7 +46,8 @@
 
   const unknownPhotos = () => {
     const hidden = new Set(unworthyStore?.read?.() || []);
-    return allUnknownPhotos().filter((photo) => !hidden.has(photo.id));
+    const assigned = unworthyStore?.readCountryAssignments?.() || {};
+    return allUnknownPhotos().filter((photo) => !hidden.has(photo.id) && !assigned[photo.id]);
   };
 
   const sameDayPhotos = (photo) => {
@@ -112,10 +113,10 @@
       root.innerHTML = `
         <article class="owner-card">
           <p class="eyebrow">Clear</p>
-          <h2>No unknown photos are currently loaded.</h2>
+          <h2>No unassigned unknown photos are currently loaded.</h2>
         </article>
       `;
-      setStatus("Unknown queue is empty.");
+      setStatus("Unknown queue is empty. Export a Curation Pass from Owner to apply any assignments on disk.");
       return;
     }
 
@@ -165,13 +166,17 @@
         const assignedCount = Object.keys(assignmentsNow).length;
         selectedPhotoId = photoId || selectedPhotoId;
         render();
-        setStatus(`${affectedPhotos.length || 1} same-day photo${(affectedPhotos.length || 1) === 1 ? "" : "s"} updated; ${assignedCount} assigned total. Export a Curation Pass from Owner to apply them on disk.`);
+        const affectedCount = affectedPhotos.length || 1;
+        setStatus(select.value
+          ? `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} assigned and removed from this queue; ${assignedCount} assigned total. Export a Curation Pass from Owner to apply them on disk.`
+          : `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} returned to the Unknown queue; ${assignedCount} assigned total.`
+        );
       });
     });
 
     const assignedCount = Object.keys(assignments).length;
     updateSelection();
-    setStatus(`${photos.length} visible unknown photo${photos.length === 1 ? "" : "s"} loaded; ${assignedCount} assigned. Use arrows to move, H to hide, U to undo.`);
+    setStatus(`${photos.length} unassigned unknown photo${photos.length === 1 ? "" : "s"} visible; ${assignedCount} already assigned. Use arrows to move, H to hide, U to undo.`);
   };
 
   window.addEventListener("keydown", (event) => {

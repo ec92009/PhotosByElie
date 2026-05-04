@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.14`
+- Current visible version: `v65.15`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -45,7 +45,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 - Public collections are ordered France, USA, Spain, Mexico, AI, Portugal, and Slovakia.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
-- Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country.
+- Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Gallery pages currently load a capped `Regular` subset of 10 photos per collection from `assets/regular`.
 - The larger Lightroom and Leonardo ingest outputs live under ignored local folders `assets/lightroom` and `assets/lightroom-ai` and act as the reserve pool.
 - On localhost, `H` marks a live-gallery photo unworthy, `U` undoes that hide, and `P` on the Unworthy page returns a hidden photo to Reserve rather than directly to the Regular gallery.

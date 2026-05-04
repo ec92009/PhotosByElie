@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v64.21`
+- Current visible version: `v65.6`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -32,7 +32,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations, including versioning and Lightroom image ingestion
-- `assets/`: shared By Elie logo asset, resized Lightroom gallery previews, and resized Leonardo AI gallery images
+- `assets/`: shared By Elie logo asset, publishable regular derivatives, and ignored local Lightroom/Leonardo reserve outputs
 
 ## Preview
 
@@ -40,10 +40,10 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 ## Current Behavior
 
-- Collections are ordered France, USA, Spain, Mexico, AI.
-- France and Mexico use resized JPEG previews from their matching Lightroom source folders under `/Users/ecohen/Pictures/LR/`; Spain now includes its original previews plus rendered 2022 Lightroom sale candidates from `assets/lightroom`; the USA gallery uses five green-rated 2014 sale candidates from `assets/lightroom`.
-- The home carousel and hero stack use the first selected France, USA, Spain, and Mexico previews.
-- The AI gallery uses eight resized Leonardo-generated JPGs from `~/Pictures/Leonardo/2023/06/08/UPSCALE`.
+- Collections are ordered France, USA, Spain, Mexico, AI, Portugal, Slovakia, and Unknown.
+- Gallery pages currently load a capped `Regular` subset of 10 photos per collection from `assets/regular`.
+- The larger Lightroom and Leonardo ingest outputs live under ignored local folders `assets/lightroom` and `assets/lightroom-ai` and act as the reserve pool.
+- `scripts/export_photos_data.py --regular-cap 10` regenerates `photos-data.js` and syncs the small publishable regular asset set.
 - The basket is the source of truth for selected resolutions.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.

@@ -1,0 +1,1149 @@
+{
+  "schema_version": 1,
+  "regular_cap": 10,
+  "selection_mode": "random",
+  "seed": 1344563728,
+  "photos_count": 80,
+  "reserve_counts": {
+    "ai": 90,
+    "france": 1713,
+    "mexico": 1,
+    "portugal": 693,
+    "slovakia": 16,
+    "spain": 873,
+    "unknown": 1547,
+    "usa": 552
+  },
+  "unworthy_counts": {
+    "ai": 0,
+    "france": 0,
+    "mexico": 0,
+    "portugal": 0,
+    "slovakia": 0,
+    "spain": 0,
+    "unknown": 0,
+    "usa": 0
+  },
+  "photos": [
+    {
+      "id": "20220506-145248-03337-3b6aef4664",
+      "relative_path": "2022/05/06/20220506 145248 03337.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220506-145248-03337-3b6aef4664.jpg",
+        "detail": "assets/regular/detail/france/20220506-145248-03337-3b6aef4664.jpg"
+      }
+    },
+    {
+      "id": "20220506-145149-03333-e92838da6f",
+      "relative_path": "2022/JPG/05/06/20220506 145149 03333.jpg",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220506-145149-03333-e92838da6f.jpg",
+        "detail": "assets/regular/detail/france/20220506-145149-03333-e92838da6f.jpg"
+      }
+    },
+    {
+      "id": "20220504-144539-02782-1836f461c0",
+      "relative_path": "2022/05/04/20220504 144539 02782.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220504-144539-02782-1836f461c0.jpg",
+        "detail": "assets/regular/detail/france/20220504-144539-02782-1836f461c0.jpg"
+      }
+    },
+    {
+      "id": "20220503-163923-02478-46a7914bcc",
+      "relative_path": "2022/05/03/20220503 163923 02478.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220503-163923-02478-46a7914bcc.jpg",
+        "detail": "assets/regular/detail/france/20220503-163923-02478-46a7914bcc.jpg"
+      }
+    },
+    {
+      "id": "20220503-161552-02232-411dc990f6",
+      "relative_path": "2022/05/03/20220503 161552 02232.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20220503-161552-02232-411dc990f6.jpg",
+        "detail": "assets/regular/detail/france/20220503-161552-02232-411dc990f6.jpg"
+      }
+    },
+    {
+      "id": "20191114-125616-00142-cd4d1d0e7b",
+      "relative_path": "2015-2019/20191114 125616 00142.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20191114-125616-00142-cd4d1d0e7b.jpg",
+        "detail": "assets/regular/detail/france/20191114-125616-00142-cd4d1d0e7b.jpg"
+      }
+    },
+    {
+      "id": "20180528-1422-14867-2d462ff9d1",
+      "relative_path": "2015-2019/20180528 1422 14867.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20180528-1422-14867-2d462ff9d1.jpg",
+        "detail": "assets/regular/detail/france/20180528-1422-14867-2d462ff9d1.jpg"
+      }
+    },
+    {
+      "id": "20180528-1403-16611-a1a78366af",
+      "relative_path": "2015-2019/20180528 1403 16611.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20180528-1403-16611-a1a78366af.jpg",
+        "detail": "assets/regular/detail/france/20180528-1403-16611-a1a78366af.jpg"
+      }
+    },
+    {
+      "id": "20160717-1431-00765-4fd597c7c6",
+      "relative_path": "2015-2019/20160717 1431 00765.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20160717-1431-00765-4fd597c7c6.jpg",
+        "detail": "assets/regular/detail/france/20160717-1431-00765-4fd597c7c6.jpg"
+      }
+    },
+    {
+      "id": "20160714-135740-00061-c1f1ea97df",
+      "relative_path": "2015-2019/20160714 135740 00061.dng",
+      "gallery_country": {
+        "slug": "france",
+        "label": "France",
+        "source": "gps_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/france/20160714-135740-00061-c1f1ea97df.jpg",
+        "detail": "assets/regular/detail/france/20160714-135740-00061-c1f1ea97df.jpg"
+      }
+    },
+    {
+      "id": "20190811-1659-15966-b7f2257aba",
+      "relative_path": "2015-2019/20190811 1659 15966.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20190811-1659-15966-b7f2257aba.jpg",
+        "detail": "assets/regular/detail/usa/20190811-1659-15966-b7f2257aba.jpg"
+      }
+    },
+    {
+      "id": "20180731-122748-00119-66fa7b6e71",
+      "relative_path": "2015-2019/20180731 122748 00119.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180731-122748-00119-66fa7b6e71.jpg",
+        "detail": "assets/regular/detail/usa/20180731-122748-00119-66fa7b6e71.jpg"
+      }
+    },
+    {
+      "id": "20180731-122652-00118-d0c5adec1c",
+      "relative_path": "2015-2019/20180731 122652 00118.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180731-122652-00118-d0c5adec1c.jpg",
+        "detail": "assets/regular/detail/usa/20180731-122652-00118-d0c5adec1c.jpg"
+      }
+    },
+    {
+      "id": "20180624-1822-16658-ea942fdf99",
+      "relative_path": "2015-2019/20180624 1822 16658.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180624-1822-16658-ea942fdf99.jpg",
+        "detail": "assets/regular/detail/usa/20180624-1822-16658-ea942fdf99.jpg"
+      }
+    },
+    {
+      "id": "20180407-1710-18268-553d0da4bb",
+      "relative_path": "2015-2019/20180407 1710 18268.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180407-1710-18268-553d0da4bb.jpg",
+        "detail": "assets/regular/detail/usa/20180407-1710-18268-553d0da4bb.jpg"
+      }
+    },
+    {
+      "id": "20180407-1706-18149-b20009ccb8",
+      "relative_path": "2015-2019/20180407 1706 18149.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180407-1706-18149-b20009ccb8.jpg",
+        "detail": "assets/regular/detail/usa/20180407-1706-18149-b20009ccb8.jpg"
+      }
+    },
+    {
+      "id": "20180304-174646-00094-50b6d1979c",
+      "relative_path": "2015-2019/20180304 174646 00094.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180304-174646-00094-50b6d1979c.jpg",
+        "detail": "assets/regular/detail/usa/20180304-174646-00094-50b6d1979c.jpg"
+      }
+    },
+    {
+      "id": "20180224-1451-00100-07b4f7fb87",
+      "relative_path": "2015-2019/20180224 1451 00100.jpg",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20180224-1451-00100-07b4f7fb87.jpg",
+        "detail": "assets/regular/detail/usa/20180224-1451-00100-07b4f7fb87.jpg"
+      }
+    },
+    {
+      "id": "20171210-153658-00085-06c44d4e8a",
+      "relative_path": "2015-2019/20171210 153658 00085.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20171210-153658-00085-06c44d4e8a.jpg",
+        "detail": "assets/regular/detail/usa/20171210-153658-00085-06c44d4e8a.jpg"
+      }
+    },
+    {
+      "id": "20160821-1553-07153-d8136ffa49",
+      "relative_path": "2015-2019/20160821 1553 07153.dng",
+      "gallery_country": {
+        "slug": "usa",
+        "label": "United States",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/usa/20160821-1553-07153-d8136ffa49.jpg",
+        "detail": "assets/regular/detail/usa/20160821-1553-07153-d8136ffa49.jpg"
+      }
+    },
+    {
+      "id": "20220705-165008-00151-1073587e96",
+      "relative_path": "2022/07/05/20220705 165008 00151.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220705-165008-00151-1073587e96.jpg",
+        "detail": "assets/regular/detail/spain/20220705-165008-00151-1073587e96.jpg"
+      }
+    },
+    {
+      "id": "20220510-125923-00518-733fc44142",
+      "relative_path": "2022/05/10/20220510 125923 00518.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-125923-00518-733fc44142.jpg",
+        "detail": "assets/regular/detail/spain/20220510-125923-00518-733fc44142.jpg"
+      }
+    },
+    {
+      "id": "20220510-105600-00138-95f3c09f78",
+      "relative_path": "2022/05/10/20220510 105600 00138.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-105600-00138-95f3c09f78.jpg",
+        "detail": "assets/regular/detail/spain/20220510-105600-00138-95f3c09f78.jpg"
+      }
+    },
+    {
+      "id": "20220510-093122-00027-00b8f4100f",
+      "relative_path": "2022/05/10/20220510 093122 00027.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220510-093122-00027-00b8f4100f.jpg",
+        "detail": "assets/regular/detail/spain/20220510-093122-00027-00b8f4100f.jpg"
+      }
+    },
+    {
+      "id": "20220509-205957-03595-1b8f20b88d",
+      "relative_path": "2022/05/09/20220509 205957 03595.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20220509-205957-03595-1b8f20b88d.jpg",
+        "detail": "assets/regular/detail/spain/20220509-205957-03595-1b8f20b88d.jpg"
+      }
+    },
+    {
+      "id": "20180523-1431-00927-5d8be4af92",
+      "relative_path": "2015-2019/20180523 1431 00927.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20180523-1431-00927-5d8be4af92.jpg",
+        "detail": "assets/regular/detail/spain/20180523-1431-00927-5d8be4af92.jpg"
+      }
+    },
+    {
+      "id": "20180523-1158-00908-c83ee908b8",
+      "relative_path": "2015-2019/20180523 1158 00908.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20180523-1158-00908-c83ee908b8.jpg",
+        "detail": "assets/regular/detail/spain/20180523-1158-00908-c83ee908b8.jpg"
+      }
+    },
+    {
+      "id": "20180522-1045-15628-c047969f43",
+      "relative_path": "2015-2019/20180522 1045 15628.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20180522-1045-15628-c047969f43.jpg",
+        "detail": "assets/regular/detail/spain/20180522-1045-15628-c047969f43.jpg"
+      }
+    },
+    {
+      "id": "20180522-1043-00818-26094a4b97",
+      "relative_path": "2015-2019/20180522 1043 00818.jpg",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20180522-1043-00818-26094a4b97.jpg",
+        "detail": "assets/regular/detail/spain/20180522-1043-00818-26094a4b97.jpg"
+      }
+    },
+    {
+      "id": "20180515-1608-15400-2006697c57",
+      "relative_path": "2015-2019/20180515 1608 15400.dng",
+      "gallery_country": {
+        "slug": "spain",
+        "label": "Spain",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/spain/20180515-1608-15400-2006697c57.jpg",
+        "detail": "assets/regular/detail/spain/20180515-1608-15400-2006697c57.jpg"
+      }
+    },
+    {
+      "id": "20190611-1102-16493-b74d8ca77a",
+      "relative_path": "2015-2019/20190611 1102 16493.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-1102-16493-b74d8ca77a.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-1102-16493-b74d8ca77a.jpg"
+      }
+    },
+    {
+      "id": "20190611-1100-14655-64ad3509ca",
+      "relative_path": "2015-2019/20190611 1100 14655.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-1100-14655-64ad3509ca.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-1100-14655-64ad3509ca.jpg"
+      }
+    },
+    {
+      "id": "20190611-1100-15992-195ddb6409",
+      "relative_path": "2015-2019/20190611 1100 15992.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-1100-15992-195ddb6409.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-1100-15992-195ddb6409.jpg"
+      }
+    },
+    {
+      "id": "20190611-1046-14715-a6c7d9828a",
+      "relative_path": "2015-2019/20190611 1046 14715.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-1046-14715-a6c7d9828a.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-1046-14715-a6c7d9828a.jpg"
+      }
+    },
+    {
+      "id": "20190611-1045-15918-6af640fb0b",
+      "relative_path": "2015-2019/20190611 1045 15918.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-1045-15918-6af640fb0b.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-1045-15918-6af640fb0b.jpg"
+      }
+    },
+    {
+      "id": "20190611-1045-14667-18d062b15b",
+      "relative_path": "2015-2019/20190611 1045 14667.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-1045-14667-18d062b15b.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-1045-14667-18d062b15b.jpg"
+      }
+    },
+    {
+      "id": "20190611-0912-17132-d0d25483ca",
+      "relative_path": "2015-2019/20190611 0912 17132.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-0912-17132-d0d25483ca.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-0912-17132-d0d25483ca.jpg"
+      }
+    },
+    {
+      "id": "20190611-0912-17467-b9a902bbc8",
+      "relative_path": "2015-2019/20190611 0912 17467.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-0912-17467-b9a902bbc8.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-0912-17467-b9a902bbc8.jpg"
+      }
+    },
+    {
+      "id": "20190611-0911-16891-1a5837b848",
+      "relative_path": "2015-2019/20190611 0911 16891.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-0911-16891-1a5837b848.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-0911-16891-1a5837b848.jpg"
+      }
+    },
+    {
+      "id": "20190611-0737-15737-4224f6f647",
+      "relative_path": "2015-2019/20190611 0737 15737.dng",
+      "gallery_country": {
+        "slug": "mexico",
+        "label": "Mexico",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/mexico/20190611-0737-15737-4224f6f647.jpg",
+        "detail": "assets/regular/detail/mexico/20190611-0737-15737-4224f6f647.jpg"
+      }
+    },
+    {
+      "id": "road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388",
+      "relative_path": "2023/06/08/UPSCALE/Road Trips - Adventure, car rental, scenic highways, landsca-2-UPSCALE_64f1a72e-0995-488f-a367-5bb3748ca213.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388.jpg",
+        "detail": "assets/regular/detail/ai/road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388.jpg"
+      }
+    },
+    {
+      "id": "national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024",
+      "relative_path": "2023/06/08/UPSCALE/National Parks - Mountains, rivers and lakes, wildlife, hiki-1-UPSCALE_9275f669-1ed7-44d4-a0fa-9c0c8544a62a.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024.jpg",
+        "detail": "assets/regular/detail/ai/national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024.jpg"
+      }
+    },
+    {
+      "id": "luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0",
+      "relative_path": "2023/06/08/UPSCALE/Luxury Escapes - Resorts, mansions, spas, golf courses, priv-0-UPSCALE_b1ae5875-1e04-4860-964d-e040b198c5b8.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0.jpg",
+        "detail": "assets/regular/detail/ai/luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0.jpg"
+      }
+    },
+    {
+      "id": "law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54",
+      "relative_path": "2023/06/08/UPSCALE/Law and legal services - corporate law, contracts, intellect-3-UPSCALE_1cf03896-3634-491b-88ed-1cbcc020f1c9.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54.jpg",
+        "detail": "assets/regular/detail/ai/law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54.jpg"
+      }
+    },
+    {
+      "id": "law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af",
+      "relative_path": "2023/06/08/UPSCALE/Law and legal services - corporate law, contracts, intellect-1-UPSCALE_1ac593ae-8cab-46da-90fa-28e83a735b3d.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af.jpg",
+        "detail": "assets/regular/detail/ai/law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af.jpg"
+      }
+    },
+    {
+      "id": "law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650",
+      "relative_path": "2023/06/08/UPSCALE/Law and legal services - corporate law, contracts, intellect-0-UPSCALE_83080d09-427b-4d1f-803c-6fc33d2f17b6.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650.jpg",
+        "detail": "assets/regular/detail/ai/law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650.jpg"
+      }
+    },
+    {
+      "id": "international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361",
+      "relative_path": "2023/06/08/UPSCALE/International business and globalization - cross-cultural co-2-UPSCALE_5d490742-10ae-4c88-bee1-665557965e6a.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361.jpg",
+        "detail": "assets/regular/detail/ai/international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361.jpg"
+      }
+    },
+    {
+      "id": "international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a",
+      "relative_path": "2023/06/08/UPSCALE/International business and globalization - cross-cultural co-1-UPSCALE_12cdbe89-dcbc-4674-80e2-eeb15f480b5d.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a.jpg",
+        "detail": "assets/regular/detail/ai/international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a.jpg"
+      }
+    },
+    {
+      "id": "human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec",
+      "relative_path": "2023/06/08/UPSCALE/Human resources and talent management - recruitment, retenti-1-UPSCALE_982b5218-66b8-4d3f-8517-0697472b7742.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec.jpg",
+        "detail": "assets/regular/detail/ai/human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec.jpg"
+      }
+    },
+    {
+      "id": "financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4",
+      "relative_path": "2023/06/08/UPSCALE/Financial planning and analysis - budgeting, forecasting, da-2-UPSCALE_fbda6874-22e8-40bb-a42a-321a24a8b618.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "ai",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/ai/financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4.jpg",
+        "detail": "assets/regular/detail/ai/financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4.jpg"
+      }
+    },
+    {
+      "id": "20220521-154652-04641-2e598aa381",
+      "relative_path": "2022/05/21/20220521 154652 04641.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20220521-154652-04641-2e598aa381.jpg",
+        "detail": "assets/regular/detail/portugal/20220521-154652-04641-2e598aa381.jpg"
+      }
+    },
+    {
+      "id": "20220521-151631-04606-dba08d1a89",
+      "relative_path": "2022/05/21/20220521 151631 04606.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20220521-151631-04606-dba08d1a89.jpg",
+        "detail": "assets/regular/detail/portugal/20220521-151631-04606-dba08d1a89.jpg"
+      }
+    },
+    {
+      "id": "20220519-144759-00129-be0c24c04d",
+      "relative_path": "2022/05/19/20220519 144759 00129.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20220519-144759-00129-be0c24c04d.jpg",
+        "detail": "assets/regular/detail/portugal/20220519-144759-00129-be0c24c04d.jpg"
+      }
+    },
+    {
+      "id": "20220515-171248-04371-fa704aeef6",
+      "relative_path": "2022/05/15/20220515 171248 04371.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20220515-171248-04371-fa704aeef6.jpg",
+        "detail": "assets/regular/detail/portugal/20220515-171248-04371-fa704aeef6.jpg"
+      }
+    },
+    {
+      "id": "20180519-1713-15517-f93416e08b",
+      "relative_path": "2015-2019/20180519 1713 15517.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20180519-1713-15517-f93416e08b.jpg",
+        "detail": "assets/regular/detail/portugal/20180519-1713-15517-f93416e08b.jpg"
+      }
+    },
+    {
+      "id": "20180519-1630-16732-6f845b7729",
+      "relative_path": "2015-2019/20180519 1630 16732.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20180519-1630-16732-6f845b7729.jpg",
+        "detail": "assets/regular/detail/portugal/20180519-1630-16732-6f845b7729.jpg"
+      }
+    },
+    {
+      "id": "20180519-1337-00615-a2dda38e79",
+      "relative_path": "2015-2019/20180519 1337 00615.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20180519-1337-00615-a2dda38e79.jpg",
+        "detail": "assets/regular/detail/portugal/20180519-1337-00615-a2dda38e79.jpg"
+      }
+    },
+    {
+      "id": "20180517-2138-16187-802cd85bd7",
+      "relative_path": "2015-2019/20180517 2138 16187.dng",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20180517-2138-16187-802cd85bd7.jpg",
+        "detail": "assets/regular/detail/portugal/20180517-2138-16187-802cd85bd7.jpg"
+      }
+    },
+    {
+      "id": "20180517-1437-00478-77707bacb4",
+      "relative_path": "2015-2019/20180517 1437 00478.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "keyword"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20180517-1437-00478-77707bacb4.jpg",
+        "detail": "assets/regular/detail/portugal/20180517-1437-00478-77707bacb4.jpg"
+      }
+    },
+    {
+      "id": "20180517-1435-00474-50a5c17bec",
+      "relative_path": "2015-2019/20180517 1435 00474.jpg",
+      "gallery_country": {
+        "slug": "portugal",
+        "label": "Portugal",
+        "source": "country"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/portugal/20180517-1435-00474-50a5c17bec.jpg",
+        "detail": "assets/regular/detail/portugal/20180517-1435-00474-50a5c17bec.jpg"
+      }
+    },
+    {
+      "id": "20190624-1821-16222-1c0e864353",
+      "relative_path": "2015-2019/20190624 1821 16222.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1821-16222-1c0e864353.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1821-16222-1c0e864353.jpg"
+      }
+    },
+    {
+      "id": "20190624-1820-15477-1db1899e27",
+      "relative_path": "2015-2019/20190624 1820 15477.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1820-15477-1db1899e27.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1820-15477-1db1899e27.jpg"
+      }
+    },
+    {
+      "id": "20190624-1817-16593-e367d8242e",
+      "relative_path": "2015-2019/20190624 1817 16593.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1817-16593-e367d8242e.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1817-16593-e367d8242e.jpg"
+      }
+    },
+    {
+      "id": "20190624-1811-15162-2525252767",
+      "relative_path": "2015-2019/20190624 1811 15162.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1811-15162-2525252767.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1811-15162-2525252767.jpg"
+      }
+    },
+    {
+      "id": "20190624-1811-15862-529e3b885f",
+      "relative_path": "2015-2019/20190624 1811 15862.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1811-15862-529e3b885f.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1811-15862-529e3b885f.jpg"
+      }
+    },
+    {
+      "id": "20190624-1757-14704-e1bc611f50",
+      "relative_path": "2015-2019/20190624 1757 14704.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "keyword_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190624-1757-14704-e1bc611f50.jpg",
+        "detail": "assets/regular/detail/slovakia/20190624-1757-14704-e1bc611f50.jpg"
+      }
+    },
+    {
+      "id": "20190623-1448-17389-fe749139ed",
+      "relative_path": "2015-2019/20190623 1448 17389.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "gps_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1448-17389-fe749139ed.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1448-17389-fe749139ed.jpg"
+      }
+    },
+    {
+      "id": "20190623-1417-14657-692ab3d9cf",
+      "relative_path": "2015-2019/20190623 1417 14657.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "gps_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1417-14657-692ab3d9cf.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1417-14657-692ab3d9cf.jpg"
+      }
+    },
+    {
+      "id": "20190623-1320-14668-5c5c81dae7",
+      "relative_path": "2015-2019/20190623 1320 14668.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "gps_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1320-14668-5c5c81dae7.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1320-14668-5c5c81dae7.jpg"
+      }
+    },
+    {
+      "id": "20190623-1317-14743-f66f754082",
+      "relative_path": "2015-2019/20190623 1317 14743.dng",
+      "gallery_country": {
+        "slug": "slovakia",
+        "label": "Slovakia",
+        "source": "gps_reclass"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/slovakia/20190623-1317-14743-f66f754082.jpg",
+        "detail": "assets/regular/detail/slovakia/20190623-1317-14743-f66f754082.jpg"
+      }
+    },
+    {
+      "id": "20220505-0352-00089-a67e196477",
+      "relative_path": "2022/05/05/20220505 0352 00089.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20220505-0352-00089-a67e196477.jpg",
+        "detail": "assets/regular/detail/unknown/20220505-0352-00089-a67e196477.jpg"
+      }
+    },
+    {
+      "id": "20220103-1726-00121-8ef9ddd1cd",
+      "relative_path": "2022/01/03/20220103 1726 00121.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20220103-1726-00121-8ef9ddd1cd.jpg",
+        "detail": "assets/regular/detail/unknown/20220103-1726-00121-8ef9ddd1cd.jpg"
+      }
+    },
+    {
+      "id": "20191207-1049-17268-c2a2afbb43",
+      "relative_path": "2015-2019/20191207 1049 17268.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191207-1049-17268-c2a2afbb43.jpg",
+        "detail": "assets/regular/detail/unknown/20191207-1049-17268-c2a2afbb43.jpg"
+      }
+    },
+    {
+      "id": "20191205-2151-17606-98de0422eb",
+      "relative_path": "2015-2019/20191205 2151 17606.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191205-2151-17606-98de0422eb.jpg",
+        "detail": "assets/regular/detail/unknown/20191205-2151-17606-98de0422eb.jpg"
+      }
+    },
+    {
+      "id": "20191205-2140-17698-8b5a46c5b9",
+      "relative_path": "2015-2019/20191205 2140 17698.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191205-2140-17698-8b5a46c5b9.jpg",
+        "detail": "assets/regular/detail/unknown/20191205-2140-17698-8b5a46c5b9.jpg"
+      }
+    },
+    {
+      "id": "20191205-1846-17863-02ad7a5e97",
+      "relative_path": "2015-2019/20191205 1846 17863.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191205-1846-17863-02ad7a5e97.jpg",
+        "detail": "assets/regular/detail/unknown/20191205-1846-17863-02ad7a5e97.jpg"
+      }
+    },
+    {
+      "id": "20191205-1504-17712-24941bcaf1",
+      "relative_path": "2015-2019/20191205 1504 17712.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191205-1504-17712-24941bcaf1.jpg",
+        "detail": "assets/regular/detail/unknown/20191205-1504-17712-24941bcaf1.jpg"
+      }
+    },
+    {
+      "id": "20191127-1413-16555-6c89e0cd94",
+      "relative_path": "2015-2019/20191127 1413 16555.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191127-1413-16555-6c89e0cd94.jpg",
+        "detail": "assets/regular/detail/unknown/20191127-1413-16555-6c89e0cd94.jpg"
+      }
+    },
+    {
+      "id": "20191127-1411-15133-614bc48c80",
+      "relative_path": "2015-2019/20191127 1411 15133.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20191127-1411-15133-614bc48c80.jpg",
+        "detail": "assets/regular/detail/unknown/20191127-1411-15133-614bc48c80.jpg"
+      }
+    },
+    {
+      "id": "20161009-1619-01513-dcdb2fc0ec",
+      "relative_path": "2015-2019/20161009 1619 01513.dng",
+      "gallery_country": {
+        "slug": "unknown",
+        "label": "Unknown",
+        "source": "unresolved"
+      },
+      "source_mode": "lightroom",
+      "derivatives": {
+        "gallery": "assets/regular/gallery/unknown/20161009-1619-01513-dcdb2fc0ec.jpg",
+        "detail": "assets/regular/detail/unknown/20161009-1619-01513-dcdb2fc0ec.jpg"
+      }
+    }
+  ]
+}

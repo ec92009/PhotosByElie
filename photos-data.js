@@ -2,2749 +2,4915 @@ window.photosByElieData = {
   france: {
     number: "01",
     title: "France",
-    description: "Ten randomized Lightroom selections from the France photo archive.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 1713 in local reserve.",
     accent: "france-gallery",
     photos: [
       {
-        id: "france-1",
+        id: "20220506-145248-03337-3b6aef4664",
         className: "p1",
-        title: "Paris, Notre Dame from Quai Montebello",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-01.jpg",
+        title: "20220506 145248 03337",
+        caption: "France / 2022-05-06",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220506-145248-03337-3b6aef4664.jpg",
+        imageSrc: "./assets/regular/detail/france/20220506-145248-03337-3b6aef4664.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame from Quai Montebello"
+                    "label": "Keywords",
+                    "value": "Art, Church, France, Invalides, Museum, Napoleon, Paris, architecture"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Captured",
+                    "value": "2022:05:06 14:52:48"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 09:24"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "france-01.jpg / 1200 x 1800 / Display P3"
+                    "label": "Lens",
+                    "value": "Tokina atx-i 11-20mm F2.8 CF"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/80, f/4.5, ISO 100"
           },
           {
-            label: "Lens",
-            value: "17.0-50.0 mm f/2.8"
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1600 sec at f/4, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "29 mm / 43 mm equivalent"
+                    "label": "Original file",
+                    "value": "20220506 145248 03337.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 3712 x 5568 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220506-145248-03337-3b6aef4664.jpg / 1200 x 1800 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/06/20220506 145248 03337.dng",
+                    "type": "DNG",
+                    "bytes": 81428469
+          }
+]
       },
       {
-        id: "france-2",
+        id: "20220506-145149-03333-e92838da6f",
         className: "p2",
-        title: "Paris, Notre Dame",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-02.jpg",
+        title: "20220506 145149 03333",
+        caption: "France / 2022-05-06",
+        full: "JPG master",
+        megapixels: 24.6,
+        gallerySrc: "./assets/regular/gallery/france/20220506-145149-03333-e92838da6f.jpg",
+        imageSrc: "./assets/regular/detail/france/20220506-145149-03333-e92838da6f.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame"
+                    "label": "Keywords",
+                    "value": "Art, Church, France, Invalides, Museum, Napoleon, Paris, architecture"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Captured",
+                    "value": "2022:05:06 14:51:49"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 12:43"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "france-02.jpg / 1200 x 1800 / Display P3"
+                    "label": "Lens",
+                    "value": "Tokina atx-i 11-20mm F2.8 CF"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 110"
           },
           {
-            label: "Lens",
-            value: "10.0-20.0 mm f/4.5-5.6"
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/5, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Bridge 2024"
           },
           {
-            label: "Focal length",
-            value: "10 mm / 15 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB IEC61966-2.1"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220506 145149 03333.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 3737 x 6589 / 24.6 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220506-145149-03333-e92838da6f.jpg / 1021 x 1800 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/JPG/05/06/20220506 145149 03333.jpg",
+                    "type": "JPG",
+                    "bytes": 2804431
+          }
+]
       },
       {
-        id: "france-3",
+        id: "20220504-144539-02782-1836f461c0",
         className: "p3",
-        title: "Paris, Notre Dame",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-03.jpg",
+        title: "20220504 144539 02782",
+        caption: "France / 2022-05-04",
+        full: "DNG master",
+        megapixels: 29.0,
+        gallerySrc: "./assets/regular/gallery/france/20220504-144539-02782-1836f461c0.jpg",
+        imageSrc: "./assets/regular/detail/france/20220504-144539-02782-1836f461c0.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame"
+                    "label": "Keywords",
+                    "value": "Castle, Chateau, Chateau de Versailles, France, Ile de France, Paris, Versailles"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Captured",
+                    "value": "2022:05:04 14:45:39"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 12:33"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "france-03.jpg / 1200 x 1800 / Display P3"
+                    "label": "Lens",
+                    "value": "17.0-50.0 mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 9.1"
+                    "label": "Exposure",
+                    "value": "1/50, f/2.8, ISO 250"
           },
           {
-            label: "Lens",
-            value: "10.0-20.0 mm f/4.5-5.6"
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1250 sec at f/5, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "10 mm / 15 mm equivalent"
+                    "label": "Original file",
+                    "value": "20220504 144539 02782.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5527 x 5254 / 29.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220504-144539-02782-1836f461c0.jpg / 1800 x 1711 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/04/20220504 144539 02782.dng",
+                    "type": "DNG",
+                    "bytes": 13387260
+          }
+]
       },
       {
-        id: "france-4",
+        id: "20220503-163923-02478-46a7914bcc",
         className: "p4",
-        title: "France Frame 04",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-04.jpg",
+        title: "20220503 163923 02478",
+        caption: "France / 2022-05-03",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220503-163923-02478-46a7914bcc.jpg",
+        imageSrc: "./assets/regular/detail/france/20220503-163923-02478-46a7914bcc.jpg",
         metadata: [
           {
-            label: "Keywords",
-            value: "Bateau Mouche, Dynosaur, France, Ile de France, Paris, Pont de l'Alma, River, Seine, Skeleton, Zouave, eiffel tower"
+                    "label": "Keywords",
+                    "value": "Bateau Mouche, Dynosaur, France, Ile de France, Paris, Pont de l'Alma, River, Seine, Skeleton, Tour de l'Horloge, Zouave"
           },
           {
-            label: "Captured",
-            value: "May 3, 2022, 12:56"
+                    "label": "Captured",
+                    "value": "2022:05:03 16:39:23"
           },
           {
-            label: "Preview file",
-            value: "france-04.jpg / 1200 x 1800 / Display P3"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 12.0.1"
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Exposure",
+                    "value": "1/800, f/6.3, ISO 100"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/5, ISO 100"
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220503 163923 02478.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220503-163923-02478-46a7914bcc.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/03/20220503 163923 02478.dng",
+                    "type": "DNG",
+                    "bytes": 7028350
+          }
+]
       },
       {
-        id: "france-5",
+        id: "20220503-161552-02232-411dc990f6",
         className: "p5",
-        title: "Paris, Notre Dame from Quai Montebello",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-05.jpg",
+        title: "20220503 161552 02232",
+        caption: "France / 2022-05-03",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20220503-161552-02232-411dc990f6.jpg",
+        imageSrc: "./assets/regular/detail/france/20220503-161552-02232-411dc990f6.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame from Quai Montebello"
+                    "label": "Keywords",
+                    "value": "Bateau Mouche, Dynosaur, France, Ile de France, Paris, Pont de l'Alma, River, Seine, Skeleton, Zouave"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Captured",
+                    "value": "2022:05:03 16:15:52"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 08:55"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "france-05.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
+                    "label": "Exposure",
+                    "value": "1/800, f/5.0, ISO 100"
           },
           {
-            label: "Lens",
-            value: "10.0-20.0 mm f/4.5-5.6"
+                    "label": "Focal length",
+                    "value": "70.0 mm / 105 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/20 sec at f/5.6, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "10 mm / 15 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220503 161552 02232.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220503-161552-02232-411dc990f6.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/03/20220503 161552 02232.dng",
+                    "type": "DNG",
+                    "bytes": 9692848
+          }
+]
       },
       {
-        id: "france-6",
-        className: "p6",
-        title: "France Frame 06",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-06.jpg",
+        id: "20191114-125616-00142-cd4d1d0e7b",
+        className: "p1",
+        title: "20191114 125616 00142",
+        caption: "France / 2019-11-14",
+        full: "DNG master",
+        megapixels: 44.9,
+        gallerySrc: "./assets/regular/gallery/france/20191114-125616-00142-cd4d1d0e7b.jpg",
+        imageSrc: "./assets/regular/detail/france/20191114-125616-00142-cd4d1d0e7b.jpg",
         metadata: [
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Keywords",
+                    "value": "France, Musee Jacquemart Andre, Paris"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 12:35"
+                    "label": "Captured",
+                    "value": "2019:11:14 12:56:16"
           },
           {
-            label: "Preview file",
-            value: "france-06.jpg / 1800 x 1200 / Display P3"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Lens",
+                    "value": "17.0-50.0 mm f/2.8"
           },
           {
-            label: "Lens",
-            value: "17.0-50.0 mm f/2.8"
+                    "label": "Exposure",
+                    "value": "1/25, f/2.8, ISO 180"
           },
           {
-            label: "Exposure",
-            value: "1/100 sec at f/2.8, ISO 100"
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
           },
           {
-            label: "Focal length",
-            value: "22 mm / 33 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191114 125616 00142.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 8535 x 5258 / 44.9 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191114-125616-00142-cd4d1d0e7b.jpg / 1800 x 1109 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191114 125616 00142.dng",
+                    "type": "DNG",
+                    "bytes": 143747881
+          }
+]
       },
       {
-        id: "france-7",
-        className: "p7",
-        title: "Paris, Notre Dame from Quai Montebello",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-07.jpg",
+        id: "20180528-1422-14867-2d462ff9d1",
+        className: "p2",
+        title: "Palais Royal de Blois, France",
+        caption: "France / 2018-05-28",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20180528-1422-14867-2d462ff9d1.jpg",
+        imageSrc: "./assets/regular/detail/france/20180528-1422-14867-2d462ff9d1.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame from Quai Montebello"
+                    "label": "Metadata title",
+                    "value": "Palais Royal de Blois, France"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Keywords",
+                    "value": "Blois, Eglise St Vincent de Paul, France, Val de Loire"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 09:22"
+                    "label": "Captured",
+                    "value": "2018:05:28 14:22:27"
           },
           {
-            label: "Preview file",
-            value: "france-07.jpg / 1800 x 1200 / Display P3"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
           },
           {
-            label: "Lens",
-            value: "17.0-50.0 mm f/2.8"
+                    "label": "Exposure",
+                    "value": "1/13, f/5.3, ISO 720"
           },
           {
-            label: "Exposure",
-            value: "1/1600 sec at f/4, ISO 100"
+                    "label": "Focal length",
+                    "value": "16.0 mm / 24 mm equivalent"
           },
           {
-            label: "Focal length",
-            value: "24 mm / 36 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180528 1422 14867.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180528-1422-14867-2d462ff9d1.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180528 1422 14867.dng",
+                    "type": "DNG",
+                    "bytes": 13377488
+          }
+]
       },
       {
-        id: "france-8",
-        className: "p8",
-        title: "France Frame 08",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-08.jpg",
+        id: "20180528-1403-16611-a1a78366af",
+        className: "p3",
+        title: "Palais Royal de Blois, France",
+        caption: "France / 2018-05-28",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/france/20180528-1403-16611-a1a78366af.jpg",
+        imageSrc: "./assets/regular/detail/france/20180528-1403-16611-a1a78366af.jpg",
         metadata: [
           {
-            label: "Keywords",
-            value: "France, Ile de France, Paris, Place de la Concorde, Tuileries"
+                    "label": "Metadata title",
+                    "value": "Palais Royal de Blois, France"
           },
           {
-            label: "Captured",
-            value: "May 2, 2022, 13:11"
+                    "label": "Keywords",
+                    "value": "Blois, Eglise St Vincent de Paul, France, Val de Loire"
           },
           {
-            label: "Preview file",
-            value: "france-08.jpg / 1800 x 1200 / Display P3"
+                    "label": "Captured",
+                    "value": "2018:05:28 14:03:11"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 12.0.1"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Lens",
-            value: "17.0-50.0 mm f/2.8"
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
           },
           {
-            label: "Exposure",
-            value: "1/320 sec at f/9, ISO 100"
+                    "label": "Exposure",
+                    "value": "1/15, f/5.6, ISO 1600"
           },
           {
-            label: "Focal length",
-            value: "17 mm / 25 mm equivalent"
+                    "label": "Focal length",
+                    "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180528 1403 16611.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180528-1403-16611-a1a78366af.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180528 1403 16611.dng",
+                    "type": "DNG",
+                    "bytes": 14273158
+          }
+]
       },
       {
-        id: "france-9",
-        className: "p9",
-        title: "Paris, Notre Dame from Quai Montebello",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-09.jpg",
+        id: "20160717-1431-00765-4fd597c7c6",
+        className: "p4",
+        title: "Giverny, Impressionists Museum, Monet House",
+        caption: "France / 2016-07-17",
+        full: "DNG master",
+        megapixels: 24.0,
+        gallerySrc: "./assets/regular/gallery/france/20160717-1431-00765-4fd597c7c6.jpg",
+        imageSrc: "./assets/regular/detail/france/20160717-1431-00765-4fd597c7c6.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame from Quai Montebello"
+                    "label": "Metadata title",
+                    "value": "Giverny, Impressionists Museum, Monet House"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Keywords",
+                    "value": "France, Giverny, Summer"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 09:24"
+                    "label": "Captured",
+                    "value": "2016:07:17 14:31:39"
           },
           {
-            label: "Preview file",
-            value: "france-09.jpg / 1200 x 1800 / Display P3"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-5.6"
           },
           {
-            label: "Lens",
-            value: "17.0-50.0 mm f/2.8"
+                    "label": "Exposure",
+                    "value": "1/1250, f/10.0, ISO 1250"
           },
           {
-            label: "Exposure",
-            value: "1/1250 sec at f/4, ISO 100"
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
           },
           {
-            label: "Focal length",
-            value: "29 mm / 43 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20160717 1431 00765.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20160717-1431-00765-4fd597c7c6.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20160717 1431 00765.dng",
+                    "type": "DNG",
+                    "bytes": 14581317
+          }
+]
       },
       {
-        id: "france-10",
-        className: "p10",
-        title: "Paris, Notre Dame from Quai Montebello",
-        caption: "Embedded Lightroom metadata from the France preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 24,
-        imageSrc: "./assets/france/france-10.jpg",
+        id: "20160714-135740-00061-c1f1ea97df",
+        className: "p5",
+        title: "Paris, Misc",
+        caption: "France / 2016-07-14",
+        full: "DNG master",
+        megapixels: 14.6,
+        gallerySrc: "./assets/regular/gallery/france/20160714-135740-00061-c1f1ea97df.jpg",
+        imageSrc: "./assets/regular/detail/france/20160714-135740-00061-c1f1ea97df.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Paris, Notre Dame from Quai Montebello"
+                    "label": "Metadata title",
+                    "value": "Paris, Misc"
           },
           {
-            label: "Keywords",
-            value: "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+                    "label": "Captured",
+                    "value": "2016:07:14 13:57:40"
           },
           {
-            label: "Captured",
-            value: "May 11, 2018, 09:22"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
           },
           {
-            label: "Preview file",
-            value: "france-10.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "17.0-50.0 mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/500, f/11.0, ISO 320"
           },
           {
-            label: "Lens",
-            value: "17.0-50.0 mm f/2.8"
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1250 sec at f/4, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Lightroom 5.3 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "24 mm / 36 mm equivalent"
+                    "label": "Original file",
+                    "value": "20160714 135740 00061.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6075 x 2398 / 14.6 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20160714-135740-00061-c1f1ea97df.jpg / 1800 x 710 / JPG"
           }
-        ]
-      }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20160714 135740 00061.dng",
+                    "type": "DNG",
+                    "bytes": 59536488
+          }
+]
+      },
     ]
   },
   usa: {
     number: "02",
     title: "USA",
-    description: "Five green-rated 2014 Lightroom selections from the USA archive.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 552 in local reserve.",
     accent: "usa-gallery",
     photos: [
       {
-        id: "usa-20140907-1911-06385-5f3a5197a2",
+        id: "20190811-1659-15966-b7f2257aba",
         className: "p1",
-        title: "Carlsbad Photo Stream",
-        caption: "Green-rated Lightroom selection from Carlsbad, California, captured 2014-09-07.",
-        full: "JPG source",
-        megapixels: 7.7,
-        imageSrc: "./assets/lightroom/detail/usa/20140907-1911-06385-5f3a5197a2.jpg",
-        sourceFiles: [{ path: "LR/Camera/2010-2014/20140907 1911 06385.jpg", type: "JPG" }],
+        title: "20190811 1659 15966",
+        caption: "USA / 2019-08-11",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/usa/20190811-1659-15966-b7f2257aba.jpg",
+        imageSrc: "./assets/regular/detail/usa/20190811-1659-15966-b7f2257aba.jpg",
         metadata: [
-          { label: "Keywords", value: "Photo Stream" },
-          { label: "Captured", value: "2014:09:07 19:11:41" },
-          { label: "Camera", value: "Apple iPhone 5s" },
-          { label: "Lens", value: "iPhone 5s back camera 4.12mm f/2.2" },
-          { label: "Exposure", value: "1/30, f/2.2, ISO 80" },
-          { label: "Focal length", value: "4.1 mm / 30 mm equivalent" },
-          { label: "Location", value: "Carlsbad, California, United States" },
-          { label: "Software", value: "Adobe Photoshop Lightroom 6.6 (Macintosh)" },
-          { label: "Color profile", value: "ProPhoto RGB" },
-          { label: "Original file", value: "20140907 1911 06385.jpg" },
-          { label: "Original size", value: "JPEG / 3196 x 2397 / 7.7 MP" },
-          { label: "Source file", value: "20140907 1911 06385.jpg / 3196 x 2397 / 7.7 MP" },
-          { label: "Preview file", value: "20140907-1911-06385-5f3a5197a2.jpg / 1800 x 1350 / watermarked JPG" },
-          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "Animal, CA, California, San Diego, US, USA, Zoo, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:08:11 16:59:20"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/2000, f/4.8, ISO 400"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "125.0 mm / 187 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190811 1659 15966.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190811-1659-15966-b7f2257aba.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190811 1659 15966.dng",
+                    "type": "DNG",
+                    "bytes": 8726788
+          }
+]
       },
       {
-        id: "usa-20141221-1313-00111-ee3b408e47",
+        id: "20180731-122748-00119-66fa7b6e71",
         className: "p2",
-        title: "Lake Arrowhead Panorama",
-        caption: "Green-rated Lightroom selection from the USA archive, captured 2014-12-21.",
-        full: "JPG source",
-        megapixels: 8.0,
-        imageSrc: "./assets/lightroom/detail/usa/20141221-1313-00111-ee3b408e47.jpg",
-        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1313 00111.jpg", type: "JPG" }],
+        title: "20180731 122748 00119",
+        caption: "USA / 2018-07-31",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/usa/20180731-122748-00119-66fa7b6e71.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180731-122748-00119-66fa7b6e71.jpg",
         metadata: [
-          { label: "Keywords", value: "Lake Arrowhead, Lake Forest, Panoramic, public" },
-          { label: "Captured", value: "2014:12:21 13:13:36" },
-          { label: "Camera", value: "Apple iPhone 6 Plus" },
-          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
-          { label: "Exposure", value: "1/9901, f/2.2, ISO 32" },
-          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
-          { label: "Software", value: "8.1.2" },
-          { label: "Color profile", value: "sRGB" },
-          { label: "Original file", value: "20141221 1313 00111.jpg" },
-          { label: "Original size", value: "JPEG / 3264 x 2448 / 8.0 MP" },
-          { label: "Source file", value: "20141221 1313 00111.jpg / 3264 x 2448 / 8.0 MP" },
-          { label: "Preview file", value: "20141221-1313-00111-ee3b408e47.jpg / 1800 x 1350 / watermarked JPG" },
-          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Carlsbad, Home, USA"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:07:31 12:27:48"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/80, f/4.5, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180731 122748 00119.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180731-122748-00119-66fa7b6e71.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180731 122748 00119.dng",
+                    "type": "DNG",
+                    "bytes": 76294281
+          }
+]
       },
       {
-        id: "usa-20141221-1313-06414-1fb7622ae6",
+        id: "20180731-122652-00118-d0c5adec1c",
         className: "p3",
-        title: "San Bernardino Landscape",
-        caption: "Green-rated Lightroom selection from San Bernardino, California, captured 2014-12-21.",
-        full: "JPG source",
-        megapixels: 5.9,
-        imageSrc: "./assets/lightroom/detail/usa/20141221-1313-06414-1fb7622ae6.jpg",
-        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1313 06414.jpg", type: "JPG" }],
+        title: "20180731 122652 00118",
+        caption: "USA / 2018-07-31",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/usa/20180731-122652-00118-d0c5adec1c.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180731-122652-00118-d0c5adec1c.jpg",
         metadata: [
-          { label: "Keywords", value: "Lake Forest, Panoramic, public" },
-          { label: "Captured", value: "2014:12:21 13:13:36" },
-          { label: "Camera", value: "Apple iPhone 6 Plus" },
-          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
-          { label: "Exposure", value: "1/10000, f/2.2, ISO 32" },
-          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
-          { label: "Location", value: "San Bernardino, California, United States" },
-          { label: "Software", value: "Adobe Photoshop Lightroom 6.6 (Macintosh)" },
-          { label: "Color profile", value: "ProPhoto RGB" },
-          { label: "Original file", value: "20141221 1313 06414.jpg" },
-          { label: "Original size", value: "JPEG / 3263 x 1800 / 5.9 MP" },
-          { label: "Source file", value: "20141221 1313 06414.jpg / 3263 x 1800 / 5.9 MP" },
-          { label: "Preview file", value: "20141221-1313-06414-1fb7622ae6.jpg / 1800 x 993 / watermarked JPG" },
-          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Carlsbad, Home, USA"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:07:31 12:26:52"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/25, f/4.5, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180731 122652 00118.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 3712 x 5568 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180731-122652-00118-d0c5adec1c.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180731 122652 00118.dng",
+                    "type": "DNG",
+                    "bytes": 70615716
+          }
+]
       },
       {
-        id: "usa-20141221-1443-06347-3544179fa4",
+        id: "20180624-1822-16658-ea942fdf99",
         className: "p4",
-        title: "Lake Arrowhead Landscape",
-        caption: "Green-rated Lightroom selection from Arrowhead Village (Village Green), Lake Arrowhead, California, captured 2014-12-21.",
-        full: "JPG source",
-        megapixels: 28.1,
-        imageSrc: "./assets/lightroom/detail/usa/20141221-1443-06347-3544179fa4.jpg",
-        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1443 06347.jpg", type: "JPG" }],
+        title: "Ben Markowitz, Bar Mitzvah, Carlsbad, CA, USA",
+        caption: "USA / 2018-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/usa/20180624-1822-16658-ea942fdf99.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180624-1822-16658-ea942fdf99.jpg",
         metadata: [
-          { label: "Keywords", value: "Lake Forest, Panoramic, architecture, public" },
-          { label: "Captured", value: "2014:12:21 14:43:05" },
-          { label: "Camera", value: "Apple iPhone 6 Plus" },
-          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
-          { label: "Exposure", value: "1/1700, f/2.2, ISO 32" },
-          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
-          { label: "Location", value: "Arrowhead Village (Village Green), Lake Arrowhead, California, United States" },
-          { label: "Software", value: "Adobe Photoshop Lightroom 6.6 (Macintosh)" },
-          { label: "Color profile", value: "ProPhoto RGB" },
-          { label: "Original file", value: "20141221 1443 06347.jpg" },
-          { label: "Original size", value: "JPEG / 9230 x 3048 / 28.1 MP" },
-          { label: "Source file", value: "20141221 1443 06347.jpg / 9230 x 3048 / 28.1 MP" },
-          { label: "Preview file", value: "20141221-1443-06347-3544179fa4.jpg / 1800 x 594 / watermarked JPG" },
-          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
-        ]
+          {
+                    "label": "Metadata title",
+                    "value": "Ben Markowitz, Bar Mitzvah, Carlsbad, CA, USA"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bar Mitzvah, Ben Markowitz, CA, California, Carlsbad, Friends, Markowitz, USA, _People"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:06:24 18:22:32"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180624 1822 16658.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180624-1822-16658-ea942fdf99.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180624 1822 16658.dng",
+                    "type": "DNG",
+                    "bytes": 15616254
+          }
+]
       },
       {
-        id: "usa-20141221-1443-25796-ae3b4eba28",
+        id: "20180407-1710-18268-553d0da4bb",
         className: "p5",
-        title: "Lake Arrowhead Panorama",
-        caption: "Green-rated Lightroom selection from the USA archive, captured 2014-12-21.",
-        full: "JPG source",
-        megapixels: 28.1,
-        imageSrc: "./assets/lightroom/detail/usa/20141221-1443-25796-ae3b4eba28.jpg",
-        sourceFiles: [{ path: "LR/Camera/2010-2014/20141221 1443 25796.jpg", type: "JPG" }],
+        title: "20180407 1710 18268",
+        caption: "USA / 2018-04-07",
+        full: "DNG master",
+        megapixels: 24.0,
+        gallerySrc: "./assets/regular/gallery/usa/20180407-1710-18268-553d0da4bb.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180407-1710-18268-553d0da4bb.jpg",
         metadata: [
-          { label: "Keywords", value: "Lake Arrowhead, Lake Forest, Panoramic, architecture, public" },
-          { label: "Captured", value: "2014:12:21 14:43:05" },
-          { label: "Camera", value: "Apple iPhone 6 Plus" },
-          { label: "Lens", value: "iPhone 6 Plus back camera 4.15mm f/2.2" },
-          { label: "Exposure", value: "1/1721, f/2.2, ISO 32" },
-          { label: "Focal length", value: "4.2 mm / 29 mm equivalent" },
-          { label: "Software", value: "8.1.2" },
-          { label: "Color profile", value: "sRGB" },
-          { label: "Original file", value: "20141221 1443 25796.jpg" },
-          { label: "Original size", value: "JPEG / 9230 x 3048 / 28.1 MP" },
-          { label: "Source file", value: "20141221 1443 25796.jpg / 9230 x 3048 / 28.1 MP" },
-          { label: "Preview file", value: "20141221-1443-25796-ae3b4eba28.jpg / 1800 x 594 / watermarked JPG" },
-          { label: "Available derivatives", value: "JPG source; watermarked gallery and detail previews" }
-        ]
-      }
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Family 4+, La Jolla, La Jolla Shores, USA, flower, tree"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:04:07 17:10:38"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/30, f/11.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180407 1710 18268.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180407-1710-18268-553d0da4bb.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180407 1710 18268.dng",
+                    "type": "DNG",
+                    "bytes": 9439325
+          }
+]
+      },
+      {
+        id: "20180407-1706-18149-b20009ccb8",
+        className: "p1",
+        title: "20180407 1706 18149",
+        caption: "USA / 2018-04-07",
+        full: "DNG master",
+        megapixels: 24.0,
+        gallerySrc: "./assets/regular/gallery/usa/20180407-1706-18149-b20009ccb8.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180407-1706-18149-b20009ccb8.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Family 4+, La Jolla, La Jolla Shores, USA, flower, tree"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:04:07 17:06:26"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/11.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180407 1706 18149.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180407-1706-18149-b20009ccb8.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180407 1706 18149.dng",
+                    "type": "DNG",
+                    "bytes": 7098654
+          }
+]
+      },
+      {
+        id: "20180304-174646-00094-50b6d1979c",
+        className: "p2",
+        title: "Solana Beach Sunset",
+        caption: "USA / Solana Beach, California / 2018-03-04",
+        full: "JPG master",
+        megapixels: 111.9,
+        gallerySrc: "./assets/regular/gallery/usa/20180304-174646-00094-50b6d1979c.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180304-174646-00094-50b6d1979c.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Solana Beach Sunset"
+          },
+          {
+                    "label": "Description",
+                    "value": "Solana Beach Sunset"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Landscape, Ocean, People, San Diego, Sand, Sea, Sky, Solana Beach, Solana Beach Sunset, Sun, Sunset, USA, Winter, public"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:03:04 17:46:46"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18.0-300.0 mm f/3.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/3.5, ISO 280"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "18.0 mm / 27 mm equivalent"
+          },
+          {
+                    "label": "Location",
+                    "value": "Solana Beach, California, United States"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.2 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB IEC61966-2.1"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180304 174646 00094.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 20945 x 5341 / 111.9 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180304-174646-00094-50b6d1979c.jpg / 1800 x 459 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180304 174646 00094.jpg",
+                    "type": "JPG",
+                    "bytes": 47745711
+          }
+]
+      },
+      {
+        id: "20180224-1451-00100-07b4f7fb87",
+        className: "p3",
+        title: "Oceanside Harbor Village",
+        caption: "USA / Oceanside, California / 2018-02-24",
+        full: "JPG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/usa/20180224-1451-00100-07b4f7fb87.jpg",
+        imageSrc: "./assets/regular/detail/usa/20180224-1451-00100-07b4f7fb87.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Oceanside Harbor Village"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Harbor, Kayak, Landscape, Ocean, Oceanside, Oceanside Harbor Village, Sea, Sky, USA, architecture, public"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:02:24 14:51:00"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18.0-300.0 mm f/3.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/320, f/9.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "24.0 mm / 36 mm equivalent"
+          },
+          {
+                    "label": "Location",
+                    "value": "Oceanside, California, United States"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.2 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB IEC61966-2.1"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180224 1451 00100.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180224-1451-00100-07b4f7fb87.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180224 1451 00100.jpg",
+                    "type": "JPG",
+                    "bytes": 11612436
+          }
+]
+      },
+      {
+        id: "20171210-153658-00085-06c44d4e8a",
+        className: "p4",
+        title: "20171210 Horse Mom and Child, Pauma Valley, California, USA",
+        caption: "USA / 2017-12-10",
+        full: "DNG master",
+        megapixels: 24.0,
+        gallerySrc: "./assets/regular/gallery/usa/20171210-153658-00085-06c44d4e8a.jpg",
+        imageSrc: "./assets/regular/detail/usa/20171210-153658-00085-06c44d4e8a.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "20171210 Horse Mom and Child, Pauma Valley, California, USA"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "CA, California, Enhanced, Fall, Horse, Landscape, Mother, Palomar Mountain, Super Resolution, USA, child"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2017:12:10 15:36:58"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "18-300mm f/3.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/80, f/6.3, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.4 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20171210 153658 00085.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20171210-153658-00085-06c44d4e8a.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20171210 153658 00085.dng",
+                    "type": "DNG",
+                    "bytes": 252550194
+          }
+]
+      },
+      {
+        id: "20160821-1553-07153-d8136ffa49",
+        className: "p5",
+        title: "SDMArt",
+        caption: "USA / 2016-08-21",
+        full: "DNG master",
+        megapixels: 24.0,
+        gallerySrc: "./assets/regular/gallery/usa/20160821-1553-07153-d8136ffa49.jpg",
+        imageSrc: "./assets/regular/detail/usa/20160821-1553-07153-d8136ffa49.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "SDMArt"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Balboa Park, CA, California, Improvisation, Konrad Cramer, Museum, San Diego, US, USA, _Places, painting"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2016:08:21 15:53:53"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/30, f/2.8, ISO 320"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "26.0 mm / 39 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20160821 1553 07153.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20160821-1553-07153-d8136ffa49.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20160821 1553 07153.dng",
+                    "type": "DNG",
+                    "bytes": 7878005
+          }
+]
+      },
     ]
   },
   spain: {
     number: "03",
     title: "Spain",
-    description: "Spain gallery with original archive picks plus rendered 2022 Lightroom sale candidates.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 873 in local reserve.",
     accent: "spain-gallery",
     photos: [
       {
-        id: "spain-1",
+        id: "20220705-165008-00151-1073587e96",
         className: "p1",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-01.jpg",
+        title: "20220705 165008 00151",
+        caption: "Spain / 2022-07-05",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220705-165008-00151-1073587e96.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220705-165008-00151-1073587e96.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Spain, seville"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2022:07:05 16:50:08"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 10:05"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-01.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/5.6, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.4.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220705 165008 00151.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220705-165008-00151-1073587e96.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/07/05/20220705 165008 00151.dng",
+                    "type": "DNG",
+                    "bytes": 9517108
+          }
+]
       },
       {
-        id: "spain-2",
+        id: "20220510-125923-00518-733fc44142",
         className: "p2",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-02.jpg",
+        title: "20220510 125923 00518",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-125923-00518-733fc44142.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-125923-00518-733fc44142.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Basque Country, Bilbao, Euzkadi, Guggenheim museum, Motion Exhibit, Pays Basque, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2022:05:10 12:59:23"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 09:56"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-02.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 220"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/4.5, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 125923 00518.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-125923-00518-733fc44142.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 125923 00518.dng",
+                    "type": "DNG",
+                    "bytes": 7073948
+          }
+]
       },
       {
-        id: "spain-3",
+        id: "20220510-105600-00138-95f3c09f78",
         className: "p3",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-03.jpg",
+        title: "20220510 105600 00138",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-105600-00138-95f3c09f78.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-105600-00138-95f3c09f78.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Basque Country, Bilbao, Euzkadi, Pays Basque, Plaza Circular, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2022:05:10 10:56:00"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 09:54"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-03.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/6.3, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 105600 00138.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-105600-00138-95f3c09f78.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 105600 00138.dng",
+                    "type": "DNG",
+                    "bytes": 9502092
+          }
+]
       },
       {
-        id: "spain-4",
+        id: "20220510-093122-00027-00b8f4100f",
         className: "p4",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-04.jpg",
+        title: "20220510 093122 00027",
+        caption: "Spain / 2022-05-10",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220510-093122-00027-00b8f4100f.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220510-093122-00027-00b8f4100f.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Bilbao, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2022:05:10 09:31:22"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 10:12"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-04.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/40, f/2.8, ISO 2500"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "24.0 mm / 36 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/6.3, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "72 mm / 108 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220510 093122 00027.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220510-093122-00027-00b8f4100f.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/10/20220510 093122 00027.dng",
+                    "type": "DNG",
+                    "bytes": 15397966
+          }
+]
       },
       {
-        id: "spain-5",
+        id: "20220509-205957-03595-1b8f20b88d",
         className: "p5",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-05.jpg",
+        title: "20220509 205957 03595",
+        caption: "Spain / 2022-05-09",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20220509-205957-03595-1b8f20b88d.jpg",
+        imageSrc: "./assets/regular/detail/spain/20220509-205957-03595-1b8f20b88d.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Basque Country, Bilbao, Euzkadi, Pays Basque, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2022:05:09 20:59:57"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 13:00"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-05.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/40, f/2.8, ISO 125"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "22.0 mm / 33 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/6.3, ISO 100"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220509 205957 03595.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220509-205957-03595-1b8f20b88d.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/09/20220509 205957 03595.dng",
+                    "type": "DNG",
+                    "bytes": 8576268
+          }
+]
       },
       {
-        id: "spain-6",
-        className: "p6",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-06.jpg",
+        id: "20180523-1431-00927-5d8be4af92",
+        className: "p1",
+        title: "20180523 1431 00927",
+        caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-23",
+        full: "JPG master",
+        megapixels: 14.7,
+        gallerySrc: "./assets/regular/gallery/spain/20180523-1431-00927-5d8be4af92.jpg",
+        imageSrc: "./assets/regular/detail/spain/20180523-1431-00927-5d8be4af92.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Basque Country, Euzkadi, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2018:05:23 14:31:16"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 10:00"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-06.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "70.0-300.0 mm f/4.5-6.3"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/2000, f/4.8, ISO 400"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "75.0 mm / 112 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/5.6, ISO 100"
+                    "label": "Location",
+                    "value": "Madrid, Comunidad de Madrid, Spain"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "ProPhoto RGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180523 1431 00927.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5501 x 2666 / 14.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180523-1431-00927-5d8be4af92.jpg / 1800 x 872 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180523 1431 00927.jpg",
+                    "type": "JPG",
+                    "bytes": 12936198
+          }
+]
       },
       {
-        id: "spain-7",
-        className: "p7",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-07.jpg",
+        id: "20180523-1158-00908-c83ee908b8",
+        className: "p2",
+        title: "20180523 1158 00908",
+        caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-23",
+        full: "JPG master",
+        megapixels: 18.1,
+        gallerySrc: "./assets/regular/gallery/spain/20180523-1158-00908-c83ee908b8.jpg",
+        imageSrc: "./assets/regular/detail/spain/20180523-1158-00908-c83ee908b8.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Basque Country, Euzkadi, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2018:05:23 11:58:07"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 10:05"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-07.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "70.0-300.0 mm f/4.5-6.3"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Exposure",
+                    "value": "1/2000, f/7.1, ISO 400"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "112.0 mm / 168 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/5.6, ISO 100"
+                    "label": "Location",
+                    "value": "Madrid, Comunidad de Madrid, Spain"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "ProPhoto RGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180523 1158 00908.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5515 x 3275 / 18.1 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180523-1158-00908-c83ee908b8.jpg / 1800 x 1069 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180523 1158 00908.jpg",
+                    "type": "JPG",
+                    "bytes": 14786092
+          }
+]
       },
       {
-        id: "spain-8",
-        className: "p8",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-08.jpg",
+        id: "20180522-1045-15628-c047969f43",
+        className: "p3",
+        title: "Imprenta Municipal - Artes del Libro, Madrid, Spain",
+        caption: "Spain / 2018-05-22",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20180522-1045-15628-c047969f43.jpg",
+        imageSrc: "./assets/regular/detail/spain/20180522-1045-15628-c047969f43.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Metadata title",
+                    "value": "Imprenta Municipal - Artes del Libro, Madrid, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Imprenta Municipal, Madrid, Paper, Press, Spain"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 10:03"
+                    "label": "Captured",
+                    "value": "2018:05:22 10:45:00"
           },
           {
-            label: "Preview file",
-            value: "spain-08.jpg / 1800 x 1200 / Display P3"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Exposure",
+                    "value": "1/13, f/6.3, ISO 800"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/5, ISO 100"
+                    "label": "Focal length",
+                    "value": "15.0 mm / 22 mm equivalent"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180522 1045 15628.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180522-1045-15628-c047969f43.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180522 1045 15628.dng",
+                    "type": "DNG",
+                    "bytes": 12429326
+          }
+]
       },
       {
-        id: "spain-9",
-        className: "p9",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-09.jpg",
+        id: "20180522-1043-00818-26094a4b97",
+        className: "p4",
+        title: "20180522 1043 00818",
+        caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-22",
+        full: "JPG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20180522-1043-00818-26094a4b97.jpg",
+        imageSrc: "./assets/regular/detail/spain/20180522-1043-00818-26094a4b97.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Imprenta Municipal, Madrid, Paper, Press, Sp, Spain"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Captured",
+                    "value": "2018:05:22 10:43:23"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 10:12"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Preview file",
-            value: "spain-09.jpg / 1800 x 1200 / Display P3"
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
+                    "label": "Exposure",
+                    "value": "1/10, f/6.3, ISO 110"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Focal length",
+                    "value": "14.0 mm / 21 mm equivalent"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/6.3, ISO 100"
+                    "label": "Location",
+                    "value": "Madrid, Comunidad de Madrid, Spain"
           },
           {
-            label: "Focal length",
-            value: "72 mm / 108 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "ProPhoto RGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180522 1043 00818.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180522-1043-00818-26094a4b97.jpg / 1800 x 1200 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180522 1043 00818.jpg",
+                    "type": "JPG",
+                    "bytes": 11193718
+          }
+]
       },
       {
-        id: "spain-10",
-        className: "p10",
-        title: "Between Lisbon, Portugal and Madrid, Spain",
-        caption: "Embedded Lightroom metadata from the Spain preview export; keywords and capture settings are listed below.",
-        full: "DNG/JPG master",
-        megapixels: 21,
-        imageSrc: "./assets/spain/spain-10.jpg",
+        id: "20180515-1608-15400-2006697c57",
+        className: "p5",
+        title: "Bilbao Spain Guggenheim Museum",
+        caption: "Spain / 2018-05-15",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/spain/20180515-1608-15400-2006697c57.jpg",
+        imageSrc: "./assets/regular/detail/spain/20180515-1608-15400-2006697c57.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Between Lisbon, Portugal and Madrid, Spain"
+                    "label": "Metadata title",
+                    "value": "Bilbao Spain Guggenheim Museum"
           },
           {
-            label: "Keywords",
-            value: "Madrid, Spain"
+                    "label": "Keywords",
+                    "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
           },
           {
-            label: "Captured",
-            value: "May 21, 2018, 09:35"
+                    "label": "Captured",
+                    "value": "2018:05:15 16:08:00"
           },
           {
-            label: "Preview file",
-            value: "spain-10.jpg / 1800 x 1200 / Display P3"
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
           },
           {
-            label: "Creator",
-            value: "Adobe Photoshop Lightroom 13.0.1 Classic"
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
           },
           {
-            label: "Lens",
-            value: "70.0-300.0 mm f/4.5-6.3"
+                    "label": "Exposure",
+                    "value": "1/250, f/9.0, ISO 100"
           },
           {
-            label: "Exposure",
-            value: "1/1000 sec at f/4.5, ISO 100"
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
           },
           {
-            label: "Focal length",
-            value: "70 mm / 105 mm equivalent"
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180515 1608 15400.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180515-1608-15400-2006697c57.jpg / 1200 x 1800 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180515 1608 15400.dng",
+                    "type": "DNG",
+                    "bytes": 7733516
+          }
+]
       },
-{
-        id: "spain-20220619-000102-00258-pano-8f64733ada",
-        className: "p11",
-        title: "Malaga Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Malaga, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 46.3,
-        imageSrc: "./assets/lightroom/detail/spain/20220619-000102-00258-pano-8f64733ada.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/06/19/20220619 000102 00258-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Malaga, Spain"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:06:19 01:01:02"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "17.0-50.0 mm f/2.8"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/25, f/2.8, ISO 1250"
-                },
-                {
-                        label: "Focal length",
-                        value: "17.0 mm / 25 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220619 000102 00258-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 7574 x 6117 / 46.3 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220619 000102 00258-Pano.jpg / 7574 x 6117 / 46.3 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220619-000102-00258-pano-8f64733ada.jpg / 1800 x 1453 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 5 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220620-144527-00117-pano-6e6b630180",
-        className: "p12",
-        title: "Spain Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 54.7,
-        imageSrc: "./assets/lightroom/detail/unknown/20220620-144527-00117-pano-6e6b630180.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/06/20/20220620 144527 00117-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Captured",
-                        value: "2022:06:20 14:45:27"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "17.0-50.0 mm f/2.8"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/250, f/8.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "17.0 mm / 25 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220620 144527 00117-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 7668 x 7135 / 54.7 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220620 144527 00117-Pano.jpg / 7668 x 7135 / 54.7 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220620-144527-00117-pano-6e6b630180.jpg / 1800 x 1675 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 5 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220620-144601-00127-pano-1a18b2ed13",
-        className: "p13",
-        title: "Spain Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 36.2,
-        imageSrc: "./assets/lightroom/detail/unknown/20220620-144601-00127-pano-1a18b2ed13.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/06/20/20220620 144601 00127-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Captured",
-                        value: "2022:06:20 14:46:01"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "17.0-50.0 mm f/2.8"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/250, f/8.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "17.0 mm / 25 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220620 144601 00127-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 6092 x 5947 / 36.2 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220620 144601 00127-Pano.jpg / 6092 x 5947 / 36.2 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220620-144601-00127-pano-1a18b2ed13.jpg / 1800 x 1757 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 5 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220620-144822-00251-57d2611649",
-        className: "p14",
-        title: "Spain Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 217.3,
-        imageSrc: "./assets/lightroom/detail/unknown/20220620-144822-00251-57d2611649.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/06/20/20220620 144822 00251.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Captured",
-                        value: "2022:06:20 14:48:22"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "17.0-50.0 mm f/2.8"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/160, f/7.1, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "44.0 mm / 66 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220620 144822 00251.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 25606 x 8487 / 217.3 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220620 144822 00251.jpg / 25606 x 8487 / 217.3 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220620-144822-00251-57d2611649.jpg / 1800 x 596 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 5 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220620-165150-00302-pano-1d95a4f7fc",
-        className: "p15",
-        title: "Spain Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 41.9,
-        imageSrc: "./assets/lightroom/detail/unknown/20220620-165150-00302-pano-1d95a4f7fc.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/06/20/20220620 165150 00302-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Captured",
-                        value: "2022:06:20 16:51:50"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "17.0-50.0 mm f/2.8"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "17.0 mm / 25 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220620 165150 00302-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 7327 x 5717 / 41.9 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220620 165150 00302-Pano.jpg / 7327 x 5717 / 41.9 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220620-165150-00302-pano-1d95a4f7fc.jpg / 1800 x 1404 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220620-165439-00307-pano-37a3caf3f3",
-        className: "p16",
-        title: "Spain Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Spain, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 30.4,
-        imageSrc: "./assets/lightroom/detail/unknown/20220620-165439-00307-pano-37a3caf3f3.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/06/20/20220620 165439 00307-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Captured",
-                        value: "2022:06:20 16:54:44"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "17.0-50.0 mm f/2.8"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/250, f/8.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "17.0 mm / 25 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220620 165439 00307-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 7125 x 4262 / 30.4 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220620 165439 00307-Pano.jpg / 7125 x 4262 / 30.4 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220620-165439-00307-pano-37a3caf3f3.jpg / 1800 x 1076 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-163053-00041-pano-ffda1926ab",
-        className: "p17",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 46.5,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-163053-00041-pano-ffda1926ab.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 163053 00041-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:31:17"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/30, f/2.8, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 163053 00041-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 10392 x 4471 / 46.5 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 163053 00041-Pano.jpg / 10392 x 4471 / 46.5 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-163053-00041-pano-ffda1926ab.jpg / 1800 x 774 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-163205-00060-pano-8068d8fe3f",
-        className: "p18",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 20.8,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-163205-00060-pano-8068d8fe3f.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 163205 00060-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:32:05"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 163205 00060-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 5957 x 3486 / 20.8 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 163205 00060-Pano.jpg / 5957 x 3486 / 20.8 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-163205-00060-pano-8068d8fe3f.jpg / 1800 x 1053 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-163201-00058-pano-fcbc893e0f",
-        className: "p19",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 50.2,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-163201-00058-pano-fcbc893e0f.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 163201 00058-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:32:18"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 163201 00058-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 14069 x 3569 / 50.2 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 163201 00058-Pano.jpg / 14069 x 3569 / 50.2 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-163201-00058-pano-fcbc893e0f.jpg / 1800 x 456 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-163214-00065-pano-bcd3b6cb72",
-        className: "p20",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 21.5,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-163214-00065-pano-bcd3b6cb72.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 163214 00065-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:32:18"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/400, f/10.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 163214 00065-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 6419 x 3354 / 21.5 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 163214 00065-Pano.jpg / 6419 x 3354 / 21.5 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-163214-00065-pano-bcd3b6cb72.jpg / 1800 x 940 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-163419-00083-pano-3f4486b119",
-        className: "p21",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 35.8,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-163419-00083-pano-3f4486b119.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 163419 00083-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:34:27"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "20.0 mm / 30 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 163419 00083-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 10762 x 3326 / 35.8 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 163419 00083-Pano.jpg / 10762 x 3326 / 35.8 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-163419-00083-pano-3f4486b119.jpg / 1800 x 556 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164241-00109-pano-c1234d4711",
-        className: "p22",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 47.1,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164241-00109-pano-c1234d4711.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164241 00109-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:42:55"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164241 00109-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 10758 x 4376 / 47.1 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164241 00109-Pano.jpg / 10758 x 4376 / 47.1 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164241-00109-pano-c1234d4711.jpg / 1800 x 732 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164226-00105-pano-467f6f472c",
-        className: "p23",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 72.8,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164226-00105-pano-467f6f472c.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164226 00105-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:43:00"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164226 00105-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 16426 x 4429 / 72.8 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164226 00105-Pano.jpg / 16426 x 4429 / 72.8 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164226-00105-pano-467f6f472c.jpg / 1800 x 485 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164252-00114-pano-77e6201324",
-        className: "p24",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 34.5,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164252-00114-pano-77e6201324.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164252 00114-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:43:00"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "11.0 mm / 16 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164252 00114-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 8024 x 4296 / 34.5 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164252 00114-Pano.jpg / 8024 x 4296 / 34.5 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164252-00114-pano-77e6201324.jpg / 1800 x 963 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164412-00127-pano-13a8791aa3",
-        className: "p25",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 38.9,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164412-00127-pano-13a8791aa3.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164412 00127-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:44:19"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "20.0 mm / 30 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164412 00127-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 8428 x 4616 / 38.9 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164412 00127-Pano.jpg / 8428 x 4616 / 38.9 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164412-00127-pano-13a8791aa3.jpg / 1800 x 986 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164409-00126-pano-75c4163f8e",
-        className: "p26",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 56.0,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164409-00126-pano-75c4163f8e.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164409 00126-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:44:24"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/320, f/9.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "20.0 mm / 30 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164409 00126-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 13864 x 4039 / 56.0 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164409 00126-Pano.jpg / 13864 x 4039 / 56.0 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164409-00126-pano-75c4163f8e.jpg / 1800 x 524 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164358-00121-pano-28e2885b71",
-        className: "p27",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 146.0,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164358-00121-pano-28e2885b71.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164358 00121-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:44:34"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/400, f/10.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "20.0 mm / 30 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164358 00121-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 28818 x 5068 / 146.0 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164358 00121-Pano.jpg / 28818 x 5068 / 146.0 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164358-00121-pano-28e2885b71.jpg / 1800 x 316 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-},
-{
-        id: "spain-20220705-164431-00139-pano-92425313d3",
-        className: "p28",
-        title: "Seville Panorama",
-        caption: "Green-rated 2022 Lightroom selection from Seville, rendered from the camera archive.",
-        full: "JPG source",
-        megapixels: 26.6,
-        imageSrc: "./assets/lightroom/detail/spain/20220705-164431-00139-pano-92425313d3.jpg",
-        sourceFiles: [
-                {
-                        path: "LR/Camera/2022/JPG/07/05/20220705 164431 00139-Pano.jpg",
-                        type: "JPG"
-                }
-        ],
-        metadata: [
-                {
-                        label: "Keywords",
-                        value: "Spain, seville"
-                },
-                {
-                        label: "Captured",
-                        value: "2022:07:05 16:44:34"
-                },
-                {
-                        label: "Camera",
-                        value: "NIKON CORPORATION NIKON D500"
-                },
-                {
-                        label: "Lens",
-                        value: "Tokina atx-i 11-20mm F2.8 CF"
-                },
-                {
-                        label: "Exposure",
-                        value: "1/400, f/10.0, ISO 100"
-                },
-                {
-                        label: "Focal length",
-                        value: "20.0 mm / 30 mm equivalent"
-                },
-                {
-                        label: "Software",
-                        value: "Adobe Bridge 2024"
-                },
-                {
-                        label: "Color profile",
-                        value: "sRGB IEC61966-2.1"
-                },
-                {
-                        label: "Original file",
-                        value: "20220705 164431 00139-Pano.jpg"
-                },
-                {
-                        label: "Original size",
-                        value: "JPEG / 6368 x 4183 / 26.6 MP"
-                },
-                {
-                        label: "Source file",
-                        value: "20220705 164431 00139-Pano.jpg / 6368 x 4183 / 26.6 MP"
-                },
-                {
-                        label: "Preview file",
-                        value: "20220705-164431-00139-pano-92425313d3.jpg / 1800 x 1182 / watermarked JPG"
-                },
-                {
-                        label: "Lightroom selection",
-                        value: "Green label / 4 stars"
-                },
-                {
-                        label: "Available derivatives",
-                        value: "JPG source; watermarked gallery and detail previews"
-                }
-        ]
-}
     ]
   },
   mexico: {
     number: "04",
     title: "Mexico",
-    description: "Ten Lightroom selections from the Mexico photo archive, sourced from Puerto Vallarta DNG originals.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 1 in local reserve.",
     accent: "mexico-gallery",
     photos: [
       {
-        id: "mexico-1",
+        id: "20190611-1102-16493-b74d8ca77a",
         className: "p1",
-        title: "Puerto Vallarta Canopy Line",
-        caption: "A shaded canopy crossing from the Puerto Vallarta archive, exported from a verified DNG source.",
+        title: "20190611 1102 16493",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-01.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 8 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-1102-16493-b74d8ca77a.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-1102-16493-b74d8ca77a.jpg",
         metadata: [
-          { label: "Metadata title", value: "Puerto Vallarta Canopy Line" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 10, 2019, 10:19" },
-          { label: "Source file", value: "sa MEXICO 2019 - 8 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-01.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
-          { label: "Exposure", value: "1/125 sec at f/5.3, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "Iguana, MX, Mexico, Puerto Vallarta, _Places, iguanas, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 11:02:31"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 1102 16493.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-1102-16493-b74d8ca77a.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 1102 16493.dng",
+                    "type": "DNG",
+                    "bytes": 8264779
+          }
+]
       },
       {
-        id: "mexico-2",
+        id: "20190611-1100-14655-64ad3509ca",
         className: "p2",
-        title: "Canopy Path Through Green Shade",
-        caption: "A quiet forest-frame view from the same Puerto Vallarta sequence, kept as a landscape preview export.",
+        title: "20190611 1100 14655",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-02.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 10 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-1100-14655-64ad3509ca.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-1100-14655-64ad3509ca.jpg",
         metadata: [
-          { label: "Metadata title", value: "Canopy Path Through Green Shade" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 10, 2019, 10:19" },
-          { label: "Source file", value: "sa MEXICO 2019 - 10 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-02.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
-          { label: "Exposure", value: "1/125 sec at f/5.6, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "Iguana, MX, Mexico, Puerto Vallarta, _Places, iguanas"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 11:00:34"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "165.0 mm / 247 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 1100 14655.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-1100-14655-64ad3509ca.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 1100 14655.dng",
+                    "type": "DNG",
+                    "bytes": 6320765
+          }
+]
       },
       {
-        id: "mexico-3",
+        id: "20190611-1100-15992-195ddb6409",
         className: "p3",
-        title: "Tropical Rail And Ferns",
-        caption: "Layered green cover and warm light from the Puerto Vallarta Mexico set.",
+        title: "20190611 1100 15992",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-03.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 24 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-1100-15992-195ddb6409.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-1100-15992-195ddb6409.jpg",
         metadata: [
-          { label: "Metadata title", value: "Tropical Rail And Ferns" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 10, 2019, 10:32" },
-          { label: "Source file", value: "sa MEXICO 2019 - 24 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-03.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
-          { label: "Exposure", value: "1/160 sec at f/6.3, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "Iguana, MX, Mexico, Puerto Vallarta, _Places, iguanas, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 11:00:28"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "260.0 mm / 390 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 1100 15992.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-1100-15992-195ddb6409.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 1100 15992.dng",
+                    "type": "DNG",
+                    "bytes": 5790197
+          }
+]
       },
       {
-        id: "mexico-4",
+        id: "20190611-1046-14715-a6c7d9828a",
         className: "p4",
-        title: "Jungle Outlook",
-        caption: "A wider canopy overlook with warm late-morning haze and dense framing branches.",
+        title: "Puerto Vallarta, MX",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-04.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 30 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-1046-14715-a6c7d9828a.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-1046-14715-a6c7d9828a.jpg",
         metadata: [
-          { label: "Metadata title", value: "Jungle Outlook" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 10, 2019, 10:37" },
-          { label: "Source file", value: "sa MEXICO 2019 - 30 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-04.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "10-20 mm f/4.5-5.6" },
-          { label: "Exposure", value: "1/250 sec at f/8, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Metadata title",
+                    "value": "Puerto Vallarta, MX"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Iguana, MX, Mexico, Puerto Vallarta, _Places, iguanas"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 10:46:18"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 1046 14715.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-1046-14715-a6c7d9828a.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 1046 14715.dng",
+                    "type": "DNG",
+                    "bytes": 8256517
+          }
+]
       },
       {
-        id: "mexico-5",
+        id: "20190611-1045-15918-6af640fb0b",
         className: "p5",
-        title: "Morning Offshore Lines",
-        caption: "Open-water morning light and quiet deck geometry from the Puerto Vallarta set.",
+        title: "Puerto Vallarta, MX",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-05.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 45 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-1045-15918-6af640fb0b.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-1045-15918-6af640fb0b.jpg",
         metadata: [
-          { label: "Metadata title", value: "Morning Offshore Lines" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 11, 2019, 05:18" },
-          { label: "Source file", value: "sa MEXICO 2019 - 45 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-05.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "17-50 mm f/2.8" },
-          { label: "Exposure", value: "1/200 sec at f/7.1, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Metadata title",
+                    "value": "Puerto Vallarta, MX"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Iguana, MX, Mexico, Puerto Vallarta, _Places, iguanas"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 10:45:54"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 1045 15918.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-1045-15918-6af640fb0b.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 1045 15918.dng",
+                    "type": "DNG",
+                    "bytes": 8416605
+          }
+]
       },
       {
-        id: "mexico-6",
-        className: "p6",
-        title: "Blue Water Deck Edge",
-        caption: "A bright offshore moment with the horizon held low and the deck cutting through the frame.",
+        id: "20190611-1045-14667-18d062b15b",
+        className: "p1",
+        title: "20190611 1045 14667",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-06.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 46 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-1045-14667-18d062b15b.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-1045-14667-18d062b15b.jpg",
         metadata: [
-          { label: "Metadata title", value: "Blue Water Deck Edge" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 11, 2019, 07:43" },
-          { label: "Source file", value: "sa MEXICO 2019 - 46 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-06.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "17-50 mm f/2.8" },
-          { label: "Exposure", value: "1/400 sec at f/10, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "Iguana, MX, Mexico, Puerto Vallarta, _Places, iguanas"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 10:45:43"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/320, f/9.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 1045 14667.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-1045-14667-18d062b15b.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 1045 14667.dng",
+                    "type": "DNG",
+                    "bytes": 8852725
+          }
+]
       },
       {
-        id: "mexico-7",
-        className: "p7",
-        title: "White Deck In High Sun",
-        caption: "Strong midday contrast, open water, and clean boat-deck lines from the Mexico archive.",
+        id: "20190611-0912-17132-d0d25483ca",
+        className: "p2",
+        title: "20190611 0912 17132",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-07.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 52 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-0912-17132-d0d25483ca.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-0912-17132-d0d25483ca.jpg",
         metadata: [
-          { label: "Metadata title", value: "White Deck In High Sun" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 11, 2019, 07:44" },
-          { label: "Source file", value: "sa MEXICO 2019 - 52 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-07.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "17-50 mm f/2.8" },
-          { label: "Exposure", value: "1/500 sec at f/11, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "MX, Mexico, Puerto Vallarta, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 09:12:40"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 0912 17132.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-0912-17132-d0d25483ca.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 0912 17132.dng",
+                    "type": "DNG",
+                    "bytes": 5021522
+          }
+]
       },
       {
-        id: "mexico-8",
-        className: "p8",
-        title: "Offshore Stern Study",
-        caption: "A second bright-water frame from the same sequence, selected for layout variety and movement.",
+        id: "20190611-0912-17467-b9a902bbc8",
+        className: "p3",
+        title: "20190611 0912 17467",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-08.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 55 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-0912-17467-b9a902bbc8.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-0912-17467-b9a902bbc8.jpg",
         metadata: [
-          { label: "Metadata title", value: "Offshore Stern Study" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 11, 2019, 07:44" },
-          { label: "Source file", value: "sa MEXICO 2019 - 55 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-08.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "17-50 mm f/2.8" },
-          { label: "Exposure", value: "1/500 sec at f/11, ISO 100" },
-          { label: "Focal length", value: "17 mm / 25 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "MX, Mexico, Puerto Vallarta, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 09:12:00"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 0912 17467.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-0912-17467-b9a902bbc8.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 0912 17467.dng",
+                    "type": "DNG",
+                    "bytes": 3941257
+          }
+]
       },
       {
-        id: "mexico-9",
-        className: "p9",
-        title: "Warm Sky Wing Study",
-        caption: "Long-lens profile against a simple warm sky from the Puerto Vallarta morning sequence.",
+        id: "20190611-0911-16891-1a5837b848",
+        className: "p4",
+        title: "20190611 0911 16891",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-09.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 63 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-0911-16891-1a5837b848.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-0911-16891-1a5837b848.jpg",
         metadata: [
-          { label: "Metadata title", value: "Warm Sky Wing Study" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta" },
-          { label: "Captured", value: "June 11, 2019, 09:12" },
-          { label: "Source file", value: "sa MEXICO 2019 - 63 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-09.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "70-300 mm f/4.5-6.3" },
-          { label: "Exposure", value: "1/500 sec at f/9, ISO 100" },
-          { label: "Focal length", value: "300 mm / 450 mm equivalent" }
-        ]
+          {
+                    "label": "Keywords",
+                    "value": "MX, Mexico, Puerto Vallarta, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 09:11:43"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "280.0 mm / 420 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 0911 16891.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-0911-16891-1a5837b848.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 0911 16891.dng",
+                    "type": "DNG",
+                    "bytes": 4195150
+          }
+]
       },
       {
-        id: "mexico-10",
-        className: "p10",
-        title: "Iguana In Dappled Shade",
-        caption: "A long-lens wildlife portrait from the Puerto Vallarta Mexico archive.",
+        id: "20190611-0737-15737-4224f6f647",
+        className: "p5",
+        title: "20190611 0737 15737",
+        caption: "Mexico / 2019-06-11",
         full: "DNG master",
         megapixels: 20.7,
-        imageSrc: "./assets/mexico/mexico-10.jpg",
-        sourceFiles: [{ path: "LR/Mexico/sa MEXICO 2019 - 70 of 70.dng", type: "DNG" }],
+        gallerySrc: "./assets/regular/gallery/mexico/20190611-0737-15737-4224f6f647.jpg",
+        imageSrc: "./assets/regular/detail/mexico/20190611-0737-15737-4224f6f647.jpg",
         metadata: [
-          { label: "Metadata title", value: "Iguana In Dappled Shade" },
-          { label: "Keywords", value: "Mexico, Puerto Vallarta, Iguana" },
-          { label: "Captured", value: "June 11, 2019, 11:02" },
-          { label: "Source file", value: "sa MEXICO 2019 - 70 of 70.dng / 5568 x 3712 / 20.7 MP" },
-          { label: "Preview file", value: "mexico-10.jpg / 1800 x 1200 / sRGB" },
-          { label: "Available derivatives", value: "DNG master; JPG 6 MP, 3 MP, and 1 MP exports" },
-          { label: "Creator", value: "Adobe Photoshop Lightroom Classic 8.3.1" },
-          { label: "Lens", value: "70-300 mm f/4.5-6.3" },
-          { label: "Exposure", value: "1/200 sec at f/7.1, ISO 100" },
-          { label: "Focal length", value: "300 mm / 450 mm equivalent" }
-        ]
-      }
+          {
+                    "label": "Keywords",
+                    "value": "MX, Marlin, Mexico, Puerto Vallarta, _Animal, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:11 07:37:07"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17.0-50.0 mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/1250, f/5.6, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190611 0737 15737.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190611-0737-15737-4224f6f647.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190611 0737 15737.dng",
+                    "type": "DNG",
+                    "bytes": 4735847
+          }
+]
+      },
     ]
   },
   ai: {
     number: "05",
     title: "AI",
-    description: "Leonardo-generated concepts, composites, restoration studies, and prompt experiments.",
+    description: "Leonardo archive selections prepared from the Saturn Lightroom AI source. 10 regular photos currently loaded; 90 in local reserve.",
     accent: "ai-gallery",
     photos: [
       {
-        id: "ai-1",
+        id: "road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388",
         className: "p1",
-        title: "Adventure Sports",
-        caption: "Leonardo-generated outdoor activity concept with motion and landscape energy.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/adventure-sports.jpg",
+        title: "Road Trips - Adventure, car rental, scenic highways, landscapes, gas stations, motels, pit-stops, route maps, vintage ve",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 11.5,
+        gallerySrc: "./assets/regular/gallery/ai/road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388.jpg",
+        imageSrc: "./assets/regular/detail/ai/road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Adventure Sports - Rafting, kayaking, hiking, biking, skiing, snowboarding, surfing, zip-lining, paragliding, extreme ch"
+                    "label": "Metadata title",
+                    "value": "Road Trips - Adventure, car rental, scenic highways, landscapes, gas stations, motels, pit-stops, route maps, vintage ve"
           },
           {
-            label: "Keywords",
-            value: "Rafting, Sports, adventure, biking, challenges., extreme, hiking, kayaking, paragliding, skiing, snowboarding, surfing, zip-lining"
+                    "label": "Keywords",
+                    "value": "Trips, adventure, car, driving, gas, highways, landscapes, maps, motels, pit-stops, rental, road, route, safety., scenic, stations, vehicles, vintage"
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "Road Trips - Adventure, car rental, scenic highways, landsca-2-UPSCALE_64f1a72e-0995-488f-a367-5bb3748ca213.jpg"
           },
           {
-            label: "Preview file",
-            value: "adventure-sports.jpg / 1600 x 1098 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 4096 x 2816 / 11.5 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-64f1a72e-0995-488f-a367-5bb3748ca213-6593d67388.jpg / 1800 x 1237 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Road Trips - Adventure, car rental, scenic highways, landsca-2-UPSCALE_64f1a72e-0995-488f-a367-5bb3748ca213.jpg",
+                    "type": "JPG",
+                    "bytes": 3945115
+          }
+]
       },
       {
-        id: "ai-2",
+        id: "national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024",
         className: "p2",
-        title: "Beach Scenes",
-        caption: "Generated beach travel concept with sun, water, and coastal atmosphere.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/beach-scenes.jpg",
+        title: "National Parks - Mountains, rivers and lakes, wildlife, hiking trails, campgrounds, scenic views, waterfalls, rock forma",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 11.5,
+        gallerySrc: "./assets/regular/gallery/ai/national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024.jpg",
+        imageSrc: "./assets/regular/detail/ai/national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Beach Scenes - Sun, sand, ocean waves, palm trees, swimming, beach umbrellas, beach chairs, tropical drinks, boating, sh"
+                    "label": "Metadata title",
+                    "value": "National Parks - Mountains, rivers and lakes, wildlife, hiking trails, campgrounds, scenic views, waterfalls, rock forma"
           },
           {
-            label: "Keywords",
-            value: "Beach, Ocean, Sand, Scenes, Sun, Waves, birds., boating, chairs, drinks, palm, shore, swimming, trees, tropical, umbrellas"
+                    "label": "Keywords",
+                    "value": "and, campgrounds, designated, forests, formations, hiking, lakes, mountains, national, natural, parks, rivers, rock, scenic, trails, views, waterfalls, wildlife, wonders."
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "National Parks - Mountains, rivers and lakes, wildlife, hiki-1-UPSCALE_9275f669-1ed7-44d4-a0fa-9c0c8544a62a.jpg"
           },
           {
-            label: "Preview file",
-            value: "beach-scenes.jpg / 1600 x 1066 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 4096 x 2816 / 11.5 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-9275f669-1ed7-44d4-a0fa-9c0c8544a62a-b440f95024.jpg / 1800 x 1237 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/National Parks - Mountains, rivers and lakes, wildlife, hiki-1-UPSCALE_9275f669-1ed7-44d4-a0fa-9c0c8544a62a.jpg",
+                    "type": "JPG",
+                    "bytes": 3811187
+          }
+]
       },
       {
-        id: "ai-3",
+        id: "luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0",
         className: "p3",
-        title: "City Breaks",
-        caption: "Generated urban travel concept with street-level architecture and transport cues.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/city-breaks.jpg",
+        title: "Luxury Escapes - Resorts, mansions, spas, golf courses, private beaches, yacht clubs, gourmet dining, fine wines, indoor",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0.jpg",
+        imageSrc: "./assets/regular/detail/ai/luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "City Breaks - Skyscrapers, street signs, public transport, local attractions, shopping, dining, parks, historical landma"
+                    "label": "Metadata title",
+                    "value": "Luxury Escapes - Resorts, mansions, spas, golf courses, private beaches, yacht clubs, gourmet dining, fine wines, indoor"
           },
           {
-            label: "Keywords",
-            value: "Breaks, Local, Skyscrapers, Street, attractions, city, dining, historical, landmarks, nightlife, parks, performers., shopping, signs, transport"
+                    "label": "Keywords",
+                    "value": "Escapes, Excire (en), Image Content, Indoor, Luxury, Place, Resorts, accommodations., beaches, clubs, courses, dining, fine, golf, gourmet, lavish, mansions, pools, private, spas, wines, yacht"
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "Luxury Escapes - Resorts, mansions, spas, golf courses, priv-0-UPSCALE_b1ae5875-1e04-4860-964d-e040b198c5b8.jpg"
           },
           {
-            label: "Preview file",
-            value: "city-breaks.jpg / 1600 x 1100 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-b1ae5875-1e04-4860-964d-e040b198c5b8-61e04af5d0.jpg / 1800 x 1235 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Luxury Escapes - Resorts, mansions, spas, golf courses, priv-0-UPSCALE_b1ae5875-1e04-4860-964d-e040b198c5b8.jpg",
+                    "type": "JPG",
+                    "bytes": 1457426
+          }
+]
       },
       {
-        id: "ai-4",
+        id: "law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54",
         className: "p4",
-        title: "Cultural Heritage",
-        caption: "Generated museum and architecture concept for heritage travel themes.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/cultural-heritage.jpg",
+        title: "Law and legal services - corporate law, contracts, intellectual property, labor laws, dispute resolution, litigation, re",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54.jpg",
+        imageSrc: "./assets/regular/detail/ai/law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Cultural Heritage - Museums, cathedrals, architecture, street scenes, art galleries, cultural events, religious landmark"
+                    "label": "Metadata title",
+                    "value": "Law and legal services - corporate law, contracts, intellectual property, labor laws, dispute resolution, litigation, re"
           },
           {
-            label: "Keywords",
-            value: "Art, Heritage, Local, Museums, Scenes, Street, architecture, cathedrals, costumes., cuisine, cultural, events, folk, galleries, landmarks, religious, traditions"
+                    "label": "Keywords",
+                    "value": "Corporate, and, compliance, contracts, dispute, intellectual, labor, law, laws, legal, litigation, property, regulatory, research, resolution, services, services."
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "Law and legal services - corporate law, contracts, intellect-3-UPSCALE_1cf03896-3634-491b-88ed-1cbcc020f1c9.jpg"
           },
           {
-            label: "Preview file",
-            value: "cultural-heritage.jpg / 1600 x 1100 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "law-and-legal-services-corporate-law-contracts-intellect-3-upscale-1cf03896-3634-491b-88ed-1cbcc020f1c9-59adb6dd54.jpg / 1800 x 1235 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Law and legal services - corporate law, contracts, intellect-3-UPSCALE_1cf03896-3634-491b-88ed-1cbcc020f1c9.jpg",
+                    "type": "JPG",
+                    "bytes": 1165595
+          }
+]
       },
       {
-        id: "ai-5",
+        id: "law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af",
         className: "p5",
-        title: "E-commerce Concept",
-        caption: "Generated online business concept for web and commerce storytelling.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/ecommerce.jpg",
+        title: "Law and legal services - corporate law, contracts, intellectual property, labor laws, dispute resolution, litigation, re",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af.jpg",
+        imageSrc: "./assets/regular/detail/ai/law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "E-commerce and online business - online shopping, mobile commerce, e-payment systems, online security, e-commerce platfo"
+                    "label": "Metadata title",
+                    "value": "Law and legal services - corporate law, contracts, intellectual property, labor laws, dispute resolution, litigation, re"
           },
           {
-            label: "Keywords",
-            value: "E-commerce, and, business, commerce, customer, design, e-payment, experience, marketing, marketplaces, mobile, online, platforms, security, shopping, systems, website"
+                    "label": "Keywords",
+                    "value": "Corporate, and, compliance, contracts, dispute, intellectual, labor, law, laws, legal, litigation, property, regulatory, research, resolution, services, services."
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "Law and legal services - corporate law, contracts, intellect-1-UPSCALE_1ac593ae-8cab-46da-90fa-28e83a735b3d.jpg"
           },
           {
-            label: "Preview file",
-            value: "ecommerce.jpg / 1600 x 1098 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "law-and-legal-services-corporate-law-contracts-intellect-1-upscale-1ac593ae-8cab-46da-90fa-28e83a735b3d-8e18bb29af.jpg / 1800 x 1235 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Law and legal services - corporate law, contracts, intellect-1-UPSCALE_1ac593ae-8cab-46da-90fa-28e83a735b3d.jpg",
+                    "type": "JPG",
+                    "bytes": 1074134
+          }
+]
       },
       {
-        id: "ai-6",
-        className: "p6",
-        title: "Forest Study",
-        caption: "Generated forest travel concept with greenery, trail, and nature mood.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/forests.jpg",
+        id: "law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650",
+        className: "p1",
+        title: "Law and legal services - corporate law, contracts, intellectual property, labor laws, dispute resolution, litigation, re",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650.jpg",
+        imageSrc: "./assets/regular/detail/ai/law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Forests – trees, leaves, wildlife, hiking, camping, greenery, nature trails, woodlands, pine cones, ferns"
+                    "label": "Metadata title",
+                    "value": "Law and legal services - corporate law, contracts, intellectual property, labor laws, dispute resolution, litigation, re"
           },
           {
-            label: "Keywords",
-            value: "Pine, camping, cones, ferns, forests, greenery, hiking, leaves, nature, trails, trees, wildlife, woodlands"
+                    "label": "Keywords",
+                    "value": "Corporate, and, compliance, contracts, dispute, intellectual, labor, law, laws, legal, litigation, property, regulatory, research, resolution, services, services."
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "Law and legal services - corporate law, contracts, intellect-0-UPSCALE_83080d09-427b-4d1f-803c-6fc33d2f17b6.jpg"
           },
           {
-            label: "Preview file",
-            value: "forests.jpg / 1600 x 1066 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "law-and-legal-services-corporate-law-contracts-intellect-0-upscale-83080d09-427b-4d1f-803c-6fc33d2f17b6-25313f8650.jpg / 1800 x 1235 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Law and legal services - corporate law, contracts, intellect-0-UPSCALE_83080d09-427b-4d1f-803c-6fc33d2f17b6.jpg",
+                    "type": "JPG",
+                    "bytes": 1169619
+          }
+]
       },
       {
-        id: "ai-7",
-        className: "p7",
-        title: "Wellness Retreat",
-        caption: "Generated wellness retreat image for calm travel and hospitality concepts.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/wellness-retreats.jpg",
+        id: "international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361",
+        className: "p2",
+        title: "International business and globalization - cross-cultural communication, global trade, cultural diversity, international",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361.jpg",
+        imageSrc: "./assets/regular/detail/ai/international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism"
+                    "label": "Metadata title",
+                    "value": "International business and globalization - cross-cultural communication, global trade, cultural diversity, international"
           },
           {
-            label: "Keywords",
-            value: "Destinations, Retreats, Wellness, cuisine, detoxing, escapism., healing, holistic, meditation, mindful, nature, organic, remote, spiritual, springs, tourism, treatments, walks, yoga"
+                    "label": "Keywords",
+                    "value": "Communication, Global, and, business, chains, corporations, cross-cultural, cultural, diversity, economies, emerging, foreign, globalization, international, investments, markets, multinational, regulations, supply, trade"
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "International business and globalization - cross-cultural co-2-UPSCALE_5d490742-10ae-4c88-bee1-665557965e6a.jpg"
           },
           {
-            label: "Preview file",
-            value: "wellness-retreats.jpg / 1600 x 1098 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "international-business-and-globalization-cross-cultural-co-2-upscale-5d490742-10ae-4c88-bee1-665557965e6a-a1a2331361.jpg / 1800 x 1235 / JPG"
           }
-        ]
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/International business and globalization - cross-cultural co-2-UPSCALE_5d490742-10ae-4c88-bee1-665557965e6a.jpg",
+                    "type": "JPG",
+                    "bytes": 1052391
+          }
+]
       },
       {
-        id: "ai-8",
-        className: "p8",
-        title: "Accounting Concept",
-        caption: "Generated business services concept for finance and accounting storytelling.",
-        full: "Leonardo JPG master",
-        megapixels: 2,
-        imageSrc: "./assets/ai/accounting.jpg",
+        id: "international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a",
+        className: "p3",
+        title: "International business and globalization - cross-cultural communication, global trade, cultural diversity, international",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a.jpg",
+        imageSrc: "./assets/regular/detail/ai/international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a.jpg",
         metadata: [
           {
-            label: "Metadata title",
-            value: "Accounting and bookkeeping - tax preparation, auditing, compliance, payroll, invoicing, tax laws, financial reporting, c"
+                    "label": "Metadata title",
+                    "value": "International business and globalization - cross-cultural communication, global trade, cultural diversity, international"
           },
           {
-            label: "Keywords",
-            value: "Accounting, Financial, analysis, and, auditing, bookkeeping, cash, compliance, flow, invoicing, laws, payroll, preparation, record-keeping, reporting, tax"
+                    "label": "Keywords",
+                    "value": "Communication, Global, and, business, chains, corporations, cross-cultural, cultural, diversity, economies, emerging, foreign, globalization, international, investments, markets, multinational, regulations, supply, trade"
           },
           {
-            label: "File date",
-            value: "May 2, 2026, 20:06"
+                    "label": "Original file",
+                    "value": "International business and globalization - cross-cultural co-1-UPSCALE_12cdbe89-dcbc-4674-80e2-eeb15f480b5d.jpg"
           },
           {
-            label: "Preview file",
-            value: "accounting.jpg / 1600 x 1098 / sRGB IEC61966-2.1"
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "international-business-and-globalization-cross-cultural-co-1-upscale-12cdbe89-dcbc-4674-80e2-eeb15f480b5d-6a80e55e0a.jpg / 1800 x 1235 / JPG"
           }
-        ]
-      }
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/International business and globalization - cross-cultural co-1-UPSCALE_12cdbe89-dcbc-4674-80e2-eeb15f480b5d.jpg",
+                    "type": "JPG",
+                    "bytes": 977100
+          }
+]
+      },
+      {
+        id: "human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec",
+        className: "p4",
+        title: "Human resources and talent management - recruitment, retention, talent development, labor laws, HR analytics, performanc",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec.jpg",
+        imageSrc: "./assets/regular/detail/ai/human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Human resources and talent management - recruitment, retention, talent development, labor laws, HR analytics, performanc"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Development, Engagement, Management, analytics, and, benefits, diversity, employee, human, labor, laws, performance, recruitment, resources, retention, talent, workforce"
+          },
+          {
+                    "label": "Original file",
+                    "value": "Human resources and talent management - recruitment, retenti-1-UPSCALE_982b5218-66b8-4d3f-8517-0697472b7742.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "human-resources-and-talent-management-recruitment-retenti-1-upscale-982b5218-66b8-4d3f-8517-0697472b7742-ecc7d77bec.jpg / 1800 x 1235 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Human resources and talent management - recruitment, retenti-1-UPSCALE_982b5218-66b8-4d3f-8517-0697472b7742.jpg",
+                    "type": "JPG",
+                    "bytes": 774529
+          }
+]
+      },
+      {
+        id: "financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4",
+        className: "p5",
+        title: "Financial planning and analysis - budgeting, forecasting, data analysis, financial modeling, performance metrics, KPIs,",
+        caption: "AI",
+        full: "JPG master",
+        megapixels: 7.3,
+        gallerySrc: "./assets/regular/gallery/ai/financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4.jpg",
+        imageSrc: "./assets/regular/detail/ai/financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Financial planning and analysis - budgeting, forecasting, data analysis, financial modeling, performance metrics, KPIs,"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Financial, KPIs, Market, Strategy, analysis, and, budgeting, business, data, forecasting, metrics, modeling, performance, planning, research, statements, statistics"
+          },
+          {
+                    "label": "Original file",
+                    "value": "Financial planning and analysis - budgeting, forecasting, da-2-UPSCALE_fbda6874-22e8-40bb-a42a-321a24a8b618.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 3264 x 2240 / 7.3 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "financial-planning-and-analysis-budgeting-forecasting-da-2-upscale-fbda6874-22e8-40bb-a42a-321a24a8b618-72f04e1ba4.jpg / 1800 x 1235 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2023/06/08/UPSCALE/Financial planning and analysis - budgeting, forecasting, da-2-UPSCALE_fbda6874-22e8-40bb-a42a-321a24a8b618.jpg",
+                    "type": "JPG",
+                    "bytes": 810251
+          }
+]
+      },
     ]
-  }
+  },
+  portugal: {
+    number: "06",
+    title: "Portugal",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 693 in local reserve.",
+    accent: "portugal-gallery",
+    photos: [
+      {
+        id: "20220521-154652-04641-2e598aa381",
+        className: "p1",
+        title: "20220521 154652 04641",
+        caption: "Portugal / 2022-05-21",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20220521-154652-04641-2e598aa381.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20220521-154652-04641-2e598aa381.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Castelo de Sao Jorge, Fortress, Portugal, lisbonne"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:21 15:46:52"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220521 154652 04641.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220521-154652-04641-2e598aa381.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/21/20220521 154652 04641.dng",
+                    "type": "DNG",
+                    "bytes": 12793526
+          }
+]
+      },
+      {
+        id: "20220521-151631-04606-dba08d1a89",
+        className: "p2",
+        title: "20220521 151631 04606",
+        caption: "Portugal / 2022-05-21",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20220521-151631-04606-dba08d1a89.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20220521-151631-04606-dba08d1a89.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Castelo de Sao Jorge, Fortress, Portugal, lisbonne"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:21 15:16:31"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/6.3, ISO 110"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220521 151631 04606.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220521-151631-04606-dba08d1a89.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/21/20220521 151631 04606.dng",
+                    "type": "DNG",
+                    "bytes": 8242656
+          }
+]
+      },
+      {
+        id: "20220519-144759-00129-be0c24c04d",
+        className: "p3",
+        title: "20220519 144759 00129",
+        caption: "Portugal / 2022-05-19",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20220519-144759-00129-be0c24c04d.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20220519-144759-00129-be0c24c04d.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Carmo Convent, Portugal, city, lisbon, travel"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:19 14:47:59"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/8.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220519 144759 00129.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220519-144759-00129-be0c24c04d.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/19/20220519 144759 00129.dng",
+                    "type": "DNG",
+                    "bytes": 11519202
+          }
+]
+      },
+      {
+        id: "20220515-171248-04371-fa704aeef6",
+        className: "p4",
+        title: "20220515 171248 04371",
+        caption: "Portugal / 2022-05-15",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20220515-171248-04371-fa704aeef6.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20220515-171248-04371-fa704aeef6.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Atlantic, Beach, Carcavelos, Ocean, Portugal, lisbon"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2022:05:15 17:12:48"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "240.0 mm / 360 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 11.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220515 171248 04371.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220515-171248-04371-fa704aeef6.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/15/20220515 171248 04371.dng",
+                    "type": "DNG",
+                    "bytes": 7768496
+          }
+]
+      },
+      {
+        id: "20180519-1713-15517-f93416e08b",
+        className: "p5",
+        title: "Ajuda National Palace, Lisbon, Portugal",
+        caption: "Portugal / 2018-05-19",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20180519-1713-15517-f93416e08b.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20180519-1713-15517-f93416e08b.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Ajuda National Palace, Lisbon, Portugal"
+          },
+          {
+                    "label": "Description",
+                    "value": "https://en.wikipedia.org/wiki/Palace_of_Ajuda"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Ajuda National Palace, Lisbon, PT, Portugal, _Places, lisbonne"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:05:19 17:13:41"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/8, f/4.5, ISO 450"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180519 1713 15517.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180519-1713-15517-f93416e08b.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180519 1713 15517.dng",
+                    "type": "DNG",
+                    "bytes": 13140873
+          }
+]
+      },
+      {
+        id: "20180519-1630-16732-6f845b7729",
+        className: "p1",
+        title: "Ajuda National Palace, Lisbon, Portugal",
+        caption: "Portugal / 2018-05-19",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20180519-1630-16732-6f845b7729.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20180519-1630-16732-6f845b7729.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Ajuda National Palace, Lisbon, Portugal"
+          },
+          {
+                    "label": "Description",
+                    "value": "https://en.wikipedia.org/wiki/Palace_of_Ajuda"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Ajuda National Palace, Church, Excire (en), Image Color, Image Content, Image Property, Indoor, Lisbon, Other, PT, Place, Portugal, Religion, Unsaturated, _Places, gray, interior, lisbonne"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:05:19 16:30:07"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/50, f/3.5, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "17.0 mm / 25 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180519 1630 16732.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180519-1630-16732-6f845b7729.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180519 1630 16732.dng",
+                    "type": "DNG",
+                    "bytes": 8579462
+          }
+]
+      },
+      {
+        id: "20180519-1337-00615-a2dda38e79",
+        className: "p2",
+        title: "20180519 1337 00615",
+        caption: "Portugal / Lisboa, Lisboa / 2018-05-19",
+        full: "JPG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20180519-1337-00615-a2dda38e79.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20180519-1337-00615-a2dda38e79.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Jeronimos Monastery, Portugal, lisbon, lisbonne"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:05:19 13:37:24"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Location",
+                    "value": "Lisboa, Portugal"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "ProPhoto RGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180519 1337 00615.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180519-1337-00615-a2dda38e79.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180519 1337 00615.jpg",
+                    "type": "JPG",
+                    "bytes": 12759609
+          }
+]
+      },
+      {
+        id: "20180517-2138-16187-802cd85bd7",
+        className: "p3",
+        title: "Cascais, Portugal",
+        caption: "Portugal / 2018-05-17",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20180517-2138-16187-802cd85bd7.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20180517-2138-16187-802cd85bd7.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Cascais, Portugal"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:05:17 21:38:28"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/13, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180517 2138 16187.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180517-2138-16187-802cd85bd7.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180517 2138 16187.dng",
+                    "type": "DNG",
+                    "bytes": 8870853
+          }
+]
+      },
+      {
+        id: "20180517-1437-00478-77707bacb4",
+        className: "p4",
+        title: "20180517 1437 00478",
+        caption: "Portugal / 2018-05-17",
+        full: "JPG master",
+        megapixels: 19.2,
+        gallerySrc: "./assets/regular/gallery/portugal/20180517-1437-00478-77707bacb4.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20180517-1437-00478-77707bacb4.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:05:17 14:37:39"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/9.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "ProPhoto RGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180517 1437 00478.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5957 x 3230 / 19.2 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180517-1437-00478-77707bacb4.jpg / 1800 x 976 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180517 1437 00478.jpg",
+                    "type": "JPG",
+                    "bytes": 12180377
+          }
+]
+      },
+      {
+        id: "20180517-1435-00474-50a5c17bec",
+        className: "p5",
+        title: "20180517 1435 00474",
+        caption: "Portugal / Cascais, Lisboa / 2018-05-17",
+        full: "JPG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/portugal/20180517-1435-00474-50a5c17bec.jpg",
+        imageSrc: "./assets/regular/detail/portugal/20180517-1435-00474-50a5c17bec.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2018:05:17 14:35:52"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "15.0 mm / 22 mm equivalent"
+          },
+          {
+                    "label": "Location",
+                    "value": "Cascais, Lisboa, Portugal"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Windows)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "ProPhoto RGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20180517 1435 00474.jpg"
+          },
+          {
+                    "label": "Original size",
+                    "value": "JPEG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20180517-1435-00474-50a5c17bec.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20180517 1435 00474.jpg",
+                    "type": "JPG",
+                    "bytes": 12922321
+          }
+]
+      },
+    ]
+  },
+  slovakia: {
+    number: "07",
+    title: "Slovakia",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 10 regular photos currently loaded; 16 in local reserve.",
+    accent: "slovakia-gallery",
+    photos: [
+      {
+        id: "20190624-1821-16222-1c0e864353",
+        className: "p1",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1821-16222-1c0e864353.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1821-16222-1c0e864353.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:21:51"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/200, f/7.1, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1821 16222.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1821-16222-1c0e864353.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1821 16222.dng",
+                    "type": "DNG",
+                    "bytes": 6459200
+          }
+]
+      },
+      {
+        id: "20190624-1820-15477-1db1899e27",
+        className: "p2",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1820-15477-1db1899e27.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1820-15477-1db1899e27.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:20:52"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/640, f/13.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "14.0 mm / 21 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1820 15477.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1820-15477-1db1899e27.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1820 15477.dng",
+                    "type": "DNG",
+                    "bytes": 7004271
+          }
+]
+      },
+      {
+        id: "20190624-1817-16593-e367d8242e",
+        className: "p3",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1817-16593-e367d8242e.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1817-16593-e367d8242e.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:17:49"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/60, f/4.5, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1817 16593.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1817-16593-e367d8242e.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1817 16593.dng",
+                    "type": "DNG",
+                    "bytes": 5534488
+          }
+]
+      },
+      {
+        id: "20190624-1811-15162-2525252767",
+        className: "p4",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1811-15162-2525252767.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1811-15162-2525252767.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:11:29"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/125, f/5.6, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1811 15162.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1811-15162-2525252767.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1811 15162.dng",
+                    "type": "DNG",
+                    "bytes": 5594848
+          }
+]
+      },
+      {
+        id: "20190624-1811-15862-529e3b885f",
+        className: "p5",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1811-15862-529e3b885f.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1811-15862-529e3b885f.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places, published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 18:11:19"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/125, f/5.6, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.5 mm / 17 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1811 15862.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1811-15862-529e3b885f.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1811 15862.dng",
+                    "type": "DNG",
+                    "bytes": 5931812
+          }
+]
+      },
+      {
+        id: "20190624-1757-14704-e1bc611f50",
+        className: "p1",
+        title: "Bratislava, SK",
+        caption: "Slovakia / 2019-06-24",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190624-1757-14704-e1bc611f50.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190624-1757-14704-e1bc611f50.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Bratislava, SK"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "Bratislava, SK, _Architecture, _Places"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:24 17:57:22"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/4.5, ISO 125"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190624 1757 14704.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190624-1757-14704-e1bc611f50.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190624 1757 14704.dng",
+                    "type": "DNG",
+                    "bytes": 7923548
+          }
+]
+      },
+      {
+        id: "20190623-1448-17389-fe749139ed",
+        className: "p2",
+        title: "20190623 1448 17389",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 41.6,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1448-17389-fe749139ed.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1448-17389-fe749139ed.jpg",
+        metadata: [
+          {
+                    "label": "Keywords",
+                    "value": "published Adobe"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 14:48:24"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.2 (Macintosh)"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1448 17389.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 9634 x 4316 / 41.6 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1448-17389-fe749139ed.jpg / 1800 x 806 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1448 17389.dng",
+                    "type": "DNG",
+                    "bytes": 18928766
+          }
+]
+      },
+      {
+        id: "20190623-1417-14657-692ab3d9cf",
+        className: "p3",
+        title: "20190623 1417 14657",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1417-14657-692ab3d9cf.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1417-14657-692ab3d9cf.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 14:17:25"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/320, f/9.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1417 14657.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1417-14657-692ab3d9cf.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1417 14657.dng",
+                    "type": "DNG",
+                    "bytes": 7377016
+          }
+]
+      },
+      {
+        id: "20190623-1320-14668-5c5c81dae7",
+        className: "p4",
+        title: "20190623 1320 14668",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1320-14668-5c5c81dae7.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1320-14668-5c5c81dae7.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 13:20:44"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/320, f/9.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1320 14668.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1320-14668-5c5c81dae7.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1320 14668.dng",
+                    "type": "DNG",
+                    "bytes": 6724919
+          }
+]
+      },
+      {
+        id: "20190623-1317-14743-f66f754082",
+        className: "p5",
+        title: "20190623 1317 14743",
+        caption: "Slovakia / 2019-06-23",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/slovakia/20190623-1317-14743-f66f754082.jpg",
+        imageSrc: "./assets/regular/detail/slovakia/20190623-1317-14743-f66f754082.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:06:23 13:17:52"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/320, f/9.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 8.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20190623 1317 14743.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20190623-1317-14743-f66f754082.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20190623 1317 14743.dng",
+                    "type": "DNG",
+                    "bytes": 8162380
+          }
+]
+      },
+    ]
+  },
+  unknown: {
+    number: "08",
+    title: "Unknown",
+    description: "Saturn Lightroom selections that still need a final gallery assignment. 10 regular photos currently loaded; 1547 in local reserve.",
+    accent: "unknown-gallery",
+    photos: [
+      {
+        id: "20220505-0352-00089-a67e196477",
+        className: "p1",
+        title: "20220505 0352 00089",
+        caption: "Unknown / 2022-05-05",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20220505-0352-00089-a67e196477.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20220505-0352-00089-a67e196477.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2022:05:05 03:52:54"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "11-20mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/15, f/2.8, ISO 160"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "11.0 mm / 16 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220505 0352 00089.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220505-0352-00089-a67e196477.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/05/05/20220505 0352 00089.dng",
+                    "type": "DNG",
+                    "bytes": 11061226
+          }
+]
+      },
+      {
+        id: "20220103-1726-00121-8ef9ddd1cd",
+        className: "p2",
+        title: "20220103 1726 00121",
+        caption: "Unknown / 2022-01-03",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20220103-1726-00121-8ef9ddd1cd.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20220103-1726-00121-8ef9ddd1cd.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2022:01:03 17:26:05"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/60, f/2.8, ISO 800"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 12.0.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20220103 1726 00121.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20220103-1726-00121-8ef9ddd1cd.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2022/01/03/20220103 1726 00121.dng",
+                    "type": "DNG",
+                    "bytes": 12197840
+          }
+]
+      },
+      {
+        id: "20191207-1049-17268-c2a2afbb43",
+        className: "p3",
+        title: "20191207 1049 17268",
+        caption: "Unknown / 2019-12-07",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191207-1049-17268-c2a2afbb43.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191207-1049-17268-c2a2afbb43.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:12:07 10:49:21"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/4000, f/4.8, ISO 200"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "72.0 mm / 108 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191207 1049 17268.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191207-1049-17268-c2a2afbb43.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191207 1049 17268.dng",
+                    "type": "DNG",
+                    "bytes": 9814560
+          }
+]
+      },
+      {
+        id: "20191205-2151-17606-98de0422eb",
+        className: "p4",
+        title: "20191205 2151 17606",
+        caption: "Unknown / 2019-12-05",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191205-2151-17606-98de0422eb.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191205-2151-17606-98de0422eb.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:12:05 21:51:54"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/60, f/2.8, ISO 900"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "44.0 mm / 66 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191205 2151 17606.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191205-2151-17606-98de0422eb.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191205 2151 17606.dng",
+                    "type": "DNG",
+                    "bytes": 12655086
+          }
+]
+      },
+      {
+        id: "20191205-2140-17698-8b5a46c5b9",
+        className: "p5",
+        title: "20191205 2140 17698",
+        caption: "Unknown / 2019-12-05",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191205-2140-17698-8b5a46c5b9.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191205-2140-17698-8b5a46c5b9.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:12:05 21:40:33"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/60, f/2.8, ISO 2800"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191205 2140 17698.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191205-2140-17698-8b5a46c5b9.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191205 2140 17698.dng",
+                    "type": "DNG",
+                    "bytes": 17369292
+          }
+]
+      },
+      {
+        id: "20191205-1846-17863-02ad7a5e97",
+        className: "p1",
+        title: "20191205 1846 17863",
+        caption: "Unknown / 2019-12-05",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191205-1846-17863-02ad7a5e97.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191205-1846-17863-02ad7a5e97.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:12:05 18:46:07"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "17-50mm f/2.8"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/1000, f/2.8, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "50.0 mm / 75 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191205 1846 17863.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191205-1846-17863-02ad7a5e97.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191205 1846 17863.dng",
+                    "type": "DNG",
+                    "bytes": 7207752
+          }
+]
+      },
+      {
+        id: "20191205-1504-17712-24941bcaf1",
+        className: "p2",
+        title: "20191205 1504 17712",
+        caption: "Unknown / 2019-12-05",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191205-1504-17712-24941bcaf1.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191205-1504-17712-24941bcaf1.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:12:05 15:04:49"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-6.3"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/500, f/11.0, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191205 1504 17712.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191205-1504-17712-24941bcaf1.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191205 1504 17712.dng",
+                    "type": "DNG",
+                    "bytes": 5327788
+          }
+]
+      },
+      {
+        id: "20191127-1413-16555-6c89e0cd94",
+        className: "p3",
+        title: "20191127 1413 16555",
+        caption: "Unknown / 2019-11-27",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191127-1413-16555-6c89e0cd94.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191127-1413-16555-6c89e0cd94.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:11:27 14:13:55"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/10, f/5.6, ISO 6400"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191127 1413 16555.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191127-1413-16555-6c89e0cd94.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191127 1413 16555.dng",
+                    "type": "DNG",
+                    "bytes": 14558346
+          }
+]
+      },
+      {
+        id: "20191127-1411-15133-614bc48c80",
+        className: "p4",
+        title: "20191127 1411 15133",
+        caption: "Unknown / 2019-11-27",
+        full: "DNG master",
+        megapixels: 20.7,
+        gallerySrc: "./assets/regular/gallery/unknown/20191127-1411-15133-614bc48c80.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20191127-1411-15133-614bc48c80.jpg",
+        metadata: [
+          {
+                    "label": "Captured",
+                    "value": "2019:11:27 14:11:21"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+                    "label": "Lens",
+                    "value": "10-20mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/10, f/4.5, ISO 1800"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 9.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20191127 1411 15133.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20191127-1411-15133-614bc48c80.jpg / 1200 x 1800 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20191127 1411 15133.dng",
+                    "type": "DNG",
+                    "bytes": 10256712
+          }
+]
+      },
+      {
+        id: "20161009-1619-01513-dcdb2fc0ec",
+        className: "p5",
+        title: "Wild Animals at the zoo",
+        caption: "Unknown / 2016-10-09",
+        full: "DNG master",
+        megapixels: 24.0,
+        gallerySrc: "./assets/regular/gallery/unknown/20161009-1619-01513-dcdb2fc0ec.jpg",
+        imageSrc: "./assets/regular/detail/unknown/20161009-1619-01513-dcdb2fc0ec.jpg",
+        metadata: [
+          {
+                    "label": "Metadata title",
+                    "value": "Wild Animals at the zoo"
+          },
+          {
+                    "label": "Keywords",
+                    "value": "pink flamingo"
+          },
+          {
+                    "label": "Captured",
+                    "value": "2016:10:09 16:19:25"
+          },
+          {
+                    "label": "Camera",
+                    "value": "NIKON CORPORATION NIKON D7100"
+          },
+          {
+                    "label": "Lens",
+                    "value": "70-300mm f/4.5-5.6"
+          },
+          {
+                    "label": "Exposure",
+                    "value": "1/250, f/5.6, ISO 100"
+          },
+          {
+                    "label": "Focal length",
+                    "value": "300.0 mm / 450 mm equivalent"
+          },
+          {
+                    "label": "Software",
+                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+                    "label": "Color profile",
+                    "value": "sRGB"
+          },
+          {
+                    "label": "Original file",
+                    "value": "20161009 1619 01513.dng"
+          },
+          {
+                    "label": "Original size",
+                    "value": "DNG / 6000 x 4000 / 24.0 MP"
+          },
+          {
+                    "label": "Preview file",
+                    "value": "20161009-1619-01513-dcdb2fc0ec.jpg / 1800 x 1200 / JPG"
+          }
+],
+        sourceFiles: [
+          {
+                    "path": "2015-2019/20161009 1619 01513.dng",
+                    "type": "DNG",
+                    "bytes": 6758666
+          }
+]
+      },
+    ]
+  },
 };
 window.photosByElieResolutions = [
   { id: "full", label: "Full resolution", detail: "Original source file at native resolution", price: 45 },

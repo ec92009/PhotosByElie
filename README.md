@@ -6,16 +6,18 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.6`
+- Current visible version: `v65.8`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
-- `index.html`: one-page photo hub with France, USA, Spain, Mexico, and AI collections
-- `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`: thin gallery shells rendered from shared photo data
+- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Portugal, Slovakia, and Unknown collections
+- `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`, `portugal.html`, `slovakia.html`, `unknown.html`: thin gallery shells rendered from shared photo data
 - `photo.html`: reusable photo detail page; resolution checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page where liked-only photos can be turned into basket selections
+- `owner.html`: localhost-only owner controls for blacklist export and the Regular gallery cap
+- `unworthy.html`: localhost-only review surface for hidden photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
@@ -43,6 +45,9 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Collections are ordered France, USA, Spain, Mexico, AI, Portugal, Slovakia, and Unknown.
 - Gallery pages currently load a capped `Regular` subset of 10 photos per collection from `assets/regular`.
 - The larger Lightroom and Leonardo ingest outputs live under ignored local folders `assets/lightroom` and `assets/lightroom-ai` and act as the reserve pool.
+- On localhost, `H` marks a live-gallery photo unworthy, `U` undoes that hide, and `P` on the Unworthy page returns a hidden photo to Reserve rather than directly to the Regular gallery.
+- The localhost Owner page exports `.pbe-blacklist` files and stores the intended Regular gallery cap for the cleaner.
+- On localhost gallery pages, single click moves the selection rectangle, double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - `scripts/export_photos_data.py --regular-cap 10` regenerates `photos-data.js` and syncs the small publishable regular asset set.
 - The basket is the source of truth for selected resolutions.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen.

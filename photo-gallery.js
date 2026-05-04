@@ -9,8 +9,11 @@ const reserveFillEnabled = Boolean(localModerationEnabled && reserveStore?.enabl
 const galleryActions = document.querySelector("[data-gallery-actions]");
 let selectedIndex = 0;
 let restoreButton = null;
+const densityKey = "photosbyelie-gallery-columns";
+let densityInput = null;
+let densityValue = null;
 
-const regularCap = () => gallery?.photos?.length || 0;
+const regularCap = () => unworthyStore?.readRegularCap?.() || gallery?.photos?.length || 0;
 
 const randomItem = (items) => items[Math.floor(Math.random() * items.length)];
 
@@ -39,7 +42,9 @@ const visiblePhotos = () => {
   const basePhotos = gallery?.photos || [];
   if (!localModerationEnabled) return basePhotos;
 
-  const selected = unworthyStore.filterPhotos(basePhotos.concat(promotedPhotos()));
+  const selected = unworthyStore
+    .filterPhotos(basePhotos)
+    .concat(unworthyStore.filterPhotos(promotedPhotos(), { includeReserveOnly: true }));
   const selectedIds = new Set(selected.map((photo) => photo.id));
   while (reserveFillEnabled && selected.length < regularCap()) {
     const nextPhoto = randomItem(eligibleReservePhotos(selectedIds));
@@ -90,6 +95,27 @@ const setGalleryStatus = (message) => {
   if (galleryStatus) galleryStatus.textContent = message;
 };
 
+const maxDensityColumns = () => {
+  if (window.matchMedia("(min-width:1520px)").matches) return 8;
+  if (window.matchMedia("(min-width:1120px)").matches) return 6;
+  if (window.matchMedia("(min-width:860px)").matches) return 4;
+  if (window.matchMedia("(min-width:640px)").matches) return 3;
+  return 2;
+};
+
+const preferredDensityColumns = () => {
+  const savedValue = Number(localStorage.getItem(densityKey));
+  return Number.isInteger(savedValue) && savedValue >= 2 ? savedValue : maxDensityColumns();
+};
+
+const applyGalleryDensity = () => {
+  if (!galleryRoot || !localModerationEnabled) return;
+  const columns = Math.min(preferredDensityColumns(), maxDensityColumns());
+  galleryRoot.style.setProperty("--gallery-zoom-columns", String(columns));
+  if (densityInput) densityInput.value = String(columns);
+  if (densityValue) densityValue.textContent = `${columns}`;
+};
+
 const renderGallery = () => {
   const photos = visiblePhotos();
   if (!photos.length) {
@@ -121,6 +147,20 @@ const renderGallery = () => {
       ${(photo.gallerySrc || photo.imageSrc) ? `<img src="${photo.gallerySrc || photo.imageSrc}" alt="${photo.title}"/>` : ""}
     </a>
   `).join("");
+  if (localModerationEnabled) {
+    galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
+        selectedIndex = Number(card.dataset.photoIndex || 0);
+        updateSelection();
+      });
+      card.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        window.location.assign(card.getAttribute("href"));
+      });
+    });
+  }
+  applyGalleryDensity();
   updateSelection();
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
@@ -133,9 +173,9 @@ if (galleryRoot && gallery) {
   document.title = `Photos By Elie | ${gallery.title} Gallery`;
   document.querySelector("[data-nav-current]").textContent = gallery.title;
   document.querySelector("[data-nav-current]").setAttribute("href", `./${galleryKey}.html`);
-  document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
+  if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
   document.querySelector("[data-gallery-title]").textContent = gallery.title;
-  document.querySelector("[data-gallery-description]").textContent = gallery.description;
+  if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${gallery.title} photos`);
   renderGallery();
@@ -164,6 +204,27 @@ if (galleryRoot && gallery) {
       });
       exportButton.after(restoreButton);
       updateRestoreAction();
+
+      const densityControl = document.createElement("label");
+      densityControl.className = "gallery-density-control";
+      densityControl.innerHTML = `
+        <span>Grid</span>
+        <input type="range" min="2" max="8" step="1" value="${Math.min(preferredDensityColumns(), maxDensityColumns())}" data-gallery-density/>
+        <b data-gallery-density-value>${Math.min(preferredDensityColumns(), maxDensityColumns())}</b>
+      `;
+      restoreButton.after(densityControl);
+      densityInput = densityControl.querySelector("[data-gallery-density]");
+      densityValue = densityControl.querySelector("[data-gallery-density-value]");
+      densityInput.addEventListener("input", () => {
+        localStorage.setItem(densityKey, densityInput.value);
+        applyGalleryDensity();
+        updateSelection();
+      });
+      window.addEventListener("resize", () => {
+        applyGalleryDensity();
+        updateSelection();
+      });
+      applyGalleryDensity();
     }
     window.addEventListener("keydown", (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;

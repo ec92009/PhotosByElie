@@ -9,11 +9,14 @@ const reserveCollections = window.photosByElieReserveData || {};
 const fallbackCollection = Object.values(collections).find((collection) => Array.isArray(collection.photos) && collection.photos.length)
   || collections.france
   || { title: "Gallery", accent: "", photos: [] };
-const collectionEntry = Object.entries(collections).find(([, collection]) =>
-  collection.photos.some((photo) => photo.id === photoId)
-) || Object.entries(reserveCollections).find(([, collection]) =>
+const regularCollectionEntry = Object.entries(collections).find(([, collection]) =>
   collection.photos.some((photo) => photo.id === photoId)
 );
+const reserveCollectionEntry = Object.entries(reserveCollections).find(([, collection]) =>
+  collection.photos.some((photo) => photo.id === photoId)
+);
+const collectionEntry = regularCollectionEntry || reserveCollectionEntry;
+const isReserveCollection = Boolean(!regularCollectionEntry && reserveCollectionEntry);
 const [collectionKey, collection] = collectionEntry || ["france", fallbackCollection];
 const photo = collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
 const photoIndex = photo ? collection.photos.findIndex((item) => item.id === photo.id) : -1;
@@ -26,7 +29,9 @@ const likedStore = window.photosByElieLiked;
 const unworthyStore = window.photosByElieUnworthy;
 const localModerationEnabled = Boolean(unworthyStore?.enabled);
 const visibleCollectionPhotos = () => (
-  unworthyStore?.filterPhotos ? unworthyStore.filterPhotos(collection.photos) : collection.photos
+  unworthyStore?.filterPhotos
+    ? unworthyStore.filterPhotos(collection.photos, { includeReserveOnly: isReserveCollection })
+    : collection.photos
 );
 
 const navigateAfterHide = () => {
@@ -83,8 +88,8 @@ if (!photo) {
   preview.querySelector("[data-photo-preview-title]").textContent = "No published photos yet";
   if (status) status.textContent = "This gallery is being rebuilt from the Saturn archive.";
 } else {
-if (localModerationEnabled && unworthyStore.has(photo.id) && navigateAfterHide()) {
-  // The currently requested photo is hidden locally, so move to the next visible one immediately.
+if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id === photo.id) && navigateAfterHide()) {
+  // The currently requested photo is locally suppressed, so move to the next visible one immediately.
 } else {
 document.title = `Photos By Elie | ${photo.title}`;
 document.querySelector("[data-nav-current]").textContent = collection.title;

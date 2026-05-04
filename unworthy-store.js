@@ -3,6 +3,8 @@
   const key = "photosbyelie-unworthy";
   const historyKey = "photosbyelie-unworthy-history";
   const reservePromotionsKey = "photosbyelie-reserve-promotions";
+  const regularCapKey = "photosbyelie-regular-cap";
+  const reserveOnlyKey = "photosbyelie-reserve-only";
 
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
@@ -27,6 +29,15 @@
     }
   };
 
+  const readReserveOnly = () => {
+    if (!enabled) return [];
+    try {
+      return normalize(JSON.parse(localStorage.getItem(reserveOnlyKey) || "[]"));
+    } catch {
+      return [];
+    }
+  };
+
   const normalizePromotionState = (value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(
@@ -45,6 +56,30 @@
     }
   };
 
+  const writePromotions = (state) => {
+    const normalized = normalizePromotionState(state);
+    if (enabled) localStorage.setItem(reservePromotionsKey, JSON.stringify(normalized));
+    return normalized;
+  };
+
+  const readRegularCap = () => {
+    if (!enabled) return null;
+    const value = Number(localStorage.getItem(regularCapKey));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  };
+
+  const setRegularCap = (value) => {
+    if (!enabled) return null;
+    const nextValue = Number(value);
+    if (Number.isInteger(nextValue) && nextValue > 0) {
+      localStorage.setItem(regularCapKey, String(nextValue));
+    } else {
+      localStorage.removeItem(regularCapKey);
+    }
+    window.dispatchEvent(new CustomEvent("photosbyelie:unworthychange", { detail: { items: read() } }));
+    return readRegularCap();
+  };
+
   const write = (items) => {
     const normalized = normalize(items);
     if (enabled) localStorage.setItem(key, JSON.stringify(normalized));
@@ -58,16 +93,43 @@
     return normalized;
   };
 
+  const writeReserveOnly = (items) => {
+    const normalized = normalize(items);
+    if (enabled) localStorage.setItem(reserveOnlyKey, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent("photosbyelie:unworthychange", { detail: { items: read() } }));
+    return normalized;
+  };
+
+  const forgetReserveOnly = (photoIds = []) => {
+    const wanted = new Set(normalize(photoIds));
+    if (!wanted.size) return readReserveOnly();
+    return writeReserveOnly(readReserveOnly().filter((item) => !wanted.has(item)));
+  };
+
+  const removePromotionEverywhere = (photoId) => {
+    const promotions = readPromotions();
+    let changed = false;
+    for (const [galleryKey, ids] of Object.entries(promotions)) {
+      const nextIds = ids.filter((id) => id !== photoId);
+      if (nextIds.length === ids.length) continue;
+      promotions[galleryKey] = nextIds;
+      changed = true;
+    }
+    if (changed) writePromotions(promotions);
+  };
+
   const mark = (photoId) => {
     if (!enabled || !photoId) return read();
     const items = read();
     if (items.includes(photoId)) return items;
+    forgetReserveOnly([photoId]);
     writeHistory([...readHistory(), photoId]);
     return write([...items, photoId]);
   };
 
   const unmark = (photoId) => {
     if (!enabled || !photoId) return read();
+    forgetReserveOnly([photoId]);
     const items = read().filter((item) => item !== photoId);
     return write(items);
   };
@@ -76,7 +138,16 @@
     if (!enabled) return read();
     const wanted = new Set(normalize(photoIds));
     if (!wanted.size) return read();
+    forgetReserveOnly([...wanted]);
     return write(read().filter((item) => !wanted.has(item)));
+  };
+
+  const returnToReserve = (photoId) => {
+    if (!enabled || !photoId) return read();
+    removePromotionEverywhere(photoId);
+    const nextItems = read().filter((item) => item !== photoId);
+    writeReserveOnly([...readReserveOnly(), photoId]);
+    return write(nextItems);
   };
 
   const undo = (preferredPhotoId = null) => {
@@ -103,13 +174,17 @@
 
   const activeRegularState = () => {
     const hidden = new Set(read());
+    const reserveOnly = new Set(readReserveOnly());
     const promotions = readPromotions();
     const collections = window.photosByElieData || {};
     return Object.fromEntries(
       Object.entries(collections).map(([galleryKey, collection]) => {
-        const regularIds = (collection.photos || []).map((photo) => photo.id).filter((photoId) => !hidden.has(photoId));
-        const promotedIds = (promotions[galleryKey] || []).filter((photoId) => !hidden.has(photoId));
-        const targetCount = collection.photos?.length || 0;
+        const regularIds = (collection.photos || [])
+          .map((photo) => photo.id)
+          .filter((photoId) => !hidden.has(photoId) && !reserveOnly.has(photoId));
+        const promotedIds = (promotions[galleryKey] || [])
+          .filter((photoId) => !hidden.has(photoId));
+        const targetCount = readRegularCap() || collection.photos?.length || 0;
         return [galleryKey, [...new Set(regularIds.concat(promotedIds))].slice(0, targetCount)];
       })
     );
@@ -123,6 +198,8 @@
       version: 2,
       exported_at: new Date().toISOString(),
       photo_ids: photoIds,
+      regular_cap: readRegularCap(),
+      reserve_only: readReserveOnly(),
       reserve_promotions: readPromotions(),
       regular_state: activeRegularState(),
     };
@@ -139,10 +216,14 @@
     return anchor.download;
   };
 
-  const filterPhotos = (photos = []) => {
+  const filterPhotos = (photos = [], options = {}) => {
     if (!enabled) return photos;
     const hidden = new Set(read());
-    return photos.filter((photo) => !hidden.has(photo.id));
+    const reserveOnly = new Set(readReserveOnly());
+    return photos.filter((photo) =>
+      !hidden.has(photo.id)
+      && (options.includeReserveOnly || !reserveOnly.has(photo.id))
+    );
   };
 
   window.photosByElieUnworthy = {
@@ -151,7 +232,11 @@
     has,
     mark,
     read,
+    readReserveOnly,
+    readRegularCap,
     exportBlacklist,
+    returnToReserve,
+    setRegularCap,
     undo,
     unmark,
     unmarkMany,

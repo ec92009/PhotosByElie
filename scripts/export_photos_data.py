@@ -247,6 +247,10 @@ def regular_state_from_payload(payload: dict) -> dict[str, list[str]]:
     return state
 
 
+def reserve_only_ids_from_payload(payload: dict) -> set[str]:
+    return {photo_id for photo_id in payload.get("reserve_only", []) if isinstance(photo_id, str)}
+
+
 def load_blacklist(path: Path | None) -> set[str]:
     return blacklist_ids_from_payload(load_blacklist_payload(path))
 
@@ -262,6 +266,7 @@ def select_regular_groups(
     blacklist_ids: set[str],
     seed: int | None,
     pinned_regular_ids: dict[str, list[str]] | None = None,
+    reserve_only_ids: set[str] | None = None,
 ) -> tuple[
     dict[str, list[tuple[dict, str]]],
     dict[str, list[tuple[dict, str]]],
@@ -278,11 +283,13 @@ def select_regular_groups(
     reserve_counts: dict[str, int] = {}
     unworthy_counts: dict[str, int] = {}
     pinned_regular_ids = pinned_regular_ids or {}
+    reserve_only_ids = reserve_only_ids or set()
 
     for slug, rows in groups.items():
         blocked = [item for item in rows if item[0].get("id") in blacklist_ids]
         eligible = [item for item in rows if item[0].get("id") not in blacklist_ids]
-        eligible_by_id = {item[0].get("id"): item for item in eligible}
+        regular_eligible = [item for item in eligible if item[0].get("id") not in reserve_only_ids]
+        eligible_by_id = {item[0].get("id"): item for item in regular_eligible}
         selected: list[tuple[dict, str]] = []
         selected_ids: set[str] = set()
 
@@ -297,7 +304,7 @@ def select_regular_groups(
             if len(selected) >= regular_cap:
                 break
 
-        fill_pool = [item for item in eligible if item[0].get("id") not in selected_ids]
+        fill_pool = [item for item in regular_eligible if item[0].get("id") not in selected_ids]
         if selection_mode == "random":
             rng.shuffle(fill_pool)
         selected.extend(fill_pool[: max(0, regular_cap - len(selected))])
@@ -323,6 +330,7 @@ def write_photos_data(
     blacklist_ids: set[str] | None = None,
     seed: int | None = None,
     pinned_regular_ids: dict[str, list[str]] | None = None,
+    reserve_only_ids: set[str] | None = None,
 ) -> Path:
     manifest_specs = [
         (repo_root / "assets/lightroom/manifest.json", "lightroom"),
@@ -349,6 +357,7 @@ def write_photos_data(
         blacklist_ids or set(),
         seed,
         pinned_regular_ids=pinned_regular_ids,
+        reserve_only_ids=reserve_only_ids,
     )
     regular_rows = [item for slug in ORDER for item in regular_groups.get(slug, [])]
     if sync_regular_assets:
@@ -465,5 +474,6 @@ if __name__ == "__main__":
         blacklist_ids=blacklist_ids_from_payload(blacklist_payload),
         seed=args.seed,
         pinned_regular_ids=regular_state_from_payload(blacklist_payload),
+        reserve_only_ids=reserve_only_ids_from_payload(blacklist_payload),
     )
     print(result)

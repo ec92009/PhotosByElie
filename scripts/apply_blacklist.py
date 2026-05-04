@@ -6,7 +6,13 @@ import importlib.util
 import json
 from pathlib import Path
 
-from export_photos_data import blacklist_ids_from_payload, regular_state_from_payload, write_photos_data
+from export_photos_data import (
+    DEFAULT_REGULAR_CAP,
+    blacklist_ids_from_payload,
+    regular_state_from_payload,
+    reserve_only_ids_from_payload,
+    write_photos_data,
+)
 
 
 def load_builder(repo_root: Path):
@@ -69,10 +75,19 @@ def move_regular_derivatives(repo_root: Path, photo_ids: set[str]) -> list[dict]
     return moved
 
 
-def apply_blacklist(repo_root: Path, blacklist_path: Path, regular_cap: int) -> None:
+def regular_cap_from_payload(payload: dict, fallback: int = DEFAULT_REGULAR_CAP) -> int:
+    value = payload.get("regular_cap")
+    if isinstance(value, int) and value > 0:
+        return value
+    return fallback
+
+
+def apply_blacklist(repo_root: Path, blacklist_path: Path, regular_cap: int | None) -> None:
     payload = json.loads(blacklist_path.read_text(encoding="utf-8"))
     photo_ids = blacklist_ids_from_payload(payload)
     regular_state = regular_state_from_payload(payload)
+    reserve_only_ids = reserve_only_ids_from_payload(payload)
+    resolved_regular_cap = regular_cap if regular_cap and regular_cap > 0 else regular_cap_from_payload(payload)
     builder = load_builder(repo_root)
     hidden_log = {
         "regular": move_regular_derivatives(repo_root, photo_ids),
@@ -107,13 +122,19 @@ def apply_blacklist(repo_root: Path, blacklist_path: Path, regular_cap: int) -> 
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"{blacklist_path.stem}.applied.json"
     log_path.write_text(json.dumps({"blacklist": str(blacklist_path), "moved": hidden_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    write_photos_data(repo_root, regular_cap=regular_cap, blacklist_ids=photo_ids, pinned_regular_ids=regular_state)
+    write_photos_data(
+        repo_root,
+        regular_cap=resolved_regular_cap,
+        blacklist_ids=photo_ids,
+        pinned_regular_ids=regular_state,
+        reserve_only_ids=reserve_only_ids,
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Apply a PhotosByElie moderation blacklist.")
     parser.add_argument("blacklist", type=Path)
-    parser.add_argument("--regular-cap", type=int, default=10)
+    parser.add_argument("--regular-cap", type=int, default=None)
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     apply_blacklist(repo_root, args.blacklist.expanduser().resolve(), args.regular_cap)

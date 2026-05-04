@@ -1,10 +1,36 @@
 # Conversation Summary
 
-Date: 2026-05-03
+Date: 2026-05-04
 
 ## Scope
 
-Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v65.6`.
+Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/Dev/PhotosByElie`, served locally at `http://localhost:8000/` and intended for `https://ec92009.github.io/PhotosByElie/`. The current visible version is `v65.8`.
+
+## Latest Conversation Snapshot
+
+- Merged PR #1, `codex/publish-regular-v65-6`, into GitHub `main`, so the public GitHub Pages site is live at `v65.6` with the lightweight `assets/regular` subset.
+- Kept the heavier local archive worktree separate from publishing because it still contains tracked Lightroom ingest churn and local archive deletions that should not be pushed blindly.
+- Continued local development to `v65.8` on `http://localhost:8000/`.
+- Added localhost-only Owner and Unworthy surfaces:
+  - `owner.html` exposes blacklist export, Regular gallery cap control, and current Regular/Reserve/Unworthy counts.
+  - `unworthy.html` renders hidden photos as a collection-like review grid.
+- Clarified moderation semantics:
+  - `H` hides from a live gallery.
+  - `U` undoes a live-gallery hide.
+  - `P` exists only on the Unworthy page and returns a hidden photo to Reserve, not directly to the always-full Regular gallery.
+- Added browser-local `reserve_only` state so a forgiven photo can leave Unworthy without re-entering Regular until the cleaner/export workflow reshuffles disk state.
+- Updated blacklist export and cleaner scripts so exported payloads include `regular_cap`, `reserve_promotions`, `regular_state`, and `reserve_only`, and `scripts/apply_blacklist.py` can honor the exported cap and Reserve-only state.
+- Added local gallery controls:
+  - Gallery hero copy was reduced to the title plus status/actions.
+  - Localhost galleries now have a Grid density slider bounded by viewport capacity.
+  - Single-click selection and double-click detail opening are working in the latest local curation pass.
+- Added/updated backlog items for:
+  - Gallery hover metadata tooltip, starting with title.
+  - Continuing to retest localhost single-click/double-click selection on mobile and during live curation.
+  - Preventing background homepage carousel cards from navigating.
+  - Adding the bottom footer band consistently across all pages, with localhost-only Owner/Export controls and public-safe published contents.
+  - GitHub branch protection/rulesets later.
+- The in-app browser is currently using the local server at `http://localhost:8000/`; localhost-only controls are enabled there and hidden/disabled on the public GitHub Pages domain.
 
 ## Repositories And Folders
 
@@ -87,7 +113,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 ## Versioning And Commits
 
 - Versioning is intentionally bumped every visible web-page cycle.
-- Current visible version: `v65.6`.
+- Current visible version: `v65.8`.
 - Latest visible cycle added the Mexico DNG-backed gallery import and completed the first real-photo replacement TODO.
 - Latest USA visible cycle replaced the older Del Mar sample set with the generated 2014 USA sale candidates.
 - Latest repo-only follow-up synced `main` with GitHub, added `docs/sops/IMAGE_INGESTION_SOP.md`, and narrowed the next TODO to automating manifest promotion into `photos-data.js`.
@@ -95,7 +121,7 @@ Continued work on the Photos By Elie static GitHub Pages site in `/Users/ecohen/
 - Branch state after the latest sync: local `main` fast-forwarded to `origin/main` at `b3b394c`, then received the repo-only ingestion SOP update.
 - Latest 2024 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2024`, saw 335 images, inspected 335 on the first pass, selected 0 matching green/rating-4+ photos, and left the public manifest at the existing five 2014 USA selected rows. A script fix now records the last run separately from the manifest contents.
 - Latest 2023 thumbnail-builder run used `/Volumes/Saturn/Pictures/LR/Camera --years 2023`, saw and inspected 3,603 images, selected 0 matching green/rating-4+ photos, and recorded no failures.
-- Latest visible local build promotes a capped Regular subset of 10 photos per collection into `assets/regular`, treats the full Lightroom and Leonardo ingest outputs as ignored local reserve material, and bumps the visible version to `v65.6`.
+- Latest visible local build promotes a capped Regular subset of 10 photos per collection into `assets/regular`, treats the full Lightroom and Leonardo ingest outputs as ignored local reserve material, adds localhost Owner/Unworthy moderation pages, adds local gallery selection and density controls, and bumps the visible version to `v65.8`.
 - The thumbnail builder now falls back to Pillow when the local `ffmpeg` build lacks the `drawtext` filter, and `--limit` now counts successfully rendered rows instead of pre-render candidates.
 - Repo re-evaluation found the canonical standalone PhotosByElie app at `v64.20`; the older `/Users/ecohen/Dev/Webapps/PhotosByElie` mirror remained stale relative to the standalone app.
 - Latest local commits after `origin/main` before this docs refresh include:

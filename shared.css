@@ -342,6 +342,19 @@ h2{margin:0 0 8px;font-size:clamp(1.25rem,2vw,1.8rem)}
 .footer-nav{display:flex;gap:14px;flex-wrap:wrap}
 .footer-nav a{text-decoration:none;color:var(--muted);font-size:.85rem;font-weight:600;transition:color .14s ease}
 .footer-nav a:hover{color:var(--text)}
+.footer-owner-tools{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap}
+.footer-owner-tools[hidden]{display:none}
+.footer-owner-tools button{
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  font:inherit;
+  font-size:.85rem;
+  font-weight:600;
+  padding:0;
+}
+.footer-owner-tools button:hover{color:var(--text)}
 a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--brand) 75%,white 25%);outline-offset:2px}
 @media (max-width:840px){
   html,body{overflow-x:hidden}

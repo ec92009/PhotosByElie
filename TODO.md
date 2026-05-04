@@ -7,6 +7,10 @@ Last updated: 2026-05-04
 - Replaced the remaining mock Mexico gallery with ten DNG-backed Puerto Vallarta selections, including preview exports, source file descriptions, megapixel counts, captions, and available derivative notes in `photos-data.js`.
 - Added a repeatable Lightroom thumbnail builder and documented the ingestion, privacy, promotion, and verification workflow in `docs/sops/IMAGE_INGESTION_SOP.md`.
 - Added rendered 2022 Spain-context Lightroom sale candidates to the public Spain gallery.
+- Published the first capped `Regular` subset to GitHub Pages and added the local Owner and Unworthy review surfaces.
+- Added localhost moderation semantics where `H` hides in the live gallery, `U` undoes there, and `P` on the Unworthy page returns a hidden photo to `Reserve` rather than straight back into `Regular`.
+- Added localhost gallery single-click selection, double-click detail navigation, and a viewport-limited Grid density slider.
+- Removed the collection number and archive blurb from gallery heroes.
 
 ## Prioritized Next Steps
 
@@ -71,19 +75,39 @@ Last updated: 2026-05-04
    - Decide whether reserve promotion should be deterministic per session or reshuffled after each applied moderation pass.
 
 3. **Add a localhost-only Owner surface.**
-   - Add an `Owner` page for moderation and curation controls rather than spreading them across public collection pages.
+   - Keep refining the new `Owner` page as moderation needs become clearer.
    - Keep `Export blacklist` there as a primary action.
-   - Add a control for the current `Regular` versus `Reserve` target size per country.
-   - Add access to an `Unworthy` page that behaves like a collection page for review.
-   - On the localhost `Unworthy` page, allow `P` to re-promote a photo out of unworthy status.
+   - Verify the `Regular` cap control against a real exported blacklist and cleaner pass.
+   - Keep the `Unworthy` page collection-like and localhost-only.
+   - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to `Regular`.
 
 4. **Refine localhost gallery selection behavior.**
-   - On localhost, single click should move the selection rectangle only.
-   - Double click should open the detail page.
+   - Keep retesting single-click selection and double-click detail opening during live curation.
    - Preserve keyboard-first moderation flow and avoid making accidental navigation too easy while curating.
-   - Keep `Export blacklist` accessible from the homepage footer for localhost owner workflows until a dedicated owner surface exists.
+   - Keep `Export blacklist` accessible from the homepage footer for localhost owner workflows.
+   - Retest single-click, double-click, arrow movement, and hide/undo on a phone-sized viewport.
 
 5. **Add zoom control for gallery density.**
-   - Let the gallery page change thumbnail density without leaving the collection.
-   - Keep keyboard navigation aligned with the current rendered grid.
-   - Remove the collection number and descriptive archive blurb from the gallery hero entirely.
+   - Refine the new Grid slider after live curation use.
+   - Consider whether density should be local-only forever or become a public browsing preference.
+
+6. **Add gallery hover metadata.**
+   - Show a lightweight tooltip when hovering over a gallery photo.
+   - Start with the photo title, then consider adding capture date, country, source type, or other safe metadata.
+   - Keep touch devices clean; the tooltip should not block curation controls or accidental-tap prevention.
+
+7. **Fix homepage carousel card hit targets.**
+   - Clicking a collection card currently navigates even when that card is not the foreground carousel item.
+   - Restrict navigation to the active/foreground card, or otherwise make background cards non-clickable.
+   - Retest keyboard and pointer behavior after the carousel hit target fix.
+
+8. **Add the bottom band everywhere.**
+   - Use the footer/bottom band consistently across home, gallery, detail, owner, unworthy, basket, and liked pages.
+   - Show owner-only links such as `Owner` and `Export blacklist` only on localhost.
+   - Keep published footer contents public-safe, likely `By Elie`, `Collections`, and other public navigation only.
+   - Make the band responsive so it stays readable on narrow screens.
+
+9. **Backburner: add GitHub branch protection.**
+   - Revisit rulesets after the lightweight publish workflow has settled.
+   - Protect `main` from force-pushes and accidental deletion.
+   - Avoid blocking the solo publishing loop until the release path is smooth.

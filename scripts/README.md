@@ -105,4 +105,4 @@ Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroo
 
 For a dry curation preview without moving files, `export_photos_data.py` can take `--curation-pass` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
 
-The larger `assets/lightroom` and `assets/lightroom-ai` folders are treated as local reserve material and are ignored by Git. The public site should point at `assets/regular` while the owner workflow promotes publishable replacements from reserve.
+The active curation states are `assets/regular` for Expo, `assets/reserve` for local Reserve, and `assets/hidden` for local Hidden. `assets/lightroom` and `assets/lightroom-ai` are legacy/disposable ingest staging folders; once referenced JPEGs have been migrated into Reserve, those staging folders can be removed.

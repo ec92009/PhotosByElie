@@ -50,7 +50,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Gallery pages load the publishable Expo subset from `assets/regular`; the cap is a maximum, so collections publish fewer photos when fewer valid JPEG pairs are available.
 - The three asset states are explicit on disk: `assets/regular` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
-- The larger Lightroom and Leonardo ingest outputs live under ignored local folders `assets/lightroom` and `assets/lightroom-ai` and act as the reserve pool.
+- Legacy Lightroom and Leonardo ingest outputs are disposable staging folders; active local curation reads Reserve from `assets/reserve` and Hidden from `assets/hidden`.
 - On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
 - On the localhost Unknown page, arrow keys move the selected card, `H` hides it, and `U` undoes the last hide.
 - The localhost Owner page exports Curation Pass files as `.pbe-curation`; the cleaner still accepts older `.pbe-blacklist` payloads for compatibility.

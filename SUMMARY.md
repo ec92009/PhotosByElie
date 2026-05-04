@@ -16,6 +16,7 @@ Date: 2026-05-04
 - `assets/regular` remains the publishable Expo asset root.
 - `assets/reserve` and `assets/hidden` are visible local/ignored working folders for Reserve and Hidden.
 - `assets/.moderation-hidden` remains only for local Curation Pass apply logs.
+- Old `assets/lightroom` and `assets/lightroom-ai` ingest staging folders have been removed locally after migrating the still-referenced Reserve JPEGs into `assets/reserve/legacy`.
 - The Owner-selected Expo cap travels inside each `.pbe-curation` file.
 - The cap is an upper bound, not a required fill count. Collections with fewer valid JPEG pairs publish fewer photos.
 - Applied Curation Passes use random Expo selection from the eligible Expo/Reserve pool, so Reserve fills do not preserve archive sequence order.

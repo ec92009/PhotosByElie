@@ -54,7 +54,13 @@ RAW_EXTENSIONS = {
     ".rw2",
 }
 
-DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn-1/Pictures/LR/Camera")
+DEFAULT_SOURCE_ROOT_CANDIDATES = [
+    Path("/Volumes/Saturn/Pictures/LR/Camera"),
+    Path("/Volumes/Saturn-1/Pictures/LR/Camera"),
+    Path.home() / "Pictures/LR/Camera",
+    Path.home() / "Pictures/LR/2024",
+]
+DEFAULT_SOURCE_ROOT = DEFAULT_SOURCE_ROOT_CANDIDATES[0]
 DEFAULT_OUTPUT_ROOT = Path("assets/lightroom")
 DEFAULT_WATERMARK = "PhotosByElie"
 DEFAULT_GALLERY_MAX = 900
@@ -176,7 +182,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create watermarked gallery/detail thumbnails from green 4+ Lightroom photos."
     )
-    parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
+    parser.add_argument(
+        "--source-root",
+        type=Path,
+        default=None,
+        help="Lightroom Camera source root. Defaults to the first available Saturn/local Camera folder.",
+    )
     parser.add_argument(
         "--developed-root",
         type=Path,
@@ -233,6 +244,17 @@ def parse_args() -> argparse.Namespace:
         help="Do not write exact GPS tags to the separate gps-metadata.json file.",
     )
     return parser.parse_args()
+
+
+def resolve_source_root(source_root: Path | None) -> Path:
+    if source_root:
+        return source_root.expanduser().resolve()
+    for candidate in DEFAULT_SOURCE_ROOT_CANDIDATES:
+        expanded = candidate.expanduser()
+        if expanded.exists():
+            return expanded.resolve()
+    candidates = ", ".join(str(path) for path in DEFAULT_SOURCE_ROOT_CANDIDATES)
+    raise SystemExit(f"Source root does not exist. Tried: {candidates}")
 
 
 def parse_year_filter(value: str) -> tuple[int, int] | None:
@@ -1273,7 +1295,7 @@ def process_batch(
 
 def main() -> int:
     args = parse_args()
-    source_root = args.source_root.expanduser().resolve()
+    source_root = resolve_source_root(args.source_root)
     args.source_root = source_root
     args.developed_root = args.developed_root.expanduser().resolve() if args.developed_root else None
     args.output_root = args.output_root.expanduser()

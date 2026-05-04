@@ -30,6 +30,25 @@ REGULAR_ASSET_ROOT = Path("assets/regular")
 RESERVE_ASSET_ROOT = Path("assets/reserve")
 
 
+def manifest_specs(repo_root: Path) -> list[tuple[Path, str]]:
+    return [
+        (repo_root / "assets/lightroom/manifest.json", "lightroom"),
+        (repo_root / "assets/lightroom-ai/manifest.json", "ai"),
+    ]
+
+
+def existing_manifest_specs(repo_root: Path) -> list[tuple[Path, str]]:
+    specs = [(path, mode) for path, mode in manifest_specs(repo_root) if path.exists()]
+    if not specs:
+        expected = ", ".join(str(path.relative_to(repo_root)) for path, _mode in manifest_specs(repo_root))
+        raise FileNotFoundError(
+            "No source ingest manifests found; expected at least one of: "
+            f"{expected}. Rebuild them with scripts/build_lightroom_thumbnails.py, "
+            "or run scripts/apply_curation_pass.py with --rebuild-missing-manifests."
+        )
+    return specs
+
+
 def js(value: object) -> str:
     return json.dumps(value, ensure_ascii=False)
 
@@ -364,15 +383,9 @@ def write_photos_data(
     reserve_only_ids: set[str] | None = None,
     country_assignments: dict[str, str] | None = None,
 ) -> Path:
-    manifest_specs = [
-        (repo_root / "assets/lightroom/manifest.json", "lightroom"),
-        (repo_root / "assets/lightroom-ai/manifest.json", "ai"),
-    ]
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
     country_assignments = country_assignments or {}
-    for path, mode in manifest_specs:
-        if not path.exists():
-            continue
+    for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
             gallery_country = row.get("gallery_country") or {}

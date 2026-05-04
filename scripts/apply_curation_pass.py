@@ -4,12 +4,19 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from export_photos_data import (
     DEFAULT_REGULAR_CAP,
+    LABELS,
+    ORDER,
     blacklist_ids_from_payload,
     country_assignments_from_payload,
+    existing_manifest_specs,
+    manifest_specs as source_manifest_specs,
     regular_state_from_payload,
     reserve_only_ids_from_payload,
     write_photos_data,
@@ -24,6 +31,12 @@ COUNTRY_ASSIGNMENT_LABELS = {
     "slovakia": "Slovakia",
 }
 
+AI_SOURCE_ROOT_CANDIDATES = [
+    Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
+    Path("/Volumes/Saturn-1/Pictures/LR/_All Leonardo"),
+    Path.home() / "Pictures/LR/_All Leonardo",
+]
+
 
 def load_builder(repo_root: Path):
     script_path = repo_root / "scripts" / "build_lightroom_thumbnails.py"
@@ -32,6 +45,69 @@ def load_builder(repo_root: Path):
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def resolve_optional_source_root(value: Path | None, candidates: list[Path], label: str) -> Path | None:
+    if value:
+        expanded = value.expanduser()
+        if not expanded.exists():
+            raise FileNotFoundError(f"{label} source root does not exist: {expanded}")
+        return expanded.resolve()
+    for candidate in candidates:
+        expanded = candidate.expanduser()
+        if expanded.exists():
+            return expanded.resolve()
+    return None
+
+
+def rebuild_missing_manifests(
+    repo_root: Path,
+    source_root: Path | None = None,
+    ai_source_root: Path | None = None,
+) -> list[dict]:
+    builder = load_builder(repo_root)
+    script_path = repo_root / "scripts" / "build_lightroom_thumbnails.py"
+    rebuilt = []
+
+    jobs = [
+        {
+            "manifest": repo_root / "assets/lightroom/manifest.json",
+            "output": "assets/lightroom",
+            "args": [],
+            "source": resolve_optional_source_root(
+                source_root,
+                builder.DEFAULT_SOURCE_ROOT_CANDIDATES,
+                "Lightroom",
+            ),
+        },
+        {
+            "manifest": repo_root / "assets/lightroom-ai/manifest.json",
+            "output": "assets/lightroom-ai",
+            "args": ["--select", "all", "--force-country", "ai"],
+            "source": resolve_optional_source_root(ai_source_root, AI_SOURCE_ROOT_CANDIDATES, "AI"),
+        },
+    ]
+
+    for job in jobs:
+        if job["manifest"].exists() or not job["source"]:
+            continue
+        command = [
+            sys.executable,
+            str(script_path),
+            "--source-root",
+            str(job["source"]),
+            "--output-root",
+            job["output"],
+            *job["args"],
+        ]
+        subprocess.run(command, cwd=repo_root, check=True)
+        rebuilt.append(
+            {
+                "manifest": job["manifest"].relative_to(repo_root).as_posix(),
+                "source_root": str(job["source"]),
+            }
+        )
+    return rebuilt
 
 
 def load_manifest(path: Path) -> tuple[dict, dict[str, dict]]:
@@ -115,24 +191,483 @@ def apply_country_assignments(rows: dict[str, dict], assignments: dict[str, str]
     return changed
 
 
-def apply_curation_pass(repo_root: Path, curation_path: Path, regular_cap: int | None) -> None:
+def clean_site_src(value: str | None) -> str:
+    return str(value or "").removeprefix("./")
+
+
+def load_site_data(repo_root: Path) -> dict:
+    script = r"""
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+const root = process.argv[1];
+const context = { window: {} };
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(path.join(root, "photos-data.js"), "utf8"), context);
+const reservePath = path.join(root, "assets/reserve/reserve-data.js");
+if (fs.existsSync(reservePath)) {
+  vm.runInContext(fs.readFileSync(reservePath, "utf8"), context);
+}
+process.stdout.write(JSON.stringify({
+  data: context.window.photosByElieData || {},
+  owner: context.window.photosByElieOwnerData || {},
+  reserve: context.window.photosByElieReserveData || {}
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(repo_root)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
+
+
+def candidate_asset_roots(repo_root: Path, asset_sources: list[Path] | None = None) -> list[Path]:
+    roots = [repo_root]
+    for source in asset_sources or []:
+        roots.append(source.expanduser().resolve())
+
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        roots.extend(Path(line.split(" ", 1)[1]) for line in result.stdout.splitlines() if line.startswith("worktree "))
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+    dev_root = repo_root.parent
+    roots.extend(path for path in dev_root.glob("photosByElie*") if path.is_dir())
+    roots.extend(path for path in dev_root.glob("PhotosByElie*") if path.is_dir())
+    webapps_copy = dev_root / "Webapps" / "PhotosByElie"
+    if webapps_copy.exists():
+        roots.append(webapps_copy)
+
+    unique = []
+    seen = set()
+    for root in roots:
+        try:
+            resolved = root.resolve()
+        except FileNotFoundError:
+            continue
+        if resolved in seen or not resolved.exists():
+            continue
+        unique.append(resolved)
+        seen.add(resolved)
+    return unique
+
+
+def find_asset_path(relative_path: str, roots: list[Path]) -> Path | None:
+    rel = clean_site_src(relative_path)
+    if not rel:
+        return None
+    path = Path(rel)
+    if path.is_absolute():
+        return path if path.exists() else None
+    for root in roots:
+        candidates = [root / rel]
+        if rel.startswith("assets/"):
+            candidates.append(root / rel.removeprefix("assets/"))
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+    return None
+
+
+def regular_asset_rel(photo: dict, derivative: str, slug: str) -> str:
+    return f"assets/regular/{derivative}/{slug}/{photo['id']}.jpg"
+
+
+def reserve_return_rel(photo: dict, derivative: str, slug: str) -> str:
+    return f"assets/reserve/regular-returned/{derivative}/{slug}/{photo['id']}.jpg"
+
+
+def copy_photo(photo: dict) -> dict:
+    return json.loads(json.dumps(photo, ensure_ascii=False))
+
+
+def photo_object_lines(photo: dict, index: int) -> list[str]:
+    ordered = copy_photo(photo)
+    ordered["className"] = f"p{(index % 5) + 1}"
+    return [
+        "      {",
+        f"        id: {json.dumps(ordered.get('id'), ensure_ascii=False)},",
+        f"        className: {json.dumps(ordered.get('className'), ensure_ascii=False)},",
+        f"        title: {json.dumps(ordered.get('title') or ordered.get('id'), ensure_ascii=False)},",
+        f"        caption: {json.dumps(ordered.get('caption') or '', ensure_ascii=False)},",
+        f"        full: {json.dumps(ordered.get('full') or 'Source file', ensure_ascii=False)},",
+        f"        megapixels: {json.dumps(ordered.get('megapixels') or 0)},",
+        f"        gallerySrc: {json.dumps(ordered.get('gallerySrc'), ensure_ascii=False)},",
+        f"        imageSrc: {json.dumps(ordered.get('imageSrc'), ensure_ascii=False)},",
+        f"        metadata: {json.dumps(ordered.get('metadata') or [], ensure_ascii=False, indent=10)},",
+        f"        sourceFiles: {json.dumps(ordered.get('sourceFiles') or [], ensure_ascii=False, indent=10)}",
+        "      },",
+    ]
+
+
+def collection_lines(slug: str, photos: list[dict], reserve_count: int | None = None) -> list[str]:
+    number, title, accent, description = LABELS[slug]
+    if reserve_count is not None:
+        description = f"{description} {len(photos)} regular photos currently loaded; {reserve_count} in local reserve."
+    lines = [
+        f"  {slug}: {{",
+        f"    number: {json.dumps(number, ensure_ascii=False)},",
+        f"    title: {json.dumps(title, ensure_ascii=False)},",
+        f"    description: {json.dumps(description, ensure_ascii=False)},",
+        f"    accent: {json.dumps(accent, ensure_ascii=False)},",
+        "    photos: [",
+    ]
+    for index, photo in enumerate(photos):
+        lines += photo_object_lines(photo, index)
+    lines += ["    ]", "  },"]
+    return lines
+
+
+def helper_lines() -> list[str]:
+    return [
+        "window.photosByElieResolutions = [",
+        '  { id: "full", label: "Full resolution", detail: "Original source file at native resolution", price: 45 },',
+        '  { id: "jpg-6mp", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18, minMegapixels: 6 },',
+        '  { id: "jpg-3mp", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 10, minMegapixels: 3 },',
+        '  { id: "jpg-1mp", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 5, minMegapixels: 1 }',
+        "];",
+        "",
+        "window.photosByEliePreviewMegapixels = (photo) => {",
+        '  const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";',
+        r"  const match = preview.match(/(\d+)\s*x\s*(\d+)/i);",
+        "  if (!match) return 0;",
+        "  return Math.round((Number(match[1]) * Number(match[2]) / 1000000) * 10) / 10;",
+        "};",
+        "",
+        "window.photosByElieVerifiedMegapixels = (photo) => {",
+        "  if (Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length) return Number(photo.megapixels) || 0;",
+        "  return window.photosByEliePreviewMegapixels(photo);",
+        "};",
+        "",
+        "window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {",
+        "  const megapixels = window.photosByElieVerifiedMegapixels(photo);",
+        "  if (!megapixels) return [];",
+        "  return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);",
+        "};",
+        "",
+        "window.photosByElieFormatLabel = (source) => {",
+        '  const value = String(source || "");',
+        "  const checks = [",
+        r'    { label: "RAW", pattern: /\b(DNG|CR2|CR3|NEF|ARW|RAF|ORF|RW2)\b/i },',
+        r'    { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },',
+        r'    { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },',
+        r'    { label: "PSD", pattern: /\bPSD\b/i },',
+        "  ];",
+        '  const formats = checks.filter((item) => item.pattern.test(value)).map((item) => item.label);',
+        '  return formats.length ? formats.join(" + ") : value;',
+        "};",
+        "",
+        "window.photosByElieSourceFormats = (photo) => {",
+        "  if (Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length) {",
+        "    const formats = [...new Set(photo.sourceFiles.map((file) => file.type || window.photosByElieFormatLabel(file.path)).filter(Boolean))];",
+        '    return formats.join(" + ");',
+        "  }",
+        '  return photo?.imageSrc ? `${window.photosByElieFormatLabel(photo.imageSrc)} preview/export` : "Source file unverified";',
+        "};",
+        "",
+        "window.photosByElieOriginalSize = (photo) => {",
+        "  const megapixels = window.photosByElieVerifiedMegapixels(photo);",
+        '  const sizeLabel = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length ? "source" : "verified";',
+        '  return [window.photosByElieSourceFormats(photo), megapixels ? `${megapixels} MP ${sizeLabel}` : ""].filter(Boolean).join(", ");',
+        "};",
+        "",
+        "window.photosByElieResolutionDetail = (photo, option) => {",
+        "  if (option.id !== \"full\") return option.detail;",
+        "  return `Original: ${window.photosByElieOriginalSize(photo)}`;",
+        "};",
+    ]
+
+
+def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]]) -> None:
+    lines = ["window.photosByElieData = {"]
+    for slug in ORDER:
+        lines += collection_lines(slug, regular_groups.get(slug, []), len(reserve_groups.get(slug, [])))
+    lines += [
+        "};",
+        "window.photosByElieOwnerData = {",
+        "  unknown: window.photosByElieData.unknown,",
+        "};",
+        "delete window.photosByElieData.unknown;",
+    ]
+    lines += helper_lines()
+    (repo_root / "photos-data.js").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_reserve_data_from_site(repo_root: Path, reserve_groups: dict[str, list[dict]]) -> None:
+    lines = ["window.photosByElieReserveData = {"]
+    for slug in ORDER:
+        lines += collection_lines(slug, reserve_groups.get(slug, []))
+    lines.append("};")
+    output = repo_root / "assets/reserve/reserve-data.js"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def source_mode_for(photo: dict, slug: str) -> str:
+    src = clean_site_src(photo.get("_originalGallerySrc") or photo.get("gallerySrc"))
+    return "ai" if "assets/lightroom-ai/" in src or slug == "ai" else "lightroom"
+
+
+def write_regular_manifest_from_site(
+    repo_root: Path,
+    regular_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    regular_cap: int,
+    hidden_ids: set[str],
+) -> None:
+    regular_rows = [(slug, photo) for slug in ORDER for photo in regular_groups.get(slug, [])]
+    payload = {
+        "schema_version": 1,
+        "regular_cap": regular_cap,
+        "selection_mode": "curation-pass",
+        "seed": None,
+        "photos_count": len(regular_rows),
+        "reserve_counts": {slug: len(reserve_groups.get(slug, [])) for slug in ORDER},
+        "unworthy_counts": {slug: 0 for slug in ORDER},
+        "photos": [
+            {
+                "id": photo["id"],
+                "relative_path": (photo.get("sourceFiles") or [{}])[0].get("path"),
+                "gallery_country": {
+                    "slug": slug,
+                    "label": LABELS[slug][1],
+                    "source": "owner" if slug == "unknown" else "curation-pass",
+                },
+                "source_mode": source_mode_for(photo, slug),
+                "derivatives": {
+                    "gallery": regular_asset_rel(photo, "gallery", slug),
+                    "detail": regular_asset_rel(photo, "detail", slug),
+                },
+            }
+            for slug, photo in regular_rows
+        ],
+    }
+    for slug, photos in regular_groups.items():
+        hidden_in_slug = hidden_ids.intersection({photo["id"] for photo in photos})
+        payload["unworthy_counts"][slug] = len(hidden_in_slug)
+    output = repo_root / "assets/regular/manifest.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def move_asset(repo_root: Path, relative_path: str, destination_rel: str) -> dict | None:
+    source = repo_root / clean_site_src(relative_path)
+    if not source.exists():
+        return None
+    destination = repo_root / destination_rel
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    source.replace(destination)
+    return {"from": source.relative_to(repo_root).as_posix(), "to": destination.relative_to(repo_root).as_posix()}
+
+
+def apply_asset_curation(
+    repo_root: Path,
+    payload: dict,
+    regular_cap: int,
+    asset_sources: list[Path] | None = None,
+) -> dict:
+    site = load_site_data(repo_root)
+    hidden_ids = blacklist_ids_from_payload(payload)
+    reserve_only_ids = reserve_only_ids_from_payload(payload)
+    country_assignments = country_assignments_from_payload(payload)
+    regular_state = regular_state_from_payload(payload)
+    reserve_promotions = payload.get("reserve_promotions") if isinstance(payload.get("reserve_promotions"), dict) else {}
+    roots = candidate_asset_roots(repo_root, asset_sources)
+
+    current_groups = {slug: list((site.get("data", {}).get(slug) or {}).get("photos") or []) for slug in ORDER}
+    current_groups["unknown"] = list((site.get("owner", {}).get("unknown") or {}).get("photos") or [])
+    reserve_groups_input = {
+        slug: list((site.get("reserve", {}).get(slug) or {}).get("photos") or [])
+        for slug in ORDER
+    }
+
+    current_by_id = {
+        photo["id"]: (slug, photo)
+        for slug, photos in current_groups.items()
+        for photo in photos
+        if photo.get("id")
+    }
+    reserve_by_id = {
+        photo["id"]: (slug, photo)
+        for slug, photos in reserve_groups_input.items()
+        for photo in photos
+        if photo.get("id")
+    }
+
+    def lookup(photo_id: str) -> tuple[str, dict] | None:
+        return current_by_id.get(photo_id) or reserve_by_id.get(photo_id)
+
+    if not regular_state:
+        regular_state = {}
+        for slug in ORDER:
+            if slug == "unknown":
+                continue
+            current_ids = [
+                photo["id"]
+                for photo in current_groups.get(slug, [])
+                if photo.get("id") not in hidden_ids and photo.get("id") not in reserve_only_ids
+            ]
+            promoted_ids = [
+                photo_id
+                for photo_id in reserve_promotions.get(slug, [])
+                if isinstance(photo_id, str) and photo_id not in hidden_ids
+            ]
+            regular_state[slug] = list(dict.fromkeys(current_ids + promoted_ids))[:regular_cap]
+
+    regular_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
+    missing_ids = []
+    for slug in ORDER:
+        if slug == "unknown":
+            continue
+        for photo_id in regular_state.get(slug, [])[:regular_cap]:
+            if photo_id in hidden_ids or photo_id in reserve_only_ids:
+                continue
+            found = lookup(photo_id)
+            if not found:
+                missing_ids.append(photo_id)
+                continue
+            _source_slug, source_photo = found
+            photo = copy_photo(source_photo)
+            photo["_originalGallerySrc"] = photo.get("gallerySrc")
+            photo["_originalImageSrc"] = photo.get("imageSrc")
+            photo["gallerySrc"] = f"./{regular_asset_rel(photo, 'gallery', slug)}"
+            photo["imageSrc"] = f"./{regular_asset_rel(photo, 'detail', slug)}"
+            regular_groups[slug].append(photo)
+
+    assigned_ids = set(country_assignments)
+    regular_groups["unknown"] = [
+        copy_photo(photo)
+        for photo in current_groups.get("unknown", [])
+        if photo.get("id") not in hidden_ids
+        and photo.get("id") not in reserve_only_ids
+        and photo.get("id") not in assigned_ids
+    ][:regular_cap]
+
+    if missing_ids:
+        raise FileNotFoundError(f"Curation Pass referenced photos not found in Regular or Reserve data: {', '.join(missing_ids[:20])}")
+
+    target_ids = {photo["id"] for photos in regular_groups.values() for photo in photos}
+    copies = []
+    missing_assets = []
+    for slug, photos in regular_groups.items():
+        for photo in photos:
+            for derivative, key, original_key in [
+                ("gallery", "gallerySrc", "_originalGallerySrc"),
+                ("detail", "imageSrc", "_originalImageSrc"),
+            ]:
+                source_rel = clean_site_src(photo.get(original_key) or photo.get(key))
+                target_rel = regular_asset_rel(photo, derivative, slug)
+                source_path = find_asset_path(source_rel, roots)
+                target_path = repo_root / target_rel
+                if not source_path and target_path.exists():
+                    source_path = target_path
+                if not source_path:
+                    missing_assets.append(source_rel)
+                    continue
+                copies.append((source_path, target_path))
+
+    if missing_assets:
+        sample = "\n".join(f"- {path}" for path in missing_assets[:25])
+        raise FileNotFoundError(f"Missing derivative assets for curation pass:\n{sample}")
+
+    for source_path, target_path in copies:
+        if source_path.resolve() == target_path.resolve():
+            continue
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, target_path)
+
+    reserve_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
+    for slug, photos in reserve_groups_input.items():
+        for source_photo in photos:
+            photo_id = source_photo.get("id")
+            if not photo_id or photo_id in hidden_ids or photo_id in target_ids:
+                continue
+            target_slug = country_assignments.get(photo_id, slug)
+            if target_slug not in reserve_groups:
+                target_slug = slug if slug in reserve_groups else "unknown"
+            reserve_groups[target_slug].append(copy_photo(source_photo))
+
+    moved_regular = []
+    for slug, photos in current_groups.items():
+        for source_photo in photos:
+            photo_id = source_photo.get("id")
+            if not photo_id or photo_id in target_ids:
+                continue
+            is_hidden = photo_id in hidden_ids
+            demoted = copy_photo(source_photo)
+            for derivative, key in [("gallery", "gallerySrc"), ("detail", "imageSrc")]:
+                source_rel = clean_site_src(source_photo.get(key))
+                if is_hidden:
+                    moved = move_derivative(repo_root, source_rel)
+                else:
+                    target_rel = reserve_return_rel(source_photo, derivative, slug)
+                    moved = move_asset(repo_root, source_rel, target_rel)
+                    if moved:
+                        demoted[key] = f"./{target_rel}"
+                if moved:
+                    moved_regular.append({"id": photo_id, "asset": moved})
+            if not is_hidden:
+                reserve_groups[slug].append(demoted)
+
+    write_photos_data_from_site(repo_root, regular_groups, reserve_groups)
+    write_regular_manifest_from_site(repo_root, regular_groups, reserve_groups, regular_cap, hidden_ids)
+    write_reserve_data_from_site(repo_root, reserve_groups)
+    return {
+        "mode": "direct-assets",
+        "regular": [{"slug": slug, "count": len(photos)} for slug, photos in regular_groups.items()],
+        "reserve": [{"slug": slug, "count": len(photos)} for slug, photos in reserve_groups.items()],
+        "moved_regular": moved_regular,
+        "asset_roots": [str(root) for root in roots],
+    }
+
+
+def apply_curation_pass(
+    repo_root: Path,
+    curation_path: Path,
+    regular_cap: int | None,
+    rebuild_manifests: bool = False,
+    source_root: Path | None = None,
+    ai_source_root: Path | None = None,
+    asset_sources: list[Path] | None = None,
+) -> None:
     payload = json.loads(curation_path.read_text(encoding="utf-8"))
     photo_ids = blacklist_ids_from_payload(payload)
     regular_state = regular_state_from_payload(payload)
     reserve_only_ids = reserve_only_ids_from_payload(payload)
     country_assignments = country_assignments_from_payload(payload)
     resolved_regular_cap = regular_cap if regular_cap and regular_cap > 0 else regular_cap_from_payload(payload)
+    rebuilt_manifests = []
+    if rebuild_manifests:
+        rebuilt_manifests = rebuild_missing_manifests(repo_root, source_root, ai_source_root)
+    manifest_specs = [(path, mode) for path, mode in source_manifest_specs(repo_root) if path.exists()]
+    if not manifest_specs:
+        curation_log = apply_asset_curation(repo_root, payload, resolved_regular_cap, asset_sources)
+        curation_log["rebuilt_manifests"] = rebuilt_manifests
+        log_dir = repo_root / "assets" / ".moderation-hidden"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / f"{curation_path.stem}.applied.json"
+        log_path.write_text(json.dumps({"curation_pass": str(curation_path), "applied": curation_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return
+
     builder = load_builder(repo_root)
     curation_log = {
+        "rebuilt_manifests": rebuilt_manifests,
         "regular": move_regular_derivatives(repo_root, photo_ids),
         "ingest": [],
         "country_assignments": [],
     }
 
-    for manifest_rel in ["assets/lightroom/manifest.json", "assets/lightroom-ai/manifest.json"]:
-        manifest_path = repo_root / manifest_rel
-        if not manifest_path.exists():
-            continue
+    for manifest_path, mode in manifest_specs:
+        manifest_rel = manifest_path.relative_to(repo_root).as_posix()
         manifest_payload, rows = load_manifest(manifest_path)
         curation_log["country_assignments"].extend(apply_country_assignments(rows, country_assignments))
         for relative_path, row in list(rows.items()):
@@ -140,7 +675,8 @@ def apply_curation_pass(repo_root: Path, curation_path: Path, regular_cap: int |
                 continue
             moved = []
             for derivative_rel in row.get("derivatives", {}).values():
-                moved_row = move_derivative(repo_root, "assets/" + ("lightroom-ai/" if "lightroom-ai" in manifest_rel else "lightroom/") + derivative_rel)
+                asset_root = "assets/lightroom-ai/" if mode == "ai" else "assets/lightroom/"
+                moved_row = move_derivative(repo_root, asset_root + derivative_rel)
                 if moved_row:
                     moved.append(moved_row)
             curation_log["ingest"].append({
@@ -176,9 +712,31 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Apply a PhotosByElie Curation Pass.")
     parser.add_argument("curation_pass", type=Path)
     parser.add_argument("--regular-cap", type=int, default=None)
+    parser.add_argument(
+        "--rebuild-missing-manifests",
+        action="store_true",
+        help="Rebuild missing local Lightroom/AI ingest manifests before applying the pass.",
+    )
+    parser.add_argument("--source-root", type=Path, default=None, help="Camera source root for manifest rebuilds.")
+    parser.add_argument("--ai-source-root", type=Path, default=None, help="AI source root for manifest rebuilds.")
+    parser.add_argument(
+        "--asset-source",
+        action="append",
+        type=Path,
+        default=[],
+        help="Additional repo/worktree or assets folder to search when copying promoted Reserve derivatives.",
+    )
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
-    apply_curation_pass(repo_root, args.curation_pass.expanduser().resolve(), args.regular_cap)
+    apply_curation_pass(
+        repo_root,
+        args.curation_pass.expanduser().resolve(),
+        args.regular_cap,
+        rebuild_manifests=args.rebuild_missing_manifests,
+        source_root=args.source_root,
+        ai_source_root=args.ai_source_root,
+        asset_sources=args.asset_source,
+    )
     return 0
 
 

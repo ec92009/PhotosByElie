@@ -6,7 +6,9 @@
 
 Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, and Pillow. Pillow is used to normalize rotated source photos; if the local `ffmpeg` build does not include the `drawtext` filter, the script also falls back to Pillow for watermarking. Install it with `python3 -m pip install --user pillow`.
 
-Default source:
+Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`.
+
+Default run:
 
 ```bash
 python3 scripts/build_lightroom_thumbnails.py
@@ -86,10 +88,22 @@ To physically apply local review decisions, export a Curation Pass from the loca
 ```bash
 python3 scripts/apply_curation_pass.py \
   ~/Downloads/photosbyelie-review.pbe-curation \
+  --rebuild-missing-manifests \
   --regular-cap 10
 ```
 
 The exported Curation Pass records hidden photos, the browser's current `Regular` state after reserve replacements, reserve-only returns, the Regular cap, and owner country assignments from the Unknown queue. The cleaner moves hidden derivatives into the ignored `assets/.moderation-hidden/` folder, removes those rows from the local ingest manifests, applies country assignments, and regenerates `Regular` while preserving browser-reviewed picks when they still exist.
+
+Because the local ingest folders are ignored by Git, a fresh sync may have `photos-data.js` and `reserve-data.js` but no `manifest.json`. In that case the cleaner applies the pass directly from the site data: it copies promoted Reserve derivatives into `assets/regular`, moves removed Regular derivatives out of the public set, and rewrites `photos-data.js`, `assets/regular/manifest.json`, and `assets/reserve/reserve-data.js`. If the Reserve derivatives live in another checkout or worktree, add it as a search root:
+
+```bash
+python3 scripts/apply_curation_pass.py \
+  ~/Downloads/photosbyelie-review.pbe-curation \
+  --asset-source ~/Dev/photosByElie-full-assets \
+  --regular-cap 10
+```
+
+Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroom and AI manifests from source archives before applying the pass. Override with `--source-root` or `--ai-source-root` when the archives are mounted somewhere else.
 
 For a dry curation preview without moving files, `export_photos_data.py` can take `--curation-pass` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
 

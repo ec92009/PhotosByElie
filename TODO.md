@@ -107,7 +107,12 @@ Last updated: 2026-05-04
    - Keep published footer contents public-safe, likely `By Elie`, `Collections`, and other public navigation only.
    - Make the band responsive so it stays readable on narrow screens.
 
-9. **Backburner: add GitHub branch protection.**
+9. **Give the homepage archive stats something worth saying.**
+   - Revisit the `Archive shape` band and replace placeholder-feeling stats/copy with something more meaningful.
+   - Keep the section compact, useful, and visually balanced with the rest of the homepage.
+   - Consider whether the values should describe the public Regular set, the local archive, the reserve workflow, or the broader By Elie media vault.
+
+10. **Backburner: add GitHub branch protection.**
    - Revisit rulesets after the lightweight publish workflow has settled.
    - Protect `main` from force-pushes and accidental deletion.
    - Avoid blocking the solo publishing loop until the release path is smooth.

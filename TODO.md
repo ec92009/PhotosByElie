@@ -30,7 +30,7 @@ Last updated: 2026-05-04
    - Keep Regular small and publishable, keep Reserve and Unworthy ignored/local, and preserve the safe GitHub Pages path without archive churn.
 
 6. **Improve live curation speed.**
-   - Refine gallery density/zoom, aspect-preserving thumbnails, hover metadata, arrow movement, selection behavior, and mobile retesting so reviewing photos feels fast.
+   - Refine gallery density/zoom, aspect-preserving thumbnails, hover metadata, arrow movement, selection behavior, cross-country detail navigation, and mobile retesting so reviewing photos feels fast.
 
 7. **Polish the homepage experience.**
    - Fix carousel hit targets, refresh samples on each carousel turn, add the bottom band everywhere, and give the Archive shape section better copy.
@@ -73,6 +73,7 @@ Last updated: 2026-05-04
 
 6. **Improve mobile gallery navigation.**
    - Add visible previous/next controls near gallery grids and detail pages.
+   - Let detail-page previous/next navigation continue into the neighboring country instead of looping only within the current country.
    - Consider a compact thumbnail strip for detail pages.
    - Retest swiping on phone after every carousel or gallery interaction change.
 

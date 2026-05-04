@@ -21,20 +21,22 @@ Last updated: 2026-05-04
 - Exercised a synthetic Curation Pass against a disposable local copy and hardened the direct-assets cleaner so missing Reserve derivatives are skipped, Expo fills up to the configured cap from available assets, and assigned visible Unknown photos move into the target country Reserve.
 - Pruned the local Reserve index to physical JPEGs and cache-busted localhost Reserve loading so refills do not show stale broken previews.
 - Made Expo selection random through the export and Curation Pass paths so Reserve fills do not preserve chronological archive runs.
+- Updated public gallery cells to show real photo aspect ratios inside square slots, reserving strong selection framing for localhost curation.
+- Tightened homepage sampling so representative photos refresh after a full public-country carousel cycle, not every single card change.
+- Re-ran the Curation Pass cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
 
 ## Current Priority Stack
 
-1. **Finish the browser-to-disk curation loop.**
-   - Ensure H/U/P actions, reserve-only state, cap changes, replacements, and future country assignments export cleanly and can be applied by the off-browser cleaner.
-   - Apply a real exported Curation Pass and verify the disk state, generated manifests, local browser, and publishable asset set agree.
+1. **Start buyer-side product basics.**
+   - Add static licensing language and a clearer order-intent flow before deciding whether a real checkout backend is needed.
+   - Keep the current basket/liked data model as the source of truth for selected files.
+   - Defer sold-photo pinning until checkout/sales tracking exists; when implemented, sold photos sit outside the Expo cap.
 
 2. **Harden Expo/Reserve/Hidden publishing.**
    - Keep Expo small and publishable, keep Reserve and Hidden ignored/local, and preserve the safe GitHub Pages path without archive churn.
    - Keep treating the Owner-selected Expo cap as an upper bound from the Curation Pass, not as a fixed global default.
 
 3. **Improve live review ergonomics.**
-   - Show gallery photos at their real aspect ratio inside stable square cells, using neutral/white bars where needed.
-   - Remove or quiet public gallery picture rectangles/frames so visitors see photos first; keep stronger selection affordances only where localhost curation needs them.
    - Add detail-page full-screen preview toggling with single click/tap, then click/tap again to dismiss.
    - Refine gallery density/zoom, hover metadata, arrow movement, selection behavior, cross-country detail navigation, and mobile retesting so reviewing photos feels fast.
 
@@ -46,10 +48,7 @@ Last updated: 2026-05-04
    - Automate manifest promotion into `photos-data.js` once the curation states and publishing rules are stable.
    - Update the import pipeline later so publishable inventory comes from developed Lightroom JPG exports only, not raw DNG/NEF files.
 
-6. **Round out buyer-facing product basics.**
-   - Add licensing, checkout/order intent, filtering/sorting, favorites polish, mobile navigation, and SEO/social metadata.
-
-7. **Keep operations steady.**
+6. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
 
 ## Product Backlog
@@ -120,6 +119,7 @@ Last updated: 2026-05-04
 2. **Introduce a third moderation state: Reserve.**
    - Keep Expo, `Reserve`, and Hidden as distinct states.
    - Use the Owner-selected Expo cap from each Curation Pass, treating it as an upper bound rather than a required count.
+   - Future sold/pinned photos should be added on top of the Owner cap, not counted inside it.
    - Store reserve assets in a location that can be ignored from Git when appropriate.
    - When an Expo photo is hidden on localhost, replace it with a random reserve photo from the same country when one is available.
    - Keep applied Curation Pass fills randomized so Reserve promotions do not publish as chronological sequences.
@@ -151,6 +151,7 @@ Last updated: 2026-05-04
    - Render the photo inside that square at its real aspect ratio instead of cropping or stretching it.
    - Use neutral/white bars where necessary so portrait, landscape, panorama, and square images all feel intentional.
    - Remove or soften public gallery borders/rectangles; reserve obvious selection framing for localhost curation mode.
+   - Done for the current public grid; retest on mobile and tune the neutral cell background if needed.
 
 8. **Add gallery hover metadata.**
    - Show a lightweight tooltip when hovering over a gallery photo.

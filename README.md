@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.22`
+- Current visible version: `v65.23`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -54,6 +54,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The localhost Owner page exports Curation Pass files as `.pbe-curation`; the cleaner still accepts older `.pbe-blacklist` payloads for compatibility.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On localhost gallery pages, single click moves the selection rectangle, double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
+- Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost curation.
+- Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Curation Pass exports include the current Owner-selected Expo cap so the cleaner can apply the browser's active maximum.
 - Curation Pass application fills each public Expo collection from a randomized eligible Expo/Reserve pool, so Reserve promotions do not preserve archive sequence order.
 - `scripts/export_photos_data.py --regular-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set up to that maximum.

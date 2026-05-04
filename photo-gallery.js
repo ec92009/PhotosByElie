@@ -407,8 +407,8 @@ const renderGallery = () => {
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
     setGalleryStatus(reserveCount
-      ? `${filterStatus} Use arrow keys to move, H to hide and refill from reserve, U to undo.`
-      : `${filterStatus} Use arrow keys to move, H to hide, U to undo.`);
+      ? `${filterStatus} Use arrow keys to move, Enter to open, H to hide and refill from reserve, U to undo.`
+      : `${filterStatus} Use arrow keys to move, Enter to open, H to hide, U to undo.`);
     updateRestoreAction();
   } else {
     setGalleryStatus(filterStatus);
@@ -493,6 +493,13 @@ if (galleryRoot && gallery) {
       if (event.key === "ArrowUp") {
         selectedIndex = Math.max(selectedIndex - visibleColumnCount(), 0);
         updateSelection();
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "Enter") {
+        const selected = photos[selectedIndex];
+        if (!selected) return;
+        window.location.assign(versionedHref(`./photo.html?id=${selected.id}`));
         event.preventDefault();
         return;
       }

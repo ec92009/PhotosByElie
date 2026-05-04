@@ -190,10 +190,8 @@ const ensureDetailBottomActions = () => {
   bottomActions.setAttribute("aria-label", "Bottom photo actions");
   bottomActions.innerHTML = `
     <a class="btn secondary" data-bottom-prev-photo href="./photo.html">Previous</a>
-    <a class="btn secondary" data-bottom-back-link href="./${collectionKey}.html">Back to gallery</a>
     <a class="btn secondary" data-bottom-next-photo href="./photo.html">Next</a>
-    <a class="btn primary" href="./basket.html">Basket</a>
-    <a class="btn secondary" href="./liked.html">Liked</a>
+    <a class="btn secondary" data-bottom-back-link href="./${collectionKey}.html">Back to gallery</a>
   `;
   detailMain.append(bottomActions);
   window.photosByElieVersionInternalLinks?.(bottomActions);
@@ -251,6 +249,7 @@ metadataRoot.replaceChildren(...metadata.map((item) => {
 
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
+let fullscreenPreview = null;
 const syncLandscapePreviewSize = () => {
   if (!detailLayout?.classList.contains("is-landscape")) return;
   const ratio = Number(preview.style.getPropertyValue("--detail-ratio")) || 1.5;
@@ -279,16 +278,62 @@ if (photo.imageSrc) {
 window.addEventListener("resize", syncLandscapePreviewSize);
 preview.querySelector("[data-photo-preview-title]").textContent = photo.title;
 
-if (likeToggle && likedStore) {
-  likeToggle.checked = likedStore.has(photo.id);
-  likeToggle.addEventListener("change", () => {
-    if (likeToggle.checked) {
-      likedStore.add({ photoId: photo.id });
-      status.textContent = `${photo.title} added to liked photos.`;
-      return;
-    }
+const closeFullscreenPreview = () => {
+  fullscreenPreview?.remove();
+  fullscreenPreview = null;
+  document.body.classList.remove("detail-fullscreen-active");
+};
+
+const openFullscreenPreview = () => {
+  if (!photo.imageSrc || fullscreenPreview) return;
+  fullscreenPreview = document.createElement("div");
+  fullscreenPreview.className = "detail-fullscreen-preview";
+  fullscreenPreview.setAttribute("role", "button");
+  fullscreenPreview.setAttribute("aria-label", `Close full screen preview for ${photo.title}`);
+  fullscreenPreview.tabIndex = 0;
+  const fullscreenImage = document.createElement("img");
+  fullscreenImage.src = photo.imageSrc;
+  fullscreenImage.alt = photo.title;
+  fullscreenPreview.append(fullscreenImage);
+  fullscreenPreview.addEventListener("click", closeFullscreenPreview);
+  fullscreenPreview.addEventListener("dblclick", closeFullscreenPreview);
+  fullscreenPreview.addEventListener("keydown", (event) => {
+    if (!["Escape", "Enter", " "].includes(event.key)) return;
+    closeFullscreenPreview();
+    event.preventDefault();
+  });
+  document.body.append(fullscreenPreview);
+  document.body.classList.add("detail-fullscreen-active");
+  fullscreenPreview.focus({ preventScroll: true });
+};
+
+preview.addEventListener("dblclick", (event) => {
+  if (event.target instanceof Element && event.target.closest(".like-toggle")) return;
+  openFullscreenPreview();
+  event.preventDefault();
+});
+
+const syncLikeToggle = () => {
+  if (likeToggle && likedStore) likeToggle.checked = likedStore.has(photo.id);
+};
+
+const toggleLike = () => {
+  if (!likedStore) return;
+  if (likedStore.has(photo.id)) {
     likedStore.remove(photo.id);
+    syncLikeToggle();
     status.textContent = `${photo.title} removed from liked photos.`;
+    return;
+  }
+  likedStore.add({ photoId: photo.id });
+  syncLikeToggle();
+  status.textContent = `${photo.title} added to liked photos.`;
+};
+
+if (likeToggle && likedStore) {
+  syncLikeToggle();
+  likeToggle.addEventListener("change", () => {
+    toggleLike();
   });
 }
 
@@ -302,6 +347,11 @@ const shouldIgnoreShortcut = (event) => {
 
 window.addEventListener("keydown", (event) => {
   if (shouldIgnoreShortcut(event)) return;
+  if (event.key.toLowerCase() === "l") {
+    toggleLike();
+    event.preventDefault();
+    return;
+  }
   if (event.key === "ArrowLeft" && prevPhotoLink?.getAttribute("href")) {
     navigateToPhotoLink(prevPhotoLink);
     event.preventDefault();

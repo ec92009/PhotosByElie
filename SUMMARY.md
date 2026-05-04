@@ -7,8 +7,8 @@ Date: 2026-05-04
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build prepared for publish: `v65.25`
-- Local `main` contains the verified v65.25 Hidden-folder fix and is ready for commit and push.
+- Current local visible build prepared for publish: `v65.26`
+- Local `main` contains verified v65.26 owner-mode collection Enter-key navigation and detail preview/like shortcut updates and is ready for commit and push.
 
 ## Latest Decisions
 
@@ -58,7 +58,8 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Unknown classification assigns every loaded unknown photo from the same capture day and removes assigned photos from the queue immediately.
 - Added H/U moderation to Unknown.
 - Detail previous/next buttons and left/right arrows now continue across collection boundaries on public and localhost builds.
-- Gallery pages support local keyboard selection, H/U moderation, Reserve refill, and a viewport-limited Grid slider.
+- Detail pages support double-click full-screen preview overlays, click/double-click dismissal, and `L` to like/unlike.
+- Gallery pages support local keyboard selection, Enter-to-detail navigation, H/U moderation, Reserve refill, and a viewport-limited Grid slider.
 - Public gallery cells now show photos at their real aspect ratio inside stable square slots, with strong selection outlines limited to localhost owner mode.
 - Footer band is present across pages, with the Owner link only on localhost.
 - Homepage carousel and hero samples refresh from collection photos after every full public-country carousel cycle.
@@ -78,7 +79,7 @@ Verification found `0` missing local image references. The publishable `assets/r
 - Python `HTMLParser` over all root HTML files
 - Node data scan for missing local `gallerySrc` and `imageSrc` references
 - `git diff --check`
-- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.25`, cache-bust strings use `?v=65.25`, and `unworthy.html` loads `hidden-store.js?v=65.25`.
+- Local `curl` confirmed root HTML shows `PHOTOS BY ELIE - v65.26`, cache-bust strings use `?v=65.26`, and `unworthy.html` loads `hidden-store.js?v=65.26`.
 
 ## Important Notes
 

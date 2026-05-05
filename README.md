@@ -97,6 +97,6 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, plain white, or plain black. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.
 - Downloads have free shipping and handling. Physical prints show a mock S&H amount by size, added and removed as a limited-time discount so the payable mock total stays unchanged.
-- The generated order email includes a per-photo review with selected products, source confidence, review links, and subtotals.
+- The generated order email includes a per-photo review with selected products, source confidence, review links, S&H add/discount lines, and subtotals.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

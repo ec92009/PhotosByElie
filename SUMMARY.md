@@ -12,6 +12,14 @@ Date: 2026-05-05
 - The current local Expo set has 502 photos: 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos; Mexico is empty until matching developed Mexico assets are reintroduced.
 - The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
 
+## Session Summary
+
+- The chat started with Codex automation checks around MailAssist sync, code review/Claude critique handling, and general repo hygiene; actionable review notes were folded into TODOs and review artifacts were archived where requested.
+- Local asset work confirmed the Saturn Lightroom/Camera tree, copied the 2024 Camera folder to Elie's Max-side Pictures/LR path, and then returned focus to `photosByElie`.
+- The public Photos By Elie site was refreshed through several phone-visible GitHub Pages pushes, including Liked-page control placement, keyboard-hint behavior, detail/mobile buying controls, and the current product-pricing model.
+- The current checkout mock now covers digital downloads, physical print sizes, per-print quantity, frame choices, size-based frame add-ons, and size-based shipping/handling shown with an equal limited-time discount.
+- Each public UI change was versioned, committed, pushed to `main`, watched through GitHub Pages deployment, and live-fetched from `https://ec92009.github.io/PhotosByElie/`.
+
 ## Asset Contract
 
 - `assets/` is tracked again.

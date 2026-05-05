@@ -55,28 +55,34 @@ Last updated: 2026-05-05
 
 ## Current Priority Stack
 
-1. **Harden Expo/Reserve/Hidden publishing.**
+1. **Finish the buyer order mock.**
+   - Review the detail, liked, basket, and generated email flow on a phone after the quantity/frame/S&H changes.
+   - Decide the next checkout step: keep mailto order intent, use Stripe payment links, or introduce a small backend.
+   - Keep mock S&H folded into physical item pricing and shown as an add/subtract limited-time discount until real fulfillment pricing exists.
+
+2. **Polish mobile buying and navigation.**
+   - Tighten bottom action layout on detail pages.
+   - On narrow screens, duplicate primary CTA buttons and previous/next navigation above the footer where useful.
+   - Retest phone detail swipes for previous/next navigation after product control changes.
+   - Decide whether public detail needs single-tap full-screen preview in addition to double click.
+
+3. **Harden Expo/Reserve/Hidden publishing.**
    - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
    - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch curation, not as a fixed global default.
    - Use `scripts/sync_local_assets.py` for local vault handoff rather than pushing Reserve/Hidden to Git.
    - Run `node scripts/validate_publish.js --summary` before public pushes.
 
-2. **Improve gallery and detail review ergonomics.**
+4. **Improve gallery and detail review ergonomics.**
    - Add panoramic orientation filtering.
    - Add gallery hover metadata for title and safe context.
    - Retest gallery-selected detail navigation, mobile swipes, full-screen preview, and H/U/P owner shortcuts on narrow screens.
 
-3. **Polish mobile buying and navigation.**
-   - Tighten bottom action layout on detail pages.
-   - Decide whether public detail needs single-tap full-screen preview in addition to double click.
-   - Keep liked/basket affordances clear without duplicating controls in cramped views.
-
-4. **Scale gallery generation.**
+5. **Scale gallery generation.**
    - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use export/live owner tooling to fill Expo.
    - Keep importer country classification improving, but do not let import write directly to Expo.
    - Keep monitoring embedded RAW preview imports for low-resolution or missing-preview failures before promoting RAW-origin photos into Expo.
 
-5. **Keep operations steady.**
+6. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
 
 ## Product Backlog
@@ -89,11 +95,13 @@ Last updated: 2026-05-05
 
 2. **Improve basket checkout from mock email to real order intent.**
    - Static order intent now exists on the basket page and includes per-photo email review details.
+   - Product rows now include physical print count, frame choice, size-based frame pricing, and S&H add/discount lines.
    - Decide whether checkout stays email-based, uses Stripe payment links, or moves to a small backend.
 
 3. **Add basic photo licensing terms.**
    - Baseline personal print/web terms now appear on detail and basket pages.
    - Product choices now include mock physical prints with quantity and per-print framing choices.
+   - Mock shipping/handling is displayed for physical goods while downloads stay free.
    - Expand the language into a fuller terms page if real checkout launches.
    - Keep prices tied to product choices until the pricing model is better tested.
 

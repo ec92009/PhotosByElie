@@ -43,6 +43,7 @@ const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameI
 const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
+const optionShippingHandlingTotal = (option) => window.photosByElieOptionShippingHandlingTotal?.(option) || 0;
 
 const photoReviewUrl = (photoId) => {
   const href = window.photosByElieVersionedHref?.(`./photo.html?id=${encodeURIComponent(photoId)}`)
@@ -50,7 +51,7 @@ const photoReviewUrl = (photoId) => {
   return new URL(href, window.location.href).href;
 };
 
-const syncOrderIntent = (items, productCount, total) => {
+const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
   if (!orderIntent || !orderSummary || !orderEmail) return;
   orderIntent.hidden = items.length === 0;
   if (!items.length) return;
@@ -67,6 +68,8 @@ const syncOrderIntent = (items, productCount, total) => {
   orderSummary.innerHTML = `
     <div><dt>Photos</dt><dd>${items.length}</dd></div>
     <div><dt>Products</dt><dd>${productCount}</dd></div>
+    ${shippingHandlingTotal ? `<div><dt>S&H</dt><dd>+${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
+    ${shippingHandlingTotal ? `<div><dt>Limited-time discount</dt><dd>-${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
     <div><dt>Draft total</dt><dd>${formatMoney(total)}</dd></div>
     <div><dt>Collections</dt><dd>${escapeText(collectionText)}</dd></div>
   `;
@@ -76,6 +79,8 @@ const syncOrderIntent = (items, productCount, total) => {
     "",
     `Photos: ${items.length}`,
     `Products: ${productCount}`,
+    `Physical S&H: ${formatMoney(shippingHandlingTotal)}`,
+    `Limited-time S&H discount: -${formatMoney(shippingHandlingTotal)}`,
     `Draft total: ${formatMoney(total)}`,
     "",
     ...items.flatMap((item, index) => {
@@ -91,7 +96,11 @@ const syncOrderIntent = (items, productCount, total) => {
           const unitPrice = window.photosByElieOptionUnitPrice?.(option) || Number(option.price) || 0;
           const quantity = optionQuantity(option);
           const frameText = option.type === "print" ? `; frame: ${option.frame?.label || "No frame"}` : "";
-          return `- [${productTypeLabel(option)}] ${productLabel(option)} x ${quantity}: ${formatMoney(optionTotal(option))} (${formatMoney(unitPrice)} each${frameText}${productDetail(photo, option) ? `; ${productDetail(photo, option)}` : ""})`;
+          const shippingHandling = optionShippingHandlingTotal(option);
+          const shippingText = option.type === "print"
+            ? `; S&H ${formatMoney(shippingHandling)}; limited-time discount -${formatMoney(shippingHandling)}`
+            : "; S&H free";
+          return `- [${productTypeLabel(option)}] ${productLabel(option)} x ${quantity}: ${formatMoney(optionTotal(option))} (${formatMoney(unitPrice)} each${frameText}${shippingText}${productDetail(photo, option) ? `; ${productDetail(photo, option)}` : ""})`;
         }),
         `Photo subtotal: ${formatMoney(subtotal)}`,
         ""
@@ -106,10 +115,11 @@ const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
   const productCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
+  const shippingHandlingTotal = items.reduce((sum, item) => sum + (item.options || []).reduce((shipping, option) => shipping + optionShippingHandlingTotal(option), 0), 0);
 
   basketTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
   emptyState.hidden = items.length !== 0;
-  syncOrderIntent(items, productCount, total);
+  syncOrderIntent(items, productCount, total, shippingHandlingTotal);
 
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);

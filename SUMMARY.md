@@ -7,7 +7,7 @@ Date: 2026-05-05
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v66.23`
+- Current local visible build: `v66.24`
 - Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been curated for the public build.
 - The current local Expo set has 502 photos: 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos; Mexico is empty until matching developed Mexico assets are reintroduced.
 - The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
@@ -53,6 +53,7 @@ Date: 2026-05-05
 - v66.21 changes print products to carry quantity and per-print framing via no-frame, plain white, and plain black radio choices.
 - v66.22 adds explicit print count steppers and auto-selects the related print when a buyer changes count or picks a frame.
 - v66.23 changes plain white/plain black frame mock pricing to scale by selected physical print size.
+- v66.24 adds mock physical-print shipping and handling by size, paired with an equal limited-time S&H discount so net totals are unchanged; downloads remain free.
 - The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
 - Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
 - Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.

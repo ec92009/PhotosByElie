@@ -51,6 +51,7 @@ Last updated: 2026-05-05
 - Changed physical prints to carry quantity plus a per-print frame radio choice: no frame, plain white, or plain black.
 - Added explicit print count steppers and made count/frame interactions automatically select the related print.
 - Changed frame mock prices to scale by physical print size instead of using one flat add-on price.
+- Added mock shipping and handling for physical prints, offset by an equal limited-time discount; downloads stay free.
 
 ## Current Priority Stack
 

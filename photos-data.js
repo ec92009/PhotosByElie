@@ -29815,6 +29815,12 @@ window.photosByElieFrameOptions = [
   { id: "white", label: "Plain white frame", price: 22, prices: { "print-4x6": 16, "print-5x7": 22, "print-8x10": 34, "print-11x14": 48 } },
   { id: "black", label: "Plain black frame", price: 22, prices: { "print-4x6": 16, "print-5x7": 22, "print-8x10": 34, "print-11x14": 48 } }
 ];
+window.photosByElieShippingHandlingPrices = {
+  "print-4x6": 5,
+  "print-5x7": 6,
+  "print-8x10": 9,
+  "print-11x14": 12
+};
 
 window.photosByEliePreviewMegapixels = (photo) => {
   const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";
@@ -29863,7 +29869,6 @@ window.photosByElieResolutionDetail = (photo, option) => {
   if (option.id !== "full") return option.detail;
   return `Original: ${window.photosByElieOriginalSize(photo)}`;
 };
-window.photosByElieProductDetail = window.photosByElieResolutionDetail;
 window.photosByElieMeasurementSystem = () => {
   const nav = typeof navigator === "undefined" ? {} : navigator;
   const locales = [
@@ -29901,5 +29906,15 @@ window.photosByElieFramePrice = (frame, option) => {
   return Number(pricedFrame?.prices?.[option?.id] ?? pricedFrame?.price ?? frame?.price ?? 0);
 };
 window.photosByElieOptionQuantity = (option) => option?.type === "print" ? Math.max(1, Number(option.quantity) || 1) : 1;
+window.photosByElieOptionShippingHandlingUnitPrice = (option) => option?.type === "print" ? Number(window.photosByElieShippingHandlingPrices?.[option?.id] || 0) : 0;
+window.photosByElieOptionShippingHandlingTotal = (option) => window.photosByElieOptionQuantity(option) * window.photosByElieOptionShippingHandlingUnitPrice(option);
+window.photosByElieShippingHandlingNote = (option) => {
+  const price = window.photosByElieOptionShippingHandlingUnitPrice(option);
+  return option?.type === "print" && price ? `S&H $${price} added and removed as a limited-time discount.` : "";
+};
+window.photosByElieProductDetail = (photo, option) => [
+  window.photosByElieResolutionDetail(photo, option),
+  window.photosByElieShippingHandlingNote(option)
+].filter(Boolean).join(" ");
 window.photosByElieOptionUnitPrice = (option) => Number(option?.price) + Number(window.photosByElieFramePrice?.(option?.frame, option) || 0);
 window.photosByElieOptionTotal = (option) => window.photosByElieOptionQuantity(option) * window.photosByElieOptionUnitPrice(option);

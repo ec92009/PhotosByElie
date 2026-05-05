@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v66.17`
+- Current visible version: `v66.18`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -35,6 +35,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photos.css`: photo-specific layout and carousel styles
 - `photos.js`: shared theme and language toggle behavior for subpages
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
+- `scripts/validate_publish.js`: pre-push generated-data, asset-pair, resolution metadata, and publish-summary check
 - `AGENTS.md`: repo-level working preferences and versioning SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
@@ -90,5 +91,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Tapping the heart on a detail preview immediately updates the browser-local liked list.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
+- Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
+- The basket page generates a static order-intent summary and mail draft from the local basket contents.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

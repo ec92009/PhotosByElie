@@ -15,6 +15,55 @@ const basketRoot = document.querySelector("[data-basket-root]");
 const emptyState = document.querySelector("[data-empty-basket]");
 const basketTotal = document.querySelector("[data-basket-total]");
 const status = document.querySelector("[data-basket-status]");
+const orderIntent = document.querySelector("[data-order-intent]");
+const orderSummary = document.querySelector("[data-order-summary]");
+const orderEmail = document.querySelector("[data-order-email]");
+
+const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#39;"
+}[char]));
+
+const syncOrderIntent = (items, fileCount, total) => {
+  if (!orderIntent || !orderSummary || !orderEmail) return;
+  orderIntent.hidden = items.length === 0;
+  if (!items.length) return;
+
+  const collectionCounts = items.reduce((counts, item) => {
+    const key = item.collection || "Collection";
+    counts.set(key, (counts.get(key) || 0) + 1);
+    return counts;
+  }, new Map());
+  const collectionText = Array.from(collectionCounts.entries())
+    .map(([name, count]) => `${name}: ${count}`)
+    .join(", ");
+
+  orderSummary.innerHTML = `
+    <div><dt>Photos</dt><dd>${items.length}</dd></div>
+    <div><dt>Files</dt><dd>${fileCount}</dd></div>
+    <div><dt>Draft total</dt><dd>${formatMoney(total)}</dd></div>
+    <div><dt>Collections</dt><dd>${escapeText(collectionText)}</dd></div>
+  `;
+
+  const lines = [
+    "Photos By Elie order intent",
+    "",
+    `Photos: ${items.length}`,
+    `Files: ${fileCount}`,
+    `Draft total: ${formatMoney(total)}`,
+    "",
+    ...items.flatMap((item) => [
+      `${item.title} (${item.collection})`,
+      ...item.options.map((option) => `- ${option.label}: ${formatMoney(option.price)}`),
+      ""
+    ]),
+    "License note: personal print and web use are included by default. Commercial, resale, and AI-training use need written approval before fulfillment."
+  ];
+  orderEmail.setAttribute("href", `mailto:?subject=${encodeURIComponent("Photos By Elie order intent")}&body=${encodeURIComponent(lines.join("\n"))}`);
+};
 
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
@@ -23,6 +72,7 @@ const renderBasket = () => {
 
   basketTotal.textContent = `${fileCount} ${fileCount === 1 ? "file" : "files"}, ${formatMoney(total)}`;
   emptyState.hidden = items.length !== 0;
+  syncOrderIntent(items, fileCount, total);
 
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);

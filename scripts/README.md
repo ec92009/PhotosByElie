@@ -98,6 +98,22 @@ For a dry curation preview without moving files, `export_photos_data.py` can tak
 
 The active curation states are `assets/expo` for tracked publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden. The old raw-first staging folders are retired.
 
+## Publish Validation
+
+`validate_publish.js` checks the generated public catalog before publishing. It loads `photos-data.js`, verifies duplicate photo IDs, local image references, matching `*_900.jpg`/`*_1800.jpg` derivative pairs, collection page shells, and resolution availability metadata.
+
+Run the validator before pushing public site changes:
+
+```bash
+node scripts/validate_publish.js
+```
+
+Use `--summary` when preparing a push. The summary prints collection counts, Expo/Reserve/Hidden asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
+
+```bash
+node scripts/validate_publish.js --summary
+```
+
 ## Local Asset Sync
 
 `sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track Reserve or Hidden. It syncs `assets/reserve`, `assets/hidden`, and `.curation-logs` by default. The tracked public `assets/expo` folder should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.

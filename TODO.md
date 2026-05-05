@@ -44,40 +44,33 @@ Last updated: 2026-05-05
 - Added `scripts/sync_local_assets.py` so ignored Reserve/Hidden assets can be dry-run or synced between Max and David from either checkout.
 - Made detail-page previous/next navigation follow the last gallery's filtered and sorted grid order when the current photo came from that gallery.
 - Added gallery and Owner review `RAW` overlays for DNG/NEF/other raw-origin photos so duplicates can be reviewed without burning labels into preview files.
+- Added `scripts/validate_publish.js` for generated-data validation, derivative-pair checks, resolution metadata checks, and publish summaries with Expo/Reserve/Hidden sizes.
+- Added buyer-facing license notes on detail and basket pages plus a static basket order-intent summary and mail draft.
 
 ## Current Priority Stack
 
-1. **Add buyer-side product basics.**
-   - Add static licensing language and a clearer order-intent flow before deciding whether a real checkout backend is needed.
-   - Keep the current basket/liked data model as the source of truth for selected files.
-   - Defer sold-photo pinning until checkout/sales tracking exists; when implemented, sold photos sit outside the Expo cap.
-
-2. **Add generated-data and asset validation.**
-   - Check duplicate IDs, broken image references, missing `*_900.jpg`/`*_1800.jpg` pairs, and invalid resolution metadata before publishing.
-   - Summarize Expo counts and changed asset volume before each push.
-   - Keep Reserve and Hidden ignored while making their sync/recovery path repeatable across Max and David.
-
-3. **Harden Expo/Reserve/Hidden publishing.**
+1. **Harden Expo/Reserve/Hidden publishing.**
    - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
    - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch curation, not as a fixed global default.
    - Use `scripts/sync_local_assets.py` for local vault handoff rather than pushing Reserve/Hidden to Git.
+   - Run `node scripts/validate_publish.js --summary` before public pushes.
 
-4. **Improve gallery and detail review ergonomics.**
+2. **Improve gallery and detail review ergonomics.**
    - Add panoramic orientation filtering.
    - Add gallery hover metadata for title and safe context.
    - Retest gallery-selected detail navigation, mobile swipes, full-screen preview, and H/U/P owner shortcuts on narrow screens.
 
-5. **Polish mobile buying and navigation.**
+3. **Polish mobile buying and navigation.**
    - Tighten bottom action layout on detail pages.
    - Decide whether public detail needs single-tap full-screen preview in addition to double click.
    - Keep liked/basket affordances clear without duplicating controls in cramped views.
 
-6. **Scale gallery generation.**
+4. **Scale gallery generation.**
    - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use export/live owner tooling to fill Expo.
    - Keep importer country classification improving, but do not let import write directly to Expo.
    - Keep monitoring embedded RAW preview imports for low-resolution or missing-preview failures before promoting RAW-origin photos into Expo.
 
-7. **Keep operations steady.**
+5. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
 
 ## Product Backlog
@@ -89,13 +82,12 @@ Last updated: 2026-05-05
    - Preserve the physical-state contract: importer fills Reserve, curation fills Expo, Hidden stays local.
 
 2. **Improve basket checkout from mock email to real order intent.**
-   - Keep the current static basket behavior as the source of truth.
-   - Add an order summary screen before checkout.
+   - Static order intent now exists on the basket page.
    - Decide whether checkout stays email-based, uses Stripe payment links, or moves to a small backend.
 
 3. **Add basic photo licensing terms.**
-   - Draft clear language for personal use, web use, print use, AI-generated imagery, and commercial use.
-   - Show a short license note on photo detail and basket pages.
+   - Baseline personal print/web terms now appear on detail and basket pages.
+   - Expand the language into a fuller terms page if real checkout launches.
    - Keep prices tied to resolution choices until the pricing model is better tested.
 
 4. **Add collection filtering and sorting.**

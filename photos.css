@@ -511,11 +511,6 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .liked-total-band{
   justify-content:flex-end;
 }
-.liked-header-actions{
-  padding-block:8px;
-  border-inline:1px solid var(--line);
-  background:var(--surface);
-}
 .liked-bulk-actions{
   display:flex;
   flex-wrap:wrap;

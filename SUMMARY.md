@@ -7,7 +7,7 @@ Date: 2026-05-05
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v66.16`
+- Current local visible build: `v66.17`
 - Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been curated for the public build.
 - The current local Expo set has 502 photos: 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos; Mexico is empty until matching developed Mexico assets are reintroduced.
 - The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
@@ -46,6 +46,7 @@ Date: 2026-05-05
 - v66.14 adds a gallery-card-only `RAW` overlay for photos whose source metadata points to DNG/NEF/other raw originals, without burning that badge into preview files.
 - v66.15 extends the `RAW` overlay helper to Owner Hidden/Unknown review grids and re-enables RAW import through embedded `exiftool` preview extraction.
 - v66.16 moves Liked bulk resolution controls below the header and hides keyboard shortcut hints on public tap-first phone screens until real keyboard input is detected, while localhost continues to show owner keyboard hints.
+- v66.17 moves the Liked bulk resolution controls below the `Liked` page heading rather than below the global site header.
 - The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
 - Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
 - Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.

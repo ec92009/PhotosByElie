@@ -44,6 +44,7 @@ Date: 2026-05-05
 - v66.11 top-aligns portrait and square-ish detail previews beside the metadata panel.
 - v66.12 removes the dead gallery Restore control, trims gallery filters to orientation/color mood/subject plus newest-first sorting, fixes hidden controls overriding the HTML `hidden` attribute, and adds a tracked Max/David local asset sync script.
 - v66.13 makes detail-page previous/next navigation follow the last gallery grid order when opened from a filtered or sorted gallery, while direct detail links still fall back to the full catalog sequence.
+- v66.14 adds a gallery-card-only `RAW` overlay for photos whose source metadata points to DNG/NEF/other raw originals, without burning that badge into preview files.
 - The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
 - Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
 - Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.

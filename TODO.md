@@ -43,6 +43,7 @@ Last updated: 2026-05-05
 - Removed the dead gallery Restore control plus Source/Availability filters, fixed hidden controls rendering as empty pills, and tightened gallery filter wrapping.
 - Added `scripts/sync_local_assets.py` so ignored Reserve/Hidden assets can be dry-run or synced between Max and David from either checkout.
 - Made detail-page previous/next navigation follow the last gallery's filtered and sorted grid order when the current photo came from that gallery.
+- Added a gallery-card-only `RAW` overlay for DNG/NEF/other raw-origin photos so duplicates can be reviewed without burning labels into preview files.
 
 ## Current Priority Stack
 
@@ -74,6 +75,7 @@ Last updated: 2026-05-05
 6. **Scale gallery generation.**
    - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use export/live owner tooling to fill Expo.
    - Keep importer country classification improving, but do not let import write directly to Expo.
+   - Revisit DNG imports using embedded `PreviewImage` extraction for review thumbnails, while keeping RAW-origin cards visibly marked in galleries.
 
 7. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.

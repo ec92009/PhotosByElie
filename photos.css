@@ -667,6 +667,22 @@ html[data-theme="light"] .photo-art.has-photo::after{
 html[data-theme="light"] .mock-photo.has-image::after{
   opacity:.135;
 }
+.raw-source-badge{
+  position:absolute;
+  left:8px;
+  top:8px;
+  z-index:4;
+  padding:4px 7px 3px;
+  border:1px solid rgba(255,255,255,.48);
+  background:rgba(0,0,0,.72);
+  color:#fff;
+  font-size:.68rem;
+  font-weight:900;
+  letter-spacing:.1em;
+  line-height:1;
+  text-transform:uppercase;
+  box-shadow:0 8px 22px rgba(0,0,0,.2);
+}
 html.is-local-owner .mock-photo.is-selected{
   outline:3px solid color-mix(in srgb,var(--text) 82%,transparent);
   outline-offset:2px;

@@ -73,6 +73,22 @@ const metadataValue = (photo, label) => (
   (photo?.metadata || []).find((item) => item.label === label)?.value || ""
 );
 
+const rawSourceTypes = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
+
+const rawSourceLabel = (photo) => {
+  const sourceType = (photo?.sourceFiles || [])
+    .map((source) => String(source?.type || "").trim().toUpperCase())
+    .find((type) => rawSourceTypes.has(type));
+  if (sourceType) return sourceType;
+  const sourceText = [
+    photo?.full,
+    metadataValue(photo, "Original file"),
+    metadataValue(photo, "Original size")
+  ].filter(Boolean).join(" ").toUpperCase();
+  const match = sourceText.match(/\b(DNG|NEF|CR2|CR3|ARW|RAF|ORF|RW2|RAW|PEF|SRW|RWL)\b/);
+  return match?.[1] || "";
+};
+
 const photoSearchText = (photo) => [
   photo?.title,
   photo?.caption,
@@ -389,17 +405,21 @@ const renderGallery = () => {
       : "");
     return;
   }
-  galleryRoot.innerHTML = photos.map((photo, index) => `
+  galleryRoot.innerHTML = photos.map((photo, index) => {
+    const rawLabel = rawSourceLabel(photo);
+    return `
     <a
-      class="mock-photo ${photo.className} ${(photo.gallerySrc || photo.imageSrc) ? "has-image" : ""}"
+      class="mock-photo ${photo.className} ${(photo.gallerySrc || photo.imageSrc) ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
       href="${versionedHref(`./photo.html?id=${photo.id}`)}"
-      aria-label="Open ${photo.title}"
+      aria-label="Open ${photo.title}${rawLabel ? `, RAW source ${rawLabel}` : ""}"
       data-photo-index="${index}"
       data-photo-id="${photo.id}"
     >
       ${(photo.gallerySrc || photo.imageSrc) ? `<img src="${photo.gallerySrc || photo.imageSrc}" alt="${photo.title}"/>` : ""}
+      ${rawLabel ? `<span class="raw-source-badge" title="${rawLabel} source">RAW</span>` : ""}
     </a>
-  `).join("");
+  `;
+  }).join("");
   if (localModerationEnabled) {
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {

@@ -66,6 +66,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
 - Subtle keyboard reminders appear above localhost curation grids and detail previews, with public detail pages showing the `L` like shortcut.
 - Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost curation.
+- Gallery cards show a small `RAW` overlay when the source metadata identifies a DNG/NEF/other raw original; the overlay is DOM-only and is not burned into preview files.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - Curation Pass exports include the current Owner-selected Expo cap for batch curation and audit paths.

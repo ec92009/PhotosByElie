@@ -50,6 +50,7 @@ Last updated: 2026-05-05
 - Added locale-inferred print unit ordering so metric locales see centimeter dimensions first and US-style locales see inch dimensions first.
 - Changed physical prints to carry quantity plus a per-print frame radio choice: no frame, plain white, or plain black.
 - Added explicit print count steppers and made count/frame interactions automatically select the related print.
+- Changed frame mock prices to scale by physical print size instead of using one flat add-on price.
 
 ## Current Priority Stack
 

@@ -3,6 +3,7 @@
   const resolutions = () => window.photosByElieResolutions || [];
   const frameOptions = () => window.photosByElieFrameOptions || [];
   const collections = () => window.photosByElieData || {};
+  const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 
   const optionById = (id) => resolutions().find((option) => option.id === id);
   const photoEntryById = (photoId) => {
@@ -35,7 +36,7 @@
         const quantity = Math.max(1, Math.min(99, Math.round(Number(option.quantity) || 1)));
         const frame = frameOptions().find((item) => item.id === option.frame?.id || item.id === option.frameId) || frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
         normalized.quantity = quantity;
-        normalized.frame = { id: frame.id, label: frame.label, price: frame.price };
+        normalized.frame = { id: frame.id, label: frame.label, price: framePriceFor(frame, normalized) };
       }
       next.push(normalized);
       return next;

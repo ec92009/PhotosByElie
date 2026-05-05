@@ -195,8 +195,12 @@ const navigateAfterHide = () => {
 const frameOptions = () => window.photosByElieFrameOptions || [];
 const defaultFrame = () => frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
 const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || defaultFrame();
+const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const printQuantityFor = (optionId) => Math.max(1, Math.min(99, Math.round(Number(document.querySelector(`[data-print-quantity="${optionId}"]`)?.value) || 1)));
-const selectedFrameFor = (optionId) => frameFor(document.querySelector(`[data-print-frame="${optionId}"]:checked`)?.value || "none");
+const selectedFrameFor = (option) => {
+  const frame = frameFor(document.querySelector(`[data-print-frame="${option.id}"]:checked`)?.value || "none");
+  return { id: frame.id, label: frame.label, price: framePriceFor(frame, option) };
+};
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
     const option = availableResolutions.find((item) => item.id === input.value);
@@ -204,7 +208,7 @@ const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolu
     const selected = { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price };
     if (selected.type === "print") {
       selected.quantity = printQuantityFor(option.id);
-      selected.frame = selectedFrameFor(option.id);
+      selected.frame = selectedFrameFor(option);
     }
     return selected;
   })
@@ -590,7 +594,7 @@ const printConfigMarkup = (option) => {
         ${frameOptions().map((frame) => `
           <label>
             <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-            <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
+            <span>${frame.label}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
           </label>
         `).join("")}
       </fieldset>

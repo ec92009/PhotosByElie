@@ -4,6 +4,7 @@ const resolutionOptions = window.photosByElieResolutions || [];
 const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const frameOptions = () => window.photosByElieFrameOptions || [];
+const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 
@@ -128,7 +129,7 @@ const renderLiked = () => {
             ${frameOptions().map((frame) => `
               <label>
                 <input type="radio" name="liked-frame-${index}-${option.id}" data-liked-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-                <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
+                <span>${frame.label}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
               </label>
             `).join("")}
           </fieldset>

@@ -40,6 +40,7 @@ const productDetail = (photo, option) => {
 const productLabel = (option) => window.photosByElieProductLabel?.(option) || option.label;
 const frameOptions = () => window.photosByElieFrameOptions || [];
 const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
+const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 
@@ -142,7 +143,7 @@ const renderBasket = () => {
             ${frameOptions().map((frame) => `
               <label>
                 <input type="radio" name="basket-frame-${index}-${option.id}" data-basket-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-                <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
+                <span>${frame.label}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
               </label>
             `).join("")}
           </fieldset>

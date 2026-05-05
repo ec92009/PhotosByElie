@@ -579,13 +579,17 @@ const printConfigMarkup = (option) => {
     <div class="print-config">
       <label class="print-quantity">
         <span>Count</span>
-        <input type="number" min="1" max="99" step="1" data-print-quantity="${option.id}" value="${quantity}" ${selectedIds.has(option.id) ? "" : "disabled"}/>
+        <span class="quantity-stepper">
+          <button type="button" data-print-step="${option.id}" data-step="-1" aria-label="Decrease ${window.photosByElieProductLabel?.(option) || option.label} count">-</button>
+          <input type="number" min="1" max="99" step="1" data-print-quantity="${option.id}" value="${quantity}"/>
+          <button type="button" data-print-step="${option.id}" data-step="1" aria-label="Increase ${window.photosByElieProductLabel?.(option) || option.label} count">+</button>
+        </span>
       </label>
       <fieldset class="frame-options">
         <legend>Frame</legend>
         ${frameOptions().map((frame) => `
           <label>
-            <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""} ${selectedIds.has(option.id) ? "" : "disabled"}/>
+            <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
             <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
           </label>
         `).join("")}
@@ -627,15 +631,39 @@ const syncSelectionToBasket = () => {
 
 document.querySelectorAll("[data-resolution]").forEach((input) => {
   input.addEventListener("change", () => {
-    document.querySelectorAll(`[data-print-quantity="${input.value}"], [data-print-frame="${input.value}"]`).forEach((control) => {
-      control.disabled = !input.checked;
-    });
     syncSelectionToBasket();
   });
 });
-document.querySelectorAll("[data-print-quantity], [data-print-frame]").forEach((input) => {
-  input.addEventListener("change", syncSelectionToBasket);
-  input.addEventListener("input", syncSelectionToBasket);
+const selectPrintProduct = (optionId) => {
+  const checkbox = document.querySelector(`[data-resolution][value="${optionId}"]`);
+  if (checkbox) checkbox.checked = true;
+};
+document.querySelectorAll("[data-print-step]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const optionId = button.dataset.printStep;
+    const input = document.querySelector(`[data-print-quantity="${optionId}"]`);
+    if (!input) return;
+    const nextValue = Math.max(1, Math.min(99, (Number(input.value) || 1) + Number(button.dataset.step || 0)));
+    input.value = nextValue;
+    selectPrintProduct(optionId);
+    syncSelectionToBasket();
+  });
+});
+document.querySelectorAll("[data-print-quantity]").forEach((input) => {
+  input.addEventListener("change", () => {
+    selectPrintProduct(input.dataset.printQuantity);
+    syncSelectionToBasket();
+  });
+  input.addEventListener("input", () => {
+    selectPrintProduct(input.dataset.printQuantity);
+    syncSelectionToBasket();
+  });
+});
+document.querySelectorAll("[data-print-frame]").forEach((input) => {
+  input.addEventListener("change", () => {
+    selectPrintProduct(input.dataset.printFrame);
+    syncSelectionToBasket();
+  });
 });
 
 updateTotal();

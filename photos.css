@@ -1113,6 +1113,33 @@ body.detail-fullscreen-active{
   letter-spacing:0;
   text-align:center;
 }
+.quantity-stepper{
+  display:grid;
+  grid-template-columns:34px 66px 34px;
+  align-items:center;
+}
+.quantity-stepper button{
+  display:grid;
+  min-height:34px;
+  place-items:center;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:1rem;
+  font-weight:900;
+  cursor:pointer;
+}
+.quantity-stepper button:first-child{
+  border-right:0;
+}
+.quantity-stepper button:last-child{
+  border-left:0;
+}
+.quantity-stepper input{
+  width:66px;
+  border-radius:0;
+}
 .frame-options{
   display:flex;
   flex-wrap:wrap;

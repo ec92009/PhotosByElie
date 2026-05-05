@@ -117,13 +117,17 @@ const renderLiked = () => {
         <div class="print-config">
           <label class="print-quantity">
             <span>Count</span>
-            <input type="number" min="1" max="99" step="1" data-liked-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}" ${selectedIds.has(option.id) ? "" : "disabled"}/>
+            <span class="quantity-stepper">
+              <button type="button" data-liked-print-step="${index}" data-option-id="${option.id}" data-step="-1" aria-label="Decrease ${window.photosByElieProductLabel?.(option) || option.label} count">-</button>
+              <input type="number" min="1" max="99" step="1" data-liked-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}"/>
+              <button type="button" data-liked-print-step="${index}" data-option-id="${option.id}" data-step="1" aria-label="Increase ${window.photosByElieProductLabel?.(option) || option.label} count">+</button>
+            </span>
           </label>
           <fieldset class="frame-options">
             <legend>Frame</legend>
             ${frameOptions().map((frame) => `
               <label>
-                <input type="radio" name="liked-frame-${index}-${option.id}" data-liked-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""} ${selectedIds.has(option.id) ? "" : "disabled"}/>
+                <input type="radio" name="liked-frame-${index}-${option.id}" data-liked-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
                 <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
               </label>
             `).join("")}
@@ -199,17 +203,45 @@ const renderLiked = () => {
     renderLiked();
   };
 
+  const selectPrintProduct = (itemIndex, optionId) => {
+    const checkbox = document.querySelector(`[data-liked-resolution="${itemIndex}"][value="${optionId}"]`);
+    if (checkbox) checkbox.checked = true;
+  };
+
   document.querySelectorAll("[data-liked-resolution]").forEach((input) => {
     input.addEventListener("change", () => {
-      document.querySelectorAll(`[data-liked-print-quantity="${input.dataset.likedResolution}"][data-option-id="${input.value}"], [data-liked-print-frame="${input.dataset.likedResolution}"][data-option-id="${input.value}"]`).forEach((control) => {
-        control.disabled = !input.checked;
-      });
       syncItemOptions(Number(input.dataset.likedResolution));
     });
   });
-  document.querySelectorAll("[data-liked-print-quantity], [data-liked-print-frame]").forEach((input) => {
-    input.addEventListener("change", () => syncItemOptions(Number(input.dataset.likedPrintQuantity || input.dataset.likedPrintFrame)));
-    input.addEventListener("input", () => syncItemOptions(Number(input.dataset.likedPrintQuantity || input.dataset.likedPrintFrame)));
+  document.querySelectorAll("[data-liked-print-step]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const itemIndex = Number(button.dataset.likedPrintStep);
+      const optionId = button.dataset.optionId;
+      const input = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${optionId}"]`);
+      if (!input) return;
+      input.value = Math.max(1, Math.min(99, (Number(input.value) || 1) + Number(button.dataset.step || 0)));
+      selectPrintProduct(itemIndex, optionId);
+      syncItemOptions(itemIndex);
+    });
+  });
+  document.querySelectorAll("[data-liked-print-quantity]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemIndex = Number(input.dataset.likedPrintQuantity);
+      selectPrintProduct(itemIndex, input.dataset.optionId);
+      syncItemOptions(itemIndex);
+    });
+    input.addEventListener("input", () => {
+      const itemIndex = Number(input.dataset.likedPrintQuantity);
+      selectPrintProduct(itemIndex, input.dataset.optionId);
+      syncItemOptions(itemIndex);
+    });
+  });
+  document.querySelectorAll("[data-liked-print-frame]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemIndex = Number(input.dataset.likedPrintFrame);
+      selectPrintProduct(itemIndex, input.dataset.optionId);
+      syncItemOptions(itemIndex);
+    });
   });
 };
 

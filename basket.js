@@ -131,13 +131,17 @@ const renderBasket = () => {
         <div class="print-config">
           <label class="print-quantity">
             <span>Count</span>
-            <input type="number" min="1" max="99" step="1" data-basket-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}" ${selectedIds.has(option.id) ? "" : "disabled"}/>
+            <span class="quantity-stepper">
+              <button type="button" data-basket-print-step="${index}" data-option-id="${option.id}" data-step="-1" aria-label="Decrease ${productLabel(option)} count">-</button>
+              <input type="number" min="1" max="99" step="1" data-basket-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}"/>
+              <button type="button" data-basket-print-step="${index}" data-option-id="${option.id}" data-step="1" aria-label="Increase ${productLabel(option)} count">+</button>
+            </span>
           </label>
           <fieldset class="frame-options">
             <legend>Frame</legend>
             ${frameOptions().map((frame) => `
               <label>
-                <input type="radio" name="basket-frame-${index}-${option.id}" data-basket-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""} ${selectedIds.has(option.id) ? "" : "disabled"}/>
+                <input type="radio" name="basket-frame-${index}-${option.id}" data-basket-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
                 <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
               </label>
             `).join("")}
@@ -206,17 +210,45 @@ const renderBasket = () => {
     renderBasket();
   };
 
+  const selectPrintProduct = (itemIndex, optionId) => {
+    const checkbox = document.querySelector(`[data-basket-resolution="${itemIndex}"][value="${optionId}"]`);
+    if (checkbox) checkbox.checked = true;
+  };
+
   document.querySelectorAll("[data-basket-resolution]").forEach((input) => {
     input.addEventListener("change", () => {
-      document.querySelectorAll(`[data-basket-print-quantity="${input.dataset.basketResolution}"][data-option-id="${input.value}"], [data-basket-print-frame="${input.dataset.basketResolution}"][data-option-id="${input.value}"]`).forEach((control) => {
-        control.disabled = !input.checked;
-      });
       syncItemOptions(Number(input.dataset.basketResolution));
     });
   });
-  document.querySelectorAll("[data-basket-print-quantity], [data-basket-print-frame]").forEach((input) => {
-    input.addEventListener("change", () => syncItemOptions(Number(input.dataset.basketPrintQuantity || input.dataset.basketPrintFrame)));
-    input.addEventListener("input", () => syncItemOptions(Number(input.dataset.basketPrintQuantity || input.dataset.basketPrintFrame)));
+  document.querySelectorAll("[data-basket-print-step]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const itemIndex = Number(button.dataset.basketPrintStep);
+      const optionId = button.dataset.optionId;
+      const input = document.querySelector(`[data-basket-print-quantity="${itemIndex}"][data-option-id="${optionId}"]`);
+      if (!input) return;
+      input.value = Math.max(1, Math.min(99, (Number(input.value) || 1) + Number(button.dataset.step || 0)));
+      selectPrintProduct(itemIndex, optionId);
+      syncItemOptions(itemIndex);
+    });
+  });
+  document.querySelectorAll("[data-basket-print-quantity]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemIndex = Number(input.dataset.basketPrintQuantity);
+      selectPrintProduct(itemIndex, input.dataset.optionId);
+      syncItemOptions(itemIndex);
+    });
+    input.addEventListener("input", () => {
+      const itemIndex = Number(input.dataset.basketPrintQuantity);
+      selectPrintProduct(itemIndex, input.dataset.optionId);
+      syncItemOptions(itemIndex);
+    });
+  });
+  document.querySelectorAll("[data-basket-print-frame]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemIndex = Number(input.dataset.basketPrintFrame);
+      selectPrintProduct(itemIndex, input.dataset.optionId);
+      syncItemOptions(itemIndex);
+    });
   });
 };
 

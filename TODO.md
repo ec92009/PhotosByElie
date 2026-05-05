@@ -49,6 +49,7 @@ Last updated: 2026-05-05
 - Added mock physical print products, plain white/plain black frame add-ons, and a per-photo order review in the generated basket email.
 - Added locale-inferred print unit ordering so metric locales see centimeter dimensions first and US-style locales see inch dimensions first.
 - Changed physical prints to carry quantity plus a per-print frame radio choice: no frame, plain white, or plain black.
+- Added explicit print count steppers and made count/frame interactions automatically select the related print.
 
 ## Current Priority Stack
 

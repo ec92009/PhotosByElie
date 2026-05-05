@@ -48,6 +48,7 @@ Last updated: 2026-05-05
 - Added buyer-facing license notes on detail and basket pages plus a static basket order-intent summary and mail draft.
 - Added mock physical print products, plain white/plain black frame add-ons, and a per-photo order review in the generated basket email.
 - Added locale-inferred print unit ordering so metric locales see centimeter dimensions first and US-style locales see inch dimensions first.
+- Changed physical prints to carry quantity plus a per-print frame radio choice: no frame, plain white, or plain black.
 
 ## Current Priority Stack
 
@@ -89,7 +90,7 @@ Last updated: 2026-05-05
 
 3. **Add basic photo licensing terms.**
    - Baseline personal print/web terms now appear on detail and basket pages.
-   - Product choices now include mock physical prints and simple frame add-ons.
+   - Product choices now include mock physical prints with quantity and per-print framing choices.
    - Expand the language into a fuller terms page if real checkout launches.
    - Keep prices tied to product choices until the pricing model is better tested.
 

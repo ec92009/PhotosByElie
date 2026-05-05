@@ -192,17 +192,28 @@ const navigateAfterHide = () => {
   return true;
 };
 
+const frameOptions = () => window.photosByElieFrameOptions || [];
+const defaultFrame = () => frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
+const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || defaultFrame();
+const printQuantityFor = (optionId) => Math.max(1, Math.min(99, Math.round(Number(document.querySelector(`[data-print-quantity="${optionId}"]`)?.value) || 1)));
+const selectedFrameFor = (optionId) => frameFor(document.querySelector(`[data-print-frame="${optionId}"]:checked`)?.value || "none");
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
     const option = availableResolutions.find((item) => item.id === input.value);
-    return option ? { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price } : null;
+    if (!option) return null;
+    const selected = { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price };
+    if (selected.type === "print") {
+      selected.quantity = printQuantityFor(option.id);
+      selected.frame = selectedFrameFor(option.id);
+    }
+    return selected;
   })
   .filter(Boolean);
 
 const updateTotal = () => {
   const totalTarget = document.querySelector("[data-selection-total]");
   if (!totalTarget) return;
-  const total = selectedOptions().reduce((sum, option) => sum + option.price, 0);
+  const total = selectedOptions().reduce((sum, option) => sum + (window.photosByElieOptionTotal?.(option) || option.price), 0);
   totalTarget.textContent = `$${total}`;
 };
 
@@ -558,16 +569,43 @@ if (localModerationEnabled) {
 }
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
+const selectedOptionById = new Map((basketItemForPhoto()?.options || []).map((option) => [option.id, option]));
+const printConfigMarkup = (option) => {
+  if (option.type !== "print") return "";
+  const selected = selectedOptionById.get(option.id) || {};
+  const quantity = window.photosByElieOptionQuantity?.(selected) || 1;
+  const selectedFrameId = selected.frame?.id || "none";
+  return `
+    <div class="print-config">
+      <label class="print-quantity">
+        <span>Count</span>
+        <input type="number" min="1" max="99" step="1" data-print-quantity="${option.id}" value="${quantity}" ${selectedIds.has(option.id) ? "" : "disabled"}/>
+      </label>
+      <fieldset class="frame-options">
+        <legend>Frame</legend>
+        ${frameOptions().map((frame) => `
+          <label>
+            <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""} ${selectedIds.has(option.id) ? "" : "disabled"}/>
+            <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
+          </label>
+        `).join("")}
+      </fieldset>
+    </div>
+  `;
+};
 
 document.querySelector("[data-resolution-list]").innerHTML = availableResolutions.map((option) => `
-  <label class="resolution-row product-row product-${option.type || "digital"}">
-    <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-    <span>
-      <strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>
-      <small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : option.detail}</small>
-    </span>
-    <b>$${option.price}</b>
-  </label>
+  <div class="resolution-row product-row product-${option.type || "digital"}">
+    <label class="product-choice">
+      <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
+      <span>
+        <strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>
+        <small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : option.detail}</small>
+      </span>
+      <b>$${option.price}</b>
+    </label>
+    ${printConfigMarkup(option)}
+  </div>
 `).join("");
 
 const syncSelectionToBasket = () => {
@@ -588,7 +626,16 @@ const syncSelectionToBasket = () => {
 };
 
 document.querySelectorAll("[data-resolution]").forEach((input) => {
+  input.addEventListener("change", () => {
+    document.querySelectorAll(`[data-print-quantity="${input.value}"], [data-print-frame="${input.value}"]`).forEach((control) => {
+      control.disabled = !input.checked;
+    });
+    syncSelectionToBasket();
+  });
+});
+document.querySelectorAll("[data-print-quantity], [data-print-frame]").forEach((input) => {
   input.addEventListener("change", syncSelectionToBasket);
+  input.addEventListener("input", syncSelectionToBasket);
 });
 
 updateTotal();

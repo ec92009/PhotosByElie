@@ -38,6 +38,10 @@ const productDetail = (photo, option) => {
   return window.photosByElieProductDetail(photo, option) || option.detail || "";
 };
 const productLabel = (option) => window.photosByElieProductLabel?.(option) || option.label;
+const frameOptions = () => window.photosByElieFrameOptions || [];
+const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
+const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
+const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 
 const photoReviewUrl = (photoId) => {
   const href = window.photosByElieVersionedHref?.(`./photo.html?id=${encodeURIComponent(photoId)}`)
@@ -75,14 +79,19 @@ const syncOrderIntent = (items, productCount, total) => {
     "",
     ...items.flatMap((item, index) => {
       const { photo } = photoForItem(item);
-      const subtotal = (item.options || []).reduce((sum, option) => sum + (Number(option.price) || 0), 0);
+      const subtotal = (item.options || []).reduce((sum, option) => sum + optionTotal(option), 0);
       return [
         `${index + 1}. ${item.title}`,
         `Collection: ${item.collection}`,
         `Review page: ${photoReviewUrl(item.photoId)}`,
         `Source: ${photo ? window.photosByElieOriginalSize?.(photo) || "Source file unverified" : "Photo no longer in public catalog"}`,
         "Selected products:",
-        ...item.options.map((option) => `- [${productTypeLabel(option)}] ${productLabel(option)}: ${formatMoney(option.price)}${productDetail(photo, option) ? ` (${productDetail(photo, option)})` : ""}`),
+        ...item.options.map((option) => {
+          const unitPrice = window.photosByElieOptionUnitPrice?.(option) || Number(option.price) || 0;
+          const quantity = optionQuantity(option);
+          const frameText = option.type === "print" ? `; frame: ${option.frame?.label || "No frame"}` : "";
+          return `- [${productTypeLabel(option)}] ${productLabel(option)} x ${quantity}: ${formatMoney(optionTotal(option))} (${formatMoney(unitPrice)} each${frameText}${productDetail(photo, option) ? `; ${productDetail(photo, option)}` : ""})`;
+        }),
         `Photo subtotal: ${formatMoney(subtotal)}`,
         ""
       ];
@@ -95,7 +104,7 @@ const syncOrderIntent = (items, productCount, total) => {
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-  const productCount = items.reduce((sum, item) => sum + (item.options || []).length, 0);
+  const productCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
 
   basketTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
   emptyState.hidden = items.length !== 0;
@@ -106,12 +115,35 @@ const renderBasket = () => {
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
     const imageSrc = photo?.gallerySrc || photo?.imageSrc || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
+    const selectedOptionById = new Map((item.options || []).map((option) => [option.id, option]));
     const availableOptions = photo && window.photosByElieAvailableResolutions
       ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
       : resolutionOptions;
     const resolutionDetail = (option) => {
       if (!photo || !window.photosByElieProductDetail) return "";
       return `<small>${window.photosByElieProductDetail(photo, option)}</small>`;
+    };
+    const printConfigMarkup = (option) => {
+      if (option.type !== "print") return "";
+      const selected = selectedOptionById.get(option.id) || {};
+      const selectedFrameId = selected.frame?.id || "none";
+      return `
+        <div class="print-config">
+          <label class="print-quantity">
+            <span>Count</span>
+            <input type="number" min="1" max="99" step="1" data-basket-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}" ${selectedIds.has(option.id) ? "" : "disabled"}/>
+          </label>
+          <fieldset class="frame-options">
+            <legend>Frame</legend>
+            ${frameOptions().map((frame) => `
+              <label>
+                <input type="radio" name="basket-frame-${index}-${option.id}" data-basket-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""} ${selectedIds.has(option.id) ? "" : "disabled"}/>
+                <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
+              </label>
+            `).join("")}
+          </fieldset>
+        </div>
+      `;
     };
     return `
     <article class="basket-item">
@@ -124,11 +156,14 @@ const renderBasket = () => {
         <h3>${item.title}</h3>
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
           ${availableOptions.map((option) => `
-            <label>
+            <div class="basket-product-row">
+            <label class="product-choice">
               <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
               <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
+            ${printConfigMarkup(option)}
+            </div>
           `).join("")}
         </div>
       </div>
@@ -147,19 +182,41 @@ const renderBasket = () => {
     });
   });
 
-  document.querySelectorAll("[data-basket-resolution]").forEach((input) => {
-    input.addEventListener("change", () => {
-      const itemIndex = Number(input.dataset.basketResolution);
-      const item = basketStore.read()[itemIndex];
-      if (!item) return;
-      const checkedIds = Array.from(document.querySelectorAll(`[data-basket-resolution="${itemIndex}"]:checked`))
-        .map((checkbox) => checkbox.value);
-      basketStore.updateOptions(itemIndex, checkedIds);
-      status.textContent = checkedIds.length
+  const selectedOptionsFor = (itemIndex) => Array.from(document.querySelectorAll(`[data-basket-resolution="${itemIndex}"]:checked`))
+    .map((checkbox) => {
+      const option = resolutionOptions.find((item) => item.id === checkbox.value);
+      if (!option) return null;
+      const selected = { id: option.id };
+      if (option.type === "print") {
+        selected.quantity = document.querySelector(`[data-basket-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
+        selected.frameId = document.querySelector(`[data-basket-print-frame="${itemIndex}"][data-option-id="${option.id}"]:checked`)?.value || "none";
+      }
+      return selected;
+    })
+    .filter(Boolean);
+
+  const syncItemOptions = (itemIndex) => {
+    const item = basketStore.read()[itemIndex];
+    if (!item) return;
+    const selectedOptions = selectedOptionsFor(itemIndex);
+    basketStore.updateOptions(itemIndex, selectedOptions);
+    status.textContent = selectedOptions.length
         ? `${item.title} order products updated.`
         : `${item.title} has no selected order products. Use Remove to delete the photo.`;
-      renderBasket();
+    renderBasket();
+  };
+
+  document.querySelectorAll("[data-basket-resolution]").forEach((input) => {
+    input.addEventListener("change", () => {
+      document.querySelectorAll(`[data-basket-print-quantity="${input.dataset.basketResolution}"][data-option-id="${input.value}"], [data-basket-print-frame="${input.dataset.basketResolution}"][data-option-id="${input.value}"]`).forEach((control) => {
+        control.disabled = !input.checked;
+      });
+      syncItemOptions(Number(input.dataset.basketResolution));
     });
+  });
+  document.querySelectorAll("[data-basket-print-quantity], [data-basket-print-frame]").forEach((input) => {
+    input.addEventListener("change", () => syncItemOptions(Number(input.dataset.basketPrintQuantity || input.dataset.basketPrintFrame)));
+    input.addEventListener("input", () => syncItemOptions(Number(input.dataset.basketPrintQuantity || input.dataset.basketPrintFrame)));
   });
 };
 

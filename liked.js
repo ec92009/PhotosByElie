@@ -3,6 +3,9 @@ const allCollections = window.photosByElieData || {};
 const resolutionOptions = window.photosByElieResolutions || [];
 const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
+const frameOptions = () => window.photosByElieFrameOptions || [];
+const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
+const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 
 const photoForLikedItem = (item) => {
   const entry = Object.values(allCollections).find((collection) =>
@@ -26,9 +29,20 @@ const optionPayload = (optionIds, photoId) => {
   const { photo } = photoForLikedItem({ photoId });
   const availableOptions = availableOptionsForPhoto(photo);
   return optionIds
-    .map((id) => availableOptions.find((option) => option.id === id))
+    .map((item) => {
+      const optionId = typeof item === "string" ? item : item.id;
+      const option = availableOptions.find((candidate) => candidate.id === optionId);
+      return option ? { option, source: item } : null;
+    })
     .filter(Boolean)
-    .map((option) => ({ id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price }));
+    .map(({ option, source }) => {
+      const payload = { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price };
+      if (payload.type === "print") {
+        payload.quantity = source.quantity || 1;
+        payload.frameId = source.frameId || "none";
+      }
+      return payload;
+    });
 };
 
 const selectResolutionForAllLiked = (resolutionId) => {
@@ -73,8 +87,8 @@ const renderLiked = () => {
   const basketItems = basketStore.read();
   const basketByPhoto = new Map(basketItems.map((item) => [item.photoId, item]));
   const rowSelections = likedItems.map((item) => basketByPhoto.get(item.photoId)?.options || []);
-  const total = rowSelections.flat().reduce((sum, option) => sum + (Number(option.price) || 0), 0);
-  const productCount = rowSelections.reduce((sum, options) => sum + options.length, 0);
+  const total = rowSelections.flat().reduce((sum, option) => sum + optionTotal(option), 0);
+  const productCount = rowSelections.reduce((sum, options) => sum + options.reduce((count, option) => count + optionQuantity(option), 0), 0);
 
   likedTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
   emptyState.hidden = likedItems.length !== 0;
@@ -88,11 +102,34 @@ const renderLiked = () => {
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
     const imageSrc = photo?.gallerySrc || photo?.imageSrc || "";
     const selectedIds = new Set((basketItem?.options || []).map((option) => option.id));
-    const itemTotal = (basketItem?.options || []).reduce((sum, option) => sum + (Number(option.price) || 0), 0);
+    const selectedOptionById = new Map((basketItem?.options || []).map((option) => [option.id, option]));
+    const itemTotal = (basketItem?.options || []).reduce((sum, option) => sum + optionTotal(option), 0);
     const availableOptions = availableOptionsForPhoto(photo);
     const resolutionDetail = (option) => {
       if (!photo || !window.photosByElieResolutionDetail) return "";
       return `<small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : window.photosByElieResolutionDetail(photo, option)}</small>`;
+    };
+    const printConfigMarkup = (option) => {
+      if (option.type !== "print") return "";
+      const selected = selectedOptionById.get(option.id) || {};
+      const selectedFrameId = selected.frame?.id || "none";
+      return `
+        <div class="print-config">
+          <label class="print-quantity">
+            <span>Count</span>
+            <input type="number" min="1" max="99" step="1" data-liked-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}" ${selectedIds.has(option.id) ? "" : "disabled"}/>
+          </label>
+          <fieldset class="frame-options">
+            <legend>Frame</legend>
+            ${frameOptions().map((frame) => `
+              <label>
+                <input type="radio" name="liked-frame-${index}-${option.id}" data-liked-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""} ${selectedIds.has(option.id) ? "" : "disabled"}/>
+                <span>${frame.label}${frame.price ? ` +$${frame.price}` : ""}</span>
+              </label>
+            `).join("")}
+          </fieldset>
+        </div>
+      `;
     };
     return `
     <article class="basket-item">
@@ -105,11 +142,14 @@ const renderLiked = () => {
         <h3>${item.title}</h3>
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
           ${availableOptions.map((option) => `
-            <label>
+            <div class="basket-product-row">
+            <label class="product-choice">
               <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
               <span><strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>${resolutionDetail(option)}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
+            ${printConfigMarkup(option)}
+            </div>
           `).join("")}
         </div>
       </div>
@@ -130,24 +170,46 @@ const renderLiked = () => {
     });
   });
 
-  document.querySelectorAll("[data-liked-resolution]").forEach((input) => {
-    input.addEventListener("change", () => {
-      const itemIndex = Number(input.dataset.likedResolution);
-      const item = likedStore.read()[itemIndex];
-      if (!item) return;
-      const checkedIds = Array.from(document.querySelectorAll(`[data-liked-resolution="${itemIndex}"]:checked`))
-        .map((checkbox) => checkbox.value);
-      basketStore.setPhotoOptions({
-        photoId: item.photoId,
-        title: item.title,
-        collection: item.collection,
-        options: optionPayload(checkedIds, item.photoId),
-      });
-      status.textContent = checkedIds.length
+  const selectedOptionsFor = (itemIndex) => Array.from(document.querySelectorAll(`[data-liked-resolution="${itemIndex}"]:checked`))
+    .map((checkbox) => {
+      const option = resolutionOptions.find((item) => item.id === checkbox.value);
+      if (!option) return null;
+      const selected = { id: option.id };
+      if (option.type === "print") {
+        selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
+        selected.frameId = document.querySelector(`[data-liked-print-frame="${itemIndex}"][data-option-id="${option.id}"]:checked`)?.value || "none";
+      }
+      return selected;
+    })
+    .filter(Boolean);
+
+  const syncItemOptions = (itemIndex) => {
+    const item = likedStore.read()[itemIndex];
+    if (!item) return;
+    const selectedOptions = selectedOptionsFor(itemIndex);
+    basketStore.setPhotoOptions({
+      photoId: item.photoId,
+      title: item.title,
+      collection: item.collection,
+      options: optionPayload(selectedOptions, item.photoId),
+    });
+    status.textContent = selectedOptions.length
         ? `${item.title} order products added to basket.`
         : `${item.title} has no selected order products.`;
-      renderLiked();
+    renderLiked();
+  };
+
+  document.querySelectorAll("[data-liked-resolution]").forEach((input) => {
+    input.addEventListener("change", () => {
+      document.querySelectorAll(`[data-liked-print-quantity="${input.dataset.likedResolution}"][data-option-id="${input.value}"], [data-liked-print-frame="${input.dataset.likedResolution}"][data-option-id="${input.value}"]`).forEach((control) => {
+        control.disabled = !input.checked;
+      });
+      syncItemOptions(Number(input.dataset.likedResolution));
     });
+  });
+  document.querySelectorAll("[data-liked-print-quantity], [data-liked-print-frame]").forEach((input) => {
+    input.addEventListener("change", () => syncItemOptions(Number(input.dataset.likedPrintQuantity || input.dataset.likedPrintFrame)));
+    input.addEventListener("input", () => syncItemOptions(Number(input.dataset.likedPrintQuantity || input.dataset.likedPrintFrame)));
   });
 };
 

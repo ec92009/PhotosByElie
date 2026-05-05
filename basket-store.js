@@ -1,6 +1,7 @@
 (() => {
   const basketKey = "photosbyelie-basket";
   const resolutions = () => window.photosByElieResolutions || [];
+  const frameOptions = () => window.photosByElieFrameOptions || [];
   const collections = () => window.photosByElieData || {};
 
   const optionById = (id) => resolutions().find((option) => option.id === id);
@@ -25,15 +26,20 @@
   const normalizeOptions = (options = [], photoId = null) => {
     const availableIds = new Set(availableOptionsForPhotoId(photoId).map((option) => option.id));
     const seen = new Set();
-    const normalized = options.reduce((next, option) => {
+    return options.reduce((next, option) => {
       const source = optionById(option.id) || option;
       if (!source?.id || !availableIds.has(source.id) || seen.has(source.id)) return next;
       seen.add(source.id);
-      next.push({ id: source.id, type: source.type || "digital", label: source.label, detail: source.detail, dimensions: source.dimensions, price: source.price });
+      const normalized = { id: source.id, type: source.type || "digital", label: source.label, detail: source.detail, dimensions: source.dimensions, price: source.price };
+      if (normalized.type === "print") {
+        const quantity = Math.max(1, Math.min(99, Math.round(Number(option.quantity) || 1)));
+        const frame = frameOptions().find((item) => item.id === option.frame?.id || item.id === option.frameId) || frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
+        normalized.quantity = quantity;
+        normalized.frame = { id: frame.id, label: frame.label, price: frame.price };
+      }
+      next.push(normalized);
       return next;
     }, []);
-    const hasPrint = normalized.some((option) => option.type === "print");
-    return normalized.filter((option) => option.type !== "frame" || hasPrint);
   };
 
   const normalizeBasket = (items = []) => {
@@ -64,7 +70,7 @@
         title: photo.title,
         collection: collection.title,
         options,
-        total: options.reduce((sum, option) => sum + option.price, 0)
+        total: options.reduce((sum, option) => sum + (window.photosByElieOptionTotal?.(option) || option.price), 0)
       };
     }).filter((item) => item.options.length);
   };
@@ -110,7 +116,7 @@
   const updateOptions = (index, optionIds) => {
     const items = read();
     if (!items[index]) return items;
-    items[index].options = normalizeOptions(optionIds.map((id) => ({ id })), items[index].photoId);
+    items[index].options = normalizeOptions(optionIds.map((option) => typeof option === "string" ? { id: option } : option), items[index].photoId);
     return write(items);
   };
 

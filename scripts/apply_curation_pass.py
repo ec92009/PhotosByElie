@@ -456,9 +456,12 @@ def helper_lines() -> list[str]:
         '  { id: "print-4x6", type: "print", label: "Print", dimensions: { imperial: "4 x 6 in", metric: "10 x 15 cm" }, detail: "Small classic photo print", price: 12, minMegapixels: 1 },',
         '  { id: "print-5x7", type: "print", label: "Print", dimensions: { imperial: "5 x 7 in", metric: "13 x 18 cm" }, detail: "Popular gift and desk frame size", price: 18, minMegapixels: 2 },',
         '  { id: "print-8x10", type: "print", label: "Print", dimensions: { imperial: "8 x 10 in", metric: "20 x 25 cm" }, detail: "Popular wall and shelf print size", price: 28, minMegapixels: 6 },',
-        '  { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 42, minMegapixels: 10 },',
-        '  { id: "frame-white", type: "frame", label: "Plain white frame", detail: "Simple white frame add-on for selected prints", price: 22 },',
-        '  { id: "frame-black", type: "frame", label: "Plain black frame", detail: "Simple black frame add-on for selected prints", price: 22 }',
+        '  { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 42, minMegapixels: 10 }',
+        "];",
+        "window.photosByElieFrameOptions = [",
+        '  { id: "none", label: "No frame", price: 0 },',
+        '  { id: "white", label: "Plain white frame", price: 22 },',
+        '  { id: "black", label: "Plain black frame", price: 22 }',
         "];",
         "",
         "window.photosByEliePreviewMegapixels = (photo) => {",
@@ -530,6 +533,12 @@ def helper_lines() -> list[str]:
         "  const secondary = preferred === \"imperial\" ? \"metric\" : \"imperial\";",
         "  return `${option.label} ${option.dimensions[preferred]} / ${option.dimensions[secondary]}`;",
         "};",
+        "window.photosByElieFrameLabel = (frameId) => (",
+        "  (window.photosByElieFrameOptions || []).find((frame) => frame.id === frameId)?.label || \"No frame\"",
+        ");",
+        "window.photosByElieOptionQuantity = (option) => option?.type === \"print\" ? Math.max(1, Number(option.quantity) || 1) : 1;",
+        "window.photosByElieOptionUnitPrice = (option) => Number(option?.price) + Number(option?.frame?.price || 0);",
+        "window.photosByElieOptionTotal = (option) => window.photosByElieOptionQuantity(option) * window.photosByElieOptionUnitPrice(option);",
     ]
 
 

@@ -102,7 +102,7 @@ The active curation states are `assets/expo` for tracked publishable Expo, `asse
 
 `validate_publish.js` checks the generated public catalog before publishing. It loads `photos-data.js`, verifies duplicate photo IDs, local image references, matching `*_900.jpg`/`*_1800.jpg` derivative pairs, collection page shells, and resolution availability metadata.
 
-The generated product list currently includes digital file options, physical print sizes, and simple frame add-ons. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update both `export_photos_data.py` and `apply_curation_pass.py` when changing product ids, labels, prices, dimensions, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
+The generated product list currently includes digital file options, physical print sizes, and per-print framing choices. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update both `export_photos_data.py` and `apply_curation_pass.py` when changing product ids, labels, prices, dimensions, frame options, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
 
 Run the validator before pushing public site changes:
 

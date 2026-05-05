@@ -509,8 +509,12 @@ html[data-theme="light"] .photo-art.has-photo::after{
   padding:8px 12px;
 }
 .liked-total-band{
-  justify-content:space-between;
-  gap:10px;
+  justify-content:flex-end;
+}
+.liked-header-actions{
+  padding-block:8px;
+  border-inline:1px solid var(--line);
+  background:var(--surface);
 }
 .liked-bulk-actions{
   display:flex;

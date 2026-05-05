@@ -6,6 +6,7 @@
   const status = document.querySelector("[data-hidden-status]");
   const shortcutHint = document.querySelector("[data-hidden-shortcut-hint]");
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+  const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
   let selectedIndex = 0;
   let catalogsLoaded = false;
 
@@ -75,7 +76,7 @@
 
   const render = () => {
     if (!galleryRoot) return;
-    if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled;
+    if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled || !shouldShowKeyboardHints();
     if (!hiddenActions?.enabled) {
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="Owner controls unavailable">
@@ -195,6 +196,7 @@
   });
 
   window.addEventListener("photosbyelie:hiddenchange", render);
+  window.addEventListener("photosbyelie:inputmodechange", render);
 
   Promise.all([
     reserveStore?.load?.() || Promise.resolve({}),

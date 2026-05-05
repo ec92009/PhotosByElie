@@ -24,6 +24,7 @@ const defaultFilterState = {
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
+const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
   if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
   const hint = document.createElement("p");
@@ -37,8 +38,13 @@ const ensureGalleryKeyboardHint = () => {
     `${shortcutKey("Enter")} detail`,
     `${shortcutKey("Double-click")} detail`
   ].join(" <span aria-hidden=\"true\">|</span> ");
+  hint.hidden = !shouldShowKeyboardHints();
   galleryRoot.before(hint);
 };
+window.addEventListener("photosbyelie:inputmodechange", () => {
+  const hint = document.querySelector("[data-gallery-shortcut-hint]");
+  if (hint) hint.hidden = !localModerationEnabled || !shouldShowKeyboardHints();
+});
 
 const readFilterState = () => {
   try {

@@ -4,6 +4,7 @@
   const root = document.querySelector("[data-unknown-root]");
   const status = document.querySelector("[data-unknown-status]");
   const shortcutHint = document.querySelector("[data-unknown-shortcut-hint]");
+  const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
   const targetCountries = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
   let selectedPhotoId = "";
   let lastHiddenPhotoId = "";
@@ -279,7 +280,7 @@
 
   const render = () => {
     if (!root) return;
-    if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled;
+    if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled || !shouldShowKeyboardHints();
     if (!hiddenActions?.enabled) {
       root.innerHTML = `
         <article class="owner-card">
@@ -461,6 +462,7 @@
   window.addEventListener("photosbyelie:hiddenchange", () => {
     render();
   });
+  window.addEventListener("photosbyelie:inputmodechange", render);
 
   reserveStore?.load?.().then(render);
   render();

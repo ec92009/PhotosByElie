@@ -81,9 +81,10 @@ if ((isOwnerCollection || isHiddenCollection) && !localModerationEnabled) {
 }
 const detailShortcutHint = document.querySelector("[data-detail-shortcut-hint]");
 const detailShortcutKey = (label) => `<kbd>${label}</kbd>`;
+const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const renderDetailShortcutHint = () => {
   if (!detailShortcutHint) return;
-  if (!photo) {
+  if (!photo || !shouldShowKeyboardHints()) {
     detailShortcutHint.hidden = true;
     return;
   }
@@ -103,6 +104,7 @@ const renderDetailShortcutHint = () => {
   detailShortcutHint.hidden = false;
 };
 renderDetailShortcutHint();
+window.addEventListener("photosbyelie:inputmodechange", renderDetailShortcutHint);
 const promotedPhotosFor = (galleryKey) => {
   if (!localModerationEnabled || !window.photosByElieReserve?.enabled) return [];
   const reserveById = new Map((reserveCollections[galleryKey]?.photos || []).map((item) => [item.id, item]));

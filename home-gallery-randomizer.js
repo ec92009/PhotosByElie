@@ -9,8 +9,8 @@ const homeCollections = [
 ];
 
 const randomPhotoForCollection = (collection) => {
-  const photos = window.photosByElieUnworthy?.filterPhotos
-    ? window.photosByElieUnworthy.filterPhotos(collection?.photos || [])
+  const photos = window.photosByElieHiddenActions?.filterPhotos
+    ? window.photosByElieHiddenActions.filterPhotos(collection?.photos || [])
     : (collection?.photos || []);
   if (!photos.length) return null;
   return photos[Math.floor(Math.random() * photos.length)];

@@ -1,15 +1,15 @@
 # Conversation Summary
 
-Date: 2026-05-04
+Date: 2026-05-05
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v65.32`
+- Current local visible build: `v66.13`
 - Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been curated for the public build.
-- The current public Expo set has 127 photos: 25 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos.
+- The current local Expo set has 502 photos: 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos; Mexico is empty until matching developed Mexico assets are reintroduced.
 - The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
 
 ## Asset Contract
@@ -33,7 +33,19 @@ Date: 2026-05-04
 
 ## Curation Direction
 
-- Owner exports now include both `expo_cap`/`expo_state` and legacy `regular_cap`/`regular_state` fields.
+- Owner exports now use only `expo_cap` and `expo_state`; live H/U/P actions bypass the Curation Pass and move files immediately on localhost.
+- Owner mode is now backed by `scripts/local_server.py`: exported `.pbe-curation` files can still be written to `~/Downloads`, and live H/U/P actions move files directly between Expo, Hidden, and Reserve.
+- The owner review code now uses Hidden naming throughout: `hidden.html`, `hidden-page.js`, `hidden-actions.js`, `photosByElieHiddenActions`, and `photosbyelie:hiddenchange`.
+- v66.6 added subtle shortcut reminders above localhost curation grids plus detail-page reminders for like, navigation, full-screen preview, and owner hide/undo.
+- v66.7 added day-before/day-after known-country context to Unknown cards to help classify surrounding travel dates.
+- v66.8 made Unknown country assignment a live localhost file move into country Reserve folders and added previous/next shooting-day context to the hints.
+- v66.9 changes previous/next shooting-day hints to show relative day distance instead of raw dates.
+- v66.10 adds localhost Owner editing for photo Title and Keywords, writes those changes into catalog/previews/source files when available, syncs collection-country keywords, and makes gallery display sort newest-first by default while leaving Reserve selection randomized.
+- v66.11 top-aligns portrait and square-ish detail previews beside the metadata panel.
+- v66.12 removes the dead gallery Restore control, trims gallery filters to orientation/color mood/subject plus newest-first sorting, fixes hidden controls overriding the HTML `hidden` attribute, and adds a tracked Max/David local asset sync script.
+- v66.13 makes detail-page previous/next navigation follow the last gallery grid order when opened from a filtered or sorted gallery, while direct detail links still fall back to the full catalog sequence.
+- The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
+- Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
 - Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.
 - Curation Pass logs now live outside assets in `.curation-logs/`.
 - Existing browser behavior still uses the working “regular cap” internal storage key, but the physical/public vocabulary is Expo, Reserve, Hidden.

@@ -1,8 +1,9 @@
 (() => {
-  const unworthyStore = window.photosByElieUnworthy;
+  const hiddenActions = window.photosByElieHiddenActions;
   const reserveStore = window.photosByElieReserve;
   const root = document.querySelector("[data-unknown-root]");
   const status = document.querySelector("[data-unknown-status]");
+  const shortcutHint = document.querySelector("[data-unknown-shortcut-hint]");
   const targetCountries = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
   let selectedPhotoId = "";
   let lastHiddenPhotoId = "";
@@ -46,8 +47,8 @@
   };
 
   const unknownPhotos = () => {
-    const hidden = new Set(unworthyStore?.read?.() || []);
-    const assigned = unworthyStore?.readCountryAssignments?.() || {};
+    const hidden = new Set(hiddenActions?.read?.() || []);
+    const assigned = hiddenActions?.readCountryAssignments?.() || {};
     return allUnknownPhotos().filter((photo) => !hidden.has(photo.id) && !assigned[photo.id]);
   };
 
@@ -59,6 +60,123 @@
     const day = captureDay(photo);
     if (!day) return [photo];
     return allUnknownPhotos().filter((candidate) => captureDay(candidate) === day);
+  };
+
+  const countryTitle = (countryKey) => (
+    window.photosByElieData?.[countryKey]?.title
+    || window.photosByElieReserveData?.[countryKey]?.title
+    || countryKey
+  );
+
+  const shiftCaptureDay = (day, offset) => {
+    const match = String(day || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return "";
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    date.setUTCDate(date.getUTCDate() + offset);
+    return [
+      date.getUTCFullYear(),
+      String(date.getUTCMonth() + 1).padStart(2, "0"),
+      String(date.getUTCDate()).padStart(2, "0"),
+    ].join("-");
+  };
+
+  const knownCountryPhotos = () => {
+    const byId = new Map();
+    const addCollections = (collections) => {
+      targetCountries.forEach((countryKey) => {
+        (collections?.[countryKey]?.photos || []).forEach((photo) => {
+          if (!photo?.id) return;
+          byId.set(`${countryKey}:${photo.id}`, { ...photo, countryKey });
+        });
+      });
+    };
+    addCollections(window.photosByElieData);
+    addCollections(window.photosByElieReserveData);
+    return [...byId.values()];
+  };
+
+  const knownCountryDayIndex = () => knownCountryPhotos().reduce((index, photo) => {
+    const day = captureDay(photo);
+    if (!day) return index;
+    if (!index.has(day)) index.set(day, new Map());
+    const countryCounts = index.get(day);
+    if (!countryCounts.has(photo.countryKey)) countryCounts.set(photo.countryKey, new Set());
+    countryCounts.get(photo.countryKey).add(photo.id);
+    return index;
+  }, new Map());
+
+  const countryDayEntries = (dayIndex, day) => {
+    const countryCounts = dayIndex.get(day);
+    if (!countryCounts) return [];
+    return [...countryCounts.entries()]
+      .map(([countryKey, ids]) => ({
+        countryKey,
+        count: ids.size,
+        title: countryTitle(countryKey),
+      }))
+      .filter((entry) => entry.count > 0)
+      .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
+  };
+
+  const photoCountLabel = (count) => `${count} photo${count === 1 ? "" : "s"}`;
+
+  const formatCountryDayEntries = (entries) => entries
+    .map((entry, index) => `${index === 0 ? photoCountLabel(entry.count) : entry.count} in ${entry.title}`)
+    .join(", ");
+
+  const shootingDayNear = (dayIndex, day, direction) => {
+    if (!day) return "";
+    const days = [...dayIndex.keys()].sort();
+    if (direction < 0) {
+      return days.reverse().find((candidate) => candidate < day) || "";
+    }
+    return days.find((candidate) => candidate > day) || "";
+  };
+
+  const daysBetween = (fromDay, toDay) => {
+    const fromMatch = String(fromDay || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const toMatch = String(toDay || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!fromMatch || !toMatch) return 0;
+    const fromTime = Date.UTC(Number(fromMatch[1]), Number(fromMatch[2]) - 1, Number(fromMatch[3]));
+    const toTime = Date.UTC(Number(toMatch[1]), Number(toMatch[2]) - 1, Number(toMatch[3]));
+    return Math.round((toTime - fromTime) / 86400000);
+  };
+
+  const shootingDayLabel = (baseDay, shootingDay, direction) => {
+    const distance = Math.abs(daysBetween(baseDay, shootingDay));
+    const suffix = distance === 1
+      ? (direction < 0 ? "1 day before" : "1 day after")
+      : `${distance} days ${direction < 0 ? "before" : "after"}`;
+    return `${direction < 0 ? "Previous shoot" : "Next shoot"}, ${suffix}`;
+  };
+
+  const adjacentDayHints = (photo, dayIndex) => {
+    const day = captureDay(photo);
+    if (!day) return [];
+    const hints = [];
+    const addSide = (dayLabel, exactDay, shootLabel, shootDay) => {
+      const exactEntries = countryDayEntries(dayIndex, exactDay);
+      if (exactEntries.length) {
+        hints.push({
+          label: shootDay === exactDay ? `${dayLabel} / ${shootLabel}` : dayLabel,
+          day: exactDay,
+          entries: exactEntries,
+        });
+      }
+      if (shootDay && shootDay !== exactDay) {
+        const shootEntries = countryDayEntries(dayIndex, shootDay);
+        if (shootEntries.length) {
+          hints.push({
+            label: shootingDayLabel(day, shootDay, shootLabel === "previous shoot" ? -1 : 1),
+            day: shootDay,
+            entries: shootEntries,
+          });
+        }
+      }
+    };
+    addSide("Day before", shiftCaptureDay(day, -1), "previous shoot", shootingDayNear(dayIndex, day, -1));
+    addSide("Day after", shiftCaptureDay(day, 1), "next shoot", shootingDayNear(dayIndex, day, 1));
+    return hints;
   };
 
   const splitKeywordText = (value) => String(value || "")
@@ -159,7 +277,8 @@
 
   const render = () => {
     if (!root) return;
-    if (!unworthyStore?.enabled) {
+    if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled;
+    if (!hiddenActions?.enabled) {
       root.innerHTML = `
         <article class="owner-card">
           <p class="eyebrow">Locked</p>
@@ -170,13 +289,14 @@
       return;
     }
 
-    const assignments = unworthyStore.readCountryAssignments?.() || {};
+    const assignments = hiddenActions.readCountryAssignments?.() || {};
     const allPhotos = allUnknownPhotos();
     const dayCounts = allPhotos.reduce((counts, photo) => {
       const day = captureDay(photo);
       if (day) counts.set(day, (counts.get(day) || 0) + 1);
       return counts;
     }, new Map());
+    const countryDayIndex = knownCountryDayIndex();
     const photos = unknownPhotos();
     if (!photos.length) {
       root.innerHTML = `
@@ -185,7 +305,7 @@
           <h2>No unassigned unknown photos are currently loaded.</h2>
         </article>
       `;
-      setStatus("Unknown queue is empty. Export a Curation Pass from Owner to apply any assignments on disk.");
+      setStatus("Unknown queue is empty.");
       return;
     }
 
@@ -194,6 +314,7 @@
       const assigned = assignments[photo.id] || "";
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;
+      const dayHints = adjacentDayHints(photo, countryDayIndex);
       const keywords = keywordsFor(photo);
       return `
         <article class="unknown-card" data-photo-id="${escapeHtml(photo.id)}">
@@ -215,6 +336,13 @@
               </div>
             </dl>
             ${dayCount > 1 ? `<p>${dayCount} photos from the same day</p>` : ""}
+            ${dayHints.length ? `
+              <div class="unknown-day-context">
+                ${dayHints.map((hint) => `
+                  <p><strong>${escapeHtml(hint.label)}:</strong> ${escapeHtml(formatCountryDayEntries(hint.entries))}</p>
+                `).join("")}
+              </div>
+            ` : ""}
             <label class="owner-number-control">
               <span>Country</span>
               <select data-country-assignment>
@@ -243,33 +371,46 @@
     });
 
     root.querySelectorAll("[data-country-assignment]").forEach((select) => {
-      select.addEventListener("change", () => {
+      select.addEventListener("change", async () => {
         const card = select.closest("[data-photo-id]");
         const photoId = card?.dataset.photoId;
         const photo = allUnknownPhotos().find((item) => item.id === photoId);
         const affectedPhotos = photo ? sameDayPhotos(photo) : [];
-        const assignmentsNow = unworthyStore.setCountryAssignments?.(
-          affectedPhotos.map((item) => item.id),
-          select.value
-        ) || {};
-        const assignedCount = countAssignedUnknown(assignmentsNow);
+        const affectedIds = affectedPhotos.map((item) => item.id);
+        const targetCountry = select.value;
+        const affectedCount = affectedPhotos.length || 1;
+        select.disabled = true;
+        if (!targetCountry) {
+          const assignmentsNow = hiddenActions.setCountryAssignments?.(affectedIds, "") || {};
+          const assignedCount = countAssignedUnknown(assignmentsNow);
+          selectedPhotoId = photoId || selectedPhotoId;
+          render();
+          setStatus(`${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} returned to the Unknown queue; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}.`);
+          return;
+        }
+        let result = null;
+        try {
+          result = await hiddenActions.assignUnknownsToCountry?.(affectedIds, targetCountry);
+        } catch (error) {
+          select.disabled = false;
+          setStatus(error?.message || "Could not assign unknown photos.");
+          return;
+        }
         selectedPhotoId = photoId || selectedPhotoId;
         render();
-        const affectedCount = affectedPhotos.length || 1;
-        setStatus(select.value
-          ? `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} assigned and removed from this queue; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}. Export a Curation Pass from Owner to apply them on disk.`
-          : `${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} returned to the Unknown queue; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}.`
-        );
+        const movedCount = result?.moved?.length ?? affectedCount;
+        const skippedCount = result?.skipped?.length || 0;
+        setStatus(`${movedCount} same-day photo${movedCount === 1 ? "" : "s"} moved to Reserve / ${countryTitle(targetCountry)}${skippedCount ? `; ${skippedCount} already assigned` : ""}. Hints refreshed.`);
       });
     });
 
     const assignedCount = countAssignedUnknown(assignments);
     updateSelection();
-    setStatus(`${photos.length} unassigned unknown photo${photos.length === 1 ? "" : "s"} visible; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}. Use arrows to move, H to hide, U to undo.`);
+    setStatus(`${photos.length} unassigned unknown photo${photos.length === 1 ? "" : "s"} visible; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}.`);
   };
 
-  window.addEventListener("keydown", (event) => {
-    if (!unworthyStore?.enabled) return;
+  window.addEventListener("keydown", async (event) => {
+    if (!hiddenActions?.enabled) return;
     const key = event.key.toLowerCase();
     const hOrU = key === "h" || key === "u";
     if (hOrU && shouldIgnoreUnknownActionShortcut(event)) return;
@@ -289,21 +430,31 @@
       const photo = unknownPhotos().find((item) => item.id === selectedPhotoId) || unknownPhotos()[0];
       if (!photo) return;
       lastHiddenPhotoId = photo.id;
-      unworthyStore.mark(photo.id);
-      selectedPhotoId = "";
-      render();
-      setStatus(`${photo.title} hidden from the Unknown queue. Export a Curation Pass from Owner to apply it on disk.`);
+      try {
+        await hiddenActions.mark(photo.id);
+        selectedPhotoId = "";
+        render();
+        setStatus(`${photo.title} moved from Unknown to Hidden.`);
+      } catch (error) {
+        setStatus(error?.message || "Could not move unknown photo to Hidden.");
+      }
       return;
     }
     if (key !== "u") return;
     event.preventDefault();
-    const restoredId = unworthyStore.undo(lastHiddenPhotoId);
+    let restoredId = null;
+    try {
+      restoredId = await hiddenActions.undo(lastHiddenPhotoId);
+    } catch (error) {
+      setStatus(error?.message || "Could not undo the hide.");
+      return;
+    }
     if (restoredId) selectedPhotoId = restoredId;
     render();
-    setStatus(restoredId ? "Last hidden unknown photo restored." : "No local hide to undo.");
+    setStatus(restoredId ? "Last hidden unknown photo moved back." : "No hidden unknown photo to undo.");
   });
 
-  window.addEventListener("photosbyelie:unworthychange", () => {
+  window.addEventListener("photosbyelie:hiddenchange", () => {
     render();
   });
 

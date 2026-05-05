@@ -46,13 +46,63 @@ const availableResolutions = photo && window.photosByElieAvailableResolutions
   : resolutions;
 const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
-const unworthyStore = window.photosByElieUnworthy;
-const localModerationEnabled = Boolean(unworthyStore?.enabled);
+const hiddenActions = window.photosByElieHiddenActions;
+const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+const detailSequenceKey = "photosbyelie-detail-sequence";
+const metadataValue = (targetPhoto, label) => (
+  (targetPhoto?.metadata || []).find((item) => item.label === label)?.value || ""
+);
+const splitKeywordText = (value) => String(value || "")
+  .split(/[;,]/)
+  .map((keyword) => keyword.trim())
+  .filter(Boolean);
+const uniqueKeywords = (items) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const setMetadataValue = (targetPhoto, label, value) => {
+  if (!Array.isArray(targetPhoto.metadata)) targetPhoto.metadata = [];
+  const item = targetPhoto.metadata.find((entry) => entry.label === label);
+  if (item) {
+    item.value = value;
+    return;
+  }
+  targetPhoto.metadata.unshift({ label, value });
+};
 if ((isOwnerCollection || isHiddenCollection) && !localModerationEnabled) {
   window.location.replace(versionedHref("./"));
   return;
 }
+const detailShortcutHint = document.querySelector("[data-detail-shortcut-hint]");
+const detailShortcutKey = (label) => `<kbd>${label}</kbd>`;
+const renderDetailShortcutHint = () => {
+  if (!detailShortcutHint) return;
+  if (!photo) {
+    detailShortcutHint.hidden = true;
+    return;
+  }
+  const ownerShortcuts = localModerationEnabled
+    ? [
+      `${detailShortcutKey("H")} hide`,
+      `${detailShortcutKey("U")} undo`
+    ]
+    : [];
+  detailShortcutHint.innerHTML = [
+    "Shortcuts:",
+    `${detailShortcutKey("L")} like`,
+    `${detailShortcutKey("Left/Right")} previous/next`,
+    `${detailShortcutKey("Double-click")} full screen`,
+    ...ownerShortcuts
+  ].join(" <span aria-hidden=\"true\">|</span> ");
+  detailShortcutHint.hidden = false;
+};
+renderDetailShortcutHint();
 const promotedPhotosFor = (galleryKey) => {
   if (!localModerationEnabled || !window.photosByElieReserve?.enabled) return [];
   const reserveById = new Map((reserveCollections[galleryKey]?.photos || []).map((item) => [item.id, item]));
@@ -62,15 +112,15 @@ const promotedPhotosFor = (galleryKey) => {
 };
 
 const regularCapFor = (targetCollection) => (
-  unworthyStore?.readRegularCap?.() || targetCollection?.photos?.length || 0
+  hiddenActions?.readRegularCap?.() || targetCollection?.photos?.length || 0
 );
 
 const visiblePhotosFor = (galleryKey, targetCollection, options = {}) => {
   const basePhotos = targetCollection?.photos || [];
-  if (!localModerationEnabled || !unworthyStore?.filterPhotos) return basePhotos;
-  const photos = unworthyStore.filterPhotos(basePhotos, { includeReserveOnly: options.includeReserveOnly });
+  if (!localModerationEnabled || !hiddenActions?.filterPhotos) return basePhotos;
+  const photos = hiddenActions.filterPhotos(basePhotos, { includeReserveOnly: options.includeReserveOnly });
   if (!options.includePromotions) return photos;
-  const promoted = unworthyStore.filterPhotos(promotedPhotosFor(galleryKey), { includeReserveOnly: true });
+  const promoted = hiddenActions.filterPhotos(promotedPhotosFor(galleryKey), { includeReserveOnly: true });
   return photos.concat(promoted).slice(0, regularCapFor(targetCollection));
 };
 
@@ -103,10 +153,27 @@ const detailSequence = () => detailScopeEntries().flatMap(([scopeKey, scopeColle
   }))
 );
 
+const galleryDetailSequence = () => {
+  try {
+    const payload = JSON.parse(sessionStorage.getItem(detailSequenceKey) || "null");
+    if (!payload || payload.source !== "gallery" || !Array.isArray(payload.photoIds)) return null;
+    if (!payload.photoIds.includes(photo?.id)) return null;
+    const byId = new Map(detailSequence().map((item) => [item.photo.id, item]));
+    const ordered = payload.photoIds
+      .map((id) => byId.get(id))
+      .filter(Boolean);
+    return ordered.some((item) => item.photo.id === photo.id) ? ordered : null;
+  } catch {
+    return null;
+  }
+};
+
+const activeDetailSequence = () => galleryDetailSequence() || detailSequence();
+
 const navigateAfterHide = () => {
   const remainingPhotos = visibleCollectionPhotos();
   if (!remainingPhotos.length) {
-    const remainingSequence = detailSequence().filter((item) => item.photo.id !== photo.id);
+    const remainingSequence = activeDetailSequence().filter((item) => item.photo.id !== photo.id);
     window.location.replace(versionedHref(remainingSequence.length ? `./photo.html?id=${remainingSequence[0].photo.id}` : `./${collectionKey}.html`));
     return true;
   }
@@ -215,7 +282,7 @@ const syncDetailBottomActions = () => {
 };
 
 if (prevPhotoLink && nextPhotoLink) {
-  const detailPhotos = detailSequence();
+  const detailPhotos = activeDetailSequence();
   const detailIndex = detailPhotos.findIndex((item) => item.photo.id === photo.id);
   if (detailPhotos.length > 1 && detailIndex >= 0) {
     const previousEntry = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
@@ -233,19 +300,74 @@ if (prevPhotoLink && nextPhotoLink) {
 syncDetailBottomActions();
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
-const metadata = Array.isArray(photo.metadata)
-  ? photo.metadata.filter((item) => item.label && item.value && item.label !== "Preview file")
-  : [];
-metadataRoot.hidden = metadata.length === 0;
-metadataRoot.replaceChildren(...metadata.map((item) => {
-  const row = document.createElement("div");
-  const label = document.createElement("dt");
-  const value = document.createElement("dd");
-  label.textContent = item.label;
-  value.textContent = item.value;
-  row.append(label, value);
-  return row;
-}));
+const renderMetadataRows = () => {
+  const metadata = Array.isArray(photo.metadata)
+    ? photo.metadata.filter((item) => item.label && item.value && item.label !== "Preview file")
+    : [];
+  metadataRoot.hidden = metadata.length === 0;
+  metadataRoot.replaceChildren(...metadata.map((item) => {
+    const row = document.createElement("div");
+    const label = document.createElement("dt");
+    const value = document.createElement("dd");
+    label.textContent = item.label;
+    value.textContent = item.value;
+    row.append(label, value);
+    return row;
+  }));
+};
+
+const syncTitleUi = () => {
+  document.title = `Photos By Elie | ${photo.title}`;
+  document.querySelector("[data-photo-title]").textContent = photo.title;
+  document.querySelector("[data-photo-preview-title]").textContent = photo.title;
+  document.querySelector("[data-photo-preview] img")?.setAttribute("alt", photo.title);
+};
+
+const ensureOwnerMetadataEditor = () => {
+  if (!localModerationEnabled || document.querySelector("[data-owner-metadata-editor]")) return;
+  const editor = document.createElement("form");
+  editor.className = "owner-metadata-editor";
+  editor.dataset.ownerMetadataEditor = "";
+  editor.innerHTML = `
+    <label>
+      <span>Title</span>
+      <input type="text" value="" data-owner-title/>
+    </label>
+    <label>
+      <span>Keywords</span>
+      <textarea rows="3" data-owner-keywords></textarea>
+    </label>
+    <button class="btn secondary" type="submit">Save metadata</button>
+  `;
+  const titleInput = editor.querySelector("[data-owner-title]");
+  const keywordInput = editor.querySelector("[data-owner-keywords]");
+  titleInput.value = photo.title || "";
+  keywordInput.value = metadataValue(photo, "Keywords");
+  editor.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = editor.querySelector("button");
+    button.disabled = true;
+    try {
+      const title = titleInput.value.trim();
+      const keywords = uniqueKeywords(splitKeywordText(keywordInput.value)).join(", ");
+      await hiddenActions.updatePhotoMetadata?.(photo.id, { title, keywords });
+      photo.title = title;
+      setMetadataValue(photo, "Metadata title", title);
+      setMetadataValue(photo, "Keywords", keywords);
+      syncTitleUi();
+      renderMetadataRows();
+      status.textContent = `${photo.title} metadata saved to catalog, previews, and source file when available.`;
+    } catch (error) {
+      status.textContent = error?.message || "Could not save metadata.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+  metadataRoot.before(editor);
+};
+
+renderMetadataRows();
+ensureOwnerMetadataEditor();
 
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
@@ -399,26 +521,36 @@ swipeTarget?.addEventListener("touchend", (event) => {
 }, { passive: true });
 
 if (localModerationEnabled) {
-  window.addEventListener("keydown", (event) => {
+  window.addEventListener("keydown", async (event) => {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
     if (key === "h") {
-      if (unworthyStore.has(photo.id)) {
-        status.textContent = `${photo.title} is already hidden on this localhost browser.`;
+      if (hiddenActions.has(photo.id)) {
+        status.textContent = `${photo.title} is already in Hidden.`;
         return;
       }
-      unworthyStore.mark(photo.id);
-      navigateAfterHide();
+      try {
+        await hiddenActions.mark(photo.id);
+        navigateAfterHide();
+      } catch (error) {
+        status.textContent = error?.message || "Could not move photo to Hidden.";
+      }
       return;
     }
     if (key !== "u") return;
-    const undoneId = unworthyStore.undo(photo.id);
+    let undoneId = null;
+    try {
+      undoneId = await hiddenActions.undo(photo.id);
+    } catch (error) {
+      status.textContent = error?.message || "Could not undo the hide.";
+      return;
+    }
     status.textContent = undoneId
-      ? `${photo.title} restored on this localhost browser.`
-      : "No local hidden mark to undo.";
+      ? `${photo.title} moved back from Hidden.`
+      : "No hidden photo to undo.";
   });
 
-  window.addEventListener("photosbyelie:unworthychange", () => {
+  window.addEventListener("photosbyelie:hiddenchange", () => {
     navigateAfterHide();
   });
 }

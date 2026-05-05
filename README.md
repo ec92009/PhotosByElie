@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v65.32`
+- Current visible version: `v66.13`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -17,11 +17,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; resolution checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
-- `owner.html`: localhost-only owner controls for Curation Pass export, Unknown classification, Hidden review, and the Expo cap
-- `unworthy.html`: localhost-only review surface for hidden photos
+- `owner.html`: localhost-only owner controls for live review actions, optional Curation Pass export, Unknown classification, Hidden review, and the Expo cap
+- `hidden.html`: localhost-only review surface for hidden photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
+- `hidden-actions.js`: localhost-only live review action store for Hidden moves, undo, Expo cap, and owner assignment state
 - `hidden-store.js`: localhost-only loader for the ignored Hidden catalog used by Hidden review and hidden-photo detail pages
+- `hidden-page.js`: localhost-only Hidden review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `photos-data.js`: shared collection, photo, resolution, and mock price data
 - `photo-gallery.js`: shared gallery renderer
@@ -53,16 +55,22 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The three asset states are explicit on disk: `assets/expo` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
 - Reserve import now scans developed JPG/TIFF exports only, keeps Camera photos at Lightroom green label/rating 4+, infers country/AI/Unknown buckets, writes watermarked `*_900.jpg` and `*_1800.jpg` pairs into `assets/reserve/<country>/`, and never scans DNG/NEF/raw files.
 - On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
-- On the localhost Unknown page, cards show title/keyword metadata; arrow keys move the selected card, `H` hides it, `U` undoes the last hide, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
-- The localhost Owner page exports Curation Pass files as `.pbe-curation`; the cleaner still accepts older `.pbe-blacklist` payloads for compatibility.
+- On localhost detail pages, Owner can edit Title and Keywords; saves update the catalog metadata, local preview JPEGs, and the original source export when it can be resolved from `sourceFiles`.
+- On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` hides it, `U` undoes the last hide, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
+- Assigning an Unknown photo to a country moves every loaded same-day unknown JPEG pair into that country's local Reserve folder, adds the country keyword to catalog/source metadata, refreshes the Reserve/Unknown catalogs, and immediately re-renders the Unknown hints.
+- The localhost Owner page can export Curation Pass files as `.pbe-curation` for audit and batch work, but H/U/P review actions now move files immediately through the local server.
+- The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for Curation Pass saving and live photo moves.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On localhost gallery pages, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
+- Gallery filters cover orientation, color mood, and subject, with Sort defaulting to Newest first on first display.
+- When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
+- Subtle keyboard reminders appear above localhost curation grids and detail previews, with public detail pages showing the `L` like shortcut.
 - Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost curation.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
-- Curation Pass exports include the current Owner-selected Expo cap so the cleaner can apply the browser's active maximum.
-- Curation Pass application fills each public Expo collection from a randomized eligible Expo/Reserve pool, writes ignored JSON catalogs for local Reserve/Hidden review, and keeps Reserve promotions from preserving archive sequence order.
-- `scripts/export_photos_data.py --regular-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set under `assets/expo` up to that maximum.
+- Curation Pass exports include the current Owner-selected Expo cap for batch curation and audit paths.
+- Curation Pass application remains available for larger batch rebuilds: it fills each public Expo collection from a randomized eligible Expo/Reserve pool, writes ignored JSON catalogs for local Reserve/Hidden review, and keeps Reserve promotions from preserving archive sequence order.
+- `scripts/export_photos_data.py --expo-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set under `assets/expo` up to that maximum.
 - The basket is the source of truth for selected resolutions.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.
@@ -74,7 +82,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Detail pages start with no resolution checked unless that photo is already in the basket.
 - Detail pages support previous/next buttons and left/right arrow keys that continue across collection boundaries on both public and localhost builds.
 - Detail pages support `L` to like/unlike and double click on the preview to open a full-screen overlay that dismisses on click or double click.
-- Detail pages preserve the original preview aspect ratio; landscape previews use a wide, space-maximizing layout while portrait previews keep the existing treatment.
+- Detail pages preserve the original preview aspect ratio; landscape previews use a wide, space-maximizing layout while portrait and square-ish previews align to the top of the detail panel.
 - Detail pages surface available embedded metadata such as metadata title, description, capture time, software, lens, exposure, and focal length.
 - Visible `PhotosByElie` watermark overlays protect homepage, gallery, basket, and detail preview images.
 - Checking or unchecking a resolution on detail immediately updates localStorage.

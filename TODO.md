@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 ## Completed
 
@@ -28,31 +28,54 @@ Last updated: 2026-05-04
 - Added the visible ignored `assets/hidden` folder and a local Hidden catalog so the three physical asset states are now Expo, Reserve, and Hidden.
 - Reset the asset contract to tracked `assets/expo` plus ignored `assets/reserve` and `assets/hidden`, with one country/AI/Unknown subfolder per state.
 - Retired raw-first ingest assumptions: future imports scan developed JPG/TIFF exports into Reserve and leave Expo to curation.
+- Imported the full Saturn Camera and Leonardo developed JPG/TIFF sources into local Reserve, curated a capped v65.30 public Expo build, and kept Unknown local-only.
+- Added Unknown full-screen thumbnail preview, title/keyword metadata, and more reliable H/U shortcuts.
+- Hardened Hidden review so it waits for local catalogs and avoids blank unresolved cards during load.
+- Changed Curation Pass exports to declare browser-state curation, and updated the cleaner to preserve browser Expo picks first, then random-fill gaps from eligible current/Reserve photos, including country-assigned Unknowns.
+- Added localhost-only live file actions so H/U/P move JPEG pairs directly between Expo, Hidden, and Reserve while GitHub Pages remains fully static.
+- Renamed the owner review workflow to `hidden.html`, `hidden-page.js`, `hidden-actions.js`, `photosByElieHiddenActions`, and `photosbyelie:hiddenchange`.
+- Added subtle keyboard reminder strips for owner curation grids and detail-page like/navigation shortcuts.
+- Added day-before/day-after known-country context to Unknown cards so country assignment can use nearby travel dates.
+- Made Unknown country assignment a live localhost file move into country Reserve folders and added previous/next shooting-day context.
+- Changed previous/next shooting-day Unknown hints to use relative day distance instead of raw dates.
+- Added localhost Owner editing for detail-page Title and Keywords, with saves flowing into catalog metadata, preview JPEG tags, and resolvable source exports.
+- Added a localhost Owner country-keyword sync and changed gallery display default to newest-first without changing randomized Expo selection.
+- Removed the dead gallery Restore control plus Source/Availability filters, fixed hidden controls rendering as empty pills, and tightened gallery filter wrapping.
+- Added `scripts/sync_local_assets.py` so ignored Reserve/Hidden assets can be dry-run or synced between Max and David from either checkout.
+- Made detail-page previous/next navigation follow the last gallery's filtered and sorted grid order when the current photo came from that gallery.
 
 ## Current Priority Stack
 
-1. **Start buyer-side product basics.**
+1. **Add buyer-side product basics.**
    - Add static licensing language and a clearer order-intent flow before deciding whether a real checkout backend is needed.
    - Keep the current basket/liked data model as the source of truth for selected files.
    - Defer sold-photo pinning until checkout/sales tracking exists; when implemented, sold photos sit outside the Expo cap.
 
-2. **Harden Expo/Reserve/Hidden publishing.**
+2. **Add generated-data and asset validation.**
+   - Check duplicate IDs, broken image references, missing `*_900.jpg`/`*_1800.jpg` pairs, and invalid resolution metadata before publishing.
+   - Summarize Expo counts and changed asset volume before each push.
+   - Keep Reserve and Hidden ignored while making their sync/recovery path repeatable across Max and David.
+
+3. **Harden Expo/Reserve/Hidden publishing.**
    - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
-   - Keep treating the Owner-selected Expo cap as an upper bound from the Curation Pass, not as a fixed global default.
+   - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch curation, not as a fixed global default.
+   - Use `scripts/sync_local_assets.py` for local vault handoff rather than pushing Reserve/Hidden to Git.
 
-3. **Improve live review ergonomics.**
-   - Add detail-page full-screen preview toggling with single click/tap, then click/tap again to dismiss.
-   - Refine gallery density/zoom, hover metadata, arrow movement, selection behavior, cross-country detail navigation, and mobile retesting so reviewing photos feels fast.
+4. **Improve gallery and detail review ergonomics.**
+   - Add panoramic orientation filtering.
+   - Add gallery hover metadata for title and safe context.
+   - Retest gallery-selected detail navigation, mobile swipes, full-screen preview, and H/U/P owner shortcuts on narrow screens.
 
-4. **Polish homepage sampling behavior.**
-   - Refresh representative homepage samples after every full carousel cycle, where the cycle length is the number of public country collections.
-   - Keep carousel and hero-stack samples feeling fresh without changing the public collection order.
+5. **Polish mobile buying and navigation.**
+   - Tighten bottom action layout on detail pages.
+   - Decide whether public detail needs single-tap full-screen preview in addition to double click.
+   - Keep liked/basket affordances clear without duplicating controls in cramped views.
 
-5. **Scale gallery generation.**
-   - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use Curation Pass/export tooling to fill Expo.
+6. **Scale gallery generation.**
+   - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use export/live owner tooling to fill Expo.
    - Keep importer country classification improving, but do not let import write directly to Expo.
 
-6. **Keep operations steady.**
+7. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
 
 ## Product Backlog
@@ -74,9 +97,12 @@ Last updated: 2026-05-04
    - Keep prices tied to resolution choices until the pricing model is better tested.
 
 4. **Add collection filtering and sorting.**
-   - Filter by orientation, color mood, subject, source type, and availability.
+   - Filter by orientation, color mood, and subject.
+   - Add a Panoramic orientation option before normal Landscape, likely based on aspect ratio `>= 2.0` or `>= 2.2`.
    - Sort by newest, collection order, price, and megapixel size.
    - Keep filters lightweight enough for GitHub Pages.
+   - For localhost curation only, consider filling filtered views from matching Reserve photos when Expo matches fall below the Owner cap.
+   - Keep buyer-facing filtered Reserve fill deferred until non-GitHub media hosting exists.
 
 5. **Polish persistent favorites.**
    - Favorites already persist in localStorage and can move liked photos into the basket.
@@ -106,6 +132,7 @@ Last updated: 2026-05-04
    - Stay static while localStorage basket, email checkout, and manual fulfillment are enough.
    - Move to a backend when logins, customer accounts, paid downloads, private galleries, or inventory/order tracking become required.
    - Likely budget-conscious path: GitHub Pages plus Stripe links first, then a small hosted backend only when proven necessary.
+   - Treat buyer-facing access to Reserve-sized catalogs as a post-GitHub/media-hosting phase.
 
 10. **Document operating procedures.**
    - Add SOPs for importing photos, resizing derivatives, updating prices, testing basket behavior, and publishing.
@@ -122,16 +149,15 @@ Last updated: 2026-05-04
 
 2. **Introduce a third moderation state: Reserve.**
    - Keep Expo, `Reserve`, and Hidden as distinct states.
-   - Use the Owner-selected Expo cap from each Curation Pass, treating it as an upper bound rather than a required count.
+   - Use the Owner-selected Expo cap as an upper bound rather than a required count.
    - Future sold/pinned photos should be added on top of the Owner cap, not counted inside it.
    - Store Reserve and Hidden assets in visible local folders that are ignored from Git.
-   - When an Expo photo is hidden on localhost, replace it with a random reserve photo from the same country when one is available.
-   - Keep applied Curation Pass fills randomized so Reserve promotions do not publish as chronological sequences.
+   - Keep future Expo fills randomized so Reserve promotions do not publish as chronological sequences.
 
 3. **Add a localhost-only Owner surface.**
    - Keep refining the new `Owner` page as moderation needs become clearer.
-   - Keep `Export Curation Pass` there as a primary action.
-   - Verify the Expo cap control against a real exported Curation Pass and cleaner pass.
+   - Keep Batch Export there as an optional audit/batch action.
+   - Verify the Expo cap control against live local moves and future cleaner passes.
    - Keep the Hidden page collection-like and localhost-only.
    - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to Expo.
 

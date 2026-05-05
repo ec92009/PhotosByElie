@@ -58,13 +58,23 @@ By default the public manifest preserves all Lightroom keywords, while exact GPS
 
 `export_photos_data.py` promotes a small publishable Expo subset from the local Reserve manifest into `photos-data.js` and copies only those web derivatives into tracked `assets/expo`.
 
-The Owner page writes the current Expo cap into each Curation Pass, and the cleaner honors that payload value unless you pass an explicit `--regular-cap` override. This cap is a maximum, not a required fill count: collections with fewer valid JPEG pairs publish fewer photos. For standalone bootstrap exports, the exporter randomly samples eligible photos in each collection, writes the selected set, records the random seed in `assets/expo-manifest.json`, and writes ignored localhost reserve data to `assets/reserve/reserve-data.json`:
+For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
 ```bash
-python3 scripts/export_photos_data.py --regular-cap 30
+python3 scripts/local_server.py 8000
 ```
 
-To physically apply local review decisions, export a Curation Pass from the localhost Owner page and apply it with the cleaner:
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-curation` files directly into `~/Downloads` and move H/U/P review photos directly between Expo, Hidden, and Reserve. GitHub Pages never gets those endpoints; the published site remains static.
+
+The Owner page writes the current Expo cap into each Curation Pass, and the cleaner honors that payload value unless you pass an explicit `--expo-cap` override. This cap is a maximum, not a required fill count: collections with fewer valid JPEG pairs publish fewer photos. For standalone bootstrap exports, the exporter randomly samples eligible photos in each collection, writes the selected set, records the random seed in `assets/expo-manifest.json`, and writes ignored localhost reserve data to `assets/reserve/reserve-data.json`:
+
+```bash
+python3 scripts/export_photos_data.py --expo-cap 30
+```
+
+For normal H/U/P review, no Apply step is needed: the localhost server moves the JPEG pairs immediately and rewrites `photos-data.js`, `assets/expo-manifest.json`, `assets/reserve/reserve-data.json`, and `assets/hidden/hidden-data.json`.
+
+For larger batch rebuilds, export a Curation Pass from the localhost Owner page and apply it with the cleaner:
 
 ```bash
 python3 scripts/apply_curation_pass.py \
@@ -72,7 +82,7 @@ python3 scripts/apply_curation_pass.py \
   --rebuild-missing-manifests
 ```
 
-The exported Curation Pass records hidden photos, the browser's current Expo state after reserve replacements, reserve-only returns, the Expo cap, and owner country assignments from the Unknown queue. The cleaner moves hidden derivatives into the ignored `assets/hidden/` folder, removes those rows from the local ingest manifests when present, applies country assignments, and regenerates Expo while preserving browser-reviewed picks when they still exist and valid assets are available.
+The exported Curation Pass records the browser's current Expo state, the Expo cap, and owner country assignments from the Unknown queue. The cleaner applies country assignments and regenerates Expo by preserving browser-reviewed picks first, then random-filling remaining slots from eligible Reserve/current candidates. Country-assigned Unknowns are eligible to fill their newly assigned collection in that same pass.
 
 Because Reserve and Hidden are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local Reserve manifest. In that case the cleaner applies the pass directly from the site data: it copies promoted Reserve derivatives into `assets/expo`, moves removed Expo derivatives out of the public set, and rewrites `photos-data.js`, `assets/expo-manifest.json`, and `assets/reserve/reserve-data.json`. If the Reserve derivatives live in another checkout or worktree, add it as a search root:
 
@@ -87,3 +97,24 @@ Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroo
 For a dry curation preview without moving files, `export_photos_data.py` can take `--curation-pass` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
 
 The active curation states are `assets/expo` for tracked publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden. The old raw-first staging folders are retired.
+
+## Local Asset Sync
+
+`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track Reserve or Hidden. It syncs `assets/reserve`, `assets/hidden`, and `.curation-logs` by default. The tracked public `assets/expo` folder should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
+
+The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
+
+```bash
+python3 scripts/sync_local_assets.py max
+python3 scripts/sync_local_assets.py david
+python3 scripts/sync_local_assets.py /Volumes/MHD2/Users/ecohen/Dev/PhotosByElie
+```
+
+It is a dry run unless `--apply` is present:
+
+```bash
+python3 scripts/sync_local_assets.py max --apply --progress
+python3 scripts/sync_local_assets.py max --direction pull --apply
+```
+
+Leave `--delete` off for additive safety. Use it only when intentionally mirroring removals from source to destination.

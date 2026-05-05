@@ -21,7 +21,7 @@ from export_photos_data import (
     existing_manifest_specs,
     ensure_state_folders,
     manifest_specs as source_manifest_specs,
-    regular_state_from_payload,
+    expo_state_from_payload,
     reserve_only_ids_from_payload,
     write_photos_data,
 )
@@ -204,7 +204,7 @@ def move_regular_derivatives(repo_root: Path, photo_ids: set[str]) -> list[dict]
 
 
 def regular_cap_from_payload(payload: dict, fallback: int = DEFAULT_REGULAR_CAP) -> int:
-    value = payload.get("expo_cap") or payload.get("regular_cap")
+    value = payload.get("expo_cap")
     if isinstance(value, int) and value > 0:
         return value
     return fallback
@@ -569,12 +569,12 @@ def write_regular_manifest_from_site(
     payload = {
         "schema_version": 1,
         "state": "expo",
-        "regular_cap": regular_cap,
+        "expo_cap": regular_cap,
         "selection_mode": selection_mode,
         "seed": None,
         "photos_count": len(regular_rows),
         "reserve_counts": {slug: len(reserve_groups.get(slug, [])) for slug in ORDER},
-        "unworthy_counts": {slug: 0 for slug in ORDER},
+        "hidden_counts": {slug: 0 for slug in ORDER},
         "photos": [
             {
                 "id": photo["id"],
@@ -595,7 +595,7 @@ def write_regular_manifest_from_site(
     }
     for slug, photos in regular_groups.items():
         hidden_in_slug = hidden_ids.intersection({photo["id"] for photo in photos})
-        payload["unworthy_counts"][slug] = len(hidden_in_slug)
+        payload["hidden_counts"][slug] = len(hidden_in_slug)
     output = repo_root / EXPO_MANIFEST_PATH
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -637,10 +637,10 @@ def apply_asset_curation(
     hidden_ids = blacklist_ids_from_payload(payload)
     reserve_only_ids = reserve_only_ids_from_payload(payload)
     country_assignments = country_assignments_from_payload(payload)
-    regular_state = regular_state_from_payload(payload)
+    regular_state = expo_state_from_payload(payload)
     reserve_promotions = payload.get("reserve_promotions") if isinstance(payload.get("reserve_promotions"), dict) else {}
     selection_mode = str(payload.get("selection_mode") or "random")
-    randomize_expo_selection = selection_mode == "random"
+    randomize_expo_selection = selection_mode == "random" and not regular_state
     roots = candidate_asset_roots(repo_root, asset_sources)
 
     current_groups = {slug: list((site.get("data", {}).get(slug) or {}).get("photos") or []) for slug in ORDER}
@@ -666,6 +666,15 @@ def apply_asset_curation(
         for photo in photos
         if photo.get("id")
     }
+    hidden_by_id = {
+        photo["id"]: (slug, photo)
+        for slug, photos in hidden_groups_input.items()
+        for photo in photos
+        if photo.get("id")
+    }
+    catalog_ids = set(current_by_id) | set(reserve_by_id) | set(hidden_by_id)
+    skipped_missing_hidden_ids = sorted(hidden_ids - catalog_ids)
+    skipped_missing_assignment_ids = sorted(set(country_assignments) - catalog_ids)
 
     def lookup(photo_id: str) -> tuple[str, dict] | None:
         return current_by_id.get(photo_id) or reserve_by_id.get(photo_id)
@@ -715,8 +724,6 @@ def apply_asset_curation(
         seen_ids: set[str] = set()
         for groups in (current_groups, reserve_groups_input):
             for source_slug, photos in groups.items():
-                if source_slug == "unknown":
-                    continue
                 for source_photo in photos:
                     photo_id = source_photo.get("id")
                     if not photo_id or photo_id in seen_ids:
@@ -750,9 +757,7 @@ def apply_asset_curation(
             add_regular_photo(slug, source_photo)
 
         selected_ids = {photo.get("id") for photo in regular_groups[slug]}
-        reserve_candidates = list(reserve_groups_input.get(slug, []))
-        rng.shuffle(reserve_candidates)
-        for source_photo in reserve_candidates:
+        for source_photo in randomized_regular_candidates(slug):
             photo_id = source_photo.get("id")
             if len(regular_groups[slug]) >= regular_cap:
                 break
@@ -762,9 +767,6 @@ def apply_asset_curation(
                 selected_ids.add(photo_id)
 
     regular_groups["unknown"] = []
-
-    if missing_ids:
-        raise FileNotFoundError(f"Curation Pass referenced photos not found in Regular or Reserve data: {', '.join(missing_ids[:20])}")
 
     target_ids = {photo["id"] for photos in regular_groups.values() for photo in photos}
     copies = []
@@ -944,6 +946,9 @@ def apply_asset_curation(
         "moved_regular": moved_regular,
         "hidden_asset_missing_count": len(missing_hidden_assets),
         "unavailable_regular_ids": sorted(unavailable_regular_ids),
+        "skipped_missing_state_ids": sorted(set(missing_ids)),
+        "skipped_missing_hidden_ids": skipped_missing_hidden_ids,
+        "skipped_missing_assignment_ids": skipped_missing_assignment_ids,
         "skipped_missing_reserve_count": len(skipped_missing_reserve),
         "asset_roots": [str(root) for root in roots],
     }
@@ -960,7 +965,7 @@ def apply_curation_pass(
 ) -> None:
     payload = json.loads(curation_path.read_text(encoding="utf-8"))
     photo_ids = blacklist_ids_from_payload(payload)
-    regular_state = regular_state_from_payload(payload)
+    regular_state = expo_state_from_payload(payload)
     reserve_only_ids = reserve_only_ids_from_payload(payload)
     country_assignments = country_assignments_from_payload(payload)
     resolved_regular_cap = regular_cap if regular_cap and regular_cap > 0 else regular_cap_from_payload(payload)
@@ -1037,7 +1042,7 @@ def apply_blacklist(repo_root: Path, blacklist_path: Path, regular_cap: int | No
 def main() -> int:
     parser = argparse.ArgumentParser(description="Apply a PhotosByElie Curation Pass.")
     parser.add_argument("curation_pass", type=Path)
-    parser.add_argument("--regular-cap", type=int, default=None)
+    parser.add_argument("--expo-cap", dest="regular_cap", type=int, default=None)
     parser.add_argument(
         "--rebuild-missing-manifests",
         action="store_true",

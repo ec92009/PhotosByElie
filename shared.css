@@ -28,6 +28,7 @@ html[data-theme="light"]{
   --btn-primary-fg:#ffffff;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{max-width:100%;overflow-x:clip}
 body{
   margin:0;

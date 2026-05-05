@@ -204,7 +204,7 @@ def write_regular_manifest(
     repo_root: Path,
     regular_rows: list[tuple[dict, str]],
     reserve_counts: dict[str, int],
-    unworthy_counts: dict[str, int],
+    hidden_counts: dict[str, int],
     regular_cap: int,
     selection_mode: str,
     seed: int | None,
@@ -212,12 +212,12 @@ def write_regular_manifest(
     payload = {
         "schema_version": 1,
         "state": "expo",
-        "regular_cap": regular_cap,
+        "expo_cap": regular_cap,
         "selection_mode": selection_mode,
         "seed": seed,
         "photos_count": len(regular_rows),
         "reserve_counts": dict(sorted(reserve_counts.items())),
-        "unworthy_counts": dict(sorted(unworthy_counts.items())),
+        "hidden_counts": dict(sorted(hidden_counts.items())),
         "photos": [
             {
                 "id": row["id"],
@@ -323,8 +323,8 @@ def blacklist_ids_from_payload(payload: dict) -> set[str]:
     return {photo_id for photo_id in payload.get("photo_ids", []) if isinstance(photo_id, str)}
 
 
-def regular_state_from_payload(payload: dict) -> dict[str, list[str]]:
-    value = payload.get("expo_state") or payload.get("regular_state")
+def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
+    value = payload.get("expo_state")
     if not isinstance(value, dict):
         return {}
     state: dict[str, list[str]] = {}
@@ -361,8 +361,8 @@ def load_blacklist(path: Path | None) -> set[str]:
     return blacklist_ids_from_payload(load_blacklist_payload(path))
 
 
-def load_blacklist_regular_state(path: Path | None) -> dict[str, list[str]]:
-    return regular_state_from_payload(load_blacklist_payload(path))
+def load_blacklist_expo_state(path: Path | None) -> dict[str, list[str]]:
+    return expo_state_from_payload(load_blacklist_payload(path))
 
 
 def apply_country_assignment(row: dict, slug: str | None) -> dict:
@@ -404,7 +404,7 @@ def select_regular_groups(
     regular_groups: dict[str, list[tuple[dict, str]]] = {}
     reserve_groups: dict[str, list[tuple[dict, str]]] = {}
     reserve_counts: dict[str, int] = {}
-    unworthy_counts: dict[str, int] = {}
+    hidden_counts: dict[str, int] = {}
     pinned_regular_ids = pinned_regular_ids or {}
     reserve_only_ids = reserve_only_ids or set()
 
@@ -415,7 +415,7 @@ def select_regular_groups(
             regular_groups[slug] = []
             reserve_groups[slug] = sort_rows(eligible)
             reserve_counts[slug] = len(reserve_groups[slug])
-            unworthy_counts[slug] = len(blocked)
+            hidden_counts[slug] = len(blocked)
             continue
         regular_eligible = [item for item in eligible if item[0].get("id") not in reserve_only_ids]
         eligible_by_id = {item[0].get("id"): item for item in regular_eligible}
@@ -434,11 +434,11 @@ def select_regular_groups(
                 break
 
         fill_pool = [item for item in regular_eligible if item[0].get("id") not in selected_ids]
-        if selection_mode == "random":
+        if selection_mode in {"random", "browser"}:
             fill_pool = diversified_random_order(fill_pool, rng)
         selected.extend(fill_pool[: max(0, regular_cap - len(selected))])
 
-        if pinned_regular_ids.get(slug) or selection_mode == "random":
+        if pinned_regular_ids.get(slug) or selection_mode in {"random", "browser"}:
             regular_groups[slug] = selected[:regular_cap]
         else:
             regular_groups[slug] = sort_rows(selected[:regular_cap])
@@ -446,9 +446,9 @@ def select_regular_groups(
         selected_ids = {item[0].get("id") for item in regular_groups[slug]}
         reserve_groups[slug] = sort_rows([item for item in eligible if item[0].get("id") not in selected_ids])
         reserve_counts[slug] = len(reserve_groups[slug])
-        unworthy_counts[slug] = len(blocked)
+        hidden_counts[slug] = len(blocked)
 
-    return regular_groups, reserve_groups, reserve_counts, unworthy_counts, resolved_seed
+    return regular_groups, reserve_groups, reserve_counts, hidden_counts, resolved_seed
 
 
 def write_photos_data(
@@ -476,7 +476,7 @@ def write_photos_data(
     for slug, rows in groups.items():
         groups[slug] = sort_rows(rows)
 
-    regular_groups, reserve_groups, reserve_counts, unworthy_counts, resolved_seed = select_regular_groups(
+    regular_groups, reserve_groups, reserve_counts, hidden_counts, resolved_seed = select_regular_groups(
         groups,
         regular_cap,
         selection_mode,
@@ -492,7 +492,7 @@ def write_photos_data(
             repo_root,
             regular_rows,
             reserve_counts,
-            unworthy_counts,
+            hidden_counts,
             regular_cap,
             selection_mode,
             resolved_seed,
@@ -591,7 +591,7 @@ def write_photos_data(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export publishable Photos By Elie data from ingest manifests.")
-    parser.add_argument("--regular-cap", type=int, default=DEFAULT_REGULAR_CAP)
+    parser.add_argument("--expo-cap", dest="regular_cap", type=int, default=DEFAULT_REGULAR_CAP)
     parser.add_argument("--selection", choices=("random", "newest"), default=DEFAULT_SELECTION_MODE)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--curation-pass", "--blacklist", dest="curation_pass", type=Path, default=None, help="Optional Curation Pass file to apply hidden, reserve, and classification choices.")
@@ -606,7 +606,7 @@ if __name__ == "__main__":
         selection_mode=args.selection,
         blacklist_ids=blacklist_ids_from_payload(curation_payload),
         seed=args.seed,
-        pinned_regular_ids=regular_state_from_payload(curation_payload),
+        pinned_regular_ids=expo_state_from_payload(curation_payload),
         reserve_only_ids=reserve_only_ids_from_payload(curation_payload),
         country_assignments=country_assignments_from_payload(curation_payload),
     )

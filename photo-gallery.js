@@ -1,29 +1,44 @@
 const galleryKey = document.body.dataset.gallery;
-const gallery = window.photosByElieData?.[galleryKey];
+let gallery = window.photosByElieData?.[galleryKey];
 const galleryRoot = document.querySelector("[data-gallery-root]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
-const unworthyStore = window.photosByElieUnworthy;
+const hiddenActions = window.photosByElieHiddenActions;
 const reserveStore = window.photosByElieReserve;
-const localModerationEnabled = Boolean(unworthyStore?.enabled);
-const reserveFillEnabled = Boolean(localModerationEnabled && reserveStore?.enabled);
+const localModerationEnabled = Boolean(hiddenActions?.enabled);
+const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
-let restoreButton = null;
 const densityKey = "photosbyelie-gallery-columns";
 let densityInput = null;
 let densityValue = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
+const detailSequenceKey = "photosbyelie-detail-sequence";
 const diversityBucketMinutes = 10;
 const defaultFilterState = {
   orientation: "all",
   mood: "all",
   subject: "all",
-  source: "all",
-  availability: "all",
-  sort: "collection"
+  sort: "newest"
 };
 let filterBar = null;
+
+const shortcutKey = (label) => `<kbd>${label}</kbd>`;
+const ensureGalleryKeyboardHint = () => {
+  if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
+  const hint = document.createElement("p");
+  hint.className = "keyboard-hint gallery-keyboard-hint";
+  hint.dataset.galleryShortcutHint = "";
+  hint.innerHTML = [
+    "Owner shortcuts:",
+    `${shortcutKey("H")} hide`,
+    `${shortcutKey("U")} undo`,
+    `${shortcutKey("Arrows")} select`,
+    `${shortcutKey("Enter")} detail`,
+    `${shortcutKey("Double-click")} detail`
+  ].join(" <span aria-hidden=\"true\">|</span> ");
+  galleryRoot.before(hint);
+};
 
 const readFilterState = () => {
   try {
@@ -37,6 +52,21 @@ let filterState = readFilterState();
 
 const writeFilterState = () => {
   localStorage.setItem(filterStateKey, JSON.stringify(filterState));
+};
+
+const writeDetailSequenceContext = (photos) => {
+  try {
+    sessionStorage.setItem(detailSequenceKey, JSON.stringify({
+      source: "gallery",
+      collectionKey: galleryKey,
+      collectionTitle: gallery?.title || "",
+      photoIds: photos.map((photo) => photo.id),
+      filterState,
+      createdAt: Date.now()
+    }));
+  } catch {
+    // Detail navigation can fall back to the full catalog if sessionStorage is unavailable.
+  }
 };
 
 const metadataValue = (photo, label) => (
@@ -92,30 +122,6 @@ const photoSubjectTags = (photo) => {
   return tags.size ? tags : new Set(["other"]);
 };
 
-const photoSourceTags = (photo) => {
-  const text = `${photoSearchText(photo)} ${window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : ""}`.toLowerCase();
-  const tags = new Set();
-  if (galleryKey === "ai" || /ai|leonardo/.test(text)) tags.add("ai");
-  if (/\b(jpg|jpeg)\b/.test(text)) tags.add("jpg");
-  if (/\b(tif|tiff|psd)\b/.test(text)) tags.add("tiff-psd");
-  return tags.size ? tags : new Set(["unknown"]);
-};
-
-const availableResolutionsFor = (photo) => (
-  window.photosByElieAvailableResolutions
-    ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
-    : []
-);
-
-const photoAvailabilityTags = (photo) => {
-  const ids = new Set(availableResolutionsFor(photo).map((option) => option.id));
-  const tags = new Set();
-  if (ids.has("full")) tags.add("full");
-  if (ids.has("jpg-6mp")) tags.add("print");
-  if (ids.has("jpg-1mp") || ids.has("jpg-3mp")) tags.add("web");
-  return tags.size ? tags : new Set(["unverified"]);
-};
-
 const captureTime = (photo) => {
   const raw = metadataValue(photo, "Captured");
   const match = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
@@ -127,17 +133,20 @@ const verifiedMegapixels = (photo) => (
   window.photosByElieVerifiedMegapixels ? window.photosByElieVerifiedMegapixels(photo) : Number(photo?.megapixels) || 0
 );
 
-const maxAvailablePrice = (photo) => Math.max(0, ...availableResolutionsFor(photo).map((option) => option.price || 0));
+const maxAvailablePrice = (photo) => {
+  const available = window.photosByElieAvailableResolutions
+    ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
+    : [];
+  return Math.max(0, ...available.map((option) => option.price || 0));
+};
 
-const activeFilterCount = () => ["orientation", "mood", "subject", "source", "availability"]
+const activeFilterCount = () => ["orientation", "mood", "subject"]
   .filter((key) => filterState[key] && filterState[key] !== "all").length;
 
 const matchesFilterState = (photo) => {
   if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
   if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
   if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
-  if (filterState.source !== "all" && !photoSourceTags(photo).has(filterState.source)) return false;
-  if (filterState.availability !== "all" && !photoAvailabilityTags(photo).has(filterState.availability)) return false;
   return true;
 };
 
@@ -192,22 +201,10 @@ const ensureGalleryFilterControls = () => {
       <option value="nature">Nature</option>
       <option value="city">City/travel</option>
     </select></label>
-    <label><span>Source</span><select data-gallery-filter="source">
-      <option value="all">All</option>
-      <option value="jpg">JPG</option>
-      <option value="ai">AI</option>
-      <option value="tiff-psd">TIFF/PSD</option>
-    </select></label>
-    <label><span>Availability</span><select data-gallery-filter="availability">
-      <option value="all">All</option>
-      <option value="full">Full source</option>
-      <option value="print">Print-ready</option>
-      <option value="web">Web-ready</option>
-    </select></label>
     <label><span>Sort</span><select data-gallery-filter="sort">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
       <option value="collection">Collection order</option>
-      <option value="newest">Newest</option>
-      <option value="oldest">Oldest</option>
       <option value="title">Title</option>
       <option value="megapixels-desc">Largest MP</option>
       <option value="megapixels-asc">Smallest MP</option>
@@ -238,7 +235,7 @@ const ensureGalleryFilterControls = () => {
   });
 };
 
-const regularCap = () => unworthyStore?.readRegularCap?.() || gallery?.photos?.length || 0;
+const regularCap = () => hiddenActions?.readRegularCap?.() || gallery?.photos?.length || 0;
 
 const randomInteger = (max) => {
   if (!max) return 0;
@@ -273,7 +270,7 @@ const promotedPhotos = () => {
 
 const eligibleReservePhotos = (selectedIds) => {
   if (!reserveFillEnabled) return [];
-  const blockedIds = new Set(unworthyStore.read());
+  const blockedIds = new Set(hiddenActions.read());
   const regularIds = new Set((gallery?.photos || []).map((photo) => photo.id));
   const promotedIds = new Set(reserveStore.promotedIds(galleryKey));
   return reserveStore.photosFor(galleryKey).filter((photo) =>
@@ -311,9 +308,9 @@ const visiblePhotos = () => {
   const basePhotos = gallery?.photos || [];
   if (!localModerationEnabled) return basePhotos;
 
-  const selected = unworthyStore
+  const selected = hiddenActions
     .filterPhotos(basePhotos)
-    .concat(unworthyStore.filterPhotos(promotedPhotos(), { includeReserveOnly: true }));
+    .concat(hiddenActions.filterPhotos(promotedPhotos(), { includeReserveOnly: true }));
   const selectedIds = new Set(selected.map((photo) => photo.id));
   while (reserveFillEnabled && selected.length < regularCap()) {
     const nextPhoto = reserveReplacementPhoto(selected, selectedIds);
@@ -323,23 +320,6 @@ const visiblePhotos = () => {
     selectedIds.add(nextPhoto.id);
   }
   return selected.slice(0, regularCap());
-};
-
-const restoreCollectionHides = () => {
-  if (!localModerationEnabled || !gallery?.photos?.length) return 0;
-  const hiddenIds = gallery.photos
-    .concat(promotedPhotos())
-    .filter((photo) => unworthyStore.has(photo.id))
-    .map((photo) => photo.id);
-  unworthyStore.unmarkMany(hiddenIds);
-  return hiddenIds.length;
-};
-
-const updateRestoreAction = () => {
-  if (!restoreButton || !localModerationEnabled || !gallery?.photos?.length) return;
-  const hiddenCount = gallery.photos.concat(promotedPhotos()).filter((photo) => unworthyStore.has(photo.id)).length;
-  restoreButton.hidden = hiddenCount === 0;
-  restoreButton.textContent = hiddenCount > 1 ? `Restore ${hiddenCount} hidden` : "Restore hidden";
 };
 
 const updateSelection = () => {
@@ -388,14 +368,13 @@ const applyGalleryDensity = () => {
 const renderGallery = () => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
+  writeDetailSequenceContext(photos);
   if (!photos.length) {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
-    const canRestoreCollection = localModerationEnabled && Boolean(gallery?.photos?.length);
     galleryRoot.innerHTML = `
       <article class="mock-photo empty-gallery-card" aria-label="${gallery.title} gallery empty state">
         <span>${filteredOut ? "No photos match the current filters" : "No locally visible photos in this collection"}</span>
         ${filteredOut ? '<button class="btn secondary" type="button" data-clear-gallery-empty>Clear filters</button>' : ""}
-        ${!filteredOut && canRestoreCollection ? '<button class="btn secondary" type="button" data-restore-collection>Restore collection</button>' : ""}
       </article>
     `;
     galleryRoot.querySelector("[data-clear-gallery-empty]")?.addEventListener("click", () => {
@@ -405,18 +384,9 @@ const renderGallery = () => {
       selectedIndex = 0;
       renderGallery();
     });
-    galleryRoot.querySelector("[data-restore-collection]")?.addEventListener("click", () => {
-      const restored = restoreCollectionHides();
-      selectedIndex = 0;
-      renderGallery();
-      setGalleryStatus(restored ? `${restored} local hides restored for ${gallery.title}.` : "No local hides to restore.");
-    });
-    updateRestoreAction();
     setGalleryStatus(filteredOut
       ? "Adjust or clear filters to show this collection again."
-      : canRestoreCollection
-        ? "All Expo photos in this collection are currently hidden locally."
-        : "");
+      : "");
     return;
   }
   galleryRoot.innerHTML = photos.map((photo, index) => `
@@ -450,9 +420,8 @@ const renderGallery = () => {
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
     setGalleryStatus(reserveCount
-      ? `${filterStatus} Use arrow keys to move, Enter to open, H to hide and refill from reserve, U to undo.`
-      : `${filterStatus} Use arrow keys to move, Enter to open, H to hide, U to undo.`);
-    updateRestoreAction();
+      ? `${filterStatus} Reserve refill is available.`
+      : filterStatus);
   } else {
     setGalleryStatus(filterStatus);
   }
@@ -468,23 +437,11 @@ if (galleryRoot && gallery) {
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${gallery.title} photos`);
   ensureGalleryFilterControls();
+  ensureGalleryKeyboardHint();
   renderGallery();
 
   if (localModerationEnabled) {
     if (galleryActions) {
-      restoreButton = document.createElement("button");
-      restoreButton.className = "btn secondary";
-      restoreButton.type = "button";
-      restoreButton.hidden = true;
-      restoreButton.addEventListener("click", () => {
-        const restored = restoreCollectionHides();
-        selectedIndex = 0;
-        renderGallery();
-        setGalleryStatus(restored ? `${restored} local hides restored for ${gallery.title}.` : "No local hides to restore.");
-      });
-      galleryActions.prepend(restoreButton);
-      updateRestoreAction();
-
       const densityControl = document.createElement("label");
       densityControl.className = "gallery-density-control";
       densityControl.innerHTML = `
@@ -492,7 +449,7 @@ if (galleryRoot && gallery) {
         <input type="range" min="2" max="8" step="1" value="${Math.min(preferredDensityColumns(), maxDensityColumns())}" data-gallery-density/>
         <b data-gallery-density-value>${Math.min(preferredDensityColumns(), maxDensityColumns())}</b>
       `;
-      restoreButton.after(densityControl);
+      galleryActions.prepend(densityControl);
       densityInput = densityControl.querySelector("[data-gallery-density]");
       densityValue = densityControl.querySelector("[data-gallery-density-value]");
       densityInput.addEventListener("input", () => {
@@ -506,7 +463,7 @@ if (galleryRoot && gallery) {
       });
       applyGalleryDensity();
     }
-    window.addEventListener("keydown", (event) => {
+    window.addEventListener("keydown", async (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
       if (target instanceof HTMLElement) {
@@ -549,15 +506,26 @@ if (galleryRoot && gallery) {
       if (event.key.toLowerCase() === "h") {
         const selected = photos[selectedIndex];
         if (!selected) return;
-        unworthyStore.mark(selected.id);
-        selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
-        renderGallery();
-        setGalleryStatus(`${selected.title} hidden on this localhost browser.`);
+        try {
+          await hiddenActions.mark(selected.id);
+          selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
+          renderGallery();
+          setGalleryStatus(`${selected.title} moved to Hidden.`);
+        } catch (error) {
+          setGalleryStatus(error?.message || "Could not move photo to Hidden.");
+        }
         event.preventDefault();
         return;
       }
       if (event.key.toLowerCase() !== "u") return;
-      const undoneId = unworthyStore.undo();
+      let undoneId = null;
+      try {
+        undoneId = await hiddenActions.undo();
+      } catch (error) {
+        setGalleryStatus(error?.message || "Could not undo the last hide.");
+        event.preventDefault();
+        return;
+      }
       renderGallery();
       if (!undoneId) {
         setGalleryStatus("No local hidden mark to undo.");
@@ -571,7 +539,8 @@ if (galleryRoot && gallery) {
       event.preventDefault();
     });
 
-    window.addEventListener("photosbyelie:unworthychange", () => {
+    window.addEventListener("photosbyelie:hiddenchange", () => {
+      gallery = window.photosByElieData?.[galleryKey];
       renderGallery();
     });
 

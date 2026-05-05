@@ -25,10 +25,9 @@ Date: 2026-05-05
 ## Import Direction
 
 - The importer is now a Reserve builder, not a publisher.
-- It scans only developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files.
+- It scans developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files, plus RAW files such as `.dng`/`.nef` when an embedded preview JPEG can be extracted.
 - For Camera imports, it keeps only Lightroom green label/rating 4+ files.
-- It no longer scans DNG, NEF, or other raw camera formats.
-- It infers country/AI/Unknown buckets, writes watermarked Reserve JPEGs, and updates the ignored Reserve manifest/catalog.
+- It infers country/AI/Unknown buckets, writes watermarked Reserve JPEGs, records RAW source metadata, and updates the ignored Reserve manifest/catalog.
 - Expo is populated only by `scripts/export_photos_data.py` or `scripts/apply_curation_pass.py`.
 
 ## Curation Direction
@@ -45,6 +44,7 @@ Date: 2026-05-05
 - v66.12 removes the dead gallery Restore control, trims gallery filters to orientation/color mood/subject plus newest-first sorting, fixes hidden controls overriding the HTML `hidden` attribute, and adds a tracked Max/David local asset sync script.
 - v66.13 makes detail-page previous/next navigation follow the last gallery grid order when opened from a filtered or sorted gallery, while direct detail links still fall back to the full catalog sequence.
 - v66.14 adds a gallery-card-only `RAW` overlay for photos whose source metadata points to DNG/NEF/other raw originals, without burning that badge into preview files.
+- v66.15 extends the `RAW` overlay helper to Owner Hidden/Unknown review grids and re-enables RAW import through embedded `exiftool` preview extraction.
 - The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
 - Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
 - Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.

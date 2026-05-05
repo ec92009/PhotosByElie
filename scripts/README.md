@@ -2,11 +2,11 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable Reserve manifest. It no longer imports raw files; use Lightroom or another editor to develop/export the photos first.
+`build_lightroom_thumbnails.py` scans developed photo exports plus RAW files with embedded previews, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable Reserve manifest. RAW files are imported from embedded `exiftool` preview JPEGs, not from direct raw rendering.
 
 Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, and Pillow. Pillow is used to normalize rotated source photos; if the local `ffmpeg` build does not include the `drawtext` filter, the script also falls back to Pillow for watermarking. Install it with `python3 -m pip install --user pillow`.
 
-Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`. The importer only considers `.jpg`, `.jpeg`, `.tif`, and `.tiff` files.
+Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`. The importer considers developed `.jpg`, `.jpeg`, `.tif`, `.tiff` files plus RAW formats such as `.dng` and `.nef` when an embedded preview can be extracted.
 
 Default run:
 

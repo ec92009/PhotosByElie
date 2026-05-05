@@ -19,6 +19,8 @@
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+  const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
+
   const allPhotoIndex = () => {
     const byId = new Map();
     const addCollection = (collections, source) => {
@@ -106,16 +108,18 @@
 
     galleryRoot.innerHTML = photos.map((photo, index) => {
       const src = photo.gallerySrc || photo.imageSrc || "";
+      const rawLabel = rawSourceLabel(photo);
       const href = photo.source === "missing" ? "" : versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
       return `
         <article
-          class="mock-photo ${photo.collectionAccent} ${photo.className} ${src ? "has-image" : ""}"
-          aria-label="${escapeHtml(photo.title)}"
+          class="mock-photo ${photo.collectionAccent} ${photo.className} ${src ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
+          aria-label="${escapeHtml(photo.title)}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
           data-photo-index="${index}"
           data-photo-id="${escapeHtml(photo.id)}"
           data-photo-href="${href}"
         >
           ${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(photo.title)}"/>` : `<span>${escapeHtml(photo.title)}</span>`}
+          ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
         </article>
       `;
     }).join("");

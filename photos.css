@@ -413,6 +413,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
   box-shadow:0 0 0 4px color-mix(in srgb,var(--surface) 72%,transparent),0 18px 38px rgba(0,0,0,.18);
 }
 .unknown-thumb{
+  position:relative;
   display:grid;
   place-items:center;
   aspect-ratio:1;

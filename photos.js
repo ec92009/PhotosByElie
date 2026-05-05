@@ -8,6 +8,25 @@ const languages = [
   { code: 'fr', label: 'French' },
   { code: 'es', label: 'Spanish' },
 ];
+const rawSourceTypes = new Set(['DNG', 'NEF', 'CR2', 'CR3', 'ARW', 'RAF', 'ORF', 'RW2', 'RAW', 'PEF', 'SRW', 'RWL']);
+
+const photoMetadataValue = (photo, label) => (
+  (photo?.metadata || []).find((item) => item.label === label)?.value || ''
+);
+
+window.photosByElieRawSourceLabel = (photo) => {
+  const sourceType = (photo?.sourceFiles || [])
+    .map((source) => String(source?.type || '').trim().toUpperCase())
+    .find((type) => rawSourceTypes.has(type));
+  if (sourceType) return sourceType;
+  const sourceText = [
+    photo?.full,
+    photoMetadataValue(photo, 'Original file'),
+    photoMetadataValue(photo, 'Original size')
+  ].filter(Boolean).join(' ').toUpperCase();
+  const match = sourceText.match(/\b(DNG|NEF|CR2|CR3|ARW|RAF|ORF|RW2|RAW|PEF|SRW|RWL)\b/);
+  return match?.[1] || '';
+};
 
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';

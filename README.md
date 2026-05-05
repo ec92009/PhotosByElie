@@ -53,7 +53,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Owner Unknown counts use the same current-queue filter as the Unknown page, so old browser assignment history does not subtract unrelated photos.
 - Gallery pages load the publishable Expo subset from tracked `assets/expo`; the cap is a maximum, so collections publish fewer photos when fewer valid JPEG pairs are available.
 - The three asset states are explicit on disk: `assets/expo` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
-- Reserve import now scans developed JPG/TIFF exports only, keeps Camera photos at Lightroom green label/rating 4+, infers country/AI/Unknown buckets, writes watermarked `*_900.jpg` and `*_1800.jpg` pairs into `assets/reserve/<country>/`, and never scans DNG/NEF/raw files.
+- Reserve import now scans developed JPG/TIFF exports plus RAW files with embedded previews, keeps Camera photos at Lightroom green label/rating 4+, infers country/AI/Unknown buckets, writes watermarked `*_900.jpg` and `*_1800.jpg` pairs into `assets/reserve/<country>/`, and marks RAW-origin cards with a gallery overlay.
 - On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
 - On localhost detail pages, Owner can edit Title and Keywords; saves update the catalog metadata, local preview JPEGs, and the original source export when it can be resolved from `sourceFiles`.
 - On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` hides it, `U` undoes the last hide, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
@@ -66,7 +66,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
 - Subtle keyboard reminders appear above localhost curation grids and detail previews, with public detail pages showing the `L` like shortcut.
 - Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost curation.
-- Gallery cards show a small `RAW` overlay when the source metadata identifies a DNG/NEF/other raw original; the overlay is DOM-only and is not burned into preview files.
+- Gallery and Owner review cards show a small `RAW` overlay when the source metadata identifies a DNG/NEF/other raw original; the overlay is DOM-only and is not burned into preview files.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - Curation Pass exports include the current Owner-selected Expo cap for batch curation and audit paths.

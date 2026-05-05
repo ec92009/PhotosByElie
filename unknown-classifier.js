@@ -206,6 +206,8 @@
     return keywords;
   };
 
+  const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
+
   const closeFullscreenPreview = () => {
     fullscreenPreview?.remove();
     fullscreenPreview = null;
@@ -311,15 +313,17 @@
 
     root.innerHTML = photos.map((photo) => {
       const image = photo.gallerySrc || photo.imageSrc || "";
+      const rawLabel = rawSourceLabel(photo);
       const assigned = assignments[photo.id] || "";
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;
       const dayHints = adjacentDayHints(photo, countryDayIndex);
       const keywords = keywordsFor(photo);
       return `
-        <article class="unknown-card" data-photo-id="${escapeHtml(photo.id)}">
+        <article class="unknown-card ${rawLabel ? "has-raw-source" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="unknown-thumb ${image ? "has-image" : ""}">
             ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(photo.title)}"/>` : ""}
+            ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
           </div>
           <div class="unknown-card-body">
             <p class="eyebrow">${escapeHtml(photo.source)}</p>

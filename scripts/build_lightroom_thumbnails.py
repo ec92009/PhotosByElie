@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build watermarked web thumbnails from developed photo exports.
+Build watermarked web thumbnails from Lightroom-selected exports and RAW previews.
 
 The script is intentionally interrupt/resume friendly:
 - source files are tracked by their path relative to --source-root
@@ -8,9 +8,9 @@ The script is intentionally interrupt/resume friendly:
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
 
-By default, developed JPG/TIFF sources are imported into Reserve only when
-Lightroom marks them green with rating 4 or higher. Expo is filled later by the
-curation/export scripts.
+By default, developed JPG/TIFF sources and RAW files with embedded previews are
+imported into Reserve only when Lightroom marks them green with rating 4 or
+higher. Expo is filled later by the curation/export scripts.
 """
 
 from __future__ import annotations
@@ -29,12 +29,27 @@ from pathlib import Path
 from typing import Any
 
 
-IMAGE_EXTENSIONS = {
+DEVELOPED_IMAGE_EXTENSIONS = {
     ".jpg",
     ".jpeg",
     ".tif",
     ".tiff",
 }
+RAW_IMAGE_EXTENSIONS = {
+    ".dng",
+    ".cr2",
+    ".cr3",
+    ".nef",
+    ".arw",
+    ".raf",
+    ".orf",
+    ".rw2",
+    ".raw",
+    ".pef",
+    ".srw",
+    ".rwl",
+}
+IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS | RAW_IMAGE_EXTENSIONS
 
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
@@ -162,7 +177,7 @@ FFMPEG_FILTERS: set[str] | None = None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Create watermarked Reserve thumbnails from developed JPG/TIFF photo exports."
+        description="Create watermarked Reserve thumbnails from developed JPG/TIFF exports and embedded RAW previews."
     )
     parser.add_argument(
         "--source-root",
@@ -174,7 +189,7 @@ def parse_args() -> argparse.Namespace:
         "--developed-root",
         type=Path,
         default=None,
-        help="Deprecated no-op. The importer now scans developed JPG/TIFF sources directly.",
+        help="Deprecated no-op. The importer now scans source JPG/TIFF/RAW files directly.",
     )
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--label", default="green", help="Lightroom color label to include.")
@@ -270,6 +285,10 @@ def choose_font() -> str:
 
 def is_image(path: Path) -> bool:
     return path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def is_raw_image(path: Path) -> bool:
+    return path.suffix.lower() in RAW_IMAGE_EXTENSIONS
 
 
 def sidecar_for(image: Path) -> Path | None:
@@ -828,6 +847,9 @@ def render_derivative(
     with tempfile.TemporaryDirectory(prefix="photosbyelie-render-") as temp_dir:
         temp_jpg = Path(temp_dir) / "base.jpg"
         temp_out = Path(temp_dir) / "watermarked.jpg"
+        source_size = image_size(source)
+        source_max = max(source_size.get("width") or 0, source_size.get("height") or 0)
+        effective_max_px = min(max_px, source_max) if source_max else max_px
         subprocess.run(
             [
                 "sips",
@@ -835,7 +857,7 @@ def render_derivative(
                 "format",
                 "jpeg",
                 "--resampleHeightWidthMax",
-                str(max_px),
+                str(effective_max_px),
                 str(source),
                 "--out",
                 str(temp_jpg),
@@ -1094,10 +1116,42 @@ def derivative_paths(output_root: Path, country_slug: str, slug: str) -> tuple[P
     return output_root / country_slug / f"{slug}_900.jpg", output_root / country_slug / f"{slug}_1800.jpg"
 
 
+def extract_raw_preview(source: Path, output: Path) -> dict[str, Any]:
+    attempted = []
+    for tag in ("PreviewImage", "JpgFromRaw", "ThumbnailImage"):
+        attempted.append(tag)
+        with output.open("wb") as handle:
+            result = subprocess.run(
+                ["exiftool", "-b", f"-{tag}", str(source)],
+                stdout=handle,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+        if result.returncode == 0 and output.exists() and output.stat().st_size > 0:
+            facts = image_size(output)
+            if facts.get("width") and facts.get("height"):
+                return {
+                    "path": output.name,
+                    "method": f"exiftool -b -{tag}",
+                    "tag": tag,
+                    "width": facts["width"],
+                    "height": facts["height"],
+                    "bytes": output.stat().st_size,
+                    "attempted": attempted,
+                }
+        output.unlink(missing_ok=True)
+    raise RuntimeError(f"No embedded RAW preview found with {', '.join(attempted)}")
+
+
 def render_sources_for(
     source: Path,
     args: argparse.Namespace,
+    temp_dir: Path,
 ) -> tuple[Path, Path, dict[str, Any] | None, Any]:
+    if is_raw_image(source):
+        preview = temp_dir / f"{source.stem}-embedded-preview.jpg"
+        facts = extract_raw_preview(source, preview)
+        return preview, preview, {"embedded_preview": facts}, None
     return source, source, None, None
 
 
@@ -1193,10 +1247,15 @@ def process_batch(
                     "gps": selected_metadata["gps"],
             }
             if not args.dry_run:
-                gallery_source, detail_source, developed_files, orientation_override = render_sources_for(source, args)
-                source_orientation = orientation_override or selected_metadata["raw"].get("Orientation")
-                render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
-                render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
+                with tempfile.TemporaryDirectory(prefix="photosbyelie-source-") as source_temp:
+                    gallery_source, detail_source, developed_files, orientation_override = render_sources_for(
+                        source,
+                        args,
+                        Path(source_temp),
+                    )
+                    source_orientation = orientation_override or selected_metadata["raw"].get("Orientation")
+                    render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
+                    render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
                 if developed_files:
                     row["developed_files"] = developed_files
                 row["derivative_files"] = {

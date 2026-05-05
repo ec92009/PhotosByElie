@@ -37,6 +37,7 @@ const productDetail = (photo, option) => {
   if (!photo || !window.photosByElieProductDetail) return option.detail || "";
   return window.photosByElieProductDetail(photo, option) || option.detail || "";
 };
+const productLabel = (option) => window.photosByElieProductLabel?.(option) || option.label;
 
 const photoReviewUrl = (photoId) => {
   const href = window.photosByElieVersionedHref?.(`./photo.html?id=${encodeURIComponent(photoId)}`)
@@ -81,7 +82,7 @@ const syncOrderIntent = (items, productCount, total) => {
         `Review page: ${photoReviewUrl(item.photoId)}`,
         `Source: ${photo ? window.photosByElieOriginalSize?.(photo) || "Source file unverified" : "Photo no longer in public catalog"}`,
         "Selected products:",
-        ...item.options.map((option) => `- [${productTypeLabel(option)}] ${option.label}: ${formatMoney(option.price)}${productDetail(photo, option) ? ` (${productDetail(photo, option)})` : ""}`),
+        ...item.options.map((option) => `- [${productTypeLabel(option)}] ${productLabel(option)}: ${formatMoney(option.price)}${productDetail(photo, option) ? ` (${productDetail(photo, option)})` : ""}`),
         `Photo subtotal: ${formatMoney(subtotal)}`,
         ""
       ];
@@ -125,7 +126,7 @@ const renderBasket = () => {
           ${availableOptions.map((option) => `
             <label>
               <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-              <span><strong>${option.label}</strong>${resolutionDetail(option)}</span>
+              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
           `).join("")}

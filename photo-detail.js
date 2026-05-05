@@ -195,7 +195,7 @@ const navigateAfterHide = () => {
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
     const option = availableResolutions.find((item) => item.id === input.value);
-    return option ? { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, price: option.price } : null;
+    return option ? { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price } : null;
   })
   .filter(Boolean);
 
@@ -563,7 +563,7 @@ document.querySelector("[data-resolution-list]").innerHTML = availableResolution
   <label class="resolution-row product-row product-${option.type || "digital"}">
     <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
     <span>
-      <strong>${option.label}</strong>
+      <strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>
       <small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : option.detail}</small>
     </span>
     <b>$${option.price}</b>

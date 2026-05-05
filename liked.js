@@ -28,7 +28,7 @@ const optionPayload = (optionIds, photoId) => {
   return optionIds
     .map((id) => availableOptions.find((option) => option.id === id))
     .filter(Boolean)
-    .map((option) => ({ id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, price: option.price }));
+    .map((option) => ({ id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price }));
 };
 
 const selectResolutionForAllLiked = (resolutionId) => {
@@ -60,7 +60,8 @@ const selectResolutionForAllLiked = (resolutionId) => {
     selectedCount += 1;
   });
 
-  const optionLabel = resolutionOptions.find((option) => option.id === resolutionId)?.label || "resolution";
+  const selectedOption = resolutionOptions.find((option) => option.id === resolutionId);
+  const optionLabel = selectedOption ? window.photosByElieProductLabel?.(selectedOption) || selectedOption.label : "resolution";
   status.textContent = unavailableCount
     ? `${optionLabel} selected for ${selectedCount} liked photo(s); ${unavailableCount} unavailable.`
     : `${optionLabel} selected for ${selectedCount} liked photo(s).`;
@@ -106,7 +107,7 @@ const renderLiked = () => {
           ${availableOptions.map((option) => `
             <label>
               <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-              <span><strong>${option.label}</strong>${resolutionDetail(option)}</span>
+              <span><strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>${resolutionDetail(option)}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
           `).join("")}

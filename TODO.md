@@ -47,6 +47,7 @@ Last updated: 2026-05-05
 - Added `scripts/validate_publish.js` for generated-data validation, derivative-pair checks, resolution metadata checks, and publish summaries with Expo/Reserve/Hidden sizes.
 - Added buyer-facing license notes on detail and basket pages plus a static basket order-intent summary and mail draft.
 - Added mock physical print products, plain white/plain black frame add-ons, and a per-photo order review in the generated basket email.
+- Added locale-inferred print unit ordering so metric locales see centimeter dimensions first and US-style locales see inch dimensions first.
 
 ## Current Priority Stack
 

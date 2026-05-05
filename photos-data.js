@@ -29805,10 +29805,10 @@ window.photosByElieResolutions = [
   { id: "jpg-6mp", type: "digital", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18, minMegapixels: 6 },
   { id: "jpg-3mp", type: "digital", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 10, minMegapixels: 3 },
   { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 5, minMegapixels: 1 },
-  { id: "print-4x6", type: "print", label: "Print 4 x 6 in / 10 x 15 cm", detail: "Small classic photo print", price: 12, minMegapixels: 1 },
-  { id: "print-5x7", type: "print", label: "Print 5 x 7 in / 13 x 18 cm", detail: "Popular gift and desk frame size", price: 18, minMegapixels: 2 },
-  { id: "print-8x10", type: "print", label: "Print 8 x 10 in / 20 x 25 cm", detail: "Popular wall and shelf print size", price: 28, minMegapixels: 6 },
-  { id: "print-11x14", type: "print", label: "Print 11 x 14 in / 28 x 36 cm", detail: "Larger display print with manual crop review", price: 42, minMegapixels: 10 },
+  { id: "print-4x6", type: "print", label: "Print", dimensions: { imperial: "4 x 6 in", metric: "10 x 15 cm" }, detail: "Small classic photo print", price: 12, minMegapixels: 1 },
+  { id: "print-5x7", type: "print", label: "Print", dimensions: { imperial: "5 x 7 in", metric: "13 x 18 cm" }, detail: "Popular gift and desk frame size", price: 18, minMegapixels: 2 },
+  { id: "print-8x10", type: "print", label: "Print", dimensions: { imperial: "8 x 10 in", metric: "20 x 25 cm" }, detail: "Popular wall and shelf print size", price: 28, minMegapixels: 6 },
+  { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 42, minMegapixels: 10 },
   { id: "frame-white", type: "frame", label: "Plain white frame", detail: "Simple white frame add-on for selected prints", price: 22 },
   { id: "frame-black", type: "frame", label: "Plain black frame", detail: "Simple black frame add-on for selected prints", price: 22 }
 ];
@@ -29861,3 +29861,30 @@ window.photosByElieResolutionDetail = (photo, option) => {
   return `Original: ${window.photosByElieOriginalSize(photo)}`;
 };
 window.photosByElieProductDetail = window.photosByElieResolutionDetail;
+window.photosByElieMeasurementSystem = () => {
+  const nav = typeof navigator === "undefined" ? {} : navigator;
+  const locales = [
+    ...(nav.languages || []),
+    nav.language,
+    Intl.DateTimeFormat().resolvedOptions().locale,
+  ].filter(Boolean);
+  const imperialRegions = new Set(["US", "LR", "MM"]);
+  for (const locale of locales) {
+    try {
+      const intlLocale = new Intl.Locale(locale).maximize();
+      if (intlLocale.measurementSystem === "metric" || intlLocale.measurementSystem === "ussystem") {
+        return intlLocale.measurementSystem === "ussystem" ? "imperial" : "metric";
+      }
+      if (intlLocale.region) return imperialRegions.has(intlLocale.region) ? "imperial" : "metric";
+    } catch {
+      // Ignore malformed browser locale entries and keep looking.
+    }
+  }
+  return "metric";
+};
+window.photosByElieProductLabel = (option) => {
+  if (option?.type !== "print" || !option.dimensions) return option?.label || "";
+  const preferred = window.photosByElieMeasurementSystem() === "imperial" ? "imperial" : "metric";
+  const secondary = preferred === "imperial" ? "metric" : "imperial";
+  return `${option.label} ${option.dimensions[preferred]} / ${option.dimensions[secondary]}`;
+};

@@ -29,7 +29,7 @@
       const source = optionById(option.id) || option;
       if (!source?.id || !availableIds.has(source.id) || seen.has(source.id)) return next;
       seen.add(source.id);
-      next.push({ id: source.id, type: source.type || "digital", label: source.label, detail: source.detail, price: source.price });
+      next.push({ id: source.id, type: source.type || "digital", label: source.label, detail: source.detail, dimensions: source.dimensions, price: source.price });
       return next;
     }, []);
     const hasPrint = normalized.some((option) => option.type === "print");

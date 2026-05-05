@@ -25,13 +25,15 @@
   const normalizeOptions = (options = [], photoId = null) => {
     const availableIds = new Set(availableOptionsForPhotoId(photoId).map((option) => option.id));
     const seen = new Set();
-    return options.reduce((next, option) => {
+    const normalized = options.reduce((next, option) => {
       const source = optionById(option.id) || option;
       if (!source?.id || !availableIds.has(source.id) || seen.has(source.id)) return next;
       seen.add(source.id);
-      next.push({ id: source.id, label: source.label, price: source.price });
+      next.push({ id: source.id, type: source.type || "digital", label: source.label, detail: source.detail, price: source.price });
       return next;
     }, []);
+    const hasPrint = normalized.some((option) => option.type === "print");
+    return normalized.filter((option) => option.type !== "frame" || hasPrint);
   };
 
   const normalizeBasket = (items = []) => {

@@ -195,7 +195,7 @@ const navigateAfterHide = () => {
 const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolution]:checked"))
   .map((input) => {
     const option = availableResolutions.find((item) => item.id === input.value);
-    return option ? { id: option.id, label: option.label, price: option.price } : null;
+    return option ? { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, price: option.price } : null;
   })
   .filter(Boolean);
 
@@ -560,11 +560,11 @@ if (localModerationEnabled) {
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
 
 document.querySelector("[data-resolution-list]").innerHTML = availableResolutions.map((option) => `
-  <label class="resolution-row">
+  <label class="resolution-row product-row product-${option.type || "digital"}">
     <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
     <span>
       <strong>${option.label}</strong>
-      <small>${window.photosByElieResolutionDetail ? window.photosByElieResolutionDetail(photo, option) : option.detail}</small>
+      <small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : option.detail}</small>
     </span>
     <b>$${option.price}</b>
   </label>
@@ -584,7 +584,7 @@ const syncSelectionToBasket = () => {
     status.textContent = existing ? `${photo.title} removed from basket.` : "No basket selections for this photo.";
     return;
   }
-  status.textContent = `${photo.title} basket selections saved.`;
+  status.textContent = `${photo.title} order selections saved.`;
 };
 
 document.querySelectorAll("[data-resolution]").forEach((input) => {

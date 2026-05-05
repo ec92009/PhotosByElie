@@ -46,6 +46,7 @@ Last updated: 2026-05-05
 - Added gallery and Owner review `RAW` overlays for DNG/NEF/other raw-origin photos so duplicates can be reviewed without burning labels into preview files.
 - Added `scripts/validate_publish.js` for generated-data validation, derivative-pair checks, resolution metadata checks, and publish summaries with Expo/Reserve/Hidden sizes.
 - Added buyer-facing license notes on detail and basket pages plus a static basket order-intent summary and mail draft.
+- Added mock physical print products, plain white/plain black frame add-ons, and a per-photo order review in the generated basket email.
 
 ## Current Priority Stack
 
@@ -82,13 +83,14 @@ Last updated: 2026-05-05
    - Preserve the physical-state contract: importer fills Reserve, curation fills Expo, Hidden stays local.
 
 2. **Improve basket checkout from mock email to real order intent.**
-   - Static order intent now exists on the basket page.
+   - Static order intent now exists on the basket page and includes per-photo email review details.
    - Decide whether checkout stays email-based, uses Stripe payment links, or moves to a small backend.
 
 3. **Add basic photo licensing terms.**
    - Baseline personal print/web terms now appear on detail and basket pages.
+   - Product choices now include mock physical prints and simple frame add-ons.
    - Expand the language into a fuller terms page if real checkout launches.
-   - Keep prices tied to resolution choices until the pricing model is better tested.
+   - Keep prices tied to product choices until the pricing model is better tested.
 
 4. **Add collection filtering and sorting.**
    - Filter by orientation, color mood, and subject.

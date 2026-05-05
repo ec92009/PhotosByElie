@@ -27,7 +27,24 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "'": "&#39;"
 }[char]));
 
-const syncOrderIntent = (items, fileCount, total) => {
+const productTypeLabel = (option) => ({
+  digital: "Digital",
+  print: "Print",
+  frame: "Frame"
+}[option?.type] || "Product");
+
+const productDetail = (photo, option) => {
+  if (!photo || !window.photosByElieProductDetail) return option.detail || "";
+  return window.photosByElieProductDetail(photo, option) || option.detail || "";
+};
+
+const photoReviewUrl = (photoId) => {
+  const href = window.photosByElieVersionedHref?.(`./photo.html?id=${encodeURIComponent(photoId)}`)
+    || `./photo.html?id=${encodeURIComponent(photoId)}`;
+  return new URL(href, window.location.href).href;
+};
+
+const syncOrderIntent = (items, productCount, total) => {
   if (!orderIntent || !orderSummary || !orderEmail) return;
   orderIntent.hidden = items.length === 0;
   if (!items.length) return;
@@ -43,7 +60,7 @@ const syncOrderIntent = (items, fileCount, total) => {
 
   orderSummary.innerHTML = `
     <div><dt>Photos</dt><dd>${items.length}</dd></div>
-    <div><dt>Files</dt><dd>${fileCount}</dd></div>
+    <div><dt>Products</dt><dd>${productCount}</dd></div>
     <div><dt>Draft total</dt><dd>${formatMoney(total)}</dd></div>
     <div><dt>Collections</dt><dd>${escapeText(collectionText)}</dd></div>
   `;
@@ -52,15 +69,24 @@ const syncOrderIntent = (items, fileCount, total) => {
     "Photos By Elie order intent",
     "",
     `Photos: ${items.length}`,
-    `Files: ${fileCount}`,
+    `Products: ${productCount}`,
     `Draft total: ${formatMoney(total)}`,
     "",
-    ...items.flatMap((item) => [
-      `${item.title} (${item.collection})`,
-      ...item.options.map((option) => `- ${option.label}: ${formatMoney(option.price)}`),
-      ""
-    ]),
-    "License note: personal print and web use are included by default. Commercial, resale, and AI-training use need written approval before fulfillment."
+    ...items.flatMap((item, index) => {
+      const { photo } = photoForItem(item);
+      const subtotal = (item.options || []).reduce((sum, option) => sum + (Number(option.price) || 0), 0);
+      return [
+        `${index + 1}. ${item.title}`,
+        `Collection: ${item.collection}`,
+        `Review page: ${photoReviewUrl(item.photoId)}`,
+        `Source: ${photo ? window.photosByElieOriginalSize?.(photo) || "Source file unverified" : "Photo no longer in public catalog"}`,
+        "Selected products:",
+        ...item.options.map((option) => `- [${productTypeLabel(option)}] ${option.label}: ${formatMoney(option.price)}${productDetail(photo, option) ? ` (${productDetail(photo, option)})` : ""}`),
+        `Photo subtotal: ${formatMoney(subtotal)}`,
+        ""
+      ];
+    }),
+    "License note: personal print and web use are included by default. Print crops, frame choices, commercial, resale, and AI-training use are confirmed manually before fulfillment."
   ];
   orderEmail.setAttribute("href", `mailto:?subject=${encodeURIComponent("Photos By Elie order intent")}&body=${encodeURIComponent(lines.join("\n"))}`);
 };
@@ -68,11 +94,11 @@ const syncOrderIntent = (items, fileCount, total) => {
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-  const fileCount = items.reduce((sum, item) => sum + (item.options || []).length, 0);
+  const productCount = items.reduce((sum, item) => sum + (item.options || []).length, 0);
 
-  basketTotal.textContent = `${fileCount} ${fileCount === 1 ? "file" : "files"}, ${formatMoney(total)}`;
+  basketTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
   emptyState.hidden = items.length !== 0;
-  syncOrderIntent(items, fileCount, total);
+  syncOrderIntent(items, productCount, total);
 
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
@@ -83,8 +109,8 @@ const renderBasket = () => {
       ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
       : resolutionOptions;
     const resolutionDetail = (option) => {
-      if (!photo || !window.photosByElieResolutionDetail) return "";
-      return option.id === "full" ? `<small>${window.photosByElieResolutionDetail(photo, option)}</small>` : "";
+      if (!photo || !window.photosByElieProductDetail) return "";
+      return `<small>${window.photosByElieProductDetail(photo, option)}</small>`;
     };
     return `
     <article class="basket-item">
@@ -129,8 +155,8 @@ const renderBasket = () => {
         .map((checkbox) => checkbox.value);
       basketStore.updateOptions(itemIndex, checkedIds);
       status.textContent = checkedIds.length
-        ? `${item.title} license options updated.`
-        : `${item.title} has no selected license files. Use Remove to delete the photo.`;
+        ? `${item.title} order products updated.`
+        : `${item.title} has no selected order products. Use Remove to delete the photo.`;
       renderBasket();
     });
   });

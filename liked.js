@@ -28,7 +28,7 @@ const optionPayload = (optionIds, photoId) => {
   return optionIds
     .map((id) => availableOptions.find((option) => option.id === id))
     .filter(Boolean)
-    .map((option) => ({ id: option.id, label: option.label, price: option.price }));
+    .map((option) => ({ id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, price: option.price }));
 };
 
 const selectResolutionForAllLiked = (resolutionId) => {
@@ -73,9 +73,9 @@ const renderLiked = () => {
   const basketByPhoto = new Map(basketItems.map((item) => [item.photoId, item]));
   const rowSelections = likedItems.map((item) => basketByPhoto.get(item.photoId)?.options || []);
   const total = rowSelections.flat().reduce((sum, option) => sum + (Number(option.price) || 0), 0);
-  const fileCount = rowSelections.reduce((sum, options) => sum + options.length, 0);
+  const productCount = rowSelections.reduce((sum, options) => sum + options.length, 0);
 
-  likedTotal.textContent = `${fileCount} ${fileCount === 1 ? "file" : "files"}, ${formatMoney(total)}`;
+  likedTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
   emptyState.hidden = likedItems.length !== 0;
   bulkResolutionButtons.forEach((button) => {
     button.disabled = likedItems.length === 0;
@@ -91,7 +91,7 @@ const renderLiked = () => {
     const availableOptions = availableOptionsForPhoto(photo);
     const resolutionDetail = (option) => {
       if (!photo || !window.photosByElieResolutionDetail) return "";
-      return option.id === "full" ? `<small>${window.photosByElieResolutionDetail(photo, option)}</small>` : "";
+      return `<small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : window.photosByElieResolutionDetail(photo, option)}</small>`;
     };
     return `
     <article class="basket-item">
@@ -143,8 +143,8 @@ const renderLiked = () => {
         options: optionPayload(checkedIds, item.photoId),
       });
       status.textContent = checkedIds.length
-        ? `${item.title} license options added to basket.`
-        : `${item.title} has no selected license files.`;
+        ? `${item.title} order products added to basket.`
+        : `${item.title} has no selected order products.`;
       renderLiked();
     });
   });

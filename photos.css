@@ -941,6 +941,12 @@ body.detail-fullscreen-active{
   color:var(--muted);
   line-height:1.35;
 }
+.product-print{
+  border-left:4px solid color-mix(in srgb,#2d6b56 72%,var(--line));
+}
+.product-frame{
+  border-left:4px solid color-mix(in srgb,#1f2937 70%,var(--line));
+}
 .basket-bar{
   grid-column:2;
   display:flex;

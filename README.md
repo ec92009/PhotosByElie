@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v66.18`
+- Current visible version: `v66.19`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -14,7 +14,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Portugal, and Slovakia collections
 - `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`, `portugal.html`, `slovakia.html`: thin gallery shells rendered from shared photo data
 - `unknown.html`: localhost-only Owner queue for classifying unknown photos into real country galleries
-- `photo.html`: reusable photo detail page; resolution checkboxes sync directly to the basket and the preview adapts to image orientation
+- `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
 - `owner.html`: localhost-only owner controls for live review actions, optional Curation Pass export, Unknown classification, Hidden review, and the Expo cap
@@ -25,7 +25,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `hidden-store.js`: localhost-only loader for the ignored Hidden catalog used by Hidden review and hidden-photo detail pages
 - `hidden-page.js`: localhost-only Hidden review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
-- `photos-data.js`: shared collection, photo, resolution, and mock price data
+- `photos-data.js`: shared collection, photo, product option, and mock price data
 - `photo-gallery.js`: shared gallery renderer
 - `photo-detail.js`: shared detail page, real-image preview support, and automatic basket sync
 - `basket.js`: basket rendering, item removal, resolution reselection, and sticky total updates
@@ -73,25 +73,27 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Curation Pass exports include the current Owner-selected Expo cap for batch curation and audit paths.
 - Curation Pass application remains available for larger batch rebuilds: it fills each public Expo collection from a randomized eligible Expo/Reserve pool, writes ignored JSON catalogs for local Reserve/Hidden review, and keeps Reserve promotions from preserving archive sequence order.
 - `scripts/export_photos_data.py --expo-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set under `assets/expo` up to that maximum.
-- The basket is the source of truth for selected resolutions.
+- The basket is the source of truth for selected product options.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.
 - Basket rail actions include both Open basket and Liked.
-- The basket page has a reduced hero and a sticky total band that remains visible while scrolling.
-- The liked page mirrors the basket layout, but rows come from hearted photos and totals count only selected resolution files.
+- The basket page has a reduced hero and a sticky product total band that remains visible while scrolling.
+- The liked page mirrors the basket layout, but rows come from hearted photos and totals count only selected products.
 - The liked page includes bulk selectors for Full, JPG 6 MP, JPG 3 MP, and JPG 1 MP resolution choices.
 - The header includes a single language button cycling English, French, and Spanish; it persists the selected state for later translation work.
-- Detail pages start with no resolution checked unless that photo is already in the basket.
+- Detail pages start with no product checked unless that photo is already in the basket.
 - Detail pages support previous/next buttons and left/right arrow keys that continue across collection boundaries on both public and localhost builds.
 - Detail pages support `L` to like/unlike and double click on the preview to open a full-screen overlay that dismisses on click or double click.
 - Detail pages preserve the original preview aspect ratio; landscape previews use a wide, space-maximizing layout while portrait and square-ish previews align to the top of the detail panel.
 - Detail pages surface available embedded metadata such as metadata title, description, capture time, software, lens, exposure, and focal length.
 - Visible `PhotosByElie` watermark overlays protect homepage, gallery, basket, and detail preview images.
-- Checking or unchecking a resolution on detail immediately updates localStorage.
+- Checking or unchecking a product on detail immediately updates localStorage.
 - Tapping the heart on a detail preview immediately updates the browser-local liked list.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
 - The basket page generates a static order-intent summary and mail draft from the local basket contents.
+- Product choices now include digital files, physical prints at 4 x 6, 5 x 7, 8 x 10, and 11 x 14 inches, plus plain white or plain black frame add-ons.
+- The generated order email includes a per-photo review with selected products, source confidence, review links, and subtotals.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.

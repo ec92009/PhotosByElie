@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import mimetypes
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -23,6 +25,7 @@ DEFAULT_PUBLIC_PREFIX = "expo"
 DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 DEFAULT_DELETE_STATE = Path(".review-logs/r2-delete-state.jsonl")
+DEFAULT_THROTTLE_FILE = Path(".review-logs/r2-upload-throttle.lock")
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn-1/Pictures/LR/Camera"),
@@ -68,7 +71,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-root", action="append", type=Path, default=[], help="Additional source roots for private masters.")
     parser.add_argument("--limit", type=int, default=0, help="Limit upload items for testing.")
     parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--retries", type=int, default=2)
+    parser.add_argument("--retries", type=int, default=8)
+    parser.add_argument("--request-min-interval", type=float, default=float(os.environ.get("PBE_R2_REQUEST_MIN_INTERVAL", "0.75")), help="Minimum seconds between Wrangler write requests across concurrent sync processes.")
+    parser.add_argument("--throttle-file", type=Path, default=DEFAULT_THROTTLE_FILE, help="Shared lock/timestamp file used to throttle parallel public/private syncs.")
+    parser.add_argument("--retry-max-delay", type=float, default=float(os.environ.get("PBE_R2_RETRY_MAX_DELAY", "900")), help="Maximum seconds to wait before retrying a transient Wrangler failure.")
     parser.add_argument("--state-file", type=Path, default=DEFAULT_UPLOAD_STATE)
     parser.add_argument("--delete-state-file", type=Path, default=DEFAULT_DELETE_STATE)
     parser.add_argument("--no-resume", action="store_true", help="Ignore the local upload success journal.")
@@ -293,7 +299,79 @@ def append_delete_state(path: Path, item: UploadItem, lock: threading.Lock) -> N
             handle.flush()
 
 
-def wrangler_put(item: UploadItem, retries: int) -> tuple[UploadItem, bool, str]:
+def throttle_wrangler_request(throttle_file: Path, min_interval: float) -> None:
+    """Throttle Wrangler request starts across separate public/private sync processes."""
+    if min_interval <= 0:
+        return
+    throttle_file.parent.mkdir(parents=True, exist_ok=True)
+    with throttle_file.open("a+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.seek(0)
+            raw = handle.read().strip()
+            try:
+                previous = float(raw) if raw else 0.0
+            except ValueError:
+                previous = 0.0
+            now = time.monotonic()
+            wait = previous + min_interval - now
+            if wait > 0:
+                time.sleep(wait)
+                now = time.monotonic()
+            handle.seek(0)
+            handle.truncate()
+            handle.write(f"{now:.6f}")
+            handle.flush()
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def terminal_auth_error(output: str) -> bool:
+    terminal_patterns = (
+        "Invalid access token",
+        "Failed to fetch auth token",
+        "CLOUDFLARE_API_TOKEN",
+        "non-interactive environment",
+    )
+    return any(pattern in output for pattern in terminal_patterns)
+
+
+def transient_wrangler_error(output: str) -> bool:
+    transient_patterns = (
+        "429",
+        "Too Many Requests",
+        "Rate limited",
+        "Failed to fetch",
+        "fetch failed",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "EAI_AGAIN",
+        "ENOTFOUND",
+        "Network",
+        "401: Unauthorized",
+        "403: Forbidden",
+    )
+    return any(pattern in output for pattern in transient_patterns)
+
+
+def retry_delay(output: str, attempt: int, max_delay: float) -> float:
+    if "429" in output or "Too Many Requests" in output or "Rate limited" in output:
+        base = 60 * (attempt + 1)
+    elif "401: Unauthorized" in output or "403: Forbidden" in output or "Failed to fetch" in output:
+        base = 30 * (attempt + 1)
+    else:
+        base = 8 * (2 ** attempt)
+    jitter = random.uniform(0, min(15, max(1, base * 0.15)))
+    return min(max_delay, base + jitter)
+
+
+def wrangler_put(
+    item: UploadItem,
+    retries: int,
+    throttle_file: Path = DEFAULT_THROTTLE_FILE,
+    request_min_interval: float = 0.75,
+    retry_max_delay: float = 900,
+) -> tuple[UploadItem, bool, str]:
     command = [
         *wrangler_command(),
         "r2",
@@ -310,19 +388,28 @@ def wrangler_put(item: UploadItem, retries: int) -> tuple[UploadItem, bool, str]
         command.extend(["--cache-control", item.cache_control])
     output = ""
     for attempt in range(retries + 1):
+        throttle_wrangler_request(throttle_file, request_min_interval)
         result = subprocess.run(command, text=True, capture_output=True, check=False)
         output = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part and part.strip())
         if result.returncode == 0:
             return item, True, output
+        if terminal_auth_error(output):
+            return item, False, output
         if attempt < retries:
-            delay = min(120, 5 * (2 ** attempt))
-            if "429" in output or "Too Many Requests" in output:
-                delay = max(delay, 60)
-            time.sleep(delay)
+            if transient_wrangler_error(output):
+                time.sleep(retry_delay(output, attempt, retry_max_delay))
+            else:
+                time.sleep(min(retry_max_delay, 8 * (2 ** attempt)))
     return item, False, output
 
 
-def wrangler_delete(item: UploadItem, retries: int) -> tuple[UploadItem, bool, str]:
+def wrangler_delete(
+    item: UploadItem,
+    retries: int,
+    throttle_file: Path = DEFAULT_THROTTLE_FILE,
+    request_min_interval: float = 0.75,
+    retry_max_delay: float = 900,
+) -> tuple[UploadItem, bool, str]:
     command = [
         *wrangler_command(),
         "r2",
@@ -333,25 +420,31 @@ def wrangler_delete(item: UploadItem, retries: int) -> tuple[UploadItem, bool, s
     ]
     output = ""
     for attempt in range(retries + 1):
+        throttle_wrangler_request(throttle_file, request_min_interval)
         result = subprocess.run(command, text=True, capture_output=True, check=False)
         output = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part and part.strip())
         if result.returncode == 0:
             return item, True, output
+        if terminal_auth_error(output):
+            return item, False, output
         if attempt < retries:
-            delay = min(120, 5 * (2 ** attempt))
-            if "429" in output or "Too Many Requests" in output:
-                delay = max(delay, 60)
-            time.sleep(delay)
+            if transient_wrangler_error(output):
+                time.sleep(retry_delay(output, attempt, retry_max_delay))
+            else:
+                time.sleep(min(retry_max_delay, 8 * (2 ** attempt)))
     return item, False, output
 
 
-def upload(items: list[UploadItem], workers: int, retries: int, state_file: Path) -> int:
+def upload(items: list[UploadItem], workers: int, retries: int, state_file: Path, throttle_file: Path, request_min_interval: float, retry_max_delay: float) -> int:
     failed = 0
     lock = threading.Lock()
     started = time.monotonic()
     uploaded_bytes = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-        futures = [executor.submit(wrangler_put, item, retries) for item in items]
+        futures = [
+            executor.submit(wrangler_put, item, retries, throttle_file, request_min_interval, retry_max_delay)
+            for item in items
+        ]
         for index, future in enumerate(as_completed(futures), start=1):
             item, ok, output = future.result()
             if not ok:
@@ -367,13 +460,16 @@ def upload(items: list[UploadItem], workers: int, retries: int, state_file: Path
     return failed
 
 
-def delete_items(items: list[UploadItem], workers: int, retries: int, state_file: Path) -> int:
+def delete_items(items: list[UploadItem], workers: int, retries: int, state_file: Path, throttle_file: Path, request_min_interval: float, retry_max_delay: float) -> int:
     failed = 0
     lock = threading.Lock()
     started = time.monotonic()
     deleted_bytes = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-        futures = [executor.submit(wrangler_delete, item, retries) for item in items]
+        futures = [
+            executor.submit(wrangler_delete, item, retries, throttle_file, request_min_interval, retry_max_delay)
+            for item in items
+        ]
         for index, future in enumerate(as_completed(futures), start=1):
             item, ok, output = future.result()
             if not ok:
@@ -455,10 +551,26 @@ def main() -> int:
             print("Dry run only. Add --upload to write to R2 or --delete to remove from R2.")
 
     if args.delete:
-        return 1 if delete_items(items, args.workers, args.retries, args.delete_state_file) else 0
+        return 1 if delete_items(
+            items,
+            args.workers,
+            args.retries,
+            args.delete_state_file,
+            args.throttle_file,
+            args.request_min_interval,
+            args.retry_max_delay,
+        ) else 0
     if not args.upload:
         return 0
-    return 1 if upload(items, args.workers, args.retries, args.state_file) else 0
+    return 1 if upload(
+        items,
+        args.workers,
+        args.retries,
+        args.state_file,
+        args.throttle_file,
+        args.request_min_interval,
+        args.retry_max_delay,
+    ) else 0
 
 
 if __name__ == "__main__":

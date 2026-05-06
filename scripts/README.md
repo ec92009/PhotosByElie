@@ -159,6 +159,22 @@ python3 scripts/sync_r2_media.py --scope private
 
 Add `--upload` only after the dry-run counts look sane. The script uses `npx wrangler r2 object put`, so Wrangler must already be authorized on the machine.
 
+Run one lane at a time unless there is a strong reason not to. Public and private uploads both call the same Cloudflare account API, so running them together can trigger `429 Too Many Requests` responses and eventually make Wrangler's OAuth token path wobble. The upload journal in `.review-logs/r2-upload-state.jsonl` records successful objects, so interrupted runs can be safely resumed without `--no-resume`.
+
+Recommended public preview resume command:
+
+```bash
+python3 scripts/sync_r2_media.py --scope public --include-reserve --upload --workers 4 --request-min-interval 0.75
+```
+
+Recommended private master resume command, after public previews finish:
+
+```bash
+python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-min-interval 1.5
+```
+
+The uploader also retries transient Wrangler failures with longer backoff. If Wrangler reports `Invalid access token`, run `npx wrangler whoami` or `npx wrangler login`, then rerun the same resume command.
+
 After the public bucket contains only final baked-watermark previews and public access is enabled through an R2 dev URL or custom domain, put that URL in `media-config.js` as `publicBaseUrl`. Public pages can also be tested temporarily with `?mediaBase=https://example.invalid/path`; use `?mediaBase=local` to clear the stored override.
 
 ## Local Asset Sync

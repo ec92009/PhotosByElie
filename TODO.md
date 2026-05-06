@@ -12,7 +12,7 @@ Last updated: 2026-05-06
 - RAW/DNG/NEF files stay off public and private cloud storage. If a buyer wants RAW, they contact Elie directly.
 - Hidden is a blacklist/review state, not a media folder contract. Re-promote means removing the ID from the blacklist.
 - `assets/reserve` remains an ignored local preview cache for importer/review compatibility, not a long-term public state.
-- R2 local logs show 1,615 public preview uploads and 2,453 public preview deletes. Live bucket state still needs direct R2 verification.
+- R2 upload journals are resumable. Cloudflare throttled parallel public/private uploads with `429 Too Many Requests`, so large R2 syncs should run one lane at a time.
 
 ## Fresh Numbered Backlog
 
@@ -26,6 +26,7 @@ Last updated: 2026-05-06
    - [Codex] Ensure every public preview is generated with the stronger repeated anti-theft watermark at the reduced opacity Elie approved.
    - [Codex] Keep R2 upload scripts from uploading RAW/DNG/NEF-derived previews.
    - [Codex] Upload only the intended public preview set after a dry-run count and sample review.
+   - [Codex] Run public previews before private masters so the visible website improves first and Cloudflare rate limits stay calm.
    - [Codex] Keep local journals for uploads/deletes, but add a live R2 inventory check before declaring success.
 
 3. **Cleanly separate GitHub metadata from media hosting.**

@@ -138,6 +138,7 @@ node scripts/validate_publish.js --summary
 - local preview-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model
 - private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
+- IDs listed in `assets/hidden/hidden-blacklist.json` are skipped for public preview uploads; private developed masters are left alone unless an explicit Owner wipe action deletes public previews from R2
 
 Dry-run the currently publishable Expo previews:
 

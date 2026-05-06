@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Current Facts
 
@@ -11,6 +11,8 @@ Last updated: 2026-05-06
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
 - RAW/DNG/NEF files stay off public and private cloud storage. If a buyer wants RAW, they contact Elie directly.
 - Hidden is a blacklist/review state, not a media folder contract. Re-promote means removing the ID from the blacklist.
+- Future public R2 sync inventories now skip IDs in `assets/hidden/hidden-blacklist.json`; private developed masters remain eligible unless Elie explicitly wipes them.
+- Owner metadata saves update catalog/local files and queue background R2 sync, while hidden photos are kept out of public-preview re-uploads.
 - `assets/reserve` remains an ignored local preview cache for importer/review compatibility, not a long-term public state.
 - R2 upload journals are resumable. Cloudflare throttled parallel public/private uploads with `429 Too Many Requests`, so large R2 syncs should run one lane at a time.
 - Public preview upload is running in tmux session `pbe-r2-public`, logging to `.review-logs/r2-public-upload-20260506-233645.log`.
@@ -50,17 +52,20 @@ Last updated: 2026-05-06
    - [Codex] Add importer tests or at least deterministic dry-run output for skipped RAW files.
 
 6. **Publish hidden state as a blacklist.**
-   - [Codex] Make H hide by updating local/public blacklist state, not moving preview files.
-   - [Codex] Make U undo the most recent hide by removing it from the blacklist.
-   - [Codex] Make Hidden page P re-promote by removing IDs from the blacklist.
-   - [Codex] Add an Owner-only action to permanently wipe hidden objects from R2 when Elie explicitly chooses that.
-   - [Codex] Ensure public pages and public media sync both respect the hidden blacklist.
+   - [Done] Make H hide by updating local/public blacklist state, not moving preview files.
+   - [Done] Make U undo the most recent hide by removing it from the blacklist.
+   - [Done] Make Hidden page P re-promote by removing IDs from the blacklist.
+   - [Done] Add an Owner-only action to permanently wipe hidden public-preview objects from R2 when Elie explicitly chooses that.
+   - [Done] Ensure public pages load and apply the hidden blacklist.
+   - [Done] Ensure future public media syncs skip hidden blacklist IDs instead of re-uploading hidden previews.
+   - [Codex] After the current public upload is done or rerun, verify the live bucket/site state and wipe any already-uploaded hidden previews if needed.
 
 7. **Finish owner metadata persistence and sync.**
-   - [Codex] Keep Return/Enter in Title or Keywords saving metadata and exiting edit focus.
-   - [Codex] Save metadata to the generated catalog, local preview JPEGs, and resolvable developed source files.
-   - [Codex] Add a background owner task to re-upload changed previews/source masters to R2.
-   - [Codex] Show quiet progress/status for that background metadata sync on `owner.html`.
+   - [Done] Keep Return/Enter in Title or Keywords saving metadata and exiting edit focus.
+   - [Done] Save metadata to the generated catalog, local preview JPEGs, and resolvable developed source files.
+   - [Done] Add a background owner task to re-upload changed previews/source masters to R2.
+   - [Done] Show quiet progress/status for that background metadata sync on `owner.html`.
+   - [Done] Avoid re-uploading public previews for photos that are currently hidden; keep private/source metadata sync eligible.
    - [Codex] Keep any screen-scrape fallback owner-only, and avoid using it unless local files truly are missing.
 
 8. **Retest local owner review UX.**

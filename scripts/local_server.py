@@ -63,6 +63,7 @@ from sync_r2_media import (  # noqa: E402
     DEFAULT_PUBLIC_BUCKET,
     DEFAULT_PUBLIC_PREFIX,
     UploadItem,
+    hidden_photo_ids as r2_hidden_photo_ids,
     private_key as r2_private_key,
     public_key as r2_public_key,
     upload_id as r2_upload_id,
@@ -748,7 +749,8 @@ def _relative_to_repo(repo_root: Path, path: Path) -> Path | None:
 def _metadata_upload_items_for_paths(repo_root: Path, photo: dict, paths: list[Path]) -> list[UploadItem]:
     items: list[UploadItem] = []
     seen: set[str] = set()
-    allow_public = public_preview_allowed(photo)
+    photo_id = str(photo.get("id") or "")
+    allow_public = public_preview_allowed(photo) and photo_id not in r2_hidden_photo_ids(repo_root)
     allow_private = private_master_allowed(photo)
     for path in paths:
         if not path.exists():

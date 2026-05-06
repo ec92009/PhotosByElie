@@ -26,6 +26,7 @@ DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 DEFAULT_DELETE_STATE = Path(".review-logs/r2-delete-state.jsonl")
 DEFAULT_THROTTLE_FILE = Path(".review-logs/r2-upload-throttle.lock")
+HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn-1/Pictures/LR/Camera"),
@@ -111,6 +112,18 @@ def public_key(public_prefix: str, derivative_path: Path) -> str:
     return "/".join([public_prefix.strip("/"), *parts[-2:]])
 
 
+def hidden_photo_ids(repo_root: Path) -> set[str]:
+    payload = load_json(repo_root / HIDDEN_BLACKLIST_PATH, {})
+    values: object = []
+    if isinstance(payload, dict):
+        values = payload.get("photo_ids") or payload.get("hidden_ids") or []
+    elif isinstance(payload, list):
+        values = payload
+    if not isinstance(values, list):
+        return set()
+    return {str(value) for value in values if isinstance(value, str) and value}
+
+
 def source_rows_by_id(repo_root: Path) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     reserve_payload = load_json(repo_root / "assets/reserve/manifest.json", {})
     reserve_rows = reserve_payload.get("photos") if isinstance(reserve_payload, dict) else []
@@ -144,6 +157,8 @@ def public_upload_items(repo_root: Path, args: argparse.Namespace, rows_by_id: d
     items: list[UploadItem] = []
     skipped: list[dict[str, str]] = []
     seen_keys: set[str] = set()
+    hidden_ids = hidden_photo_ids(repo_root)
+    reported_hidden_ids: set[str] = set()
 
     candidates: list[tuple[dict[str, Any], Path]] = []
     for row in expo_rows(repo_root):
@@ -158,11 +173,17 @@ def public_upload_items(repo_root: Path, args: argparse.Namespace, rows_by_id: d
                 candidates.append((row, repo_root / "assets/reserve" / clean_asset_ref(rel)))
 
     for row, path in candidates:
+        photo_id = str(row.get("id") or "")
+        if photo_id in hidden_ids:
+            if photo_id not in reported_hidden_ids:
+                skipped.append({"id": photo_id, "reason": "hidden-blacklist"})
+                reported_hidden_ids.add(photo_id)
+            continue
         if not public_preview_allowed(row):
-            skipped.append({"id": str(row.get("id") or ""), "reason": "raw-or-unverified-source"})
+            skipped.append({"id": photo_id, "reason": "raw-or-unverified-source"})
             continue
         if not path.exists():
-            skipped.append({"id": str(row.get("id") or ""), "reason": "missing-preview", "path": str(path)})
+            skipped.append({"id": photo_id, "reason": "missing-preview", "path": str(path)})
             continue
         key = public_key(args.public_prefix, path.relative_to(repo_root))
         if key in seen_keys:

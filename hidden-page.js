@@ -108,7 +108,7 @@
     }
 
     galleryRoot.innerHTML = photos.map((photo, index) => {
-      const src = photo.gallerySrc || photo.imageSrc || "";
+      const src = window.photosByElieMediaUrl?.(photo, "gallery") || "";
       const rawLabel = rawSourceLabel(photo);
       const href = photo.source === "missing" ? "" : versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
       return `
@@ -185,12 +185,12 @@
     const selected = photos[selectedIndex];
     if (!selected) return;
     try {
-      await hiddenActions.returnToReserve(selected.id);
+      await hiddenActions.promoteHidden(selected.id);
       selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
       render();
-      setStatus(`${selected.title} moved to Reserve.`);
+      setStatus(`${selected.title} re-promoted.`);
     } catch (error) {
-      setStatus(error?.message || "Could not move photo to Reserve.");
+      setStatus(error?.message || "Could not re-promote photo.");
     }
     event.preventDefault();
   });

@@ -5,6 +5,7 @@ if (window.photosByElieReserve?.enabled) {
 if (window.photosByElieHidden?.enabled) {
   await window.photosByElieHidden.load();
 }
+await window.photosByElieHiddenBlacklistReady;
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
 const collections = window.photosByElieData || {};
@@ -49,6 +50,10 @@ const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+if (window.photosByElieIsPublicHidden?.(photo)) {
+  window.location.replace(versionedHref(`./${collectionKey}.html`));
+  return;
+}
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const metadataValue = (targetPhoto, label) => (
   (targetPhoto?.metadata || []).find((item) => item.label === label)?.value || ""
@@ -318,8 +323,9 @@ syncDetailBottomActions();
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
 const renderMetadataRows = () => {
+  const hiddenLabels = new Set(["preview file", "software", "color profile"]);
   const metadata = Array.isArray(photo.metadata)
-    ? photo.metadata.filter((item) => item.label && item.value && item.label !== "Preview file")
+    ? photo.metadata.filter((item) => item.label && item.value && !hiddenLabels.has(String(item.label).toLowerCase()))
     : [];
   metadataRoot.hidden = metadata.length === 0;
   metadataRoot.replaceChildren(...metadata.map((item) => {
@@ -360,6 +366,18 @@ const ensureOwnerMetadataEditor = () => {
   const keywordInput = editor.querySelector("[data-owner-keywords]");
   titleInput.value = photo.title || "";
   keywordInput.value = metadataValue(photo, "Keywords");
+  const exitMetadataEditState = () => {
+    if (document.activeElement === titleInput || document.activeElement === keywordInput) {
+      document.activeElement.blur();
+    }
+  };
+  [titleInput, keywordInput].forEach((input) => {
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      editor.requestSubmit();
+    });
+  });
   editor.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = editor.querySelector("button");
@@ -373,10 +391,11 @@ const ensureOwnerMetadataEditor = () => {
       setMetadataValue(photo, "Keywords", keywords);
       syncTitleUi();
       renderMetadataRows();
-      status.textContent = `${photo.title} metadata saved to catalog, previews, and source file when available.`;
+      status.textContent = "";
     } catch (error) {
       status.textContent = error?.message || "Could not save metadata.";
     } finally {
+      exitMetadataEditState();
       button.disabled = false;
     }
   });
@@ -397,7 +416,8 @@ const syncLandscapePreviewSize = () => {
   preview.style.setProperty("--detail-landscape-width", `${Math.min(maxWidth, maxHeight * ratio)}px`);
 };
 preview.classList.add(collection.accent, photo.className);
-if (photo.imageSrc) {
+const detailImageSrc = window.photosByElieMediaUrl?.(photo, "detail") || "";
+if (detailImageSrc) {
   preview.classList.add("has-image");
   const img = document.createElement("img");
   const setPreviewAspectRatio = () => {
@@ -408,7 +428,7 @@ if (photo.imageSrc) {
     detailLayout?.classList.toggle("is-portrait", img.naturalWidth < img.naturalHeight);
     syncLandscapePreviewSize();
   };
-  img.src = photo.imageSrc;
+  img.src = detailImageSrc;
   img.alt = photo.title;
   img.addEventListener("load", setPreviewAspectRatio);
   if (img.complete) setPreviewAspectRatio();
@@ -424,14 +444,15 @@ const closeFullscreenPreview = () => {
 };
 
 const openFullscreenPreview = () => {
-  if (!photo.imageSrc || fullscreenPreview) return;
+  const image = window.photosByElieMediaUrl?.(photo, "detail") || "";
+  if (!image || fullscreenPreview) return;
   fullscreenPreview = document.createElement("div");
   fullscreenPreview.className = "detail-fullscreen-preview";
   fullscreenPreview.setAttribute("role", "button");
   fullscreenPreview.setAttribute("aria-label", `Close full screen preview for ${photo.title}`);
   fullscreenPreview.tabIndex = 0;
   const fullscreenImage = document.createElement("img");
-  fullscreenImage.src = photo.imageSrc;
+  fullscreenImage.src = image;
   fullscreenImage.alt = photo.title;
   fullscreenPreview.append(fullscreenImage);
   fullscreenPreview.addEventListener("click", closeFullscreenPreview);

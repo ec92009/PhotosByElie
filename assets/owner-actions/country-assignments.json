@@ -26442,8 +26442,152 @@
           "to": "assets/reserve/france/20191122-1656-17361-3cabe66d9a_900.jpg"
         }
       }
+    },
+    "20220620-165439-00307-pano-37a3caf3f3": {
+      "gallery_key": "spain",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:18.343977Z",
+      "batch_id": "2026-05-06T14:46:18.343977Z-3eeaf324",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220620-165439-00307-pano-37a3caf3f3_1800.jpg",
+          "to": "assets/reserve/spain/20220620-165439-00307-pano-37a3caf3f3_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220620-165439-00307-pano-37a3caf3f3_900.jpg",
+          "to": "assets/reserve/spain/20220620-165439-00307-pano-37a3caf3f3_900.jpg"
+        }
+      }
+    },
+    "20220620-165150-00302-pano-1d95a4f7fc": {
+      "gallery_key": "spain",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:18.343977Z",
+      "batch_id": "2026-05-06T14:46:18.343977Z-3eeaf324",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220620-165150-00302-pano-1d95a4f7fc_1800.jpg",
+          "to": "assets/reserve/spain/20220620-165150-00302-pano-1d95a4f7fc_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220620-165150-00302-pano-1d95a4f7fc_900.jpg",
+          "to": "assets/reserve/spain/20220620-165150-00302-pano-1d95a4f7fc_900.jpg"
+        }
+      }
+    },
+    "20220620-144822-00251-57d2611649": {
+      "gallery_key": "spain",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:18.343977Z",
+      "batch_id": "2026-05-06T14:46:18.343977Z-3eeaf324",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220620-144822-00251-57d2611649_1800.jpg",
+          "to": "assets/reserve/spain/20220620-144822-00251-57d2611649_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220620-144822-00251-57d2611649_900.jpg",
+          "to": "assets/reserve/spain/20220620-144822-00251-57d2611649_900.jpg"
+        }
+      }
+    },
+    "20220620-144601-00127-pano-1a18b2ed13": {
+      "gallery_key": "spain",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:18.343977Z",
+      "batch_id": "2026-05-06T14:46:18.343977Z-3eeaf324",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220620-144601-00127-pano-1a18b2ed13_1800.jpg",
+          "to": "assets/reserve/spain/20220620-144601-00127-pano-1a18b2ed13_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220620-144601-00127-pano-1a18b2ed13_900.jpg",
+          "to": "assets/reserve/spain/20220620-144601-00127-pano-1a18b2ed13_900.jpg"
+        }
+      }
+    },
+    "20220620-144527-00117-pano-6e6b630180": {
+      "gallery_key": "spain",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:18.343977Z",
+      "batch_id": "2026-05-06T14:46:18.343977Z-3eeaf324",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220620-144527-00117-pano-6e6b630180_1800.jpg",
+          "to": "assets/reserve/spain/20220620-144527-00117-pano-6e6b630180_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220620-144527-00117-pano-6e6b630180_900.jpg",
+          "to": "assets/reserve/spain/20220620-144527-00117-pano-6e6b630180_900.jpg"
+        }
+      }
+    },
+    "20220103-163309-00200-4107edee53": {
+      "gallery_key": "portugal",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:35.695946Z",
+      "batch_id": "2026-05-06T14:46:35.695946Z-6eb80162",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220103-163309-00200-4107edee53_1800.jpg",
+          "to": "assets/reserve/portugal/20220103-163309-00200-4107edee53_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220103-163309-00200-4107edee53_900.jpg",
+          "to": "assets/reserve/portugal/20220103-163309-00200-4107edee53_900.jpg"
+        }
+      }
+    },
+    "20220103-1633-00042-0f2ff159e9": {
+      "gallery_key": "portugal",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:35.695946Z",
+      "batch_id": "2026-05-06T14:46:35.695946Z-6eb80162",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220103-1633-00042-0f2ff159e9_1800.jpg",
+          "to": "assets/reserve/portugal/20220103-1633-00042-0f2ff159e9_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220103-1633-00042-0f2ff159e9_900.jpg",
+          "to": "assets/reserve/portugal/20220103-1633-00042-0f2ff159e9_900.jpg"
+        }
+      }
+    },
+    "20220103-1558-00011-1bdfd05be7": {
+      "gallery_key": "portugal",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-06T14:46:35.695946Z",
+      "batch_id": "2026-05-06T14:46:35.695946Z-6eb80162",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20220103-1558-00011-1bdfd05be7_1800.jpg",
+          "to": "assets/reserve/portugal/20220103-1558-00011-1bdfd05be7_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20220103-1558-00011-1bdfd05be7_900.jpg",
+          "to": "assets/reserve/portugal/20220103-1558-00011-1bdfd05be7_900.jpg"
+        }
+      }
     }
   },
-  "updated_at": "2026-05-05T21:49:50.415153Z",
-  "latest_batch_id": "2026-05-05T21:49:50.415153Z-eec91ced"
+  "updated_at": "2026-05-06T14:46:35.695946Z",
+  "latest_batch_id": "2026-05-06T14:46:35.695946Z-6eb80162"
 }

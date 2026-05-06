@@ -9,6 +9,8 @@ import shutil
 from collections import defaultdict
 from pathlib import Path
 
+from media_policy import media_source_policy, public_preview_allowed, source_file_entries
+
 LABELS = {
     "france": ("01", "France", "france-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
     "usa": ("02", "USA", "usa-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -29,6 +31,7 @@ DEFAULT_SELECTION_MODE = "random"
 DIVERSITY_BUCKET_MINUTES = 10
 REGULAR_ASSET_ROOT = Path("assets/expo")
 RESERVE_ASSET_ROOT = Path("assets/reserve")
+HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
 
 
@@ -105,17 +108,27 @@ def normalize_metadata(row: dict) -> list[dict]:
 
 
 def source_files(row: dict) -> list[dict]:
-    source = row.get("source_file") or {}
-    ext = str(source.get("extension") or "").upper()
-    if not ext:
-        return []
-    return [
-        {
-            "path": row.get("relative_path"),
-            "type": ext,
-            "bytes": source.get("bytes"),
-        }
-    ]
+    return source_file_entries(row)
+
+
+def public_media_key(reference: str) -> str:
+    clean = str(reference or "").removeprefix("./")
+    parts = clean.split("/")
+    if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
+        return "/".join(["expo", *parts[2:]])
+    return clean
+
+
+def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
+    public_allowed = public_preview_allowed(row)
+    return {
+        "sourcePolicy": media_source_policy(row),
+        "publicPreview": {
+            "allowed": public_allowed,
+            "galleryKey": public_media_key(gallery_rel) if public_allowed else "",
+            "detailKey": public_media_key(detail_rel) if public_allowed else "",
+        },
+    }
 
 
 def source_asset_root(repo_root: Path, mode: str) -> Path:
@@ -130,6 +143,15 @@ def regular_asset_rel(row: dict, derivative: str) -> str:
 
 def source_derivative_rel(row: dict, mode: str, derivative: str) -> str:
     return f"./{RESERVE_ASSET_ROOT.as_posix()}/{row['derivatives'][derivative]}"
+
+
+def derivative_files_exist(repo_root: Path, row: dict, mode: str) -> bool:
+    derivatives = row.get("derivatives") or {}
+    return all(
+        derivatives.get(derivative)
+        and (source_asset_root(repo_root, mode) / derivatives[derivative]).exists()
+        for derivative in ("gallery", "detail")
+    )
 
 
 def photo_object_data(
@@ -151,6 +173,7 @@ def photo_object_data(
         "gallerySrc": gallery_rel,
         "imageSrc": detail_rel,
         "metadata": normalize_metadata(row),
+        "media": media_object(row, gallery_rel, detail_rel),
         "sourceFiles": source_files(row),
     }
 
@@ -175,6 +198,7 @@ def photo_object_lines(
         f"        gallerySrc: {js(photo['gallerySrc'])},",
         f"        imageSrc: {js(photo['imageSrc'])},",
         f"        metadata: {json.dumps(photo['metadata'], ensure_ascii=False, indent=10)},",
+        f"        media: {json.dumps(photo['media'], ensure_ascii=False, indent=10)},",
         f"        sourceFiles: {json.dumps(photo['sourceFiles'], ensure_ascii=False, indent=10)}",
         "      },",
     ]
@@ -323,6 +347,22 @@ def blacklist_ids_from_payload(payload: dict) -> set[str]:
     return {photo_id for photo_id in payload.get("photo_ids", []) if isinstance(photo_id, str)}
 
 
+def hidden_ids_from_current_state(repo_root: Path) -> set[str]:
+    path = repo_root / HIDDEN_DATA_PATH
+    if not path.exists():
+        return set()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    hidden_ids: set[str] = set()
+    for collection in payload.values() if isinstance(payload, dict) else []:
+        if not isinstance(collection, dict):
+            continue
+        for photo in collection.get("photos", []) or []:
+            photo_id = photo.get("id") if isinstance(photo, dict) else None
+            if isinstance(photo_id, str) and photo_id:
+                hidden_ids.add(photo_id)
+    return hidden_ids
+
+
 def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
     value = payload.get("expo_state")
     if not isinstance(value, dict):
@@ -417,7 +457,11 @@ def select_regular_groups(
             reserve_counts[slug] = len(reserve_groups[slug])
             hidden_counts[slug] = len(blocked)
             continue
-        regular_eligible = [item for item in eligible if item[0].get("id") not in reserve_only_ids]
+        regular_eligible = [
+            item
+            for item in eligible
+            if item[0].get("id") not in reserve_only_ids and public_preview_allowed(item[0])
+        ]
         eligible_by_id = {item[0].get("id"): item for item in regular_eligible}
         selected: list[tuple[dict, str]] = []
         selected_ids: set[str] = set()
@@ -455,6 +499,7 @@ def write_photos_data(
     repo_root: Path,
     regular_cap: int = DEFAULT_REGULAR_CAP,
     sync_regular_assets: bool = True,
+    write_regular_state: bool = True,
     selection_mode: str = DEFAULT_SELECTION_MODE,
     blacklist_ids: set[str] | None = None,
     seed: int | None = None,
@@ -466,6 +511,8 @@ def write_photos_data(
     country_assignments = country_assignments or {}
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
+            if not derivative_files_exist(repo_root, row, mode):
+                continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)
@@ -488,6 +535,7 @@ def write_photos_data(
     regular_rows = [item for slug in PUBLIC_ORDER for item in regular_groups.get(slug, [])]
     if sync_regular_assets:
         copy_regular_assets(repo_root, regular_rows)
+    if write_regular_state:
         write_regular_manifest(
             repo_root,
             regular_rows,
@@ -565,7 +613,11 @@ def write_photos_data(
         'window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {',
         '  const megapixels = window.photosByElieVerifiedMegapixels(photo);',
         '  if (!megapixels) return [];',
-        '  return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);',
+        '  const physicalProductsEnabled = window.photosByElieProductSettings?.physicalProductsEnabled?.() === true;',
+        '  return options.filter((option) =>',
+        '    (physicalProductsEnabled || option.type !== "print")',
+        '    && (!option.minMegapixels || megapixels >= option.minMegapixels)',
+        '  );',
         '};',
         "",
         'window.photosByElieFormatLabel = (source) => {',
@@ -654,15 +706,18 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--review-snapshot", "--blacklist", dest="review_snapshot", type=Path, default=None, help="Optional Review Snapshot file to apply hidden, reserve, and classification choices.")
     parser.add_argument("--no-sync-assets", action="store_true")
+    parser.add_argument("--external-media", action="store_true", help="Write public metadata/R2 keys without copying JPG derivatives into tracked assets/expo.")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     review_payload = load_blacklist_payload(args.review_snapshot)
+    hidden_ids = hidden_ids_from_current_state(repo_root) | blacklist_ids_from_payload(review_payload)
     result = write_photos_data(
         repo_root,
         regular_cap=args.regular_cap,
-        sync_regular_assets=not args.no_sync_assets,
+        sync_regular_assets=not args.no_sync_assets and not args.external_media,
+        write_regular_state=not args.no_sync_assets,
         selection_mode=args.selection,
-        blacklist_ids=blacklist_ids_from_payload(review_payload),
+        blacklist_ids=hidden_ids,
         seed=args.seed,
         pinned_regular_ids=expo_state_from_payload(review_payload),
         reserve_only_ids=reserve_only_ids_from_payload(review_payload),

@@ -2,11 +2,11 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo exports plus RAW files with embedded previews, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable Reserve manifest. RAW files are imported from embedded `exiftool` preview JPEGs, not from direct raw rendering.
+`build_lightroom_thumbnails.py` scans developed photo exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable local preview-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF masters before importing them.
 
-Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, and Pillow. Pillow is used to normalize rotated source photos; if the local `ffmpeg` build does not include the `drawtext` filter, the script also falls back to Pillow for watermarking. Install it with `python3 -m pip install --user pillow`.
+Required tools: `python3`, `exiftool`, `sips`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
 
-Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`. The importer considers developed `.jpg`, `.jpeg`, `.tif`, `.tiff` files plus RAW formats such as `.dng` and `.nef` when an embedded preview can be extracted.
+Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`. The importer considers only developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files.
 
 Default run:
 
@@ -54,9 +54,9 @@ Outputs:
 
 By default the public manifest preserves all Lightroom keywords, while exact GPS coordinates are written to the separate ignored GPS file. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
 
-## Expo Asset Export
+## Public Catalog Export
 
-`export_photos_data.py` promotes a small publishable Expo subset from the local Reserve manifest into `photos-data.js` and copies only those web derivatives into tracked `assets/expo`.
+`export_photos_data.py` promotes a publishable catalog subset from the local preview-cache manifest into `photos-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -64,7 +64,7 @@ For normal localhost preview with Owner tools, run the small local server instea
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads` and move H/U/P review photos directly between Expo, Hidden, and Reserve. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, and save owner metadata edits. GitHub Pages never gets those endpoints; the published site remains static.
 
 We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; `.pbe-review` snapshots remain only as audit files and as a fallback for larger rebuilds.
 
@@ -74,7 +74,13 @@ The Owner page writes the current Expo cap into each review snapshot, and the cl
 python3 scripts/export_photos_data.py --expo-cap 30
 ```
 
-For normal H/U/P review, no Apply step is needed: the localhost server moves the JPEG pairs immediately and rewrites `photos-data.js`, `assets/expo-manifest.json`, `assets/reserve/reserve-data.json`, and `assets/hidden/hidden-data.json`. Unknown-to-country moves are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, place them under the target Reserve country, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server move fails, the Unknown page should leave the card visible and reset the country selector.
+For the GitHub-code/R2-media publishing model, write the same public catalog and Expo manifest without copying preview JPGs into tracked `assets/expo`:
+
+```bash
+python3 scripts/export_photos_data.py --expo-cap 100 --external-media
+```
+
+For normal H/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H hides by adding the photo to the Hidden blacklist, U removes the most recent hide, and P on the Hidden page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update local catalog/source metadata when possible, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
 
 For larger batch rebuilds, export a review snapshot from the localhost Owner page and apply it with the cleaner:
 
@@ -84,9 +90,9 @@ python3 scripts/apply_review_snapshot.py \
   --rebuild-missing-manifests
 ```
 
-The exported review snapshot records the browser's current Expo state, the Expo cap, and owner country assignments from the Unknown queue. The cleaner applies country assignments and regenerates Expo by preserving browser-reviewed picks first, then random-filling remaining slots from eligible Reserve/current candidates. Country-assigned Unknowns are eligible to fill their newly assigned collection in that same pass.
+The exported review snapshot records the browser's current Expo state, the Expo cap, and owner country assignments from the Unknown queue. The cleaner applies country assignments and regenerates the public catalog by preserving browser-reviewed picks first, then random-filling remaining slots from eligible current/local-cache candidates. Country-assigned Unknowns are eligible to fill their newly assigned collection in that same pass.
 
-Because Reserve and Hidden are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local Reserve manifest. In that case the cleaner applies the pass directly from the site data: it copies promoted Reserve derivatives into `assets/expo`, moves removed Expo derivatives out of the public set, and rewrites `photos-data.js`, `assets/expo-manifest.json`, and `assets/reserve/reserve-data.json`. If the Reserve derivatives live in another checkout or worktree, add it as a search root:
+Because the local preview cache and Hidden review data are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local preview-cache manifest. In that case the cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
 
 ```bash
 python3 scripts/apply_review_snapshot.py \
@@ -98,11 +104,11 @@ Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroo
 
 For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
 
-The active review states are `assets/expo` for tracked publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden. The old raw-first staging folders are retired.
+The active storage contract is: Git tracks code/metadata and tiny assets; `assets/reserve` is an ignored local preview cache; Hidden is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
 
 ## Publish Validation
 
-`validate_publish.js` checks the generated public catalog before publishing. It loads `photos-data.js`, verifies duplicate photo IDs, local image references, matching `*_900.jpg`/`*_1800.jpg` derivative pairs, collection page shells, and resolution availability metadata.
+`validate_publish.js` checks the generated public catalog before publishing. It loads `photos-data.js`, verifies duplicate photo IDs, collection page shells, resolution availability metadata, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
 
 The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update both `export_photos_data.py` and `apply_review_snapshot.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
 
@@ -112,15 +118,52 @@ Run the validator before pushing public site changes:
 node scripts/validate_publish.js
 ```
 
-Use `--summary` when preparing a push. The summary prints collection counts, Expo/Reserve/Hidden asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
+When GitHub Pages is serving code and metadata while public previews live in R2/CDN, validate the catalog keys instead of committed local JPG files:
+
+```bash
+node scripts/validate_publish.js --external-media
+```
+
+Use `--summary` when preparing a push. The summary prints collection counts, local preview-cache/Hidden asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
 
 ```bash
 node scripts/validate_publish.js --summary
 ```
 
+## R2 Media Sync
+
+`sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:
+
+- public watermarked previews go to `photosbyelie-public` under `expo/<country>/<file>`
+- local preview-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model
+- private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
+- RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
+
+Dry-run the currently publishable Expo previews:
+
+```bash
+python3 scripts/sync_r2_media.py --scope public
+```
+
+Dry-run the full public browsing set, including local preview-cache previews:
+
+```bash
+python3 scripts/sync_r2_media.py --scope public --include-reserve
+```
+
+Dry-run private developed masters, using mounted Saturn source paths when available:
+
+```bash
+python3 scripts/sync_r2_media.py --scope private
+```
+
+Add `--upload` only after the dry-run counts look sane. The script uses `npx wrangler r2 object put`, so Wrangler must already be authorized on the machine.
+
+After the public bucket contains only final baked-watermark previews and public access is enabled through an R2 dev URL or custom domain, put that URL in `media-config.js` as `publicBaseUrl`. Public pages can also be tested temporarily with `?mediaBase=https://example.invalid/path`; use `?mediaBase=local` to clear the stored override.
+
 ## Local Asset Sync
 
-`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track Reserve or Hidden. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public `assets/expo` folder should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
+`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track preview-cache or Hidden data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
 
 The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
 

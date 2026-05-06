@@ -2,233 +2,86 @@
 
 Last updated: 2026-05-06
 
-## Completed
+## Current Facts
 
-- Replaced the remaining mock Mexico gallery with ten DNG-backed Puerto Vallarta selections, including preview exports, source file descriptions, megapixel counts, captions, and available derivative notes in `photos-data.js`.
-- Added a repeatable Lightroom thumbnail builder and documented the ingestion, privacy, promotion, and verification workflow in `docs/sops/IMAGE_INGESTION_SOP.md`.
-- Added rendered 2022 Spain-context Lightroom sale candidates to the public Spain gallery.
-- Published the first capped Expo subset to GitHub Pages and added the local Owner and Hidden review surfaces.
-- Added localhost moderation semantics where `H` hides in the live gallery, `U` undoes there, and `P` on the Hidden page returns a hidden photo to `Reserve` rather than straight back into Expo.
-- Added localhost gallery single-click selection, double-click detail navigation, and a viewport-limited Grid density slider.
-- Removed the collection number and archive blurb from gallery heroes.
-- Renamed owner-facing blacklist export to Review Snapshot, including `.pbe-review` downloads and the Apply Review Snapshot helper while keeping old payload compatibility.
-- Expanded Owner into the review command center with Review Snapshot export, Expo cap, Hidden review, Unknown classification, and state counts.
-- Moved Unknown out of the public homepage carousel and into a localhost-only owner classification queue.
-- Polished the homepage by keeping only public collection cards, making every visible carousel card navigate to its collection, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
-- Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
-- Made basket selections automatically feed the Liked list, pruned stale catalog entries from basket rendering, and expanded Unknown classification with same-day assignment plus H/U moderation.
-- Removed assigned photos from the Unknown classification queue immediately after country assignment.
-- Exercised a synthetic Review Snapshot against a disposable local copy and hardened the direct-assets cleaner so missing Reserve derivatives are skipped, Expo fills up to the configured cap from available assets, and assigned visible Unknown photos move into the target country Reserve.
-- Pruned the local Reserve index to physical JPEGs and cache-busted localhost Reserve loading so refills do not show stale broken previews.
-- Made Expo selection random through the export and Review Snapshot paths so Reserve fills do not preserve chronological archive runs.
-- Updated public gallery cells to show real photo aspect ratios inside square slots, reserving strong selection framing for localhost review.
-- Tightened homepage sampling so representative photos refresh after a full public-country carousel cycle, not every single card change.
-- Re-ran the Review Snapshot cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
-- Let visible side cards in the collection carousel navigate directly to their galleries instead of requiring a foregrounding click first.
-- Added the visible ignored `assets/hidden` folder and a local Hidden catalog so the three physical asset states are now Expo, Reserve, and Hidden.
-- Reset the asset contract to tracked `assets/expo` plus ignored `assets/reserve` and `assets/hidden`, with one country/AI/Unknown subfolder per state.
-- Retired raw-first ingest assumptions: future imports scan developed JPG/TIFF exports into Reserve and leave Expo to review.
-- Imported the full Saturn Camera and Leonardo developed JPG/TIFF sources into local Reserve, selected a capped v65.30 public Expo build, and kept Unknown local-only.
-- Added Unknown full-screen thumbnail preview, title/keyword metadata, and more reliable H/U shortcuts.
-- Hardened Hidden review so it waits for local catalogs and avoids blank unresolved cards during load.
-- Changed Review Snapshot exports to declare browser-state review, and updated the cleaner to preserve browser Expo picks first, then random-fill gaps from eligible current/Reserve photos, including country-assigned Unknowns.
-- Added localhost-only live file actions so H/U/P move JPEG pairs directly between Expo, Hidden, and Reserve while GitHub Pages remains fully static.
-- Renamed the owner review workflow to `hidden.html`, `hidden-page.js`, `hidden-actions.js`, `photosByElieHiddenActions`, and `photosbyelie:hiddenchange`.
-- Added subtle keyboard reminder strips for owner review grids and detail-page like/navigation shortcuts.
-- Added day-before/day-after known-country context to Unknown cards so country assignment can use nearby travel dates.
-- Made Unknown country assignment a live localhost file move into country Reserve folders and added previous/next shooting-day context.
-- Changed previous/next shooting-day Unknown hints to use relative day distance instead of raw dates.
-- Added localhost Owner editing for detail-page Title and Keywords, with saves flowing into catalog metadata, preview JPEG tags, and resolvable source exports.
-- Added a localhost Owner country-keyword sync and changed gallery display default to newest-first without changing randomized Expo selection.
-- Removed the dead gallery Restore control plus Source/Availability filters, fixed hidden controls rendering as empty pills, and tightened gallery filter wrapping.
-- Added `scripts/sync_local_assets.py` so ignored Reserve/Hidden assets can be dry-run or synced between Max and David from either checkout.
-- Made detail-page previous/next navigation follow the last gallery's filtered and sorted grid order when the current photo came from that gallery.
-- Added gallery and Owner review `RAW` overlays for DNG/NEF/other raw-origin photos so duplicates can be reviewed without burning labels into preview files.
-- Added `scripts/validate_publish.js` for generated-data validation, derivative-pair checks, resolution metadata checks, and publish summaries with Expo/Reserve/Hidden sizes.
-- Added buyer-facing license notes on detail and basket pages plus a static basket order-intent summary and mail draft.
-- Added mock physical print products, plain white/plain black frame add-ons, and a per-photo order review in the generated basket email.
-- Added locale-inferred print unit ordering so metric locales see centimeter dimensions first and US-style locales see inch dimensions first.
-- Changed physical prints to carry quantity plus a per-print frame radio choice: no frame, plain white, or plain black.
-- Added explicit print count steppers and made count/frame interactions automatically select the related print.
-- Changed frame mock prices to scale by physical print size instead of using one flat add-on price.
-- Added mock shipping and handling for physical prints, offset by an equal limited-time discount; downloads stay free.
-- Re-enabled Lightroom RAW ingestion through embedded preview extraction, refreshed local Reserve to 14,805 selected manifest rows, and verified 29,638 Reserve JPG derivatives with zero recorded import failures.
-- Prepared the Max/David ignored-asset handoff with the tracked `scripts/sync_local_assets.py` workflow plus tarball fallback for large local vault deltas.
-- Folded the 2026-05-06 Codex review into this backlog and archived the review notes under `Archive/`.
-- Retired the old Review Pass framing in code, renamed the batch fallback to Review Snapshot, and documented that live localhost owner actions are now the preferred workflow.
+- Local visible build: `v66.48`.
+- Public GitHub Pages build before this push: `v66.37`.
+- Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
+- Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
+- Public previews should live on R2/CDN as baked, strong-watermark files only.
+- RAW/DNG/NEF files stay off public and private cloud storage. If a buyer wants RAW, they contact Elie directly.
+- Hidden is a blacklist/review state, not a media folder contract. Re-promote means removing the ID from the blacklist.
+- `assets/reserve` remains an ignored local preview cache for importer/review compatibility, not a long-term public state.
+- R2 local logs show 1,615 public preview uploads and 2,453 public preview deletes. Live bucket state still needs direct R2 verification.
 
-## Current Priority Stack
+## Fresh Numbered Backlog
 
-1. **Verify the Max handoff and GitHub sync.**
-   - On Max, confirm the base asset tarball plus created-today delta are unpacked into the checkout.
-   - Verify `assets/reserve` is about 29,638 JPG derivatives and roughly 6.8 GB before deleting transfer tarballs.
-   - Pull GitHub on Max after the media handoff so tracked code/docs and ignored local vaults are both current.
-   - Keep `assets/reserve` and `assets/hidden` local/ignored; do not use Git cleanup commands that remove ignored media.
+1. **Verify live R2 state and access.**
+   - [Codex] Re-check `photosbyelie-public` and `photosbyelie-private` directly through Wrangler/API once Cloudflare credentials are available in the shell.
+   - [Codex] Confirm whether any old permissive-watermark public previews remain in R2.
+   - [Elie] Keep using the Cloudflare dashboard as the manual source of truth until the local token path is stable.
+   - [Codex] Add a no-secrets `.env.example` or setup note for Cloudflare account ID, bucket names, API token, and media base URL.
 
-2. **Harden the public/local boundary before the next push cycle.**
-   - Make the static public site versus localhost Owner tooling boundary explicit in docs, code organization, and tests.
-   - Keep operator hints, Owner actions, Reserve/Hidden catalogs, and local logs out of public GitHub Pages behavior.
-   - Add deterministic checks around Expo/Reserve/Hidden transitions, Expo caps, and generated catalog outputs.
-   - Keep asset budget checks in the publish path so accidental full-library publication is caught before push.
+2. **Finish the safe public-media pipeline.**
+   - [Codex] Ensure every public preview is generated with the stronger repeated anti-theft watermark at the reduced opacity Elie approved.
+   - [Codex] Keep R2 upload scripts from uploading RAW/DNG/NEF-derived previews.
+   - [Codex] Upload only the intended public preview set after a dry-run count and sample review.
+   - [Codex] Keep local journals for uploads/deletes, but add a live R2 inventory check before declaring success.
 
-3. **Finish the buyer order mock.**
-   - Review the detail, liked, basket, and generated email flow on a phone after the quantity/frame/S&H changes.
-   - Decide the next checkout step: keep mailto order intent, use Stripe payment links, or introduce a small backend.
-   - Keep mock S&H folded into physical item pricing and shown as an add/subtract limited-time discount until real fulfillment pricing exists.
-   - Make the final shopping path obvious: like, choose resolution/product, basket, checkout/request.
+3. **Cleanly separate GitHub metadata from media hosting.**
+   - [Codex] Keep `photos-data.js`, `assets/expo-manifest.json`, `media-config.js`, code, and docs tracked.
+   - [Codex] Keep public preview JPGs out of Git and validate with `node scripts/validate_publish.js --external-media --summary`.
+   - [Codex] Confirm GitHub Pages can render from R2/CDN public media keys after each publish.
+   - [Codex] Watch GitHub upload size so pushes stay small and boring.
 
-4. **Polish mobile buying and navigation.**
-   - Tighten bottom action layout on detail pages.
-   - On narrow screens, duplicate primary CTA buttons and previous/next navigation above the footer where useful.
-   - Retest phone detail swipes for previous/next navigation after product control changes.
-   - Decide whether public detail needs single-tap full-screen preview in addition to double click.
-   - Add public empty states for no filter results, empty likes, empty basket, and unavailable product choices.
+4. **Repair and document the importer around developed files only.**
+   - [Codex] Confirm `scripts/build_lightroom_thumbnails.py` scans only JPG/JPEG/TIF/TIFF developed exports.
+   - [Codex] Preserve Camera green label/rating 4+ selection and Leonardo forced-AI import.
+   - [Codex] Keep RAW/DNG/NEF as owner-local source evidence only, not upload candidates.
+   - [Codex] Add importer tests or at least deterministic dry-run output for skipped RAW files.
 
-5. **Harden Expo/Reserve/Hidden publishing.**
-   - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
-   - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch review, not as a fixed global default.
-   - Use `scripts/sync_local_assets.py` for local vault handoff rather than pushing Reserve/Hidden to Git.
-   - Run `node scripts/validate_publish.js --summary` before public pushes.
-   - Archive or ignore local review exports and `.playwright-mcp` logs unless they become intentional audit fixtures.
+5. **Publish hidden state as a blacklist.**
+   - [Codex] Make H hide by updating local/public blacklist state, not moving preview files.
+   - [Codex] Make U undo the most recent hide by removing it from the blacklist.
+   - [Codex] Make Hidden page P re-promote by removing IDs from the blacklist.
+   - [Codex] Add an Owner-only action to permanently wipe hidden objects from R2 when Elie explicitly chooses that.
+   - [Codex] Ensure public pages and public media sync both respect the hidden blacklist.
 
-6. **Improve gallery and detail review ergonomics.**
-   - Add panoramic orientation filtering.
-   - Add gallery hover metadata for title and safe context.
-   - Retest gallery-selected detail navigation, mobile swipes, full-screen preview, and H/U/P owner shortcuts on narrow screens.
-   - Keep Owner UI visually operational and distinct from the public shopping/browsing experience.
+6. **Finish owner metadata persistence and sync.**
+   - [Codex] Keep Return/Enter in Title or Keywords saving metadata and exiting edit focus.
+   - [Codex] Save metadata to the generated catalog, local preview JPEGs, and resolvable developed source files.
+   - [Codex] Add a background owner task to re-upload changed previews/source masters to R2.
+   - [Codex] Show quiet progress/status for that background metadata sync on `owner.html`.
+   - [Codex] Keep any screen-scrape fallback owner-only, and avoid using it unless local files truly are missing.
 
-7. **Scale gallery generation and review.**
-   - Treat the current RAW-aware Reserve import as the local vault baseline before the next broad import.
-   - Use export/live owner tooling to fill Expo from Reserve; keep importer output in Reserve only.
-   - Keep importer country classification improving, but do not let import write directly to Expo.
-   - Keep monitoring embedded RAW preview imports for low-resolution or missing-preview failures before promoting RAW-origin photos into Expo.
+7. **Polish buyer-facing product UI.**
+   - [Codex] Replace the narrow detail-page product copy with the simpler label `Pick a resolution`.
+   - [Codex] Keep physical products disabled by default or owner-toggleable until fulfillment is real.
+   - [Codex] Keep the public copy focused on Digital Assets until checkout/fulfillment is ready.
+   - [Codex] Retest detail, liked, basket, and generated order email after product visibility changes.
 
-8. **Keep operations steady.**
-   - Document procedures, revisit branch protection, and defer a backend decision until the static/local review model proves its limits.
-   - Add a concise data-flow diagram for source metadata, Reserve/Hidden catalogs, Expo assets, and public `photos-data.js`.
-   - Keep `README.md` focused on the current public/local workflow as the behavior list grows.
+8. **Improve liked and basket presentation.**
+   - [Codex] Use each asset preview as a subtle low-opacity row background in liked and basket views.
+   - [Codex] Keep row controls readable on narrow screens.
+   - [Codex] Retest liked-to-basket and basket total behavior after visual changes.
 
-## Product Backlog
+9. **Retest local owner review UX.**
+   - [Codex] Check gallery selection, Enter detail navigation, double-click detail navigation, H/U, and hidden re-promote on localhost.
+   - [Codex] Check Unknown classification behavior and confirm same-day assignment still refreshes hints.
+   - [Codex] Remove obsolete Reserve wording from visible owner UI as it appears.
 
-1. **Automate manifest promotion into `photos-data.js`.**
-   - Convert selected rows from `assets/reserve/manifest.json` into collection entries.
-   - Preserve public-safe metadata, source file proof, and verified derivative dimensions.
-   - Keep manual review for titles, captions, pricing, and privacy before publishing.
-   - Preserve the physical-state contract: importer fills Reserve, review fills Expo, Hidden stays local.
+10. **Polish gallery card captions.**
+    - [Codex] Add photo titles back below gallery thumbnails.
+    - [Codex] Keep the current image framing and square-cell layout untouched.
+    - [Codex] Constrain captions to the available card width and let long titles wrap cleanly across multiple lines.
+    - [Codex] Retest narrow and wide galleries so captions do not collide with selection outlines or grid spacing.
 
-2. **Improve basket checkout from mock email to real order intent.**
-   - Static order intent now exists on the basket page and includes per-photo email review details.
-   - Product rows now include physical print count, frame choice, size-based frame pricing, and S&H add/discount lines.
-   - Decide whether checkout stays email-based, uses Stripe payment links, or moves to a small backend.
+11. **Continue checkout architecture only after media is stable.**
+    - [Elie] Finish Stripe account setup when ready.
+    - [Codex] Keep checkout in static/email-intent mode until public media, hidden blacklist, and owner sync are trustworthy.
+    - [Codex] Later prototype a small Worker for Stripe webhook receipt, order lookup, signed delivery links, and one-download-per-hour throttling.
 
-3. **Add basic photo licensing terms.**
-   - Baseline personal print/web terms now appear on detail and basket pages.
-   - Product choices now include mock physical prints with quantity and per-print framing choices.
-   - Mock shipping/handling is displayed for physical goods while downloads stay free.
-   - Expand the language into a fuller terms page if real checkout launches.
-   - Keep prices tied to product choices until the pricing model is better tested.
-
-4. **Add collection filtering and sorting.**
-   - Filter by orientation, color mood, and subject.
-   - Add a Panoramic orientation option before normal Landscape, likely based on aspect ratio `>= 2.0` or `>= 2.2`.
-   - Sort by newest, collection order, price, and megapixel size.
-   - Keep filters lightweight enough for GitHub Pages.
-   - For localhost review only, consider filling filtered views from matching Reserve photos when Expo matches fall below the Owner cap.
-   - Keep buyer-facing filtered Reserve fill deferred until non-GitHub media hosting exists.
-
-5. **Polish persistent favorites.**
-   - Favorites already persist in localStorage and can move liked photos into the basket.
-   - Retest the liked flow on mobile.
-   - Decide whether favorites need collection-level affordances beyond the detail-page heart.
-
-6. **Improve mobile gallery navigation.**
-   - Add visible previous/next controls near gallery grids.
-   - On narrow screens, duplicate primary CTA buttons and previous/next navigation at the bottom of each page, above the footer.
-   - On phone-sized detail pages, horizontal swipes should trigger previous/next photo navigation.
-   - On detail pages, single click/tap on the photo should enter full-screen preview; click/tap again should dismiss it.
-   - Retest detail-page cross-collection previous/next navigation on mobile.
-   - Consider a compact thumbnail strip for detail pages.
-   - Retest swiping on phone after every carousel or gallery interaction change.
-
-7. **Polish homepage collection sampling.**
-   - Refresh the random representative photos after every full carousel cycle.
-   - Use the number of public country collections as the cycle length so the samples rotate at a predictable pace.
-   - Retest visible side-card navigation after carousel layout changes.
-
-8. **Add SEO and social sharing metadata per collection and photo.**
-   - Give each collection a stronger title and description.
-   - Add share-ready preview images once real photos are imported.
-   - Consider static generated detail pages later if search indexing becomes important.
-
-9. **Decide when to leave pure GitHub Pages.**
-   - Stay static while localStorage basket, email checkout, and manual fulfillment are enough.
-   - Move to a backend when logins, customer accounts, paid downloads, private galleries, or inventory/order tracking become required.
-   - Likely budget-conscious path: GitHub Pages plus Stripe links first, then a small hosted backend only when proven necessary.
-   - Treat buyer-facing access to Reserve-sized catalogs as a post-GitHub/media-hosting phase.
-
-10. **Document operating procedures.**
-   - Add SOPs for importing photos, resizing derivatives, updating prices, testing basket behavior, and publishing.
-   - Keep versioning under the existing MailAssist SOP.
-   - Include a short recovery note for clearing localStorage during testing.
-   - Add a data-flow diagram for source metadata, local catalogs, generated public data, and publishable assets.
-   - Keep a short public/localhost boundary note in README and SOPs.
-
-11. **Add automated quality gates.**
-   - Add deterministic catalog-generation tests for Expo/Reserve/Hidden transitions and Owner cap handling.
-   - Add Playwright smoke coverage for homepage, gallery filters, detail navigation, likes, basket, and localhost owner-only visibility.
-   - Make asset budget checks part of the pre-push/publish routine, with clear failure output when Expo grows too large.
-   - Ensure operator hints and Owner-only controls do not appear in public-mode smoke tests.
-
-## Backlog: Archive Review And Publishing
-
-1. **Re-establish publishing away from one-machine dependence.**
-   - Publish a lightweight, repeatable subset instead of relying on the current single-computer local archive.
-   - Separate publishable web assets from the heavyweight local ingest and moderation workspace.
-   - Decide whether the public site should ship only the selected Expo set while `Reserve` remains local or external.
-   - Define a safe path for syncing publishable assets to GitHub without dragging the full Saturn archive into normal Git history.
-
-2. **Introduce a third moderation state: Reserve.**
-   - Keep Expo, `Reserve`, and Hidden as distinct states.
-   - Use the Owner-selected Expo cap as an upper bound rather than a required count.
-   - Future sold/pinned photos should be added on top of the Owner cap, not counted inside it.
-   - Store Reserve and Hidden assets in visible local folders that are ignored from Git.
-   - Keep future Expo fills randomized so Reserve promotions do not publish as chronological sequences.
-
-3. **Add a localhost-only Owner surface.**
-   - Keep refining the new `Owner` page as moderation needs become clearer.
-   - Keep Batch Export there as an optional audit/batch action.
-   - Verify the Expo cap control against live local moves and future cleaner passes.
-   - Keep the Hidden page collection-like and localhost-only.
-   - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to Expo.
-
-4. **Move Unknown into an Owner classification workflow.**
-   - Remove `Unknown` from the public country-style collection list and treat it as an owner-only review queue.
-   - Add a manual classification path for assigning an unknown photo to a real country.
-   - Decide whether classification writes a small owner export, updates the Lightroom manifest, or feeds directly into the cleaner script.
-   - Preserve enough context while classifying, such as filename, capture time, GPS metadata, keywords, and nearby shoot folders.
-
-5. **Refine localhost gallery selection behavior.**
-   - Keep retesting single-click selection and double-click detail opening during live review.
-   - Preserve keyboard-first moderation flow and avoid making accidental navigation too easy while reviewing.
-   - Retest single-click, double-click, arrow movement, and hide/undo on a phone-sized viewport.
-
-6. **Add zoom control for gallery density.**
-   - Refine the new Grid slider after live review use.
-   - Consider whether density should be local-only forever or become a public browsing preference.
-
-7. **Show real photo aspect ratios in square gallery cells.**
-   - Keep each gallery slot as a stable square background so the grid stays tidy.
-   - Render the photo inside that square at its real aspect ratio instead of cropping or stretching it.
-   - Use neutral/white bars where necessary so portrait, landscape, panorama, and square images all feel intentional.
-   - Remove or soften public gallery borders/rectangles; reserve obvious selection framing for localhost review mode.
-   - Done for the current public grid; retest on mobile and tune the neutral cell background if needed.
-
-8. **Add gallery hover metadata.**
-   - Show a lightweight tooltip when hovering over a gallery photo.
-   - Start with the photo title, then consider adding capture date, country, source type, or other safe metadata.
-   - Keep touch devices clean; the tooltip should not block review controls or accidental-tap prevention.
-
-9. **Backburner: add GitHub branch protection.**
-   - Revisit rulesets after the lightweight publish workflow has settled.
-   - Protect `main` from force-pushes and accidental deletion.
-   - Avoid blocking the solo publishing loop until the release path is smooth.
+12. **Keep documentation current.**
+    - [Codex] Update `README.md`, `scripts/README.md`, `SUMMARY.md`, and this file whenever the media contract changes.
+    - [Codex] Convert architecture notes into a short migration SOP once R2 auth and public media URLs are settled.
+    - [Codex] Keep the public/local boundary explicit in docs and validation.

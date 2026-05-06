@@ -7,6 +7,14 @@ const frameOptions = () => window.photosByElieFrameOptions || [];
 const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
+const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#39;"
+}[char]));
+const cssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
 
 const photoForLikedItem = (item) => {
   const entry = Object.values(allCollections).find((collection) =>
@@ -101,7 +109,7 @@ const renderLiked = () => {
     const { collection, photo } = photoForLikedItem(item);
     const basketItem = basketByPhoto.get(item.photoId);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
-    const imageSrc = photo?.gallerySrc || photo?.imageSrc || "";
+    const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     const selectedIds = new Set((basketItem?.options || []).map((option) => option.id));
     const selectedOptionById = new Map((basketItem?.options || []).map((option) => [option.id, option]));
     const itemTotal = (basketItem?.options || []).reduce((sum, option) => sum + optionTotal(option), 0);
@@ -137,7 +145,7 @@ const renderLiked = () => {
       `;
     };
     return `
-    <article class="basket-item">
+    <article class="basket-item ${imageSrc ? "has-row-bg" : ""}" data-basket-row-bg="${escapeText(imageSrc)}">
       <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
         ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
@@ -164,6 +172,11 @@ const renderLiked = () => {
       </div>
     </article>
   `}).join("");
+
+  document.querySelectorAll("[data-basket-row-bg]").forEach((row) => {
+    const rowBg = row.dataset.basketRowBg || "";
+    if (rowBg) row.style.setProperty("--basket-row-bg", cssUrlValue(rowBg));
+  });
 
   document.querySelectorAll("[data-remove-liked]").forEach((button) => {
     button.addEventListener("click", () => {

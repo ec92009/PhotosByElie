@@ -8,6 +8,10 @@ const vm = require("vm");
 const repoRoot = path.resolve(__dirname, "..");
 const args = new Set(process.argv.slice(2));
 const showSummary = args.has("--summary");
+const externalMedia = args.has("--external-media")
+  || process.env.PHOTOSBYELIE_EXTERNAL_MEDIA === "1"
+  || Boolean(process.env.PHOTOSBYELIE_PUBLIC_MEDIA_BASE);
+const rawSourceTypes = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 
 const toPosix = (value) => value.split(path.sep).join("/");
 const relative = (value) => toPosix(path.relative(repoRoot, value));
@@ -146,20 +150,45 @@ const validate = () => {
       if (!photo.title) errors.push(`${photo.id} is missing a title.`);
       if (!photo.gallerySrc) errors.push(`${photo.id} is missing gallerySrc.`);
       if (!photo.imageSrc) errors.push(`${photo.id} is missing imageSrc.`);
+      const sourceTypes = (photo.sourceFiles || []).map((source) => String(source?.type || "").trim().toUpperCase());
+      if (sourceTypes.some((sourceType) => rawSourceTypes.has(sourceType))) {
+        errors.push(`${photo.id} has RAW/DNG source metadata and cannot be published.`);
+      }
+      if (photo.media?.publicPreview?.allowed === false) {
+        errors.push(`${photo.id} is marked ineligible for public preview upload.`);
+      }
 
-      [photo.gallerySrc, photo.imageSrc].filter(Boolean).forEach((reference) => {
-        const targetPath = localPathFor(reference);
-        if (!targetPath) {
-          errors.push(`${photo.id} has a non-local asset reference: ${reference}`);
-          return;
+      const publicPreview = photo.media?.publicPreview || {};
+      const publicGalleryKey = String(publicPreview.galleryKey || "");
+      const publicDetailKey = String(publicPreview.detailKey || "");
+
+      if (externalMedia) {
+        if (!publicGalleryKey) errors.push(`${photo.id} is missing publicPreview.galleryKey for external media.`);
+        if (!publicDetailKey) errors.push(`${photo.id} is missing publicPreview.detailKey for external media.`);
+        if (publicGalleryKey && !/_900\.jpg$/i.test(publicGalleryKey)) {
+          errors.push(`${photo.id} publicPreview.galleryKey does not end in _900.jpg.`);
         }
-        if (!fs.existsSync(targetPath)) errors.push(`${photo.id} references a missing asset: ${cleanLocalReference(reference)}`);
-        const paired = pairFor(reference);
-        const pairedPath = paired ? localPathFor(paired) : null;
-        if (pairedPath && !fs.existsSync(pairedPath)) {
-          errors.push(`${photo.id} is missing derivative pair: ${cleanLocalReference(paired)}`);
+        if (publicDetailKey && !/_1800\.jpg$/i.test(publicDetailKey)) {
+          errors.push(`${photo.id} publicPreview.detailKey does not end in _1800.jpg.`);
         }
-      });
+        if (publicGalleryKey && publicDetailKey && pairFor(publicGalleryKey) !== publicDetailKey) {
+          errors.push(`${photo.id} public preview gallery/detail keys do not match.`);
+        }
+      } else {
+        [photo.gallerySrc, photo.imageSrc].filter(Boolean).forEach((reference) => {
+          const targetPath = localPathFor(reference);
+          if (!targetPath) {
+            errors.push(`${photo.id} has a non-local asset reference: ${reference}`);
+            return;
+          }
+          if (!fs.existsSync(targetPath)) errors.push(`${photo.id} references a missing asset: ${cleanLocalReference(reference)}`);
+          const paired = pairFor(reference);
+          const pairedPath = paired ? localPathFor(paired) : null;
+          if (pairedPath && !fs.existsSync(pairedPath)) {
+            errors.push(`${photo.id} is missing derivative pair: ${cleanLocalReference(paired)}`);
+          }
+        });
+      }
 
       if (photo.gallerySrc && !/_900\.jpg$/i.test(photo.gallerySrc)) {
         warnings.push(`${photo.id} gallerySrc does not end in _900.jpg.`);
@@ -225,6 +254,7 @@ const printSummary = (collections) => {
   console.log(`Expo assets: ${expoStats.files} files, ${formatBytes(expoStats.bytes)}`);
   console.log(`Reserve assets: ${reserveStats.files} files, ${formatBytes(reserveStats.bytes)} (ignored/local)`);
   console.log(`Hidden assets: ${hiddenStats.files} files, ${formatBytes(hiddenStats.bytes)} (ignored/local)`);
+  console.log(`Media validation: ${externalMedia ? "external R2/CDN keys" : "local Expo asset files"}`);
   console.log(`Changed Expo/catalog files: ${assetCatalogChanged.length}`);
   console.log(`Changed publish files: ${changed.length}, current working-tree volume ${formatBytes(changedBytes)}`);
   if (changed.length) {

@@ -336,6 +336,19 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-number-control select{
   appearance:none;
 }
+.owner-toggle-control{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color:var(--text);
+  font-size:.95rem;
+  font-weight:750;
+}
+.owner-toggle-control input{
+  width:20px;
+  height:20px;
+  accent-color:var(--text);
+}
 .owner-metadata-editor{
   display:grid;
   gap:10px;
@@ -1095,9 +1108,39 @@ body.detail-fullscreen-active{
   grid-template-columns:148px minmax(0,1fr) auto;
   gap:14px;
   align-items:start;
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
   border:1px solid var(--line);
   background:var(--bg);
   padding:14px;
+}
+.basket-item.has-row-bg::before,
+.basket-item.has-row-bg::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.basket-item.has-row-bg::before{
+  z-index:-2;
+  background-image:var(--basket-row-bg);
+  background-position:center;
+  background-size:cover;
+  opacity:.14;
+  filter:saturate(1.05) blur(8px);
+  transform:scale(1.04);
+}
+.basket-item.has-row-bg::after{
+  z-index:-1;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--bg) 64%,transparent) 0%,
+    color-mix(in srgb,var(--bg) 88%,transparent) 24%,
+    color-mix(in srgb,var(--bg) 96%,transparent) 100%
+  );
+}
+html[data-theme="dark"] .basket-item.has-row-bg::before{
+  opacity:.1;
 }
 .basket-thumb{
   width:148px;
@@ -1108,6 +1151,24 @@ body.detail-fullscreen-active{
 .basket-thumb.has-image::after{
   background-size:112px 60px;
   opacity:.155;
+}
+.photo-print.has-photo::after,
+.photo-art.has-photo::after,
+.mock-photo.has-image::after,
+.detail-preview.has-image::after,
+.detail-fullscreen-preview::after,
+.basket-thumb.has-image::after{
+  content:none;
+  background-image:none;
+  opacity:0;
+}
+html[data-theme="light"] .photo-print.has-photo::after,
+html[data-theme="light"] .photo-art.has-photo::after,
+html[data-theme="light"] .mock-photo.has-image::after,
+html[data-theme="light"] .detail-preview.has-image::after{
+  content:none;
+  background-image:none;
+  opacity:0;
 }
 .basket-thumb span{
   display:none;

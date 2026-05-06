@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build watermarked web thumbnails from Lightroom-selected exports and RAW previews.
+Build watermarked web thumbnails from Lightroom-selected developed exports.
 
 The script is intentionally interrupt/resume friendly:
 - source files are tracked by their path relative to --source-root
@@ -8,9 +8,10 @@ The script is intentionally interrupt/resume friendly:
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
 
-By default, developed JPG/TIFF sources and RAW files with embedded previews are
-imported into Reserve only when Lightroom marks them green with rating 4 or
-higher. Expo is filled later by the review/export scripts.
+Developed JPG/TIFF sources are imported into Reserve only when Lightroom marks
+them green with rating 4 or higher. RAW/DNG/NEF files are owner-local source
+material only; their embedded previews are not imported, published, or uploaded.
+Expo is filled later by the review/export scripts.
 """
 
 from __future__ import annotations
@@ -18,38 +19,23 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import mimetypes
 import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from media_policy import DEVELOPED_IMAGE_EXTENSIONS, RAW_IMAGE_EXTENSIONS
+from sync_r2_media import wrangler_command
 
-DEVELOPED_IMAGE_EXTENSIONS = {
-    ".jpg",
-    ".jpeg",
-    ".tif",
-    ".tiff",
-}
-RAW_IMAGE_EXTENSIONS = {
-    ".dng",
-    ".cr2",
-    ".cr3",
-    ".nef",
-    ".arw",
-    ".raf",
-    ".orf",
-    ".rw2",
-    ".raw",
-    ".pef",
-    ".srw",
-    ".rwl",
-}
-IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS | RAW_IMAGE_EXTENSIONS
+
+IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS
 
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
@@ -59,11 +45,15 @@ DEFAULT_SOURCE_ROOT_CANDIDATES = [
 ]
 DEFAULT_SOURCE_ROOT = DEFAULT_SOURCE_ROOT_CANDIDATES[0]
 DEFAULT_OUTPUT_ROOT = Path("assets/reserve")
-DEFAULT_WATERMARK = "PhotosByElie"
+DEFAULT_WATERMARK = "PhotosByElie Preview - Not Licensed"
 DEFAULT_GALLERY_MAX = 900
 DEFAULT_DETAIL_MAX = 1800
 DEFAULT_BATCH_SIZE = 50
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
+DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
+DEFAULT_PUBLIC_PREFIX = "expo"
+DEFAULT_PRIVATE_PREFIX = "masters"
 COUNTRY_ALIASES = {
     "fr": ("france", "France"),
     "france": ("france", "France"),
@@ -177,7 +167,7 @@ FFMPEG_FILTERS: set[str] | None = None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Create watermarked Reserve thumbnails from developed JPG/TIFF exports and embedded RAW previews."
+        description="Create watermarked Reserve thumbnails from developed JPG/TIFF exports."
     )
     parser.add_argument(
         "--source-root",
@@ -189,7 +179,7 @@ def parse_args() -> argparse.Namespace:
         "--developed-root",
         type=Path,
         default=None,
-        help="Deprecated no-op. The importer now scans source JPG/TIFF/RAW files directly.",
+        help="Deprecated no-op. The importer now scans developed JPG/TIFF source files directly.",
     )
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--label", default="green", help="Lightroom color label to include.")
@@ -220,6 +210,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="Scan and checkpoint, but do not render files.")
     parser.add_argument("--force", action="store_true", help="Ignore checkpoints and rebuild existing derivatives.")
     parser.add_argument("--clean-missing", action="store_true", help="Drop manifest rows whose derivatives are missing.")
+    parser.add_argument(
+        "--r2-upload",
+        choices=("none", "public", "private", "both"),
+        default="none",
+        help="Upload rendered public previews and/or developed source masters directly to Cloudflare R2.",
+    )
+    parser.add_argument("--r2-public-bucket", default=DEFAULT_PUBLIC_BUCKET)
+    parser.add_argument("--r2-private-bucket", default=DEFAULT_PRIVATE_BUCKET)
+    parser.add_argument("--r2-public-prefix", default=DEFAULT_PUBLIC_PREFIX)
+    parser.add_argument("--r2-private-prefix", default=DEFAULT_PRIVATE_PREFIX)
+    parser.add_argument("--r2-retries", type=int, default=2)
     parser.add_argument(
         "--include-private-keywords",
         action="store_true",
@@ -805,28 +806,56 @@ def apply_pillow_watermark(source: Path, output: Path, watermark: str, font: str
         from PIL import Image, ImageDraw, ImageFont
     except ImportError as exc:
         raise RuntimeError(
-            "ffmpeg drawtext is unavailable and Pillow is not installed. Run `python3 -m pip install --user pillow`."
+            "Pillow is required for baked preview watermarking. Run `python3 -m pip install --user pillow`."
         ) from exc
 
     with Image.open(source) as image:
         image = image.convert("RGB")
         overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
-        draw = ImageDraw.Draw(overlay)
-        font_object = ImageFont.truetype(font, font_size)
-        bbox = draw.textbbox((0, 0), watermark, font=font_object, stroke_width=border_width)
+        watermark_text = (watermark or DEFAULT_WATERMARK).strip()
+        repeat_text = watermark_text.upper()
+        repeat_font = ImageFont.truetype(font, max(34, round(font_size * 2.35)))
+        repeat_stroke = max(2, round(border_width * 2.2))
+        repeat_draw = ImageDraw.Draw(overlay)
+        bbox = repeat_draw.textbbox((0, 0), repeat_text, font=repeat_font, stroke_width=repeat_stroke)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-        position = (
-            max(margin, image.width - text_width - margin),
-            max(margin, image.height - text_height - margin),
+        tile_padding = max(80, round(min(image.size) * 0.22))
+        tile = Image.new("RGBA", (text_width + tile_padding * 2, text_height + tile_padding * 2), (255, 255, 255, 0))
+        tile_draw = ImageDraw.Draw(tile)
+        tile_draw.text(
+            (tile_padding, tile_padding),
+            repeat_text,
+            font=repeat_font,
+            fill=(255, 255, 255, 43),
+            stroke_width=repeat_stroke,
+            stroke_fill=(0, 0, 0, 33),
         )
-        draw.text(
-            position,
-            watermark,
-            font=font_object,
-            fill=(255, 255, 255, 148),
-            stroke_width=border_width,
-            stroke_fill=(0, 0, 0, 92),
+        rotated = tile.rotate(-28, expand=True, resample=Image.Resampling.BICUBIC)
+        step_x = max(220, round(rotated.width * 0.78))
+        step_y = max(180, round(rotated.height * 0.72))
+        for y in range(-rotated.height, image.height + rotated.height, step_y):
+            row_offset = 0 if (y // step_y) % 2 == 0 else -(step_x // 2)
+            for x in range(-rotated.width + row_offset, image.width + rotated.width, step_x):
+                overlay.alpha_composite(rotated, (x, y))
+
+        corner_font = ImageFont.truetype(font, font_size)
+        corner_stroke = max(1, border_width)
+        corner_draw = ImageDraw.Draw(overlay)
+        corner_bbox = corner_draw.textbbox((0, 0), "PhotosByElie", font=corner_font, stroke_width=corner_stroke)
+        corner_width = corner_bbox[2] - corner_bbox[0]
+        corner_height = corner_bbox[3] - corner_bbox[1]
+        corner_position = (
+            max(margin, image.width - corner_width - margin),
+            max(margin, image.height - corner_height - margin),
+        )
+        corner_draw.text(
+            corner_position,
+            "PhotosByElie",
+            font=corner_font,
+            fill=(255, 255, 255, 185),
+            stroke_width=corner_stroke,
+            stroke_fill=(0, 0, 0, 122),
         )
         watermarked = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
         watermarked.save(output, format="JPEG", quality=88, optimize=True)
@@ -869,36 +898,7 @@ def render_derivative(
         font_size = max(18, round(max_px / 45))
         border_width = max(1, round(font_size / 14))
         margin = max(18, round(max_px / 36))
-        if ffmpeg_has_filter("drawtext"):
-            watermark_filter = (
-                f"drawtext=fontfile='{ffmpeg_escape(font)}':"
-                f"text='{ffmpeg_escape(watermark)}':"
-                "fontcolor=white@0.58:"
-                f"fontsize={font_size}:"
-                f"borderw={border_width}:"
-                "bordercolor=black@0.36:"
-                f"x=w-tw-{margin}:"
-                f"y=h-th-{margin}"
-            )
-            subprocess.run(
-                [
-                    "ffmpeg",
-                    "-y",
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-i",
-                    str(temp_jpg),
-                    "-vf",
-                    watermark_filter,
-                    "-q:v",
-                    "3",
-                    str(temp_out),
-                ],
-                check=True,
-            )
-        else:
-            apply_pillow_watermark(temp_jpg, temp_out, watermark, font, font_size, border_width, margin)
+        apply_pillow_watermark(temp_jpg, temp_out, watermark, font, font_size, border_width, margin)
         temp_out.replace(output)
     return True
 
@@ -931,6 +931,90 @@ def derivative_facts(output_root: Path, relative_path: str) -> dict[str, Any]:
     facts = image_size(path)
     facts["path"] = relative_path
     return facts
+
+
+def r2_upload_enabled(args: argparse.Namespace, scope: str) -> bool:
+    return args.r2_upload == "both" or args.r2_upload == scope
+
+
+def r2_put_file(
+    bucket: str,
+    key: str,
+    path: Path,
+    content_type: str,
+    retries: int,
+    cache_control: str | None = None,
+) -> dict[str, Any]:
+    command = [
+        *wrangler_command(),
+        "r2",
+        "object",
+        "put",
+        f"{bucket}/{key}",
+        "--file",
+        str(path),
+        "--content-type",
+        content_type,
+        "--remote",
+    ]
+    if cache_control:
+        command.extend(["--cache-control", cache_control])
+    output = ""
+    for attempt in range(retries + 1):
+        result = subprocess.run(command, text=True, capture_output=True, check=False)
+        output = (result.stdout or result.stderr).strip()
+        if result.returncode == 0:
+            return {
+                "bucket": bucket,
+                "key": key,
+                "path": str(path),
+                "bytes": path.stat().st_size,
+                "content_type": content_type,
+            }
+        if attempt < retries:
+            time.sleep(min(30, 2 ** attempt))
+    raise RuntimeError(f"R2 upload failed for {bucket}/{key}: {output}")
+
+
+def r2_public_key(args: argparse.Namespace, country_slug: str, path: Path) -> str:
+    return "/".join([args.r2_public_prefix.strip("/"), country_slug, path.name])
+
+
+def r2_private_key(args: argparse.Namespace, row: dict[str, Any], source_path: Path) -> str:
+    return "/".join([args.r2_private_prefix.strip("/"), row.get("id") or source_path.stem, source_path.name])
+
+
+def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path: Path, detail_path: Path, source_path: Path) -> dict[str, Any]:
+    uploaded: dict[str, Any] = {}
+    country_slug = row.get("gallery_country", {}).get("slug") or "unknown"
+    if r2_upload_enabled(args, "public"):
+        uploaded["public_previews"] = [
+            r2_put_file(
+                args.r2_public_bucket,
+                r2_public_key(args, country_slug, gallery_path),
+                gallery_path,
+                "image/jpeg",
+                args.r2_retries,
+                cache_control="public, max-age=31536000, immutable",
+            ),
+            r2_put_file(
+                args.r2_public_bucket,
+                r2_public_key(args, country_slug, detail_path),
+                detail_path,
+                "image/jpeg",
+                args.r2_retries,
+                cache_control="public, max-age=31536000, immutable",
+            ),
+        ]
+    if r2_upload_enabled(args, "private"):
+        uploaded["private_master"] = r2_put_file(
+            args.r2_private_bucket,
+            r2_private_key(args, row, source_path),
+            source_path,
+            mimetypes.guess_type(source_path.name)[0] or "application/octet-stream",
+            args.r2_retries,
+        )
+    return uploaded
 
 
 def load_manifest(path: Path) -> dict[str, dict[str, Any]]:
@@ -993,6 +1077,7 @@ def write_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.N
             "gallery_max": args.gallery_max,
             "detail_max": args.detail_max,
             "watermark": args.watermark,
+            "watermark_policy": "baked-repeating-preview",
         },
         "photos": sorted(rows.values(), key=lambda row: row["relative_path"]),
     }
@@ -1149,9 +1234,7 @@ def render_sources_for(
     temp_dir: Path,
 ) -> tuple[Path, Path, dict[str, Any] | None, Any]:
     if is_raw_image(source):
-        preview = temp_dir / f"{source.stem}-embedded-preview.jpg"
-        facts = extract_raw_preview(source, preview)
-        return preview, preview, {"embedded_preview": facts}, None
+        raise ValueError(f"{source} is a RAW file; export a developed JPG/TIFF before importing.")
     return source, source, None, None
 
 
@@ -1263,6 +1346,12 @@ def process_batch(
                     "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
                     "generated_at": now_iso(),
                 }
+                r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source)
+                if r2_assets:
+                    row["r2"] = {
+                        "uploaded_at": now_iso(),
+                        **r2_assets,
+                    }
             manifest[relative_path] = row
             failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
@@ -1292,7 +1381,6 @@ def main() -> int:
         raise SystemExit(f"Source root does not exist: {source_root}")
     require_tool("exiftool")
     require_tool("sips")
-    require_tool("ffmpeg")
     font = choose_font()
 
     manifest_path = args.output_root / "manifest.json"

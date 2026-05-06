@@ -6,10 +6,13 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import mimetypes
 import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -19,6 +22,7 @@ from urllib.parse import parse_qs, urlparse
 
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
 PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
+R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -27,6 +31,8 @@ OWNER_ACTION_ROOT = Path("assets/owner-actions")
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 ACTION_PROGRESS: dict[str, dict] = {}
+R2_BACKGROUND_TASKS: dict[str, dict] = {}
+R2_BACKGROUND_LOCK = threading.Lock()
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
@@ -50,6 +56,19 @@ from asset_state import (  # noqa: E402
     write_regular_manifest_from_site,
     write_reserve_data_from_site,
 )
+from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
+from sync_r2_media import (  # noqa: E402
+    DEFAULT_PRIVATE_BUCKET,
+    DEFAULT_PRIVATE_PREFIX,
+    DEFAULT_PUBLIC_BUCKET,
+    DEFAULT_PUBLIC_PREFIX,
+    UploadItem,
+    private_key as r2_private_key,
+    public_key as r2_public_key,
+    upload_id as r2_upload_id,
+    wrangler_delete,
+    wrangler_put,
+)
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -65,15 +84,29 @@ SOURCE_ROOT_CANDIDATES = [
     Path.home() / "Pictures/LR/Camera",
     Path.home() / "Pictures/LR/_All Leonardo",
 ]
+HIDDEN_BLACKLIST_PATH = HIDDEN_ASSET_ROOT / "hidden-blacklist.json"
+HIDDEN_BLACKLIST_R2_KEY = "hidden-blacklist.json"
 
 
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
     server_version = "PhotosByElieLocal/1.0"
 
+    def translate_path(self, path: str) -> str:
+        translated = Path(super().translate_path(path))
+        request_path = urlparse(path).path
+        if request_path.startswith("/assets/expo/") and not translated.exists():
+            reserve_path = Path.cwd() / "assets/reserve" / request_path.removeprefix("/assets/expo/")
+            if reserve_path.exists():
+                return str(reserve_path)
+        return str(translated)
+
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == PHOTO_ACTION_PROGRESS_PATH:
             self._handle_photo_action_progress()
+            return
+        if path == R2_PROGRESS_PATH:
+            self._handle_r2_progress()
             return
         super().do_GET()
 
@@ -111,6 +144,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         operation_id = (query.get("operation_id") or [""])[0]
         progress = ACTION_PROGRESS.get(operation_id) if operation_id else None
         self._send_json(HTTPStatus.OK, {"ok": True, "progress": progress})
+
+    def _handle_r2_progress(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "tasks": _r2_task_snapshot()})
 
     def _is_loopback_request(self) -> bool:
         host = self.headers.get("Host", "").split(":", 1)[0].strip("[]")
@@ -183,6 +222,14 @@ def _find_and_remove(groups: dict[str, list[dict]], photo_id: str) -> tuple[str,
     return None
 
 
+def _find_photo(groups: dict[str, list[dict]], photo_id: str) -> tuple[str, dict] | None:
+    for slug, photos in groups.items():
+        for photo in photos:
+            if photo.get("id") == photo_id:
+                return slug, photo
+    return None
+
+
 def _matching_photos(groups: dict[str, list[dict]], photo_id: str) -> list[tuple[str, dict]]:
     return [
         (slug, photo)
@@ -239,6 +286,63 @@ def _photo_asset_paths(photo: dict) -> dict[str, str]:
         for derivative, key in DERIVATIVES
         if clean_site_src(photo.get(key))
     }
+
+
+def _existing_preview_rel(repo_root: Path, photo_id: str, derivative: str, preferred_slug: str) -> tuple[str, str, str] | None:
+    suffix = "900" if derivative == "gallery" else "1800"
+    slugs = [preferred_slug] + [slug for slug in ORDER if slug != preferred_slug]
+    for state in ("expo", "reserve"):
+        for slug in slugs:
+            rel = f"assets/{state}/{slug}/{photo_id}_{suffix}.jpg"
+            if (repo_root / rel).exists():
+                return state, slug, rel
+    return None
+
+
+def _hidden_review_photo(source_photo: dict, source_slug: str, source_state: str = "expo") -> dict:
+    photo = copy_photo(source_photo)
+    photo["hiddenFromState"] = source_state if source_state in {"expo", "reserve"} else "expo"
+    photo["hiddenFromSlug"] = source_slug if source_slug in ORDER else "unknown"
+    return photo
+
+
+def _repair_hidden_references(
+    repo_root: Path,
+    hidden_groups: dict[str, list[dict]],
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+) -> None:
+    for slug, photos in list(hidden_groups.items()):
+        repaired = []
+        for photo in photos:
+            photo_id = photo.get("id")
+            if not photo_id:
+                continue
+            found = _find_photo(expo_groups, photo_id)
+            source_state = "expo"
+            if not found:
+                found = _find_photo(reserve_groups, photo_id)
+                source_state = "reserve"
+            if found:
+                source_slug, source_photo = found
+                repaired.append(_hidden_review_photo(source_photo, source_slug, source_state))
+                continue
+
+            fallback_slug = slug if slug in ORDER else "unknown"
+            review_photo = _hidden_review_photo(photo, fallback_slug, "expo")
+            resolved_slug = fallback_slug
+            for derivative, key in DERIVATIVES:
+                current_rel = clean_site_src(review_photo.get(key))
+                if current_rel and (repo_root / current_rel).exists():
+                    continue
+                located = _existing_preview_rel(repo_root, photo_id, derivative, fallback_slug)
+                if not located:
+                    continue
+                _state, resolved_slug, rel = located
+                review_photo[key] = f"./{rel}"
+            review_photo["hiddenFromSlug"] = resolved_slug
+            repaired.append(review_photo)
+        hidden_groups[slug] = repaired
 
 
 def _read_json_file(path: Path, fallback: object) -> object:
@@ -343,11 +447,93 @@ def _current_expo_cap(repo_root: Path, expo_groups: dict[str, list[dict]]) -> in
     return max(1, *(len(expo_groups.get(slug, [])) for slug in ORDER if slug != "unknown"))
 
 
+def _hidden_public_preview_keys(photo: dict, slug: str) -> list[str]:
+    keys: list[str] = []
+    for source in (photo.get("gallerySrc"), photo.get("imageSrc")):
+        rel = clean_site_src(source)
+        parts = rel.split("/")
+        if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
+            keys.append("/".join([DEFAULT_PUBLIC_PREFIX, *parts[2:]]))
+    _source_state, source_slug = _hidden_provenance(photo, "expo", slug)
+    if source_slug in ORDER and photo.get("id"):
+        keys.extend([
+            f"{DEFAULT_PUBLIC_PREFIX}/{source_slug}/{photo['id']}_900.jpg",
+            f"{DEFAULT_PUBLIC_PREFIX}/{source_slug}/{photo['id']}_1800.jpg",
+        ])
+    unique = []
+    seen = set()
+    for key in keys:
+        normalized = key.strip("/")
+        if not normalized or normalized in seen:
+            continue
+        unique.append(normalized)
+        seen.add(normalized)
+    return unique
+
+
+def _hidden_blacklist_payload(hidden_groups: dict[str, list[dict]]) -> dict:
+    photo_ids = []
+    public_preview_keys = []
+    for slug, photos in hidden_groups.items():
+        for photo in photos:
+            photo_id = photo.get("id")
+            if photo_id:
+                photo_ids.append(photo_id)
+            public_preview_keys.extend(_hidden_public_preview_keys(photo, slug))
+    return {
+        "format": "photosbyelie-hidden-blacklist",
+        "version": 1,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "photo_ids": sorted(set(photo_ids)),
+        "public_preview_keys": sorted(set(public_preview_keys)),
+    }
+
+
+def _write_hidden_blacklist(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> Path:
+    path = repo_root / HIDDEN_BLACKLIST_PATH
+    _write_json_file(path, _hidden_blacklist_payload(hidden_groups))
+    return path
+
+
+def _hidden_blacklist_upload_item(repo_root: Path) -> UploadItem:
+    return UploadItem(
+        bucket=DEFAULT_PUBLIC_BUCKET,
+        key=HIDDEN_BLACKLIST_R2_KEY,
+        path=repo_root / HIDDEN_BLACKLIST_PATH,
+        content_type="application/json",
+        cache_control="public, max-age=30, must-revalidate",
+    )
+
+
+def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> list[UploadItem]:
+    items = []
+    seen = set()
+    placeholder = repo_root / HIDDEN_BLACKLIST_PATH
+    for slug, photos in hidden_groups.items():
+        for photo in photos:
+            for key in _hidden_public_preview_keys(photo, slug):
+                identifier = f"{DEFAULT_PUBLIC_BUCKET}/{key}"
+                if identifier in seen:
+                    continue
+                seen.add(identifier)
+                items.append(
+                    UploadItem(
+                        bucket=DEFAULT_PUBLIC_BUCKET,
+                        key=key,
+                        path=placeholder,
+                        content_type="image/jpeg",
+                    )
+                )
+    return items
+
+
 def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
+    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
     hidden_ids = {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
     write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
     write_reserve_data_from_site(repo_root, reserve_groups)
     write_hidden_data_from_site(repo_root, hidden_groups)
+    _write_hidden_blacklist(repo_root, hidden_groups)
     write_regular_manifest_from_site(
         repo_root,
         expo_groups,
@@ -508,18 +694,207 @@ def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
     return paths
 
 
+def _append_unique_path(paths: list[Path], path: Path) -> None:
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path
+    if resolved not in paths:
+        paths.append(resolved)
+
+
+def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:
+    """Resolve a site asset reference, including localhost-only Expo-to-Reserve fallback."""
+    paths: list[Path] = []
+    if not rel:
+        return paths
+    direct = repo_root / rel
+    if direct.exists():
+        _append_unique_path(paths, direct)
+    if rel.startswith("assets/expo/"):
+        reserve_rel = "assets/reserve/" + rel.removeprefix("assets/expo/")
+        reserve_path = repo_root / reserve_rel
+        if reserve_path.exists():
+            _append_unique_path(paths, reserve_path)
+    elif rel.startswith("assets/reserve/"):
+        expo_rel = "assets/expo/" + rel.removeprefix("assets/reserve/")
+        expo_path = repo_root / expo_rel
+        if expo_path.exists():
+            _append_unique_path(paths, expo_path)
+    return paths
+
+
 def _photo_file_paths(repo_root: Path, photo: dict, include_source: bool = True) -> list[Path]:
     paths = []
     for key in ("gallerySrc", "imageSrc"):
         rel = clean_site_src(photo.get(key))
         if not rel:
             continue
-        path = repo_root / rel
-        if path.exists():
-            paths.append(path.resolve())
+        for path in _site_asset_paths(repo_root, rel):
+            if path not in paths:
+                paths.append(path)
     if include_source:
         paths.extend(path for path in _source_paths(repo_root, photo) if path not in paths)
     return paths
+
+
+def _relative_to_repo(repo_root: Path, path: Path) -> Path | None:
+    try:
+        return path.relative_to(repo_root)
+    except ValueError:
+        return None
+
+
+def _metadata_upload_items_for_paths(repo_root: Path, photo: dict, paths: list[Path]) -> list[UploadItem]:
+    items: list[UploadItem] = []
+    seen: set[str] = set()
+    allow_public = public_preview_allowed(photo)
+    allow_private = private_master_allowed(photo)
+    for path in paths:
+        if not path.exists():
+            continue
+        rel = _relative_to_repo(repo_root, path)
+        if rel and rel.parts and rel.parts[0] == "assets":
+            if len(rel.parts) < 3 or rel.parts[1] not in {"expo", "reserve"} or not allow_public:
+                continue
+            item = UploadItem(
+                bucket=DEFAULT_PUBLIC_BUCKET,
+                key=r2_public_key(DEFAULT_PUBLIC_PREFIX, rel),
+                path=path,
+                content_type="image/jpeg",
+                cache_control="public, max-age=31536000, immutable",
+            )
+        else:
+            if not allow_private:
+                continue
+            item = UploadItem(
+                bucket=DEFAULT_PRIVATE_BUCKET,
+                key=r2_private_key(DEFAULT_PRIVATE_PREFIX, photo, path),
+                path=path,
+                content_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+            )
+        identifier = r2_upload_id(item)
+        if identifier in seen:
+            continue
+        seen.add(identifier)
+        items.append(item)
+    return items
+
+
+def _update_r2_task(task_id: str, **updates: object) -> None:
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task.update(updates)
+        task["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+
+def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
+    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
+    for item in items:
+        try:
+            if operation == "delete":
+                _processed_item, ok, output = wrangler_delete(item, retries=2)
+            else:
+                _processed_item, ok, output = wrangler_put(item, retries=2)
+        except Exception as error:  # noqa: BLE001 - background progress should capture any upload failure.
+            ok = False
+            output = str(error)
+        with R2_BACKGROUND_LOCK:
+            task = R2_BACKGROUND_TASKS.get(task_id)
+            if not task:
+                return
+            task["completed"] = int(task.get("completed") or 0) + 1
+            if ok:
+                if operation == "upload" and item.path.exists():
+                    task["bytes_done"] = int(task.get("bytes_done") or 0) + item.path.stat().st_size
+            else:
+                task["failed"] = int(task.get("failed") or 0) + 1
+                errors = list(task.get("errors") or [])
+                if len(errors) < 20:
+                    errors.append({
+                        "bucket": item.bucket,
+                        "key": item.key,
+                        "path": str(item.path),
+                        "error": output,
+                    })
+                task["errors"] = errors
+            task["updated_at"] = datetime.now(timezone.utc).isoformat()
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["state"] = "failed" if int(task.get("failed") or 0) else "done"
+        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+        task["updated_at"] = task["completed_at"]
+
+
+def _start_r2_task(photo_id: str, items: list[UploadItem], kind: str, operation: str = "upload") -> dict | None:
+    if not items:
+        return None
+    task_id = uuid.uuid4().hex
+    queued_at = datetime.now(timezone.utc).isoformat()
+    task = {
+        "id": task_id,
+        "kind": kind,
+        "operation": operation,
+        "photo_id": photo_id,
+        "state": "queued",
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "total": len(items),
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": sum(item.path.stat().st_size for item in items if operation == "upload" and item.path.exists()),
+        "bytes_done": 0,
+        "items": [
+            {"bucket": item.bucket, "key": item.key, "path": str(item.path)}
+            for item in items[:10]
+        ],
+        "errors": [],
+    }
+    with R2_BACKGROUND_LOCK:
+        R2_BACKGROUND_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_r2_task, args=(task_id, items, operation), daemon=True)
+    worker.start()
+    return dict(task)
+
+
+def _start_r2_upload_task(photo_id: str, items: list[UploadItem], kind: str = "metadata-upload") -> dict | None:
+    return _start_r2_task(photo_id, items, kind, "upload")
+
+
+def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "hidden-public-wipe") -> dict | None:
+    return _start_r2_task(photo_id, items, kind, "delete")
+
+
+def _r2_task_snapshot() -> list[dict]:
+    cutoff = time.time() - 60 * 60
+    with R2_BACKGROUND_LOCK:
+        stale = [
+            task_id
+            for task_id, task in R2_BACKGROUND_TASKS.items()
+            if task.get("state") in {"done", "failed"}
+            and task.get("completed_at")
+            and _iso_to_timestamp(str(task["completed_at"])) < cutoff
+        ]
+        for task_id in stale:
+            R2_BACKGROUND_TASKS.pop(task_id, None)
+        return sorted(
+            [dict(task) for task in R2_BACKGROUND_TASKS.values()],
+            key=lambda task: str(task.get("queued_at") or ""),
+            reverse=True,
+        )
+
+
+def _iso_to_timestamp(value: str) -> float:
+    try:
+        return datetime.fromisoformat(value).timestamp()
+    except ValueError:
+        return time.time()
 
 
 def _write_file_metadata(path: Path, title: str | None = None, keywords: list[str] | None = None, append_keyword: str | None = None) -> str:
@@ -555,6 +930,7 @@ def _sync_asset_keyword(repo_root: Path, photo: dict, keyword: str) -> dict:
     updated = 0
     skipped = 0
     errors = []
+    updated_paths = []
     for path in _photo_file_paths(repo_root, photo):
         rel = path.relative_to(repo_root).as_posix() if path.is_relative_to(repo_root) else str(path)
         try:
@@ -564,23 +940,26 @@ def _sync_asset_keyword(repo_root: Path, photo: dict, keyword: str) -> dict:
                 continue
             _write_file_metadata(path, append_keyword=keyword)
             updated += 1
+            updated_paths.append(str(path))
         except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
             errors.append(f"{rel}: {error}")
-    return {"updated": updated, "skipped": skipped, "errors": errors}
+    return {"updated": updated, "skipped": skipped, "errors": errors, "updated_paths": updated_paths}
 
 
 def _sync_photo_metadata_files(repo_root: Path, photo: dict, title: str, keywords: list[str]) -> dict:
     updated = 0
     skipped = 0
     errors = []
+    updated_paths = []
     for path in _photo_file_paths(repo_root, photo):
         rel = path.relative_to(repo_root).as_posix() if path.is_relative_to(repo_root) else str(path)
         try:
             _write_file_metadata(path, title=title, keywords=keywords)
             updated += 1
+            updated_paths.append(str(path))
         except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
             errors.append(f"{rel}: {error}")
-    return {"updated": updated, "skipped": skipped, "errors": errors}
+    return {"updated": updated, "skipped": skipped, "errors": errors, "updated_paths": updated_paths}
 
 
 def _apply_collection_keyword(repo_root: Path, photo: dict, slug: str, sync_assets: bool = True) -> dict:
@@ -604,6 +983,8 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
     asset_updated = 0
     asset_skipped = 0
     errors = []
+    r2_items: list[UploadItem] = []
+    seen_r2_items: set[str] = set()
     for groups in state_groups:
         for slug, keyword in COLLECTION_KEYWORD_TARGETS.items():
             for photo in groups.get(slug, []):
@@ -614,11 +995,20 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
                 asset_updated += result["assets"].get("updated", 0)
                 asset_skipped += result["assets"].get("skipped", 0)
                 errors.extend(result["assets"].get("errors", []))
+                updated_paths = [Path(item) for item in result["assets"].get("updated_paths", [])]
+                for item in _metadata_upload_items_for_paths(repo_root, photo, updated_paths):
+                    identifier = r2_upload_id(item)
+                    if identifier in seen_r2_items:
+                        continue
+                    seen_r2_items.add(identifier)
+                    r2_items.append(item)
+    r2_task = _start_r2_upload_task("country-keywords", r2_items)
     return {
         "photos_seen": photos_seen,
         "metadata_changed": metadata_changed,
         "asset_updated": asset_updated,
         "asset_skipped": asset_skipped,
+        "r2_upload_task": r2_task,
         "errors": errors[:20],
         "error_count": len(errors),
     }
@@ -627,9 +1017,9 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
 def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     action = payload.get("action")
     photo_id = payload.get("photo_id")
-    if action not in {"hide", "undo-hide", "return-to-reserve", "assign-country", "sync-country-keywords", "update-photo-metadata"}:
+    if action not in {"hide", "undo-hide", "promote-hidden", "return-to-reserve", "assign-country", "sync-country-keywords", "update-photo-metadata", "publish-hidden-blacklist", "wipe-hidden-r2"}:
         raise ValueError("unsupported photo action")
-    if action not in {"assign-country", "sync-country-keywords"} and (not isinstance(photo_id, str) or not photo_id):
+    if action not in {"assign-country", "sync-country-keywords", "publish-hidden-blacklist", "wipe-hidden-r2"} and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
     if action == "assign-country":
         target_slug = payload.get("gallery_key") or payload.get("country")
@@ -644,6 +1034,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
 
     expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
     moved = None
 
     if action == "sync-country-keywords":
@@ -653,6 +1044,28 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "action": action,
             "keyword_updates": keyword_updates,
             "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups),
+        }
+
+    if action == "publish-hidden-blacklist":
+        site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
+        return {
+            "ok": True,
+            "action": action,
+            "hidden_count": sum(len(photos) for photos in hidden_groups.values()),
+            "r2_upload_task": r2_task,
+            "site": site_state,
+        }
+
+    if action == "wipe-hidden-r2":
+        site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        r2_task = _start_r2_delete_task("hidden-public-previews", _hidden_public_delete_items(repo_root, hidden_groups))
+        return {
+            "ok": True,
+            "action": action,
+            "hidden_count": sum(len(photos) for photos in hidden_groups.values()),
+            "r2_delete_task": r2_task,
+            "site": site_state,
         }
 
     if action == "update-photo-metadata":
@@ -669,6 +1082,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             raise ValueError(f"photo not found: {photo_id}")
         metadata_changed = 0
         file_updates = {"updated": 0, "skipped": 0, "errors": []}
+        r2_items: list[UploadItem] = []
+        seen_r2_items: set[str] = set()
         for _state, _slug, photo in matches:
             title_changed = _set_photo_title(photo, title)
             keywords_changed = _set_photo_keywords(photo, keywords)
@@ -678,6 +1093,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             file_updates["updated"] += result.get("updated", 0)
             file_updates["skipped"] += result.get("skipped", 0)
             file_updates["errors"].extend(result.get("errors", []))
+            updated_paths = [Path(item) for item in result.get("updated_paths", [])]
+            for item in _metadata_upload_items_for_paths(repo_root, photo, updated_paths):
+                identifier = r2_upload_id(item)
+                if identifier in seen_r2_items:
+                    continue
+                seen_r2_items.add(identifier)
+                r2_items.append(item)
+        r2_task = _start_r2_upload_task(photo_id, r2_items)
         return {
             "ok": True,
             "action": action,
@@ -692,6 +1115,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "error_count": len(file_updates["errors"]),
                 "errors": file_updates["errors"][:20],
             },
+            "r2_upload_task": r2_task,
             "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups),
         }
 
@@ -760,10 +1184,10 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         }
 
     if action == "hide":
-        found = _find_and_remove(expo_groups, photo_id)
+        found = _find_photo(expo_groups, photo_id)
         source_state = "expo"
         if not found:
-            found = _find_and_remove(reserve_groups, photo_id)
+            found = _find_photo(reserve_groups, photo_id)
             source_state = "reserve"
         if not found:
             hidden_hit = next(
@@ -771,15 +1195,22 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 None,
             )
             if hidden_hit:
-                return {"ok": True, "action": action, "photo_id": photo_id, "message": "already hidden", "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)}
+                site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+                r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
+                return {
+                    "ok": True,
+                    "action": action,
+                    "photo_id": photo_id,
+                    "message": "already hidden",
+                    "r2_blacklist_task": r2_task,
+                    "site": site_state,
+                }
             raise ValueError(f"photo not found in Expo or Reserve: {photo_id}")
         source_slug, source_photo = found
-        hidden_photo = _move_photo(repo_root, source_photo, "hidden", source_slug)
-        hidden_photo["hiddenFromState"] = source_state
-        hidden_photo["hiddenFromSlug"] = source_slug
+        hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state)
         _remove_existing(hidden_groups, photo_id)
         hidden_groups[source_slug].append(hidden_photo)
-        moved = {"from": source_state, "from_slug": source_slug, "to": "hidden", "to_slug": source_slug}
+        moved = {"from": source_state, "from_slug": source_slug, "to": "hidden", "to_slug": source_slug, "mode": "blacklist"}
 
     elif action == "undo-hide":
         found = _find_and_remove(hidden_groups, photo_id)
@@ -787,33 +1218,33 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             raise ValueError(f"photo not found in Hidden: {photo_id}")
         hidden_slug, hidden_photo = found
         target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
-        target_groups = expo_groups if target_state == "expo" else reserve_groups
-        restored = _move_photo(repo_root, hidden_photo, target_state, target_slug)
-        restored.pop("hiddenFromState", None)
-        restored.pop("hiddenFromSlug", None)
-        _remove_existing(target_groups, photo_id)
-        target_groups[target_slug].append(restored)
-        moved = {"from": "hidden", "from_slug": hidden_slug, "to": target_state, "to_slug": target_slug}
+        if target_state == "expo" and not public_preview_allowed(hidden_photo):
+            target_state = "reserve"
+        moved = {"from": "hidden", "from_slug": hidden_slug, "to": target_state, "to_slug": target_slug, "mode": "blacklist"}
 
     else:
         found = _find_and_remove(hidden_groups, photo_id)
         if not found:
             raise ValueError(f"photo not found in Hidden: {photo_id}")
         hidden_slug, hidden_photo = found
-        _source_state, target_slug = _hidden_provenance(hidden_photo, "reserve", hidden_slug)
-        reserve_photo = _move_photo(repo_root, hidden_photo, "reserve", target_slug)
-        reserve_photo.pop("hiddenFromState", None)
-        reserve_photo.pop("hiddenFromSlug", None)
-        _remove_existing(reserve_groups, photo_id)
-        reserve_groups[target_slug].append(reserve_photo)
-        moved = {"from": "hidden", "from_slug": hidden_slug, "to": "reserve", "to_slug": target_slug}
+        _source_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
+        if not _find_photo(expo_groups, photo_id):
+            restored = copy_photo(hidden_photo)
+            restored.pop("hiddenFromState", None)
+            restored.pop("hiddenFromSlug", None)
+            _remove_existing(expo_groups, photo_id)
+            expo_groups[target_slug].append(restored)
+        moved = {"from": "hidden", "from_slug": hidden_slug, "to": "expo", "to_slug": target_slug, "mode": "blacklist"}
 
+    site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+    r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
     return {
         "ok": True,
         "action": action,
         "photo_id": photo_id,
         "moved": moved,
-        "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups),
+        "r2_blacklist_task": r2_task,
+        "site": site_state,
     }
 
 

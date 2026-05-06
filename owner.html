@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=66.37"/>
-  <link rel="stylesheet" href="./styles.css?v=66.37"/>
-  <link rel="stylesheet" href="./photos.css?v=66.37"/>
+  <link rel="stylesheet" href="./shared.css?v=66.48"/>
+  <link rel="stylesheet" href="./styles.css?v=66.48"/>
+  <link rel="stylesheet" href="./photos.css?v=66.48"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v66.37</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v66.48</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -61,6 +61,13 @@
           <a class="btn secondary" href="./hidden.html">Review</a>
         </article>
         <article class="owner-card">
+          <p class="eyebrow">Publishing</p>
+          <h2>Hidden blacklist</h2>
+          <p>Publish the hidden-photo blacklist to R2, or wipe hidden public previews when you mean it.</p>
+          <button class="btn secondary" type="button" data-owner-publish-hidden-blacklist>Publish blacklist</button>
+          <button class="btn secondary" type="button" data-owner-wipe-hidden-r2>Wipe public previews</button>
+        </article>
+        <article class="owner-card">
           <p class="eyebrow">Expo</p>
           <h2>Expo cap</h2>
           <label class="owner-number-control">
@@ -69,10 +76,25 @@
           </label>
           <button class="btn secondary" type="button" data-owner-save-cap>Set cap</button>
         </article>
+        <article class="owner-card">
+          <p class="eyebrow">Products</p>
+          <h2>Physical items</h2>
+          <label class="owner-toggle-control">
+            <input type="checkbox" data-owner-physical-products/>
+            <span>Show print and frame options locally</span>
+          </label>
+          <p>Off by default; the public site stays digital-only.</p>
+        </article>
         <article class="owner-card owner-card-wide">
           <p class="eyebrow">Counts</p>
           <h2>Current state</h2>
           <dl class="owner-counts" data-owner-counts></dl>
+        </article>
+        <article class="owner-card owner-card-wide" data-owner-r2-card hidden>
+          <p class="eyebrow">Cloud sync</p>
+          <h2>R2 background work</h2>
+          <p data-owner-r2-summary>Background R2 uploads and deletes will appear here.</p>
+          <dl class="owner-counts" data-owner-r2-counts></dl>
         </article>
       </div>
     </section>
@@ -91,12 +113,13 @@
     </div>
   </footer>
 
-  <script src="./photos.js?v=66.37"></script>
-  <script src="./owner-tools.js?v=66.37"></script>
-  <script src="./site-version.js?v=66.37"></script>
-  <script src="./photos-data.js?v=66.37"></script>
-  <script src="./hidden-actions.js?v=66.37"></script>
-  <script src="./reserve-store.js?v=66.37"></script>
-  <script src="./owner.js?v=66.37"></script>
+  <script src="./media-config.js?v=66.48"></script>
+  <script src="./photos.js?v=66.48"></script>
+  <script src="./owner-tools.js?v=66.48"></script>
+  <script src="./site-version.js?v=66.48"></script>
+  <script src="./photos-data.js?v=66.48"></script>
+  <script src="./hidden-actions.js?v=66.48"></script>
+  <script src="./reserve-store.js?v=66.48"></script>
+  <script src="./owner.js?v=66.48"></script>
 </body>
 </html>

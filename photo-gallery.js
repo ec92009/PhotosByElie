@@ -314,7 +314,7 @@ const reserveReplacementPhoto = (selected, selectedIds) => {
 
 const visiblePhotos = () => {
   const basePhotos = gallery?.photos || [];
-  if (!localModerationEnabled) return basePhotos;
+  if (!localModerationEnabled) return window.photosByElieFilterPublicHidden?.(basePhotos) || basePhotos;
 
   const selected = hiddenActions
     .filterPhotos(basePhotos)
@@ -399,15 +399,16 @@ const renderGallery = () => {
   }
   galleryRoot.innerHTML = photos.map((photo, index) => {
     const rawLabel = rawSourceLabel(photo);
+    const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     return `
     <a
-      class="mock-photo ${photo.className} ${(photo.gallerySrc || photo.imageSrc) ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
+      class="mock-photo ${photo.className} ${image ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
       href="${versionedHref(`./photo.html?id=${photo.id}`)}"
       aria-label="Open ${photo.title}${rawLabel ? `, RAW source ${rawLabel}` : ""}"
       data-photo-index="${index}"
       data-photo-id="${photo.id}"
     >
-      ${(photo.gallerySrc || photo.imageSrc) ? `<img src="${photo.gallerySrc || photo.imageSrc}" alt="${photo.title}"/>` : ""}
+      ${image ? `<img src="${image}" alt="${photo.title}"/>` : ""}
       ${rawLabel ? `<span class="raw-source-badge" title="${rawLabel} source">RAW</span>` : ""}
     </a>
   `;
@@ -562,4 +563,10 @@ if (galleryRoot && gallery) {
       });
     }
   }
+  window.photosByElieHiddenBlacklistReady?.then(() => {
+    if (!localModerationEnabled) renderGallery();
+  });
+  window.addEventListener("photosbyelie:hiddenblacklistchange", () => {
+    if (!localModerationEnabled) renderGallery();
+  });
 }

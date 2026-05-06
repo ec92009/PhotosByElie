@@ -1,4 +1,5 @@
 .playwright-mcp/
+.wrangler/
 .DS_Store
 
 # Local/generated photo workspaces.
@@ -16,6 +17,7 @@ assets/hidden/**
 !assets/hidden/*/
 !assets/hidden/*/.gitkeep
 .curation-logs/
+.review-logs/
 
 # Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/

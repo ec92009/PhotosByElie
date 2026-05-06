@@ -110,8 +110,10 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
     `Delivery ZIP: ${zipName}`,
     `Photos: ${items.length}`,
     `Products: ${productCount}`,
-    `Physical S&H: ${formatMoney(shippingHandlingTotal)}`,
-    `Limited-time S&H discount: -${formatMoney(shippingHandlingTotal)}`,
+    ...(shippingHandlingTotal ? [
+      `Physical S&H: ${formatMoney(shippingHandlingTotal)}`,
+      `Limited-time S&H discount: -${formatMoney(shippingHandlingTotal)}`,
+    ] : []),
     `Draft total: ${formatMoney(total)}`,
     "",
     ...items.flatMap((item, index) => {
@@ -139,7 +141,7 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
         ""
       ];
     }),
-    "License note: personal print and web use are included by default. Print crops, frame choices, commercial, resale, and AI-training use are confirmed manually before fulfillment."
+    "License note: personal print and web use of delivered digital files are included by default. Commercial, resale, and AI-training use are confirmed manually before fulfillment."
   ];
   const subject = `Photos By Elie order ${orderId}`;
   const body = lines.join("\n");
@@ -190,10 +192,11 @@ const renderBasket = () => {
   emptyState.hidden = items.length !== 0;
   syncOrderIntent(items, productCount, total, shippingHandlingTotal);
 
+  const cssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
-    const imageSrc = photo?.gallerySrc || photo?.imageSrc || "";
+    const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
     const selectedOptionById = new Map((item.options || []).map((option) => [option.id, option]));
     const availableOptions = photo && window.photosByElieAvailableResolutions
@@ -230,7 +233,7 @@ const renderBasket = () => {
       `;
     };
     return `
-    <article class="basket-item">
+    <article class="basket-item ${imageSrc ? "has-row-bg" : ""}" data-basket-row-bg="${escapeText(imageSrc)}">
       <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
         ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
@@ -257,6 +260,11 @@ const renderBasket = () => {
       </div>
     </article>
   `}).join("");
+
+  document.querySelectorAll("[data-basket-row-bg]").forEach((row) => {
+    const rowBg = row.dataset.basketRowBg || "";
+    if (rowBg) row.style.setProperty("--basket-row-bg", cssUrlValue(rowBg));
+  });
 
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {

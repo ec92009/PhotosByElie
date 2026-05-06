@@ -159,9 +159,10 @@
 
   const photoAction = async (action, photoId, extra = {}) => {
     if (!enabled) return null;
+    const photoOptionalActions = ["sync-country-keywords", "publish-hidden-blacklist", "wipe-hidden-r2"];
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
-    if (!["sync-country-keywords"].includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
+    if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
     setOwnerBusy(true);
     try {
       const response = await fetch(photoActionEndpoint, {
@@ -320,12 +321,14 @@
     return write(read().filter((item) => !wanted.has(item)));
   };
 
-  const returnToReserve = async (photoId) => {
+  const promoteHidden = async (photoId) => {
     if (!enabled || !photoId) return read();
     removePromotionEverywhere(photoId);
-    await photoAction("return-to-reserve", photoId);
+    await photoAction("promote-hidden", photoId);
     return read();
   };
+
+  const returnToReserve = promoteHidden;
 
   const assignUnknownsToCountry = async (photoIds = [], galleryKey, options = {}) => {
     const ids = normalize(photoIds);
@@ -350,6 +353,16 @@
   const syncCountryKeywords = async () => {
     if (!enabled) return null;
     return photoAction("sync-country-keywords", null);
+  };
+
+  const publishHiddenBlacklist = async () => {
+    if (!enabled) return null;
+    return photoAction("publish-hidden-blacklist", null);
+  };
+
+  const wipeHiddenR2 = async () => {
+    if (!enabled) return null;
+    return photoAction("wipe-hidden-r2", null);
   };
 
   const undo = async (preferredPhotoId = null) => {
@@ -395,6 +408,8 @@
     readRegularCap,
     assignUnknownsToCountry,
     effectiveRegularCap,
+    promoteHidden,
+    publishHiddenBlacklist,
     returnToReserve,
     setOwnerBusy,
     updateOwnerBusy,
@@ -406,5 +421,6 @@
     unmark,
     unmarkMany,
     updatePhotoMetadata,
+    wipeHiddenR2,
   };
 })();

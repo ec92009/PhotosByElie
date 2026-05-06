@@ -25,6 +25,7 @@ from export_photos_data import (
     reserve_only_ids_from_payload,
     write_photos_data,
 )
+from media_policy import media_source_policy, public_preview_allowed
 
 COUNTRY_ASSIGNMENT_LABELS = {
     "france": "France",
@@ -149,6 +150,32 @@ def args_from_manifest(payload: dict):
 
 def clean_site_src(value: str | None) -> str:
     return str(value or "").removeprefix("./")
+
+
+def public_media_key(reference: str | None) -> str:
+    clean = clean_site_src(reference)
+    parts = clean.split("/")
+    if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
+        return "/".join(["expo", *parts[2:]])
+    return clean
+
+
+def media_object_for_photo(photo: dict) -> dict:
+    public_allowed = public_preview_allowed(photo)
+    return {
+        "sourcePolicy": media_source_policy(photo),
+        "publicPreview": {
+            "allowed": public_allowed,
+            "galleryKey": public_media_key(photo.get("gallerySrc")) if public_allowed else "",
+            "detailKey": public_media_key(photo.get("imageSrc")) if public_allowed else "",
+        },
+    }
+
+
+def photo_with_media(photo: dict) -> dict:
+    next_photo = copy_photo(photo)
+    next_photo["media"] = media_object_for_photo(next_photo)
+    return next_photo
 
 
 def hidden_asset_rel(photo: dict, derivative: str, slug: str) -> str:
@@ -412,6 +439,7 @@ def copy_photo(photo: dict) -> dict:
 def photo_object_lines(photo: dict, index: int) -> list[str]:
     ordered = copy_photo(photo)
     ordered["className"] = f"p{(index % 5) + 1}"
+    ordered["media"] = media_object_for_photo(ordered)
     return [
         "      {",
         f"        id: {json.dumps(ordered.get('id'), ensure_ascii=False)},",
@@ -423,6 +451,7 @@ def photo_object_lines(photo: dict, index: int) -> list[str]:
         f"        gallerySrc: {json.dumps(ordered.get('gallerySrc'), ensure_ascii=False)},",
         f"        imageSrc: {json.dumps(ordered.get('imageSrc'), ensure_ascii=False)},",
         f"        metadata: {json.dumps(ordered.get('metadata') or [], ensure_ascii=False, indent=10)},",
+        f"        media: {json.dumps(ordered.get('media') or {}, ensure_ascii=False, indent=10)},",
         f"        sourceFiles: {json.dumps(ordered.get('sourceFiles') or [], ensure_ascii=False, indent=10)}",
         "      },",
     ]
@@ -485,7 +514,11 @@ def helper_lines() -> list[str]:
         "window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {",
         "  const megapixels = window.photosByElieVerifiedMegapixels(photo);",
         "  if (!megapixels) return [];",
-        "  return options.filter((option) => !option.minMegapixels || megapixels >= option.minMegapixels);",
+        "  const physicalProductsEnabled = window.photosByElieProductSettings?.physicalProductsEnabled?.() === true;",
+        "  return options.filter((option) =>",
+        "    (physicalProductsEnabled || option.type !== \"print\")",
+        "    && (!option.minMegapixels || megapixels >= option.minMegapixels)",
+        "  );",
         "};",
         "",
         "window.photosByElieFormatLabel = (source) => {",
@@ -587,7 +620,7 @@ def write_reserve_data_from_site(repo_root: Path, reserve_groups: dict[str, list
             "title": title,
             "description": description,
             "accent": accent,
-            "photos": reserve_groups.get(slug, []),
+            "photos": [photo_with_media(photo) for photo in reserve_groups.get(slug, [])],
         }
     output = repo_root / "assets/reserve/reserve-data.json"
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -603,7 +636,7 @@ def write_hidden_data_from_site(repo_root: Path, hidden_groups: dict[str, list[d
             "title": title,
             "description": description,
             "accent": accent,
-            "photos": hidden_groups.get(slug, []),
+            "photos": [photo_with_media(photo) for photo in hidden_groups.get(slug, [])],
         }
     output = repo_root / HIDDEN_ASSET_ROOT / "hidden-data.json"
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -768,6 +801,10 @@ def apply_asset_review(
         photo = copy_photo(source_photo)
         photo["_originalGallerySrc"] = photo.get("gallerySrc")
         photo["_originalImageSrc"] = photo.get("imageSrc")
+        if not public_preview_allowed(photo):
+            if photo.get("id"):
+                unavailable_regular_ids.add(photo.get("id"))
+            return False
         if not photo_has_regular_source_assets(repo_root, photo, slug, roots):
             if photo.get("id"):
                 unavailable_regular_ids.add(photo.get("id"))
@@ -785,6 +822,8 @@ def apply_asset_review(
                 for source_photo in photos:
                     photo_id = source_photo.get("id")
                     if not photo_id or photo_id in seen_ids:
+                        continue
+                    if not public_preview_allowed(source_photo):
                         continue
                     if photo_id in hidden_ids or photo_id in reserve_only_ids:
                         continue

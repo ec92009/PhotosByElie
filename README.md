@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v66.24`
+- Current visible version: `v66.48`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -21,7 +21,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `hidden.html`: localhost-only review surface for hidden photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
-- `hidden-actions.js`: localhost-only live review action store for Hidden moves, undo, Expo cap, and owner assignment state
+- `hidden-actions.js`: localhost-only live review action store for Hidden blacklist changes, undo, Expo cap, and owner assignment state
 - `hidden-store.js`: localhost-only loader for the ignored Hidden catalog used by Hidden review and hidden-photo detail pages
 - `hidden-page.js`: localhost-only Hidden review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
@@ -30,6 +30,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo-detail.js`: shared detail page, real-image preview support, and automatic basket sync
 - `basket.js`: basket rendering, item removal, resolution reselection, and sticky total updates
 - `liked.js`: liked page rendering, unlike actions, and resolution selection into the basket
+- `media-config.js`: public-media base URL configuration for GitHub Pages/R2 preview delivery
 - `shared.css`: copied from the By Elie visual system
 - `styles.css`: copied By Elie animation overrides
 - `photos.css`: photo-specific layout and carousel styles
@@ -40,7 +41,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations, including versioning and Lightroom image ingestion
-- `assets/`: shared By Elie logo asset, publishable Expo derivatives, and ignored local Reserve/Hidden working folders
+- `assets/`: shared By Elie logo asset, publish metadata, tiny placeholders, and ignored local preview-cache/Hidden working data
 
 ## Preview
 
@@ -52,22 +53,23 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts use the same current-queue filter as the Unknown page, so old browser assignment history does not subtract unrelated photos.
-- Gallery pages load the publishable Expo subset from tracked `assets/expo`; the cap is a maximum, so collections publish fewer photos when fewer valid JPEG pairs are available.
-- The three asset states are explicit on disk: `assets/expo` for publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden.
-- Reserve import now scans developed JPG/TIFF exports plus RAW files with embedded previews, keeps Camera photos at Lightroom green label/rating 4+, infers country/AI/Unknown buckets, writes watermarked `*_900.jpg` and `*_1800.jpg` pairs into `assets/reserve/<country>/`, and marks RAW-origin cards with a gallery overlay.
-- On localhost, `H` hides a live-gallery photo, `U` undoes that hide, and `P` on the Hidden page returns a hidden photo to Reserve rather than directly to Expo.
+- Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
+- `assets/expo` can stay empty or local-only once the public R2 bucket has the baked-watermark previews; use `node scripts/validate_publish.js --external-media` for that publishing mode.
+- Local preview files may still live in `assets/reserve` as a compatibility cache, but Reserve is no longer a user-facing review state. Hidden is a blacklist/review list, not a file location.
+- Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, infer country/AI/Unknown buckets, and write watermarked `*_900.jpg` and `*_1800.jpg` pairs into the local preview cache. RAW/DNG/NEF files stay owner-local until Elie exports developed masters.
+- On localhost, `H` hides a live-gallery photo by adding it to the hidden blacklist while leaving preview files in place, `U` undoes that hide, and `P` on the Hidden page re-promotes a hidden photo by removing it from the blacklist.
 - On localhost detail pages, Owner can edit Title and Keywords; saves update the catalog metadata, local preview JPEGs, and the original source export when it can be resolved from `sourceFiles`.
 - On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` hides it, `U` undoes the last hide, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
-- Assigning an Unknown photo to a country moves every loaded same-day unknown JPEG pair into that country's local Reserve folder, adds the country keyword to catalog/source metadata, refreshes the Reserve/Unknown catalogs, and immediately re-renders the Unknown hints.
-- We are walking away from the old Curation Pass model: localhost Owner actions now move files live, and any exported `.pbe-review` file is only an audit/batch snapshot.
-- The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving and live photo moves.
+- Assigning an Unknown photo to a country updates every loaded same-day unknown into that country in the local catalog/preview cache, adds the country keyword to catalog/source metadata when possible, refreshes the Unknown hints, and removes assigned cards from the queue.
+- We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
+- The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, Hidden blacklist updates, Unknown assignment, and metadata edits.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On localhost gallery pages, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - Gallery filters cover orientation, color mood, and subject, with Sort defaulting to Newest first on first display.
 - When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
 - Subtle keyboard reminders appear above localhost review grids and detail previews, with public detail pages showing the `L` like shortcut.
 - Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost review.
-- Gallery and Owner review cards show a small `RAW` overlay when the source metadata identifies a DNG/NEF/other raw original; the overlay is DOM-only and is not burned into preview files.
+- Gallery and Owner review cards can show a small `RAW` overlay when legacy/local metadata identifies a DNG/NEF/other raw original, but RAW-origin previews are not eligible for Expo or public media upload.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - Review snapshot exports include the current Owner-selected Expo cap for audit paths and emergency batch rebuilds, but the preferred workflow is live localhost review.

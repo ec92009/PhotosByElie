@@ -212,7 +212,7 @@
   };
 
   const openFullscreenPreview = (photo) => {
-    const image = photo?.imageSrc || photo?.gallerySrc || "";
+    const image = window.photosByElieMediaUrl?.(photo, "detail") || "";
     if (!image || fullscreenPreview) return;
     fullscreenPreview = document.createElement("div");
     fullscreenPreview.className = "detail-fullscreen-preview";
@@ -308,7 +308,7 @@
     }
 
     root.innerHTML = photos.map((photo) => {
-      const image = photo.gallerySrc || photo.imageSrc || "";
+      const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
       const rawLabel = rawSourceLabel(photo);
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;

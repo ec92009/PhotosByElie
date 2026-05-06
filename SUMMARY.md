@@ -1,76 +1,65 @@
 # Conversation Summary
 
-Date: 2026-05-05
+Date: 2026-05-06
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v66.24`
-- Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been selected for the public build.
-- The current local Expo set has 502 photos: 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos; Mexico is empty until matching developed Mexico assets are reintroduced.
-- The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
+- Current local visible build: `v66.48`
+- Current public GitHub Pages build before this push: `v66.37`
+- Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia and 1 Mexico.
+- Publish validation is passing in external media mode: `node scripts/validate_publish.js --external-media --summary`.
+- Tracked `assets/expo` preview JPGs have been removed from the GitHub payload; public pages now validate against R2/CDN media keys instead of local committed preview files.
+- Ignored local preview cache: `assets/reserve`, about 20,318 preview JPGs and 5.9 GB.
+- Hidden is now a blacklist/review state, not a physical media state: 14 hidden IDs and 28 public preview keys are recorded in `assets/hidden/hidden-blacklist.json`.
 
-## Session Summary
+## Architecture Direction
 
-- The chat started with Codex automation checks around MailAssist sync, code review/Claude critique handling, and general repo hygiene; actionable review notes were folded into TODOs and review artifacts were archived where requested.
-- Local asset work confirmed the Saturn Lightroom/Camera tree, copied the 2024 Camera folder to Elie's Max-side Pictures/LR path, and then returned focus to `photosByElie`.
-- The public Photos By Elie site was refreshed through several phone-visible GitHub Pages pushes, including Liked-page control placement, keyboard-hint behavior, detail/mobile buying controls, and the current product-pricing model.
-- The current checkout mock now covers digital downloads, physical print sizes, per-print quantity, frame choices, size-based frame add-ons, and size-based shipping/handling shown with an equal limited-time discount.
-- Each public UI change was versioned, committed, pushed to `main`, watched through GitHub Pages deployment, and live-fetched from `https://ec92009.github.io/PhotosByElie/`.
+- GitHub should carry code, HTML/CSS/JS, metadata, generated catalogs, docs, and small shared assets.
+- Public media should live outside GitHub as baked, aggressive watermarked previews only.
+- Private developed masters may live in private object storage later, but RAW/DNG/NEF originals stay off cloud media and remain on Elie's computers and backup drives.
+- Reserve disappears from the long-term public/cloud model. Locally, `assets/reserve` remains a compatibility preview cache used by the importer, review tools, and handoff scripts.
+- Hidden photos are hidden through a blacklist that the public site and media tooling respect. The Hidden owner page should re-promote by removing IDs from the blacklist or permanently remove the related cloud objects when Elie chooses to wipe them.
+- Owner-only capabilities remain localhost-only: H/U hiding, Unknown classification, metadata edits, hidden review, upload/accounting tools, and any future R2 wipe actions.
 
-## Asset Contract
+## Media And Upload Work
 
-- `assets/` is tracked again.
-- `assets/byelie-logo.png` and root JSON metadata such as `assets/expo-manifest.json` are tracked.
-- `assets/expo/<country>/` is the publishable, tracked Expo state.
-- `assets/reserve/<country>/` is the local Reserve state and is ignored by Git except for `.gitkeep` folder placeholders.
-- `assets/hidden/<country>/` is the local Hidden state and is ignored by Git except for `.gitkeep` folder placeholders.
-- Each state has subfolders for `france`, `usa`, `spain`, `mexico`, `ai`, `portugal`, `slovakia`, and `unknown`.
-- Future derivative pairs use flat state folders: `<id>_900.jpg` for gallery and `<id>_1800.jpg` for detail.
+- Cloudflare R2 buckets exist for the account: `photosbyelie-public` and `photosbyelie-private`.
+- The first public upload attempt did run: local journals show 1,615 successful public preview uploads to `photosbyelie-public`.
+- Cleanup also ran: local journals show 2,453 successful public preview delete operations against `photosbyelie-public`.
+- No private master uploads are recorded in the local R2 journals.
+- Live R2 state still needs a direct dashboard/API/Wrangler check when Cloudflare credentials are available in the shell.
+- The weak/permissive watermark preview path was stopped. Public preview generation is being revised around the stronger repeated "do not use" watermark, with opacity tuned down from the first too-heavy test.
+- Import/upload should skip previews derived from RAW/DNG/NEF sources. DNGs are useful owner-local source material, but they are not public previews or private masters for this plan.
+
+## App And Owner Workflow
+
+- Localhost detail pages let Owner edit Title and Keywords. Return/Enter saves metadata and exits edit focus so left/right navigation can continue immediately.
+- Metadata saves now target the catalog and available local preview/source files; pushing those metadata changes back to R2 should become a background owner task with progress visible on the Owner page.
+- Gallery/detail data now includes public media keys so GitHub Pages can render from a public media base URL instead of committed image files.
+- Public and localhost pages still share the static app, but localhost uses `scripts/local_server.py` for owner-only endpoints.
+- Hidden review now treats P as re-promote from the blacklist, not "return to Reserve."
+- Buyer-facing detail copy is being simplified toward digital assets and resolution selection. Physical products should stay disabled or owner-toggleable until fulfillment is real.
+- Liked and basket views are being polished to use each selected asset preview as a subtle low-opacity row background.
 
 ## Import Direction
 
-- The importer is now a Reserve builder, not a publisher.
-- It scans developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files, plus RAW files such as `.dng`/`.nef` when an embedded preview JPEG can be extracted.
-- For Camera imports, it keeps only Lightroom green label/rating 4+ files.
-- It infers country/AI/Unknown buckets, writes watermarked Reserve JPEGs, records RAW source metadata, and updates the ignored Reserve manifest/catalog.
-- Expo is populated only by `scripts/export_photos_data.py` or `scripts/apply_review_snapshot.py`.
+- The active importer should scan developed JPG/JPEG/TIF/TIFF exports only.
+- Camera imports still use Lightroom green label/rating 4+ selection.
+- Leonardo/AI imports are selected by folder membership and forced to the AI country/group.
+- The importer creates local preview-cache derivatives and catalog metadata, not a GitHub media payload.
+- A later upload pass should send only safe baked-watermark public previews and, separately, private developed masters for non-RAW sources.
 
-## Review Direction
+## Backlog Snapshot
 
-- We are walking away from the old Curation Pass flow. Owner mode now favors live localhost file moves, with `.pbe-review` snapshots kept only for audit and emergency batch rebuilds.
-- Owner exports now use only `expo_cap` and `expo_state`; live H/U/P actions move files immediately on localhost.
-- Owner mode is now backed by `scripts/local_server.py`: exported `.pbe-review` files can still be written to `~/Downloads`, and live H/U/P actions move files directly between Expo, Hidden, and Reserve.
-- The owner review code now uses Hidden naming throughout: `hidden.html`, `hidden-page.js`, `hidden-actions.js`, `photosByElieHiddenActions`, and `photosbyelie:hiddenchange`.
-- v66.6 added subtle shortcut reminders above localhost review grids plus detail-page reminders for like, navigation, full-screen preview, and owner hide/undo.
-- v66.7 added day-before/day-after known-country context to Unknown cards to help classify surrounding travel dates.
-- v66.8 made Unknown country assignment a live localhost file move into country Reserve folders and added previous/next shooting-day context to the hints.
-- v66.9 changes previous/next shooting-day hints to show relative day distance instead of raw dates.
-- v66.10 adds localhost Owner editing for photo Title and Keywords, writes those changes into catalog/previews/source files when available, syncs collection-country keywords, and makes gallery display sort newest-first by default while leaving Reserve selection randomized.
-- v66.11 top-aligns portrait and square-ish detail previews beside the metadata panel.
-- v66.12 removes the dead gallery Restore control, trims gallery filters to orientation/color mood/subject plus newest-first sorting, fixes hidden controls overriding the HTML `hidden` attribute, and adds a tracked Max/David local asset sync script.
-- v66.13 makes detail-page previous/next navigation follow the last gallery grid order when opened from a filtered or sorted gallery, while direct detail links still fall back to the full catalog sequence.
-- v66.14 adds a gallery-card-only `RAW` overlay for photos whose source metadata points to DNG/NEF/other raw originals, without burning that badge into preview files.
-- v66.15 extends the `RAW` overlay helper to Owner Hidden/Unknown review grids and re-enables RAW import through embedded `exiftool` preview extraction.
-- v66.16 moves Liked bulk resolution controls below the header and hides keyboard shortcut hints on public tap-first phone screens until real keyboard input is detected, while localhost continues to show owner keyboard hints.
-- v66.17 moves the Liked bulk resolution controls below the `Liked` page heading rather than below the global site header.
-- v66.18 adds generated-data/publish validation, publish summaries, buyer-facing license notes, and a static basket order-intent email draft.
-- v66.19 adds mock physical print products, plain white/plain black frame add-ons, product totals, and a generated order email that reviews each ordered photo with selected products, source confidence, links, and subtotals.
-- v66.20 infers preferred print units from browser locale and orders print dimensions as inches-first or centimeters-first while still showing both units.
-- v66.21 changes print products to carry quantity and per-print framing via no-frame, plain white, and plain black radio choices.
-- v66.22 adds explicit print count steppers and auto-selects the related print when a buyer changes count or picks a frame.
-- v66.23 changes plain white/plain black frame mock pricing to scale by selected physical print size.
-- v66.24 adds mock physical-print shipping and handling by size, paired with an equal limited-time S&H discount so net totals are unchanged; downloads remain free.
-- The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
-- Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
-- Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.
-- Review Snapshot logs now live outside assets in `.review-logs/`.
-- Existing browser behavior still uses the working “regular cap” internal storage key, but the physical/public vocabulary is Expo, Reserve, Hidden.
+The living backlog is in `TODO.md`. Highest-priority work now centers on:
 
-## Recent Decisions
-
-- Generated JPGs are precious again after the Saturn rebuild.
-- Camera imports dump every eligible developed green/4+ photo into Reserve and only try to classify countries.
-- Published GitHub assets should include only the selected Expo set, never Reserve/Hidden.
+1. Verify live R2 state and credentials.
+2. Finish the safe public-media pipeline.
+3. Reconcile importer rules with the developed-only source policy.
+4. Wire hidden blacklist publishing and optional permanent R2 wipe actions.
+5. Finish owner metadata persistence and background R2 resync.
+6. Polish buyer-facing detail, liked, and basket pages.
+7. Keep GitHub Pages deployable with code and metadata only.

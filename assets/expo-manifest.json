@@ -4,16 +4,16 @@
   "expo_cap": 100,
   "selection_mode": "live-local-action",
   "seed": null,
-  "photos_count": 488,
+  "photos_count": 473,
   "reserve_counts": {
-    "france": 234,
-    "usa": 65,
-    "spain": 69,
-    "mexico": 1,
+    "france": 1900,
+    "usa": 812,
+    "spain": 882,
+    "mexico": 445,
     "ai": 9153,
-    "portugal": 113,
-    "slovakia": 0,
-    "unknown": 13
+    "portugal": 1093,
+    "slovakia": 24,
+    "unknown": 8
   },
   "hidden_counts": {
     "france": 0,
@@ -32,7 +32,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -46,7 +46,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -60,7 +60,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -74,7 +74,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -88,7 +88,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -97,26 +97,12 @@
       }
     },
     {
-      "id": "20180510-1434-00271-e2c5e5c2fd",
-      "relative_path": "2015-2019/20180510 1434 00271.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180510-1434-00271-e2c5e5c2fd_900.jpg",
-        "detail": "assets/expo/france/20180510-1434-00271-e2c5e5c2fd_1800.jpg"
-      }
-    },
-    {
       "id": "20220506-041124-03096-fad0dd9f78",
       "relative_path": "2022/JPG/05/06/20220506 041124 03096.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -130,7 +116,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -144,7 +130,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -158,7 +144,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -172,7 +158,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -186,7 +172,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -200,7 +186,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -214,7 +200,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -228,7 +214,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -242,7 +228,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -256,7 +242,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -270,7 +256,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -284,7 +270,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -298,7 +284,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -312,7 +298,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -326,7 +312,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -340,7 +326,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -354,7 +340,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -368,7 +354,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -377,26 +363,12 @@
       }
     },
     {
-      "id": "20180510-1447-00281-0c4221fcef",
-      "relative_path": "2015-2019/20180510 1447 00281.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180510-1447-00281-0c4221fcef_900.jpg",
-        "detail": "assets/expo/france/20180510-1447-00281-0c4221fcef_1800.jpg"
-      }
-    },
-    {
       "id": "20180511-1140-00367-8ba499e834",
       "relative_path": "2015-2019/20180511 1140 00367.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -410,7 +382,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -424,7 +396,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -438,7 +410,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -452,7 +424,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -466,7 +438,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -480,7 +452,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -494,7 +466,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -508,7 +480,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -522,7 +494,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -536,7 +508,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -550,7 +522,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -564,7 +536,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -578,7 +550,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -592,7 +564,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -606,7 +578,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -620,7 +592,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -634,7 +606,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -648,7 +620,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -662,7 +634,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -676,7 +648,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -690,7 +662,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -704,7 +676,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -718,7 +690,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -732,7 +704,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -746,7 +718,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -760,7 +732,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -774,7 +746,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -783,26 +755,12 @@
       }
     },
     {
-      "id": "20180510-0001-00268-c479c726cf",
-      "relative_path": "2015-2019/20180510 0001 00268.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180510-0001-00268-c479c726cf_900.jpg",
-        "detail": "assets/expo/france/20180510-0001-00268-c479c726cf_1800.jpg"
-      }
-    },
-    {
       "id": "20160708-1500-04226-pano-6e1f16ad1b",
       "relative_path": "2015-2019/20160708 1500 04226-Pano.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -816,7 +774,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -830,7 +788,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -839,26 +797,12 @@
       }
     },
     {
-      "id": "20180509-2326-00266-3402cc9833",
-      "relative_path": "2015-2019/20180509 2326 00266.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180509-2326-00266-3402cc9833_900.jpg",
-        "detail": "assets/expo/france/20180509-2326-00266-3402cc9833_1800.jpg"
-      }
-    },
-    {
       "id": "20220506-051024-03188-26c219176a",
       "relative_path": "2022/JPG/05/06/20220506 051024 03188.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -872,7 +816,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -881,152 +825,12 @@
       }
     },
     {
-      "id": "20220506-054409-03193-8303575241",
-      "relative_path": "2022/JPG/05/06/20220506 054409 03193.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20220506-054409-03193-8303575241_900.jpg",
-        "detail": "assets/expo/france/20220506-054409-03193-8303575241_1800.jpg"
-      }
-    },
-    {
-      "id": "20180511-1109-00347-4121def4a0",
-      "relative_path": "2015-2019/20180511 1109 00347.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180511-1109-00347-4121def4a0_900.jpg",
-        "detail": "assets/expo/france/20180511-1109-00347-4121def4a0_1800.jpg"
-      }
-    },
-    {
-      "id": "20180529-1757-15382-4fb563774f",
-      "relative_path": "2015-2019/20180529 1757 15382.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180529-1757-15382-4fb563774f_900.jpg",
-        "detail": "assets/expo/france/20180529-1757-15382-4fb563774f_1800.jpg"
-      }
-    },
-    {
-      "id": "20160717-1423-02630-pano-0aff868fcc",
-      "relative_path": "2015-2019/20160717 1423 02630-Pano.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20160717-1423-02630-pano-0aff868fcc_900.jpg",
-        "detail": "assets/expo/france/20160717-1423-02630-pano-0aff868fcc_1800.jpg"
-      }
-    },
-    {
-      "id": "20191114-1254-15649-pano-05f6c65b28",
-      "relative_path": "2015-2019/20191114 1254 15649-Pano.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20191114-1254-15649-pano-05f6c65b28_900.jpg",
-        "detail": "assets/expo/france/20191114-1254-15649-pano-05f6c65b28_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0602-28078-fd1f4c2685",
-      "relative_path": "2010-2014/20110104 0602 28078.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20110104-0602-28078-fd1f4c2685_900.jpg",
-        "detail": "assets/expo/france/20110104-0602-28078-fd1f4c2685_1800.jpg"
-      }
-    },
-    {
-      "id": "20180510-1518-00297-c1981b429a",
-      "relative_path": "2015-2019/20180510 1518 00297.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180510-1518-00297-c1981b429a_900.jpg",
-        "detail": "assets/expo/france/20180510-1518-00297-c1981b429a_1800.jpg"
-      }
-    },
-    {
-      "id": "20180511-1408-00371-a6f83947e2",
-      "relative_path": "2015-2019/20180511 1408 00371.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180511-1408-00371-a6f83947e2_900.jpg",
-        "detail": "assets/expo/france/20180511-1408-00371-a6f83947e2_1800.jpg"
-      }
-    },
-    {
-      "id": "20111102-1226-07867-136188a2c1",
-      "relative_path": "2010-2014/20111102 1226 07867.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20111102-1226-07867-136188a2c1_900.jpg",
-        "detail": "assets/expo/france/20111102-1226-07867-136188a2c1_1800.jpg"
-      }
-    },
-    {
-      "id": "20180524-1746-00941-72deedae61",
-      "relative_path": "2015-2019/20180524 1746 00941.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180524-1746-00941-72deedae61_900.jpg",
-        "detail": "assets/expo/france/20180524-1746-00941-72deedae61_1800.jpg"
-      }
-    },
-    {
       "id": "20220506-044820-03115-d18397db96",
       "relative_path": "2022/JPG/05/06/20220506 044820 03115.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1040,7 +844,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1054,7 +858,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1068,7 +872,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1082,7 +886,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1096,7 +900,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1105,26 +909,12 @@
       }
     },
     {
-      "id": "20180510-1443-00277-536a6ae39b",
-      "relative_path": "2015-2019/20180510 1443 00277.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "curation-pass"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "assets/expo/france/20180510-1443-00277-536a6ae39b_900.jpg",
-        "detail": "assets/expo/france/20180510-1443-00277-536a6ae39b_1800.jpg"
-      }
-    },
-    {
       "id": "20110106-0649-28038-1e0a23ade0",
       "relative_path": "2010-2014/20110106 0649 28038.jpg",
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1138,7 +928,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1152,7 +942,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1166,7 +956,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1180,7 +970,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1194,7 +984,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1208,7 +998,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1222,7 +1012,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1236,7 +1026,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1250,7 +1040,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1264,7 +1054,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1278,7 +1068,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1292,7 +1082,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1306,7 +1096,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1320,7 +1110,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1334,7 +1124,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1348,7 +1138,7 @@
       "gallery_country": {
         "slug": "france",
         "label": "France",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1362,7 +1152,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1376,7 +1166,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1390,7 +1180,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1404,7 +1194,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1418,7 +1208,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1432,7 +1222,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1446,7 +1236,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1460,7 +1250,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1474,7 +1264,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1488,7 +1278,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1502,7 +1292,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1516,7 +1306,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1530,7 +1320,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1544,7 +1334,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1558,7 +1348,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1572,7 +1362,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1586,7 +1376,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1600,7 +1390,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1614,7 +1404,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1628,7 +1418,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1642,7 +1432,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1656,7 +1446,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1670,7 +1460,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1684,7 +1474,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1698,7 +1488,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1712,7 +1502,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1726,7 +1516,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1740,7 +1530,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1754,7 +1544,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1768,7 +1558,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1782,7 +1572,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1796,7 +1586,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1810,7 +1600,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1824,7 +1614,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1838,7 +1628,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1852,7 +1642,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1866,7 +1656,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1880,7 +1670,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1894,7 +1684,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1908,7 +1698,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1922,7 +1712,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1936,7 +1726,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1950,7 +1740,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1964,7 +1754,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1978,7 +1768,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -1992,7 +1782,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2006,7 +1796,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2020,7 +1810,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2034,7 +1824,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2048,7 +1838,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2062,7 +1852,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2076,7 +1866,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2090,7 +1880,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2104,7 +1894,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2118,7 +1908,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2132,7 +1922,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2146,7 +1936,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2160,7 +1950,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2174,7 +1964,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2188,7 +1978,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2202,7 +1992,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2216,7 +2006,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2230,7 +2020,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2244,7 +2034,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2258,7 +2048,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2272,7 +2062,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2286,7 +2076,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2300,7 +2090,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2314,7 +2104,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2328,7 +2118,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2342,7 +2132,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2356,7 +2146,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2370,7 +2160,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2384,7 +2174,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2398,7 +2188,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2412,7 +2202,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2426,7 +2216,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2440,7 +2230,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2454,7 +2244,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2468,7 +2258,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2482,7 +2272,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2496,7 +2286,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2510,7 +2300,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2524,7 +2314,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2538,7 +2328,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2552,7 +2342,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2566,7 +2356,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2580,7 +2370,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2594,7 +2384,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2608,7 +2398,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2622,7 +2412,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2636,7 +2426,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2650,7 +2440,7 @@
       "gallery_country": {
         "slug": "usa",
         "label": "USA",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2664,7 +2454,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2678,7 +2468,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2692,7 +2482,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2706,7 +2496,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2720,7 +2510,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2734,7 +2524,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2748,7 +2538,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2762,7 +2552,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2776,7 +2566,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2790,7 +2580,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2804,7 +2594,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2818,7 +2608,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2832,7 +2622,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2846,7 +2636,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2860,7 +2650,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2874,7 +2664,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2888,7 +2678,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2902,7 +2692,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2916,7 +2706,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2930,7 +2720,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2944,7 +2734,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2958,7 +2748,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2972,7 +2762,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -2986,7 +2776,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3000,7 +2790,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3014,7 +2804,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3028,7 +2818,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3042,7 +2832,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3056,7 +2846,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3070,7 +2860,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3084,7 +2874,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3098,7 +2888,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3112,7 +2902,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3126,7 +2916,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3140,7 +2930,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3154,7 +2944,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3168,7 +2958,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3182,7 +2972,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3196,7 +2986,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3210,7 +3000,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3224,7 +3014,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3238,7 +3028,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3252,7 +3042,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3266,7 +3056,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3280,7 +3070,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3294,7 +3084,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3308,7 +3098,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3322,7 +3112,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3336,7 +3126,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3350,7 +3140,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3364,7 +3154,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3378,7 +3168,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3392,7 +3182,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3406,7 +3196,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3420,7 +3210,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3434,7 +3224,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3448,7 +3238,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3462,7 +3252,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3476,7 +3266,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3490,7 +3280,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3504,7 +3294,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3518,7 +3308,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3532,7 +3322,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3546,7 +3336,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3560,7 +3350,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3574,7 +3364,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3588,7 +3378,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3602,7 +3392,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3616,7 +3406,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3630,7 +3420,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3644,7 +3434,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3658,7 +3448,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3672,7 +3462,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3686,7 +3476,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3700,7 +3490,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3714,7 +3504,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3728,7 +3518,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3742,7 +3532,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3756,7 +3546,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3770,7 +3560,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3784,7 +3574,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3798,7 +3588,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3812,7 +3602,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3826,7 +3616,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3840,7 +3630,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3854,7 +3644,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3868,7 +3658,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3882,7 +3672,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3896,7 +3686,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3910,7 +3700,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3924,7 +3714,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3938,7 +3728,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3952,7 +3742,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3966,7 +3756,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3980,7 +3770,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -3994,7 +3784,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -4008,7 +3798,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -4022,7 +3812,7 @@
       "gallery_country": {
         "slug": "spain",
         "label": "Spain",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -4036,7 +3826,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4050,7 +3840,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4064,7 +3854,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4078,7 +3868,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4092,7 +3882,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4106,7 +3896,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4120,7 +3910,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4134,7 +3924,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4148,7 +3938,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4162,7 +3952,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4176,7 +3966,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4190,7 +3980,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4204,7 +3994,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4218,7 +4008,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4232,7 +4022,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4246,7 +4036,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4260,7 +4050,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4274,7 +4064,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4288,7 +4078,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4302,7 +4092,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4316,7 +4106,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4330,7 +4120,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4344,7 +4134,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4358,7 +4148,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4372,7 +4162,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4386,7 +4176,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4400,7 +4190,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4414,7 +4204,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4428,7 +4218,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4442,7 +4232,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4456,7 +4246,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4470,7 +4260,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4484,7 +4274,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4498,7 +4288,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4512,7 +4302,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4526,7 +4316,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4540,7 +4330,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4554,7 +4344,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4568,7 +4358,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4582,7 +4372,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4596,7 +4386,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4610,7 +4400,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4624,7 +4414,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4638,7 +4428,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4652,7 +4442,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4666,7 +4456,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4680,7 +4470,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4694,7 +4484,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4708,7 +4498,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4722,7 +4512,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4736,7 +4526,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4750,7 +4540,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4764,7 +4554,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4778,7 +4568,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4792,7 +4582,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4806,7 +4596,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4820,7 +4610,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4834,7 +4624,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4848,7 +4638,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4862,7 +4652,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4876,7 +4666,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4890,7 +4680,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4904,7 +4694,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4918,7 +4708,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4932,7 +4722,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4946,7 +4736,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4960,7 +4750,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4974,7 +4764,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -4988,7 +4778,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5002,7 +4792,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5016,7 +4806,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5030,7 +4820,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5044,7 +4834,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5058,7 +4848,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5072,7 +4862,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5086,7 +4876,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5100,7 +4890,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5114,7 +4904,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5128,7 +4918,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5142,7 +4932,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5156,7 +4946,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5170,7 +4960,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5184,7 +4974,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5198,7 +4988,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5212,7 +5002,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5226,7 +5016,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5240,7 +5030,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5254,7 +5044,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5268,7 +5058,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5282,7 +5072,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5296,7 +5086,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5310,7 +5100,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5324,7 +5114,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5338,7 +5128,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5352,7 +5142,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5366,7 +5156,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5380,7 +5170,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5394,7 +5184,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5408,7 +5198,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5422,7 +5212,7 @@
       "gallery_country": {
         "slug": "ai",
         "label": "AI",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "ai",
       "derivatives": {
@@ -5436,7 +5226,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5450,7 +5240,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5464,7 +5254,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5478,7 +5268,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5492,7 +5282,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5506,7 +5296,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5520,7 +5310,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5534,7 +5324,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5548,7 +5338,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5562,7 +5352,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5576,7 +5366,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5590,7 +5380,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5604,7 +5394,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5618,7 +5408,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5632,7 +5422,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5646,7 +5436,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5660,7 +5450,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5674,7 +5464,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5688,7 +5478,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5702,7 +5492,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5716,7 +5506,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5730,7 +5520,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5744,7 +5534,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5758,7 +5548,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5772,7 +5562,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5786,7 +5576,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5800,7 +5590,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5814,7 +5604,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5828,7 +5618,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5842,7 +5632,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5856,7 +5646,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5870,7 +5660,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5884,7 +5674,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5898,7 +5688,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5912,7 +5702,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5926,7 +5716,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5940,7 +5730,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5954,7 +5744,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5968,7 +5758,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5982,7 +5772,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -5996,7 +5786,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6010,7 +5800,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6024,7 +5814,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6038,7 +5828,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6052,7 +5842,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6066,7 +5856,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6080,7 +5870,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6094,7 +5884,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6108,7 +5898,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6122,7 +5912,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6136,7 +5926,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6150,7 +5940,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6164,7 +5954,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6178,7 +5968,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6192,7 +5982,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6206,7 +5996,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6220,7 +6010,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6234,7 +6024,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6248,7 +6038,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6262,7 +6052,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6276,7 +6066,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6290,7 +6080,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6304,7 +6094,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6318,7 +6108,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6332,7 +6122,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6346,7 +6136,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6360,7 +6150,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6374,7 +6164,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6388,7 +6178,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6402,7 +6192,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6416,7 +6206,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6430,7 +6220,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6444,7 +6234,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6458,7 +6248,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6472,7 +6262,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6486,7 +6276,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6500,7 +6290,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6514,7 +6304,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6528,7 +6318,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6542,7 +6332,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6556,7 +6346,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6570,7 +6360,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6584,7 +6374,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6598,7 +6388,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6612,7 +6402,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6626,7 +6416,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6640,7 +6430,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6654,7 +6444,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6668,7 +6458,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6682,7 +6472,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6696,7 +6486,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6710,7 +6500,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6724,7 +6514,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6738,7 +6528,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6752,7 +6542,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6766,7 +6556,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6780,7 +6570,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6794,7 +6584,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6808,7 +6598,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6822,7 +6612,7 @@
       "gallery_country": {
         "slug": "portugal",
         "label": "Portugal",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6836,7 +6626,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {
@@ -6850,7 +6640,7 @@
       "gallery_country": {
         "slug": "slovakia",
         "label": "Slovakia",
-        "source": "curation-pass"
+        "source": "review-snapshot"
       },
       "source_mode": "reserve",
       "derivatives": {

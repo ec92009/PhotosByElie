@@ -54,7 +54,7 @@ def existing_manifest_specs(repo_root: Path) -> list[tuple[Path, str]]:
         raise FileNotFoundError(
             "No source ingest manifests found; expected at least one of: "
             f"{expected}. Rebuild them with scripts/build_lightroom_thumbnails.py, "
-            "or run scripts/apply_curation_pass.py with --rebuild-missing-manifests."
+            "or run scripts/apply_review_snapshot.py with --rebuild-missing-manifests."
         )
     return specs
 
@@ -652,20 +652,20 @@ if __name__ == "__main__":
     parser.add_argument("--expo-cap", dest="regular_cap", type=int, default=DEFAULT_REGULAR_CAP)
     parser.add_argument("--selection", choices=("random", "newest"), default=DEFAULT_SELECTION_MODE)
     parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--curation-pass", "--blacklist", dest="curation_pass", type=Path, default=None, help="Optional Curation Pass file to apply hidden, reserve, and classification choices.")
+    parser.add_argument("--review-snapshot", "--blacklist", dest="review_snapshot", type=Path, default=None, help="Optional Review Snapshot file to apply hidden, reserve, and classification choices.")
     parser.add_argument("--no-sync-assets", action="store_true")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
-    curation_payload = load_blacklist_payload(args.curation_pass)
+    review_payload = load_blacklist_payload(args.review_snapshot)
     result = write_photos_data(
         repo_root,
         regular_cap=args.regular_cap,
         sync_regular_assets=not args.no_sync_assets,
         selection_mode=args.selection,
-        blacklist_ids=blacklist_ids_from_payload(curation_payload),
+        blacklist_ids=blacklist_ids_from_payload(review_payload),
         seed=args.seed,
-        pinned_regular_ids=expo_state_from_payload(curation_payload),
-        reserve_only_ids=reserve_only_ids_from_payload(curation_payload),
-        country_assignments=country_assignments_from_payload(curation_payload),
+        pinned_regular_ids=expo_state_from_payload(review_payload),
+        reserve_only_ids=reserve_only_ids_from_payload(review_payload),
+        country_assignments=country_assignments_from_payload(review_payload),
     )
     print(result)

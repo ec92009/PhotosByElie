@@ -8,7 +8,8 @@
   const countryAssignmentsKey = "photosbyelie-country-assignments";
   const photoActionEndpoint = "/__photosbyelie/photo-action";
   const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
-  let lastCurationPass = null;
+  let ownerBusyCount = 0;
+  let ownerBusyMessage = "";
 
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
@@ -111,21 +112,71 @@
     return result;
   };
 
+  const ensureOwnerBusyIndicator = () => {
+    let indicator = document.querySelector("[data-owner-busy-indicator]");
+    if (indicator) return indicator;
+    indicator = document.createElement("div");
+    indicator.className = "owner-busy-indicator";
+    indicator.dataset.ownerBusyIndicator = "";
+    indicator.setAttribute("role", "status");
+    indicator.setAttribute("aria-live", "polite");
+    indicator.innerHTML = `
+      <span class="owner-busy-spinner" aria-hidden="true"></span>
+      <strong data-owner-busy-message></strong>
+    `;
+    document.body.append(indicator);
+    return indicator;
+  };
+
+  const updateOwnerBusyIndicator = () => {
+    const indicator = ensureOwnerBusyIndicator();
+    const message = indicator.querySelector("[data-owner-busy-message]");
+    if (message) message.textContent = ownerBusyMessage;
+  };
+
+  const setOwnerBusy = (active, message = "") => {
+    ownerBusyCount = Math.max(0, ownerBusyCount + (active ? 1 : -1));
+    if (active && message) ownerBusyMessage = message;
+    const busy = ownerBusyCount > 0;
+    document.documentElement.classList.toggle("is-owner-action-busy", busy);
+    document.body?.toggleAttribute("aria-busy", busy);
+    if (busy) {
+      updateOwnerBusyIndicator();
+    } else {
+      ownerBusyMessage = "";
+      document.querySelector("[data-owner-busy-indicator]")?.remove();
+    }
+    window.dispatchEvent(new CustomEvent("photosbyelie:ownerbusychange", { detail: { busy, message: ownerBusyMessage } }));
+    return busy;
+  };
+
+  const updateOwnerBusy = (message = "") => {
+    if (message) ownerBusyMessage = message;
+    if (ownerBusyCount > 0) updateOwnerBusyIndicator();
+  };
+
+  window.photosByElieSetOwnerBusy = setOwnerBusy;
+
   const photoAction = async (action, photoId, extra = {}) => {
     if (!enabled) return null;
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!["sync-country-keywords"].includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
-    const response = await fetch(photoActionEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestPayload),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload?.ok) {
-      throw new Error(payload?.error || `Photo action failed: ${action}`);
+    setOwnerBusy(true);
+    try {
+      const response = await fetch(photoActionEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestPayload),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || `Photo action failed: ${action}`);
+      }
+      return applyServerState(payload);
+    } finally {
+      setOwnerBusy(false);
     }
-    return applyServerState(payload);
   };
 
   const readRegularCap = () => {
@@ -276,12 +327,13 @@
     return read();
   };
 
-  const assignUnknownsToCountry = async (photoIds = [], galleryKey) => {
+  const assignUnknownsToCountry = async (photoIds = [], galleryKey, options = {}) => {
     const ids = normalize(photoIds);
     if (!enabled || !ids.length || !countryAssignmentTargets.includes(galleryKey)) return null;
     const result = await photoAction("assign-country", ids[0], {
       photo_ids: ids,
       gallery_key: galleryKey,
+      operation_id: options.operationId,
     });
     clearCountryAssignments(ids);
     return result;
@@ -322,75 +374,6 @@
 
   const has = (photoId) => read().includes(photoId);
 
-  const activeRegularState = () => {
-    const hidden = new Set(read());
-    const reserveOnly = new Set(readReserveOnly());
-    const promotions = readPromotions();
-    const collections = window.photosByElieData || {};
-    return Object.fromEntries(
-      Object.entries(collections).map(([galleryKey, collection]) => {
-        const regularIds = (collection.photos || [])
-          .map((photo) => photo.id)
-          .filter((photoId) => !hidden.has(photoId) && !reserveOnly.has(photoId));
-        const promotedIds = (promotions[galleryKey] || [])
-          .filter((photoId) => !hidden.has(photoId));
-        const targetCount = effectiveRegularCap();
-        return [galleryKey, [...new Set(regularIds.concat(promotedIds))].slice(0, targetCount)];
-      })
-    );
-  };
-
-  const createCurationPass = () => {
-    if (!enabled) return null;
-    const photoIds = read();
-    const expoCap = effectiveRegularCap();
-    const expoState = activeRegularState();
-    const payload = {
-      format: "photosbyelie-curation-pass",
-      version: 3,
-      exported_at: new Date().toISOString(),
-      photo_ids: photoIds,
-      expo_cap: expoCap,
-      selection_mode: "browser",
-      reserve_only: readReserveOnly(),
-      reserve_promotions: readPromotions(),
-      expo_state: expoState,
-      country_assignments: readCountryAssignments(),
-    };
-    const stamp = payload.exported_at.replace(/[:.]/g, "-");
-    const text = JSON.stringify(payload, null, 2);
-    const filename = `photosbyelie-${stamp}.pbe-curation`;
-    lastCurationPass = { filename, payload, text };
-    return lastCurationPass;
-  };
-
-  const downloadLastCurationPass = () => {
-    if (!enabled) return null;
-    const curationPass = lastCurationPass || createCurationPass();
-    if (!curationPass?.filename || !curationPass?.text) return null;
-    const blob = new Blob([curationPass.text], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = curationPass.filename;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return anchor.download;
-  };
-
-  const exportCurationPass = (options = {}) => {
-    if (!enabled) return null;
-    const curationPass = createCurationPass();
-    if (options.download !== false) downloadLastCurationPass();
-    return curationPass?.filename || null;
-  };
-
-  const exportBlacklist = exportCurationPass;
-
-  const readLastCurationPass = () => lastCurationPass;
-
   const filterPhotos = (photos = [], options = {}) => {
     if (!enabled) return photos;
     const hidden = new Set(read());
@@ -408,16 +391,13 @@
     mark,
     read,
     readCountryAssignments,
-    readLastCurationPass,
     readReserveOnly,
     readRegularCap,
     assignUnknownsToCountry,
-    createCurationPass,
-    downloadLastCurationPass,
     effectiveRegularCap,
-    exportBlacklist,
-    exportCurationPass,
     returnToReserve,
+    setOwnerBusy,
+    updateOwnerBusy,
     setCountryAssignment,
     setCountryAssignments,
     setRegularCap,

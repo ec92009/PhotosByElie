@@ -9,6 +9,7 @@
   let selectedPhotoId = "";
   let lastHiddenPhotoId = "";
   let fullscreenPreview = null;
+  let pendingScrollAnchor = null;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -49,13 +50,8 @@
 
   const unknownPhotos = () => {
     const hidden = new Set(hiddenActions?.read?.() || []);
-    const assigned = hiddenActions?.readCountryAssignments?.() || {};
-    return allUnknownPhotos().filter((photo) => !hidden.has(photo.id) && !assigned[photo.id]);
+    return allUnknownPhotos().filter((photo) => !hidden.has(photo.id));
   };
-
-  const countAssignedUnknown = (assignments) => allUnknownPhotos()
-    .filter((photo) => assignments[photo.id])
-    .length;
 
   const sameDayPhotos = (photo) => {
     const day = captureDay(photo);
@@ -292,7 +288,6 @@
       return;
     }
 
-    const assignments = hiddenActions.readCountryAssignments?.() || {};
     const allPhotos = allUnknownPhotos();
     const dayCounts = allPhotos.reduce((counts, photo) => {
       const day = captureDay(photo);
@@ -315,7 +310,6 @@
     root.innerHTML = photos.map((photo) => {
       const image = photo.gallerySrc || photo.imageSrc || "";
       const rawLabel = rawSourceLabel(photo);
-      const assigned = assignments[photo.id] || "";
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;
       const dayHints = adjacentDayHints(photo, countryDayIndex);
@@ -324,6 +318,7 @@
         <article class="unknown-card ${rawLabel ? "has-raw-source" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="unknown-thumb ${image ? "has-image" : ""}">
             ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(photo.title)}"/>` : ""}
+            ${image ? '<span class="unknown-missing-preview">Missing preview</span>' : ""}
             ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
           </div>
           <div class="unknown-card-body">
@@ -351,7 +346,7 @@
             <label class="owner-number-control">
               <span>Country</span>
               <select data-country-assignment>
-                ${countryOptions(assigned)}
+                ${countryOptions("")}
               </select>
             </label>
           </div>
@@ -375,6 +370,12 @@
       });
     });
 
+    root.querySelectorAll(".unknown-thumb img").forEach((image) => {
+      const markMissing = () => image.closest(".unknown-thumb")?.classList.add("is-missing-preview");
+      image.addEventListener("error", markMissing, { once: true });
+      if (image.complete && image.naturalWidth === 0) markMissing();
+    });
+
     root.querySelectorAll("[data-country-assignment]").forEach((select) => {
       select.addEventListener("change", async () => {
         const card = select.closest("[data-photo-id]");
@@ -386,32 +387,107 @@
         const affectedCount = affectedPhotos.length || 1;
         select.disabled = true;
         if (!targetCountry) {
-          const assignmentsNow = hiddenActions.setCountryAssignments?.(affectedIds, "") || {};
-          const assignedCount = countAssignedUnknown(assignmentsNow);
           selectedPhotoId = photoId || selectedPhotoId;
-          render();
-          setStatus(`${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} returned to the Unknown queue; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}.`);
+          renderPreservingScroll();
+          setStatus(`${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} left in Unknown.`);
           return;
         }
         let result = null;
+        const operationId = `unknown-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        let progressTimer = null;
+        const setMoveCount = (remaining) => {
+          const count = Math.max(0, Number(remaining) || 0);
+          hiddenActions.updateOwnerBusy?.(`${count} pic${count === 1 ? "" : "s"} left`);
+        };
+        const pollProgress = async () => {
+          try {
+            const response = await fetch(`/__photosbyelie/photo-action-progress?operation_id=${encodeURIComponent(operationId)}`, { cache: "no-store" });
+            const payload = await response.json();
+            if (payload?.progress) setMoveCount(payload.progress.remaining);
+          } catch {
+            // The main action still owns success/failure reporting.
+          }
+        };
+        const busyMessage = `${affectedCount} pic${affectedCount === 1 ? "" : "s"} left`;
+        hiddenActions.setOwnerBusy?.(true, busyMessage);
+        progressTimer = window.setInterval(pollProgress, 700);
+        setStatus(`Moving ${affectedCount} same-day photo${affectedCount === 1 ? "" : "s"} to Reserve / ${countryTitle(targetCountry)}...`);
         try {
-          result = await hiddenActions.assignUnknownsToCountry?.(affectedIds, targetCountry);
+          await runWithPreservedScroll(affectedIds, async (scrollAnchor) => {
+            result = await hiddenActions.assignUnknownsToCountry?.(affectedIds, targetCountry, { operationId });
+            selectedPhotoId = photoId || selectedPhotoId;
+            renderPreservingScroll(scrollAnchor);
+          });
         } catch (error) {
+          select.value = "";
           select.disabled = false;
           setStatus(error?.message || "Could not assign unknown photos.");
           return;
+        } finally {
+          if (progressTimer) window.clearInterval(progressTimer);
+          hiddenActions.setOwnerBusy?.(false);
         }
-        selectedPhotoId = photoId || selectedPhotoId;
-        render();
         const movedCount = result?.moved?.length ?? affectedCount;
+        const removedCount = result?.removed_from_unknown?.length ?? movedCount;
         const skippedCount = result?.skipped?.length || 0;
-        setStatus(`${movedCount} same-day photo${movedCount === 1 ? "" : "s"} moved to Reserve / ${countryTitle(targetCountry)}${skippedCount ? `; ${skippedCount} already assigned` : ""}. Hints refreshed.`);
+        setStatus(`${removedCount} same-day photo${removedCount === 1 ? "" : "s"} removed from Unknown and moved to Reserve / ${countryTitle(targetCountry)}${skippedCount ? `; ${skippedCount} already assigned` : ""}. Hints refreshed.`);
       });
     });
 
-    const assignedCount = countAssignedUnknown(assignments);
     updateSelection();
-    setStatus(`${photos.length} unassigned unknown photo${photos.length === 1 ? "" : "s"} visible; ${assignedCount} current Unknown assignment${assignedCount === 1 ? "" : "s"}.`);
+    setStatus(`${photos.length} unknown photo${photos.length === 1 ? "" : "s"} visible.`);
+  };
+
+  const captureScrollAnchor = (excludeIds = []) => {
+    const excluded = new Set(excludeIds);
+    const visibleCards = [...root?.querySelectorAll("[data-photo-id]") || []]
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.bottom > 0 && rect.top < window.innerHeight);
+    const anchor = visibleCards.find(({ element }) => !excluded.has(element.dataset.photoId)) || visibleCards[0];
+    return {
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      id: anchor?.element.dataset.photoId || "",
+      top: anchor?.rect.top ?? null,
+    };
+  };
+
+  const restoreScrollAnchor = (anchor) => {
+    const apply = () => {
+      const nextAnchor = anchor?.id ? root?.querySelector(`[data-photo-id="${CSS.escape(anchor.id)}"]`) : null;
+      if (nextAnchor && anchor.top !== null) {
+        const nextTop = nextAnchor.getBoundingClientRect().top;
+        window.scrollBy(0, nextTop - anchor.top);
+        return;
+      }
+      const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(anchor?.scrollX || 0, Math.min(anchor?.scrollY || 0, maxScrollY));
+    };
+    window.requestAnimationFrame(() => {
+      apply();
+      window.setTimeout(apply, 80);
+      window.setTimeout(apply, 250);
+    });
+  };
+
+  const renderPreservingScroll = (anchor = captureScrollAnchor()) => {
+    const scrollAnchor = anchor || captureScrollAnchor();
+    pendingScrollAnchor = null;
+    render();
+    restoreScrollAnchor(scrollAnchor);
+  };
+
+  const runWithPreservedScroll = async (excludeIds, task) => {
+    pendingScrollAnchor = captureScrollAnchor(excludeIds);
+    try {
+      return await task(pendingScrollAnchor);
+    } finally {
+      pendingScrollAnchor = null;
+    }
+  };
+
+  const renderPreservingPendingScroll = () => {
+    renderPreservingScroll(pendingScrollAnchor || captureScrollAnchor());
   };
 
   window.addEventListener("keydown", async (event) => {
@@ -436,9 +512,11 @@
       if (!photo) return;
       lastHiddenPhotoId = photo.id;
       try {
-        await hiddenActions.mark(photo.id);
-        selectedPhotoId = "";
-        render();
+        await runWithPreservedScroll([photo.id], async (scrollAnchor) => {
+          await hiddenActions.mark(photo.id);
+          selectedPhotoId = "";
+          renderPreservingScroll(scrollAnchor);
+        });
         setStatus(`${photo.title} moved from Unknown to Hidden.`);
       } catch (error) {
         setStatus(error?.message || "Could not move unknown photo to Hidden.");
@@ -455,12 +533,12 @@
       return;
     }
     if (restoredId) selectedPhotoId = restoredId;
-    render();
+    renderPreservingScroll();
     setStatus(restoredId ? "Last hidden unknown photo moved back." : "No hidden unknown photo to undo.");
   });
 
   window.addEventListener("photosbyelie:hiddenchange", () => {
-    render();
+    renderPreservingPendingScroll();
   });
   window.addEventListener("photosbyelie:inputmodechange", render);
 

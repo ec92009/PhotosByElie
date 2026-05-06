@@ -2,7 +2,7 @@
 """Sync PhotosByElie local-only asset vaults between two checkouts.
 
 Git owns the public Expo subset. This script owns the ignored local vaults:
-Reserve, Hidden, and curation logs.
+Reserve, Hidden, and review logs.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PATHS = (
     Path("assets/reserve"),
     Path("assets/hidden"),
-    Path(".curation-logs"),
+    Path(".review-logs"),
 )
 
 OPTIONAL_EXPO_PATH = Path("assets/expo")

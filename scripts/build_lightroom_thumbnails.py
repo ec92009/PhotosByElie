@@ -10,7 +10,7 @@ The script is intentionally interrupt/resume friendly:
 
 By default, developed JPG/TIFF sources and RAW files with embedded previews are
 imported into Reserve only when Lightroom marks them green with rating 4 or
-higher. Expo is filled later by the curation/export scripts.
+higher. Expo is filled later by the review/export scripts.
 """
 
 from __future__ import annotations

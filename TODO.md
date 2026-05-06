@@ -11,30 +11,30 @@ Last updated: 2026-05-06
 - Added localhost moderation semantics where `H` hides in the live gallery, `U` undoes there, and `P` on the Hidden page returns a hidden photo to `Reserve` rather than straight back into Expo.
 - Added localhost gallery single-click selection, double-click detail navigation, and a viewport-limited Grid density slider.
 - Removed the collection number and archive blurb from gallery heroes.
-- Renamed owner-facing blacklist export to Curation Pass, including `.pbe-curation` downloads and the Apply Curation Pass helper while keeping old payload compatibility.
-- Expanded Owner into the curation command center with Curation Pass export, Expo cap, Hidden review, Unknown classification, and state counts.
+- Renamed owner-facing blacklist export to Review Snapshot, including `.pbe-review` downloads and the Apply Review Snapshot helper while keeping old payload compatibility.
+- Expanded Owner into the review command center with Review Snapshot export, Expo cap, Hidden review, Unknown classification, and state counts.
 - Moved Unknown out of the public homepage carousel and into a localhost-only owner classification queue.
 - Polished the homepage by keeping only public collection cards, making every visible carousel card navigate to its collection, refreshing representative samples on carousel turns, improving the Archive shape copy, and adding the shared footer band across pages.
 - Updated detail-page previous/next controls and left/right arrow keys so navigation continues across collection boundaries instead of looping inside one country.
 - Made basket selections automatically feed the Liked list, pruned stale catalog entries from basket rendering, and expanded Unknown classification with same-day assignment plus H/U moderation.
 - Removed assigned photos from the Unknown classification queue immediately after country assignment.
-- Exercised a synthetic Curation Pass against a disposable local copy and hardened the direct-assets cleaner so missing Reserve derivatives are skipped, Expo fills up to the configured cap from available assets, and assigned visible Unknown photos move into the target country Reserve.
+- Exercised a synthetic Review Snapshot against a disposable local copy and hardened the direct-assets cleaner so missing Reserve derivatives are skipped, Expo fills up to the configured cap from available assets, and assigned visible Unknown photos move into the target country Reserve.
 - Pruned the local Reserve index to physical JPEGs and cache-busted localhost Reserve loading so refills do not show stale broken previews.
-- Made Expo selection random through the export and Curation Pass paths so Reserve fills do not preserve chronological archive runs.
-- Updated public gallery cells to show real photo aspect ratios inside square slots, reserving strong selection framing for localhost curation.
+- Made Expo selection random through the export and Review Snapshot paths so Reserve fills do not preserve chronological archive runs.
+- Updated public gallery cells to show real photo aspect ratios inside square slots, reserving strong selection framing for localhost review.
 - Tightened homepage sampling so representative photos refresh after a full public-country carousel cycle, not every single card change.
-- Re-ran the Curation Pass cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
+- Re-ran the Review Snapshot cleaner in a disposable copy after the randomization change and verified expected publish counts with zero missing image references.
 - Let visible side cards in the collection carousel navigate directly to their galleries instead of requiring a foregrounding click first.
 - Added the visible ignored `assets/hidden` folder and a local Hidden catalog so the three physical asset states are now Expo, Reserve, and Hidden.
 - Reset the asset contract to tracked `assets/expo` plus ignored `assets/reserve` and `assets/hidden`, with one country/AI/Unknown subfolder per state.
-- Retired raw-first ingest assumptions: future imports scan developed JPG/TIFF exports into Reserve and leave Expo to curation.
-- Imported the full Saturn Camera and Leonardo developed JPG/TIFF sources into local Reserve, curated a capped v65.30 public Expo build, and kept Unknown local-only.
+- Retired raw-first ingest assumptions: future imports scan developed JPG/TIFF exports into Reserve and leave Expo to review.
+- Imported the full Saturn Camera and Leonardo developed JPG/TIFF sources into local Reserve, selected a capped v65.30 public Expo build, and kept Unknown local-only.
 - Added Unknown full-screen thumbnail preview, title/keyword metadata, and more reliable H/U shortcuts.
 - Hardened Hidden review so it waits for local catalogs and avoids blank unresolved cards during load.
-- Changed Curation Pass exports to declare browser-state curation, and updated the cleaner to preserve browser Expo picks first, then random-fill gaps from eligible current/Reserve photos, including country-assigned Unknowns.
+- Changed Review Snapshot exports to declare browser-state review, and updated the cleaner to preserve browser Expo picks first, then random-fill gaps from eligible current/Reserve photos, including country-assigned Unknowns.
 - Added localhost-only live file actions so H/U/P move JPEG pairs directly between Expo, Hidden, and Reserve while GitHub Pages remains fully static.
 - Renamed the owner review workflow to `hidden.html`, `hidden-page.js`, `hidden-actions.js`, `photosByElieHiddenActions`, and `photosbyelie:hiddenchange`.
-- Added subtle keyboard reminder strips for owner curation grids and detail-page like/navigation shortcuts.
+- Added subtle keyboard reminder strips for owner review grids and detail-page like/navigation shortcuts.
 - Added day-before/day-after known-country context to Unknown cards so country assignment can use nearby travel dates.
 - Made Unknown country assignment a live localhost file move into country Reserve folders and added previous/next shooting-day context.
 - Changed previous/next shooting-day Unknown hints to use relative day distance instead of raw dates.
@@ -55,6 +55,7 @@ Last updated: 2026-05-06
 - Re-enabled Lightroom RAW ingestion through embedded preview extraction, refreshed local Reserve to 14,805 selected manifest rows, and verified 29,638 Reserve JPG derivatives with zero recorded import failures.
 - Prepared the Max/David ignored-asset handoff with the tracked `scripts/sync_local_assets.py` workflow plus tarball fallback for large local vault deltas.
 - Folded the 2026-05-06 Codex review into this backlog and archived the review notes under `Archive/`.
+- Retired the old Review Pass framing in code, renamed the batch fallback to Review Snapshot, and documented that live localhost owner actions are now the preferred workflow.
 
 ## Current Priority Stack
 
@@ -85,10 +86,10 @@ Last updated: 2026-05-06
 
 5. **Harden Expo/Reserve/Hidden publishing.**
    - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
-   - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch curation, not as a fixed global default.
+   - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch review, not as a fixed global default.
    - Use `scripts/sync_local_assets.py` for local vault handoff rather than pushing Reserve/Hidden to Git.
    - Run `node scripts/validate_publish.js --summary` before public pushes.
-   - Archive or ignore local curation exports and `.playwright-mcp` logs unless they become intentional audit fixtures.
+   - Archive or ignore local review exports and `.playwright-mcp` logs unless they become intentional audit fixtures.
 
 6. **Improve gallery and detail review ergonomics.**
    - Add panoramic orientation filtering.
@@ -96,14 +97,14 @@ Last updated: 2026-05-06
    - Retest gallery-selected detail navigation, mobile swipes, full-screen preview, and H/U/P owner shortcuts on narrow screens.
    - Keep Owner UI visually operational and distinct from the public shopping/browsing experience.
 
-7. **Scale gallery generation and curation.**
+7. **Scale gallery generation and review.**
    - Treat the current RAW-aware Reserve import as the local vault baseline before the next broad import.
    - Use export/live owner tooling to fill Expo from Reserve; keep importer output in Reserve only.
    - Keep importer country classification improving, but do not let import write directly to Expo.
    - Keep monitoring embedded RAW preview imports for low-resolution or missing-preview failures before promoting RAW-origin photos into Expo.
 
 8. **Keep operations steady.**
-   - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
+   - Document procedures, revisit branch protection, and defer a backend decision until the static/local review model proves its limits.
    - Add a concise data-flow diagram for source metadata, Reserve/Hidden catalogs, Expo assets, and public `photos-data.js`.
    - Keep `README.md` focused on the current public/local workflow as the behavior list grows.
 
@@ -113,7 +114,7 @@ Last updated: 2026-05-06
    - Convert selected rows from `assets/reserve/manifest.json` into collection entries.
    - Preserve public-safe metadata, source file proof, and verified derivative dimensions.
    - Keep manual review for titles, captions, pricing, and privacy before publishing.
-   - Preserve the physical-state contract: importer fills Reserve, curation fills Expo, Hidden stays local.
+   - Preserve the physical-state contract: importer fills Reserve, review fills Expo, Hidden stays local.
 
 2. **Improve basket checkout from mock email to real order intent.**
    - Static order intent now exists on the basket page and includes per-photo email review details.
@@ -132,7 +133,7 @@ Last updated: 2026-05-06
    - Add a Panoramic orientation option before normal Landscape, likely based on aspect ratio `>= 2.0` or `>= 2.2`.
    - Sort by newest, collection order, price, and megapixel size.
    - Keep filters lightweight enough for GitHub Pages.
-   - For localhost curation only, consider filling filtered views from matching Reserve photos when Expo matches fall below the Owner cap.
+   - For localhost review only, consider filling filtered views from matching Reserve photos when Expo matches fall below the Owner cap.
    - Keep buyer-facing filtered Reserve fill deferred until non-GitHub media hosting exists.
 
 5. **Polish persistent favorites.**
@@ -178,12 +179,12 @@ Last updated: 2026-05-06
    - Make asset budget checks part of the pre-push/publish routine, with clear failure output when Expo grows too large.
    - Ensure operator hints and Owner-only controls do not appear in public-mode smoke tests.
 
-## Backlog: Archive Curation And Publishing
+## Backlog: Archive Review And Publishing
 
 1. **Re-establish publishing away from one-machine dependence.**
    - Publish a lightweight, repeatable subset instead of relying on the current single-computer local archive.
    - Separate publishable web assets from the heavyweight local ingest and moderation workspace.
-   - Decide whether the public site should ship only the curated Expo set while `Reserve` remains local or external.
+   - Decide whether the public site should ship only the selected Expo set while `Reserve` remains local or external.
    - Define a safe path for syncing publishable assets to GitHub without dragging the full Saturn archive into normal Git history.
 
 2. **Introduce a third moderation state: Reserve.**
@@ -201,31 +202,31 @@ Last updated: 2026-05-06
    - Preserve the rule that `P` returns a hidden photo to `Reserve`, not directly to Expo.
 
 4. **Move Unknown into an Owner classification workflow.**
-   - Remove `Unknown` from the public country-style collection list and treat it as an owner-only curation queue.
+   - Remove `Unknown` from the public country-style collection list and treat it as an owner-only review queue.
    - Add a manual classification path for assigning an unknown photo to a real country.
    - Decide whether classification writes a small owner export, updates the Lightroom manifest, or feeds directly into the cleaner script.
    - Preserve enough context while classifying, such as filename, capture time, GPS metadata, keywords, and nearby shoot folders.
 
 5. **Refine localhost gallery selection behavior.**
-   - Keep retesting single-click selection and double-click detail opening during live curation.
-   - Preserve keyboard-first moderation flow and avoid making accidental navigation too easy while curating.
+   - Keep retesting single-click selection and double-click detail opening during live review.
+   - Preserve keyboard-first moderation flow and avoid making accidental navigation too easy while reviewing.
    - Retest single-click, double-click, arrow movement, and hide/undo on a phone-sized viewport.
 
 6. **Add zoom control for gallery density.**
-   - Refine the new Grid slider after live curation use.
+   - Refine the new Grid slider after live review use.
    - Consider whether density should be local-only forever or become a public browsing preference.
 
 7. **Show real photo aspect ratios in square gallery cells.**
    - Keep each gallery slot as a stable square background so the grid stays tidy.
    - Render the photo inside that square at its real aspect ratio instead of cropping or stretching it.
    - Use neutral/white bars where necessary so portrait, landscape, panorama, and square images all feel intentional.
-   - Remove or soften public gallery borders/rectangles; reserve obvious selection framing for localhost curation mode.
+   - Remove or soften public gallery borders/rectangles; reserve obvious selection framing for localhost review mode.
    - Done for the current public grid; retest on mobile and tune the neutral cell background if needed.
 
 8. **Add gallery hover metadata.**
    - Show a lightweight tooltip when hovering over a gallery photo.
    - Start with the photo title, then consider adding capture date, country, source type, or other safe metadata.
-   - Keep touch devices clean; the tooltip should not block curation controls or accidental-tap prevention.
+   - Keep touch devices clean; the tooltip should not block review controls or accidental-tap prevention.
 
 9. **Backburner: add GitHub branch protection.**
    - Revisit rulesets after the lightweight publish workflow has settled.

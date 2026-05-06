@@ -42,7 +42,7 @@ AI_SOURCE_ROOT_CANDIDATES = [
 ]
 
 HIDDEN_ASSET_ROOT = Path("assets/hidden")
-MODERATION_LOG_ROOT = Path(".curation-logs")
+MODERATION_LOG_ROOT = Path(".review-logs")
 DIVERSITY_BUCKET_MINUTES = 10
 
 
@@ -621,7 +621,7 @@ def write_regular_manifest_from_site(
     reserve_groups: dict[str, list[dict]],
     regular_cap: int,
     hidden_ids: set[str],
-    selection_mode: str = "curation-pass",
+    selection_mode: str = "review-snapshot",
 ) -> None:
     regular_rows = [(slug, photo) for slug in ORDER for photo in regular_groups.get(slug, [])]
     payload = {
@@ -640,7 +640,7 @@ def write_regular_manifest_from_site(
                 "gallery_country": {
                     "slug": slug,
                     "label": LABELS[slug][1],
-                    "source": "owner" if slug == "unknown" else "curation-pass",
+                    "source": "owner" if slug == "unknown" else "review-snapshot",
                 },
                 "source_mode": source_mode_for(photo, slug),
                 "derivatives": {
@@ -684,7 +684,7 @@ def move_asset(repo_root: Path, relative_path: str, destination_rel: str) -> dic
     return {"from": source.relative_to(repo_root).as_posix(), "to": destination.relative_to(repo_root).as_posix()}
 
 
-def apply_asset_curation(
+def apply_asset_review(
     repo_root: Path,
     payload: dict,
     regular_cap: int,
@@ -848,7 +848,7 @@ def apply_asset_curation(
 
     if missing_assets:
         sample = "\n".join(f"- {path}" for path in missing_assets[:25])
-        raise FileNotFoundError(f"Missing derivative assets for curation pass:\n{sample}")
+        raise FileNotFoundError(f"Missing derivative assets for review snapshot:\n{sample}")
 
     for source_path, target_path in copies:
         if source_path.resolve() == target_path.resolve():
@@ -992,7 +992,7 @@ def apply_asset_curation(
         reserve_groups,
         regular_cap,
         hidden_ids,
-        "random-curation-pass" if randomize_expo_selection else "curation-pass",
+        "random-review-snapshot" if randomize_expo_selection else "review-snapshot",
     )
     write_reserve_data_from_site(repo_root, reserve_groups)
     write_hidden_data_from_site(repo_root, hidden_groups)
@@ -1012,16 +1012,16 @@ def apply_asset_curation(
     }
 
 
-def apply_curation_pass(
+def apply_review_snapshot(
     repo_root: Path,
-    curation_path: Path,
+    review_path: Path,
     regular_cap: int | None,
     rebuild_manifests: bool = False,
     source_root: Path | None = None,
     ai_source_root: Path | None = None,
     asset_sources: list[Path] | None = None,
 ) -> None:
-    payload = json.loads(curation_path.read_text(encoding="utf-8"))
+    payload = json.loads(review_path.read_text(encoding="utf-8"))
     photo_ids = blacklist_ids_from_payload(payload)
     regular_state = expo_state_from_payload(payload)
     reserve_only_ids = reserve_only_ids_from_payload(payload)
@@ -1036,16 +1036,16 @@ def apply_curation_pass(
         or (repo_root / "assets/hidden/hidden-data.json").exists()
     )
     if has_site_asset_catalog or not manifest_specs:
-        curation_log = apply_asset_curation(repo_root, payload, resolved_regular_cap, asset_sources)
-        curation_log["rebuilt_manifests"] = rebuilt_manifests
+        review_log = apply_asset_review(repo_root, payload, resolved_regular_cap, asset_sources)
+        review_log["rebuilt_manifests"] = rebuilt_manifests
         log_dir = repo_root / MODERATION_LOG_ROOT
         log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / f"{curation_path.stem}.applied.json"
-        log_path.write_text(json.dumps({"curation_pass": str(curation_path), "applied": curation_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        log_path = log_dir / f"{review_path.stem}.applied.json"
+        log_path.write_text(json.dumps({"review_snapshot": str(review_path), "applied": review_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return
 
     builder = load_builder(repo_root)
-    curation_log = {
+    review_log = {
         "rebuilt_manifests": rebuilt_manifests,
         "regular": move_regular_derivatives(repo_root, photo_ids),
         "ingest": [],
@@ -1055,7 +1055,7 @@ def apply_curation_pass(
     for manifest_path, mode in manifest_specs:
         manifest_rel = manifest_path.relative_to(repo_root).as_posix()
         manifest_payload, rows = load_manifest(manifest_path)
-        curation_log["country_assignments"].extend(apply_country_assignments(rows, country_assignments))
+        review_log["country_assignments"].extend(apply_country_assignments(rows, country_assignments))
         for relative_path, row in list(rows.items()):
             if row.get("id") not in photo_ids:
                 continue
@@ -1068,7 +1068,7 @@ def apply_curation_pass(
                 moved_row = move_derivative(repo_root, asset_root + derivative_rel, hidden_asset_rel(row, derivative, slug))
                 if moved_row:
                     moved.append(moved_row)
-            curation_log["ingest"].append({
+            review_log["ingest"].append({
                 "id": row.get("id"),
                 "relative_path": relative_path,
                 "manifest": manifest_rel,
@@ -1081,8 +1081,8 @@ def apply_curation_pass(
 
     log_dir = repo_root / MODERATION_LOG_ROOT
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f"{curation_path.stem}.applied.json"
-    log_path.write_text(json.dumps({"curation_pass": str(curation_path), "applied": curation_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    log_path = log_dir / f"{review_path.stem}.applied.json"
+    log_path.write_text(json.dumps({"review_snapshot": str(review_path), "applied": review_log}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_photos_data(
         repo_root,
         regular_cap=resolved_regular_cap,
@@ -1094,12 +1094,12 @@ def apply_curation_pass(
 
 
 def apply_blacklist(repo_root: Path, blacklist_path: Path, regular_cap: int | None) -> None:
-    apply_curation_pass(repo_root, blacklist_path, regular_cap)
+    apply_review_snapshot(repo_root, blacklist_path, regular_cap)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Apply a PhotosByElie Curation Pass.")
-    parser.add_argument("curation_pass", type=Path)
+    parser = argparse.ArgumentParser(description="Apply a PhotosByElie Review Snapshot.")
+    parser.add_argument("review_snapshot", type=Path)
     parser.add_argument("--expo-cap", dest="regular_cap", type=int, default=None)
     parser.add_argument(
         "--rebuild-missing-manifests",
@@ -1117,9 +1117,9 @@ def main() -> int:
     )
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
-    apply_curation_pass(
+    apply_review_snapshot(
         repo_root,
-        args.curation_pass.expanduser().resolve(),
+        args.review_snapshot.expanduser().resolve(),
         args.regular_cap,
         rebuild_manifests=args.rebuild_missing_manifests,
         source_root=args.source_root,

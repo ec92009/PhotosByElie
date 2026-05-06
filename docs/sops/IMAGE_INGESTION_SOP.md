@@ -4,7 +4,7 @@ Repeatable workflow for importing Lightroom-selected photos into the static Phot
 
 ## Scope
 
-Use this SOP when adding or refreshing real-photo galleries from developed Lightroom exports. The automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests into local Reserve; Expo is filled later by Curation Pass/export tooling.
+Use this SOP when adding or refreshing real-photo galleries from developed Lightroom exports. The automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests into local Reserve; Expo is filled later by live Owner review or export tooling.
 
 Do not use this SOP for repo-only documentation edits, CSS-only page polish, or manual one-off fixes to existing gallery data.
 
@@ -14,7 +14,7 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, or `.tiff`.
 - Do not import DNG, NEF, or other raw camera files. Develop/export them first.
 - Lightroom sidecars should sit next to the image files as `.xmp` files when metadata is not embedded.
-- The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly curated folders such as Leonardo/AI.
+- The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites
@@ -79,6 +79,7 @@ The builder is designed to be interrupted and resumed.
 ## Privacy Rules
 
 - Keep `assets/reserve` and `assets/hidden` untracked except for their `.gitkeep` folder placeholders.
+- Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are the handoff trail for localhost Unknown-to-country moves. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Do not paste exact GPS coordinates into public site data.
 - Review public keywords before promoting them into `photos-data.js`.
 - Use `--redact-private-keywords` if generating a sanitized manifest for publishing or review.
@@ -86,13 +87,15 @@ The builder is designed to be interrupted and resumed.
 
 ## Promote To Site Data
 
-Promotion is automated by the Expo exporter/curation pass:
+Promotion is automated by live Owner actions first, with exporter/review snapshots as fallback tools:
 
 1. Build or refresh `assets/reserve/manifest.json`.
-2. Export a Curation Pass from the localhost Owner page when applying browser review decisions.
-3. Run `scripts/apply_curation_pass.py` or `scripts/export_photos_data.py --regular-cap N`.
+2. Prefer H/U/P and Unknown assignment in the localhost Owner surfaces; those actions move files immediately.
+3. Run `scripts/apply_review_snapshot.py` or `scripts/export_photos_data.py --regular-cap N`.
 4. Confirm Expo contains only publishable watermarked JPEGs under `assets/expo/<country>/`.
 5. Run the visible versioning SOP when the public gallery changes.
+
+We are walking away from the old Curation Pass workflow. Review snapshots are retained only for audit trails and emergency batch rebuilds.
 
 ## Verification
 

@@ -4,29 +4,35 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import re
 import shutil
 import subprocess
 import sys
+import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 
-SAVE_CURATION_PATH = "/__photosbyelie/save-curation-pass"
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
+PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 MAX_BODY_BYTES = 5 * 1024 * 1024
-FILENAME_PATTERN = re.compile(r"^photosbyelie-[A-Za-z0-9_.:-]+\.pbe-curation$")
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
+OWNER_ACTION_ROOT = Path("assets/owner-actions")
+COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
+COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
+ACTION_PROGRESS: dict[str, dict] = {}
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
-from apply_curation_pass import (  # noqa: E402
+from asset_state import (  # noqa: E402
     EXPO_MANIFEST_PATH,
     HIDDEN_ASSET_ROOT,
     LABELS,
@@ -64,40 +70,19 @@ SOURCE_ROOT_CANDIDATES = [
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
     server_version = "PhotosByElieLocal/1.0"
 
+    def do_GET(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path == PHOTO_ACTION_PROGRESS_PATH:
+            self._handle_photo_action_progress()
+            return
+        super().do_GET()
+
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
             return
-        if path != SAVE_CURATION_PATH:
-            self.send_error(HTTPStatus.NOT_FOUND)
-            return
-        if not self._is_loopback_request():
-            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
-            return
-
-        try:
-            payload = self._read_json_body()
-            filename = self._validated_filename(payload.get("filename"))
-            text = self._validated_curation_text(payload.get("text"))
-            destination = Path.home() / "Downloads" / filename
-            destination.write_text(text, encoding="utf-8")
-        except ValueError as error:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
-            return
-        except OSError as error:
-            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
-            return
-
-        self._send_json(
-            HTTPStatus.OK,
-            {
-                "ok": True,
-                "filename": filename,
-                "path": str(destination),
-                "bytes": len(text.encode("utf-8")),
-            },
-        )
+        self.send_error(HTTPStatus.NOT_FOUND)
 
     def end_headers(self) -> None:
         self.send_header("Cache-Control", "no-store")
@@ -117,6 +102,15 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
+
+    def _handle_photo_action_progress(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        operation_id = (query.get("operation_id") or [""])[0]
+        progress = ACTION_PROGRESS.get(operation_id) if operation_id else None
+        self._send_json(HTTPStatus.OK, {"ok": True, "progress": progress})
 
     def _is_loopback_request(self) -> bool:
         host = self.headers.get("Host", "").split(":", 1)[0].strip("[]")
@@ -143,29 +137,6 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             raise ValueError("request body must be a JSON object")
         return payload
 
-    @staticmethod
-    def _validated_filename(value: object) -> str:
-        if not isinstance(value, str):
-            raise ValueError("filename must be a string")
-        filename = Path(value).name
-        if filename != value or not FILENAME_PATTERN.match(filename):
-            raise ValueError("filename must be a Photos By Elie .pbe-curation file")
-        return filename
-
-    @staticmethod
-    def _validated_curation_text(value: object) -> str:
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError("text must be a non-empty string")
-        try:
-            payload = json.loads(value)
-        except json.JSONDecodeError as error:
-            raise ValueError("curation text is not valid JSON") from error
-        if not isinstance(payload, dict):
-            raise ValueError("curation text must be a JSON object")
-        if payload.get("format") != "photosbyelie-curation-pass":
-            raise ValueError("curation text has the wrong format")
-        return value
-
     def _send_json(self, status: HTTPStatus, payload: dict) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
@@ -185,7 +156,6 @@ def main() -> int:
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
     url_host = "localhost" if args.bind in {"127.0.0.1", "::1"} else args.bind
     print(f"Serving Photos By Elie at http://{url_host}:{args.port}/")
-    print(f"Owner helper endpoint: {SAVE_CURATION_PATH}")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
     try:
         server.serve_forever()
@@ -261,6 +231,93 @@ def _move_photo(repo_root: Path, source_photo: dict, state: str, slug: str) -> d
     if missing:
         raise ValueError(f"missing derivative assets for {photo.get('id')}: {', '.join(str(item) for item in missing)}")
     return photo
+
+
+def _photo_asset_paths(photo: dict) -> dict[str, str]:
+    return {
+        derivative: clean_site_src(photo.get(key))
+        for derivative, key in DERIVATIVES
+        if clean_site_src(photo.get(key))
+    }
+
+
+def _read_json_file(path: Path, fallback: object) -> object:
+    if not path.exists():
+        return fallback
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return fallback
+
+
+def _write_json_file(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f"{path.suffix}.tmp")
+    temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def _record_country_assignments(repo_root: Path, target_slug: str, moved: list[dict], skipped: list[dict]) -> dict:
+    if not moved and not skipped:
+        return {}
+
+    created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    batch_id = f"{created_at}-{uuid.uuid4().hex[:8]}"
+    event = {
+        "batch_id": batch_id,
+        "created_at": created_at,
+        "action": "assign-country",
+        "target_slug": target_slug,
+        "moved": moved,
+        "skipped": skipped,
+    }
+
+    log_path = repo_root / COUNTRY_ASSIGNMENT_LOG
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+
+    index_path = repo_root / COUNTRY_ASSIGNMENT_INDEX
+    index = _read_json_file(index_path, {"format": "photosbyelie-country-assignments", "photos": {}})
+    if not isinstance(index, dict):
+        index = {"format": "photosbyelie-country-assignments", "photos": {}}
+    photos = index.get("photos")
+    if not isinstance(photos, dict):
+        photos = {}
+        index["photos"] = photos
+    index["format"] = "photosbyelie-country-assignments"
+    index["updated_at"] = created_at
+    index["latest_batch_id"] = batch_id
+    for item in moved:
+        photo_id = item.get("id")
+        if not photo_id:
+            continue
+        photos[photo_id] = {
+            "gallery_key": target_slug,
+            "state": item.get("to"),
+            "from_state": item.get("from"),
+            "from_slug": item.get("from_slug"),
+            "assigned_at": created_at,
+            "batch_id": batch_id,
+            "assets": item.get("assets") or {},
+        }
+    _write_json_file(index_path, index)
+
+    return {
+        "log": COUNTRY_ASSIGNMENT_LOG.as_posix(),
+        "index": COUNTRY_ASSIGNMENT_INDEX.as_posix(),
+        "batch_id": batch_id,
+    }
+
+
+def _set_action_progress(operation_id: object, total: int, completed: int) -> None:
+    if not isinstance(operation_id, str) or not operation_id:
+        return
+    ACTION_PROGRESS[operation_id] = {
+        "total": total,
+        "completed": completed,
+        "remaining": max(0, total - completed),
+    }
 
 
 def _hidden_provenance(photo: dict, fallback_state: str, fallback_slug: str) -> tuple[str, str]:
@@ -642,7 +699,10 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         moved = []
         skipped = []
         keyword_updates = []
-        for current_photo_id in photo_ids:
+        operation_id = payload.get("operation_id")
+        total_photos = len(photo_ids)
+        _set_action_progress(operation_id, total_photos, 0)
+        for index, current_photo_id in enumerate(photo_ids, start=1):
             found = _find_and_remove({"unknown": expo_groups.get("unknown", [])}, current_photo_id)
             source_state = "expo"
             if not found:
@@ -654,10 +714,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 )
                 if already_assigned:
                     skipped.append({"id": current_photo_id, "reason": "already assigned"})
+                    _set_action_progress(operation_id, total_photos, index)
                     continue
                 raise ValueError(f"unknown photo not found in Expo or Reserve: {current_photo_id}")
             source_slug, source_photo = found
+            source_assets = _photo_asset_paths(source_photo)
             reserve_photo = _move_photo(repo_root, source_photo, "reserve", target_slug)
+            target_assets = _photo_asset_paths(reserve_photo)
             reserve_photo.pop("hiddenFromState", None)
             reserve_photo.pop("hiddenFromSlug", None)
             keyword_updates.append({
@@ -672,15 +735,28 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "from_slug": source_slug,
                 "to": "reserve",
                 "to_slug": target_slug,
+                "assets": {
+                    derivative: {
+                        "from": source_assets.get(derivative),
+                        "to": target_assets.get(derivative),
+                    }
+                    for derivative in sorted(set(source_assets) | set(target_assets))
+                },
             })
+            _set_action_progress(operation_id, total_photos, index)
+        _set_action_progress(operation_id, total_photos, total_photos)
+        site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        action_log = _record_country_assignments(repo_root, target_slug, moved, skipped)
         return {
             "ok": True,
             "action": action,
             "photo_ids": photo_ids,
             "moved": moved,
+            "removed_from_unknown": [item["id"] for item in moved],
             "skipped": skipped,
+            "action_log": action_log,
             "keyword_updates": keyword_updates,
-            "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups),
+            "site": site_state,
         }
 
     if action == "hide":

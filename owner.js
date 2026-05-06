@@ -2,22 +2,15 @@
   const hiddenActions = window.photosByElieHiddenActions;
   const reserveStore = window.photosByElieReserve;
   const collections = window.photosByElieData || {};
-  const saveEndpoint = "/__photosbyelie/save-curation-pass";
   const controls = document.querySelector("[data-owner-controls]");
   const locked = document.querySelector("[data-owner-locked]");
   const status = document.querySelector("[data-owner-status]");
   const capInput = document.querySelector("[data-owner-regular-cap]");
   const saveCapButton = document.querySelector("[data-owner-save-cap]");
-  const exportButton = document.querySelector("[data-owner-export]");
-  const exportResult = document.querySelector("[data-owner-export-result]");
-  const exportPath = document.querySelector("[data-owner-export-path]");
-  const copyPathButton = document.querySelector("[data-owner-copy-path]");
-  const exportText = document.querySelector("[data-owner-export-text]");
   const countsRoot = document.querySelector("[data-owner-counts]");
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
-  const downloadRoot = "/Users/ecohen/Downloads";
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -32,7 +25,7 @@
 
   const normalizedInputCap = () => {
     const rawValue = Number(capInput?.value || currentCap());
-    return Math.max(1, Math.min(100, Math.round(rawValue)));
+    return Math.max(1, Math.round(rawValue));
   };
 
   const saveCurrentCap = () => {
@@ -94,65 +87,6 @@
     `).join("");
   };
 
-  const showExportResult = () => {
-    const curationPass = hiddenActions.readLastCurationPass?.();
-    if (!curationPass?.filename || !curationPass?.text) return;
-    const fullPath = curationPass.savedPath || `${downloadRoot}/${curationPass.filename}`;
-    if (exportResult) exportResult.hidden = false;
-    if (exportText) exportText.value = curationPass.text;
-    if (exportPath) {
-      exportPath.textContent = fullPath;
-      exportPath.title = fullPath;
-    }
-  };
-
-  const copyText = async (text) => {
-    if (!text) return false;
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch {
-        // Browser permission prompts are inconsistent in embedded localhost tabs.
-      }
-    }
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.setAttribute("readonly", "");
-    textArea.style.position = "fixed";
-    textArea.style.top = "-1000px";
-    textArea.style.left = "-1000px";
-    document.body.append(textArea);
-    textArea.focus();
-    textArea.select();
-    textArea.setSelectionRange(0, textArea.value.length);
-    const copied = document.execCommand("copy");
-    textArea.remove();
-    return copied;
-  };
-
-  const saveCurationPassLocally = async (curationPass) => {
-    if (!curationPass?.filename || !curationPass?.text) return null;
-    try {
-      const response = await fetch(saveEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: curationPass.filename,
-          text: curationPass.text,
-        }),
-      });
-      if (!response.ok) return null;
-      const result = await response.json();
-      if (!result?.ok || !result.path) return null;
-      curationPass.savedPath = result.path;
-      curationPass.savedBytes = result.bytes;
-      return result;
-    } catch {
-      return null;
-    }
-  };
-
   if (!hiddenActions?.enabled) {
     if (controls) controls.hidden = true;
     if (locked) locked.hidden = false;
@@ -161,31 +95,6 @@
   }
 
   if (capInput) capInput.value = String(currentCap());
-
-  exportButton?.addEventListener("click", async () => {
-    const exportedCap = saveCurrentCap();
-    const filename = hiddenActions.exportCurationPass?.({ download: false }) || hiddenActions.exportBlacklist();
-    const curationPass = hiddenActions.readLastCurationPass?.();
-    const saved = await saveCurationPassLocally(curationPass);
-    if (!saved) hiddenActions.downloadLastCurationPass?.();
-    showExportResult();
-    if (saved) {
-      setStatus(`Batch JSON saved to Downloads with Expo cap ${exportedCap}.`);
-    } else {
-      setStatus(filename ? `${filename} downloaded with Expo cap ${exportedCap}.` : "Batch export unavailable.");
-    }
-    renderCounts();
-  });
-
-  copyPathButton?.addEventListener("click", async () => {
-    const text = exportPath?.textContent || "";
-    try {
-      const copied = await copyText(text);
-      setStatus(copied ? "Batch JSON path copied." : "Path copy unavailable.");
-    } catch {
-      setStatus("Path copy unavailable.");
-    }
-  });
 
   saveCapButton?.addEventListener("click", () => {
     const savedCap = saveCurrentCap();

@@ -8,7 +8,7 @@ Date: 2026-05-05
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Current local visible build: `v66.24`
-- Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been curated for the public build.
+- Reserve has been rebuilt from Saturn Camera plus Leonardo sources, and Expo has been selected for the public build.
 - The current local Expo set has 502 photos: 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia photos; Mexico is empty until matching developed Mexico assets are reintroduced.
 - The ignored local Reserve pool has 10,150 photos with 0 import failures, including 9,253 AI images and 96 Unknowns for later classification.
 
@@ -36,14 +36,15 @@ Date: 2026-05-05
 - It scans developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files, plus RAW files such as `.dng`/`.nef` when an embedded preview JPEG can be extracted.
 - For Camera imports, it keeps only Lightroom green label/rating 4+ files.
 - It infers country/AI/Unknown buckets, writes watermarked Reserve JPEGs, records RAW source metadata, and updates the ignored Reserve manifest/catalog.
-- Expo is populated only by `scripts/export_photos_data.py` or `scripts/apply_curation_pass.py`.
+- Expo is populated only by `scripts/export_photos_data.py` or `scripts/apply_review_snapshot.py`.
 
-## Curation Direction
+## Review Direction
 
-- Owner exports now use only `expo_cap` and `expo_state`; live H/U/P actions bypass the Curation Pass and move files immediately on localhost.
-- Owner mode is now backed by `scripts/local_server.py`: exported `.pbe-curation` files can still be written to `~/Downloads`, and live H/U/P actions move files directly between Expo, Hidden, and Reserve.
+- We are walking away from the old Curation Pass flow. Owner mode now favors live localhost file moves, with `.pbe-review` snapshots kept only for audit and emergency batch rebuilds.
+- Owner exports now use only `expo_cap` and `expo_state`; live H/U/P actions move files immediately on localhost.
+- Owner mode is now backed by `scripts/local_server.py`: exported `.pbe-review` files can still be written to `~/Downloads`, and live H/U/P actions move files directly between Expo, Hidden, and Reserve.
 - The owner review code now uses Hidden naming throughout: `hidden.html`, `hidden-page.js`, `hidden-actions.js`, `photosByElieHiddenActions`, and `photosbyelie:hiddenchange`.
-- v66.6 added subtle shortcut reminders above localhost curation grids plus detail-page reminders for like, navigation, full-screen preview, and owner hide/undo.
+- v66.6 added subtle shortcut reminders above localhost review grids plus detail-page reminders for like, navigation, full-screen preview, and owner hide/undo.
 - v66.7 added day-before/day-after known-country context to Unknown cards to help classify surrounding travel dates.
 - v66.8 made Unknown country assignment a live localhost file move into country Reserve folders and added previous/next shooting-day context to the hints.
 - v66.9 changes previous/next shooting-day hints to show relative day distance instead of raw dates.
@@ -65,11 +66,11 @@ Date: 2026-05-05
 - The Max handoff tar finished at `/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie/photosbyelie-ignored-assets-2026-05-05.tar`, and `scripts/sync_local_assets.py` now provides a reusable dry-run/apply workflow for ignored Reserve/Hidden vault syncs between Max and David.
 - Gallery filters are intentionally lean now: Orientation, Color mood, Subject, and Sort. Source and Availability were removed from the visible gallery filter row.
 - Reserve and Hidden localhost catalogs are JSON files in ignored folders: `assets/reserve/reserve-data.json` and `assets/hidden/hidden-data.json`.
-- Curation Pass logs now live outside assets in `.curation-logs/`.
+- Review Snapshot logs now live outside assets in `.review-logs/`.
 - Existing browser behavior still uses the working “regular cap” internal storage key, but the physical/public vocabulary is Expo, Reserve, Hidden.
 
 ## Recent Decisions
 
 - Generated JPGs are precious again after the Saturn rebuild.
 - Camera imports dump every eligible developed green/4+ photo into Reserve and only try to classify countries.
-- Published GitHub assets should include only the curated Expo set, never Reserve/Hidden.
+- Published GitHub assets should include only the selected Expo set, never Reserve/Hidden.

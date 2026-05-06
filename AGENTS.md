@@ -6,6 +6,7 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 - If a task may take more than a few seconds, send a short acknowledgment before doing the work.
 - Read and follow this file before making changes.
+- For Max/David machine handoff or ignored asset sync work, read [`HANDOFF.md`](./HANDOFF.md).
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
 - For changes intended to be viewed externally, commit and push once complete unless the user asks not to.
 

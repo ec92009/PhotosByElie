@@ -18,6 +18,8 @@ const status = document.querySelector("[data-basket-status]");
 const orderIntent = document.querySelector("[data-order-intent]");
 const orderSummary = document.querySelector("[data-order-summary]");
 const orderEmail = document.querySelector("[data-order-email]");
+const orderEmailDraft = document.querySelector("[data-order-email-draft]");
+const orderIdKey = "photosbyelie-order-id";
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -45,10 +47,34 @@ const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) |
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 const optionShippingHandlingTotal = (option) => window.photosByElieOptionShippingHandlingTotal?.(option) || 0;
 
+const fallbackGuid = () => [
+  Date.now().toString(16),
+  Math.random().toString(16).slice(2, 10),
+  Math.random().toString(16).slice(2, 10),
+].join("-");
+
+const currentOrderId = (items = []) => {
+  if (!items.length) {
+    localStorage.removeItem(orderIdKey);
+    return "";
+  }
+  const existing = localStorage.getItem(orderIdKey);
+  if (existing) return existing;
+  const nextId = window.crypto?.randomUUID?.() || fallbackGuid();
+  localStorage.setItem(orderIdKey, nextId);
+  return nextId;
+};
+
 const photoReviewUrl = (photoId) => {
   const href = window.photosByElieVersionedHref?.(`./photo.html?id=${encodeURIComponent(photoId)}`)
     || `./photo.html?id=${encodeURIComponent(photoId)}`;
   return new URL(href, window.location.href).href;
+};
+
+const sourceFileLabel = (photo) => {
+  const source = Array.isArray(photo?.sourceFiles) ? photo.sourceFiles[0] : null;
+  if (source?.path) return `${source.path}${source.type ? ` (${source.type})` : ""}`;
+  return (photo?.metadata || []).find((item) => item.label === "Original file")?.value || "Source file unverified";
 };
 
 const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
@@ -64,8 +90,11 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
   const collectionText = Array.from(collectionCounts.entries())
     .map(([name, count]) => `${name}: ${count}`)
     .join(", ");
+  const orderId = currentOrderId(items);
+  const zipName = `photosbyelie-order-${orderId}.zip`;
 
   orderSummary.innerHTML = `
+    <div><dt>Order ID</dt><dd>${escapeText(orderId)}</dd></div>
     <div><dt>Photos</dt><dd>${items.length}</dd></div>
     <div><dt>Products</dt><dd>${productCount}</dd></div>
     ${shippingHandlingTotal ? `<div><dt>S&H</dt><dd>+${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
@@ -77,6 +106,8 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
   const lines = [
     "Photos By Elie order intent",
     "",
+    `Order ID: ${orderId}`,
+    `Delivery ZIP: ${zipName}`,
     `Photos: ${items.length}`,
     `Products: ${productCount}`,
     `Physical S&H: ${formatMoney(shippingHandlingTotal)}`,
@@ -88,8 +119,10 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
       const subtotal = (item.options || []).reduce((sum, option) => sum + optionTotal(option), 0);
       return [
         `${index + 1}. ${item.title}`,
+        `Photo ID: ${item.photoId}`,
         `Collection: ${item.collection}`,
         `Review page: ${photoReviewUrl(item.photoId)}`,
+        `Original: ${photo ? sourceFileLabel(photo) : "Photo no longer in public catalog"}`,
         `Source: ${photo ? window.photosByElieOriginalSize?.(photo) || "Source file unverified" : "Photo no longer in public catalog"}`,
         "Selected products:",
         ...item.options.map((option) => {
@@ -108,8 +141,44 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
     }),
     "License note: personal print and web use are included by default. Print crops, frame choices, commercial, resale, and AI-training use are confirmed manually before fulfillment."
   ];
-  orderEmail.setAttribute("href", `mailto:?subject=${encodeURIComponent("Photos By Elie order intent")}&body=${encodeURIComponent(lines.join("\n"))}`);
+  const subject = `Photos By Elie order ${orderId}`;
+  const body = lines.join("\n");
+  orderEmail.dataset.orderEmailSubject = subject;
+  orderEmail.dataset.orderEmailBody = body;
+  orderEmail.setAttribute("href", `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  if (orderEmailDraft) {
+    orderEmailDraft.value = "";
+    orderEmailDraft.hidden = true;
+  }
 };
+
+const showOrderEmailDraft = (draft) => {
+  if (!orderEmailDraft) return;
+  orderEmailDraft.value = draft;
+  orderEmailDraft.hidden = false;
+  window.requestAnimationFrame(() => {
+    orderEmailDraft.focus();
+    orderEmailDraft.select();
+  });
+};
+
+orderEmail?.addEventListener("click", async (event) => {
+  event.preventDefault();
+  const subject = orderEmail.dataset.orderEmailSubject || "Photos By Elie order intent";
+  const body = orderEmail.dataset.orderEmailBody || "";
+  const draft = `Subject: ${subject}\n\n${body}`;
+  if (!body) {
+    status.textContent = "No order email is ready yet.";
+    return;
+  }
+  showOrderEmailDraft(draft);
+  try {
+    await navigator.clipboard.writeText(draft);
+    status.textContent = "Order email copied. The draft is selected below too.";
+  } catch {
+    status.textContent = "Order email is ready below. Press Command-C to copy the selected draft.";
+  }
+});
 
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());

@@ -30,7 +30,7 @@ Resume on another machine by pointing `--source-root` at that machine's develope
 
 Use `--years 2024` for one year or `--years 2022-2024` for an inclusive range. The filter uses the first four-digit year found in each photo's path relative to the `Camera` folder.
 
-For Leonardo/AI folders where files are already curated by presence rather than Lightroom rating, opt into every image and force the gallery bucket to AI:
+For Leonardo/AI folders where files are already selected by presence rather than Lightroom rating, opt into every image and force the gallery bucket to AI:
 
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \
@@ -64,45 +64,47 @@ For normal localhost preview with Owner tools, run the small local server instea
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-curation` files directly into `~/Downloads` and move H/U/P review photos directly between Expo, Hidden, and Reserve. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads` and move H/U/P review photos directly between Expo, Hidden, and Reserve. GitHub Pages never gets those endpoints; the published site remains static.
 
-The Owner page writes the current Expo cap into each Curation Pass, and the cleaner honors that payload value unless you pass an explicit `--expo-cap` override. This cap is a maximum, not a required fill count: collections with fewer valid JPEG pairs publish fewer photos. For standalone bootstrap exports, the exporter randomly samples eligible photos in each collection, writes the selected set, records the random seed in `assets/expo-manifest.json`, and writes ignored localhost reserve data to `assets/reserve/reserve-data.json`:
+We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; `.pbe-review` snapshots remain only as audit files and as a fallback for larger rebuilds.
+
+The Owner page writes the current Expo cap into each review snapshot, and the cleaner honors that payload value unless you pass an explicit `--expo-cap` override. This cap is a maximum, not a required fill count: collections with fewer valid JPEG pairs publish fewer photos. For standalone bootstrap exports, the exporter randomly samples eligible photos in each collection, writes the selected set, records the random seed in `assets/expo-manifest.json`, and writes ignored localhost reserve data to `assets/reserve/reserve-data.json`:
 
 ```bash
 python3 scripts/export_photos_data.py --expo-cap 30
 ```
 
-For normal H/U/P review, no Apply step is needed: the localhost server moves the JPEG pairs immediately and rewrites `photos-data.js`, `assets/expo-manifest.json`, `assets/reserve/reserve-data.json`, and `assets/hidden/hidden-data.json`.
+For normal H/U/P review, no Apply step is needed: the localhost server moves the JPEG pairs immediately and rewrites `photos-data.js`, `assets/expo-manifest.json`, `assets/reserve/reserve-data.json`, and `assets/hidden/hidden-data.json`. Unknown-to-country moves are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, place them under the target Reserve country, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server move fails, the Unknown page should leave the card visible and reset the country selector.
 
-For larger batch rebuilds, export a Curation Pass from the localhost Owner page and apply it with the cleaner:
+For larger batch rebuilds, export a review snapshot from the localhost Owner page and apply it with the cleaner:
 
 ```bash
-python3 scripts/apply_curation_pass.py \
-  ~/Downloads/photosbyelie-review.pbe-curation \
+python3 scripts/apply_review_snapshot.py \
+  ~/Downloads/photosbyelie-review.pbe-review \
   --rebuild-missing-manifests
 ```
 
-The exported Curation Pass records the browser's current Expo state, the Expo cap, and owner country assignments from the Unknown queue. The cleaner applies country assignments and regenerates Expo by preserving browser-reviewed picks first, then random-filling remaining slots from eligible Reserve/current candidates. Country-assigned Unknowns are eligible to fill their newly assigned collection in that same pass.
+The exported review snapshot records the browser's current Expo state, the Expo cap, and owner country assignments from the Unknown queue. The cleaner applies country assignments and regenerates Expo by preserving browser-reviewed picks first, then random-filling remaining slots from eligible Reserve/current candidates. Country-assigned Unknowns are eligible to fill their newly assigned collection in that same pass.
 
 Because Reserve and Hidden are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local Reserve manifest. In that case the cleaner applies the pass directly from the site data: it copies promoted Reserve derivatives into `assets/expo`, moves removed Expo derivatives out of the public set, and rewrites `photos-data.js`, `assets/expo-manifest.json`, and `assets/reserve/reserve-data.json`. If the Reserve derivatives live in another checkout or worktree, add it as a search root:
 
 ```bash
-python3 scripts/apply_curation_pass.py \
-  ~/Downloads/photosbyelie-review.pbe-curation \
+python3 scripts/apply_review_snapshot.py \
+  ~/Downloads/photosbyelie-review.pbe-review \
   --asset-source ~/Dev/photosByElie-full-assets
 ```
 
 Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroom and AI manifests from source archives before applying the pass. Override with `--source-root` or `--ai-source-root` when the archives are mounted somewhere else.
 
-For a dry curation preview without moving files, `export_photos_data.py` can take `--curation-pass` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
+For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
 
-The active curation states are `assets/expo` for tracked publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden. The old raw-first staging folders are retired.
+The active review states are `assets/expo` for tracked publishable Expo, `assets/reserve` for ignored local Reserve, and `assets/hidden` for ignored local Hidden. The old raw-first staging folders are retired.
 
 ## Publish Validation
 
 `validate_publish.js` checks the generated public catalog before publishing. It loads `photos-data.js`, verifies duplicate photo IDs, local image references, matching `*_900.jpg`/`*_1800.jpg` derivative pairs, collection page shells, and resolution availability metadata.
 
-The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update both `export_photos_data.py` and `apply_curation_pass.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
+The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update both `export_photos_data.py` and `apply_review_snapshot.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
 
 Run the validator before pushing public site changes:
 
@@ -118,7 +120,7 @@ node scripts/validate_publish.js --summary
 
 ## Local Asset Sync
 
-`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track Reserve or Hidden. It syncs `assets/reserve`, `assets/hidden`, and `.curation-logs` by default. The tracked public `assets/expo` folder should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
+`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track Reserve or Hidden. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public `assets/expo` folder should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
 
 The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
 

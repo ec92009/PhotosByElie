@@ -2,7 +2,7 @@ window.photosByElieData = {
   france: {
     number: "01",
     title: "France",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 95 expo photos currently loaded; 234 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 80 expo photos currently loaded; 1900 in local reserve.",
     accent: "france-gallery",
     photos: [
       {
@@ -325,75 +325,8 @@ window.photosByElieData = {
 ]
       },
       {
-        id: "20180510-1434-00271-e2c5e5c2fd",
-        className: "p1",
-        title: "20180510 1434 00271",
-        caption: "France / Paris, Île-de-France / 2018-05-10",
-        full: "JPG master",
-        megapixels: 10.8,
-        gallerySrc: "./assets/expo/france/20180510-1434-00271-e2c5e5c2fd_900.jpg",
-        imageSrc: "./assets/expo/france/20180510-1434-00271-e2c5e5c2fd_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Montmartre, Paris, moulin de la galette, moulin rouge, place du tertre, rue lepic"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:10 14:34:00"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/100, f/7.1, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "20.0 mm / 30 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Paris, Île-de-France, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180510 1434 00271.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 2915 x 3712 / 10.8 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180510-1434-00271-e2c5e5c2fd_1800.jpg / 1413 x 1800 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180510 1434 00271.jpg",
-                    "type": "JPG",
-                    "bytes": 8821365
-          }
-]
-      },
-      {
         id: "20220506-041124-03096-fad0dd9f78",
-        className: "p2",
+        className: "p1",
         title: "20220506 041124 03096",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -456,7 +389,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0717-28127-7171d4ea0b",
-        className: "p3",
+        className: "p2",
         title: "20110104 0717 28127",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -515,7 +448,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-060627-03224-86e5202fb1",
-        className: "p4",
+        className: "p3",
         title: "20220506 060627 03224",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -578,7 +511,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0642-14984-a0e2359c3a",
-        className: "p5",
+        className: "p4",
         title: "20110106 0642 14984",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -637,7 +570,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-141127-03238-6a809a3d2d",
-        className: "p1",
+        className: "p5",
         title: "20220506 141127 03238",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -700,7 +633,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0551-15184-60d5a7494f",
-        className: "p2",
+        className: "p1",
         title: "20110106 0551 15184",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -759,7 +692,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0708-28122-7a797a87ce",
-        className: "p3",
+        className: "p2",
         title: "20110104 0708 28122",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -818,7 +751,7 @@ window.photosByElieData = {
       },
       {
         id: "20180530-1458-15730-b90327218e",
-        className: "p4",
+        className: "p3",
         title: "Jardin du Luxembourg,Paris, France",
         caption: "France / 2018-05-30",
         full: "JPG master",
@@ -885,7 +818,7 @@ window.photosByElieData = {
       },
       {
         id: "20180511-1120-00361-edit-e178f03aa6",
-        className: "p5",
+        className: "p4",
         title: "20180511 1120 00361 Edit",
         caption: "France / 2018-05-11",
         full: "JPG master",
@@ -948,7 +881,7 @@ window.photosByElieData = {
       },
       {
         id: "20160708-1628-07226-pano-9131666b8a",
-        className: "p1",
+        className: "p5",
         title: "Albi, Cathedrale Saite Catherine, Interior, Exterior, Church",
         caption: "France / 2016-07-08",
         full: "JPG master",
@@ -1015,7 +948,7 @@ window.photosByElieData = {
       },
       {
         id: "20180511-1409-00373-957584364a",
-        className: "p2",
+        className: "p1",
         title: "20180511 1409 00373",
         caption: "France / 2018-05-11",
         full: "JPG master",
@@ -1078,7 +1011,7 @@ window.photosByElieData = {
       },
       {
         id: "20160714-1357-07255-pano-735b2de8ed",
-        className: "p3",
+        className: "p2",
         title: "Paris, Misc",
         caption: "France / 2016-07-14",
         full: "JPG master",
@@ -1141,7 +1074,7 @@ window.photosByElieData = {
       },
       {
         id: "20220504-141310-00203-231d78d849",
-        className: "p4",
+        className: "p3",
         title: "20220504 141310 00203",
         caption: "France / 2022-05-04",
         full: "TIF master",
@@ -1204,7 +1137,7 @@ window.photosByElieData = {
       },
       {
         id: "20180509-2311-00255-7474968431",
-        className: "p5",
+        className: "p4",
         title: "20180509 2311 00255",
         caption: "France / Paris-16E-Arrondissement, Île-de-France / 2018-05-09",
         full: "JPG master",
@@ -1271,7 +1204,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0526-28042-2d67946dcb",
-        className: "p1",
+        className: "p5",
         title: "20110106 0526 28042",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -1330,7 +1263,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-160631-03403-51426edaac",
-        className: "p2",
+        className: "p1",
         title: "Les Invalides, Paris",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -1397,7 +1330,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-144147-03314-497e126421",
-        className: "p3",
+        className: "p2",
         title: "Les Invalides, Paris",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -1464,7 +1397,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0628-28102-d78ba3bc43",
-        className: "p4",
+        className: "p3",
         title: "Les Invalides, Paris",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -1527,7 +1460,7 @@ window.photosByElieData = {
       },
       {
         id: "20180525-1443-00956-a9e61b8dde",
-        className: "p5",
+        className: "p4",
         title: "20180525 1443 00956",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
@@ -1593,79 +1526,8 @@ window.photosByElieData = {
 ]
       },
       {
-        id: "20180510-1447-00281-0c4221fcef",
-        className: "p1",
-        title: "Boire et Manger Cafe, Montmartre, Paris",
-        caption: "France / Paris, Île-de-France / 2018-05-10",
-        full: "JPG master",
-        megapixels: 15.3,
-        gallerySrc: "./assets/expo/france/20180510-1447-00281-0c4221fcef_900.jpg",
-        imageSrc: "./assets/expo/france/20180510-1447-00281-0c4221fcef_1800.jpg",
-        metadata: [
-          {
-                    "label": "Metadata title",
-                    "value": "Boire et Manger Cafe, Montmartre, Paris"
-          },
-          {
-                    "label": "Keywords",
-                    "value": "France, Montmartre, Paris, moulin de la galette, moulin rouge, place du tertre, rue lepic"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:10 14:47:32"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/1600, f/8.0, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "10.0 mm / 15 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Paris, Île-de-France, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180510 1447 00281.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 4882 x 3133 / 15.3 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180510-1447-00281-0c4221fcef_1800.jpg / 1800 x 1155 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180510 1447 00281.jpg",
-                    "type": "JPG",
-                    "bytes": 9054799
-          }
-]
-      },
-      {
         id: "20180511-1140-00367-8ba499e834",
-        className: "p2",
+        className: "p5",
         title: "Institut du Monde Arabe, Paris",
         caption: "France / 2018-05-11",
         full: "JPG master",
@@ -1732,7 +1594,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-154558-03388-a887904b4b",
-        className: "p3",
+        className: "p1",
         title: "Eglise des Invalides, Paris",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -1799,7 +1661,7 @@ window.photosByElieData = {
       },
       {
         id: "20180511-1443-00382-346dfde4a7",
-        className: "p4",
+        className: "p2",
         title: "Notre Dame de Paris from Pont Neuf",
         caption: "France / 2018-05-11",
         full: "JPG master",
@@ -1866,7 +1728,7 @@ window.photosByElieData = {
       },
       {
         id: "20180529-1739-15441-c012616b8d",
-        className: "p5",
+        className: "p3",
         title: "Chateau de Monte Cristo, France",
         caption: "France / 2018-05-29",
         full: "JPG master",
@@ -1933,7 +1795,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-044147-03105-2f7a1843b4",
-        className: "p1",
+        className: "p4",
         title: "Les Invalides, Paris",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -2000,7 +1862,7 @@ window.photosByElieData = {
       },
       {
         id: "20220505-153639-03083-3ded4343e5",
-        className: "p2",
+        className: "p5",
         title: "Coupole des Galeries Lafayette",
         caption: "France / 2022-05-05",
         full: "JPG master",
@@ -2067,7 +1929,7 @@ window.photosByElieData = {
       },
       {
         id: "20180509-2308-00253-0eeaef9d8e",
-        className: "p3",
+        className: "p1",
         title: "Eiffel Tower, Paris",
         caption: "France / Paris-16E-Arrondissement, Île-de-France / 2018-05-09",
         full: "JPG master",
@@ -2138,7 +2000,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0601-14851-1f7385741f",
-        className: "p4",
+        className: "p2",
         title: "20110106 0601 14851",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -2197,7 +2059,7 @@ window.photosByElieData = {
       },
       {
         id: "20180510-1502-00287-cdb42e6e17",
-        className: "p5",
+        className: "p3",
         title: "20180510 1502 00287",
         caption: "France / Paris, Île-de-France / 2018-05-10",
         full: "JPG master",
@@ -2264,7 +2126,7 @@ window.photosByElieData = {
       },
       {
         id: "20180530-1523-15556-0aac5ec9cc",
-        className: "p1",
+        className: "p4",
         title: "Jardin du Luxembourg,Paris, France",
         caption: "France / 2018-05-30",
         full: "JPG master",
@@ -2331,7 +2193,7 @@ window.photosByElieData = {
       },
       {
         id: "20111102-1227-05325-ab56a019a3",
-        className: "p2",
+        className: "p5",
         title: "Eglise des Augustins, Toulouse, France",
         caption: "France / 2011-11-02",
         full: "JPG master",
@@ -2394,7 +2256,7 @@ window.photosByElieData = {
       },
       {
         id: "20180530-1508-14876-8349c69c56",
-        className: "p3",
+        className: "p1",
         title: "Jardin du Luxembourg,Paris, France",
         caption: "France / 2018-05-30",
         full: "JPG master",
@@ -2461,7 +2323,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0612-28118-79cde9baa5",
-        className: "p4",
+        className: "p2",
         title: "Musee Rodin, Paris, France",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -2524,7 +2386,7 @@ window.photosByElieData = {
       },
       {
         id: "20111106-0808-27995-c4cfb5f5c1",
-        className: "p5",
+        className: "p3",
         title: "Cloître des Jacobins, Toulouse, France",
         caption: "France / 2011-11-06",
         full: "JPG master",
@@ -2591,7 +2453,7 @@ window.photosByElieData = {
       },
       {
         id: "20180524-1746-00940-636b34659d",
-        className: "p1",
+        className: "p4",
         title: "Galeries Lafayette, Rue Bayard, Toulouse, France",
         caption: "France / Toulouse, Occitanie / 2018-05-24",
         full: "JPG master",
@@ -2662,7 +2524,7 @@ window.photosByElieData = {
       },
       {
         id: "20120829-0319-20179-6dd023c02f",
-        className: "p2",
+        className: "p5",
         title: "Galeries Lafayette, Paris, France",
         caption: "France / 2012-08-29",
         full: "JPG master",
@@ -2725,7 +2587,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0653-16075-a3146fc113",
-        className: "p3",
+        className: "p1",
         title: "Les Invalides, Paris, France",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -2788,7 +2650,7 @@ window.photosByElieData = {
       },
       {
         id: "20180511-1205-00368-3481c74f91",
-        className: "p4",
+        className: "p2",
         title: "Art, Institut du Monde Arabe, Paris, France",
         caption: "France / 2018-05-11",
         full: "JPG master",
@@ -2855,7 +2717,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0647-15378-f6cc4dcb73",
-        className: "p5",
+        className: "p3",
         title: "20110104 0647 15378",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -2914,7 +2776,7 @@ window.photosByElieData = {
       },
       {
         id: "20180510-1519-00298-793ef096f2",
-        className: "p1",
+        className: "p4",
         title: "Le Moulin De La Galette, Montmartre, Paris, France",
         caption: "France / Paris, Île-de-France / 2018-05-10",
         full: "JPG master",
@@ -2985,7 +2847,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0652-28098-862d1eeb6f",
-        className: "p2",
+        className: "p5",
         title: "20110104 0652 28098",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -3044,7 +2906,7 @@ window.photosByElieData = {
       },
       {
         id: "20180510-1450-00283-0c7c1fb449",
-        className: "p3",
+        className: "p1",
         title: "Le Moulin De La Galette, Montmartre, Paris, France",
         caption: "France / Paris, Île-de-France / 2018-05-10",
         full: "JPG master",
@@ -3115,7 +2977,7 @@ window.photosByElieData = {
       },
       {
         id: "20110104-0602-16550-5c4e1038d6",
-        className: "p4",
+        className: "p2",
         title: "20110104 0602 16550",
         caption: "France / 2011-01-04",
         full: "JPG master",
@@ -3174,7 +3036,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0635-15715-8eeb2ce0b5",
-        className: "p5",
+        className: "p3",
         title: "20110106 0635 15715",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -3233,7 +3095,7 @@ window.photosByElieData = {
       },
       {
         id: "20180525-1420-00944-6079776b41",
-        className: "p1",
+        className: "p4",
         title: "20180525 1420 00944",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
@@ -3300,7 +3162,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-145037-03329-9100ee8314",
-        className: "p2",
+        className: "p5",
         title: "20220506 145037 03329",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -3363,7 +3225,7 @@ window.photosByElieData = {
       },
       {
         id: "20160714-1400-07415-pano-24e255b40f",
-        className: "p3",
+        className: "p1",
         title: "Paris, Misc",
         caption: "France / 2016-07-14",
         full: "JPG master",
@@ -3426,7 +3288,7 @@ window.photosByElieData = {
       },
       {
         id: "20160702-1255-20199-pano-32dd35fe45",
-        className: "p4",
+        className: "p2",
         title: "France, Chateau de Vaux-Le-Vicomte",
         caption: "France / 2016-07-02",
         full: "JPG master",
@@ -3488,75 +3350,8 @@ window.photosByElieData = {
 ]
       },
       {
-        id: "20180510-0001-00268-c479c726cf",
-        className: "p5",
-        title: "20180510 0001 00268",
-        caption: "France / Paris-16E-Arrondissement, Île-de-France / 2018-05-10",
-        full: "JPG master",
-        megapixels: 20.6,
-        gallerySrc: "./assets/expo/france/20180510-0001-00268-c479c726cf_900.jpg",
-        imageSrc: "./assets/expo/france/20180510-0001-00268-c479c726cf_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Night, Panoramic, Paris, louvres, pyramide"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:10 00:01:17"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "8, f/7.1, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "10.0 mm / 15 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Paris-16E-Arrondissement, Île-de-France, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180510 0001 00268.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 8664 x 2378 / 20.6 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180510-0001-00268-c479c726cf_1800.jpg / 1800 x 494 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180510 0001 00268.jpg",
-                    "type": "JPG",
-                    "bytes": 14804232
-          }
-]
-      },
-      {
         id: "20160708-1500-04226-pano-6e1f16ad1b",
-        className: "p1",
+        className: "p3",
         title: "Cordes Sur Ciel, Near Albi, Occitanie",
         caption: "France / 2016-07-08",
         full: "JPG master",
@@ -3623,7 +3418,7 @@ window.photosByElieData = {
       },
       {
         id: "20160708-1655-06473-pano-87b46cd260",
-        className: "p2",
+        className: "p4",
         title: "Albi, Cathedrale Sainte Catherine",
         caption: "France / 2016-07-08",
         full: "JPG master",
@@ -3690,7 +3485,7 @@ window.photosByElieData = {
       },
       {
         id: "20180511-0222-00331-9ce96882fb",
-        className: "p3",
+        className: "p5",
         title: "Bateau Mouche, Seine, Notre Dame de Paris,",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
@@ -3760,79 +3555,8 @@ window.photosByElieData = {
 ]
       },
       {
-        id: "20180509-2326-00266-3402cc9833",
-        className: "p4",
-        title: "Eiffel Tower from the Esplanade du Trocadero",
-        caption: "France / Paris-16E-Arrondissement, Île-de-France / 2018-05-09",
-        full: "JPG master",
-        megapixels: 13.4,
-        gallerySrc: "./assets/expo/france/20180509-2326-00266-3402cc9833_900.jpg",
-        imageSrc: "./assets/expo/france/20180509-2326-00266-3402cc9833_1800.jpg",
-        metadata: [
-          {
-                    "label": "Metadata title",
-                    "value": "Eiffel Tower from the Esplanade du Trocadero"
-          },
-          {
-                    "label": "Keywords",
-                    "value": "Eiffel Tower, Esplanade du Trocadero, France, Night, Paris, tour eiffel, trocadero"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:09 23:26:24"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "17.0-50.0 mm f/2.8"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/5, f/2.8, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "17.0 mm / 25 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Paris-16E-Arrondissement, Île-de-France, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180509 2326 00266.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 4483 x 2989 / 13.4 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180509-2326-00266-3402cc9833_1800.jpg / 1800 x 1200 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180509 2326 00266.jpg",
-                    "type": "JPG",
-                    "bytes": 6516131
-          }
-]
-      },
-      {
         id: "20220506-051024-03188-26c219176a",
-        className: "p5",
+        className: "p1",
         title: "20220506 051024 03188",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -3895,7 +3619,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-151024-03375-3e4d581417",
-        className: "p1",
+        className: "p2",
         title: "20220506 151024 03375",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -3957,650 +3681,8 @@ window.photosByElieData = {
 ]
       },
       {
-        id: "20220506-054409-03193-8303575241",
-        className: "p2",
-        title: "20220506 054409 03193",
-        caption: "France / 2022-05-06",
-        full: "JPG master",
-        megapixels: 17.4,
-        gallerySrc: "./assets/expo/france/20220506-054409-03193-8303575241_900.jpg",
-        imageSrc: "./assets/expo/france/20220506-054409-03193-8303575241_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "Art, Church, France, Invalides, Museum, Napoleon, Paris, architecture"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2022:05:06 05:44:09"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "Tokina atx-i 11-20mm F2.8 CF"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/40, f/3.2, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "11.0 mm / 16 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Bridge 2024"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20220506 054409 03193.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 4452 x 3917 / 17.4 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20220506-054409-03193-8303575241_1800.jpg / 1800 x 1583 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2022/JPG/05/06/20220506 054409 03193.jpg",
-                    "type": "JPG",
-                    "bytes": 2784993
-          }
-]
-      },
-      {
-        id: "20180511-1109-00347-4121def4a0",
-        className: "p3",
-        title: "20180511 1109 00347",
-        caption: "France / 2018-05-11",
-        full: "JPG master",
-        megapixels: 20.7,
-        gallerySrc: "./assets/expo/france/20180511-1109-00347-4121def4a0_900.jpg",
-        imageSrc: "./assets/expo/france/20180511-1109-00347-4121def4a0_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:11 11:09:28"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/800, f/5.6, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "13.0 mm / 19 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180511 1109 00347.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 5568 x 3712 / 20.7 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180511-1109-00347-4121def4a0_1800.jpg / 1800 x 1200 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180511 1109 00347.jpg",
-                    "type": "JPG",
-                    "bytes": 19869218
-          }
-]
-      },
-      {
-        id: "20180529-1757-15382-4fb563774f",
-        className: "p4",
-        title: "Chateau de Monte Cristo, France",
-        caption: "France / 2018-05-29",
-        full: "JPG master",
-        megapixels: 62,
-        gallerySrc: "./assets/expo/france/20180529-1757-15382-4fb563774f_900.jpg",
-        imageSrc: "./assets/expo/france/20180529-1757-15382-4fb563774f_1800.jpg",
-        metadata: [
-          {
-                    "label": "Metadata title",
-                    "value": "Chateau de Monte Cristo, France"
-          },
-          {
-                    "label": "Keywords",
-                    "value": "Chateau, Chateau de Monte Cristo, France, Ile de France, Le-Port-Marly, Monte-Cristo, Paris"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:29 17:57:11"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/15, f/5.6, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "13.0 mm / 19 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Bridge 2024"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180529 1757 15382.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 13954 x 4445 / 62.0 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180529-1757-15382-4fb563774f_1800.jpg / 1800 x 573 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180529 1757 15382.jpg",
-                    "type": "JPG",
-                    "bytes": 16671548
-          }
-]
-      },
-      {
-        id: "20160717-1423-02630-pano-0aff868fcc",
-        className: "p5",
-        title: "Giverny, Impressionists Museum, Monet House",
-        caption: "France / 2016-07-17",
-        full: "JPG master",
-        megapixels: 13.6,
-        gallerySrc: "./assets/expo/france/20160717-1423-02630-pano-0aff868fcc_900.jpg",
-        imageSrc: "./assets/expo/france/20160717-1423-02630-pano-0aff868fcc_1800.jpg",
-        metadata: [
-          {
-                    "label": "Metadata title",
-                    "value": "Giverny, Impressionists Museum, Monet House"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2016:07:17 14:23:33"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D7100"
-          },
-          {
-                    "label": "Lens",
-                    "value": "70.0-300.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/1000, f/10.0, ISO 1000"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "82.0 mm / 123 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Bridge 2024"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20160717 1423 02630-Pano.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 6121 x 2224 / 13.6 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20160717-1423-02630-pano-0aff868fcc_1800.jpg / 1800 x 654 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20160717 1423 02630-Pano.jpg",
-                    "type": "JPG",
-                    "bytes": 4992130
-          }
-]
-      },
-      {
-        id: "20191114-1254-15649-pano-05f6c65b28",
-        className: "p1",
-        title: "20191114 1254 15649 Pano",
-        caption: "France / 2019-11-14",
-        full: "JPG master",
-        megapixels: 44,
-        gallerySrc: "./assets/expo/france/20191114-1254-15649-pano-05f6c65b28_900.jpg",
-        imageSrc: "./assets/expo/france/20191114-1254-15649-pano-05f6c65b28_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Musee Jacquemart Andre, Paris"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2019:11:14 12:54:12"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "17.0-50.0 mm f/2.8"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/25, f/2.8, ISO 320"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "17.0 mm / 25 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Bridge 2024"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20191114 1254 15649-Pano.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 6970 x 6309 / 44.0 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20191114-1254-15649-pano-05f6c65b28_1800.jpg / 1800 x 1629 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20191114 1254 15649-Pano.jpg",
-                    "type": "JPG",
-                    "bytes": 6471773
-          }
-]
-      },
-      {
-        id: "20110104-0602-28078-fd1f4c2685",
-        className: "p2",
-        title: "20110104 0602 28078",
-        caption: "France / 2011-01-04",
-        full: "JPG master",
-        megapixels: 8.9,
-        gallerySrc: "./assets/expo/france/20110104-0602-28078-fd1f4c2685_900.jpg",
-        imageSrc: "./assets/expo/france/20110104-0602-28078-fd1f4c2685_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "Family 4+, France, NotMyPhoto"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2011:01:04 06:02:18"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON COOLPIX S630"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/545, f/3.5, ISO 284"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "6.6 mm / 37 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "COOLPIX S630V1.0"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20110104 0602 28078.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 3968 x 2232 / 8.9 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20110104-0602-28078-fd1f4c2685_1800.jpg / 1800 x 1012 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2010-2014/20110104 0602 28078.jpg",
-                    "type": "JPG",
-                    "bytes": 1999644
-          }
-]
-      },
-      {
-        id: "20180510-1518-00297-c1981b429a",
-        className: "p3",
-        title: "20180510 1518 00297",
-        caption: "France / Paris, Île-de-France / 2018-05-10",
-        full: "JPG master",
-        megapixels: 13.9,
-        gallerySrc: "./assets/expo/france/20180510-1518-00297-c1981b429a_900.jpg",
-        imageSrc: "./assets/expo/france/20180510-1518-00297-c1981b429a_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Montmartre, Paris, moulin de la galette, moulin rouge, place du tertre, rue lepic"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:10 15:18:54"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/800, f/5.6, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "20.0 mm / 30 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Paris, Île-de-France, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180510 1518 00297.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 4684 x 2967 / 13.9 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180510-1518-00297-c1981b429a_1800.jpg / 1800 x 1140 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180510 1518 00297.jpg",
-                    "type": "JPG",
-                    "bytes": 12293969
-          }
-]
-      },
-      {
-        id: "20180511-1408-00371-a6f83947e2",
-        className: "p4",
-        title: "20180511 1408 00371",
-        caption: "France / 2018-05-11",
-        full: "JPG master",
-        megapixels: 22.2,
-        gallerySrc: "./assets/expo/france/20180511-1408-00371-a6f83947e2_900.jpg",
-        imageSrc: "./assets/expo/france/20180511-1408-00371-a6f83947e2_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:11 14:08:35"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D7100"
-          },
-          {
-                    "label": "Lens",
-                    "value": "17.0-50.0 mm f/2.8"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/8000, f/2.8, ISO 400"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "19.0 mm / 28 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180511 1408 00371.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 5766 x 3844 / 22.2 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180511-1408-00371-a6f83947e2_1800.jpg / 1800 x 1200 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180511 1408 00371.jpg",
-                    "type": "JPG",
-                    "bytes": 19468867
-          }
-]
-      },
-      {
-        id: "20111102-1226-07867-136188a2c1",
-        className: "p5",
-        title: "Cloitre des Jacobins, Toulouse, France",
-        caption: "France / 2011-11-02",
-        full: "JPG master",
-        megapixels: 8,
-        gallerySrc: "./assets/expo/france/20111102-1226-07867-136188a2c1_900.jpg",
-        imageSrc: "./assets/expo/france/20111102-1226-07867-136188a2c1_1800.jpg",
-        metadata: [
-          {
-                    "label": "Metadata title",
-                    "value": "Cloitre des Jacobins, Toulouse, France"
-          },
-          {
-                    "label": "Description",
-                    "value": "Les Jacobins"
-          },
-          {
-                    "label": "Keywords",
-                    "value": "Church, France, Jacobins, Toulouse, architecture, interior"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2011:11:02 12:26:50"
-          },
-          {
-                    "label": "Camera",
-                    "value": "Apple iPhone 4S"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/20, f/2.4, ISO 80"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "4.3 mm / 35 mm equivalent"
-          },
-          {
-                    "label": "Software",
-                    "value": "5.0"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20111102 1226 07867.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 3264 x 2448 / 8.0 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20111102-1226-07867-136188a2c1_1800.jpg / 1800 x 1350 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2010-2014/20111102 1226 07867.jpg",
-                    "type": "JPG",
-                    "bytes": 2101617
-          }
-]
-      },
-      {
-        id: "20180524-1746-00941-72deedae61",
-        className: "p1",
-        title: "20180524 1746 00941",
-        caption: "France / Toulouse, Occitanie / 2018-05-24",
-        full: "JPG master",
-        megapixels: 17,
-        gallerySrc: "./assets/expo/france/20180524-1746-00941-72deedae61_900.jpg",
-        imageSrc: "./assets/expo/france/20180524-1746-00941-72deedae61_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Occitanie, Toulouse"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:24 17:46:10"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "17.0-50.0 mm f/2.8"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/400, f/10.0, ISO 400"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "17.0 mm / 25 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Toulouse, Occitanie, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.4 (Windows)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "ProPhoto RGB"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180524 1746 00941.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 5568 x 3056 / 17.0 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180524-1746-00941-72deedae61_1800.jpg / 1800 x 988 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180524 1746 00941.jpg",
-                    "type": "JPG",
-                    "bytes": 11904325
-          }
-]
-      },
-      {
         id: "20220506-044820-03115-d18397db96",
-        className: "p2",
+        className: "p3",
         title: "20220506 044820 03115",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -4663,7 +3745,7 @@ window.photosByElieData = {
       },
       {
         id: "20110106-0653-15437-08d1621cec",
-        className: "p3",
+        className: "p4",
         title: "20110106 0653 15437",
         caption: "France / 2011-01-06",
         full: "JPG master",
@@ -4722,7 +3804,7 @@ window.photosByElieData = {
       },
       {
         id: "20160717-1424-03649-pano-c6d8818d93",
-        className: "p4",
+        className: "p5",
         title: "Giverny, Impressionists Museum, Monet House",
         caption: "France / 2016-07-17",
         full: "JPG master",
@@ -4785,7 +3867,7 @@ window.photosByElieData = {
       },
       {
         id: "20180525-1439-00946-d866163437",
-        className: "p5",
+        className: "p1",
         title: "20180525 1439 00946",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
@@ -4852,7 +3934,7 @@ window.photosByElieData = {
       },
       {
         id: "20220506-054411-03196-49e0fc3c0e",
-        className: "p1",
+        className: "p2",
         title: "20220506 054411 03196",
         caption: "France / 2022-05-06",
         full: "JPG master",
@@ -4915,7 +3997,7 @@ window.photosByElieData = {
       },
       {
         id: "20160702-1256-20261-pano-b090c16a17",
-        className: "p2",
+        className: "p3",
         title: "France, Chateau de Vaux-Le-Vicomte",
         caption: "France / 2016-07-02",
         full: "JPG master",
@@ -4973,73 +4055,6 @@ window.photosByElieData = {
                     "path": "2015-2019/20160702 1256 20261-Pano.jpg",
                     "type": "JPG",
                     "bytes": 1841609
-          }
-]
-      },
-      {
-        id: "20180510-1443-00277-536a6ae39b",
-        className: "p3",
-        title: "20180510 1443 00277",
-        caption: "France / Paris, Île-de-France / 2018-05-10",
-        full: "JPG master",
-        megapixels: 14.8,
-        gallerySrc: "./assets/expo/france/20180510-1443-00277-536a6ae39b_900.jpg",
-        imageSrc: "./assets/expo/france/20180510-1443-00277-536a6ae39b_1800.jpg",
-        metadata: [
-          {
-                    "label": "Keywords",
-                    "value": "France, Montmartre, Paris, moulin de la galette, moulin rouge, place du tertre, rue lepic"
-          },
-          {
-                    "label": "Captured",
-                    "value": "2018:05:10 14:43:56"
-          },
-          {
-                    "label": "Camera",
-                    "value": "NIKON CORPORATION NIKON D500"
-          },
-          {
-                    "label": "Lens",
-                    "value": "10.0-20.0 mm f/4.5-5.6"
-          },
-          {
-                    "label": "Exposure",
-                    "value": "1/320, f/7.1, ISO 100"
-          },
-          {
-                    "label": "Focal length",
-                    "value": "20.0 mm / 30 mm equivalent"
-          },
-          {
-                    "label": "Location",
-                    "value": "Paris, Île-de-France, France"
-          },
-          {
-                    "label": "Software",
-                    "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
-          },
-          {
-                    "label": "Color profile",
-                    "value": "sRGB IEC61966-2.1"
-          },
-          {
-                    "label": "Original file",
-                    "value": "20180510 1443 00277.jpg"
-          },
-          {
-                    "label": "Original size",
-                    "value": "JPEG / 3187 x 4645 / 14.8 MP"
-          },
-          {
-                    "label": "Preview file",
-                    "value": "20180510-1443-00277-536a6ae39b_1800.jpg / 1235 x 1800 / JPG"
-          }
-],
-        sourceFiles: [
-          {
-                    "path": "2015-2019/20180510 1443 00277.jpg",
-                    "type": "JPG",
-                    "bytes": 9299047
           }
 ]
       },
@@ -6091,7 +5106,7 @@ window.photosByElieData = {
   usa: {
     number: "02",
     title: "USA",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 93 expo photos currently loaded; 65 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 93 expo photos currently loaded; 812 in local reserve.",
     accent: "usa-gallery",
     photos: [
       {
@@ -12638,7 +11653,7 @@ window.photosByElieData = {
   spain: {
     number: "03",
     title: "Spain",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 98 expo photos currently loaded; 69 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 98 expo photos currently loaded; 882 in local reserve.",
     accent: "spain-gallery",
     photos: [
       {
@@ -19140,7 +18155,7 @@ window.photosByElieData = {
   mexico: {
     number: "04",
     title: "Mexico",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 0 expo photos currently loaded; 1 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 0 expo photos currently loaded; 445 in local reserve.",
     accent: "mexico-gallery",
     photos: [
     ]
@@ -23048,7 +22063,7 @@ window.photosByElieData = {
   portugal: {
     number: "06",
     title: "Portugal",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 113 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 1093 in local reserve.",
     accent: "portugal-gallery",
     photos: [
       {
@@ -29696,7 +28711,7 @@ window.photosByElieData = {
   slovakia: {
     number: "07",
     title: "Slovakia",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 2 expo photos currently loaded; 0 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 2 expo photos currently loaded; 24 in local reserve.",
     accent: "slovakia-gallery",
     photos: [
       {
@@ -29790,7 +28805,7 @@ window.photosByElieData = {
   unknown: {
     number: "08",
     title: "Unknown",
-    description: "Saturn Lightroom selections that still need a final gallery assignment. 0 expo photos currently loaded; 13 in local reserve.",
+    description: "Saturn Lightroom selections that still need a final gallery assignment. 0 expo photos currently loaded; 8 in local reserve.",
     accent: "unknown-gallery",
     photos: [
     ]
@@ -29871,11 +28886,7 @@ window.photosByElieResolutionDetail = (photo, option) => {
 };
 window.photosByElieMeasurementSystem = () => {
   const nav = typeof navigator === "undefined" ? {} : navigator;
-  const locales = [
-    ...(nav.languages || []),
-    nav.language,
-    Intl.DateTimeFormat().resolvedOptions().locale,
-  ].filter(Boolean);
+  const locales = [...(nav.languages || []), nav.language, Intl.DateTimeFormat().resolvedOptions().locale].filter(Boolean);
   const imperialRegions = new Set(["US", "LR", "MM"]);
   for (const locale of locales) {
     try {
@@ -29884,9 +28895,7 @@ window.photosByElieMeasurementSystem = () => {
         return intlLocale.measurementSystem === "ussystem" ? "imperial" : "metric";
       }
       if (intlLocale.region) return imperialRegions.has(intlLocale.region) ? "imperial" : "metric";
-    } catch {
-      // Ignore malformed browser locale entries and keep looking.
-    }
+    } catch {}
   }
   return "metric";
 };

@@ -612,7 +612,7 @@ html.is-owner-action-busy *{
   --gallery-columns:var(--gallery-zoom-columns,var(--gallery-default-columns));
   display:grid;
   grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));
-  gap:12px;
+  gap:18px 12px;
   background:var(--surface);
   border-top:1px solid var(--line);
 }
@@ -669,6 +669,13 @@ html.is-owner-action-busy *{
 .gallery-filter-clear{
   min-height:42px;
   align-self:end;
+}
+.mock-photo-card{
+  display:grid;
+  grid-template-rows:auto auto;
+  gap:7px;
+  min-width:0;
+  color:inherit;
 }
 .mock-photo{
   display:block;
@@ -735,6 +742,23 @@ html.is-owner-action-busy *{
 html[data-theme="light"] .mock-photo.has-image::after{
   opacity:.135;
 }
+.mock-photo-caption{
+  display:block;
+  min-width:0;
+  max-width:100%;
+  padding:0 2px 2px;
+  color:var(--text);
+  font-size:clamp(.78rem,.85vw,.94rem);
+  font-weight:750;
+  line-height:1.18;
+  overflow-wrap:anywhere;
+  text-decoration:none;
+}
+.mock-photo-caption:hover{
+  text-decoration:underline;
+  text-decoration-thickness:1px;
+  text-underline-offset:3px;
+}
 .raw-source-badge{
   position:absolute;
   left:8px;
@@ -751,6 +775,7 @@ html[data-theme="light"] .mock-photo.has-image::after{
   text-transform:uppercase;
   box-shadow:0 8px 22px rgba(0,0,0,.2);
 }
+html.is-local-owner .mock-photo-card.is-selected .mock-photo,
 html.is-local-owner .mock-photo.is-selected{
   outline:3px solid color-mix(in srgb,var(--text) 82%,transparent);
   outline-offset:2px;
@@ -1127,20 +1152,20 @@ body.detail-fullscreen-active{
   background-image:var(--basket-row-bg);
   background-position:center;
   background-size:cover;
-  opacity:.14;
-  filter:saturate(1.05) blur(8px);
+  opacity:.18;
+  filter:saturate(1.08) blur(5px);
   transform:scale(1.04);
 }
 .basket-item.has-row-bg::after{
   z-index:-1;
   background:linear-gradient(90deg,
-    color-mix(in srgb,var(--bg) 64%,transparent) 0%,
-    color-mix(in srgb,var(--bg) 88%,transparent) 24%,
-    color-mix(in srgb,var(--bg) 96%,transparent) 100%
+    color-mix(in srgb,var(--bg) 54%,transparent) 0%,
+    color-mix(in srgb,var(--bg) 86%,transparent) 24%,
+    color-mix(in srgb,var(--bg) 97%,transparent) 100%
   );
 }
 html[data-theme="dark"] .basket-item.has-row-bg::before{
-  opacity:.1;
+  opacity:.13;
 }
 .basket-thumb{
   width:148px;

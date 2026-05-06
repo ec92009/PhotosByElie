@@ -7,7 +7,7 @@ Date: 2026-05-06
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current local visible build: `v66.48`
+- Current local visible build: `v66.49`
 - Current public GitHub Pages build before this push: `v66.37`
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, and USA, plus 2 Slovakia and 1 Mexico.
 - Publish validation is passing in external media mode: `node scripts/validate_publish.js --external-media --summary`.

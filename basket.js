@@ -30,7 +30,7 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 
 const productTypeLabel = (option) => ({
-  digital: "Digital",
+  digital: "Digital asset",
   print: "Print",
   frame: "Frame"
 }[option?.type] || "Product");
@@ -77,7 +77,7 @@ const sourceFileLabel = (photo) => {
   return (photo?.metadata || []).find((item) => item.label === "Original file")?.value || "Source file unverified";
 };
 
-const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
+const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
   if (!orderIntent || !orderSummary || !orderEmail) return;
   orderIntent.hidden = items.length === 0;
   if (!items.length) return;
@@ -96,7 +96,7 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
   orderSummary.innerHTML = `
     <div><dt>Order ID</dt><dd>${escapeText(orderId)}</dd></div>
     <div><dt>Photos</dt><dd>${items.length}</dd></div>
-    <div><dt>Products</dt><dd>${productCount}</dd></div>
+    <div><dt>Assets</dt><dd>${assetCount}</dd></div>
     ${shippingHandlingTotal ? `<div><dt>S&H</dt><dd>+${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
     ${shippingHandlingTotal ? `<div><dt>Limited-time discount</dt><dd>-${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
     <div><dt>Draft total</dt><dd>${formatMoney(total)}</dd></div>
@@ -109,7 +109,7 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
     `Order ID: ${orderId}`,
     `Delivery ZIP: ${zipName}`,
     `Photos: ${items.length}`,
-    `Products: ${productCount}`,
+    `Assets: ${assetCount}`,
     ...(shippingHandlingTotal ? [
       `Physical S&H: ${formatMoney(shippingHandlingTotal)}`,
       `Limited-time S&H discount: -${formatMoney(shippingHandlingTotal)}`,
@@ -126,7 +126,7 @@ const syncOrderIntent = (items, productCount, total, shippingHandlingTotal) => {
         `Review page: ${photoReviewUrl(item.photoId)}`,
         `Original: ${photo ? sourceFileLabel(photo) : "Photo no longer in public catalog"}`,
         `Source: ${photo ? window.photosByElieOriginalSize?.(photo) || "Source file unverified" : "Photo no longer in public catalog"}`,
-        "Selected products:",
+        "Selected assets:",
         ...item.options.map((option) => {
           const unitPrice = window.photosByElieOptionUnitPrice?.(option) || Number(option.price) || 0;
           const quantity = optionQuantity(option);
@@ -185,12 +185,12 @@ orderEmail?.addEventListener("click", async (event) => {
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-  const productCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
+  const assetCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
   const shippingHandlingTotal = items.reduce((sum, item) => sum + (item.options || []).reduce((shipping, option) => shipping + optionShippingHandlingTotal(option), 0), 0);
 
-  basketTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
+  basketTotal.textContent = `${assetCount} ${assetCount === 1 ? "asset" : "assets"}, ${formatMoney(total)}`;
   emptyState.hidden = items.length !== 0;
-  syncOrderIntent(items, productCount, total, shippingHandlingTotal);
+  syncOrderIntent(items, assetCount, total, shippingHandlingTotal);
 
   const cssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
   basketRoot.innerHTML = items.map((item, index) => {
@@ -293,8 +293,8 @@ const renderBasket = () => {
     const selectedOptions = selectedOptionsFor(itemIndex);
     basketStore.updateOptions(itemIndex, selectedOptions);
     status.textContent = selectedOptions.length
-        ? `${item.title} order products updated.`
-        : `${item.title} has no selected order products. Use Remove to delete the photo.`;
+        ? `${item.title} asset choices updated.`
+        : `${item.title} has no selected assets. Use Remove to delete the photo.`;
     renderBasket();
   };
 

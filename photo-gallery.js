@@ -24,6 +24,13 @@ const defaultFilterState = {
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
+const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#39;"
+}[char]));
 const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
   if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
@@ -400,17 +407,28 @@ const renderGallery = () => {
   galleryRoot.innerHTML = photos.map((photo, index) => {
     const rawLabel = rawSourceLabel(photo);
     const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
+    const href = versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
+    const hrefAttr = escapeHtml(href);
+    const title = escapeHtml(photo.title);
     return `
-    <a
-      class="mock-photo ${photo.className} ${image ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
-      href="${versionedHref(`./photo.html?id=${photo.id}`)}"
-      aria-label="Open ${photo.title}${rawLabel ? `, RAW source ${rawLabel}` : ""}"
+    <article
+      class="mock-photo-card"
+      aria-label="Open ${title}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
       data-photo-index="${index}"
-      data-photo-id="${photo.id}"
+      data-photo-id="${escapeHtml(photo.id)}"
+      data-photo-href="${hrefAttr}"
     >
-      ${image ? `<img src="${image}" alt="${photo.title}"/>` : ""}
-      ${rawLabel ? `<span class="raw-source-badge" title="${rawLabel} source">RAW</span>` : ""}
-    </a>
+      <a
+        class="mock-photo ${photo.className} ${image ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
+        href="${hrefAttr}"
+        data-photo-link
+        aria-label="Open ${title}"
+      >
+        ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : ""}
+        ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
+      </a>
+      <a class="mock-photo-caption" href="${hrefAttr}" data-photo-caption>${title}</a>
+    </article>
   `;
   }).join("");
   if (localModerationEnabled) {
@@ -422,7 +440,7 @@ const renderGallery = () => {
       });
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
-        window.location.assign(versionedHref(card.getAttribute("href")));
+        window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href")));
       });
     });
   }

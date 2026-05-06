@@ -97,9 +97,9 @@ const renderLiked = () => {
   const basketByPhoto = new Map(basketItems.map((item) => [item.photoId, item]));
   const rowSelections = likedItems.map((item) => basketByPhoto.get(item.photoId)?.options || []);
   const total = rowSelections.flat().reduce((sum, option) => sum + optionTotal(option), 0);
-  const productCount = rowSelections.reduce((sum, options) => sum + options.reduce((count, option) => count + optionQuantity(option), 0), 0);
+  const assetCount = rowSelections.reduce((sum, options) => sum + options.reduce((count, option) => count + optionQuantity(option), 0), 0);
 
-  likedTotal.textContent = `${productCount} ${productCount === 1 ? "product" : "products"}, ${formatMoney(total)}`;
+  likedTotal.textContent = `${assetCount} ${assetCount === 1 ? "asset" : "assets"}, ${formatMoney(total)}`;
   emptyState.hidden = likedItems.length !== 0;
   bulkResolutionButtons.forEach((button) => {
     button.disabled = likedItems.length === 0;
@@ -212,8 +212,8 @@ const renderLiked = () => {
       options: optionPayload(selectedOptions, item.photoId),
     });
     status.textContent = selectedOptions.length
-        ? `${item.title} order products added to basket.`
-        : `${item.title} has no selected order products.`;
+        ? `${item.title} asset choices added to basket.`
+        : `${item.title} has no selected assets.`;
     renderLiked();
   };
 

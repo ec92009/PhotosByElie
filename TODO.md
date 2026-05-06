@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 ## Completed
 
@@ -52,38 +52,60 @@ Last updated: 2026-05-05
 - Added explicit print count steppers and made count/frame interactions automatically select the related print.
 - Changed frame mock prices to scale by physical print size instead of using one flat add-on price.
 - Added mock shipping and handling for physical prints, offset by an equal limited-time discount; downloads stay free.
+- Re-enabled Lightroom RAW ingestion through embedded preview extraction, refreshed local Reserve to 14,805 selected manifest rows, and verified 29,638 Reserve JPG derivatives with zero recorded import failures.
+- Prepared the Max/David ignored-asset handoff with the tracked `scripts/sync_local_assets.py` workflow plus tarball fallback for large local vault deltas.
+- Folded the 2026-05-06 Codex review into this backlog and archived the review notes under `Archive/`.
 
 ## Current Priority Stack
 
-1. **Finish the buyer order mock.**
+1. **Verify the Max handoff and GitHub sync.**
+   - On Max, confirm the base asset tarball plus created-today delta are unpacked into the checkout.
+   - Verify `assets/reserve` is about 29,638 JPG derivatives and roughly 6.8 GB before deleting transfer tarballs.
+   - Pull GitHub on Max after the media handoff so tracked code/docs and ignored local vaults are both current.
+   - Keep `assets/reserve` and `assets/hidden` local/ignored; do not use Git cleanup commands that remove ignored media.
+
+2. **Harden the public/local boundary before the next push cycle.**
+   - Make the static public site versus localhost Owner tooling boundary explicit in docs, code organization, and tests.
+   - Keep operator hints, Owner actions, Reserve/Hidden catalogs, and local logs out of public GitHub Pages behavior.
+   - Add deterministic checks around Expo/Reserve/Hidden transitions, Expo caps, and generated catalog outputs.
+   - Keep asset budget checks in the publish path so accidental full-library publication is caught before push.
+
+3. **Finish the buyer order mock.**
    - Review the detail, liked, basket, and generated email flow on a phone after the quantity/frame/S&H changes.
    - Decide the next checkout step: keep mailto order intent, use Stripe payment links, or introduce a small backend.
    - Keep mock S&H folded into physical item pricing and shown as an add/subtract limited-time discount until real fulfillment pricing exists.
+   - Make the final shopping path obvious: like, choose resolution/product, basket, checkout/request.
 
-2. **Polish mobile buying and navigation.**
+4. **Polish mobile buying and navigation.**
    - Tighten bottom action layout on detail pages.
    - On narrow screens, duplicate primary CTA buttons and previous/next navigation above the footer where useful.
    - Retest phone detail swipes for previous/next navigation after product control changes.
    - Decide whether public detail needs single-tap full-screen preview in addition to double click.
+   - Add public empty states for no filter results, empty likes, empty basket, and unavailable product choices.
 
-3. **Harden Expo/Reserve/Hidden publishing.**
+5. **Harden Expo/Reserve/Hidden publishing.**
    - Keep Expo small and publishable under tracked `assets/expo`, keep `assets/reserve` and `assets/hidden` ignored/local, and preserve the safe GitHub Pages path without archive churn.
    - Keep treating the Owner-selected Expo cap as an upper bound for live local review and batch curation, not as a fixed global default.
    - Use `scripts/sync_local_assets.py` for local vault handoff rather than pushing Reserve/Hidden to Git.
    - Run `node scripts/validate_publish.js --summary` before public pushes.
+   - Archive or ignore local curation exports and `.playwright-mcp` logs unless they become intentional audit fixtures.
 
-4. **Improve gallery and detail review ergonomics.**
+6. **Improve gallery and detail review ergonomics.**
    - Add panoramic orientation filtering.
    - Add gallery hover metadata for title and safe context.
    - Retest gallery-selected detail navigation, mobile swipes, full-screen preview, and H/U/P owner shortcuts on narrow screens.
+   - Keep Owner UI visually operational and distinct from the public shopping/browsing experience.
 
-5. **Scale gallery generation.**
-   - Reimport developed Lightroom JPG/TIFF exports into Reserve, then use export/live owner tooling to fill Expo.
+7. **Scale gallery generation and curation.**
+   - Treat the current RAW-aware Reserve import as the local vault baseline before the next broad import.
+   - Use export/live owner tooling to fill Expo from Reserve; keep importer output in Reserve only.
    - Keep importer country classification improving, but do not let import write directly to Expo.
    - Keep monitoring embedded RAW preview imports for low-resolution or missing-preview failures before promoting RAW-origin photos into Expo.
 
-6. **Keep operations steady.**
+8. **Keep operations steady.**
    - Document procedures, revisit branch protection, and defer a backend decision until the static/local curation model proves its limits.
+   - Add a concise data-flow diagram for source metadata, Reserve/Hidden catalogs, Expo assets, and public `photos-data.js`.
+   - Keep `README.md` focused on the current public/local workflow as the behavior list grows.
 
 ## Product Backlog
 
@@ -147,6 +169,14 @@ Last updated: 2026-05-05
    - Add SOPs for importing photos, resizing derivatives, updating prices, testing basket behavior, and publishing.
    - Keep versioning under the existing MailAssist SOP.
    - Include a short recovery note for clearing localStorage during testing.
+   - Add a data-flow diagram for source metadata, local catalogs, generated public data, and publishable assets.
+   - Keep a short public/localhost boundary note in README and SOPs.
+
+11. **Add automated quality gates.**
+   - Add deterministic catalog-generation tests for Expo/Reserve/Hidden transitions and Owner cap handling.
+   - Add Playwright smoke coverage for homepage, gallery filters, detail navigation, likes, basket, and localhost owner-only visibility.
+   - Make asset budget checks part of the pre-push/publish routine, with clear failure output when Expo grows too large.
+   - Ensure operator hints and Owner-only controls do not appear in public-mode smoke tests.
 
 ## Backlog: Archive Curation And Publishing
 

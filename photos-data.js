@@ -2,7 +2,7 @@ window.photosByElieData = {
   france: {
     number: "01",
     title: "France",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 217 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 222 in local reserve.",
     accent: "france-gallery",
     photos: [
       {
@@ -7262,7 +7262,7 @@ window.photosByElieData = {
   usa: {
     number: "02",
     title: "USA",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 13 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 63 in local reserve.",
     accent: "usa-gallery",
     photos: [
       {
@@ -15030,7 +15030,7 @@ window.photosByElieData = {
   spain: {
     number: "03",
     title: "Spain",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 65 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 67 in local reserve.",
     accent: "spain-gallery",
     photos: [
       {
@@ -22470,7 +22470,7 @@ window.photosByElieData = {
   mexico: {
     number: "04",
     title: "Mexico",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 1 expo photos currently loaded; 0 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 1 expo photos currently loaded; 1 in local reserve.",
     accent: "mexico-gallery",
     photos: [
       {
@@ -27257,7 +27257,7 @@ window.photosByElieData = {
   portugal: {
     number: "06",
     title: "Portugal",
-    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 110 in local reserve.",
+    description: "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 117 in local reserve.",
     accent: "portugal-gallery",
     photos: [
       {
@@ -34815,7 +34815,7 @@ window.photosByElieData = {
   unknown: {
     number: "08",
     title: "Unknown",
-    description: "Saturn Lightroom selections that still need a final gallery assignment. 0 expo photos currently loaded; 76 in local reserve.",
+    description: "Saturn Lightroom selections that still need a final gallery assignment. 0 expo photos currently loaded; 11 in local reserve.",
     accent: "unknown-gallery",
     photos: [
     ]

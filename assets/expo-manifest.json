@@ -6,14 +6,14 @@
   "seed": null,
   "photos_count": 503,
   "reserve_counts": {
-    "france": 217,
-    "usa": 13,
-    "spain": 65,
-    "mexico": 0,
+    "france": 222,
+    "usa": 63,
+    "spain": 67,
+    "mexico": 1,
     "ai": 0,
-    "portugal": 110,
+    "portugal": 117,
     "slovakia": 0,
-    "unknown": 76
+    "unknown": 11
   },
   "hidden_counts": {
     "france": 0,

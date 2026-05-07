@@ -27,6 +27,7 @@ Date: 2026-05-07
 - V1 checkout currency is USD only. The UI can note that buyers’ banks may convert charges locally; multi-currency display is deferred.
 - Guest checkout is the first real paid flow. Account checkout remains optional and should be framed as a convenience for saved orders/re-downloads.
 - Stripe receipts should not be treated as the delivery email. They can mention the order number and order-portal URL, while PhotosByElie/Worker controls actual delivery links.
+- Repo-root cleanup is a backburner item: keep root HTML files for now, but later consider a clearer `site/` or `public/` structure once R2/checkout stabilizes.
 
 ## Worker Prototype
 
@@ -74,3 +75,4 @@ The living backlog is in `TODO.md`. Highest-priority work now centers on:
 4. Replace in-memory Worker storage with durable Cloudflare storage, likely D1 for orders plus R2 for deliveries.
 5. Replace mock Stripe with real Stripe Checkout/webhook calls once Elie’s Stripe account is ready.
 6. Fix the page 4 PDF text collision before treating the infographic deck as final.
+7. Backburner: revisit repo layout and reduce root-file clutter after the active R2/checkout work settles.

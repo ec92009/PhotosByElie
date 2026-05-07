@@ -88,6 +88,12 @@ Last updated: 2026-05-07
     - [Codex] Convert architecture notes into a short migration SOP once R2 auth, Worker deployment, and public media URLs are settled.
     - [Codex] Keep the public/local/Worker boundaries explicit in docs and validation.
 
+12. **Backburner: clean up repo layout.**
+    - [Codex] Do this only after the R2 and checkout paths settle.
+    - [Codex] Keep root HTML files for now while GitHub Pages serves directly from repo root.
+    - [Codex] Later consider moving static assets into clearer `site/`, `public/`, `js/`, or `css/` folders.
+    - [Codex] Keep top-level domains like `worker/`, `scripts/`, `docs/`, and `Archive/` clear and avoid adding more root-level files unless they are repo-level docs/config.
+
 ## Completed In This Session
 
 - Added an MSC-style checkout/fulfillment infographic page.

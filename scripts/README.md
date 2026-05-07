@@ -178,6 +178,18 @@ The uploader also retries transient Wrangler failures with longer backoff. If Wr
 
 After the public bucket contains only final baked-watermark previews and public access is enabled through an R2 dev URL or custom domain, put that URL in `media-config.js` as `publicBaseUrl`. Public pages can also be tested temporarily with `?mediaBase=https://example.invalid/path`; use `?mediaBase=local` to clear the stored override.
 
+## Classified Unknown Public R2 Cleanup
+
+`cleanup_classified_unknowns_public_r2.py` is a recovery tool for the narrow case where Unknown previews were already uploaded to public R2 before localhost country classification moved them into a real gallery. It reads a review log with `r2_moves`, uploads the classified target key first, then deletes the old Unknown key, with resumable state in `.review-logs/public-r2-unknowns-cleanup-state.jsonl`.
+
+Dry-run the default review log:
+
+```bash
+python3 scripts/cleanup_classified_unknowns_public_r2.py --dry-run
+```
+
+Run it only after confirming no public/private R2 upload lane is active. The script checks for active R2 writer processes and the shared throttle lock before making changes.
+
 ## Local Asset Sync
 
 `sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track preview-cache or Hidden data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.

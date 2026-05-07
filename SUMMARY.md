@@ -12,7 +12,9 @@ Date: 2026-05-07
 - `origin/main` before this push was `5dbadf0 photosbyelie: classify unknown reserve countries`.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
 - GitHub should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should stay out of Git and live in R2/CDN.
-- Existing unrelated working-tree items remain present and should not be staged accidentally: `scripts/sync_r2_media.py`, `home-v66-41.png`, and `scripts/cleanup_classified_unknowns_public_r2.py`.
+- Existing unrelated working-tree item remains present and should not be staged accidentally: `scripts/sync_r2_media.py`.
+- `home-v66-41.png` was an untracked local screenshot and was deleted on request.
+- `scripts/cleanup_classified_unknowns_public_r2.py` is being kept as a tracked recovery utility rather than archived.
 
 ## Architecture Decisions From This Session
 
@@ -53,6 +55,7 @@ Date: 2026-05-07
 - Public media should remain baked-watermark previews only.
 - RAW/DNG/NEF originals stay local/off-cloud; private R2 is for developed masters and delivery artifacts, not RAW originals.
 - Hidden is a blacklist/review state; future public R2 syncs skip hidden IDs.
+- The classified-Unknown public R2 cleanup script exists for the one-off/recovery case where old Unknown public keys must be moved to their newly classified country keys after upload.
 
 ## Verification
 

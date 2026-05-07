@@ -26,6 +26,7 @@ Last updated: 2026-05-07
    - [Codex] Confirm whether any old permissive-watermark public previews remain in R2.
    - [Codex] Verify hidden-blacklist IDs are absent from the live public preview set or wipe them through an explicit Owner action.
    - [Codex] If classified Unknown objects already exist under old public keys, use `scripts/cleanup_classified_unknowns_public_r2.py` only after confirming no R2 upload lane is active.
+   - [Codex] If Wrangler auth wobbles again, use `scripts/sync_r2_media.py --backend s3` with explicit R2 S3 credentials and a tiny `--limit 1` probe first.
 
 2. **Start private R2 masters only after public is done.**
    - [Codex] Let automation `start-private-r2-after-public-upload` wait on public and start `pbe-r2-private`.

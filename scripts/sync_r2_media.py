@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import hashlib
+import hmac
 import json
 import mimetypes
 import os
@@ -12,6 +14,9 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +31,8 @@ DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 DEFAULT_DELETE_STATE = Path(".review-logs/r2-delete-state.jsonl")
 DEFAULT_THROTTLE_FILE = Path(".review-logs/r2-upload-throttle.lock")
+S3_REGION = "auto"
+S3_SERVICE = "s3"
 HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
@@ -79,6 +86,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-file", type=Path, default=DEFAULT_UPLOAD_STATE)
     parser.add_argument("--delete-state-file", type=Path, default=DEFAULT_DELETE_STATE)
     parser.add_argument("--no-resume", action="store_true", help="Ignore the local upload success journal.")
+    parser.add_argument("--backend", choices=("wrangler", "s3"), default=os.environ.get("PBE_R2_BACKEND", "wrangler"))
+    parser.add_argument("--s3-account-id", default=first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID"))
+    parser.add_argument("--s3-access-key-id", default=first_env("R2_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"))
+    parser.add_argument("--s3-secret-access-key", default=first_env("R2_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"))
+    parser.add_argument("--s3-endpoint", default=os.environ.get("R2_S3_ENDPOINT", ""))
     parser.add_argument("--upload", action="store_true", help="Actually upload. Without this, only prints a dry-run inventory.")
     parser.add_argument("--delete", action="store_true", help="Delete the inventoried objects from R2.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable inventory summary.")
@@ -86,6 +98,14 @@ def parse_args() -> argparse.Namespace:
     if args.upload and args.delete:
         parser.error("--upload and --delete cannot be used together")
     return args
+
+
+def first_env(*names: str) -> str:
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return ""
 
 
 def load_json(path: Path, fallback: Any) -> Any:
@@ -335,6 +355,11 @@ def throttle_wrangler_request(throttle_file: Path, min_interval: float) -> None:
             except ValueError:
                 previous = 0.0
             now = time.monotonic()
+            # Guard against stale monotonic timestamps after sleep/reboot/restore.
+            # If the lock file contains a timestamp from a different monotonic epoch,
+            # treat it as empty rather than sleeping for a huge interval.
+            if previous > now + 1.0:
+                previous = 0.0
             wait = previous + min_interval - now
             if wait > 0:
                 time.sleep(wait)
@@ -456,16 +481,171 @@ def wrangler_delete(
     return item, False, output
 
 
-def upload(items: list[UploadItem], workers: int, retries: int, state_file: Path, throttle_file: Path, request_min_interval: float, retry_max_delay: float) -> int:
+def quote_s3_path(path: str) -> str:
+    return "/" + "/".join(urllib.parse.quote(part, safe="-_.~") for part in path.split("/"))
+
+
+def s3_signing_key(secret_key: str, datestamp: str) -> bytes:
+    date_key = hmac.new(("AWS4" + secret_key).encode("utf-8"), datestamp.encode("utf-8"), hashlib.sha256).digest()
+    region_key = hmac.new(date_key, S3_REGION.encode("utf-8"), hashlib.sha256).digest()
+    service_key = hmac.new(region_key, S3_SERVICE.encode("utf-8"), hashlib.sha256).digest()
+    return hmac.new(service_key, b"aws4_request", hashlib.sha256).digest()
+
+
+def s3_request(
+    method: str,
+    item: UploadItem,
+    body: bytes,
+    account_id: str,
+    access_key_id: str,
+    secret_access_key: str,
+    endpoint: str,
+    timeout: float = 120.0,
+) -> tuple[bool, str]:
+    host = endpoint or f"{account_id}.r2.cloudflarestorage.com"
+    object_path = item.bucket + "/" + item.key
+    url = f"https://{host}{quote_s3_path(object_path)}"
+    payload_hash = hashlib.sha256(body).hexdigest()
+    now = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    datestamp = now[:8]
+    headers = {
+        "host": host,
+        "x-amz-content-sha256": payload_hash,
+        "x-amz-date": now,
+    }
+    if method == "PUT":
+        headers["content-type"] = item.content_type
+        if item.cache_control:
+            headers["cache-control"] = item.cache_control
+    signed_header_names = sorted(headers)
+    canonical_headers = "".join(f"{name}:{headers[name].strip()}\n" for name in signed_header_names)
+    signed_headers = ";".join(signed_header_names)
+    canonical_request = "\n".join(
+        [
+            method,
+            quote_s3_path(object_path),
+            "",
+            canonical_headers,
+            signed_headers,
+            payload_hash,
+        ]
+    )
+    credential_scope = f"{datestamp}/{S3_REGION}/{S3_SERVICE}/aws4_request"
+    string_to_sign = "\n".join(
+        [
+            "AWS4-HMAC-SHA256",
+            now,
+            credential_scope,
+            hashlib.sha256(canonical_request.encode("utf-8")).hexdigest(),
+        ]
+    )
+    signature = hmac.new(s3_signing_key(secret_access_key, datestamp), string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+    request_headers = {name: value for name, value in headers.items() if name != "host"}
+    request_headers["Authorization"] = (
+        "AWS4-HMAC-SHA256 "
+        f"Credential={access_key_id}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, "
+        f"Signature={signature}"
+    )
+    try:
+        request = urllib.request.Request(url, data=body if method == "PUT" else None, headers=request_headers, method=method)
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            response_body = response.read(4096).decode("utf-8", errors="replace")
+            return 200 <= response.status < 300, f"{method} {item.bucket}/{item.key}: HTTP {response.status} {response_body}".strip()
+    except urllib.error.HTTPError as exc:
+        response_body = exc.read(4096).decode("utf-8", errors="replace")
+        return False, f"{method} {item.bucket}/{item.key}: HTTP {exc.code} {response_body}".strip()
+    except urllib.error.URLError as exc:
+        return False, f"{method} {item.bucket}/{item.key}: URL error {exc.reason}"
+    except (OSError, UnicodeError) as exc:
+        return False, f"{method} {item.bucket}/{item.key}: OS error {exc}"
+
+
+def s3_put(
+    item: UploadItem,
+    retries: int,
+    throttle_file: Path,
+    request_min_interval: float,
+    retry_max_delay: float,
+    account_id: str,
+    access_key_id: str,
+    secret_access_key: str,
+    endpoint: str,
+) -> tuple[UploadItem, bool, str]:
+    body = item.path.read_bytes()
+    output = ""
+    for attempt in range(retries + 1):
+        throttle_wrangler_request(throttle_file, request_min_interval)
+        ok, output = s3_request("PUT", item, body, account_id, access_key_id, secret_access_key, endpoint)
+        if ok:
+            return item, True, output
+        if attempt < retries:
+            time.sleep(min(retry_max_delay, 4.0 * (attempt + 1)))
+    return item, False, output
+
+
+def s3_delete(
+    item: UploadItem,
+    retries: int,
+    throttle_file: Path,
+    request_min_interval: float,
+    retry_max_delay: float,
+    account_id: str,
+    access_key_id: str,
+    secret_access_key: str,
+    endpoint: str,
+) -> tuple[UploadItem, bool, str]:
+    output = ""
+    for attempt in range(retries + 1):
+        throttle_wrangler_request(throttle_file, request_min_interval)
+        ok, output = s3_request("DELETE", item, b"", account_id, access_key_id, secret_access_key, endpoint)
+        if ok:
+            return item, True, output
+        if attempt < retries:
+            time.sleep(min(retry_max_delay, 4.0 * (attempt + 1)))
+    return item, False, output
+
+
+def upload(
+    items: list[UploadItem],
+    workers: int,
+    retries: int,
+    state_file: Path,
+    throttle_file: Path,
+    request_min_interval: float,
+    retry_max_delay: float,
+    backend: str,
+    s3_account_id: str,
+    s3_access_key_id: str,
+    s3_secret_access_key: str,
+    s3_endpoint: str,
+) -> int:
     failed = 0
     lock = threading.Lock()
     started = time.monotonic()
     uploaded_bytes = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-        futures = [
-            executor.submit(wrangler_put, item, retries, throttle_file, request_min_interval, retry_max_delay)
-            for item in items
-        ]
+        if backend == "s3":
+            futures = [
+                executor.submit(
+                    s3_put,
+                    item,
+                    retries,
+                    throttle_file,
+                    request_min_interval,
+                    retry_max_delay,
+                    s3_account_id,
+                    s3_access_key_id,
+                    s3_secret_access_key,
+                    s3_endpoint,
+                )
+                for item in items
+            ]
+        else:
+            futures = [
+                executor.submit(wrangler_put, item, retries, throttle_file, request_min_interval, retry_max_delay)
+                for item in items
+            ]
         for index, future in enumerate(as_completed(futures), start=1):
             item, ok, output = future.result()
             if not ok:
@@ -481,16 +661,46 @@ def upload(items: list[UploadItem], workers: int, retries: int, state_file: Path
     return failed
 
 
-def delete_items(items: list[UploadItem], workers: int, retries: int, state_file: Path, throttle_file: Path, request_min_interval: float, retry_max_delay: float) -> int:
+def delete_items(
+    items: list[UploadItem],
+    workers: int,
+    retries: int,
+    state_file: Path,
+    throttle_file: Path,
+    request_min_interval: float,
+    retry_max_delay: float,
+    backend: str,
+    s3_account_id: str,
+    s3_access_key_id: str,
+    s3_secret_access_key: str,
+    s3_endpoint: str,
+) -> int:
     failed = 0
     lock = threading.Lock()
     started = time.monotonic()
     deleted_bytes = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-        futures = [
-            executor.submit(wrangler_delete, item, retries, throttle_file, request_min_interval, retry_max_delay)
-            for item in items
-        ]
+        if backend == "s3":
+            futures = [
+                executor.submit(
+                    s3_delete,
+                    item,
+                    retries,
+                    throttle_file,
+                    request_min_interval,
+                    retry_max_delay,
+                    s3_account_id,
+                    s3_access_key_id,
+                    s3_secret_access_key,
+                    s3_endpoint,
+                )
+                for item in items
+            ]
+        else:
+            futures = [
+                executor.submit(wrangler_delete, item, retries, throttle_file, request_min_interval, retry_max_delay)
+                for item in items
+            ]
         for index, future in enumerate(as_completed(futures), start=1):
             item, ok, output = future.result()
             if not ok:
@@ -543,6 +753,20 @@ def main() -> int:
         items.extend(next_items)
         skipped.extend(next_skipped)
 
+    if args.backend == "s3" and (args.upload or args.delete):
+        missing = [
+            name
+            for name, value in (
+                ("R2_ACCOUNT_ID or CLOUDFLARE_ACCOUNT_ID", args.s3_account_id),
+                ("R2_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID", args.s3_access_key_id),
+                ("R2_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY", args.s3_secret_access_key),
+            )
+            if not value
+        ]
+        if missing:
+            print(f"Missing S3 backend credential(s): {', '.join(missing)}", file=sys.stderr)
+            return 2
+
     if args.limit:
         items = items[: args.limit]
 
@@ -580,6 +804,11 @@ def main() -> int:
             args.throttle_file,
             args.request_min_interval,
             args.retry_max_delay,
+            args.backend,
+            args.s3_account_id,
+            args.s3_access_key_id,
+            args.s3_secret_access_key,
+            args.s3_endpoint,
         ) else 0
     if not args.upload:
         return 0
@@ -591,6 +820,11 @@ def main() -> int:
         args.throttle_file,
         args.request_min_interval,
         args.retry_max_delay,
+        args.backend,
+        args.s3_account_id,
+        args.s3_access_key_id,
+        args.s3_secret_access_key,
+        args.s3_endpoint,
     ) else 0
 
 

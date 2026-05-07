@@ -56,6 +56,7 @@ Date: 2026-05-07
 - RAW/DNG/NEF originals stay local/off-cloud; private R2 is for developed masters and delivery artifacts, not RAW originals.
 - Hidden is a blacklist/review state; future public R2 syncs skip hidden IDs.
 - The classified-Unknown public R2 cleanup script exists for the one-off/recovery case where old Unknown public keys must be moved to their newly classified country keys after upload.
+- `scripts/sync_r2_media.py` now has an optional `--backend s3` path for R2 uploads/deletes when Wrangler OAuth is unreliable, while keeping `wrangler` as the default backend.
 
 ## Verification
 

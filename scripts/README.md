@@ -176,6 +176,24 @@ python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-
 
 The uploader also retries transient Wrangler failures with longer backoff. If Wrangler reports `Invalid access token`, run `npx wrangler whoami` or `npx wrangler login`, then rerun the same resume command.
 
+If Wrangler auth keeps failing, `sync_r2_media.py` can write through Cloudflare R2's S3-compatible API instead:
+
+```bash
+export R2_ACCOUNT_ID="..."
+export R2_ACCESS_KEY_ID="..."
+export R2_SECRET_ACCESS_KEY="..."
+
+python3 scripts/sync_r2_media.py \
+  --scope public \
+  --include-reserve \
+  --backend s3 \
+  --upload \
+  --workers 2 \
+  --request-min-interval 1.5
+```
+
+The S3 backend uses Python stdlib SigV4 signing and does not need Wrangler login state. Keep the same one-lane rule and start with a small `--limit 1` upload if credentials or bucket permissions were just created. Dry runs do not require credentials because they only build the local inventory.
+
 After the public bucket contains only final baked-watermark previews and public access is enabled through an R2 dev URL or custom domain, put that URL in `media-config.js` as `publicBaseUrl`. Public pages can also be tested temporarily with `?mediaBase=https://example.invalid/path`; use `?mediaBase=local` to clear the stored override.
 
 ## Classified Unknown Public R2 Cleanup

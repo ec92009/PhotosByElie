@@ -1,6 +1,8 @@
 .playwright-mcp/
 .wrangler/
 .DS_Store
+__pycache__/
+*.pyc
 
 # Local/generated photo workspaces.
 # assets/expo is publishable and tracked. Reserve and Hidden are local vault states.

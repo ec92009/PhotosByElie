@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v66.49`
+- Current visible version: `v67.1`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -31,6 +31,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `basket.js`: basket rendering, item removal, resolution reselection, and sticky total updates
 - `liked.js`: liked page rendering, unlike actions, and resolution selection into the basket
 - `media-config.js`: public-media base URL configuration for GitHub Pages/R2 preview delivery
+- `worker/`: mockable Cloudflare Worker-track checkout and fulfillment prototype
 - `shared.css`: copied from the By Elie visual system
 - `styles.css`: copied By Elie animation overrides
 - `photos.css`: photo-specific layout and carousel styles
@@ -104,3 +105,15 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The generated order email includes a per-photo review with selected products, source confidence, review links, S&H add/discount lines, and subtotals.
 - In the basket, unchecking every resolution keeps the photo row available for later reselection; only Remove deletes it.
 - Adding the same photo twice does not create a duplicate charge line; one photo maps to one basket row.
+
+## Worker Checkout Track
+
+`worker/checkout-worker.mjs` is the first implementation of the trusted checkout/fulfillment track, with Stripe mocked for now. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, ZIP delivery metadata, and signed-link-style download tokens. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, then waits for a paid webhook before marking delivery ready.
+
+Run the Worker tests from the repo root:
+
+```bash
+node --test worker/checkout-worker.test.mjs
+```
+
+See `worker/README.md` for route examples and the current mock Stripe flow.

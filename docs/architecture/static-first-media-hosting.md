@@ -135,6 +135,34 @@ Optional private service
 
 This avoids using GitHub as a media vault while preserving the simplicity of a mostly static public website.
 
+## Checkout Track
+
+The buyer-facing basket can stay static, but paid delivery needs a trusted Worker track:
+
+```text
+Browser basket
+  sends selected photo IDs, products, checkout mode, and buyer email
+
+Worker
+  validates the basket against the catalog
+  creates the order ID and USD amount
+  creates a Stripe Checkout Session
+  stores the basket snapshot and expected amount
+
+Stripe
+  handles card/payment UI and sends a signed paid webhook
+
+Worker
+  verifies the webhook, order ID, amount, and currency
+  creates or queues the delivery ZIP
+  stores the ZIP under the order ID in private R2
+  issues a signed download link or order-portal link
+```
+
+The browser is never the source of truth for fulfillment. Stripe confirms payment; the Worker decides what the payment unlocks. V1 uses USD only, guest checkout first, and optional account checkout later.
+
+The first code version lives in `worker/` and uses mock Stripe plus in-memory storage so the order state machine can be tested before real Cloudflare/Stripe credentials are introduced.
+
 ## References
 
 - GitHub Pages limits: https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits

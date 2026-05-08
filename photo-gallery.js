@@ -10,8 +10,10 @@ const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
 const densityKey = "photosbyelie-gallery-columns";
+const fitModeKey = "photosbyelie-gallery-fit-mode";
 let densityInput = null;
 let densityValue = null;
+let fitModeButtons = [];
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const diversityBucketMinutes = 10;
@@ -21,6 +23,7 @@ const defaultFilterState = {
   subject: "all",
   sort: "newest"
 };
+const persistedFilterKeys = ["orientation", "mood", "subject"];
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
@@ -55,7 +58,11 @@ window.addEventListener("photosbyelie:inputmodechange", () => {
 
 const readFilterState = () => {
   try {
-    return { ...defaultFilterState, ...JSON.parse(localStorage.getItem(filterStateKey) || "{}") };
+    const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
+    const persistedState = Object.fromEntries(
+      persistedFilterKeys.map((key) => [key, savedState[key] || defaultFilterState[key]])
+    );
+    return { ...defaultFilterState, ...persistedState };
   } catch {
     return { ...defaultFilterState };
   }
@@ -64,7 +71,10 @@ const readFilterState = () => {
 let filterState = readFilterState();
 
 const writeFilterState = () => {
-  localStorage.setItem(filterStateKey, JSON.stringify(filterState));
+  const persistedState = Object.fromEntries(
+    persistedFilterKeys.map((key) => [key, filterState[key] || defaultFilterState[key]])
+  );
+  localStorage.setItem(filterStateKey, JSON.stringify(persistedState));
 };
 
 const writeDetailSequenceContext = (photos) => {
@@ -360,6 +370,11 @@ const setGalleryStatus = (message) => {
 };
 
 const maxDensityColumns = () => {
+  if (window.matchMedia("(max-width:760px)").matches) return 3;
+  return 10;
+};
+
+const defaultDensityColumns = () => {
   if (window.matchMedia("(min-width:1520px)").matches) return 8;
   if (window.matchMedia("(min-width:1120px)").matches) return 6;
   if (window.matchMedia("(min-width:860px)").matches) return 4;
@@ -367,17 +382,48 @@ const maxDensityColumns = () => {
   return 2;
 };
 
+const clampDensityColumns = (columns) => {
+  const numericColumns = Number(columns);
+  return Math.min(
+    Math.max(Number.isFinite(numericColumns) ? numericColumns : defaultDensityColumns(), 1),
+    maxDensityColumns()
+  );
+};
+
 const preferredDensityColumns = () => {
   const savedValue = Number(localStorage.getItem(densityKey));
-  return Number.isInteger(savedValue) && savedValue >= 2 ? savedValue : maxDensityColumns();
+  return clampDensityColumns(Number.isInteger(savedValue) ? savedValue : defaultDensityColumns());
 };
 
 const applyGalleryDensity = () => {
-  if (!galleryRoot || !localModerationEnabled) return;
-  const columns = Math.min(preferredDensityColumns(), maxDensityColumns());
+  if (!galleryRoot) return;
+  const columns = preferredDensityColumns();
   galleryRoot.style.setProperty("--gallery-zoom-columns", String(columns));
-  if (densityInput) densityInput.value = String(columns);
+  if (densityInput) {
+    densityInput.max = String(maxDensityColumns());
+    densityInput.value = String(columns);
+  }
   if (densityValue) densityValue.textContent = `${columns}`;
+};
+
+const preferredFitMode = () => (
+  localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit"
+);
+
+let fitMode = preferredFitMode();
+
+const applyGalleryFitMode = () => {
+  if (!galleryRoot) return;
+  galleryRoot.dataset.imageFit = fitMode;
+  fitModeButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.galleryFitMode === fitMode ? "true" : "false");
+  });
+};
+
+const photoAspectRatioStyle = (photo) => {
+  const dimensions = previewDimensions(photo);
+  if (!dimensions?.width || !dimensions?.height) return "";
+  return ` style="--photo-aspect-ratio:${dimensions.width} / ${dimensions.height}"`;
 };
 
 const renderGallery = () => {
@@ -423,6 +469,7 @@ const renderGallery = () => {
         href="${hrefAttr}"
         data-photo-link
         aria-label="Open ${title}"
+        ${photoAspectRatioStyle(photo)}
       >
         ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : ""}
         ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
@@ -446,6 +493,7 @@ const renderGallery = () => {
   }
   window.photosByElieVersionInternalLinks?.(galleryRoot);
   applyGalleryDensity();
+  applyGalleryFitMode();
   updateSelection();
   const filterStatus = activeFilterCount() ? `Showing ${photos.length} of ${allPhotos.length} after filters.` : `Showing ${photos.length} photos.`;
   if (localModerationEnabled) {
@@ -471,29 +519,48 @@ if (galleryRoot && gallery) {
   ensureGalleryKeyboardHint();
   renderGallery();
 
-  if (localModerationEnabled) {
-    if (galleryActions) {
-      const densityControl = document.createElement("label");
-      densityControl.className = "gallery-density-control";
-      densityControl.innerHTML = `
-        <span>Grid</span>
-        <input type="range" min="2" max="8" step="1" value="${Math.min(preferredDensityColumns(), maxDensityColumns())}" data-gallery-density/>
-        <b data-gallery-density-value>${Math.min(preferredDensityColumns(), maxDensityColumns())}</b>
-      `;
-      galleryActions.prepend(densityControl);
-      densityInput = densityControl.querySelector("[data-gallery-density]");
-      densityValue = densityControl.querySelector("[data-gallery-density-value]");
-      densityInput.addEventListener("input", () => {
-        localStorage.setItem(densityKey, densityInput.value);
-        applyGalleryDensity();
-        updateSelection();
-      });
-      window.addEventListener("resize", () => {
-        applyGalleryDensity();
-        updateSelection();
-      });
+  if (galleryActions) {
+    const densityControl = document.createElement("label");
+    densityControl.className = "gallery-density-control";
+    densityControl.innerHTML = `
+      <span>Grid</span>
+      <input type="range" min="1" max="${maxDensityColumns()}" step="1" value="${preferredDensityColumns()}" data-gallery-density/>
+      <b data-gallery-density-value>${preferredDensityColumns()}</b>
+    `;
+    const fitControl = document.createElement("div");
+    fitControl.className = "gallery-fit-control";
+    fitControl.setAttribute("role", "group");
+    fitControl.setAttribute("aria-label", "Gallery image fit");
+    fitControl.innerHTML = `
+      <button type="button" data-gallery-fit-mode="fit" aria-pressed="true">Fit</button>
+      <button type="button" data-gallery-fit-mode="fill" aria-pressed="false">Fill</button>
+    `;
+    galleryActions.prepend(densityControl, fitControl);
+    densityInput = densityControl.querySelector("[data-gallery-density]");
+    densityValue = densityControl.querySelector("[data-gallery-density-value]");
+    fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
+    densityInput.addEventListener("input", () => {
+      localStorage.setItem(densityKey, String(clampDensityColumns(densityInput.value)));
       applyGalleryDensity();
-    }
+      updateSelection();
+    });
+    fitControl.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-gallery-fit-mode]");
+      if (!button) return;
+      fitMode = button.dataset.galleryFitMode === "fill" ? "fill" : "fit";
+      localStorage.setItem(fitModeKey, fitMode);
+      applyGalleryFitMode();
+      updateSelection();
+    });
+    window.addEventListener("resize", () => {
+      applyGalleryDensity();
+      updateSelection();
+    });
+    applyGalleryDensity();
+    applyGalleryFitMode();
+  }
+
+  if (localModerationEnabled) {
     window.addEventListener("keydown", async (event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;

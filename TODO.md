@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.17`.
+- Local visible build: `v67.18`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -19,7 +19,7 @@ Last updated: 2026-05-08
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
 - Public mock checkout Worker is live at `https://photosbyelie-checkout-mock.ec92009.workers.dev`, backed by Cloudflare KV plus private R2.
-- The public site config points checkout to the deployed Worker as of `v67.11`; current UI/copy/media-key fixes are published through `v67.17`.
+- The public site config points checkout to the deployed Worker as of `v67.11`; current UI/copy/media-key fixes are published through `v67.18`.
 - Public previews are temporarily served through `https://photosbyelie-checkout-mock.ec92009.workers.dev/media/...`, backed by `photosbyelie-public`.
 - Public preview keys are moving to a country-free R2 shape: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`. Original gallery/country provenance is preserved in `assets/media-sidecar.json`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`; the Worker generated `deliveries/photosbyelie-order-PBE-20260508-D054362044.zip` in private R2 and returned a valid ZIP download.

@@ -21,8 +21,11 @@ const hasFlag = (name) => args.includes(name);
 const bucket = valueFor("--bucket", "photosbyelie-private");
 const limit = Number(valueFor("--limit", "0")) || 0;
 const commitEvery = Number(valueFor("--commit-every", "0")) || 0;
+const requestTimeoutMs = Number(valueFor("--request-timeout-ms", "180000")) || 180000;
+const retries = Number(valueFor("--retries", "4")) || 0;
 const push = hasFlag("--push");
 const dryRun = hasFlag("--dry-run");
+const refreshOnly = hasFlag("--refresh-only");
 const manifestPath = valueFor("--manifest", "assets/private-delivery-manifest.json");
 const statePath = valueFor("--state-file", ".review-logs/private-deliverable-sync-state.jsonl");
 const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-public-preview-ids.json");
@@ -62,7 +65,9 @@ const s3SigningKey = (secretKey, datestamp) => {
   return hmac(serviceKey, "aws4_request");
 };
 
-const s3Request = async (method, key, body = Buffer.alloc(0), contentType = "", query = "") => {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const s3RequestOnce = async (method, key, body = Buffer.alloc(0), contentType = "", query = "") => {
   const objectPath = `${bucket}${key ? `/${key}` : ""}`;
   const payloadHash = sha256(body);
   const now = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
@@ -84,12 +89,38 @@ const s3Request = async (method, key, body = Buffer.alloc(0), contentType = "", 
   const requestHeaders = Object.fromEntries(Object.entries(headers).filter(([name]) => name !== "host"));
   requestHeaders.Authorization = `AWS4-HMAC-SHA256 Credential=${credentials.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   const url = `https://${host}${canonicalPath}${query ? `?${query}` : ""}`;
-  const response = await fetch(url, { method, headers: requestHeaders, body: method === "PUT" ? body : undefined });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers: requestHeaders,
+      body: method === "PUT" ? body : undefined,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`${method} ${bucket}/${key}: HTTP ${response.status} ${text}`.trim());
   }
   return response;
+};
+
+const s3Request = async (method, key, body = Buffer.alloc(0), contentType = "", query = "") => {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await s3RequestOnce(method, key, body, contentType, query);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries) break;
+      await sleep(Math.min(60_000, 1500 * (2 ** attempt)));
+    }
+  }
+  throw lastError;
 };
 
 const queryString = (params) => Object.entries(params)
@@ -306,6 +337,10 @@ const inventory = await loadPrivateInventory();
 const publicIdsPayload = await readJson(publicPreviewIdsPath, {});
 let manifest = await buildManifest(inventory, publicIdsPayload);
 await writeJson(manifestPath, manifest);
+if (refreshOnly) {
+  console.log(`Refreshed ${manifestPath}: ${manifest.privateRenderTripletPhotoIds} complete private render triplets.`);
+  process.exit(0);
+}
 const rememberInventoryKey = (kind, key) => {
   const field = kind === "master" ? "masterKeys" : "renderKeys";
   if (!Array.isArray(inventory[field])) inventory[field] = [];
@@ -355,7 +390,8 @@ for (const record of Object.values(manifest.records)) {
     if (!dryRun) {
       inventory.generatedAt = new Date().toISOString();
       await writeJson(privateInventoryPath, inventory);
-      await writeJson(manifestPath, { ...manifest, updatedAt: new Date().toISOString() });
+      manifest = await buildManifest(inventory, publicIdsPayload);
+      await writeJson(manifestPath, manifest);
       await maybeCommit(processed.length);
     }
     console.log(`${processed.length}: ${record.id} ${dryRun ? "would upload" : "uploaded"} ${uploadedKeys.length}`);

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v67.11`
+- Current visible version: `v67.25`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -17,11 +17,11 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
-- `owner.html`: localhost-only owner controls for live review actions, optional Review Snapshot export, Unknown classification, Hidden review, and the Expo cap
+- `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Hidden review, metadata sync, and R2 maintenance
 - `hidden.html`: localhost-only review surface for hidden photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
-- `hidden-actions.js`: localhost-only live review action store for Hidden blacklist changes, undo, Expo cap, and owner assignment state
+- `hidden-actions.js`: localhost-only live review action store for Hidden blacklist changes, undo, and owner assignment state
 - `hidden-store.js`: localhost-only loader for the ignored Hidden catalog used by Hidden review and hidden-photo detail pages
 - `hidden-page.js`: localhost-only Hidden review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
@@ -57,10 +57,10 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
 - Public previews currently resolve through the deployed Worker `/media/...` route backed by `photosbyelie-public`; move `publicBaseUrl` to an R2 custom domain when that is attached.
 - `assets/expo` can stay empty or local-only once the public R2 bucket has the baked-watermark previews; use `node scripts/validate_publish.js --external-media` for that publishing mode.
-- R2 media uploads should run one lane at a time. Public previews go first so the visible site improves; private masters follow only after public finishes. The upload journal in `.review-logs/r2-upload-state.jsonl` makes interrupted runs resumable.
-- Public R2 sync skips IDs from `assets/hidden/hidden-blacklist.json`, so hidden photos are not reintroduced by later bulk preview uploads.
+- R2 media uploads should run through the lock-guarded sweep wrapper, `scripts/run_cloud_media_sweep.zsh`, or otherwise one lane at a time. The wrapper uses `.review-logs/cloud-media-sweep.lock` so the daily automation and manual runs do not race each other.
+- Public R2 sync and Saturn imports skip IDs from the hidden/discard tombstones, so owner-discarded photos are not reintroduced by later bulk uploads.
 - Local preview files may still live in `assets/reserve` as a compatibility cache, but Reserve is no longer a user-facing review state. Hidden is a blacklist/review list, not a file location.
-- Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, infer country/AI/Unknown buckets, and write watermarked `*_900.jpg` and `*_1800.jpg` pairs into the local preview cache. RAW/DNG/NEF files stay owner-local until Elie exports developed masters.
+- Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, infer country/AI/Unknown buckets, and write watermarked `*_900.jpg` and `*_1800.jpg` pairs into the local preview cache. RAW/DNG/NEF files are not public-site or cloud-storage inputs.
 - On localhost, `H` hides a live-gallery photo by adding it to the hidden blacklist while leaving preview files in place, `U` undoes that hide, and `P` on the Hidden page re-promotes a hidden photo by removing it from the blacklist.
 - On localhost detail pages, Owner can edit Title and Keywords; saves update the catalog metadata, local preview JPEGs, and the original source export when it can be resolved from `sourceFiles`.
 - Metadata saves queue a quiet background R2 sync for changed previews/source masters; hidden photos do not re-upload public preview objects while they are blacklisted.
@@ -77,8 +77,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Gallery and Owner review cards can show a small `RAW` overlay when legacy/local metadata identifies a DNG/NEF/other raw original, but RAW-origin previews are not eligible for Expo or public media upload.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
-- Review snapshot exports include the current Owner-selected Expo cap for audit paths and emergency batch rebuilds, but the preferred workflow is live localhost review.
-- `scripts/export_photos_data.py --expo-cap N` regenerates `photos-data.js` and syncs the publishable Expo asset set under `assets/expo` up to that maximum.
+- The Expo cap is retired. The exporter now publishes all eligible cloud-backed previews unless they are hidden/discarded or otherwise ineligible.
+- `scripts/export_photos_data.py --external-media` regenerates `photos-data.js` from the local import manifest and tracked owner state without committing preview JPGs.
 - The basket is the source of truth for selected product options.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.
@@ -101,6 +101,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the configured mock checkout Worker for guest checkout. Public `v67.11` points to `https://photosbyelie-checkout-mock.ec92009.workers.dev`; local testing can override with `?workerBase=http://localhost:8787`. After simulated payment, buyers land on `order.html` with order status, a ZIP download button, a visible local/cloud delivery reference, and a copy-path fallback for app browsers that hide attachment downloads.
 - The order page shows explicit payment, ZIP build, and download phases; cloud delivery failures are shown as blocked delivery instead of indefinite preparation.
 - The checkout Worker expects JPG 6 MP, 3 MP, and 1 MP buyer deliverables to exist in private R2 under `renders/...`; those unwatermarked files are generated by the media pipeline on the machine that owns the developed masters and reused for future ZIPs.
+- `assets/private-delivery-manifest.json` tracks private master/render coverage for catalog photos.
+- `assets/discarded-media-manifest.json` tracks owner-discarded tombstones and R2 object cleanup so deleted photos do not return from future Saturn scans.
 - Product choices now include digital files and physical prints at 4 x 6, 5 x 7, 8 x 10, and 11 x 14 inches.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, plain white, or plain black. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.

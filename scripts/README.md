@@ -145,7 +145,15 @@ node scripts/validate_publish.js --summary
 - private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
 - unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker only zips them after payment
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
-- IDs listed in `assets/hidden/hidden-blacklist.json` are skipped for public preview uploads; private developed masters are left alone unless an explicit Owner wipe action deletes public previews from R2
+- IDs listed in owner discard tombstones are skipped for import/upload and should be deleted from public and private R2 by `delete_discarded_r2_media.mjs`; the tombstone stays tracked so Saturn scans do not resurrect discarded photos
+
+For the normal daily/manual sweep, prefer the lock-guarded wrapper:
+
+```bash
+zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
+```
+
+The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera and Leonardo developed sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
 
 Dry-run the currently publishable Expo previews:
 
@@ -189,6 +197,20 @@ python3 scripts/build_lightroom_thumbnails.py \
   --r2-upload private \
   --r2-private-renders
 ```
+
+For private render backfill against the current catalog and tracked private-delivery manifest:
+
+```bash
+node scripts/sync_private_deliverables.mjs --commit-every 100 --push
+```
+
+For owner-discard cleanup:
+
+```bash
+node scripts/delete_discarded_r2_media.mjs --delete
+```
+
+That command deletes matching public previews, private masters, and private JPG render objects from R2, then writes `assets/discarded-media-manifest.json` as the durable do-not-resurrect record.
 
 For an already-published photo, render/upload just its private JPG deliverables:
 

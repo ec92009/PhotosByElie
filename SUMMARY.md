@@ -4,96 +4,74 @@ Date: 2026-05-08
 
 ## Current State
 
-- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build in `VERSION`: `v67.11`
-- Local `main` has the public mock checkout deploy/config work in progress and should be committed/pushed after verification.
-- GitHub Pages should serve `v67.11` after the latest `main` push finishes deploying.
-- Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
-- GitHub should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should stay out of Git and live in R2/CDN.
-- `scripts/cleanup_classified_unknowns_public_r2.py` is being kept as a tracked recovery utility rather than archived.
-- Estimated idle Cloudflare cost remains roughly `$1.37/month` if the current private/public R2 storage sits for a full month with no traffic or recurring Worker jobs. Future cost callouts should happen after massive uploads and before/when starting recurring Worker tasks, not on a calendar automation.
+- Current visible build: `v67.25`
+- Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,123` catalog photos.
+- Current catalog counts: France `320`, USA `160`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
+- Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
+- Country, provenance, legacy key references, private master keys, and private render keys live in tracked metadata, especially `assets/media-sidecar.json`.
+- Private delivery manifest is tracked at `assets/private-delivery-manifest.json`; current counts are `10,151` private master photo IDs and `624` complete private JPG 1/3/6 MP render triplets.
+- Discarded-media tombstones are tracked at `assets/discarded-media-manifest.json`. Current discarded count is `18` photo IDs; those IDs are banned from re-import and their R2 objects are deleted for cost control.
+- A long cloud media sweep is currently running via `scripts/run_cloud_media_sweep.zsh --push` under `.review-logs/cloud-media-sweep.lock`. The scheduled automation uses the same lock and will exit if this run is still alive.
 
-## Architecture Decisions From This Session
+## Media Contract
 
-- Checkout is split into two tracks:
-  - **Stripe track:** payment UI, card handling, receipt, and payment confirmation.
-  - **Worker track:** order truth, basket validation, expected amount, delivery contents, ZIP creation/metadata, signed download links, and order lookup.
-- Stripe is not the order brain. The Worker creates an order draft, asks Stripe to collect payment for that order, then waits for the paid webhook.
-- The Stripe webhook returns payment facts such as Checkout Session ID, order reference, buyer email, amount, currency, payment status, and PaymentIntent ID.
-- The Worker already knows what to ZIP because it stored the basket snapshot before creating the Stripe Checkout Session.
-- V1 checkout currency is USD only. The UI can note that buyers’ banks may convert charges locally; multi-currency display is deferred.
-- Guest checkout is the first real paid flow. Account checkout remains optional and should be framed as a convenience for saved orders/re-downloads.
-- Stripe receipts should not be treated as the delivery email. They can mention the order number and order-portal URL, while PhotosByElie/Worker controls actual delivery links.
-- Repo-root cleanup is a backburner item: keep root HTML files for now, but later consider a clearer `site/` or `public/` structure once R2/checkout stabilizes.
+- Public previews are watermarked and public.
+- Buyer deliverables are private and unwatermarked.
+- Private developed sources are stored under `photosbyelie-private/masters/<photo-id>/<original-file>`.
+- Private buyer JPG deliverables are stored under:
+  - `renders/<photo-id>/<original-file>-jpg-6mp.jpg`
+  - `renders/<photo-id>/<original-file>-jpg-3mp.jpg`
+  - `renders/<photo-id>/<original-file>-jpg-1mp.jpg`
+- RAW files are out of scope for public display and cloud storage. The working rule is developed sources only.
+- Saturn is the steady-state source of truth for new developed photos. The catalog is a repair/backfill input only when the repo and cloud are temporarily out of sync.
+- Camera imports scan `/Volumes/Saturn/Pictures/LR/Camera`.
+- Leonardo/AI imports scan `/Volumes/Saturn/Pictures/LR/_All Leonardo`.
+- Owner-hidden/discarded photos are tombstoned: delete their R2 bytes, keep their IDs as permanent do-not-resurrect records.
 
-## Worker Prototype
+## Automation
 
-- Added `worker/checkout-worker.mjs` as a mockable Cloudflare Worker-track implementation.
-- Added `worker/mock-stripe.mjs` for fake Checkout Session creation, mock paid events, and mock webhook signature handling.
-- Added `worker/memory-store.mjs` as in-memory order/download storage for local tests.
-- Added `worker/local-server.mjs` and `worker/local-zip-delivery.mjs` for local end-to-end mock checkout with real ZIP files written under `deliveries/`.
-- Added `worker/deployed-worker.mjs`, `worker/kv-store.mjs`, `worker/r2-zip-delivery.mjs`, `worker/zip-utils.mjs`, and `wrangler.toml` scaffolding for public mock checkout against Cloudflare KV plus private R2.
-- Added `worker/photos-catalog.generated.mjs` so the deployed Worker can load the public catalog without browser globals.
-- Added `order.html` / `order.js` for buyer-facing mock order status, `Download ZIP`, `Copy ZIP path`, and a visible Local ZIP fallback path.
-- Added `worker/checkout-worker.test.mjs` covering:
-  - guest checkout creates a pending order and mock Stripe session
-  - mock paid event moves the order to `ready`
-  - amount mismatch webhooks are rejected
-  - download tokens return mock signed R2 URLs and rate-limit repeat downloads
-  - local ZIP delivery creates a real ZIP from the preview fallback
-  - deployed Worker mock checkout writes a ZIP to fake private R2 and downloads it as `application/zip`
-- Added `worker/README.md` with route examples and the current mock flow.
-- Worker routes currently include `/health`, `/checkout/guest`, `/checkout/account`, `/stripe-webhook`, `/mock-stripe/pay`, `/orders/:orderId`, and `/download/:token`.
-- The local server additionally serves `/download-order/:orderId` as an order-ID based ZIP attachment route so already-generated mock ZIP files remain downloadable after an in-memory Worker restart.
-- The in-app browser did not visibly surface attachment downloads, so the order page now makes the generated ZIP path explicit and offers a copy button. Safari downloads the ZIP correctly, so this is a built-in browser limitation rather than a product download failure. For order `PBE-20260508-DF50ABD9A9`, the verified local ZIP was `/Users/ecohen/Dev/PhotosByElie/deliveries/photosbyelie-order-PBE-20260508-DF50ABD9A9.zip`.
-- Public mock checkout is wired to the deployed Worker at `https://photosbyelie-checkout-mock.ec92009.workers.dev`.
-- The Cloudflare Worker uses real KV namespace ids in `wrangler.toml`, private R2 for developed-master reads, and the same private bucket for generated mock delivery ZIPs.
-- Public preview media is temporarily bridged through the Worker at `/media/...`, backed by the `photosbyelie-public` R2 bucket, so GitHub Pages can render thumbnails before an R2 custom domain exists.
-- The R2 ZIP adapter passes `full` products through unchanged and expects JPG 6/3/1 MP buyer deliverables to already exist in private R2 under `renders/...`.
-- Generated JPG deliverables are unwatermarked buyer files; they must be generated/uploaded by the media pipeline on David, where the developed masters live, and are reused for future ZIPs.
-- The order page now labels phases explicitly as payment, ZIP build, and download. Delivery-generation failures persist as `delivery_failed` and display their Worker error instead of staying stuck as `preparing`.
-- Wrangler can authenticate with the Cloudflare environment variables exported from `~/.zshrc`.
-- First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`: guest checkout, mock Stripe payment, private R2 ZIP creation, and `/download/:token` returning `application/zip` with valid ZIP magic.
-- Mixed full/JPG 6/3/1 MP cloud checkout was verified by API with order `PBE-20260508-1D7B1CF611` after pre-rendering one test photo's private JPG deliverables; the ZIP returned `application/zip`, valid `PK` bytes, and was about 4.5 MB.
+- Automation: `photosbyelie-daily-cloud-media-sweep`
+- Schedule: daily at 03:30 local automation time.
+- It runs `zsh -lc './scripts/run_cloud_media_sweep.zsh --push'` so credentials from `~/.zshrc` are available.
+- The wrapper uses `.review-logs/cloud-media-sweep.lock`; if a prior sweep is active, the scheduled run exits without starting a second uploader.
+- The sweep:
+  1. Pulls latest `main`.
+  2. Deletes R2 media for discarded tombstones.
+  3. Scans Saturn Camera and Leonardo developed-source folders.
+  4. Imports/uploads only non-discarded candidates.
+  5. Regenerates `photos-data.js`, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
+  6. Backfills missing private 1/3/6 MP render triplets.
+  7. Deletes discarded R2 media again.
+  8. Runs `npm test` and `npm run validate`.
+  9. Commits and pushes tracked metadata/code checkpoints.
 
-## PDF / Infographic Work
+## Recent Decisions
 
-- Checked `docs/architecture/infographics/photosbyelie-architecture-infographics.pdf`; it opened as a 7-page image-based PDF.
-- Found page 4 had a text-overlap issue in the Cloudflare R2 checklist card; not fixed yet.
-- Added `docs/architecture/infographics/08-guest-checkout-msc.png`, an MSC-style page showing Buyer Browser, Auth/Account, Worker API, Stripe Checkout, Private R2, and Email Service.
-- Rebuilt `docs/architecture/infographics/photosbyelie-architecture-infographics.pdf` as an 8-page PDF and verified the in-app browser shows `1 / 8` with the new MSC page in the thumbnail rail.
-
-## Media / R2 State
-
-- Public watermarked previews still need to finish uploading to R2 and be verified directly.
-- Private developed masters should upload only after the public lane finishes.
-- Public media should remain baked-watermark previews only.
-- RAW/DNG/NEF originals stay local/off-cloud; private R2 is for developed masters and delivery artifacts, not RAW originals.
-- Hidden is a blacklist/review state; future public R2 syncs skip hidden IDs.
-- The classified-Unknown public R2 cleanup script exists for the one-off/recovery case where old Unknown public keys must be moved to their newly classified country keys after upload.
-- `scripts/sync_r2_media.py` now has an optional `--backend s3` path for R2 uploads/deletes when Wrangler OAuth is unreliable, while keeping `wrangler` as the default backend.
+- Reserve is no longer a product/review concept. `assets/reserve` is only an ignored local preview/import cache.
+- The old Expo cap is retired. The public catalog should include all eligible cloud-backed previews unless a photo is hidden/discarded or otherwise ineligible.
+- Discard is stronger than hide: discarded photos should disappear from paid storage while their tombstone remains tracked.
+- Large R2 operations should be resumable, one active sweep at a time, and checkpointed through Git.
+- Owner account, user accounts, and real payment are the next product discussion. Guest checkout remains the first payment path.
 
 ## Verification
 
-- `node --test worker/checkout-worker.test.mjs` passed.
-- `node --check` passed for all new Worker modules/tests.
-- `node scripts/validate_publish.js --external-media` passed.
-- Local download verification returned `application/zip` with valid ZIP magic `PK`.
-- Deployed Worker adapter test returned `application/zip` from fake private R2 with valid ZIP magic `PK`.
+- `npm test` passed after the sweep/automation tooling changes.
+- `npm run validate` passed in external media mode.
+- The private delivery sync probe uploaded live private render triplets and moved the manifest count upward before the automation wrapper was added.
+- Discard cleanup deleted the current discarded public preview objects from R2 and recorded the tombstones in `assets/discarded-media-manifest.json`.
 
-## Backlog Snapshot
+## Fresh Backlog
 
-The living backlog is in `TODO.md`. Highest-priority work now centers on:
-
-1. Finish and verify public R2 preview upload.
-2. Start/verify private R2 master upload after public completes.
-3. Browser-test public mock checkout on GitHub Pages with a mixed full/JPG 6/3/1 MP basket.
-4. Harden the local/public mock checkout UX with browser smoke coverage and clearer unsupported-print states.
-5. Decide production order storage, with KV acceptable for public mock and D1 still likely for production records.
-6. Replace mock Stripe with real Stripe Checkout/webhook calls once Elie’s Stripe account is ready.
-7. Fix the page 4 PDF text collision before treating the infographic deck as final.
-8. Add like/unlike controls directly to collection grid/card views.
-9. Update collection/gallery zoom ranges: 1-10 on wide screens, 1-4 on narrow screens.
-10. Backburner: revisit repo layout and reduce root-file clutter after the active R2/checkout work settles.
+1. **Watch the active cloud media sweep.** Confirm it finishes, commits, pushes, and reports final private render/backfill counts.
+2. **Make discard lifecycle first-class in Owner.** Owner discard should create tombstones, delete public/private R2 bytes, update manifests, and keep the item banned from future Saturn imports.
+3. **Finish private delivery backfill.** Drive private render triplets from `624` to full non-discarded catalog coverage.
+4. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.
+5. **Add user/account model.** Decide guest-only vs optional buyer accounts, then model saved orders and re-download flows.
+6. **Add Owner account/auth.** Protect owner tools beyond localhost-only assumptions before production payment.
+7. **Replace mock Stripe.** Wire real Stripe Checkout and webhook verification behind the existing Worker boundary.
+8. **Make order records durable for production.** Choose D1 vs KV for queryable order state; keep private R2 for delivery ZIPs.
+9. **Harden browser smoke coverage.** Cover gallery controls, basket, checkout, order status, Owner hide/discard, and Unknown assignment.
+10. **Repair architecture artifacts.** Fix the known page 4 text collision and refresh diagrams once account/payment decisions settle.

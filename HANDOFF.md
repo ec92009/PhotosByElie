@@ -2,22 +2,30 @@
 
 Use this when moving work between Max, David, or the laptop.
 
-## Current Handoff: 2026-05-08 David Pre-Render Checkout
+## Current Handoff: 2026-05-08 Cloud Media Sweep
 
-- GitHub sync point: latest `main` commit titled `photosbyelie: prepare private render checkout handoff`.
-- Current visible build in `VERSION`: `v67.21`.
+- Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Public catalog validates in external media mode with 506 photos: AI 100, France 101, Portugal 100, Spain 102, USA 100, Slovakia 2, Mexico 1.
-- Git carries code, docs, generated metadata, worker prototype, architecture artifacts, and tiny shared assets. Public preview JPGs remain out of Git.
-- David owns the developed files. Do not run import/private render generation from this Mac unless the developed source roots are mounted and verified.
+- Current visible build: `v67.25`
+- Public catalog: `10,123` eligible cloud-backed photos.
+- Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
+- Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
+- Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
+- RAW files are not public-site or cloud-storage inputs.
+- Saturn developed-source folders are the steady-state upstream:
+  - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
+  - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
+- Owner-discarded photos are tombstoned and must not be re-imported from Saturn.
 
-## First Commands On The Laptop
+## First Commands On A Machine
 
 ```bash
-cd /Users/ecohen/Dev/PhotosByElie
+cd /Users/ecohen/Dev/photosByElie
 git pull --ff-only origin main
-node scripts/validate_publish.js --external-media --summary
+npm install
+npm test
+npm run validate
 python3 scripts/local_server.py 8000
 ```
 
@@ -28,83 +36,95 @@ http://localhost:8000/
 http://localhost:8000/owner.html
 ```
 
-If the laptop checkout path is lower-case instead, use:
+If the checkout path is upper-case on a machine, use:
 
 ```bash
-cd /Users/ecohen/Dev/photosByElie
+cd /Users/ecohen/Dev/PhotosByElie
 ```
 
-## Current Priority
+## Active Sweep / Automation
 
-1. Keep new public imports in parity: private master first, private JPG 6/3/1 MP renders next, then public watermarked previews.
-2. Verify mixed checkout can ZIP Full + JPG 6 MP + JPG 3 MP + JPG 1 MP from private R2 for newly added public photos.
-3. Keep checkout USD-only and guest-first.
-4. Move public preview delivery from the Worker `/media/...` bridge to an R2 custom domain later.
-5. Fix the page 4 text collision in the architecture PDF when the infographic deck matters again.
-
-## R2 / Media State
-
-- Public R2 upload originally failed through Wrangler because of OAuth/token errors.
-- `scripts/sync_r2_media.py` now supports `--backend s3` as a fallback to Wrangler.
-- Public S3 recovery logs:
-  - `.review-logs/r2-public-s3-upload-20260507-203343.log`
-  - `.review-logs/r2-public-s3-live-missing-fix-20260507-210437.log`
-- The live-missing fix log reports:
-  - live public objects before fix: 19,090
-  - active public inventory: 20,274
-  - missing objects re-uploaded: 1,213
-  - failed count: 0
-- Private S3 upload log:
-  - `.review-logs/r2-private-s3-upload-20260507-143913.log`
-  - final progress line shows `3890/3890 failed=1`.
-- No tmux R2 upload sessions were running on the desktop at handoff time.
-- `.review-logs/` is ignored by Git, so these logs may need machine-to-machine sync if you need exact local state on the laptop.
-
-Useful S3 backend environment:
+- Daily automation: `photosbyelie-daily-cloud-media-sweep`
+- It runs `zsh -lc './scripts/run_cloud_media_sweep.zsh --push'` so credentials from `~/.zshrc` are available.
+- The wrapper uses `.review-logs/cloud-media-sweep.lock`; if a manual run is still active, the scheduled run exits without starting a second uploader.
+- A manual run can be started with:
 
 ```bash
-export R2_ACCOUNT_ID="..."
-export R2_ACCESS_KEY_ID="..."
-export R2_SECRET_ACCESS_KEY="..."
+zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 ```
 
-Safe dry-run/probe pattern:
+The sweep:
+
+1. Pulls latest `main`.
+2. Deletes discarded public/private R2 media while preserving tombstones.
+3. Scans Saturn Camera and Leonardo developed-source folders.
+4. Imports/uploads only non-discarded candidates.
+5. Regenerates `photos-data.js`, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
+6. Backfills missing private JPG 1/3/6 MP render triplets.
+7. Deletes discarded R2 media again.
+8. Runs tests and validation.
+9. Commits and pushes tracked changes.
+
+## Tracked Media Metadata
+
+- `assets/expo-manifest.json`: public catalog/media manifest.
+- `assets/media-sidecar.json`: provenance and public/private key mapping.
+- `assets/private-delivery-manifest.json`: private master/render coverage.
+- `assets/discarded-media-manifest.json`: owner-discard tombstones and R2 object cleanup record.
+- `assets/owner-actions/country-assignments.jsonl`: append-only Unknown-to-country move log.
+- `assets/owner-actions/country-assignments.json`: latest Unknown-to-country assignment index.
+
+Do not commit:
+
+- `assets/reserve/**`
+- `assets/hidden/**` except tracked manifest/tombstone files already in Git
+- `.review-logs/**`
+- `deliveries/**`
+- secrets or local credentials
+
+## Useful Commands
+
+Regenerate public catalog from current import metadata:
 
 ```bash
-python3 scripts/sync_r2_media.py --scope public --limit 1 --backend s3 --json
-python3 scripts/sync_r2_media.py --scope private --limit 1 --backend s3 --json
+python3 scripts/export_photos_data.py \
+  --selection newest \
+  --external-media \
+  --review-snapshot assets/hidden/hidden-blacklist.json
 ```
 
-Resume private only after confirming no other R2 writer is active:
+Regenerate Worker catalog and media sidecar:
 
 ```bash
-python3 scripts/sync_r2_media.py \
-  --scope private \
-  --backend s3 \
-  --upload \
-  --workers 2 \
-  --request-min-interval 1.5
+node scripts/write_worker_catalog.mjs
+node scripts/write_media_sidecar.mjs
 ```
 
-If classified Unknown objects already exist under old public keys, use the tracked recovery tool only after confirming no upload lane is active:
+Backfill private delivery render triplets:
 
 ```bash
-python3 scripts/cleanup_classified_unknowns_public_r2.py --dry-run
+node scripts/sync_private_deliverables.mjs --commit-every 100 --push
+```
+
+Delete discarded R2 media while preserving tombstones:
+
+```bash
+node scripts/delete_discarded_r2_media.mjs --delete
+```
+
+Run the full cloud media sweep:
+
+```bash
+zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 ```
 
 ## Checkout / Worker State
 
 - Worker prototype lives in `worker/`.
-- Public Worker is live at `https://photosbyelie-checkout-mock.ec92009.workers.dev`.
+- Public mock Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Stripe is mocked for now.
+- Checkout is guest-first and USD-only.
 - Worker owns order ID, buyer email, USD total, basket snapshot, status, delivery ZIP metadata, and mock signed download tokens.
-- Worker now expects low-res buyer JPG deliverables to exist in private R2 before checkout fulfillment:
-  - `renders/<photo-id>/<original-file>-jpg-6mp.jpg`
-  - `renders/<photo-id>/<original-file>-jpg-3mp.jpg`
-  - `renders/<photo-id>/<original-file>-jpg-1mp.jpg`
-- These JPG deliverables are unwatermarked buyer files. They must stay private. The Worker zips them after payment and never serves them from the public `/media/...` route.
-- If a selected JPG render is missing, the Worker records `delivery_failed` with `missing_private_render`; this is intentional until David generates/uploads the render cache.
-- Stripe track remains payment-only: Checkout Session, payment UI, receipt, and paid webhook.
 - Routes currently implemented:
   - `GET /health`
   - `POST /checkout/guest`
@@ -117,91 +137,14 @@ python3 scripts/cleanup_classified_unknowns_public_r2.py --dry-run
 Run Worker checks:
 
 ```bash
-npm install
 npm test
 npm run validate
 ```
 
-David private render commands:
+## Current Priority
 
-```bash
-cd /Users/ecohen/Dev/PhotosByElie
-git pull --ff-only origin main
-
-# For new/imported developed files:
-python3 scripts/build_lightroom_thumbnails.py \
-  --source-root /path/to/developed/files \
-  --r2-upload private \
-  --r2-private-renders
-
-# For already-published specific photos:
-zsh -ic 'node scripts/render_private_deliverables.mjs --photo-id <photo-id>'
-```
-
-For the current mixed-checkout test photo, David should render:
-
-```bash
-zsh -ic 'node scripts/render_private_deliverables.mjs --photo-id 20110106-0604-14854-8e7f792f7e'
-```
-
-The render script now prefers David's local developed masters under mounted Saturn Lightroom roots, such as `/Volumes/Saturn/Pictures/LR/Camera`, before falling back to private R2. When S3 backend credentials are present, it uploads through the S3 backend automatically so non-interactive Wrangler auth is not required. This test photo has private renders in R2:
-
-- `jpg-6mp`: about 1.3 MB
-- `jpg-3mp`: about 762 KB
-- `jpg-1mp`: about 274 KB
-
-With those renders present, API checkout order `PBE-20260508-C0BAC13F53` and browser checkout order `PBE-20260508-2C676E5D8F` verified Full resolution + JPG 6 MP + JPG 3 MP + JPG 1 MP, producing a valid ZIP of about 4.5 MB. The current 506-photo public catalog has matching private masters and JPG 6/3/1 MP render objects for the newly imported rows as of v67.21.
-
-## Architecture Artifacts
-
-- `docs/architecture/infographics/photosbyelie-architecture-infographics.pdf` is now an 8-page PDF.
-- New page 8 is `08-guest-checkout-msc.png`, an MSC-style checkout/fulfillment sequence chart.
-- Known defect: page 4, Cloudflare R2 Storage, still has a text collision in the left card.
-
-## Current Asset States
-
-- `assets/expo/<country>/`: tiny tracked placeholders / publish metadata era leftovers; public JPGs should live in R2/CDN.
-- `assets/reserve/<country>/`: ignored local preview cache for importer/review compatibility.
-- `assets/hidden/<country>/`: ignored local Hidden review state.
-- `assets/owner-actions/country-assignments.jsonl`: tracked append-only Unknown-to-country move log.
-- `assets/owner-actions/country-assignments.json`: tracked latest-state index by photo ID.
-- `assets/hidden/hidden-blacklist.json`: ignored local blacklist source; public sync skips hidden IDs.
-
-## Unknown Country Moves
-
-Unknown assignment is live, not staged in browser storage.
-
-When a photo is assigned to a country from `unknown.html`, the local server should:
-
-1. Move the chosen photo and same-day Unknown cohort out of Unknown.
-2. Put the JPEG pairs under `assets/reserve/<country>/`.
-3. Rewrite local reserve/catalog state and public generated metadata as needed.
-4. Record every move in `assets/owner-actions/country-assignments.jsonl`.
-5. Update the latest-state index in `assets/owner-actions/country-assignments.json`.
-
-Do not rely on browser localStorage for country assignments.
-
-## Local Asset Sync
-
-Preferred handoff:
-
-1. Pull tracked files through Git.
-2. Sync ignored local vault assets separately only if needed:
-
-```bash
-python3 scripts/sync_local_assets.py david --apply --progress
-python3 scripts/sync_local_assets.py max --apply --progress
-```
-
-Use the peer name for the mounted machine, or pass the peer repo path directly.
-
-Leave `--delete` off unless intentionally mirroring removals.
-
-## Cautions
-
-- Do not commit exact GPS metadata unless explicitly intended.
-- Do not commit `assets/reserve/**` or `assets/hidden/**`; they are local vault states.
-- Do not commit `.review-logs/**`; sync logs manually only when needed.
-- Do not re-run public/private R2 uploads concurrently.
-- Use `--backend s3` if Wrangler auth wobbles again.
-- Repo layout cleanup is on the backburner; keep root HTML files for now while GitHub Pages serves from repo root.
+1. Let the active/manual cloud media sweep finish and review final counts.
+2. Finish private delivery render-triplet coverage for all non-discarded catalog photos.
+3. Make discard a first-class Owner action that deletes R2 bytes but keeps tombstones.
+4. Move public preview delivery from the checkout Worker `/media/...` bridge to an R2 custom domain.
+5. Discuss next product architecture: buyer accounts, owner auth, and real Stripe payment.

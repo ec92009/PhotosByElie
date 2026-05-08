@@ -144,13 +144,13 @@ For the current mixed-checkout test photo, David should render:
 zsh -ic 'node scripts/render_private_deliverables.mjs --photo-id 20110106-0604-14854-8e7f792f7e'
 ```
 
-This test photo already has private renders in R2 from this Mac:
+The render script now prefers David's local developed masters under mounted Saturn Lightroom roots, such as `/Volumes/Saturn/Pictures/LR/Camera`, before falling back to private R2. When S3 backend credentials are present, it uploads through the S3 backend automatically so non-interactive Wrangler auth is not required. This test photo has private renders in R2:
 
 - `jpg-6mp`: about 1.3 MB
 - `jpg-3mp`: about 762 KB
 - `jpg-1mp`: about 274 KB
 
-With those renders present, API checkout order `PBE-20260508-1D7B1CF611` verified Full resolution + JPG 6 MP + JPG 3 MP + JPG 1 MP, producing a valid ZIP of about 4.5 MB. On David, repeat this for the actual developed-file corpus, then retest from the browser.
+With those renders present, API checkout order `PBE-20260508-C0BAC13F53` and browser checkout order `PBE-20260508-2C676E5D8F` verified Full resolution + JPG 6 MP + JPG 3 MP + JPG 1 MP, producing a valid ZIP of about 4.5 MB. On David, repeat this for the actual developed-file corpus, then retest from the browser.
 
 ## Architecture Artifacts
 

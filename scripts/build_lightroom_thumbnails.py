@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, RAW_IMAGE_EXTENSIONS
-from sync_r2_media import wrangler_command
+from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, first_env, s3_put, wrangler_command
 
 
 IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS
@@ -226,6 +226,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--r2-public-prefix", default=DEFAULT_PUBLIC_PREFIX)
     parser.add_argument("--r2-private-prefix", default=DEFAULT_PRIVATE_PREFIX)
     parser.add_argument("--r2-retries", type=int, default=2)
+    default_r2_backend = os.environ.get("PBE_R2_BACKEND") or (
+        "s3"
+        if first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID")
+        and first_env("R2_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID")
+        and first_env("R2_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY")
+        else "wrangler"
+    )
+    parser.add_argument("--r2-backend", choices=("wrangler", "s3"), default=default_r2_backend)
+    parser.add_argument("--r2-s3-account-id", default=first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID"))
+    parser.add_argument("--r2-s3-access-key-id", default=first_env("R2_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"))
+    parser.add_argument("--r2-s3-secret-access-key", default=first_env("R2_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"))
+    parser.add_argument("--r2-s3-endpoint", default=os.environ.get("R2_S3_ENDPOINT", ""))
+    parser.add_argument("--r2-request-min-interval", type=float, default=float(os.environ.get("PBE_R2_REQUEST_MIN_INTERVAL", "0.75")))
+    parser.add_argument("--r2-retry-max-delay", type=float, default=float(os.environ.get("PBE_R2_RETRY_MAX_DELAY", "900")))
     parser.add_argument(
         "--r2-private-renders",
         action="store_true",
@@ -948,6 +962,7 @@ def r2_upload_enabled(args: argparse.Namespace, scope: str) -> bool:
 
 
 def r2_put_file(
+    args: argparse.Namespace,
     bucket: str,
     key: str,
     path: Path,
@@ -955,6 +970,40 @@ def r2_put_file(
     retries: int,
     cache_control: str | None = None,
 ) -> dict[str, Any]:
+    if args.r2_backend == "s3":
+        missing = [
+            name
+            for name, value in (
+                ("R2_ACCOUNT_ID or CLOUDFLARE_ACCOUNT_ID", args.r2_s3_account_id),
+                ("R2_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID", args.r2_s3_access_key_id),
+                ("R2_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY", args.r2_s3_secret_access_key),
+            )
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(f"Missing S3 backend credential(s): {', '.join(missing)}")
+        item = UploadItem(bucket=bucket, key=key, path=path, content_type=content_type, cache_control=cache_control or "")
+        _, ok, output = s3_put(
+            item,
+            retries,
+            DEFAULT_THROTTLE_FILE,
+            args.r2_request_min_interval,
+            args.r2_retry_max_delay,
+            args.r2_s3_account_id,
+            args.r2_s3_access_key_id,
+            args.r2_s3_secret_access_key,
+            args.r2_s3_endpoint,
+        )
+        if not ok:
+            raise RuntimeError(f"R2 upload failed for {bucket}/{key}: {output}")
+        return {
+            "bucket": bucket,
+            "key": key,
+            "path": str(path),
+            "bytes": path.stat().st_size,
+            "content_type": content_type,
+        }
+
     command = [
         *wrangler_command(),
         "r2",
@@ -1043,6 +1092,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
     if r2_upload_enabled(args, "public"):
         uploaded["public_previews"] = [
             r2_put_file(
+                args,
                 args.r2_public_bucket,
                 r2_public_key(args, country_slug, gallery_path),
                 gallery_path,
@@ -1051,6 +1101,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 cache_control="public, max-age=31536000, immutable",
             ),
             r2_put_file(
+                args,
                 args.r2_public_bucket,
                 r2_public_key(args, country_slug, detail_path),
                 detail_path,
@@ -1061,6 +1112,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
         ]
     if r2_upload_enabled(args, "private"):
         uploaded["private_master"] = r2_put_file(
+            args,
             args.r2_private_bucket,
             r2_private_key(args, row, source_path),
             source_path,
@@ -1079,6 +1131,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 render_private_deliverable(source_path, render_path, long_edge, args.force)
                 private_renders.append(
                     r2_put_file(
+                        args,
                         args.r2_private_bucket,
                         r2_private_render_key(row, source_path, product_id),
                         render_path,

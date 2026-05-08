@@ -7,7 +7,7 @@ Date: 2026-05-08
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v69.1`
+- Current visible build: `v70.0`
 - Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,123` catalog photos.
 - Current catalog counts: France `320`, USA `160`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -54,7 +54,20 @@ Date: 2026-05-08
 - The old Expo cap is retired. The public catalog should include all eligible cloud-backed previews unless a photo is hidden/discarded or otherwise ineligible.
 - Discard is stronger than hide: discarded photos should disappear from paid storage while their tombstone remains tracked.
 - Large R2 operations should be resumable, one active sweep at a time, and checkpointed through Git.
-- Owner account, user accounts, and real payment are the next product discussion. Guest checkout remains the first payment path.
+- Payment comes before buyer accounts. Guest checkout remains the first payment path.
+- Real Stripe Checkout is wired in code, but live payments are not ready until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout flows are verified.
+- Stripe test mode should cover successful payment, 3D Secure/authentication-required payment, and declined-card payment before live keys are considered.
+
+## This Conversation
+
+- We chose Stripe as the next business step instead of starting with user accounts.
+- The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
+- Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.0`.
+- Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
+- Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
+- Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
+- Commit pushed for the Stripe wiring: `f0e1746 photosbyelie: wire Stripe checkout`.
 
 ## Verification
 
@@ -62,16 +75,19 @@ Date: 2026-05-08
 - `npm run validate` passed in external media mode.
 - The private delivery sync probe uploaded live private render triplets and moved the manifest count upward before the automation wrapper was added.
 - Discard cleanup deleted the current discarded public preview objects from R2 and recorded the tombstones in `assets/discarded-media-manifest.json`.
+- Stripe wiring verification passed with `node --test worker/checkout-worker.test.mjs` (`10/10`) and `npm run validate`.
 
 ## Fresh Backlog
 
-1. **Watch the active cloud media sweep.** Confirm it finishes, commits, pushes, and reports final private render/backfill counts.
-2. **Make discard lifecycle first-class in Owner.** Owner discard should create tombstones, delete public/private R2 bytes, update manifests, and keep the item banned from future Saturn imports.
-3. **Finish private delivery backfill.** Drive private render triplets from `624` to full non-discarded catalog coverage.
-4. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.
-5. **Add user/account model.** Decide guest-only vs optional buyer accounts, then model saved orders and re-download flows.
-6. **Add Owner account/auth.** Protect owner tools beyond localhost-only assumptions before production payment.
-7. **Finish Stripe launch hardening.** Configure Worker Stripe secrets, add the live webhook endpoint, and run test-mode success/3DS/decline flows before live keys.
-8. **Make order records durable for production.** Choose D1 vs KV for queryable order state; keep private R2 for delivery ZIPs.
-9. **Harden browser smoke coverage.** Cover gallery controls, basket, checkout, order status, Owner hide/discard, and Unknown assignment.
-10. **Repair architecture artifacts.** Fix the known page 4 text collision and refresh diagrams once account/payment decisions settle.
+1. **Set up Stripe test mode.** Create/sign into Stripe, collect the test secret key, create the `/stripe-webhook` endpoint, and record the webhook secret as a Worker secret.
+2. **Run Stripe test checkout end to end.** Verify success, 3D Secure/authentication-required, and declined-card paths before any live keys.
+3. **Confirm paid fulfillment.** Make sure a verified `checkout.session.completed` webhook marks the order paid, builds the ZIP from private R2, and shows the order download.
+4. **Decide production order storage.** Choose whether KV is enough for launch or move queryable order records to D1 before live payments.
+5. **Watch the active cloud media sweep.** Confirm it finishes, commits, pushes, and reports final private render/backfill counts.
+6. **Finish private delivery backfill.** Drive private render triplets from `624` to full non-discarded catalog coverage.
+7. **Make discard lifecycle first-class in Owner.** Owner discard should create tombstones, delete public/private R2 bytes, update manifests, and keep the item banned from future Saturn imports.
+8. **Harden Owner account/auth.** Keep localhost owner login working, decide production Owner identity, and add browser coverage for locked/logout/unauthorized states.
+9. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.
+10. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery without slowing guest purchase.
+11. **Harden browser smoke coverage.** Cover gallery controls, basket, Stripe checkout, order status, Owner hide/discard, and Unknown assignment.
+12. **Repair architecture artifacts.** Fix the known page 4 text collision and refresh diagrams once account/payment decisions settle.

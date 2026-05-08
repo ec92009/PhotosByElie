@@ -61,6 +61,16 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 
+Live payment is blocked until test mode proves the full flow:
+
+- Successful card payment reaches `checkout.session.completed`.
+- 3D Secure/authentication-required payment returns to the order page cleanly.
+- Declined card does not mark the order paid.
+- A verified webhook builds the private R2 delivery ZIP and exposes the order download.
+- Stripe receipts remain payment records only; PhotosByElie delivery links stay in the Worker/order flow.
+
+Stripe's standard successful test Visa is `4242 4242 4242 4242` with any future expiry and any 3-digit CVC. Use Stripe's current test-card list for 3D Secure and decline scenarios.
+
 ## Guest Checkout Example
 
 For the full local mock flow, run the static site and the local Worker in separate terminals:

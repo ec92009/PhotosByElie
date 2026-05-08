@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <style>
+      .bg { fill: #f7f6f2; }
+      .ink { fill: #232323; }
+      .muted { fill: #62615f; }
+      .eyebrow { fill: #5f605f; font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 34px; letter-spacing: 1px; }
+      .title { fill: #202020; font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 72px; }
+      .subtitle { fill: #606060; font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 33px; }
+      .card { fill: #fffefb; stroke: #d2d0ca; stroke-width: 2; }
+      .panel { fill: #fbfaf7; stroke: #d2d0ca; stroke-width: 2; }
+      .green { fill: #0f513d; }
+      .greenText { fill: #225f4a; font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 29px; letter-spacing: 1px; }
+      .gold { fill: #b88424; }
+      .orange { fill: #e87521; }
+      .blue { fill: #5b54b8; }
+      .small { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 24px; }
+      .body { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 28px; fill: #282828; }
+      .bodyBold { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 30px; fill: #252525; }
+      .label { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 25px; fill: #252525; }
+      .tiny { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 21px; fill: #62615f; }
+      .resultText { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; fill: #fff; }
+      .resultBody { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 22px; fill: #fff; }
+      .chip { fill: #ffffff; stroke: #dedbd3; stroke-width: 1.5; }
+      .softGreen { fill: #eef7f2; stroke: #b9d9c9; stroke-width: 1.5; }
+      .softGold { fill: #fff8ea; stroke: #e0c184; stroke-width: 1.5; }
+      .softBlue { fill: #f0f1fb; stroke: #c7c5eb; stroke-width: 1.5; }
+      .softOrange { fill: #fff1e8; stroke: #efbe9a; stroke-width: 1.5; }
+      .line { stroke: #d6d3ca; stroke-width: 3; }
+      .arrowGreen { stroke: #0f513d; stroke-width: 5; fill: none; marker-end: url(#arrowGreen); }
+      .arrowGold { stroke: #b88424; stroke-width: 5; fill: none; marker-end: url(#arrowGold); }
+      .arrowBlue { stroke: #5b54b8; stroke-width: 5; fill: none; marker-end: url(#arrowBlue); }
+      .dash { stroke-dasharray: 10 10; }
+    </style>
+    <marker id="arrowGreen" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,7 L0,14 z" fill="#0f513d"/>
+    </marker>
+    <marker id="arrowGold" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,7 L0,14 z" fill="#b88424"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L14,7 L0,14 z" fill="#5b54b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1920" height="1080"/>
+
+  <text x="92" y="82" class="eyebrow">METADATA OPERATING MODEL</text>
+  <text x="92" y="160" class="title">Non-Destructive Metadata Overrides</text>
+  <text x="92" y="215" class="subtitle">Owner edits behave like RAW editor adjustments: reversible metadata overlays, not media rewrites.</text>
+  <line x1="92" y1="255" x2="1828" y2="255" class="line"/>
+
+  <rect x="92" y="300" width="430" height="450" rx="18" class="card"/>
+  <text x="130" y="352" class="greenText">IMMUTABLE MEDIA</text>
+  <text x="130" y="418" class="bodyBold">Keep image bytes stable</text>
+  <rect x="130" y="455" width="330" height="54" rx="10" class="softGreen"/>
+  <text x="153" y="491" class="body">public preview JPGs</text>
+  <rect x="130" y="530" width="330" height="54" rx="10" class="softGreen"/>
+  <text x="153" y="566" class="body">private developed masters</text>
+  <rect x="130" y="605" width="330" height="54" rx="10" class="softGreen"/>
+  <text x="153" y="641" class="body">RAW originals stay local</text>
+  <text x="130" y="704" class="tiny">No automatic IPTC/XMP rewrite.</text>
+  <text x="130" y="735" class="tiny">No R2 image re-upload for text edits.</text>
+
+  <rect x="610" y="300" width="700" height="450" rx="18" class="card"/>
+  <text x="648" y="352" class="greenText">OWNER EDIT OVERLAY</text>
+  <text x="648" y="418" class="bodyBold">Small records become the source of truth</text>
+  <rect x="648" y="455" width="285" height="76" rx="12" class="softGold"/>
+  <text x="672" y="488" class="label">Owner UI</text>
+  <text x="672" y="518" class="tiny">title + keyword edits</text>
+  <rect x="996" y="455" width="270" height="76" rx="12" class="softGold"/>
+  <text x="1020" y="488" class="label">Override files</text>
+  <text x="1020" y="518" class="tiny">JSON + optional journal</text>
+  <path d="M935 493 L990 493" class="arrowGold"/>
+
+  <rect x="648" y="580" width="618" height="108" rx="14" class="softBlue"/>
+  <text x="676" y="618" class="label">Build-time merge</text>
+  <text x="676" y="650" class="tiny">original import metadata + country assignments</text>
+  <text x="676" y="680" class="tiny">hidden state + owner title/keyword overrides</text>
+  <path d="M1130 532 L1130 572" class="arrowBlue"/>
+
+  <rect x="1388" y="300" width="440" height="450" rx="18" class="card"/>
+  <text x="1426" y="352" class="greenText">DERIVED OUTPUTS</text>
+  <text x="1426" y="418" class="bodyBold">Regenerate small data, not media</text>
+  <rect x="1426" y="455" width="330" height="54" rx="10" class="softBlue"/>
+  <text x="1449" y="491" class="body">photos-data.js</text>
+  <rect x="1426" y="530" width="330" height="54" rx="10" class="softBlue"/>
+  <text x="1449" y="566" class="body">manifest / sidecar JSON</text>
+  <rect x="1426" y="605" width="330" height="54" rx="10" class="softOrange"/>
+  <text x="1449" y="641" class="body">temporary delivery copy</text>
+  <text x="1426" y="704" class="tiny">Delivery ZIP may embed current metadata</text>
+  <text x="1426" y="735" class="tiny">into a disposable export copy only.</text>
+
+  <path d="M522 525 C565 525 575 493 610 493" class="arrowGreen"/>
+  <path d="M1266 635 C1328 635 1334 493 1388 493" class="arrowBlue"/>
+
+  <rect x="120" y="790" width="520" height="150" rx="16" class="panel"/>
+  <text x="154" y="833" class="greenText">EXPLICIT ESCAPE HATCH</text>
+  <text x="154" y="874" class="small ink">"Bake metadata into files" is a rare,</text>
+  <text x="154" y="906" class="small ink">manual, resumable, S3-backed job.</text>
+
+  <rect x="700" y="790" width="520" height="150" rx="16" class="panel"/>
+  <text x="734" y="833" class="greenText">PUBLISH CONTRACT</text>
+  <text x="734" y="874" class="small ink">Commit regenerated metadata. R2 media</text>
+  <text x="734" y="906" class="small ink">changes only when image bytes change.</text>
+
+  <rect x="1280" y="790" width="520" height="150" rx="16" class="panel"/>
+  <text x="1314" y="833" class="greenText">AUDIT / UNDO</text>
+  <text x="1314" y="874" class="small ink">Append-only override journal preserves</text>
+  <text x="1314" y="906" class="small ink">who changed what and allows rollback.</text>
+
+  <rect x="92" y="972" width="1736" height="52" rx="14" class="green"/>
+  <text x="122" y="1007" class="resultText">RESULT</text>
+  <text x="230" y="1007" class="resultBody">Fast owner edits, stable R2 objects, reversible metadata, and delivery files that reflect the latest catalog at ZIP time.</text>
+  <text x="92" y="1056" class="tiny">Sources: PhotosByElie owner metadata plan  |  RAW-editor non-destructive editing model  |  Cloudflare R2 media contract</text>
+</svg>

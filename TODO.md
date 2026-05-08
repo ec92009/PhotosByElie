@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 ## Current Facts
 
@@ -13,82 +13,114 @@ Last updated: 2026-05-07
 - Future public R2 sync inventories skip IDs in `assets/hidden/hidden-blacklist.json`; private developed masters remain eligible unless Elie explicitly wipes them.
 - `assets/reserve` remains an ignored local preview cache for importer/review compatibility, not a long-term public state.
 - R2 upload journals are resumable. Cloudflare throttled parallel public/private uploads with `429 Too Many Requests`, so large R2 syncs should run one lane at a time.
+- Public R2 active inventory was live-verified with zero missing active objects after the S3 backend repair pass; the bucket still has stale extra public objects to review before deletion.
+- Private R2 is one object short of the local private inventory because `20220504 141310 00203.tif` timed out during upload.
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe and in-memory storage.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
-- The architecture PDF now includes an MSC-style checkout/fulfillment page, but page 4 still has a known text-overlap defect.
+- The architecture PDF now includes an MSC-style checkout/fulfillment page and a non-destructive metadata overrides page, but page 4 still has a known text-overlap defect.
 
 ## Fresh Numbered Backlog
 
-1. **Finish public R2 previews and verify the live bucket.**
-   - [Codex] Monitor `pbe-r2-public` / `.review-logs/r2-public-upload-20260506-233645.log` until the public lane finishes.
-   - [Codex] Confirm the public lane ends with zero failed uploads or rerun the same public resume command until clean.
-   - [Codex] Re-check `photosbyelie-public` directly through Wrangler/API after the lane finishes.
-   - [Codex] Confirm whether any old permissive-watermark public previews remain in R2.
-   - [Codex] Verify hidden-blacklist IDs are absent from the live public preview set or wipe them through an explicit Owner action.
-   - [Codex] If classified Unknown objects already exist under old public keys, use `scripts/cleanup_classified_unknowns_public_r2.py` only after confirming no R2 upload lane is active.
-   - [Codex] If Wrangler auth wobbles again, use `scripts/sync_r2_media.py --backend s3` with explicit R2 S3 credentials and a tiny `--limit 1` probe first.
+1. **Clean up public R2 leftovers after the successful S3 repair.**
+   - [Codex] Review the 29 live public objects that are not in the active inventory.
+   - [Codex] Confirm which extras are stale previews, hidden-blacklist objects, or old Unknown keys before deleting anything.
+   - [Codex] Delete approved stale public objects through the S3 backend and verify `photosbyelie-public` again.
+   - [Codex] Keep using `scripts/sync_r2_media.py --backend s3` for public repair work; Wrangler auth was unreliable.
 
-2. **Start private R2 masters only after public is done.**
-   - [Codex] Let automation `start-private-r2-after-public-upload` wait on public and start `pbe-r2-private`.
-   - [Codex] If automation cannot start private, run `python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-min-interval 1.5`.
-   - [Codex] Keep the private upload single-lane and resumable through `.review-logs/r2-upload-state.jsonl`.
-   - [Codex] Verify `photosbyelie-private` after the private lane completes.
+2. **Finish private R2 masters.**
+   - [Codex] Re-upload the one missing private object: `masters/20220504-141310-00203-231d78d849/20220504 141310 00203.tif`.
+   - [Codex] Verify `photosbyelie-private` live against the private inventory after the retry.
+   - [Codex] Keep private uploads single-lane and resumable through `.review-logs/r2-upload-state.jsonl`.
 
-3. **Wire the static basket to the Worker mock checkout flow.**
+3. **Flatten R2 object key layout.**
+   - [Codex] Stop using country folders in public or private R2 object keys; manifests already carry country/gallery metadata.
+   - [Codex] Design a stable flat key scheme for public previews and private masters before the next major media migration.
+   - [Codex] Update upload, cleanup, delivery, and validation scripts to treat country as metadata, not storage structure.
+   - [Codex] Plan redirects or cleanup for existing country-prefixed R2 objects before changing published URLs.
+
+4. **Adopt non-destructive owner metadata overrides.**
+   - [Codex] Treat public previews and private masters as immutable media bytes by default, like RAW-editor negatives.
+   - [Codex] Store owner title/keyword edits as structured overrides in `assets/owner-actions/metadata-overrides.json` plus an optional append-only journal.
+   - [Codex] Merge original import metadata, country assignments, hidden state, and owner overrides during `photos-data.js` / manifest export.
+   - [Codex] Stop automatically rewriting image IPTC/XMP or re-uploading R2 media for title/keyword-only edits.
+   - [Codex] If cloud-side metadata is needed, upload small sidecar JSON/manifest shards instead of image binaries.
+   - [Codex] Embed current title/keywords into temporary delivery copies only during ZIP creation, then discard the temp files.
+   - [Codex] Keep any "bake metadata into files" or "refresh R2 media metadata" action explicit, rare, resumable, and S3-backed.
+
+5. **Strengthen architecture boundaries and docs.**
+   - [Codex] Document the responsibilities of public static viewer code, localhost-only owner tools, media pipeline scripts, and the commerce Worker.
+   - [Codex] Keep public/local/Worker boundaries explicit in `README.md`, `worker/README.md`, `scripts/README.md`, `SUMMARY.md`, and this file.
+   - [Codex] Write a short data dictionary for `photos-data.js`, media manifests, hidden blacklist, R2 journals, and review snapshots.
+
+6. **Make publish validation the gate.**
+   - [Codex] Expand `scripts/validate_publish.js` to enforce media key presence, hidden blacklist exclusions, Expo cap behavior, duplicate IDs, generated data consistency, and public/private eligibility.
+   - [Codex] Add schema-style checks for manifests, journals, and generated publish data.
+   - [Codex] Run validation before any publish or media sync handoff.
+
+7. **Add browser smoke coverage.**
+   - [Codex] Add Playwright smoke tests for gallery filtering, detail navigation, liked sync, basket sync, and public page loading.
+   - [Codex] Add localhost owner smoke tests for hide/unhide, hidden re-promote, unknown assignment, and metadata save feedback.
+   - [Codex] Include missing-media, stale basket, empty-state, and failed-action recovery checks where practical.
+
+8. **Improve owner dashboard and safer review UX.**
+   - [Codex] Add dense owner summaries for counts, selected item, last action, undo availability, pending sync, hidden/unknown state, and publish eligibility.
+   - [Codex] Add clearer batch previews and "what will publish" summaries before irreversible-feeling actions.
+   - [Codex] Remove obsolete Reserve wording from visible owner UI as it appears.
+
+9. **Wire the static basket to the Worker mock checkout flow.**
    - [Codex] Add bottom-of-basket checkout choice UI: `Pay as guest` and `Create account / sign in`.
    - [Codex] Keep guest checkout primary and account checkout secondary.
    - [Codex] Collect buyer email before mock checkout.
    - [Codex] Call `/checkout/guest` with the current basket and show the returned mock Stripe URL/order number.
    - [Codex] Add a small USD-only note: prices are in USD; buyer bank/card may convert locally.
+   - [Codex] Make product options, selected resolution, digital delivery, and mock/real checkout status unmistakable.
 
-4. **Make Worker storage durable.**
+10. **Make Worker storage durable.**
    - [Codex] Choose D1 vs KV for order records; current likely direction is D1 for queryable order state.
    - [Codex] Keep private R2 as the delivery ZIP location.
    - [Codex] Store order ID, buyer email, checkout session ID, payment intent ID, status, basket snapshot, expected/paid amount, ZIP key, and download timing.
    - [Codex] Keep download links rate-limited, starting with roughly one ZIP download per order per hour.
 
-5. **Replace mock Stripe with real Stripe when account setup is ready.**
+11. **Replace mock Stripe with real Stripe when account setup is ready.**
    - [Elie] Finish Stripe business, identity, tax, and bank onboarding.
    - [Codex] Add real Checkout Session creation behind the existing Stripe client interface.
    - [Codex] Add real webhook signature verification.
    - [Codex] Pass `client_reference_id`, `metadata.order_id`, buyer email, USD amount, and static receipt text with the order-portal URL.
    - [Codex] Keep Stripe receipts separate from PhotosByElie delivery emails/download links.
 
-6. **Implement real delivery ZIP creation.**
+12. **Implement real delivery ZIP creation.**
    - [Codex] Replace mock delivery with R2/private master reads and ZIP creation.
    - [Codex] Decide whether ZIP creation runs synchronously in the Worker or through a queued/background flow for large orders.
    - [Codex] Preserve the current local `scripts/create_digital_delivery.py` as manual fallback until automated delivery is proven.
    - [Codex] Ensure the Worker never tries to deliver RAW/DNG/NEF originals.
 
-7. **Add order lookup and delivery UX.**
+13. **Add order lookup and delivery UX.**
    - [Codex] Add `/orders` buyer-facing page or static shell.
    - [Codex] Let guest buyers retrieve orders with order number plus email verification.
    - [Codex] Let account buyers see saved orders later, after guest checkout works.
    - [Codex] Show states: pending payment, preparing, ready, downloaded/rate-limited, failed/refunded.
 
-8. **Keep checkout pricing conservative.**
+14. **Keep checkout pricing conservative.**
    - [Codex] Keep all buyer-facing prices and Stripe amounts in USD for v1.
    - [Codex] Reject/ignore client-provided currency in the Worker.
    - [Codex] Recalculate prices server-side from the catalog before creating checkout.
    - [Codex] On webhook, require Stripe amount/currency to match the stored order before delivery.
 
-9. **Repair and finalize architecture artifacts.**
+15. **Repair and finalize architecture artifacts.**
    - [Codex] Fix the page 4 text collision in `photosbyelie-architecture-infographics.pdf`.
-   - [Codex] Keep the new MSC page as page 8 and regenerate the PDF.
+   - [Codex] Keep the MSC page as page 8 and the non-destructive metadata page as page 9 when regenerating the PDF.
    - [Codex] Consider adding a second MSC later for real delivery ZIP creation if Worker/queue/R2 details change.
 
-10. **Retest local owner and media workflows.**
+16. **Retest local owner and media workflows.**
     - [Codex] Check gallery selection, Enter detail navigation, double-click detail navigation, H/U, and hidden re-promote on localhost.
     - [Codex] Check Unknown classification behavior and confirm same-day assignment still refreshes hints.
-    - [Codex] Retest owner metadata persistence/background R2 resync after the current public lane quiets down.
-    - [Codex] Remove obsolete Reserve wording from visible owner UI as it appears.
+    - [Codex] Retest owner metadata persistence/background R2 resync now that the public S3 repair is complete.
 
-11. **Keep documentation current.**
+17. **Keep documentation current.**
     - [Codex] Update `README.md`, `worker/README.md`, `scripts/README.md`, `SUMMARY.md`, and this file whenever the checkout or media contract changes.
     - [Codex] Convert architecture notes into a short migration SOP once R2 auth, Worker deployment, and public media URLs are settled.
-    - [Codex] Keep the public/local/Worker boundaries explicit in docs and validation.
 
-12. **Backburner: clean up repo layout.**
+18. **Backburner: clean up repo layout.**
     - [Codex] Do this only after the R2 and checkout paths settle.
     - [Codex] Keep root HTML files for now while GitHub Pages serves directly from repo root.
     - [Codex] Later consider moving static assets into clearer `site/`, `public/`, `js/`, or `css/` folders.
@@ -100,3 +132,5 @@ Last updated: 2026-05-07
 - Rebuilt the architecture PDF as an 8-page deck.
 - Added a mockable Worker checkout prototype with guest/account routes, mock Stripe, webhook handling, order lookup, delivery metadata, and download token rate limiting.
 - Added Worker tests and documentation.
+- Completed the public R2 S3 repair pass and live-verified zero missing active public objects.
+- Added the non-destructive metadata overrides infographic page and rebuilt the architecture PDF as 9 pages.

@@ -1225,6 +1225,13 @@ body.detail-fullscreen-active{
   font-weight:800;
   overflow-wrap:anywhere;
 }
+.order-local-path{
+  grid-column:1 / -1;
+}
+.order-local-path dd{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size:.88rem;
+}
 .order-items{
   display:grid;
   gap:10px;

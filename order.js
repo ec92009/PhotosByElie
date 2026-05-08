@@ -69,6 +69,7 @@ const renderOrder = (order) => {
     <div><dt>Total</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
     <div><dt>Paid</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>
     <div><dt>Mode</dt><dd>${escapeText(order.checkoutMode)}</dd></div>
+    ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>Local ZIP</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
   `;
 
   itemsRoot.innerHTML = (order.items || []).map((item) => `
@@ -86,7 +87,7 @@ const renderOrder = (order) => {
 
   if (order.delivery?.downloadUrl) {
     downloadZip.hidden = false;
-    downloadZip.href = `${workerBaseUrl()}${order.delivery.downloadUrl}`;
+    downloadZip.href = `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`;
     downloadZip.setAttribute("download", "");
   } else {
     downloadZip.hidden = true;
@@ -112,6 +113,12 @@ const loadOrder = async () => {
     renderOrder(body.order);
     status.textContent = "Order refreshed.";
   } catch (error) {
+    const cachedOrder = checkoutState().lastResponse?.order;
+    if (cachedOrder?.id === id) {
+      renderOrder(cachedOrder);
+      status.textContent = "Showing cached local order. Download uses the generated ZIP file on disk.";
+      return;
+    }
     heading.textContent = "Order unavailable";
     message.textContent = error.message;
     setProgress("");

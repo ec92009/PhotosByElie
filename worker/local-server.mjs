@@ -55,8 +55,30 @@ const readBody = (req) => new Promise((resolve, reject) => {
 });
 
 const serveLocalDownload = async (req, res) => {
-  const match = new URL(req.url, `http://localhost:${port}`).pathname.match(/^\/download\/([^/]+)$/);
-  if (!match || req.method !== "GET") return false;
+  const pathname = new URL(req.url, `http://localhost:${port}`).pathname;
+  if (!["GET", "HEAD"].includes(req.method || "GET")) return false;
+  const orderMatch = pathname.match(/^\/download-order\/([^/]+)$/);
+  if (orderMatch) {
+    const orderId = decodeURIComponent(orderMatch[1]);
+    const zipPath = path.join(repoRoot, "deliveries", `photosbyelie-order-${orderId}.zip`);
+    if (!fs.existsSync(zipPath)) return false;
+    const filename = path.basename(zipPath);
+    res.writeHead(200, {
+      "access-control-allow-origin": "*",
+      "content-type": "application/zip",
+      "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
+      "content-length": fs.statSync(zipPath).size,
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return true;
+    }
+    fs.createReadStream(zipPath).pipe(res);
+    return true;
+  }
+
+  const match = pathname.match(/^\/download\/([^/]+)$/);
+  if (!match) return false;
   const token = decodeURIComponent(match[1]);
   const download = await worker.store.getDownload(token);
   if (!download || !path.isAbsolute(download.zipKey)) return false;
@@ -70,6 +92,10 @@ const serveLocalDownload = async (req, res) => {
     "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
     "content-length": fs.statSync(download.zipKey).size,
   });
+  if (req.method === "HEAD") {
+    res.end();
+    return true;
+  }
   fs.createReadStream(download.zipKey).pipe(res);
   return true;
 };

@@ -34,6 +34,8 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
 | `GET /download/:token` | Buyer clicks download | Returns a mock signed R2 URL and applies one-download-per-hour throttling |
 
+`worker/local-server.mjs` also provides `GET /download-order/:orderId` for local-only mock testing. It serves the generated ZIP directly from `deliveries/` by order ID, which keeps downloads working after the in-memory mock Worker state has been restarted.
+
 ## Guest Checkout Example
 
 For the full local mock flow, run the static site and the local Worker in separate terminals:
@@ -43,7 +45,7 @@ python3 -m http.server 8000
 node worker/local-server.mjs
 ```
 
-Then open `http://localhost:8000/basket.html`, enter a buyer email, choose `Pay as guest`, and use `Simulate Stripe payment`. The browser lands on `order.html`, where `Download ZIP` downloads the generated file from the local Worker. Mock delivery ZIPs are also written to `deliveries/photosbyelie-order-<orderId>.zip`.
+Then open `http://localhost:8000/basket.html`, enter a buyer email, choose `Pay as guest`, and use `Simulate Stripe payment`. The browser lands on `order.html`, where `Download ZIP` downloads the generated file from the local Worker. Mock delivery ZIPs are also written to `deliveries/photosbyelie-order-<orderId>.zip`, and the order page shows the Local ZIP path plus a copy button for browser shells that hide attachment download feedback.
 
 ```bash
 curl -sS http://localhost:8787/checkout/guest \
@@ -80,7 +82,7 @@ That simulates the paid webhook and moves the order to `ready`. The resulting de
 deliveries/photosbyelie-order-<orderId>.zip
 ```
 
-In production the mock Stripe client gets replaced by a real Stripe client, and the local ZIP adapter becomes real private R2/ZIP work. The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing. The core Worker still returns JSON from `/download/:token`; `worker/local-server.mjs` upgrades that local route into an actual ZIP response when the ZIP path is on disk.
+In production the mock Stripe client gets replaced by a real Stripe client, and the local ZIP adapter becomes real private R2/ZIP work. The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing. The core Worker still returns JSON from `/download/:token`; `worker/local-server.mjs` upgrades local token/order routes into actual ZIP responses when the ZIP path is on disk.
 
 ## Tests
 

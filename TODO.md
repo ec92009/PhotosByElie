@@ -16,7 +16,9 @@ Last updated: 2026-05-08
 - Public R2 active inventory was live-verified with zero missing active objects after the S3 backend repair pass; the bucket still has stale extra public objects to review before deletion.
 - Private R2 is one object short of the local private inventory because `20220504 141310 00203.tif` timed out during upload.
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
+- Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
+- Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.
 - The architecture PDF now includes an MSC-style checkout/fulfillment page and a non-destructive metadata overrides page, but page 4 still has a known text-overlap defect.
 
 ## Fresh Numbered Backlog
@@ -72,6 +74,7 @@ Last updated: 2026-05-08
    - [Codex] Expand basket copy/states so unsupported print items are clearly separate from digital ZIP delivery.
    - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
    - [Codex] Add browser smoke coverage for the basket -> mock payment -> order page -> ZIP download path.
+   - [Codex] Decide whether local mock orders need persisted JSON state so order lookup survives Worker restarts without relying on browser cache.
 
 10. **Make Worker storage durable.**
    - [Codex] Choose D1 vs KV for order records; current likely direction is D1 for queryable order state.
@@ -134,3 +137,4 @@ Last updated: 2026-05-08
 - Added the non-destructive metadata overrides infographic page and rebuilt the architecture PDF as 9 pages.
 - Wired the basket to local mock guest checkout and added local ZIP generation for mock paid orders.
 - Added `order.html` with a proper mock order status and local ZIP download button.
+- Added the order-ID ZIP fallback route and visible Local ZIP / Copy ZIP path fallback after the in-app browser hid attachment download feedback.

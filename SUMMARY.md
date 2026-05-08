@@ -1,20 +1,18 @@
 # Conversation Summary
 
-Date: 2026-05-07
+Date: 2026-05-08
 
 ## Current State
 
-- Repo: `/Users/ecohen/Dev/photosByElie`
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Current visible build in `VERSION`: `v67.6`
-- Local `main` was already ahead of `origin/main` by one commit before this checkout/Worker pass.
-- `origin/main` before this push was `5dbadf0 photosbyelie: classify unknown reserve countries`.
+- Local `main` is synced to `origin/main` after the mock checkout/download documentation pass.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
 - GitHub should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should stay out of Git and live in R2/CDN.
-- Existing unrelated working-tree item remains present and should not be staged accidentally: `scripts/sync_r2_media.py`.
-- `home-v66-41.png` was an untracked local screenshot and was deleted on request.
 - `scripts/cleanup_classified_unknowns_public_r2.py` is being kept as a tracked recovery utility rather than archived.
+- Estimated idle Cloudflare cost remains roughly `$1.37/month` if the current private/public R2 storage sits for a full month with no traffic or recurring Worker jobs. Future cost callouts should happen after massive uploads and before/when starting recurring Worker tasks, not on a calendar automation.
 
 ## Architecture Decisions From This Session
 
@@ -35,7 +33,7 @@ Date: 2026-05-07
 - Added `worker/mock-stripe.mjs` for fake Checkout Session creation, mock paid events, and mock webhook signature handling.
 - Added `worker/memory-store.mjs` as in-memory order/download storage for local tests.
 - Added `worker/local-server.mjs` and `worker/local-zip-delivery.mjs` for local end-to-end mock checkout with real ZIP files written under `deliveries/`.
-- Added `order.html` / `order.js` for buyer-facing mock order status and one-click local ZIP download.
+- Added `order.html` / `order.js` for buyer-facing mock order status, `Download ZIP`, `Copy ZIP path`, and a visible Local ZIP fallback path.
 - Added `worker/checkout-worker.test.mjs` covering:
   - guest checkout creates a pending order and mock Stripe session
   - mock paid event moves the order to `ready`
@@ -44,6 +42,8 @@ Date: 2026-05-07
   - local ZIP delivery creates a real ZIP from the preview fallback
 - Added `worker/README.md` with route examples and the current mock flow.
 - Worker routes currently include `/health`, `/checkout/guest`, `/checkout/account`, `/stripe-webhook`, `/mock-stripe/pay`, `/orders/:orderId`, and `/download/:token`.
+- The local server additionally serves `/download-order/:orderId` as an order-ID based ZIP attachment route so already-generated mock ZIP files remain downloadable after an in-memory Worker restart.
+- The in-app browser did not visibly surface attachment downloads, so the order page now makes the generated ZIP path explicit and offers a copy button. For order `PBE-20260508-DF50ABD9A9`, the verified local ZIP was `/Users/ecohen/Dev/PhotosByElie/deliveries/photosbyelie-order-PBE-20260508-DF50ABD9A9.zip`.
 
 ## PDF / Infographic Work
 
@@ -66,7 +66,8 @@ Date: 2026-05-07
 
 - `node --test worker/checkout-worker.test.mjs` passed.
 - `node --check` passed for all new Worker modules/tests.
-- Publish validation should still be run before push/final handoff.
+- `node scripts/validate_publish.js --external-media` passed.
+- Local download verification returned `application/zip` with valid ZIP magic `PK`.
 
 ## Backlog Snapshot
 

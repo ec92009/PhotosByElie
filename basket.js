@@ -26,7 +26,7 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "67.16";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "67.17";
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -96,7 +96,7 @@ const sourceFileLabel = (photo) => {
 };
 
 const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
-  if (!orderIntent || !orderSummary || !orderEmail) return;
+  if (!orderIntent || !orderSummary) return;
   orderIntent.hidden = items.length === 0;
   if (!items.length) return;
 
@@ -163,9 +163,11 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
   ];
   const subject = `Photos By Elie order ${orderId}`;
   const body = lines.join("\n");
-  orderEmail.dataset.orderEmailSubject = subject;
-  orderEmail.dataset.orderEmailBody = body;
-  orderEmail.setAttribute("href", `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  if (orderEmail) {
+    orderEmail.dataset.orderEmailSubject = subject;
+    orderEmail.dataset.orderEmailBody = body;
+    orderEmail.setAttribute("href", `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  }
   if (orderEmailDraft) {
     orderEmailDraft.value = "";
     orderEmailDraft.hidden = true;

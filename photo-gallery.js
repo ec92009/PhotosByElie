@@ -348,14 +348,14 @@ const visiblePhotos = () => {
   return selected.slice(0, regularCap());
 };
 
-const updateSelection = () => {
+const updateSelection = ({ scroll = true } = {}) => {
   const cards = [...galleryRoot.querySelectorAll("[data-photo-index]")];
   if (!cards.length) return;
   selectedIndex = Math.max(0, Math.min(selectedIndex, cards.length - 1));
   cards.forEach((card, index) => {
     card.classList.toggle("is-selected", index === selectedIndex);
   });
-  cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  if (scroll) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
 };
 
 const visibleColumnCount = () => {
@@ -554,7 +554,7 @@ if (galleryRoot && gallery) {
     densityInput.addEventListener("input", () => {
       localStorage.setItem(densityKey, String(clampDensityColumns(densityInput.value)));
       applyGalleryDensity();
-      updateSelection();
+      updateSelection({ scroll: false });
     });
     fitControl.addEventListener("click", (event) => {
       const button = event.target.closest("[data-gallery-fit-mode]");
@@ -562,12 +562,12 @@ if (galleryRoot && gallery) {
       fitMode = button.dataset.galleryFitMode === "fill" ? "fill" : "fit";
       localStorage.setItem(fitModeKey, fitMode);
       applyGalleryFitMode();
-      updateSelection();
+      updateSelection({ scroll: false });
     });
     window.addEventListener("resize", () => {
       applyGalleryDensity();
       positionGalleryViewControls();
-      updateSelection();
+      updateSelection({ scroll: false });
     });
     window.addEventListener("scroll", positionGalleryViewControls, { passive: true });
     applyGalleryDensity();

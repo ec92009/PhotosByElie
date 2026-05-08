@@ -6,7 +6,7 @@ Use this when moving work between Max, David, or the laptop.
 
 - GitHub sync point: `df582dc photosbyelie: backlog repo layout cleanup`.
 - Local `main` is clean and aligned with `origin/main` at this commit.
-- Current visible build in `VERSION`: `v67.5`.
+- Current visible build in `VERSION`: `v67.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.

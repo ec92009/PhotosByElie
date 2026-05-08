@@ -8,7 +8,9 @@ const details = document.querySelector("[data-order-details]");
 const itemsRoot = document.querySelector("[data-order-items]");
 const status = document.querySelector("[data-order-status]");
 const downloadZip = document.querySelector("[data-download-zip]");
+const copyZipPath = document.querySelector("[data-copy-zip-path]");
 const refreshButton = document.querySelector("[data-order-refresh]");
+let currentZipPath = "";
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -86,12 +88,16 @@ const renderOrder = (order) => {
   `).join("");
 
   if (order.delivery?.downloadUrl) {
+    currentZipPath = order.delivery.zipKey || "";
     downloadZip.hidden = false;
     downloadZip.href = `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`;
     downloadZip.setAttribute("download", "");
+    if (copyZipPath) copyZipPath.hidden = !currentZipPath;
   } else {
+    currentZipPath = "";
     downloadZip.hidden = true;
     downloadZip.removeAttribute("href");
+    if (copyZipPath) copyZipPath.hidden = true;
   }
 };
 
@@ -128,4 +134,16 @@ const loadOrder = async () => {
 };
 
 refreshButton?.addEventListener("click", loadOrder);
+downloadZip?.addEventListener("click", () => {
+  status.textContent = "Download requested. If the in-app browser does not show a download, use the Local ZIP path below.";
+});
+copyZipPath?.addEventListener("click", async () => {
+  if (!currentZipPath) return;
+  try {
+    await navigator.clipboard.writeText(currentZipPath);
+    status.textContent = "Local ZIP path copied.";
+  } catch {
+    status.textContent = currentZipPath;
+  }
+});
 loadOrder();

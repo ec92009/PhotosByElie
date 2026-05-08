@@ -7,7 +7,7 @@ Date: 2026-05-07
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build in `VERSION`: `v67.5`
+- Current visible build in `VERSION`: `v67.6`
 - Local `main` was already ahead of `origin/main` by one commit before this checkout/Worker pass.
 - `origin/main` before this push was `5dbadf0 photosbyelie: classify unknown reserve countries`.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.

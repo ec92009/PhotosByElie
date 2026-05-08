@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.10`.
+- Local visible build: `v67.11`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -19,9 +19,12 @@ Last updated: 2026-05-08
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
 - Public mock checkout Worker is live at `https://photosbyelie-checkout-mock.ec92009.workers.dev`, backed by Cloudflare KV plus private R2.
-- The public site config points checkout to the deployed Worker as of `v67.10`; GitHub Pages must finish serving the latest `main` commit before browser testing the cloud flow.
+- The public site config points checkout to the deployed Worker as of `v67.11`; GitHub Pages must finish serving the latest `main` commit before browser testing the cloud flow.
 - Public previews are temporarily served through `https://photosbyelie-checkout-mock.ec92009.workers.dev/media/...`, backed by `photosbyelie-public`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`; the Worker generated `deliveries/photosbyelie-order-PBE-20260508-D054362044.zip` in private R2 and returned a valid ZIP download.
+- Order status now shows explicit mock checkout phases: payment, ZIP build, and download. Cloud ZIP generation failures persist as `delivery_failed`.
+- The Worker now expects JPG 6/3/1 MP buyer files to exist in private R2 under `renders/...`; David should generate/upload those unwatermarked deliverables from the machine that owns the developed masters.
+- Mixed full/JPG 6/3/1 MP API checkout was verified for test order `PBE-20260508-1D7B1CF611` after pre-rendering one test photo's private JPG deliverables.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
 - Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.
@@ -81,11 +84,11 @@ Last updated: 2026-05-08
 9. **Harden the mock checkout flow.**
    - [Codex] Add account checkout UI only after guest checkout feels right.
    - [Codex] Expand basket copy/states so unsupported print items are clearly separate from digital ZIP delivery.
-   - [Codex] Make public mock checkout clearly full-resolution-only until cloud resizing/export exists for JPG 1/3/6 MP products.
+   - [Codex] Browser-test mixed full/JPG 6/3/1 MP checkout after David generates/uploads the private render cache.
    - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
    - [Codex] Add browser smoke coverage for the basket -> mock payment -> order page -> ZIP download path.
    - [Codex] Decide whether local mock orders need persisted JSON state so order lookup survives Worker restarts without relying on browser cache.
-   - [Codex] For public mock checkout, keep cloud ZIP delivery limited to `full` products until a real resize/export path exists for JPG 1/3/6 MP products.
+   - [Codex] Keep checkout errors clear when a selected JPG 6/3/1 MP private render is missing.
 
 10. **Make Worker storage durable.**
    - [Codex] Use KV for public mock checkout state; choose D1 vs KV before production order records, with D1 still likely for queryable order state.

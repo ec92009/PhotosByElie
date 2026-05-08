@@ -54,6 +54,11 @@ DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PUBLIC_PREFIX = "expo"
 DEFAULT_PRIVATE_PREFIX = "masters"
+PRIVATE_RENDER_PRODUCTS = {
+    "jpg-6mp": 6,
+    "jpg-3mp": 3,
+    "jpg-1mp": 1,
+}
 COUNTRY_ALIASES = {
     "fr": ("france", "France"),
     "france": ("france", "France"),
@@ -221,6 +226,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--r2-public-prefix", default=DEFAULT_PUBLIC_PREFIX)
     parser.add_argument("--r2-private-prefix", default=DEFAULT_PRIVATE_PREFIX)
     parser.add_argument("--r2-retries", type=int, default=2)
+    parser.add_argument(
+        "--r2-private-renders",
+        action="store_true",
+        help="When private R2 upload is enabled, also render/upload unwatermarked JPG 6/3/1 MP buyer deliverables under private renders/ keys.",
+    )
     parser.add_argument(
         "--include-private-keywords",
         action="store_true",
@@ -984,6 +994,49 @@ def r2_private_key(args: argparse.Namespace, row: dict[str, Any], source_path: P
     return "/".join([args.r2_private_prefix.strip("/"), row.get("id") or source_path.stem, source_path.name])
 
 
+def r2_private_render_key(row: dict[str, Any], source_path: Path, product_id: str) -> str:
+    photo_id = str(row.get("id") or source_path.stem)
+    safe_source = re.sub(r"[^A-Za-z0-9._-]+", "-", source_path.name).strip("-") or "source"
+    return "/".join(["renders", photo_id, f"{safe_source}-{product_id}.jpg"])
+
+
+def long_edge_for_megapixels(size: dict[str, Any], megapixels: int) -> int:
+    width = int(size.get("width") or 0)
+    height = int(size.get("height") or 0)
+    if not width or not height:
+        return 0
+    source_pixels = width * height
+    target_pixels = megapixels * 1_000_000
+    if target_pixels >= source_pixels:
+        return max(width, height)
+    return max(1, round(max(width, height) * (target_pixels / source_pixels) ** 0.5))
+
+
+def render_private_deliverable(source_path: Path, output_path: Path, long_edge: int, force: bool) -> bool:
+    if output_path.exists() and not force:
+        return False
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            "sips",
+            "-s",
+            "format",
+            "jpeg",
+            "-s",
+            "formatOptions",
+            "90",
+            "-Z",
+            str(long_edge),
+            str(source_path),
+            "--out",
+            str(output_path),
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+    return True
+
+
 def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path: Path, detail_path: Path, source_path: Path) -> dict[str, Any]:
     uploaded: dict[str, Any] = {}
     country_slug = row.get("gallery_country", {}).get("slug") or "unknown"
@@ -1014,6 +1067,27 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
             mimetypes.guess_type(source_path.name)[0] or "application/octet-stream",
             args.r2_retries,
         )
+        if args.r2_private_renders and source_path.suffix.lower() in {".jpg", ".jpeg"}:
+            source_size = image_size(source_path)
+            render_root = Path(tempfile.gettempdir()) / "photosbyelie-private-renders" / str(row.get("id") or source_path.stem)
+            private_renders = []
+            for product_id, megapixels in PRIVATE_RENDER_PRODUCTS.items():
+                long_edge = long_edge_for_megapixels(source_size, megapixels)
+                if not long_edge:
+                    continue
+                render_path = render_root / f"{product_id}.jpg"
+                render_private_deliverable(source_path, render_path, long_edge, args.force)
+                private_renders.append(
+                    r2_put_file(
+                        args.r2_private_bucket,
+                        r2_private_render_key(row, source_path, product_id),
+                        render_path,
+                        "image/jpeg",
+                        args.r2_retries,
+                    )
+                )
+            if private_renders:
+                uploaded["private_renders"] = private_renders
     return uploaded
 
 

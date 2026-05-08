@@ -137,6 +137,7 @@ node scripts/validate_publish.js --summary
 - public watermarked previews go to `photosbyelie-public` under `expo/<country>/<file>`
 - local preview-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model
 - private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
+- unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker only zips them after payment
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
 - IDs listed in `assets/hidden/hidden-blacklist.json` are skipped for public preview uploads; private developed masters are left alone unless an explicit Owner wipe action deletes public previews from R2
 
@@ -172,6 +173,21 @@ Recommended private master resume command, after public previews finish:
 
 ```bash
 python3 scripts/sync_r2_media.py --scope private --upload --workers 2 --request-min-interval 1.5
+```
+
+On David, which owns the developed masters, generate/upload private buyer JPG renders during import/private upload:
+
+```bash
+python3 scripts/build_lightroom_thumbnails.py \
+  --source-root /path/to/developed/files \
+  --r2-upload private \
+  --r2-private-renders
+```
+
+For an already-published photo, render/upload just its private JPG deliverables:
+
+```bash
+zsh -ic 'node scripts/render_private_deliverables.mjs --photo-id <photo-id>'
 ```
 
 The uploader also retries transient Wrangler failures with longer backoff. If Wrangler reports `Invalid access token`, run `npx wrangler whoami` or `npx wrangler login`, then rerun the same resume command.

@@ -1,0 +1,14 @@
+{
+  "name": "photosbyelie",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static Photos By Elie gallery with mock checkout Worker fulfillment.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test worker/checkout-worker.test.mjs",
+    "validate": "node scripts/validate_publish.js --external-media"
+  },
+  "dependencies": {
+    "jpeg-js": "^0.4.4"
+  }
+}

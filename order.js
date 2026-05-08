@@ -3,6 +3,7 @@ const checkoutStateKey = "photosbyelie-mock-checkout";
 const params = new URLSearchParams(window.location.search);
 
 const heading = document.querySelector("[data-order-heading]");
+const phase = document.querySelector("[data-order-phase]");
 const message = document.querySelector("[data-order-message]");
 const details = document.querySelector("[data-order-details]");
 const itemsRoot = document.querySelector("[data-order-items]");
@@ -47,24 +48,65 @@ const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/
 
 const statusText = {
   pending_payment: "Waiting for payment",
-  preparing: "Preparing delivery",
+  preparing: "Building delivery ZIP",
+  delivery_failed: "Delivery blocked",
   ready: "Ready to download",
+};
+
+const phaseCopy = (order) => {
+  const deliveryError = order.deliveryError?.message || "";
+  if (order.status === "ready") {
+    return {
+      step: "Phase 3 of 3",
+      heading: "Ready to download",
+      message: "Payment is complete and the ZIP has been generated from private storage.",
+      current: "ready",
+    };
+  }
+  if (order.status === "delivery_failed") {
+    return {
+      step: "Blocked after Phase 2",
+      heading: "Delivery needs attention",
+      message: deliveryError || "Payment is complete, but the Worker could not generate the delivery ZIP.",
+      current: "preparing",
+      failed: true,
+    };
+  }
+  if (order.status === "preparing") {
+    return {
+      step: "Phase 2 of 3",
+      heading: "Building delivery ZIP",
+      message: "Payment is complete. The Worker is reading private R2 masters and writing the ZIP.",
+      current: "preparing",
+    };
+  }
+  return {
+    step: "Phase 1 of 3",
+    heading: "Waiting for mock payment",
+    message: "The order draft exists. Complete mock Stripe payment before ZIP generation starts.",
+    current: "pending_payment",
+  };
 };
 
 const setProgress = (state) => {
   document.querySelectorAll("[data-state-step]").forEach((step) => {
     const stepState = step.dataset.stateStep;
-    step.classList.toggle("is-active", stepState === state);
-    step.classList.toggle("is-complete", state === "ready" || (state === "preparing" && stepState === "pending_payment"));
+    const isFailed = state === "delivery_failed";
+    const activeState = isFailed ? "preparing" : state;
+    step.classList.toggle("is-active", stepState === activeState);
+    step.classList.toggle("is-failed", isFailed && stepState === "preparing");
+    step.classList.toggle("is-complete", state === "ready" || ((state === "preparing" || isFailed) && stepState === "pending_payment"));
   });
 };
 
 const renderOrder = (order) => {
-  const label = statusText[order.status] || order.status;
-  heading.textContent = label;
-  message.textContent = order.status === "ready"
-    ? "Your mock delivery ZIP is ready."
-    : "The order exists, but the mock delivery is not ready yet.";
+  const copy = phaseCopy(order);
+  heading.textContent = copy.heading || statusText[order.status] || order.status;
+  if (phase) {
+    phase.textContent = copy.step;
+    phase.classList.toggle("is-failed", Boolean(copy.failed));
+  }
+  message.textContent = copy.message;
   setProgress(order.status);
 
   details.innerHTML = `
@@ -74,6 +116,7 @@ const renderOrder = (order) => {
     <div><dt>Total</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
     <div><dt>Paid</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>
     <div><dt>Mode</dt><dd>${escapeText(order.checkoutMode)}</dd></div>
+    ${order.deliveryError?.message ? `<div class="order-local-path"><dt>Delivery note</dt><dd>${escapeText(order.deliveryError.message)}</dd></div>` : ""}
     ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>${isLocalWorker() ? "Local ZIP" : "Delivery ZIP"}</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
   `;
 

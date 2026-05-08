@@ -45,7 +45,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 - `PRIVATE_MEDIA` reads private developed masters from R2.
 - `DELIVERY_MEDIA` writes and serves generated ZIP files. It can point at the same private R2 bucket for the mock phase.
 
-The public static site points checkout to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media to the same Worker under `/media` through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 ZIP adapter currently supports full-resolution products only; scaled JPG products still need a production image-resize/export path before they should be enabled for real cloud delivery.
+The public static site points checkout to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media to the same Worker under `/media` through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 ZIP adapter passes full-resolution masters through unchanged and reads JPG 6 MP, 3 MP, and 1 MP products from private R2 `renders/...` keys. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later ZIPs.
 
 The public mock checkout Worker is live at:
 

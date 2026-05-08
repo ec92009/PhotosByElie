@@ -7,9 +7,9 @@ Date: 2026-05-08
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build in `VERSION`: `v67.10`
+- Current visible build in `VERSION`: `v67.11`
 - Local `main` has the public mock checkout deploy/config work in progress and should be committed/pushed after verification.
-- GitHub Pages should serve `v67.10` after the latest `main` push finishes deploying.
+- GitHub Pages should serve `v67.11` after the latest `main` push finishes deploying.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
 - GitHub should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should stay out of Git and live in R2/CDN.
 - `scripts/cleanup_classified_unknowns_public_r2.py` is being kept as a tracked recovery utility rather than archived.
@@ -51,9 +51,12 @@ Date: 2026-05-08
 - Public mock checkout is wired to the deployed Worker at `https://photosbyelie-checkout-mock.ec92009.workers.dev`.
 - The Cloudflare Worker uses real KV namespace ids in `wrangler.toml`, private R2 for developed-master reads, and the same private bucket for generated mock delivery ZIPs.
 - Public preview media is temporarily bridged through the Worker at `/media/...`, backed by the `photosbyelie-public` R2 bucket, so GitHub Pages can render thumbnails before an R2 custom domain exists.
-- The R2 ZIP adapter currently supports `full` products only; JPG 1/3/6 MP products still need a real cloud resize/export path.
+- The R2 ZIP adapter passes `full` products through unchanged and expects JPG 6/3/1 MP buyer deliverables to already exist in private R2 under `renders/...`.
+- Generated JPG deliverables are unwatermarked buyer files; they must be generated/uploaded by the media pipeline on David, where the developed masters live, and are reused for future ZIPs.
+- The order page now labels phases explicitly as payment, ZIP build, and download. Delivery-generation failures persist as `delivery_failed` and display their Worker error instead of staying stuck as `preparing`.
 - Wrangler can authenticate with the Cloudflare environment variables exported from `~/.zshrc`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`: guest checkout, mock Stripe payment, private R2 ZIP creation, and `/download/:token` returning `application/zip` with valid ZIP magic.
+- Mixed full/JPG 6/3/1 MP cloud checkout was verified by API with order `PBE-20260508-1D7B1CF611` after pre-rendering one test photo's private JPG deliverables; the ZIP returned `application/zip`, valid `PK` bytes, and was about 4.5 MB.
 
 ## PDF / Infographic Work
 
@@ -86,7 +89,7 @@ The living backlog is in `TODO.md`. Highest-priority work now centers on:
 
 1. Finish and verify public R2 preview upload.
 2. Start/verify private R2 master upload after public completes.
-3. Browser-test public mock checkout on GitHub Pages with a full-resolution-only basket.
+3. Browser-test public mock checkout on GitHub Pages with a mixed full/JPG 6/3/1 MP basket.
 4. Harden the local/public mock checkout UX with browser smoke coverage and clearer unsupported-print states.
 5. Decide production order storage, with KV acceptable for public mock and D1 still likely for production records.
 6. Replace mock Stripe with real Stripe Checkout/webhook calls once Elie’s Stripe account is ready.

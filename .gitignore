@@ -3,6 +3,7 @@
 .DS_Store
 __pycache__/
 *.pyc
+node_modules/
 
 # Local/generated photo workspaces.
 # assets/expo is publishable and tracked. Reserve and Hidden are local vault states.

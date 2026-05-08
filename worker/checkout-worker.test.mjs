@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import jpeg from "jpeg-js";
 import test from "node:test";
 import vm from "node:vm";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
@@ -7,6 +8,7 @@ import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 
 const loadCatalog = () => {
   const sandbox = { window: {}, console, Intl };
@@ -103,6 +105,20 @@ const createFakeR2 = (initial = {}) => {
     },
     _debug: values,
   };
+};
+
+const createTestJpeg = (width = 64, height = 48) => {
+  const data = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      data[index] = Math.round((x / width) * 255);
+      data[index + 1] = Math.round((y / height) * 255);
+      data[index + 2] = 120;
+      data[index + 3] = 255;
+    }
+  }
+  return jpeg.encode({ data, width, height }, 90).data;
 };
 
 test("guest checkout creates a pending order and mock Stripe session", async () => {
@@ -275,6 +291,65 @@ test("deployed Worker mock checkout writes and downloads a private R2 ZIP", asyn
   assert.equal(zip.subarray(0, 4).toString("hex"), "504b0304");
   assert.ok(zip.includes(Buffer.from("ORDER.txt")));
   assert.ok(zip.includes(Buffer.from("private developed master bytes")));
+});
+
+test("R2 ZIP delivery renders and privately caches JPG products", async () => {
+  const photoId = "photo-1";
+  const privateKey = `masters/${photoId}/source.jpg`;
+  const privateR2 = createFakeR2({
+    [privateKey]: {
+      body: createTestJpeg(),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  let renderCount = 0;
+  const delivery = createR2ZipDelivery({
+    privateBucket: privateR2,
+    deliveryBucket: privateR2,
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID: deterministicIds(),
+    renderer: {
+      canRender: (productId) => productId === "jpg-3mp",
+      render: async () => {
+        renderCount += 1;
+        return createTestJpeg(32, 24);
+      },
+    },
+  });
+  const order = {
+    id: "PBE-TEST",
+    buyerEmail: "buyer@example.com",
+    currency: "usd",
+    amountPaid: 5500,
+    amountExpected: 5500,
+    items: [{
+      photoId,
+      title: "Private source",
+      source: {
+        path: "source.jpg",
+        privateMasterKey: privateKey,
+        dimensions: { width: 64, height: 48 },
+      },
+      products: [
+        { id: "full", label: "Full resolution" },
+        { id: "jpg-3mp", label: "JPG 3 MP" },
+      ],
+    }],
+  };
+
+  const firstDelivery = await delivery.createDelivery(order);
+  const secondDelivery = await delivery.createDelivery({ ...order, id: "PBE-TEST-2" });
+  assert.equal(renderCount, 1);
+  assert.equal(firstDelivery.items.find((item) => item.products.includes("jpg-3mp")).cacheHit, false);
+  assert.equal(secondDelivery.items.find((item) => item.products.includes("jpg-3mp")).cacheHit, true);
+  const renderKeys = Array.from(privateR2._debug.keys()).filter((key) => key.startsWith(`renders/${photoId}/`));
+  assert.equal(renderKeys.length, 1);
+  assert.match(renderKeys[0], /jpg-3mp\.jpg$/);
+  assert.equal(privateR2._debug.get(renderKeys[0]).httpMetadata.contentType, "image/jpeg");
+  assert.equal(privateR2._debug.get(renderKeys[0]).customMetadata.watermark, "none");
+  const zip = Buffer.from(privateR2._debug.get(firstDelivery.zipKey).body);
+  assert.ok(zip.includes(Buffer.from(`${photoId}-full.jpg`)));
+  assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-3mp.jpg`)));
 });
 
 test("deployed Worker serves public R2 previews through the media route", async () => {

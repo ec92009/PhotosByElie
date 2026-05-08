@@ -47,6 +47,12 @@ const originalSize = (photo) => {
   return fromMetadata || (photo?.megapixels ? `${photo.megapixels} MP source` : "Source size unverified");
 };
 
+const originalDimensions = (photo) => {
+  const value = originalSize(photo);
+  const match = String(value).match(/(\d+)\s*x\s*(\d+)/i);
+  return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
+};
+
 const verifiedMegapixels = (photo) => {
   if (Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length) return Number(photo.megapixels) || 0;
   const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";
@@ -160,6 +166,7 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
         type: sourceType(source),
         path: source.path,
         privateMasterKey: `masters/${photo.id}/${basename(source.path)}`,
+        dimensions: originalDimensions(photo),
       },
       publicPreview: photo.media?.publicPreview || null,
       products: options,
@@ -193,6 +200,11 @@ const publicOrder = (order) => ({
     zipKey: order.delivery.zipKey,
     downloadUrl: order.delivery.downloadUrl,
     readyAt: order.delivery.readyAt,
+  } : null,
+  deliveryError: order.deliveryError ? {
+    code: order.deliveryError.code || "delivery_failed",
+    message: order.deliveryError.message || "Delivery could not be generated.",
+    failedAt: order.deliveryError.failedAt || null,
   } : null,
   stripe: {
     checkoutSessionId: order.checkoutSessionId,
@@ -328,7 +340,24 @@ export const createPhotosByElieWorker = ({
     };
     await store.putOrder(preparing);
 
-    const deliveryResult = await deliveryClient.createDelivery(preparing);
+    let deliveryResult;
+    try {
+      deliveryResult = await deliveryClient.createDelivery(preparing);
+    } catch (error) {
+      const failedAt = now().toISOString();
+      const failed = {
+        ...preparing,
+        status: "delivery_failed",
+        deliveryError: {
+          code: error?.code || "delivery_failed",
+          message: error?.message || "Delivery could not be generated.",
+          failedAt,
+        },
+        updatedAt: failedAt,
+      };
+      await store.putOrder(failed);
+      throw error;
+    }
     const readyAt = now().toISOString();
     const ready = {
       ...preparing,

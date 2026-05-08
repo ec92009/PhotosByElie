@@ -14,7 +14,7 @@ Last updated: 2026-05-08
 - `assets/reserve` remains an ignored local preview cache for importer/review compatibility, not a long-term public state.
 - R2 upload journals are resumable. Cloudflare throttled parallel public/private uploads with `429 Too Many Requests`, so large R2 syncs should run one lane at a time.
 - Public R2 active inventory was live-verified with zero missing active objects after the S3 backend repair pass. The 29 extra public objects were dumped intentionally; they can be re-uploaded later if ever needed.
-- Every public preview should map to a full-size developed private source usable for delivery ZIPs. The skipped low-value TIFF `20220504 141310 00203.tif` should therefore be removed from delivery-eligible catalog data or replaced with a usable developed master before buyer delivery.
+- Every public preview, including TIFF-derived previews, should map to a full-size developed private source usable for delivery ZIPs. If the full-size source is intentionally skipped, its public preview should be removed or marked unavailable for buyer delivery; this includes the skipped low-value TIFF `20220504 141310 00203.tif`.
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
@@ -37,7 +37,7 @@ Last updated: 2026-05-08
 1. **Enforce public preview to private delivery-source parity.**
    - [Codex] Verify every active public preview/catalog photo has a corresponding private developed master under `masters/...`.
    - [Codex] Verify every delivery-eligible photo has private JPG 6/3/1 MP render objects under `renders/...`.
-   - [Codex] Remove or mark unavailable any public-preview photo whose full-size developed source is intentionally skipped, including the low-value timed-out TIFF.
+   - [Codex] Remove or mark unavailable any public-preview photo whose full-size developed source is intentionally skipped, including TIFF-derived previews such as the low-value timed-out TIFF.
    - [Codex] Add publish validation so future public previews cannot ship without a matching private delivery source.
 
 2. **Flatten R2 object key layout.**

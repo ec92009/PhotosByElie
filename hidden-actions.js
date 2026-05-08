@@ -3,7 +3,6 @@
   const key = "photosbyelie-hidden";
   const historyKey = "photosbyelie-hidden-history";
   const reservePromotionsKey = "photosbyelie-reserve-promotions";
-  const regularCapKey = "photosbyelie-regular-cap";
   const reserveOnlyKey = "photosbyelie-reserve-only";
   const countryAssignmentsKey = "photosbyelie-country-assignments";
   const photoActionEndpoint = "/__photosbyelie/photo-action";
@@ -180,19 +179,6 @@
     }
   };
 
-  const readRegularCap = () => {
-    if (!enabled) return null;
-    const value = Number(localStorage.getItem(regularCapKey));
-    return Number.isInteger(value) && value > 0 ? value : null;
-  };
-
-  const effectiveRegularCap = () => {
-    const savedCap = readRegularCap();
-    if (savedCap) return savedCap;
-    const collections = window.photosByElieData || {};
-    return Math.max(1, ...Object.values(collections).map((collection) => collection.photos?.length || 0));
-  };
-
   const readCountryAssignments = () => {
     if (!enabled) return {};
     try {
@@ -245,18 +231,6 @@
       changed = true;
     });
     return changed ? writeCountryAssignments(assignments) : assignments;
-  };
-
-  const setRegularCap = (value) => {
-    if (!enabled) return null;
-    const nextValue = Number(value);
-    if (Number.isInteger(nextValue) && nextValue > 0) {
-      localStorage.setItem(regularCapKey, String(nextValue));
-    } else {
-      localStorage.removeItem(regularCapKey);
-    }
-    window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read() } }));
-    return readRegularCap();
   };
 
   const write = (items) => {
@@ -410,9 +384,7 @@
     read,
     readCountryAssignments,
     readReserveOnly,
-    readRegularCap,
     assignUnknownsToCountry,
-    effectiveRegularCap,
     promoteHidden,
     publishHiddenBlacklist,
     returnToReserve,
@@ -420,7 +392,6 @@
     updateOwnerBusy,
     setCountryAssignment,
     setCountryAssignments,
-    setRegularCap,
     syncCountryKeywords,
     undo,
     unmark,

@@ -5,8 +5,6 @@
   const controls = document.querySelector("[data-owner-controls]");
   const locked = document.querySelector("[data-owner-locked]");
   const status = document.querySelector("[data-owner-status]");
-  const capInput = document.querySelector("[data-owner-regular-cap]");
-  const saveCapButton = document.querySelector("[data-owner-save-cap]");
   const countsRoot = document.querySelector("[data-owner-counts]");
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
@@ -22,27 +20,6 @@
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
-  };
-
-  const collectionCap = () => Math.max(
-    1,
-    ...Object.values(collections).map((collection) => collection.photos?.length || 0)
-  );
-
-  const currentCap = () => hiddenActions?.effectiveRegularCap?.() || collectionCap();
-
-  const normalizedInputCap = () => {
-    const rawValue = Number(capInput?.value || currentCap());
-    return Math.max(1, Math.round(rawValue));
-  };
-
-  const saveCurrentCap = () => {
-    const nextCap = normalizedInputCap();
-    const savedCap = hiddenActions.setRegularCap(nextCap);
-    const resolvedCap = savedCap || nextCap;
-    if (capInput) capInput.value = String(resolvedCap);
-    renderCounts();
-    return resolvedCap;
   };
 
   const countPhotos = (data) => Object.values(data || {})
@@ -99,7 +76,6 @@
       ["Unknown queue", queue.visible.length],
       ["Unknown loaded", queue.photos.length],
       ["Unknown assigned", queue.assigned.length],
-      ["Expo cap", currentCap()],
     ];
     countsRoot.innerHTML = counts.map(([label, value]) => `
       <div>
@@ -172,15 +148,9 @@
     return;
   }
 
-  if (capInput) capInput.value = String(currentCap());
   if (physicalProductsToggle) {
     physicalProductsToggle.checked = productSettings?.physicalProductsEnabled?.() === true;
   }
-
-  saveCapButton?.addEventListener("click", () => {
-    const savedCap = saveCurrentCap();
-    setStatus(`Expo cap set to ${savedCap}.`);
-  });
 
   physicalProductsToggle?.addEventListener("change", () => {
     const enabled = productSettings?.setPhysicalProductsEnabled?.(physicalProductsToggle.checked) === true;
@@ -212,12 +182,12 @@
 
   publishHiddenBlacklistButton?.addEventListener("click", async () => {
     publishHiddenBlacklistButton.disabled = true;
-    setStatus("Publishing the hidden-photo blacklist to R2...");
+    setStatus("Syncing the hidden-photo list to R2...");
     try {
       await hiddenActions.publishHiddenBlacklist?.();
       renderCounts();
       loadR2Progress();
-      setStatus("Hidden blacklist queued for R2.");
+      setStatus("Hidden list sync queued for R2.");
     } catch (error) {
       setStatus(error?.message || "Could not publish hidden blacklist.");
     } finally {
@@ -226,6 +196,8 @@
   });
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
+    const ok = window.confirm("Delete public preview objects for hidden photos? Publish the hidden list first so galleries know these photos are rejected.");
+    if (!ok) return;
     wipeHiddenR2Button.disabled = true;
     setStatus("Queueing hidden public preview deletes in R2...");
     try {

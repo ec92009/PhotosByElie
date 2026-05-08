@@ -118,17 +118,13 @@ const promotedPhotosFor = (galleryKey) => {
     .filter(Boolean);
 };
 
-const regularCapFor = (targetCollection) => (
-  hiddenActions?.readRegularCap?.() || targetCollection?.photos?.length || 0
-);
-
 const visiblePhotosFor = (galleryKey, targetCollection, options = {}) => {
   const basePhotos = targetCollection?.photos || [];
   if (!localModerationEnabled || !hiddenActions?.filterPhotos) return basePhotos;
   const photos = hiddenActions.filterPhotos(basePhotos, { includeReserveOnly: options.includeReserveOnly });
   if (!options.includePromotions) return photos;
   const promoted = hiddenActions.filterPhotos(promotedPhotosFor(galleryKey), { includeReserveOnly: true });
-  return photos.concat(promoted).slice(0, regularCapFor(targetCollection));
+  return photos.concat(promoted);
 };
 
 const visibleCollectionPhotos = () => visiblePhotosFor(collectionKey, collection, {

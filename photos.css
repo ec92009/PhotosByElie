@@ -274,6 +274,20 @@ html[data-theme="light"] .photo-art.has-photo::after{
   color:var(--muted);
   line-height:1.45;
 }
+.owner-danger-zone{
+  display:grid;
+  gap:9px;
+  margin-top:4px;
+  border-top:1px solid var(--line);
+  padding-top:12px;
+}
+.btn.danger{
+  border-color:color-mix(in srgb,#b23b3b 58%,var(--line));
+  background:color-mix(in srgb,#b23b3b 12%,var(--surface-2));
+}
+.btn.danger:hover{
+  background:color-mix(in srgb,#b23b3b 20%,var(--surface-2));
+}
 .owner-export-result{
   display:grid;
   gap:10px;

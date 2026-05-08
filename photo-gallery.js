@@ -261,8 +261,6 @@ const ensureGalleryFilterControls = () => {
   });
 };
 
-const regularCap = () => hiddenActions?.readRegularCap?.() || gallery?.photos?.length || 0;
-
 const randomInteger = (max) => {
   if (!max) return 0;
   const cryptoObject = window.crypto || window.msCrypto;
@@ -338,14 +336,14 @@ const visiblePhotos = () => {
     .filterPhotos(basePhotos)
     .concat(hiddenActions.filterPhotos(promotedPhotos(), { includeReserveOnly: true }));
   const selectedIds = new Set(selected.map((photo) => photo.id));
-  while (reserveFillEnabled && selected.length < regularCap()) {
+  while (reserveFillEnabled && selected.length < basePhotos.length) {
     const nextPhoto = reserveReplacementPhoto(selected, selectedIds);
     if (!nextPhoto) break;
     reserveStore.addPromotion(galleryKey, nextPhoto.id);
     selected.push(nextPhoto);
     selectedIds.add(nextPhoto.id);
   }
-  return selected.slice(0, regularCap());
+  return selected;
 };
 
 const updateSelection = ({ scroll = true } = {}) => {

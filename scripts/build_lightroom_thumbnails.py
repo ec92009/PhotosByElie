@@ -265,6 +265,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not write exact GPS tags to the separate gps-metadata.json file.",
     )
+    parser.add_argument(
+        "--hidden-blacklist",
+        type=Path,
+        default=Path("assets/hidden/hidden-blacklist.json"),
+        help="Owner discard tombstones. Matching photo ids are skipped before render/upload.",
+    )
     return parser.parse_args()
 
 
@@ -1232,6 +1238,17 @@ def load_failures(path: Path) -> dict[str, dict[str, Any]]:
     return {row["relative_path"]: row for row in rows if "relative_path" in row}
 
 
+def load_discarded_photo_ids(path: Path) -> set[str]:
+    if not path.exists():
+        return set()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return set()
+    values = payload.get("photo_ids") if isinstance(payload, dict) else []
+    return {value for value in values or [] if isinstance(value, str) and value}
+
+
 def write_gps_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -1424,6 +1441,12 @@ def process_batch(
 
         try:
             slug = slug_for(relative_path)
+            if slug in getattr(args, "discarded_photo_ids", set()):
+                manifest.pop(relative_path, None)
+                gps_manifest.pop(relative_path, None)
+                failures.pop(relative_path, None)
+                append_state(state_path, {**base_state, "status": "discarded"})
+                continue
             selected_metadata = merged_selected_metadata(source, metadata_path, args)
             gallery_country = selected_metadata["gallery_country"]
             gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug)
@@ -1502,6 +1525,7 @@ def main() -> int:
     args.source_root = source_root
     args.developed_root = args.developed_root.expanduser().resolve() if args.developed_root else None
     args.output_root = args.output_root.expanduser()
+    args.discarded_photo_ids = load_discarded_photo_ids(args.hidden_blacklist.expanduser())
     year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")

@@ -1163,23 +1163,18 @@ body.detail-fullscreen-active{
 }
 .mock-checkout-result a,
 .mock-checkout-result a:visited{
-  color:#9fe6ff;
+  color:var(--link);
   font-weight:800;
-  text-decoration-color:rgba(159,230,255,.7);
+  text-decoration-color:var(--link-decoration);
   text-decoration-thickness:2px;
   text-underline-offset:.16em;
 }
 .mock-checkout-result a:hover{
-  color:#ffffff;
+  color:var(--link-hover);
 }
 .mock-checkout-result code{
   color:var(--muted);
   font-size:.82rem;
-}
-html[data-theme="light"] .mock-checkout-result a,
-html[data-theme="light"] .mock-checkout-result a:visited{
-  color:#075a75;
-  text-decoration-color:rgba(7,90,117,.55);
 }
 .order-panel{
   display:grid;

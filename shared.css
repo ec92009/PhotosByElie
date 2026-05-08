@@ -7,6 +7,9 @@
   --line:#303030;
   --brand:#f0f0f0;
   --brand-2:#909090;
+  --link:#9fe6ff;
+  --link-hover:#ffffff;
+  --link-decoration:rgba(159,230,255,.72);
   --accent:#252525;
   --btn-primary-fg:#0e0e0e;
   --radius:0;
@@ -24,6 +27,9 @@ html[data-theme="light"]{
   --line:#e0e0e0;
   --brand:#111111;
   --brand-2:#666666;
+  --link:#075a75;
+  --link-hover:#033949;
+  --link-decoration:rgba(7,90,117,.58);
   --accent:#e0e0e0;
   --btn-primary-fg:#ffffff;
 }
@@ -35,6 +41,18 @@ body{
   font-family:"Space Grotesk",Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;
   color:var(--text);
   background:var(--bg);
+}
+a{
+  color:var(--link);
+  text-decoration-color:var(--link-decoration);
+  text-decoration-thickness:1.5px;
+  text-underline-offset:.16em;
+}
+a:visited{
+  color:var(--link);
+}
+a:hover{
+  color:var(--link-hover);
 }
 .panel{
   padding:var(--panel-block) var(--panel-inline);

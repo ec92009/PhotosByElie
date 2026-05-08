@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.14`.
+- Local visible build: `v67.15`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -19,8 +19,9 @@ Last updated: 2026-05-08
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
 - Public mock checkout Worker is live at `https://photosbyelie-checkout-mock.ec92009.workers.dev`, backed by Cloudflare KV plus private R2.
-- The public site config points checkout to the deployed Worker as of `v67.11`; current UI/copy fixes are published through `v67.14`.
+- The public site config points checkout to the deployed Worker as of `v67.11`; current UI/copy/media-key fixes are published through `v67.15`.
 - Public previews are temporarily served through `https://photosbyelie-checkout-mock.ec92009.workers.dev/media/...`, backed by `photosbyelie-public`.
+- Public preview keys are moving to a country-free R2 shape: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`. Original gallery/country provenance is preserved in `assets/media-sidecar.json`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`; the Worker generated `deliveries/photosbyelie-order-PBE-20260508-D054362044.zip` in private R2 and returned a valid ZIP download.
 - Order status now shows explicit mock checkout phases: payment, ZIP build, and download. Cloud ZIP generation failures persist as `delivery_failed`.
 - The Worker expects JPG 6/3/1 MP buyer files to exist in private R2 under `renders/...`; David generated and uploaded the completed private render cache from local Saturn developed masters.
@@ -41,10 +42,11 @@ Last updated: 2026-05-08
    - [Codex] Add publish validation so future public previews cannot ship without a matching private delivery source.
 
 2. **Flatten R2 object key layout.**
-   - [Codex] Stop using country folders in public or private R2 object keys; manifests already carry country/gallery metadata.
-   - [Codex] Design a stable flat key scheme for public previews and private masters before the next major media migration.
-   - [Codex] Update upload, cleanup, delivery, and validation scripts to treat country as metadata, not storage structure.
-   - [Codex] Plan redirects or cleanup for existing country-prefixed R2 objects before changing published URLs.
+   - [Done] Stop using country folders in public preview R2 object keys; manifests already carry country/gallery metadata.
+   - [Done] Use stable flat public preview keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
+   - [Done] Preserve original source, collection/country provenance, legacy public keys, private master keys, and private render keys in `assets/media-sidecar.json`.
+   - [Done] Update upload/import/export and validation scripts to treat country as metadata, not storage structure.
+   - [Codex] After the flat-key catalog is live and verified, decide whether to delete old country-prefixed public R2 preview objects or keep them as a temporary compatibility cushion.
 
 3. **Adopt non-destructive owner metadata overrides.**
    - [Codex] Treat public previews and private masters as immutable media bytes by default, like RAW-editor negatives.

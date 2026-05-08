@@ -22,11 +22,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
 from media_policy import private_master_allowed, public_preview_allowed
 
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
-DEFAULT_PUBLIC_PREFIX = "expo"
 DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 DEFAULT_DELETE_STATE = Path(".review-logs/r2-delete-state.jsonl")
@@ -125,11 +125,8 @@ def country_slug(row: dict[str, Any]) -> str:
     return str(gallery_country or "unknown")
 
 
-def public_key(public_prefix: str, derivative_path: Path) -> str:
-    parts = derivative_path.as_posix().split("/")
-    if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
-        return "/".join([public_prefix.strip("/"), *parts[2:]])
-    return "/".join([public_prefix.strip("/"), *parts[-2:]])
+def public_key(public_prefix: str, row: dict[str, Any], derivative_path: Path) -> str:
+    return public_preview_key_for_reference(public_prefix, str(row.get("id") or derivative_path.stem), derivative_path)
 
 
 def hidden_photo_ids(repo_root: Path) -> set[str]:
@@ -205,7 +202,7 @@ def public_upload_items(repo_root: Path, args: argparse.Namespace, rows_by_id: d
         if not path.exists():
             skipped.append({"id": photo_id, "reason": "missing-preview", "path": str(path)})
             continue
-        key = public_key(args.public_prefix, path.relative_to(repo_root))
+        key = public_key(args.public_prefix, row, path.relative_to(repo_root))
         if key in seen_keys:
             continue
         seen_keys.add(key)

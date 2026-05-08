@@ -56,7 +56,7 @@ By default the public manifest preserves all Lightroom keywords, while exact GPS
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local preview-cache manifest into `photos-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet.
+`export_photos_data.py` promotes a publishable catalog subset from the local preview-cache manifest into `photos-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys are flat by photo ID under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -78,6 +78,12 @@ For the GitHub-code/R2-media publishing model, write the same public catalog and
 
 ```bash
 python3 scripts/export_photos_data.py --expo-cap 100 --external-media
+```
+
+After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and legacy country-prefixed provenance:
+
+```bash
+node scripts/write_media_sidecar.mjs
 ```
 
 For normal H/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H hides by adding the photo to the Hidden blacklist, U removes the most recent hide, and P on the Hidden page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update local catalog/source metadata when possible, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
@@ -134,8 +140,8 @@ node scripts/validate_publish.js --summary
 
 `sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:
 
-- public watermarked previews go to `photosbyelie-public` under `expo/<country>/<file>`
-- local preview-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model
+- public watermarked previews go to `photosbyelie-public` under flat keys such as `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
+- local preview-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
 - private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
 - unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker only zips them after payment
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads

@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, RAW_IMAGE_EXTENSIONS
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, first_env, s3_put, wrangler_command
 
@@ -52,7 +53,6 @@ DEFAULT_BATCH_SIZE = 50
 SCHEMA_VERSION = 4
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
-DEFAULT_PUBLIC_PREFIX = "expo"
 DEFAULT_PRIVATE_PREFIX = "masters"
 PRIVATE_RENDER_PRODUCTS = {
     "jpg-6mp": 6,
@@ -1035,8 +1035,8 @@ def r2_put_file(
     raise RuntimeError(f"R2 upload failed for {bucket}/{key}: {output}")
 
 
-def r2_public_key(args: argparse.Namespace, country_slug: str, path: Path) -> str:
-    return "/".join([args.r2_public_prefix.strip("/"), country_slug, path.name])
+def r2_public_key(args: argparse.Namespace, row: dict[str, Any], path: Path) -> str:
+    return public_preview_key_for_reference(args.r2_public_prefix, str(row.get("id") or path.stem), path)
 
 
 def r2_private_key(args: argparse.Namespace, row: dict[str, Any], source_path: Path) -> str:
@@ -1088,13 +1088,12 @@ def render_private_deliverable(source_path: Path, output_path: Path, long_edge: 
 
 def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path: Path, detail_path: Path, source_path: Path) -> dict[str, Any]:
     uploaded: dict[str, Any] = {}
-    country_slug = row.get("gallery_country", {}).get("slug") or "unknown"
     if r2_upload_enabled(args, "public"):
         uploaded["public_previews"] = [
             r2_put_file(
                 args,
                 args.r2_public_bucket,
-                r2_public_key(args, country_slug, gallery_path),
+                r2_public_key(args, row, gallery_path),
                 gallery_path,
                 "image/jpeg",
                 args.r2_retries,
@@ -1103,7 +1102,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
             r2_put_file(
                 args,
                 args.r2_public_bucket,
-                r2_public_key(args, country_slug, detail_path),
+                r2_public_key(args, row, detail_path),
                 detail_path,
                 "image/jpeg",
                 args.r2_retries,

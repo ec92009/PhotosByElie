@@ -69,7 +69,7 @@ const pathFromStatusLine = (line) => line.slice(3).replace(/^.* -> /, "");
 const isPublishPath = (file) => {
   if (!file) return false;
   if (file === "VERSION" || file === "README.md" || file === "SUMMARY.md" || file === "TODO.md") return true;
-  if (file === "photos-data.js" || file === "assets/expo-manifest.json") return true;
+  if (file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json") return true;
   if (file.startsWith("assets/expo/")) return true;
   if (file.startsWith("scripts/")) return true;
   return /\.(html|css|js)$/i.test(file);
@@ -108,6 +108,7 @@ const validate = () => {
   const errors = [];
   const warnings = [];
   const seenPhotoIds = new Map();
+  const seenPublicPreview = new Map();
   const resolutionIds = new Set();
 
   resolutions.forEach((resolution) => {
@@ -171,6 +172,12 @@ const validate = () => {
         if (publicDetailKey && !/_1800\.jpg$/i.test(publicDetailKey)) {
           errors.push(`${photo.id} publicPreview.detailKey does not end in _1800.jpg.`);
         }
+        if (publicGalleryKey && publicGalleryKey !== `expo/${photo.id}_900.jpg`) {
+          errors.push(`${photo.id} publicPreview.galleryKey is not flat by photo id.`);
+        }
+        if (publicDetailKey && publicDetailKey !== `expo/${photo.id}_1800.jpg`) {
+          errors.push(`${photo.id} publicPreview.detailKey is not flat by photo id.`);
+        }
         if (publicGalleryKey && publicDetailKey && pairFor(publicGalleryKey) !== publicDetailKey) {
           errors.push(`${photo.id} public preview gallery/detail keys do not match.`);
         }
@@ -189,6 +196,11 @@ const validate = () => {
           }
         });
       }
+      seenPublicPreview.set(photo.id, {
+        collectionKey,
+        galleryKey: publicGalleryKey,
+        detailKey: publicDetailKey,
+      });
 
       if (photo.gallerySrc && !/_900\.jpg$/i.test(photo.gallerySrc)) {
         warnings.push(`${photo.id} gallerySrc does not end in _900.jpg.`);
@@ -222,6 +234,43 @@ const validate = () => {
     });
   });
 
+  const sidecarPath = path.join(repoRoot, "assets", "media-sidecar.json");
+  if (!fs.existsSync(sidecarPath)) {
+    errors.push("assets/media-sidecar.json is missing.");
+  } else {
+    try {
+      const sidecar = JSON.parse(fs.readFileSync(sidecarPath, "utf8"));
+      const sidecarPhotos = sidecar.photos || {};
+      if (Number(sidecar.photosCount) !== seenPhotoIds.size) {
+        errors.push(`assets/media-sidecar.json photosCount is ${sidecar.photosCount}; expected ${seenPhotoIds.size}.`);
+      }
+      seenPublicPreview.forEach((preview, photoId) => {
+        const sidecarPhoto = sidecarPhotos[photoId];
+        if (!sidecarPhoto) {
+          errors.push(`${photoId} is missing from assets/media-sidecar.json.`);
+          return;
+        }
+        if (sidecarPhoto.collectionKey !== preview.collectionKey) {
+          errors.push(`${photoId} sidecar collectionKey does not match catalog.`);
+        }
+        if (sidecarPhoto.publicPreview?.galleryKey !== preview.galleryKey) {
+          errors.push(`${photoId} sidecar galleryKey does not match catalog.`);
+        }
+        if (sidecarPhoto.publicPreview?.detailKey !== preview.detailKey) {
+          errors.push(`${photoId} sidecar detailKey does not match catalog.`);
+        }
+        if (!sidecarPhoto.legacyPublicPreview?.galleryKey || !sidecarPhoto.legacyPublicPreview?.detailKey) {
+          warnings.push(`${photoId} sidecar has no legacy public preview key.`);
+        }
+        if (!sidecarPhoto.privateDelivery?.masterKey) {
+          warnings.push(`${photoId} sidecar has no private master key.`);
+        }
+      });
+    } catch (error) {
+      errors.push(`assets/media-sidecar.json is not valid JSON: ${error.message}`);
+    }
+  }
+
   return { collections, errors, warnings };
 };
 
@@ -243,7 +292,7 @@ const printSummary = (collections) => {
   }, 0);
   const assetCatalogChanged = changed.filter((line) => {
     const file = pathFromStatusLine(line);
-    return file === "photos-data.js" || file === "assets/expo-manifest.json" || file.startsWith("assets/expo/");
+    return file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json" || file.startsWith("assets/expo/");
   });
   const diffStat = runGit("git diff --stat -- .");
 

@@ -9,6 +9,7 @@ import shutil
 from collections import defaultdict
 from pathlib import Path
 
+from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
 
 LABELS = {
@@ -111,12 +112,8 @@ def source_files(row: dict) -> list[dict]:
     return source_file_entries(row)
 
 
-def public_media_key(reference: str) -> str:
-    clean = str(reference or "").removeprefix("./")
-    parts = clean.split("/")
-    if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
-        return "/".join(["expo", *parts[2:]])
-    return clean
+def public_media_key(row: dict, reference: str) -> str:
+    return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, row["id"], reference)
 
 
 def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
@@ -125,8 +122,8 @@ def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
         "sourcePolicy": media_source_policy(row),
         "publicPreview": {
             "allowed": public_allowed,
-            "galleryKey": public_media_key(gallery_rel) if public_allowed else "",
-            "detailKey": public_media_key(detail_rel) if public_allowed else "",
+            "galleryKey": public_media_key(row, gallery_rel) if public_allowed else "",
+            "detailKey": public_media_key(row, detail_rel) if public_allowed else "",
         },
     }
 

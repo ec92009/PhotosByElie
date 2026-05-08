@@ -139,8 +139,14 @@ export const createLocalZipDelivery = ({
     }
     const previewKey = item.publicPreview?.detailKey || item.publicPreview?.galleryKey || "";
     const previewPath = previewKey.replace(/^expo\//, "");
-    const candidate = path.join(reserveRoot, previewPath);
-    if (previewPath && await exists(candidate)) return { filePath: candidate, kind: "preview-fallback" };
+    const previewName = path.basename(previewPath);
+    const candidates = [
+      path.join(reserveRoot, previewPath),
+      path.join(reserveRoot, item.collectionKey || "", previewName),
+    ];
+    for (const candidate of candidates) {
+      if (previewPath && await exists(candidate)) return { filePath: candidate, kind: "preview-fallback" };
+    }
     throw new Error(`No local source or preview fallback for ${item.photoId}`);
   };
 

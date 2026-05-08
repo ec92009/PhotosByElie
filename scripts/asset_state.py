@@ -25,6 +25,7 @@ from export_photos_data import (
     reserve_only_ids_from_payload,
     write_photos_data,
 )
+from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed
 
 COUNTRY_ASSIGNMENT_LABELS = {
@@ -152,12 +153,8 @@ def clean_site_src(value: str | None) -> str:
     return str(value or "").removeprefix("./")
 
 
-def public_media_key(reference: str | None) -> str:
-    clean = clean_site_src(reference)
-    parts = clean.split("/")
-    if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
-        return "/".join(["expo", *parts[2:]])
-    return clean
+def public_media_key(photo: dict, reference: str | None) -> str:
+    return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, photo["id"], reference)
 
 
 def media_object_for_photo(photo: dict) -> dict:
@@ -166,8 +163,8 @@ def media_object_for_photo(photo: dict) -> dict:
         "sourcePolicy": media_source_policy(photo),
         "publicPreview": {
             "allowed": public_allowed,
-            "galleryKey": public_media_key(photo.get("gallerySrc")) if public_allowed else "",
-            "detailKey": public_media_key(photo.get("imageSrc")) if public_allowed else "",
+            "galleryKey": public_media_key(photo, photo.get("gallerySrc")) if public_allowed else "",
+            "detailKey": public_media_key(photo, photo.get("imageSrc")) if public_allowed else "",
         },
     }
 

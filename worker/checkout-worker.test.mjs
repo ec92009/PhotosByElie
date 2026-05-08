@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
@@ -56,6 +57,52 @@ const firstDeliverablePhotoId = (catalog) => {
     }
   }
   throw new Error("Could not find a deliverable test photo.");
+};
+
+const sourcePathForPhoto = (catalog, photoId) => catalog.photos.get(photoId).photo.sourceFiles[0].path;
+
+const createFakeKv = () => {
+  const values = new Map();
+  return {
+    get: async (key, options = {}) => {
+      const value = values.get(key) ?? null;
+      if (value == null) return null;
+      return options.type === "json" ? JSON.parse(value) : value;
+    },
+    put: async (key, value) => {
+      values.set(key, String(value));
+    },
+    _debug: values,
+  };
+};
+
+const createFakeR2 = (initial = {}) => {
+  const values = new Map(Object.entries(initial).map(([key, value]) => [key, {
+    body: value.body instanceof Uint8Array ? value.body : new Uint8Array(value.body),
+    httpMetadata: value.httpMetadata || {},
+    customMetadata: value.customMetadata || {},
+  }]));
+  return {
+    get: async (key) => {
+      const value = values.get(key);
+      if (!value) return null;
+      return {
+        httpMetadata: value.httpMetadata,
+        customMetadata: value.customMetadata,
+        arrayBuffer: async () => value.body.buffer.slice(value.body.byteOffset, value.body.byteOffset + value.body.byteLength),
+        body: value.body,
+      };
+    },
+    put: async (key, body, options = {}) => {
+      const bytes = body instanceof Uint8Array ? body : new Uint8Array(body);
+      values.set(key, {
+        body: bytes,
+        httpMetadata: options.httpMetadata || {},
+        customMetadata: options.customMetadata || {},
+      });
+    },
+    _debug: values,
+  };
 };
 
 test("guest checkout creates a pending order and mock Stripe session", async () => {
@@ -185,4 +232,47 @@ test("local ZIP delivery creates a real ZIP from preview fallback", async () => 
   assert.ok(zip.includes(Buffer.from("ORDER.txt")));
 
   fs.rmSync(outputDir, { recursive: true, force: true });
+});
+
+test("deployed Worker mock checkout writes and downloads a private R2 ZIP", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const sourcePath = sourcePathForPhoto(catalog, photoId);
+  const privateKey = `masters/${photoId}/${sourcePath.split(/[\\/]/).pop()}`;
+  const privateR2 = createFakeR2({
+    [privateKey]: {
+      body: new TextEncoder().encode("private developed master bytes"),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const env = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: privateR2,
+    DELIVERY_MEDIA: privateR2,
+    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+  };
+
+  const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }), env);
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+
+  const payResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }), env);
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.match(paid.order.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-/);
+
+  const token = paid.order.delivery.downloadUrl.split("/").pop();
+  const downloadResponse = await deployedWorker.fetch(new Request(`https://worker.test/download/${token}`), env);
+  assert.equal(downloadResponse.status, 200);
+  assert.equal(downloadResponse.headers.get("content-type"), "application/zip");
+  const zip = Buffer.from(await downloadResponse.arrayBuffer());
+  assert.equal(zip.subarray(0, 4).toString("hex"), "504b0304");
+  assert.ok(zip.includes(Buffer.from("ORDER.txt")));
+  assert.ok(zip.includes(Buffer.from("private developed master bytes")));
 });

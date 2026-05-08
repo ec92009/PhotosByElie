@@ -26,7 +26,7 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "67.6";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "67.7";
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -35,7 +35,8 @@ const workerBaseUrl = () => {
     localStorage.setItem(workerBaseKey, fromQuery.replace(/\/+$/, ""));
     return fromQuery.replace(/\/+$/, "");
   }
-  return (localStorage.getItem(workerBaseKey) || "http://localhost:8787").replace(/\/+$/, "");
+  const configured = window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "";
+  return (localStorage.getItem(workerBaseKey) || configured || "http://localhost:8787").replace(/\/+$/, "");
 };
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({

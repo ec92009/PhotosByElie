@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.6`.
+- Local visible build: `v67.7`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -17,6 +17,7 @@ Last updated: 2026-05-08
 - Private R2 is one object short of the local private inventory because `20220504 141310 00203.tif` timed out during upload.
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
+- Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
 - Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.
@@ -78,9 +79,10 @@ Last updated: 2026-05-08
    - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
    - [Codex] Add browser smoke coverage for the basket -> mock payment -> order page -> ZIP download path.
    - [Codex] Decide whether local mock orders need persisted JSON state so order lookup survives Worker restarts without relying on browser cache.
+   - [Codex] For public mock checkout, keep cloud ZIP delivery limited to `full` products until a real resize/export path exists for JPG 1/3/6 MP products.
 
 10. **Make Worker storage durable.**
-   - [Codex] Choose D1 vs KV for order records; current likely direction is D1 for queryable order state.
+   - [Codex] Use KV for public mock checkout state; choose D1 vs KV before production order records, with D1 still likely for queryable order state.
    - [Codex] Keep private R2 as the delivery ZIP location.
    - [Codex] Store order ID, buyer email, checkout session ID, payment intent ID, status, basket snapshot, expected/paid amount, ZIP key, and download timing.
    - [Codex] Keep download links rate-limited, starting with roughly one ZIP download per order per hour.
@@ -141,3 +143,4 @@ Last updated: 2026-05-08
 - Wired the basket to local mock guest checkout and added local ZIP generation for mock paid orders.
 - Added `order.html` with a proper mock order status and local ZIP download button.
 - Added the order-ID ZIP fallback route and visible Local ZIP / Copy ZIP path fallback after the in-app browser hid attachment download feedback.
+- Added a deployable public mock checkout Worker path with KV state and private R2 full-resolution ZIP delivery scaffolding.

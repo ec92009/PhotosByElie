@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v67.6`
+- Current visible version: `v67.7`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -108,7 +108,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 ## Worker Checkout Track
 
-`worker/checkout-worker.mjs` is the first implementation of the trusted checkout/fulfillment track, with Stripe mocked for now. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, ZIP delivery metadata, and signed-link-style download tokens. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, then waits for a paid webhook before marking delivery ready. For local end-to-end testing, `worker/local-server.mjs` runs the Worker on `http://localhost:8787`, uses `worker/local-zip-delivery.mjs` to write mock ZIPs under `deliveries/`, serves token downloads during the live mock session, and serves order-ID fallback downloads from `/download-order/:orderId` when the ZIP exists on disk.
+`worker/checkout-worker.mjs` is the first implementation of the trusted checkout/fulfillment track, with Stripe mocked for now. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, ZIP delivery metadata, and signed-link-style download tokens. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, then waits for a paid webhook before marking delivery ready. For local end-to-end testing, `worker/local-server.mjs` runs the Worker on `http://localhost:8787`, uses `worker/local-zip-delivery.mjs` to write mock ZIPs under `deliveries/`, serves token downloads during the live mock session, and serves order-ID fallback downloads from `/download-order/:orderId` when the ZIP exists on disk. For public mock checkout, `worker/deployed-worker.mjs` uses Cloudflare KV for order state and private R2 for developed-master reads plus generated ZIP storage; `media-config.js` can point the public site at that deployed Worker with `checkoutWorkerBaseUrl`.
 
 Run the Worker tests from the repo root:
 

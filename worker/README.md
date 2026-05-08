@@ -36,6 +36,18 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 `worker/local-server.mjs` also provides `GET /download-order/:orderId` for local-only mock testing. It serves the generated ZIP directly from `deliveries/` by order ID, which keeps downloads working after the in-memory mock Worker state has been restarted.
 
+## Public Mock Checkout
+
+`worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public mock checkout. It is still mock payment, but it uses durable Cloudflare bindings:
+
+- `ORDERS_KV` stores orders, Checkout Session indexes, and download tokens.
+- `PRIVATE_MEDIA` reads private developed masters from R2.
+- `DELIVERY_MEDIA` writes and serves generated ZIP files. It can point at the same private R2 bucket for the mock phase.
+
+The public static site can point to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` in `media-config.js`, or with `?workerBase=https://...` while testing. The R2 ZIP adapter currently supports full-resolution products only; scaled JPG products still need a production image-resize/export path before they should be enabled for real cloud delivery.
+
+`wrangler.toml` is checked in with placeholder KV ids. Replace the `ORDERS_KV` ids before deploying.
+
 ## Guest Checkout Example
 
 For the full local mock flow, run the static site and the local Worker in separate terminals:

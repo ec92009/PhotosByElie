@@ -378,7 +378,33 @@ export const createPhotosByElieWorker = ({
     const sessionId = payload.checkoutSessionId || payload.sessionId;
     if (!sessionId) return errorJson(400, "missing_session_id", "Mock payment requires checkoutSessionId.");
     try {
-      const event = stripe.paidEventForSession(sessionId, payload.overrides || {});
+      let event;
+      try {
+        event = stripe.paidEventForSession(sessionId, payload.overrides || {});
+      } catch (error) {
+        const order = await store.getOrderByCheckoutSessionId?.(sessionId);
+        if (!order) throw error;
+        event = {
+          id: `evt_mock_${randomUUID().replace(/-/g, "").slice(0, 24)}`,
+          object: "event",
+          type: "checkout.session.completed",
+          created: Math.floor(now().getTime() / 1000),
+          data: {
+            object: {
+              id: sessionId,
+              object: "checkout.session",
+              client_reference_id: order.id,
+              metadata: { order_id: order.id },
+              payment_status: "paid",
+              amount_total: order.amountExpected,
+              currency: order.currency,
+              customer_details: { email: order.buyerEmail },
+              payment_intent: order.paymentIntentId || `pi_mock_${randomUUID().replace(/-/g, "").slice(0, 24)}`,
+              ...payload.overrides,
+            },
+          },
+        };
+      }
       const order = await markOrderPaidAndFulfill(event.data.object);
       return json({ event, order: publicOrder(order) });
     } catch (error) {
@@ -405,6 +431,9 @@ export const createPhotosByElieWorker = ({
       return errorJson(429, "download_rate_limited", "This order was downloaded recently. Try again later.");
     }
     await store.recordDownload(token, nowDate.toISOString());
+    if (typeof deliveryClient.getDownloadResponse === "function") {
+      return deliveryClient.getDownloadResponse(downloadRecord);
+    }
     return json({
       download: {
         orderId: downloadRecord.orderId,

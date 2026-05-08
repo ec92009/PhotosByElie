@@ -34,7 +34,8 @@ const workerBaseUrl = () => {
     localStorage.setItem(workerBaseKey, fromQuery.replace(/\/+$/, ""));
     return fromQuery.replace(/\/+$/, "");
   }
-  return (localStorage.getItem(workerBaseKey) || "http://localhost:8787").replace(/\/+$/, "");
+  const configured = window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "";
+  return (localStorage.getItem(workerBaseKey) || configured || "http://localhost:8787").replace(/\/+$/, "");
 };
 
 const orderId = () => params.get("id") || checkoutState().orderId || "";

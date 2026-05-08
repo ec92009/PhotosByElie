@@ -688,10 +688,16 @@ html.is-owner-action-busy *{
   --gallery-columns:var(--gallery-zoom-columns,var(--gallery-default-columns));
   display:grid;
   grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));
-  gap:18px 12px;
+  gap:12px 8px;
   background:var(--surface);
   border-top:1px solid var(--line);
   padding:0;
+}
+body[data-gallery] main.shell{
+  width:100%;
+}
+body[data-gallery] .gallery-hero{
+  padding-inline:var(--page-gutter);
 }
 .gallery-view-controls{
   position:fixed;
@@ -784,7 +790,7 @@ html.is-owner-action-busy *{
 .mock-photo-card{
   display:grid;
   grid-template-rows:auto auto;
-  gap:7px;
+  gap:4px;
   align-self:start;
   min-width:0;
   color:inherit;
@@ -800,6 +806,10 @@ html.is-owner-action-busy *{
   text-decoration:none;
   transition:transform .16s ease,box-shadow .16s ease;
 }
+.mock-photo.has-image{
+  aspect-ratio:auto;
+  background:transparent;
+}
 .empty-gallery-card{
   display:grid;
   place-items:center;
@@ -814,16 +824,20 @@ html.is-owner-action-busy *{
   color:var(--muted);
 }
 .mock-photo img{
-  position:absolute;
-  inset:0;
+  display:block;
+  position:relative;
   width:100%;
-  height:100%;
+  height:auto;
   object-fit:contain;
 }
 .mock-gallery[data-image-fit="fill"] .mock-photo{
   aspect-ratio:1;
+  background:color-mix(in srgb,var(--surface-2) 72%,var(--bg));
 }
 .mock-gallery[data-image-fit="fill"] .mock-photo img{
+  position:absolute;
+  inset:0;
+  height:100%;
   object-fit:cover;
 }
 .mock-photo:hover{
@@ -864,7 +878,7 @@ html[data-theme="light"] .mock-photo.has-image::after{
   display:block;
   min-width:0;
   max-width:100%;
-  padding:0 2px 2px;
+  padding:0 0 2px;
   color:var(--text);
   font-size:clamp(.78rem,.85vw,.94rem);
   font-weight:750;

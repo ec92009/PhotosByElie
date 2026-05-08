@@ -7,7 +7,7 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v70.1`
+- Current visible build: `v70.2`
 - Public catalog: `10,123` eligible cloud-backed photos.
 - Local Owner actions require owner login. `scripts/local_server.py` reads `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD`, or prints a one-time code for that server run. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.

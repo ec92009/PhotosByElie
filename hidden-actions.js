@@ -1,5 +1,6 @@
 (() => {
   const enabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const ownerAuth = window.photosByElieOwnerAuth;
   const key = "photosbyelie-hidden";
   const historyKey = "photosbyelie-hidden-history";
   const reservePromotionsKey = "photosbyelie-reserve-promotions";
@@ -158,6 +159,10 @@
 
   const photoAction = async (action, photoId, extra = {}) => {
     if (!enabled) return null;
+    const authorized = await ownerAuth?.requireAuth?.(`Owner login required for ${action}.`);
+    if (ownerAuth?.enabled && !authorized) {
+      throw new Error("Owner login required.");
+    }
     const photoOptionalActions = ["sync-country-keywords", "publish-hidden-blacklist", "wipe-hidden-r2"];
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
@@ -171,6 +176,7 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) {
+        if (response.status === 401) ownerAuth?.markSignedOut?.();
         throw new Error(payload?.error || `Photo action failed: ${action}`);
       }
       return applyServerState(payload);

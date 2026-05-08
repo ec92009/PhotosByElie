@@ -7,8 +7,9 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v69.1`
+- Current visible build: `v70.0`
 - Public catalog: `10,123` eligible cloud-backed photos.
+- Local Owner actions require owner login. `scripts/local_server.py` reads `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD`, or prints a one-time code for that server run.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
@@ -147,4 +148,5 @@ npm run validate
 2. Finish private delivery render-triplet coverage for all non-discarded catalog photos.
 3. Make discard a first-class Owner action that deletes R2 bytes but keeps tombstones.
 4. Move public preview delivery from the checkout Worker `/media/...` bridge to an R2 custom domain.
-5. Discuss next product architecture: buyer accounts, owner auth, and real Stripe payment.
+5. Decide production Owner identity/auth beyond the new localhost session gate.
+6. Discuss next product architecture: buyer accounts and real Stripe payment.

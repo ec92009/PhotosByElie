@@ -64,7 +64,9 @@ For normal localhost preview with Owner tools, run the small local server instea
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, and save owner metadata edits. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, save owner metadata edits, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
+
+Owner mutation endpoints require a local owner session. Set `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD` before starting the server, or use the one-time login code printed by `scripts/local_server.py` for that server run.
 
 We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; `.pbe-review` snapshots remain only as audit files and as a fallback for larger rebuilds.
 

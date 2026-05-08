@@ -1,10 +1,18 @@
 (() => {
+  const ownerAuth = window.photosByElieOwnerAuth;
   const hiddenActions = window.photosByElieHiddenActions;
   const reserveStore = window.photosByElieReserve;
   const collections = window.photosByElieData || {};
   const controls = document.querySelector("[data-owner-controls]");
   const locked = document.querySelector("[data-owner-locked]");
   const status = document.querySelector("[data-owner-status]");
+  const authPanel = document.querySelector("[data-owner-auth-panel]");
+  const authHeading = document.querySelector("[data-owner-auth-heading]");
+  const authCopy = document.querySelector("[data-owner-auth-copy]");
+  const authForm = document.querySelector("[data-owner-auth-form]");
+  const authPassword = document.querySelector("[data-owner-auth-password]");
+  const authSubmit = document.querySelector("[data-owner-auth-submit]");
+  const authLogout = document.querySelector("[data-owner-auth-logout]");
   const countsRoot = document.querySelector("[data-owner-counts]");
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
@@ -20,6 +28,42 @@
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
+  };
+
+  const renderAuthState = (authState = ownerAuth?.state || {}) => {
+    if (!authPanel || !ownerAuth?.enabled) return;
+    const authenticated = authState.authenticated === true;
+    const available = authState.available !== false;
+    authPanel.hidden = false;
+    if (controls) controls.hidden = !authenticated;
+    if (authHeading) authHeading.textContent = authenticated ? "Signed in" : "Sign in";
+    if (authCopy) {
+      authCopy.textContent = authenticated
+        ? "Owner controls are unlocked for this local browser session."
+        : available
+          ? "Use the password from PHOTOSBYELIE_OWNER_PASSWORD, PBE_OWNER_PASSWORD, or the one-time code printed by the local server."
+          : "Start the Photos By Elie local server to unlock owner controls.";
+    }
+    const passwordLabel = authPassword?.closest("label");
+    if (passwordLabel) passwordLabel.hidden = authenticated;
+    if (authPassword) {
+      authPassword.disabled = authenticated || !available;
+      if (authenticated) authPassword.value = "";
+    }
+    if (authSubmit) {
+      authSubmit.hidden = authenticated;
+      authSubmit.disabled = !available;
+    }
+    if (authLogout) authLogout.hidden = !authenticated;
+    if (authenticated) {
+      setStatus("Owner controls unlocked.");
+      renderCounts();
+      startR2Polling();
+    } else if (available) {
+      setStatus("Owner login required before catalog or cloud actions can run.");
+    } else {
+      setStatus("Owner controls need the local helper server.");
+    }
   };
 
   const countPhotos = (data) => Object.values(data || {})
@@ -143,10 +187,44 @@
 
   if (!hiddenActions?.enabled) {
     if (controls) controls.hidden = true;
+    if (authPanel) authPanel.hidden = true;
     if (locked) locked.hidden = false;
     setStatus("Owner controls are locked on the public site.");
     return;
   }
+
+  if (controls) controls.hidden = true;
+
+  authForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const password = String(authPassword?.value || "");
+    if (!password) {
+      authPassword?.focus();
+      return;
+    }
+    if (authSubmit) authSubmit.disabled = true;
+    setStatus("Checking owner password...");
+    try {
+      const nextState = await ownerAuth.login(password);
+      renderAuthState(nextState);
+    } catch (error) {
+      setStatus(error?.message || "Owner login failed.");
+      authPassword?.focus();
+    } finally {
+      if (authSubmit) authSubmit.disabled = false;
+    }
+  });
+
+  authLogout?.addEventListener("click", async () => {
+    await ownerAuth?.logout?.();
+    renderAuthState(ownerAuth?.state);
+  });
+
+  window.addEventListener("photosbyelie:ownerauthchange", (event) => {
+    renderAuthState(event.detail || ownerAuth?.state);
+  });
+
+  ownerAuth?.refresh?.().then(renderAuthState);
 
   if (physicalProductsToggle) {
     physicalProductsToggle.checked = productSettings?.physicalProductsEnabled?.() === true;
@@ -215,8 +293,10 @@
   window.addEventListener("photosbyelie:hiddenchange", renderCounts);
 
   reserveStore?.load?.().then(() => {
-    renderCounts();
+    if (ownerAuth?.state?.authenticated) renderCounts();
   });
-  renderCounts();
-  startR2Polling();
+  if (ownerAuth?.state?.authenticated) {
+    renderCounts();
+    startR2Polling();
+  }
 })();

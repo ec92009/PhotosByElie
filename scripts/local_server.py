@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import os
+import secrets
 import json
 import mimetypes
 import re
@@ -23,16 +25,23 @@ from urllib.parse import parse_qs, urlparse
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
 PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
+OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
+OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
+OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
+OWNER_SESSION_COOKIE = "pbe_owner_session"
+OWNER_SESSION_SECONDS = 12 * 60 * 60
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 ACTION_PROGRESS: dict[str, dict] = {}
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
+OWNER_SESSIONS: dict[str, float] = {}
+OWNER_SESSION_LOCK = threading.Lock()
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
@@ -103,6 +112,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
+        if path == OWNER_SESSION_PATH:
+            self._handle_owner_session()
+            return
         if path == PHOTO_ACTION_PROGRESS_PATH:
             self._handle_photo_action_progress()
             return
@@ -113,6 +125,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
+        if path == OWNER_LOGIN_PATH:
+            self._handle_owner_login()
+            return
+        if path == OWNER_LOGOUT_PATH:
+            self._handle_owner_logout()
+            return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
             return
@@ -125,6 +143,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
     def _handle_photo_action(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        if not self._is_owner_authenticated():
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
             return
         try:
             payload = self._read_json_body()
@@ -141,6 +162,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
+        if not self._is_owner_authenticated():
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
+            return
         query = parse_qs(urlparse(self.path).query)
         operation_id = (query.get("operation_id") or [""])[0]
         progress = ACTION_PROGRESS.get(operation_id) if operation_id else None
@@ -150,7 +174,62 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
+        if not self._is_owner_authenticated():
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
+            return
         self._send_json(HTTPStatus.OK, {"ok": True, "tasks": _r2_task_snapshot()})
+
+    def _handle_owner_session(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        self._send_json(HTTPStatus.OK, self._owner_session_payload())
+
+    def _handle_owner_login(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        password = str(payload.get("password") or "")
+        expected_password = getattr(self.server, "owner_password", "")
+        if not expected_password or not secrets.compare_digest(password, expected_password):
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login failed"})
+            return
+        token = secrets.token_urlsafe(32)
+        expires_at = time.time() + OWNER_SESSION_SECONDS
+        with OWNER_SESSION_LOCK:
+            OWNER_SESSIONS[token] = expires_at
+        response = self._owner_session_payload(token=token)
+        self._send_json(
+            HTTPStatus.OK,
+            response,
+            extra_headers={
+                "Set-Cookie": (
+                    f"{OWNER_SESSION_COOKIE}={token}; Path=/; Max-Age={OWNER_SESSION_SECONDS}; "
+                    "HttpOnly; SameSite=Strict"
+                )
+            },
+        )
+
+    def _handle_owner_logout(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        token = self._owner_session_token()
+        if token:
+            with OWNER_SESSION_LOCK:
+                OWNER_SESSIONS.pop(token, None)
+        self._send_json(
+            HTTPStatus.OK,
+            {"ok": True, "authenticated": False},
+            extra_headers={
+                "Set-Cookie": f"{OWNER_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
+            },
+        )
 
     def _is_loopback_request(self) -> bool:
         host = self.headers.get("Host", "").split(":", 1)[0].strip("[]")
@@ -158,6 +237,35 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if client.startswith("127.") or client == "::1":
             return host in LOCAL_CLIENTS or host.startswith("127.")
         return False
+
+    def _owner_session_payload(self, token: str | None = None) -> dict:
+        return {
+            "ok": True,
+            "authenticated": self._is_owner_authenticated(token=token),
+            "sessionSeconds": OWNER_SESSION_SECONDS,
+            "passwordConfigured": getattr(self.server, "owner_password_source", "generated") != "generated",
+            "passwordSource": getattr(self.server, "owner_password_source", "generated"),
+        }
+
+    def _owner_session_token(self) -> str | None:
+        cookies = self.headers.get("Cookie", "")
+        for part in cookies.split(";"):
+            name, separator, value = part.strip().partition("=")
+            if separator and name == OWNER_SESSION_COOKIE and value:
+                return value
+        return None
+
+    def _is_owner_authenticated(self, token: str | None = None) -> bool:
+        token = token or self._owner_session_token()
+        if not token:
+            return False
+        now = time.time()
+        with OWNER_SESSION_LOCK:
+            expires_at = OWNER_SESSIONS.get(token)
+            if not expires_at or expires_at <= now:
+                OWNER_SESSIONS.pop(token, None)
+                return False
+            return True
 
     def _read_json_body(self) -> dict:
         raw_length = self.headers.get("Content-Length")
@@ -177,12 +285,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             raise ValueError("request body must be a JSON object")
         return payload
 
-    def _send_json(self, status: HTTPStatus, payload: dict) -> None:
+    def _send_json(self, status: HTTPStatus, payload: dict, extra_headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -193,10 +303,25 @@ def main() -> int:
     parser.add_argument("--bind", default="127.0.0.1", help="Address to bind. Defaults to 127.0.0.1.")
     args = parser.parse_args()
 
+    owner_password = (
+        os.environ.get("PHOTOSBYELIE_OWNER_PASSWORD")
+        or os.environ.get("PBE_OWNER_PASSWORD")
+        or ""
+    )
+    owner_password_source = "PHOTOSBYELIE_OWNER_PASSWORD/PBE_OWNER_PASSWORD" if owner_password else "generated"
+    if not owner_password:
+        owner_password = secrets.token_urlsafe(12)
+
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
+    server.owner_password = owner_password
+    server.owner_password_source = owner_password_source
     url_host = "localhost" if args.bind in {"127.0.0.1", "::1"} else args.bind
     print(f"Serving Photos By Elie at http://{url_host}:{args.port}/")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
+    if owner_password_source == "generated":
+        print(f"Owner login code for this server session: {owner_password}")
+    else:
+        print(f"Owner login password loaded from {owner_password_source}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -17,6 +17,7 @@ Last updated: 2026-05-08
 - Private R2 is one object short of the local private inventory because `20220504 141310 00203.tif` timed out during upload.
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
+- Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
 - Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.
 - The architecture PDF now includes an MSC-style checkout/fulfillment page and a non-destructive metadata overrides page, but page 4 still has a known text-overlap defect.

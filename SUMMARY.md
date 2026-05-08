@@ -43,7 +43,7 @@ Date: 2026-05-08
 - Added `worker/README.md` with route examples and the current mock flow.
 - Worker routes currently include `/health`, `/checkout/guest`, `/checkout/account`, `/stripe-webhook`, `/mock-stripe/pay`, `/orders/:orderId`, and `/download/:token`.
 - The local server additionally serves `/download-order/:orderId` as an order-ID based ZIP attachment route so already-generated mock ZIP files remain downloadable after an in-memory Worker restart.
-- The in-app browser did not visibly surface attachment downloads, so the order page now makes the generated ZIP path explicit and offers a copy button. For order `PBE-20260508-DF50ABD9A9`, the verified local ZIP was `/Users/ecohen/Dev/PhotosByElie/deliveries/photosbyelie-order-PBE-20260508-DF50ABD9A9.zip`.
+- The in-app browser did not visibly surface attachment downloads, so the order page now makes the generated ZIP path explicit and offers a copy button. Safari downloads the ZIP correctly, so this is a built-in browser limitation rather than a product download failure. For order `PBE-20260508-DF50ABD9A9`, the verified local ZIP was `/Users/ecohen/Dev/PhotosByElie/deliveries/photosbyelie-order-PBE-20260508-DF50ABD9A9.zip`.
 
 ## PDF / Infographic Work
 

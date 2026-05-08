@@ -13,8 +13,8 @@ Last updated: 2026-05-08
 - Future public R2 sync inventories skip IDs in `assets/hidden/hidden-blacklist.json`; private developed masters remain eligible unless Elie explicitly wipes them.
 - `assets/reserve` remains an ignored local preview cache for importer/review compatibility, not a long-term public state.
 - R2 upload journals are resumable. Cloudflare throttled parallel public/private uploads with `429 Too Many Requests`, so large R2 syncs should run one lane at a time.
-- Public R2 active inventory was live-verified with zero missing active objects after the S3 backend repair pass; the bucket still has stale extra public objects to review before deletion.
-- The timed-out private TIFF `20220504 141310 00203.tif` is intentionally not being retried; it is low-value and no longer treated as an open R2 task.
+- Public R2 active inventory was live-verified with zero missing active objects after the S3 backend repair pass. The 29 extra public objects were dumped intentionally; they can be re-uploaded later if ever needed.
+- Every public preview should map to a full-size developed private source usable for delivery ZIPs. The skipped low-value TIFF `20220504 141310 00203.tif` should therefore be removed from delivery-eligible catalog data or replaced with a usable developed master before buyer delivery.
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
@@ -34,11 +34,11 @@ Last updated: 2026-05-08
 
 ## Fresh Numbered Backlog
 
-1. **Clean up public R2 leftovers after the successful S3 repair.**
-   - [Codex] Review the 29 live public objects that are not in the active inventory.
-   - [Codex] Confirm which extras are stale previews, hidden-blacklist objects, or old Unknown keys before deleting anything.
-   - [Codex] Delete approved stale public objects through the S3 backend and verify `photosbyelie-public` again.
-   - [Codex] Keep using `scripts/sync_r2_media.py --backend s3` for public repair work; Wrangler auth was unreliable.
+1. **Enforce public preview to private delivery-source parity.**
+   - [Codex] Verify every active public preview/catalog photo has a corresponding private developed master under `masters/...`.
+   - [Codex] Verify every delivery-eligible photo has private JPG 6/3/1 MP render objects under `renders/...`.
+   - [Codex] Remove or mark unavailable any public-preview photo whose full-size developed source is intentionally skipped, including the low-value timed-out TIFF.
+   - [Codex] Add publish validation so future public previews cannot ship without a matching private delivery source.
 
 2. **Flatten R2 object key layout.**
    - [Codex] Stop using country folders in public or private R2 object keys; manifests already carry country/gallery metadata.
@@ -101,11 +101,10 @@ Last updated: 2026-05-08
    - [Codex] Pass `client_reference_id`, `metadata.order_id`, buyer email, USD amount, and static receipt text with the order-portal URL.
    - [Codex] Keep Stripe receipts separate from PhotosByElie delivery emails/download links.
 
-11. **Implement real delivery ZIP creation.**
-   - [Codex] Replace mock delivery with R2/private master reads and ZIP creation.
-   - [Codex] Decide whether ZIP creation runs synchronously in the Worker or through a queued/background flow for large orders.
-   - [Codex] Preserve the current local `scripts/create_digital_delivery.py` as manual fallback until automated delivery is proven.
-   - [Codex] Ensure the Worker never tries to deliver RAW/DNG/NEF originals.
+11. **Scale delivery ZIP creation beyond v1.**
+   - [Codex] Decide whether ZIP creation stays synchronous in the Worker or moves to a queued/background flow for large orders.
+   - [Codex] Keep `scripts/create_digital_delivery.py` as a manual fallback until automated R2 delivery is proven in public browser tests.
+   - [Codex] Keep the Worker contract strict: deliver developed masters and private JPG renders, never RAW/DNG/NEF originals.
 
 12. **Add order lookup and delivery UX.**
    - [Codex] Add `/orders` buyer-facing page or static shell.
@@ -155,3 +154,5 @@ Last updated: 2026-05-08
 - Improved checkout contrast: the mock Checkout Session link and unscoped default links now use explicit accessible link colors in dark and light themes.
 - Clarified unpaid order-page copy so direct access before payment reads as an exception instead of the normal post-payment flow.
 - Retired the low-value timed-out private TIFF from the active R2 backlog.
+- Removed the public-R2 extra-object cleanup from the active backlog after the 29 extras were dumped intentionally.
+- Marked v1 R2 ZIP creation as implemented; remaining delivery work is scale/queueing and public browser proof.

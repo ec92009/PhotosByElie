@@ -14,6 +14,7 @@ const fitModeKey = "photosbyelie-gallery-fit-mode";
 let densityInput = null;
 let densityValue = null;
 let fitModeButtons = [];
+let viewControls = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const diversityBucketMinutes = 10;
@@ -420,6 +421,13 @@ const applyGalleryFitMode = () => {
   });
 };
 
+const positionGalleryViewControls = () => {
+  if (!viewControls) return;
+  const topbar = document.querySelector(".topbar");
+  const topOffset = topbar ? Math.max(12, Math.ceil(topbar.getBoundingClientRect().bottom + 8)) : 72;
+  viewControls.style.setProperty("--gallery-view-controls-top", `${topOffset}px`);
+};
+
 const photoAspectRatioStyle = (photo) => {
   const dimensions = previewDimensions(photo);
   if (!dimensions?.width || !dimensions?.height) return "";
@@ -519,7 +527,10 @@ if (galleryRoot && gallery) {
   ensureGalleryKeyboardHint();
   renderGallery();
 
-  if (galleryActions) {
+  if (!viewControls) {
+    viewControls = document.createElement("div");
+    viewControls.className = "gallery-view-controls";
+    viewControls.setAttribute("aria-label", "Gallery view controls");
     const densityControl = document.createElement("label");
     densityControl.className = "gallery-density-control";
     densityControl.innerHTML = `
@@ -535,7 +546,8 @@ if (galleryRoot && gallery) {
       <button type="button" data-gallery-fit-mode="fit" aria-pressed="true">Fit</button>
       <button type="button" data-gallery-fit-mode="fill" aria-pressed="false">Fill</button>
     `;
-    galleryActions.prepend(densityControl, fitControl);
+    viewControls.append(densityControl, fitControl);
+    document.body.append(viewControls);
     densityInput = densityControl.querySelector("[data-gallery-density]");
     densityValue = densityControl.querySelector("[data-gallery-density-value]");
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
@@ -554,10 +566,13 @@ if (galleryRoot && gallery) {
     });
     window.addEventListener("resize", () => {
       applyGalleryDensity();
+      positionGalleryViewControls();
       updateSelection();
     });
+    window.addEventListener("scroll", positionGalleryViewControls, { passive: true });
     applyGalleryDensity();
     applyGalleryFitMode();
+    positionGalleryViewControls();
   }
 
   if (localModerationEnabled) {

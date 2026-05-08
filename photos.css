@@ -616,6 +616,18 @@ html.is-owner-action-busy *{
   background:var(--surface);
   border-top:1px solid var(--line);
 }
+.gallery-view-controls{
+  position:fixed;
+  top:var(--gallery-view-controls-top,72px);
+  right:max(var(--page-gutter),calc((100dvw - 1480px) / 2));
+  z-index:19;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+  max-width:min(520px,calc(100dvw - (var(--page-gutter) * 2)));
+  pointer-events:auto;
+}
 .gallery-density-control,
 .gallery-fit-control{
   display:inline-flex;
@@ -628,6 +640,8 @@ html.is-owner-action-busy *{
   color:var(--text);
   font-size:.82rem;
   font-weight:800;
+  box-shadow:0 12px 26px rgba(0,0,0,.16);
+  backdrop-filter:blur(12px);
 }
 .gallery-density-control input{
   width:clamp(96px,12vw,160px);

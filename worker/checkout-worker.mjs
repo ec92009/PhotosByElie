@@ -42,6 +42,11 @@ const createOrderId = (now, randomUUID) => `PBE-${orderDate(now())}-${randomUUID
 
 const sourceType = (source) => String(source?.type || basename(source?.path).split(".").pop() || "").toUpperCase();
 
+const checkoutLineName = (title, label, maxLength = 180) => {
+  const value = `${title || "Photo"} - ${label || "Digital asset"}`.replace(/\s+/g, " ").trim();
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+};
+
 const originalSize = (photo) => {
   const fromMetadata = (photo?.metadata || []).find((item) => item.label === "Original size")?.value;
   return fromMetadata || (photo?.megapixels ? `${photo.megapixels} MP source` : "Source size unverified");
@@ -247,6 +252,7 @@ export const createPhotosByElieWorker = ({
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
+  const stripeProvider = stripe.provider || "stripe";
 
   const createCheckout = async (request, checkoutMode) => {
     const payload = await parseJson(request);
@@ -272,7 +278,7 @@ export const createPhotosByElieWorker = ({
       currency: ORDER_CURRENCY,
       lineItems: items.flatMap((item) => item.products.map((product) => ({
         photoId: item.photoId,
-        name: `${item.title} - ${product.label}`,
+        name: checkoutLineName(item.title, product.label),
         quantity: 1,
         unit_amount: product.unitAmount,
         amount: product.amount,
@@ -302,7 +308,7 @@ export const createPhotosByElieWorker = ({
     return json({
       order: publicOrder(order),
       checkout: {
-        provider: "mock-stripe",
+        provider: stripeProvider,
         sessionId: checkoutSession.id,
         url: checkoutSession.url,
       },
@@ -481,7 +487,7 @@ export const createPhotosByElieWorker = ({
 
     try {
       if (request.method === "GET" && path === "/health") {
-        return json({ ok: true, service: "photosbyelie-worker", stripe: "mock", currency: ORDER_CURRENCY });
+        return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY });
       }
       if (request.method === "POST" && path === "/checkout/guest") return createCheckout(request, "guest");
       if (request.method === "POST" && path === "/checkout/account") return createCheckout(request, "account");

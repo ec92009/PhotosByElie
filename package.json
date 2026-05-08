@@ -2,7 +2,7 @@
   "name": "photosbyelie",
   "version": "1.0.0",
   "private": true,
-  "description": "Static Photos By Elie gallery with mock checkout Worker fulfillment.",
+  "description": "Static Photos By Elie gallery with Stripe-capable Worker fulfillment.",
   "type": "commonjs",
   "scripts": {
     "test": "node --test worker/checkout-worker.test.mjs",

@@ -9,6 +9,7 @@ import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
+import { createStripeClient, createStripeWebhookSignature } from "./stripe-client.mjs";
 
 const loadCatalog = () => {
   const sandbox = { window: {}, console, Intl };
@@ -139,6 +140,84 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.equal(body.order.amountExpected, 5500);
   assert.equal(body.order.items[0].products.length, 2);
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
+});
+
+test("real Stripe client creates hosted Checkout Sessions with order metadata", async () => {
+  let stripeRequest;
+  const stripe = createStripeClient({
+    secretKey: "sk_test_photosbyelie",
+    webhookSecret: "whsec_photosbyelie",
+    apiVersion: "2025-12-17",
+    fetchImpl: async (url, init) => {
+      stripeRequest = { url, init, params: new URLSearchParams(init.body) };
+      return new Response(JSON.stringify({
+        id: "cs_test_123",
+        object: "checkout.session",
+        url: "https://checkout.stripe.com/c/pay/cs_test_123",
+        payment_intent: "pi_test_123",
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+  });
+
+  const session = await stripe.createCheckoutSession({
+    orderId: "PBE-20260508-TEST",
+    buyerEmail: "buyer@example.com",
+    amountTotal: 5500,
+    currency: "usd",
+    lineItems: [{
+      photoId: "photo-1",
+      name: "Photo One - Full resolution",
+      quantity: 1,
+      unit_amount: 5500,
+    }],
+    successUrl: "https://photosbyelie.test/order.html?id=PBE-20260508-TEST",
+    cancelUrl: "https://photosbyelie.test/basket.html",
+    receiptDescription: "PhotosByElie order PBE-20260508-TEST.",
+  });
+
+  assert.equal(session.id, "cs_test_123");
+  assert.equal(stripeRequest.url, "https://api.stripe.com/v1/checkout/sessions");
+  assert.equal(stripeRequest.init.method, "POST");
+  assert.match(stripeRequest.init.headers.authorization, /^Basic /);
+  assert.equal(stripeRequest.init.headers["stripe-version"], "2025-12-17");
+  assert.equal(stripeRequest.init.headers["idempotency-key"], "photosbyelie-checkout-PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("mode"), "payment");
+  assert.equal(stripeRequest.params.get("client_reference_id"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("metadata[order_id]"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("payment_intent_data[metadata][order_id]"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("line_items[0][price_data][unit_amount]"), "5500");
+  assert.equal(stripeRequest.params.get("line_items[0][price_data][product_data][metadata][photo_id]"), "photo-1");
+});
+
+test("real Stripe client verifies raw webhook signatures", async () => {
+  const timestamp = 1778241600;
+  const payload = JSON.stringify({
+    id: "evt_test_123",
+    object: "event",
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_test_123", metadata: { order_id: "PBE-TEST" } } },
+  });
+  const signature = await createStripeWebhookSignature({
+    payload,
+    secret: "whsec_photosbyelie",
+    timestamp,
+  });
+  const stripe = createStripeClient({
+    secretKey: "sk_test_photosbyelie",
+    webhookSecret: "whsec_photosbyelie",
+    fetchImpl: async () => new Response("{}"),
+    now: () => new Date(timestamp * 1000),
+  });
+
+  const event = await stripe.constructEvent(new Request("https://worker.test/stripe-webhook", {
+    method: "POST",
+    headers: { "stripe-signature": signature },
+    body: payload,
+  }));
+
+  assert.equal(event.id, "evt_test_123");
+  assert.equal(event.type, "checkout.session.completed");
+  assert.equal(event.data.object.metadata.order_id, "PBE-TEST");
 });
 
 test("mock Stripe payment moves the order to ready and records a delivery ZIP", async () => {

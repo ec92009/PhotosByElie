@@ -5,6 +5,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
+import { createStripeClient } from "./stripe-client.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -32,12 +33,22 @@ const delivery = createLocalZipDelivery({
   outputDir: path.resolve(repoRoot, process.env.PBE_DELIVERY_OUTPUT_DIR || "deliveries"),
 });
 
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? createStripeClient({
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    apiVersion: process.env.STRIPE_API_VERSION,
+  })
+  : undefined;
+
 const worker = createPhotosByElieWorker({
   catalog: loadCatalog(),
   delivery,
+  stripe,
   ordersUrl: `http://localhost:${port}/orders`,
   successUrl: `http://localhost:8000/order.html?id={ORDER_ID}&checkout=success`,
   cancelUrl: "http://localhost:8000/basket.html?checkout=cancelled",
+  mockStripeEnabled: !stripe,
 });
 
 const toWebRequest = (req, body) => new Request(`http://localhost:${port}${req.url}`, {
@@ -119,6 +130,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`PhotosByElie local mock Worker listening on http://localhost:${port}`);
+  console.log(`PhotosByElie local ${stripe ? "Stripe" : "mock"} Worker listening on http://localhost:${port}`);
   console.log(`Delivery ZIPs will be written under ${path.resolve(repoRoot, process.env.PBE_DELIVERY_OUTPUT_DIR || "deliveries")}`);
 });

@@ -1,9 +1,9 @@
 # PhotosByElie Worker
 
-This folder contains the first Worker-track implementation for checkout and fulfillment. Stripe is mocked for now, but the Worker keeps the same boundary we want in production:
+This folder contains the Worker-track implementation for checkout and fulfillment. It supports real Stripe Checkout when Stripe secrets are configured, and keeps a mock Stripe path for local/testing work:
 
 ```text
-browser basket -> Worker order draft -> mock Stripe checkout -> mock paid webhook -> delivery ZIP
+browser basket -> Worker order draft -> Stripe Checkout -> signed paid webhook -> delivery ZIP
 ```
 
 ## What The Worker Owns
@@ -13,8 +13,8 @@ browser basket -> Worker order draft -> mock Stripe checkout -> mock paid webhoo
 - USD-only totals.
 - Basket snapshots.
 - Photo/product validation against the public catalog.
-- Mock Stripe Checkout Session creation.
-- Mock Stripe webhook verification.
+- Stripe Checkout Session creation.
+- Stripe webhook verification from the raw request body and `Stripe-Signature` header.
 - Order status transitions.
 - Delivery ZIP metadata, local mock ZIP generation, and signed-link-style download tokens.
 
@@ -27,7 +27,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | Route | Trigger | Result |
 |---|---|---|
 | `GET /health` | Runtime check | Returns Worker status and fixed currency |
-| `POST /checkout/guest` | Buyer chooses guest checkout | Creates `pending_payment` order and mock Stripe URL |
+| `POST /checkout/guest` | Buyer chooses guest checkout | Creates `pending_payment` order and Stripe Checkout URL |
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
@@ -36,9 +36,9 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 `worker/local-server.mjs` also provides `GET /download-order/:orderId` for local-only mock testing. It serves the generated ZIP directly from `deliveries/` by order ID, which keeps downloads working after the in-memory mock Worker state has been restarted.
 
-## Public Mock Checkout
+## Public Checkout
 
-`worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public mock checkout. It is still mock payment, but it uses durable Cloudflare bindings:
+`worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public checkout. It uses durable Cloudflare bindings:
 
 - `ORDERS_KV` stores orders, Checkout Session indexes, and download tokens.
 - `PUBLIC_MEDIA` serves public preview JPEGs from the `photosbyelie-public` R2 bucket under `/media/...`.
@@ -47,11 +47,19 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 The public static site points checkout to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media to the same Worker under `/media` through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 ZIP adapter passes full-resolution masters through unchanged and reads JPG 6 MP, 3 MP, and 1 MP products from private R2 `renders/...` keys. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later ZIPs.
 
-The public mock checkout Worker is live at:
+The current checkout Worker is live at:
 
 ```text
 https://photosbyelie-checkout-mock.ec92009.workers.dev
 ```
+
+Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Required Stripe configuration:
+
+- `STRIPE_SECRET_KEY`: test or live secret key used to create Checkout Sessions.
+- `STRIPE_WEBHOOK_SECRET`: endpoint secret for `/stripe-webhook`; required for real Stripe webhook verification.
+- `STRIPE_API_VERSION`: optional pinned Stripe API version.
+
+Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 
 ## Guest Checkout Example
 
@@ -82,7 +90,7 @@ The response includes:
 
 - `order.id`, such as `PBE-20260507-...`
 - `order.amountExpected`, in cents
-- `checkout.url`, a mock Stripe Checkout URL
+- `checkout.url`, a Stripe Checkout URL
 - `checkout.sessionId`, used by the mock payment helper
 
 ## Mock Payment Example
@@ -99,7 +107,7 @@ That simulates the paid webhook and moves the order to `ready`. The resulting de
 deliveries/photosbyelie-order-<orderId>.zip
 ```
 
-In production the mock Stripe client gets replaced by a real Stripe client, and the local ZIP adapter becomes real private R2/ZIP work. The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing. The core Worker still returns JSON from `/download/:token`; `worker/local-server.mjs` upgrades local token/order routes into actual ZIP responses when the ZIP path is on disk.
+The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing. The core Worker still returns JSON from `/download/:token`; `worker/local-server.mjs` upgrades local token/order routes into actual ZIP responses when the ZIP path is on disk.
 
 ## Tests
 

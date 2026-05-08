@@ -26,7 +26,7 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "67.25";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "69.1";
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -240,10 +240,16 @@ const renderCheckoutResult = (body, mode = "checkout") => {
   }
   const delivery = order.delivery;
   checkoutResult.hidden = false;
+  const provider = body.checkout?.provider || "stripe";
+  const mockMode = provider === "mock-stripe";
+  const title = mode === "paid"
+    ? (mockMode ? "Mock payment complete" : "Payment complete")
+    : (mockMode ? "Mock Checkout Session ready" : "Stripe Checkout ready");
+  const checkoutLinkText = mockMode ? "Open mock Checkout Session" : "Open Stripe Checkout";
   checkoutResult.innerHTML = `
-    <strong>${mode === "paid" ? "Mock payment complete" : "Mock Checkout Session ready"}</strong>
+    <strong>${title}</strong>
     <span>Order ${escapeText(order.id)} · ${escapeText(order.status)} · ${moneyFromCents(order.amountExpected, order.currency)}</span>
-    ${body.checkout?.url ? `<a href="${escapeText(body.checkout.url)}" target="_blank" rel="noreferrer">${escapeText(body.checkout.sessionId)}</a>` : ""}
+    ${body.checkout?.url ? `<a href="${escapeText(body.checkout.url)}" target="_blank" rel="noreferrer">${checkoutLinkText}</a>` : ""}
     ${delivery?.downloadUrl ? `<a href="${escapeText(workerBaseUrl() + delivery.downloadUrl)}" target="_blank" rel="noreferrer">Open download token</a>` : ""}
     ${delivery?.zipKey ? `<code>${escapeText(delivery.zipKey)}</code>` : ""}
   `;
@@ -251,7 +257,8 @@ const renderCheckoutResult = (body, mode = "checkout") => {
 
 const syncCheckoutControls = () => {
   const state = checkoutState();
-  if (mockPay) mockPay.hidden = !state.checkoutSessionId;
+  const provider = state.provider || state.lastResponse?.checkout?.provider || "mock-stripe";
+  if (mockPay) mockPay.hidden = !(state.checkoutSessionId && provider === "mock-stripe");
   if (checkoutEmail && state.email && !checkoutEmail.value) checkoutEmail.value = state.email;
   if (state.lastResponse) renderCheckoutResult(state.lastResponse, state.mode);
 };
@@ -260,16 +267,16 @@ checkoutGuest?.addEventListener("click", async () => {
   const email = String(checkoutEmail?.value || "").trim();
   const items = digitalCheckoutItems();
   if (!items.length) {
-    status.textContent = "Mock checkout needs at least one digital asset in the basket.";
+    status.textContent = "Checkout needs at least one digital asset in the basket.";
     return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    status.textContent = "Enter a buyer email before starting mock checkout.";
+    status.textContent = "Enter a buyer email before starting checkout.";
     checkoutEmail?.focus();
     return;
   }
   checkoutGuest.disabled = true;
-  status.textContent = "Creating mock Checkout Session...";
+  status.textContent = "Creating Checkout Session...";
   try {
     const body = await checkoutFetch("/checkout/guest", {
       method: "POST",
@@ -279,11 +286,18 @@ checkoutGuest?.addEventListener("click", async () => {
       email,
       orderId: body.order.id,
       checkoutSessionId: body.checkout.sessionId,
+      provider: body.checkout.provider,
+      checkoutUrl: body.checkout.url,
       lastResponse: body,
       mode: "checkout",
     });
     renderCheckoutResult(body, "checkout");
     syncCheckoutControls();
+    if (body.checkout?.provider === "stripe" && body.checkout?.url) {
+      status.textContent = "Opening Stripe Checkout...";
+      window.location.assign(body.checkout.url);
+      return;
+    }
     status.textContent = "Mock Checkout Session ready. Simulate Stripe payment to generate the ZIP.";
   } catch (error) {
     status.textContent = error.message;

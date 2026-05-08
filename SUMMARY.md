@@ -7,7 +7,7 @@ Date: 2026-05-08
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v67.25`
+- Current visible build: `v69.1`
 - Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,123` catalog photos.
 - Current catalog counts: France `320`, USA `160`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -71,7 +71,7 @@ Date: 2026-05-08
 4. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.
 5. **Add user/account model.** Decide guest-only vs optional buyer accounts, then model saved orders and re-download flows.
 6. **Add Owner account/auth.** Protect owner tools beyond localhost-only assumptions before production payment.
-7. **Replace mock Stripe.** Wire real Stripe Checkout and webhook verification behind the existing Worker boundary.
+7. **Finish Stripe launch hardening.** Configure Worker Stripe secrets, add the live webhook endpoint, and run test-mode success/3DS/decline flows before live keys.
 8. **Make order records durable for production.** Choose D1 vs KV for queryable order state; keep private R2 for delivery ZIPs.
 9. **Harden browser smoke coverage.** Cover gallery controls, basket, checkout, order status, Owner hide/discard, and Unknown assignment.
 10. **Repair architecture artifacts.** Fix the known page 4 text collision and refresh diagrams once account/payment decisions settle.

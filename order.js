@@ -154,7 +154,7 @@ const loadOrder = async () => {
   const email = buyerEmail();
   if (!id || !email) {
     heading.textContent = "Order details needed";
-    message.textContent = "Open this page from the mock checkout flow so the order number and buyer email are available.";
+    message.textContent = "Open this page from checkout so the order number and buyer email are available.";
     setProgress("");
     return;
   }

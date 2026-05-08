@@ -2,6 +2,7 @@ import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
+import { createStripeClient } from "./stripe-client.mjs";
 import { collections, frameOptions, resolutions } from "./photos-catalog.generated.mjs";
 
 const catalog = createCatalogIndex({ collections, resolutions, frameOptions });
@@ -55,16 +56,24 @@ export default {
     }
 
     const publicSiteUrl = env.PUBLIC_SITE_URL || "https://ec92009.github.io/PhotosByElie";
+    const realStripeEnabled = Boolean(env.STRIPE_SECRET_KEY);
+    const stripe = realStripeEnabled
+      ? createStripeClient({
+        secretKey: env.STRIPE_SECRET_KEY,
+        webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+        apiVersion: env.STRIPE_API_VERSION,
+      })
+      : createMockStripeClient({
+        checkoutBaseUrl: env.MOCK_STRIPE_CHECKOUT_BASE_URL || `${publicSiteUrl}/order.html?mockStripeSession=`,
+        webhookSecret: env.MOCK_STRIPE_WEBHOOK_SECRET || "mock_whsec_photosbyelie",
+      });
     const worker = createPhotosByElieWorker({
       catalog,
       store: createKvStore({
         namespace: requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
       }),
-      stripe: createMockStripeClient({
-        checkoutBaseUrl: env.MOCK_STRIPE_CHECKOUT_BASE_URL || `${publicSiteUrl}/order.html?mockStripeSession=`,
-        webhookSecret: env.MOCK_STRIPE_WEBHOOK_SECRET || "mock_whsec_photosbyelie",
-      }),
+      stripe,
       delivery: createR2ZipDelivery({
         privateBucket: requiredBinding(env, "PRIVATE_MEDIA"),
         deliveryBucket: env.DELIVERY_MEDIA || env.PRIVATE_MEDIA,
@@ -72,7 +81,7 @@ export default {
       ordersUrl: `${publicSiteUrl}/order.html`,
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&checkout=success`,
       cancelUrl: `${publicSiteUrl}/basket.html?checkout=cancelled`,
-      mockStripeEnabled: env.MOCK_STRIPE_ENABLED !== "false",
+      mockStripeEnabled: !realStripeEnabled && env.MOCK_STRIPE_ENABLED !== "false",
     });
     return worker.fetch(request);
   },

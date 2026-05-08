@@ -7,7 +7,7 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v67.25`
+- Current visible build: `v69.1`
 - Public catalog: `10,123` eligible cloud-backed photos.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.

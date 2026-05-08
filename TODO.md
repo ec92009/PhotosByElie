@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.25`.
+- Local visible build: `v69.1`.
 - Public catalog validates in external media mode with `10,123` photos: France `320`, USA `160`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless hidden/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -17,7 +17,7 @@ Last updated: 2026-05-08
 - Hidden/discarded photos are tombstoned. Their R2 media should be deleted for cost control, while the tombstone stays tracked so Saturn imports do not resurrect them.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Current private delivery manifest shows `10,151` private master IDs and `624` complete private render triplets. The active cloud media sweep is expected to continue closing that gap.
-- Checkout remains guest-first and USD-only. Accounts and real Stripe are next-phase product decisions.
+- Checkout remains guest-first and USD-only. Real Stripe is now wired behind Worker configuration; accounts remain a next-phase product decision.
 
 ## Numbered Backlog
 
@@ -55,10 +55,10 @@ Last updated: 2026-05-08
    - Decide owner login/session mechanism.
    - Gate destructive actions such as discard/R2 delete behind owner auth and clear confirmation.
 
-7. **Replace mock Stripe with real Stripe.**
-   - Wire real Checkout Session creation behind the existing Worker client boundary.
-   - Add real webhook signature verification.
-   - Store Stripe Checkout Session ID, PaymentIntent ID, buyer email, amount, currency, and order ID.
+7. **Finish Stripe launch hardening.**
+   - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+   - Add the live Stripe webhook endpoint for `/stripe-webhook`.
+   - Run test-mode checkout with success, 3D Secure, and declined test cards before using live keys.
    - Keep Stripe receipts separate from PhotosByElie delivery links.
 
 8. **Make order records production-durable.**

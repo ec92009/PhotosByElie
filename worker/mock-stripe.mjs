@@ -71,6 +71,7 @@ export const createMockStripeClient = ({
   };
 
   return {
+    provider: "mock-stripe",
     createCheckoutSession,
     paidEventForSession,
     signatureForPayload,

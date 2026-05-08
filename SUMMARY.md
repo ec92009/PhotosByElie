@@ -7,9 +7,9 @@ Date: 2026-05-08
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build in `VERSION`: `v67.9`
+- Current visible build in `VERSION`: `v67.10`
 - Local `main` has the public mock checkout deploy/config work in progress and should be committed/pushed after verification.
-- GitHub Pages should serve `v67.9` after the latest `main` push finishes deploying.
+- GitHub Pages should serve `v67.10` after the latest `main` push finishes deploying.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
 - GitHub should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should stay out of Git and live in R2/CDN.
 - `scripts/cleanup_classified_unknowns_public_r2.py` is being kept as a tracked recovery utility rather than archived.
@@ -50,6 +50,7 @@ Date: 2026-05-08
 - The in-app browser did not visibly surface attachment downloads, so the order page now makes the generated ZIP path explicit and offers a copy button. Safari downloads the ZIP correctly, so this is a built-in browser limitation rather than a product download failure. For order `PBE-20260508-DF50ABD9A9`, the verified local ZIP was `/Users/ecohen/Dev/PhotosByElie/deliveries/photosbyelie-order-PBE-20260508-DF50ABD9A9.zip`.
 - Public mock checkout is wired to the deployed Worker at `https://photosbyelie-checkout-mock.ec92009.workers.dev`.
 - The Cloudflare Worker uses real KV namespace ids in `wrangler.toml`, private R2 for developed-master reads, and the same private bucket for generated mock delivery ZIPs.
+- Public preview media is temporarily bridged through the Worker at `/media/...`, backed by the `photosbyelie-public` R2 bucket, so GitHub Pages can render thumbnails before an R2 custom domain exists.
 - The R2 ZIP adapter currently supports `full` products only; JPG 1/3/6 MP products still need a real cloud resize/export path.
 - Wrangler can authenticate with the Cloudflare environment variables exported from `~/.zshrc`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`: guest checkout, mock Stripe payment, private R2 ZIP creation, and `/download/:token` returning `application/zip` with valid ZIP magic.

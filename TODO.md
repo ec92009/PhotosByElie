@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.9`.
+- Local visible build: `v67.10`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -19,7 +19,8 @@ Last updated: 2026-05-08
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
 - Public mock checkout Worker is live at `https://photosbyelie-checkout-mock.ec92009.workers.dev`, backed by Cloudflare KV plus private R2.
-- The public site config points checkout to the deployed Worker as of `v67.9`; GitHub Pages must finish serving the latest `main` commit before browser testing the cloud flow.
+- The public site config points checkout to the deployed Worker as of `v67.10`; GitHub Pages must finish serving the latest `main` commit before browser testing the cloud flow.
+- Public previews are temporarily served through `https://photosbyelie-checkout-mock.ec92009.workers.dev/media/...`, backed by `photosbyelie-public`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`; the Worker generated `deliveries/photosbyelie-order-PBE-20260508-D054362044.zip` in private R2 and returned a valid ZIP download.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
@@ -56,6 +57,7 @@ Last updated: 2026-05-08
 
 5. **Strengthen architecture boundaries and docs.**
    - [Codex] Document the responsibilities of public static viewer code, localhost-only owner tools, media pipeline scripts, and the commerce Worker.
+   - [Codex] Move public preview delivery from the checkout Worker `/media/...` bridge to a dedicated R2 custom domain or public bucket domain.
    - [Codex] Keep public/local/Worker boundaries explicit in `README.md`, `worker/README.md`, `scripts/README.md`, `SUMMARY.md`, and this file.
    - [Codex] Write a short data dictionary for `photos-data.js`, media manifests, hidden blacklist, R2 journals, and review snapshots.
 

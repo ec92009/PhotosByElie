@@ -11,8 +11,49 @@ const requiredBinding = (env, key) => {
   return env[key];
 };
 
+const mediaHeaders = (object = null) => ({
+  "access-control-allow-origin": "*",
+  "cache-control": "public, max-age=31536000, immutable",
+  "content-type": object?.httpMetadata?.contentType || "image/jpeg",
+});
+
+const publicMediaResponse = async (request, env) => {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { "access-control-allow-origin": "*" },
+    });
+  }
+
+  const url = new URL(request.url);
+  const key = decodeURIComponent(url.pathname.replace(/^\/media\/?/, "")).replace(/^\/+/, "");
+  if (!key) {
+    return new Response("Missing media key", {
+      status: 400,
+      headers: { "access-control-allow-origin": "*" },
+    });
+  }
+
+  const object = await requiredBinding(env, "PUBLIC_MEDIA").get(key);
+  if (!object) {
+    return new Response("Media not found", {
+      status: 404,
+      headers: { "access-control-allow-origin": "*" },
+    });
+  }
+
+  return new Response(request.method === "HEAD" ? null : object.body, {
+    headers: mediaHeaders(object),
+  });
+};
+
 export default {
   fetch(request, env = {}) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/media/")) {
+      return publicMediaResponse(request, env);
+    }
+
     const publicSiteUrl = env.PUBLIC_SITE_URL || "https://ec92009.github.io/PhotosByElie";
     const worker = createPhotosByElieWorker({
       catalog,

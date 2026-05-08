@@ -18,6 +18,11 @@ bucket_name = "photosbyelie-private"
 preview_bucket_name = "photosbyelie-private"
 
 [[r2_buckets]]
+binding = "PUBLIC_MEDIA"
+bucket_name = "photosbyelie-public"
+preview_bucket_name = "photosbyelie-public"
+
+[[r2_buckets]]
 binding = "DELIVERY_MEDIA"
 bucket_name = "photosbyelie-private"
 preview_bucket_name = "photosbyelie-private"

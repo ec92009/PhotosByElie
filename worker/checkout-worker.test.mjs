@@ -276,3 +276,25 @@ test("deployed Worker mock checkout writes and downloads a private R2 ZIP", asyn
   assert.ok(zip.includes(Buffer.from("ORDER.txt")));
   assert.ok(zip.includes(Buffer.from("private developed master bytes")));
 });
+
+test("deployed Worker serves public R2 previews through the media route", async () => {
+  const publicR2 = createFakeR2({
+    "expo/france/sample_900.jpg": {
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const env = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: createFakeR2(),
+    PUBLIC_MEDIA: publicR2,
+    DELIVERY_MEDIA: createFakeR2(),
+    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+  };
+
+  const response = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/jpeg");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, immutable");
+  assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "ffd8ffd9");
+});

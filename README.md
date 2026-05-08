@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v67.9`
+- Current visible version: `v67.10`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -55,6 +55,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts use the same current-queue filter as the Unknown page, so old browser assignment history does not subtract unrelated photos.
 - Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
+- Public previews currently resolve through the deployed Worker `/media/...` route backed by `photosbyelie-public`; move `publicBaseUrl` to an R2 custom domain when that is attached.
 - `assets/expo` can stay empty or local-only once the public R2 bucket has the baked-watermark previews; use `node scripts/validate_publish.js --external-media` for that publishing mode.
 - R2 media uploads should run one lane at a time. Public previews go first so the visible site improves; private masters follow only after public finishes. The upload journal in `.review-logs/r2-upload-state.jsonl` makes interrupted runs resumable.
 - Public R2 sync skips IDs from `assets/hidden/hidden-blacklist.json`, so hidden photos are not reintroduced by later bulk preview uploads.
@@ -97,7 +98,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
-- The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the configured mock checkout Worker for guest checkout. Public `v67.9` points to `https://photosbyelie-checkout-mock.ec92009.workers.dev`; local testing can override with `?workerBase=http://localhost:8787`. After simulated payment, buyers land on `order.html` with order status, a ZIP download button, a visible local/cloud delivery reference, and a copy-path fallback for app browsers that hide attachment downloads.
+- The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the configured mock checkout Worker for guest checkout. Public `v67.10` points to `https://photosbyelie-checkout-mock.ec92009.workers.dev`; local testing can override with `?workerBase=http://localhost:8787`. After simulated payment, buyers land on `order.html` with order status, a ZIP download button, a visible local/cloud delivery reference, and a copy-path fallback for app browsers that hide attachment downloads.
 - Product choices now include digital files and physical prints at 4 x 6, 5 x 7, 8 x 10, and 11 x 14 inches.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, plain white, or plain black. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.

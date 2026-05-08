@@ -127,10 +127,14 @@ const storedMediaBase = (() => {
   }
 })();
 const configuredMediaBase = normalizePublicMediaBase(mediaConfig.publicBaseUrl);
+const explicitMediaBase = mediaBaseFromQuery && mediaBaseFromQuery.toLowerCase() !== 'local'
+  ? mediaBaseFromQuery
+  : '';
+const defaultMediaBase = window.photosByElieInputMode.isLocalhost()
+  ? ''
+  : storedMediaBase || configuredMediaBase;
 window.photosByEliePublicMediaBase = normalizePublicMediaBase(
-  mediaBaseFromQuery && mediaBaseFromQuery.toLowerCase() !== 'local'
-    ? mediaBaseFromQuery
-    : window.photosByEliePublicMediaBase || configuredMediaBase || storedMediaBase
+  explicitMediaBase || window.photosByEliePublicMediaBase || defaultMediaBase
 );
 window.photosByEliePublicMediaHostnames = new Set(mediaConfig.publicMediaHostnames || ['ec92009.github.io']);
 window.photosByElieMediaStatus = () => ({

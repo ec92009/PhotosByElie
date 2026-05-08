@@ -79,4 +79,5 @@ The living backlog is in `TODO.md`. Highest-priority work now centers on:
 4. Replace in-memory Worker storage with durable Cloudflare storage, likely D1 for orders plus R2 for deliveries.
 5. Replace mock Stripe with real Stripe Checkout/webhook calls once Elie’s Stripe account is ready.
 6. Fix the page 4 PDF text collision before treating the infographic deck as final.
-7. Backburner: revisit repo layout and reduce root-file clutter after the active R2/checkout work settles.
+7. Add like/unlike controls directly to collection grid/card views.
+8. Backburner: revisit repo layout and reduce root-file clutter after the active R2/checkout work settles.

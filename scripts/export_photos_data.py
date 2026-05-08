@@ -27,7 +27,7 @@ ORDER = ["france", "usa", "spain", "mexico", "ai", "portugal", "slovakia", "unkn
 PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown"]
 OWNER_ORDER = ["unknown"]
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
-DEFAULT_REGULAR_CAP = 10
+DEFAULT_REGULAR_CAP = None
 DEFAULT_SELECTION_MODE = "random"
 DIVERSITY_BUCKET_MINUTES = 10
 REGULAR_ASSET_ROOT = Path("assets/expo")
@@ -226,7 +226,7 @@ def write_regular_manifest(
     regular_rows: list[tuple[dict, str]],
     reserve_counts: dict[str, int],
     hidden_counts: dict[str, int],
-    regular_cap: int,
+    regular_cap: int | None,
     selection_mode: str,
     seed: int | None,
 ) -> None:
@@ -234,6 +234,7 @@ def write_regular_manifest(
         "schema_version": 1,
         "state": "expo",
         "expo_cap": regular_cap,
+        "publish_scope": "all-eligible" if regular_cap is None or regular_cap <= 0 else "capped",
         "selection_mode": selection_mode,
         "seed": seed,
         "photos_count": len(regular_rows),
@@ -340,6 +341,15 @@ def load_blacklist_payload(path: Path | None) -> dict:
     return json.loads(path.expanduser().read_text(encoding="utf-8"))
 
 
+def load_json(path: Path, fallback: object) -> object:
+    if not path.exists():
+        return fallback
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return fallback
+
+
 def blacklist_ids_from_payload(payload: dict) -> set[str]:
     return {photo_id for photo_id in payload.get("photo_ids", []) if isinstance(photo_id, str)}
 
@@ -394,6 +404,21 @@ def country_assignments_from_payload(payload: dict) -> dict[str, str]:
     }
 
 
+def country_assignments_from_owner_index(repo_root: Path) -> dict[str, str]:
+    payload = load_json(repo_root / "assets/owner-actions/country-assignments.json", {})
+    photos = payload.get("photos") if isinstance(payload, dict) else {}
+    if not isinstance(photos, dict):
+        return {}
+    assignments: dict[str, str] = {}
+    for photo_id, record in photos.items():
+        if not isinstance(photo_id, str) or not isinstance(record, dict):
+            continue
+        slug = record.get("gallery_key")
+        if slug in COUNTRY_ASSIGNMENT_TARGETS:
+            assignments[photo_id] = slug
+    return assignments
+
+
 def load_blacklist(path: Path | None) -> set[str]:
     return blacklist_ids_from_payload(load_blacklist_payload(path))
 
@@ -421,7 +446,7 @@ def apply_country_assignment(row: dict, slug: str | None) -> dict:
 
 def select_regular_groups(
     groups: dict[str, list[tuple[dict, str]]],
-    regular_cap: int,
+    regular_cap: int | None,
     selection_mode: str,
     blacklist_ids: set[str],
     seed: int | None,
@@ -449,9 +474,9 @@ def select_regular_groups(
         blocked = [item for item in rows if item[0].get("id") in blacklist_ids]
         eligible = [item for item in rows if item[0].get("id") not in blacklist_ids]
         if slug == "unknown":
-            regular_groups[slug] = []
-            reserve_groups[slug] = sort_rows(eligible)
-            reserve_counts[slug] = len(reserve_groups[slug])
+            regular_groups[slug] = sort_rows(eligible)
+            reserve_groups[slug] = []
+            reserve_counts[slug] = 0
             hidden_counts[slug] = len(blocked)
             continue
         regular_eligible = [
@@ -460,6 +485,7 @@ def select_regular_groups(
             if item[0].get("id") not in reserve_only_ids and public_preview_allowed(item[0])
         ]
         eligible_by_id = {item[0].get("id"): item for item in regular_eligible}
+        limit = len(regular_eligible) if regular_cap is None or regular_cap <= 0 else regular_cap
         selected: list[tuple[dict, str]] = []
         selected_ids: set[str] = set()
 
@@ -471,18 +497,18 @@ def select_regular_groups(
                 continue
             selected.append(item)
             selected_ids.add(photo_id)
-            if len(selected) >= regular_cap:
+            if len(selected) >= limit:
                 break
 
         fill_pool = [item for item in regular_eligible if item[0].get("id") not in selected_ids]
         if selection_mode in {"random", "browser"}:
             fill_pool = diversified_random_order(fill_pool, rng)
-        selected.extend(fill_pool[: max(0, regular_cap - len(selected))])
+        selected.extend(fill_pool[: max(0, limit - len(selected))])
 
         if pinned_regular_ids.get(slug) or selection_mode in {"random", "browser"}:
-            regular_groups[slug] = selected[:regular_cap]
+            regular_groups[slug] = selected[:limit]
         else:
-            regular_groups[slug] = sort_rows(selected[:regular_cap])
+            regular_groups[slug] = sort_rows(selected[:limit])
 
         selected_ids = {item[0].get("id") for item in regular_groups[slug]}
         reserve_groups[slug] = sort_rows([item for item in eligible if item[0].get("id") not in selected_ids])
@@ -494,7 +520,7 @@ def select_regular_groups(
 
 def write_photos_data(
     repo_root: Path,
-    regular_cap: int = DEFAULT_REGULAR_CAP,
+    regular_cap: int | None = DEFAULT_REGULAR_CAP,
     sync_regular_assets: bool = True,
     write_regular_state: bool = True,
     selection_mode: str = DEFAULT_SELECTION_MODE,
@@ -547,12 +573,11 @@ def write_photos_data(
     def collection_lines(slug: str) -> list[str]:
         number, title, accent, description = LABELS[slug]
         rows = regular_groups.get(slug, [])
-        reserve_count = reserve_counts.get(slug, 0)
         next_lines = [
             f"  {slug}: {{",
             f"    number: {js(number)},",
             f"    title: {js(title)},",
-            f"    description: {js(f'{description} {len(rows)} expo photos currently loaded; {reserve_count} in local reserve.')},",
+            f"    description: {js(description)},",
             f"    accent: {js(accent)},",
             "    photos: [",
         ]
@@ -698,7 +723,13 @@ def write_photos_data(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export publishable Photos By Elie data from ingest manifests.")
-    parser.add_argument("--expo-cap", dest="regular_cap", type=int, default=DEFAULT_REGULAR_CAP)
+    parser.add_argument(
+        "--expo-cap",
+        dest="regular_cap",
+        type=int,
+        default=DEFAULT_REGULAR_CAP,
+        help="Optional legacy cap. Omit to publish every eligible cloud-backed preview.",
+    )
     parser.add_argument("--selection", choices=("random", "newest"), default=DEFAULT_SELECTION_MODE)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--review-snapshot", "--blacklist", dest="review_snapshot", type=Path, default=None, help="Optional Review Snapshot file to apply hidden, reserve, and classification choices.")
@@ -708,6 +739,8 @@ if __name__ == "__main__":
     repo_root = Path(__file__).resolve().parents[1]
     review_payload = load_blacklist_payload(args.review_snapshot)
     hidden_ids = hidden_ids_from_current_state(repo_root) | blacklist_ids_from_payload(review_payload)
+    country_assignments = country_assignments_from_owner_index(repo_root)
+    country_assignments.update(country_assignments_from_payload(review_payload))
     result = write_photos_data(
         repo_root,
         regular_cap=args.regular_cap,
@@ -718,6 +751,6 @@ if __name__ == "__main__":
         seed=args.seed,
         pinned_regular_ids=expo_state_from_payload(review_payload),
         reserve_only_ids=reserve_only_ids_from_payload(review_payload),
-        country_assignments=country_assignments_from_payload(review_payload),
+        country_assignments=country_assignments,
     )
     print(result)

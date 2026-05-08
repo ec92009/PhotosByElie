@@ -227,7 +227,7 @@ def move_regular_derivatives(repo_root: Path, photo_ids: set[str]) -> list[dict]
     return moved
 
 
-def regular_cap_from_payload(payload: dict, fallback: int = DEFAULT_REGULAR_CAP) -> int:
+def regular_cap_from_payload(payload: dict, fallback: int | None = DEFAULT_REGULAR_CAP) -> int | None:
     value = payload.get("expo_cap")
     if isinstance(value, int) and value > 0:
         return value
@@ -454,10 +454,8 @@ def photo_object_lines(photo: dict, index: int) -> list[str]:
     ]
 
 
-def collection_lines(slug: str, photos: list[dict], reserve_count: int | None = None) -> list[str]:
+def collection_lines(slug: str, photos: list[dict]) -> list[str]:
     number, title, accent, description = LABELS[slug]
-    if reserve_count is not None:
-        description = f"{description} {len(photos)} expo photos currently loaded; {reserve_count} in local reserve."
     lines = [
         f"  {slug}: {{",
         f"    number: {json.dumps(number, ensure_ascii=False)},",
@@ -596,7 +594,7 @@ def helper_lines() -> list[str]:
 def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]]) -> None:
     lines = ["window.photosByElieData = {"]
     for slug in ORDER:
-        lines += collection_lines(slug, regular_groups.get(slug, []), len(reserve_groups.get(slug, [])))
+        lines += collection_lines(slug, regular_groups.get(slug, []))
     lines += [
         "};",
         "window.photosByElieOwnerData = {",
@@ -649,7 +647,7 @@ def write_regular_manifest_from_site(
     repo_root: Path,
     regular_groups: dict[str, list[dict]],
     reserve_groups: dict[str, list[dict]],
-    regular_cap: int,
+    regular_cap: int | None,
     hidden_ids: set[str],
     selection_mode: str = "review-snapshot",
 ) -> None:
@@ -658,6 +656,7 @@ def write_regular_manifest_from_site(
         "schema_version": 1,
         "state": "expo",
         "expo_cap": regular_cap,
+        "publish_scope": "all-eligible" if regular_cap is None or regular_cap <= 0 else "capped",
         "selection_mode": selection_mode,
         "seed": None,
         "photos_count": len(regular_rows),
@@ -717,7 +716,7 @@ def move_asset(repo_root: Path, relative_path: str, destination_rel: str) -> dic
 def apply_asset_review(
     repo_root: Path,
     payload: dict,
-    regular_cap: int,
+    regular_cap: int | None,
     asset_sources: list[Path] | None = None,
 ) -> dict:
     site = load_site_data(repo_root)
@@ -778,6 +777,7 @@ def apply_asset_review(
         for slug in ORDER:
             if slug == "unknown":
                 continue
+            limit = regular_cap if regular_cap and regular_cap > 0 else None
             current_ids = [
                 photo["id"]
                 for photo in current_groups.get(slug, [])
@@ -788,7 +788,8 @@ def apply_asset_review(
                 for photo_id in reserve_promotions.get(slug, [])
                 if isinstance(photo_id, str) and photo_id not in hidden_ids
             ]
-            regular_state[slug] = list(dict.fromkeys(current_ids + promoted_ids))[:regular_cap]
+            selected_ids = list(dict.fromkeys(current_ids + promoted_ids))
+            regular_state[slug] = selected_ids[:limit] if limit else selected_ids
 
     regular_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
     missing_ids = []
@@ -833,14 +834,15 @@ def apply_asset_review(
     for slug in ORDER:
         if slug == "unknown":
             continue
+        limit = regular_cap if regular_cap and regular_cap > 0 else None
         if randomize_expo_selection:
             for source_photo in randomized_regular_candidates(slug):
-                if len(regular_groups[slug]) >= regular_cap:
+                if limit and len(regular_groups[slug]) >= limit:
                     break
                 add_regular_photo(slug, source_photo)
             continue
 
-        for photo_id in regular_state.get(slug, [])[:regular_cap]:
+        for photo_id in (regular_state.get(slug, [])[:limit] if limit else regular_state.get(slug, [])):
             if photo_id in hidden_ids or photo_id in reserve_only_ids:
                 continue
             found = lookup(photo_id)
@@ -853,7 +855,7 @@ def apply_asset_review(
         selected_ids = {photo.get("id") for photo in regular_groups[slug]}
         for source_photo in randomized_regular_candidates(slug):
             photo_id = source_photo.get("id")
-            if len(regular_groups[slug]) >= regular_cap:
+            if limit and len(regular_groups[slug]) >= limit:
                 break
             if not photo_id or photo_id in selected_ids or photo_id in hidden_ids or photo_id in reserve_only_ids:
                 continue

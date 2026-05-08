@@ -435,19 +435,6 @@ def _hidden_provenance(photo: dict, fallback_state: str, fallback_slug: str) -> 
     return state, slug
 
 
-def _current_expo_cap(repo_root: Path, expo_groups: dict[str, list[dict]]) -> int:
-    manifest_path = repo_root / EXPO_MANIFEST_PATH
-    if manifest_path.exists():
-        try:
-            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-            value = payload.get("expo_cap")
-            if isinstance(value, int) and value > 0:
-                return value
-        except json.JSONDecodeError:
-            pass
-    return max(1, *(len(expo_groups.get(slug, [])) for slug in ORDER if slug != "unknown"))
-
-
 def _hidden_public_preview_keys(photo: dict, slug: str) -> list[str]:
     keys: list[str] = []
     for source in (photo.get("gallerySrc"), photo.get("imageSrc")):
@@ -539,7 +526,7 @@ def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_gr
         repo_root,
         expo_groups,
         reserve_groups,
-        _current_expo_cap(repo_root, expo_groups),
+        None,
         hidden_ids,
         "live-local-action",
     )

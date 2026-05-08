@@ -70,6 +70,7 @@ const isPublishPath = (file) => {
   if (!file) return false;
   if (file === "VERSION" || file === "README.md" || file === "SUMMARY.md" || file === "TODO.md") return true;
   if (file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json") return true;
+  if (file === "assets/private-delivery-manifest.json") return true;
   if (file.startsWith("assets/expo/")) return true;
   if (file.startsWith("scripts/")) return true;
   return /\.(html|css|js)$/i.test(file);

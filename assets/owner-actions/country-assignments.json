@@ -27756,8 +27756,206 @@
           "to": "assets/reserve/usa/20160416-1913-27477-pano-ecaa9f563f_900.jpg"
         }
       }
+    },
+    "20180822-0748-42638-ee1597992c": {
+      "gallery_key": "usa",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:40:50.754068Z",
+      "batch_id": "2026-05-08T15:40:50.754068Z-669a3fc8",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180822-0748-42638-ee1597992c_1800.jpg",
+          "to": "assets/reserve/usa/20180822-0748-42638-ee1597992c_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180822-0748-42638-ee1597992c_900.jpg",
+          "to": "assets/reserve/usa/20180822-0748-42638-ee1597992c_900.jpg"
+        }
+      }
+    },
+    "20180322-0915-00178-ba6139b8b5": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0915-00178-ba6139b8b5_1800.jpg",
+          "to": "assets/reserve/france/20180322-0915-00178-ba6139b8b5_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0915-00178-ba6139b8b5_900.jpg",
+          "to": "assets/reserve/france/20180322-0915-00178-ba6139b8b5_900.jpg"
+        }
+      }
+    },
+    "20180322-0915-00177-2e8ae321f3": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0915-00177-2e8ae321f3_1800.jpg",
+          "to": "assets/reserve/france/20180322-0915-00177-2e8ae321f3_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0915-00177-2e8ae321f3_900.jpg",
+          "to": "assets/reserve/france/20180322-0915-00177-2e8ae321f3_900.jpg"
+        }
+      }
+    },
+    "20180322-0915-00176-829cdd2881": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0915-00176-829cdd2881_1800.jpg",
+          "to": "assets/reserve/france/20180322-0915-00176-829cdd2881_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0915-00176-829cdd2881_900.jpg",
+          "to": "assets/reserve/france/20180322-0915-00176-829cdd2881_900.jpg"
+        }
+      }
+    },
+    "20180322-0915-00175-ffaa26da3d": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0915-00175-ffaa26da3d_1800.jpg",
+          "to": "assets/reserve/france/20180322-0915-00175-ffaa26da3d_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0915-00175-ffaa26da3d_900.jpg",
+          "to": "assets/reserve/france/20180322-0915-00175-ffaa26da3d_900.jpg"
+        }
+      }
+    },
+    "20180322-0915-00174-9960ccde3d": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0915-00174-9960ccde3d_1800.jpg",
+          "to": "assets/reserve/france/20180322-0915-00174-9960ccde3d_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0915-00174-9960ccde3d_900.jpg",
+          "to": "assets/reserve/france/20180322-0915-00174-9960ccde3d_900.jpg"
+        }
+      }
+    },
+    "20180322-0915-00173-e3b893dbea": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0915-00173-e3b893dbea_1800.jpg",
+          "to": "assets/reserve/france/20180322-0915-00173-e3b893dbea_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0915-00173-e3b893dbea_900.jpg",
+          "to": "assets/reserve/france/20180322-0915-00173-e3b893dbea_900.jpg"
+        }
+      }
+    },
+    "20180322-0914-00172-8ecac334b7": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0914-00172-8ecac334b7_1800.jpg",
+          "to": "assets/reserve/france/20180322-0914-00172-8ecac334b7_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0914-00172-8ecac334b7_900.jpg",
+          "to": "assets/reserve/france/20180322-0914-00172-8ecac334b7_900.jpg"
+        }
+      }
+    },
+    "20180322-0914-00171-2d4d282746": {
+      "gallery_key": "france",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:41:01.848201Z",
+      "batch_id": "2026-05-08T15:41:01.848201Z-4972b556",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180322-0914-00171-2d4d282746_1800.jpg",
+          "to": "assets/reserve/france/20180322-0914-00171-2d4d282746_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180322-0914-00171-2d4d282746_900.jpg",
+          "to": "assets/reserve/france/20180322-0914-00171-2d4d282746_900.jpg"
+        }
+      }
+    },
+    "20180314-2235-00143-5149ab8f43": {
+      "gallery_key": "usa",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:42:01.830263Z",
+      "batch_id": "2026-05-08T15:42:01.830263Z-e1eabee5",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20180314-2235-00143-5149ab8f43_1800.jpg",
+          "to": "assets/reserve/usa/20180314-2235-00143-5149ab8f43_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20180314-2235-00143-5149ab8f43_900.jpg",
+          "to": "assets/reserve/usa/20180314-2235-00143-5149ab8f43_900.jpg"
+        }
+      }
+    },
+    "20130326-2207-25784-4b9d7e15d3": {
+      "gallery_key": "usa",
+      "state": "reserve",
+      "from_state": "reserve",
+      "from_slug": "unknown",
+      "assigned_at": "2026-05-08T15:44:11.627332Z",
+      "batch_id": "2026-05-08T15:44:11.627332Z-8f914eca",
+      "assets": {
+        "detail": {
+          "from": "assets/reserve/unknown/20130326-2207-25784-4b9d7e15d3_1800.jpg",
+          "to": "assets/reserve/usa/20130326-2207-25784-4b9d7e15d3_1800.jpg"
+        },
+        "gallery": {
+          "from": "assets/reserve/unknown/20130326-2207-25784-4b9d7e15d3_900.jpg",
+          "to": "assets/reserve/usa/20130326-2207-25784-4b9d7e15d3_900.jpg"
+        }
+      }
     }
   },
-  "updated_at": "2026-05-06T22:38:42.398991Z",
-  "latest_batch_id": "2026-05-06T22:38:42.398991Z-831302f7"
+  "updated_at": "2026-05-08T15:44:11.627332Z",
+  "latest_batch_id": "2026-05-08T15:44:11.627332Z-8f914eca"
 }

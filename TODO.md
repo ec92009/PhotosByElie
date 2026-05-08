@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.11`.
+- Local visible build: `v67.14`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -19,14 +19,16 @@ Last updated: 2026-05-08
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
 - Public mock checkout Worker is live at `https://photosbyelie-checkout-mock.ec92009.workers.dev`, backed by Cloudflare KV plus private R2.
-- The public site config points checkout to the deployed Worker as of `v67.11`; GitHub Pages must finish serving the latest `main` commit before browser testing the cloud flow.
+- The public site config points checkout to the deployed Worker as of `v67.11`; current UI/copy fixes are published through `v67.14`.
 - Public previews are temporarily served through `https://photosbyelie-checkout-mock.ec92009.workers.dev/media/...`, backed by `photosbyelie-public`.
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`; the Worker generated `deliveries/photosbyelie-order-PBE-20260508-D054362044.zip` in private R2 and returned a valid ZIP download.
 - Order status now shows explicit mock checkout phases: payment, ZIP build, and download. Cloud ZIP generation failures persist as `delivery_failed`.
-- The Worker now expects JPG 6/3/1 MP buyer files to exist in private R2 under `renders/...`; David should generate/upload those unwatermarked deliverables from the machine that owns the developed masters.
+- The Worker expects JPG 6/3/1 MP buyer files to exist in private R2 under `renders/...`; David generated and uploaded the completed private render cache from local Saturn developed masters.
+- Private buyer JPG render verification passed for the full current catalog: 503 photos, 1,509 expected render objects, 1,509 present, 0 missing.
 - Mixed full/JPG 6/3/1 MP API checkout was verified for test order `PBE-20260508-1D7B1CF611` after pre-rendering one test photo's private JPG deliverables.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
+- Checkout result links and default site links now have explicit accessible contrast tokens; unpaid order-page copy now reads as an exception/direct-access state rather than the normal buyer path.
 - Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.
 - The architecture PDF now includes an MSC-style checkout/fulfillment page and a non-destructive metadata overrides page, but page 4 still has a known text-overlap defect.
 
@@ -84,8 +86,8 @@ Last updated: 2026-05-08
 9. **Harden the mock checkout flow.**
    - [Codex] Add account checkout UI only after guest checkout feels right.
    - [Codex] Expand basket copy/states so unsupported print items are clearly separate from digital ZIP delivery.
-   - [Codex] Make the order page entry model explicit: buyers should normally land there only after mock/real payment, while unpaid direct-access states should read as exceptions.
-   - [Codex] Browser-test mixed full/JPG 6/3/1 MP checkout after David generates/uploads the private render cache.
+   - [Codex] Finish the order page entry model: buyers should normally land there only after mock/real payment, while unpaid direct-access states remain exception states.
+   - [Codex] Browser-test mixed full/JPG 6/3/1 MP checkout against the completed private render cache on GitHub Pages/public Worker.
    - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
    - [Codex] Add browser smoke coverage for the basket -> mock payment -> order page -> ZIP download path.
    - [Codex] Decide whether local mock orders need persisted JSON state so order lookup survives Worker restarts without relying on browser cache.
@@ -154,3 +156,6 @@ Last updated: 2026-05-08
 - Added `order.html` with a proper mock order status and local ZIP download button.
 - Added the order-ID ZIP fallback route and visible Local ZIP / Copy ZIP path fallback after the in-app browser hid attachment download feedback.
 - Added a deployable public mock checkout Worker path with KV state and private R2 full-resolution ZIP delivery scaffolding.
+- Updated private render tooling to prefer local Saturn developed masters and uploaded the full current catalog's private JPG 6/3/1 MP buyer render cache: 1,509/1,509 private render objects verified.
+- Improved checkout contrast: the mock Checkout Session link and unscoped default links now use explicit accessible link colors in dark and light themes.
+- Clarified unpaid order-page copy so direct access before payment reads as an exception instead of the normal post-payment flow.

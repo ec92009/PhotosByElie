@@ -68,6 +68,12 @@ This still serves the same static site files, but adds localhost-only endpoints 
 
 Owner mutation endpoints require a local owner session. Set `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD` before starting the server, or use the one-time login code printed by `scripts/local_server.py` for that server run.
 
+For a temporary private-LAN review session, bind to all interfaces and opt in to password-gated LAN owner endpoints:
+
+```bash
+PHOTOSBYELIE_OWNER_PASSWORD=... python3 scripts/local_server.py 8000 --bind 0.0.0.0 --allow-lan-owner
+```
+
 We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; `.pbe-review` snapshots remain only as audit files and as a fallback for larger rebuilds.
 
 The Owner page writes the current Expo cap into each review snapshot, and the cleaner honors that payload value unless you pass an explicit `--expo-cap` override. This cap is a maximum, not a required fill count: collections with fewer valid JPEG pairs publish fewer photos. For standalone bootstrap exports, the exporter randomly samples eligible photos in each collection, writes the selected set, records the random seed in `assets/expo-manifest.json`, and writes ignored localhost reserve data to `assets/reserve/reserve-data.json`:

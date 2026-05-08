@@ -30,11 +30,12 @@
     if (status) status.textContent = message;
   };
 
-  const renderAuthState = (authState = ownerAuth?.state || {}) => {
+  const renderAuthState = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!authPanel || !ownerAuth?.enabled) return;
     const authenticated = authState.authenticated === true;
     const available = authState.available !== false;
     authPanel.hidden = false;
+    authPanel.classList.toggle("is-owner-authenticated", authenticated);
     if (controls) controls.hidden = !authenticated;
     if (authHeading) authHeading.textContent = authenticated ? "Signed in" : "Sign in";
     if (authCopy) {
@@ -59,6 +60,11 @@
       setStatus("Owner controls unlocked.");
       renderCounts();
       startR2Polling();
+      if (options.scrollToControls && controls) {
+        window.requestAnimationFrame(() => {
+          controls.scrollIntoView({ block: "start", behavior: "smooth" });
+        });
+      }
     } else if (available) {
       setStatus("Owner login required before catalog or cloud actions can run.");
     } else {
@@ -206,7 +212,7 @@
     setStatus("Checking owner password...");
     try {
       const nextState = await ownerAuth.login(password);
-      renderAuthState(nextState);
+      renderAuthState(nextState, { scrollToControls: true });
     } catch (error) {
       setStatus(error?.message || "Owner login failed.");
       authPassword?.focus();

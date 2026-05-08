@@ -7,7 +7,7 @@ Date: 2026-05-08
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v70.0`
+- Current visible build: `v70.1`
 - Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,123` catalog photos.
 - Current catalog counts: France `320`, USA `160`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -63,7 +63,7 @@ Date: 2026-05-08
 - We chose Stripe as the next business step instead of starting with user accounts.
 - The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
 - Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
-- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.0`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.1`.
 - Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
 - Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.

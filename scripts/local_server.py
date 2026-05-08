@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import ipaddress
 import os
 import secrets
 import json
@@ -236,6 +237,8 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         client = self.client_address[0]
         if client.startswith("127.") or client == "::1":
             return host in LOCAL_CLIENTS or host.startswith("127.")
+        if getattr(self.server, "allow_lan_owner", False) and _is_private_lan_address(client):
+            return _is_private_lan_address(host)
         return False
 
     def _owner_session_payload(self, token: str | None = None) -> dict:
@@ -301,6 +304,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Serve Photos By Elie locally with owner helper endpoints.")
     parser.add_argument("port", nargs="?", type=int, default=8000)
     parser.add_argument("--bind", default="127.0.0.1", help="Address to bind. Defaults to 127.0.0.1.")
+    parser.add_argument("--allow-lan-owner", action="store_true", help="Allow password-gated owner helper endpoints from private LAN clients.")
     args = parser.parse_args()
 
     owner_password = (
@@ -315,6 +319,7 @@ def main() -> int:
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
     server.owner_password = owner_password
     server.owner_password_source = owner_password_source
+    server.allow_lan_owner = args.allow_lan_owner
     url_host = "localhost" if args.bind in {"127.0.0.1", "::1"} else args.bind
     print(f"Serving Photos By Elie at http://{url_host}:{args.port}/")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
@@ -322,6 +327,8 @@ def main() -> int:
         print(f"Owner login code for this server session: {owner_password}")
     else:
         print(f"Owner login password loaded from {owner_password_source}")
+    if args.allow_lan_owner:
+        print("Owner helper endpoints are enabled for private LAN clients with the owner password.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -329,6 +336,14 @@ def main() -> int:
     finally:
         server.server_close()
     return 0
+
+
+def _is_private_lan_address(value: str) -> bool:
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return bool(address.is_private or address.is_loopback)
 
 
 def _state_groups(repo_root: Path) -> tuple[dict[str, list[dict]], dict[str, list[dict]], dict[str, list[dict]]]:

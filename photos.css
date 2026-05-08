@@ -262,6 +262,23 @@ html[data-theme="light"] .photo-art.has-photo::after{
   background:var(--bg);
   padding:16px;
 }
+.owner-auth-panel.is-owner-authenticated{
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  padding:12px 16px;
+}
+.owner-auth-panel.is-owner-authenticated .eyebrow,
+.owner-auth-panel.is-owner-authenticated [data-owner-auth-copy]{
+  display:none;
+}
+.owner-auth-panel.is-owner-authenticated h2{
+  font-size:1.1rem;
+  margin:0;
+}
+.owner-auth-panel.is-owner-authenticated .owner-auth-form{
+  display:flex;
+  justify-content:flex-end;
+}
 .owner-auth-panel h2,
 .owner-auth-panel p{
   margin:0;

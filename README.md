@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v70.0`
+- Current visible version: `v70.1`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -69,7 +69,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Assigning an Unknown photo to a country updates every loaded same-day unknown into that country in the local catalog/preview cache, adds the country keyword to catalog/source metadata when possible, refreshes the Unknown hints, and removes assigned cards from the queue.
 - We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
 - The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, Hidden blacklist updates, Unknown assignment, metadata edits, and R2 maintenance.
-- Local owner mutation endpoints require an owner session. Set `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD` before starting the server, or use the one-time login code printed by `scripts/local_server.py` for that server run.
+- Local owner mutation endpoints require an owner session. Set `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD` before starting the server, or use the one-time login code printed by `scripts/local_server.py` for that server run. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On localhost gallery pages, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - Gallery filters cover orientation, color mood, and subject, with Sort defaulting to Newest first on first display.

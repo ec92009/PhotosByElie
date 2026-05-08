@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v67.8`
+- Current visible version: `v67.9`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -97,7 +97,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
-- The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the local mock Worker at `http://localhost:8787` for guest checkout. After simulated payment, buyers land on `order.html` with order status, a ZIP download button, a visible Local ZIP path, and a copy-path fallback for app browsers that hide attachment downloads.
+- The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the configured mock checkout Worker for guest checkout. Public `v67.9` points to `https://photosbyelie-checkout-mock.ec92009.workers.dev`; local testing can override with `?workerBase=http://localhost:8787`. After simulated payment, buyers land on `order.html` with order status, a ZIP download button, a visible local/cloud delivery reference, and a copy-path fallback for app browsers that hide attachment downloads.
 - Product choices now include digital files and physical prints at 4 x 6, 5 x 7, 8 x 10, and 11 x 14 inches.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, plain white, or plain black. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.

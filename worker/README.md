@@ -44,11 +44,13 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 - `PRIVATE_MEDIA` reads private developed masters from R2.
 - `DELIVERY_MEDIA` writes and serves generated ZIP files. It can point at the same private R2 bucket for the mock phase.
 
-The public static site can point to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` in `media-config.js`, or with `?workerBase=https://...` while testing. The R2 ZIP adapter currently supports full-resolution products only; scaled JPG products still need a production image-resize/export path before they should be enabled for real cloud delivery.
+The public static site points to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` in `media-config.js`. Use `?workerBase=https://...` for alternate cloud Workers, or `?workerBase=http://localhost:8787` while testing locally. The R2 ZIP adapter currently supports full-resolution products only; scaled JPG products still need a production image-resize/export path before they should be enabled for real cloud delivery.
 
-`wrangler.toml` is checked in with placeholder KV ids. Replace the `ORDERS_KV` ids before deploying.
+The public mock checkout Worker is live at:
 
-Public mock checkout is not live until the Worker is deployed and `media-config.js` points `checkoutWorkerBaseUrl` at the deployed Worker URL.
+```text
+https://photosbyelie-checkout-mock.ec92009.workers.dev
+```
 
 ## Guest Checkout Example
 

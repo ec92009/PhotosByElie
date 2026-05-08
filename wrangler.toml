@@ -9,8 +9,8 @@ KV_PREFIX = "pbe"
 
 [[kv_namespaces]]
 binding = "ORDERS_KV"
-id = "REPLACE_WITH_CLOUDFLARE_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_CLOUDFLARE_PREVIEW_KV_NAMESPACE_ID"
+id = "0ea4d21c491246c986c2c0308bebc560"
+preview_id = "0896fcb030ac4f54b43756707a11a6e0"
 
 [[r2_buckets]]
 binding = "PRIVATE_MEDIA"

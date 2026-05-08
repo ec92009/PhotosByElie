@@ -338,7 +338,12 @@
       gallery_key: galleryKey,
       operation_id: options.operationId,
     });
-    clearCountryAssignments(ids);
+    const assignedIds = normalize(
+      result?.removed_from_unknown
+      || result?.moved?.map((item) => item.id)
+      || ids
+    );
+    setCountryAssignments(assignedIds.length ? assignedIds : ids, galleryKey);
     return result;
   };
 

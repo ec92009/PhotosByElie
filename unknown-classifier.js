@@ -10,6 +10,7 @@
   let lastHiddenPhotoId = "";
   let fullscreenPreview = null;
   let pendingScrollAnchor = null;
+  let assignmentIndexPhotoIds = new Set();
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -48,15 +49,38 @@
     return [...byId.values()];
   };
 
+  const assignedPhotoIds = () => new Set([
+    ...Object.keys(hiddenActions?.readCountryAssignments?.() || {}),
+    ...assignmentIndexPhotoIds,
+  ]);
+
   const unknownPhotos = () => {
     const hidden = new Set(hiddenActions?.read?.() || []);
-    return allUnknownPhotos().filter((photo) => !hidden.has(photo.id));
+    const assigned = assignedPhotoIds();
+    return allUnknownPhotos().filter((photo) => !hidden.has(photo.id) && !assigned.has(photo.id));
   };
 
   const sameDayPhotos = (photo) => {
     const day = captureDay(photo);
     if (!day) return [photo];
-    return allUnknownPhotos().filter((candidate) => captureDay(candidate) === day);
+    return unknownPhotos().filter((candidate) => captureDay(candidate) === day);
+  };
+
+  const loadAssignmentIndex = async () => {
+    if (!hiddenActions?.enabled) return;
+    try {
+      const response = await fetch(`./assets/owner-actions/country-assignments.json?v=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      assignmentIndexPhotoIds = new Set(
+        Object.entries(payload?.photos || {})
+          .filter(([, assignment]) => targetCountries.includes(assignment?.gallery_key))
+          .map(([photoId]) => photoId)
+      );
+      renderPreservingScroll();
+    } catch {
+      // The live localStorage action state still filters newly assigned photos.
+    }
   };
 
   const countryTitle = (countryKey) => (
@@ -288,14 +312,13 @@
       return;
     }
 
-    const allPhotos = allUnknownPhotos();
-    const dayCounts = allPhotos.reduce((counts, photo) => {
+    const photos = unknownPhotos();
+    const dayCounts = photos.reduce((counts, photo) => {
       const day = captureDay(photo);
       if (day) counts.set(day, (counts.get(day) || 0) + 1);
       return counts;
     }, new Map());
     const countryDayIndex = knownCountryDayIndex();
-    const photos = unknownPhotos();
     if (!photos.length) {
       root.innerHTML = `
         <article class="owner-card">
@@ -542,6 +565,9 @@
   });
   window.addEventListener("photosbyelie:inputmodechange", render);
 
-  reserveStore?.load?.().then(render);
+  reserveStore?.load?.().then(() => {
+    render();
+    loadAssignmentIndex();
+  });
   render();
 })();

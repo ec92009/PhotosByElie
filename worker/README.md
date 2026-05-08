@@ -43,7 +43,7 @@ python3 -m http.server 8000
 node worker/local-server.mjs
 ```
 
-Then open `http://localhost:8000/basket.html`, enter a buyer email, choose `Pay as guest`, and use `Simulate Stripe payment`. Mock delivery ZIPs are written to `deliveries/photosbyelie-order-<orderId>.zip`.
+Then open `http://localhost:8000/basket.html`, enter a buyer email, choose `Pay as guest`, and use `Simulate Stripe payment`. The browser lands on `order.html`, where `Download ZIP` downloads the generated file from the local Worker. Mock delivery ZIPs are also written to `deliveries/photosbyelie-order-<orderId>.zip`.
 
 ```bash
 curl -sS http://localhost:8787/checkout/guest \
@@ -80,7 +80,7 @@ That simulates the paid webhook and moves the order to `ready`. The resulting de
 deliveries/photosbyelie-order-<orderId>.zip
 ```
 
-In production the mock Stripe client gets replaced by a real Stripe client, and the local ZIP adapter becomes real private R2/ZIP work. The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing.
+In production the mock Stripe client gets replaced by a real Stripe client, and the local ZIP adapter becomes real private R2/ZIP work. The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing. The core Worker still returns JSON from `/download/:token`; `worker/local-server.mjs` upgrades that local route into an actual ZIP response when the ZIP path is on disk.
 
 ## Tests
 

@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.2`.
+- Local visible build: `v67.3`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -69,10 +69,9 @@ Last updated: 2026-05-08
 
 9. **Harden the local mock checkout flow.**
    - [Codex] Add account checkout UI only after guest checkout feels right.
-   - [Codex] Add a buyer order page or static shell instead of showing Worker JSON/download token output.
-   - [Codex] Make the local ZIP download one click from the browser during mock testing.
    - [Codex] Expand basket copy/states so unsupported print items are clearly separate from digital ZIP delivery.
    - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
+   - [Codex] Add browser smoke coverage for the basket -> mock payment -> order page -> ZIP download path.
 
 10. **Make Worker storage durable.**
    - [Codex] Choose D1 vs KV for order records; current likely direction is D1 for queryable order state.
@@ -134,3 +133,4 @@ Last updated: 2026-05-08
 - Completed the public R2 S3 repair pass and live-verified zero missing active public objects.
 - Added the non-destructive metadata overrides infographic page and rebuilt the architecture PDF as 9 pages.
 - Wired the basket to local mock guest checkout and added local ZIP generation for mock paid orders.
+- Added `order.html` with a proper mock order status and local ZIP download button.

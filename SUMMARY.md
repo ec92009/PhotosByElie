@@ -7,7 +7,7 @@ Date: 2026-05-07
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build in `VERSION`: `v67.2`
+- Current visible build in `VERSION`: `v67.3`
 - Local `main` was already ahead of `origin/main` by one commit before this checkout/Worker pass.
 - `origin/main` before this push was `5dbadf0 photosbyelie: classify unknown reserve countries`.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
@@ -35,6 +35,7 @@ Date: 2026-05-07
 - Added `worker/mock-stripe.mjs` for fake Checkout Session creation, mock paid events, and mock webhook signature handling.
 - Added `worker/memory-store.mjs` as in-memory order/download storage for local tests.
 - Added `worker/local-server.mjs` and `worker/local-zip-delivery.mjs` for local end-to-end mock checkout with real ZIP files written under `deliveries/`.
+- Added `order.html` / `order.js` for buyer-facing mock order status and one-click local ZIP download.
 - Added `worker/checkout-worker.test.mjs` covering:
   - guest checkout creates a pending order and mock Stripe session
   - mock paid event moves the order to `ready`
@@ -73,7 +74,7 @@ The living backlog is in `TODO.md`. Highest-priority work now centers on:
 
 1. Finish and verify public R2 preview upload.
 2. Start/verify private R2 master upload after public completes.
-3. Harden the local mock checkout UX with a proper order/download page.
+3. Harden the local mock checkout UX with browser smoke coverage and clearer unsupported-print states.
 4. Replace in-memory Worker storage with durable Cloudflare storage, likely D1 for orders plus R2 for deliveries.
 5. Replace mock Stripe with real Stripe Checkout/webhook calls once Elie’s Stripe account is ready.
 6. Fix the page 4 PDF text collision before treating the infographic deck as final.

@@ -26,6 +26,7 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "67.3";
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -218,6 +219,14 @@ const checkoutFetch = async (path, options = {}) => {
 const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
+const orderPageHref = (orderId, email) => {
+  const url = new URL("./order.html", window.location.href);
+  url.searchParams.set("id", orderId);
+  url.searchParams.set("email", email);
+  url.searchParams.set("v", siteVersion);
+  return url.href;
+};
+
 const renderCheckoutResult = (body, mode = "checkout") => {
   if (!checkoutResult) return;
   const order = body?.order;
@@ -295,10 +304,12 @@ mockPay?.addEventListener("click", async () => {
       lastResponse: body,
       mode: "paid",
       checkoutSessionId: "",
+      orderId: body.order.id,
     });
     renderCheckoutResult(body, "paid");
     syncCheckoutControls();
     status.textContent = "Mock payment complete. Delivery ZIP generated.";
+    window.location.href = orderPageHref(body.order.id, body.order.buyerEmail || state.email);
   } catch (error) {
     status.textContent = error.message;
   } finally {

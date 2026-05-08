@@ -54,8 +54,29 @@ const readBody = (req) => new Promise((resolve, reject) => {
   req.on("error", reject);
 });
 
+const serveLocalDownload = async (req, res) => {
+  const match = new URL(req.url, `http://localhost:${port}`).pathname.match(/^\/download\/([^/]+)$/);
+  if (!match || req.method !== "GET") return false;
+  const token = decodeURIComponent(match[1]);
+  const download = await worker.store.getDownload(token);
+  if (!download || !path.isAbsolute(download.zipKey)) return false;
+  if (!fs.existsSync(download.zipKey)) return false;
+
+  await worker.store.recordDownload(token, new Date().toISOString());
+  const filename = path.basename(download.zipKey);
+  res.writeHead(200, {
+    "access-control-allow-origin": "*",
+    "content-type": "application/zip",
+    "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
+    "content-length": fs.statSync(download.zipKey).size,
+  });
+  fs.createReadStream(download.zipKey).pipe(res);
+  return true;
+};
+
 const server = http.createServer(async (req, res) => {
   try {
+    if (await serveLocalDownload(req, res)) return;
     const body = await readBody(req);
     const response = await worker.fetch(toWebRequest(req, body.length ? body : undefined));
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));

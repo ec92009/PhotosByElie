@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Gallery</title>
-  <meta name="description" content="Mock photo gallery for Photos By Elie."/>
+  <title>Photos By Elie | Order</title>
+  <meta name="description" content="Mock order status and delivery for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
   <link rel="stylesheet" href="./shared.css?v=67.3"/>
@@ -14,13 +14,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="ai">
+<body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <nav class="version-switch" aria-label="Site navigation">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" data-nav-current href="./ai.html">Gallery</a>
+      <a href="./basket.html">Basket</a> <span>|</span>
+      <a href="./liked.html">Liked</a>
     </nav>
     <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v67.3</div>
     <div class="header-controls">
@@ -29,12 +30,29 @@
     </div>
   </header>
   <main id="main-content" class="shell">
-    <section class="panel gallery-hero">
-      <h1 data-gallery-title>Gallery</h1>
-      <p class="gallery-status" data-gallery-status aria-live="polite"></p>
-      <div class="cta" data-gallery-actions><a class="btn secondary" href="./">Back to collections</a></div>
+    <section class="panel gallery-hero basket-hero">
+      <h1>Order</h1>
+      <div class="cta">
+        <a class="btn secondary" href="./basket.html">Basket</a>
+        <button class="btn secondary" type="button" data-order-refresh>Refresh</button>
+      </div>
     </section>
-    <section class="panel mock-gallery" data-gallery-root></section>
+    <section class="panel order-panel">
+      <div class="order-status-card">
+        <p class="eyebrow">Mock checkout</p>
+        <h2 data-order-heading>Loading order</h2>
+        <p data-order-message>Checking the local Worker for order status.</p>
+        <div class="order-state-rail" aria-label="Order progress">
+          <span data-state-step="pending_payment">Pending</span>
+          <span data-state-step="preparing">Preparing</span>
+          <span data-state-step="ready">Ready</span>
+        </div>
+        <a class="btn primary" data-download-zip hidden>Download ZIP</a>
+      </div>
+      <dl class="order-detail-grid" data-order-details></dl>
+      <div class="order-items" data-order-items></div>
+      <p class="basket-status" data-order-status aria-live="polite"></p>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -43,9 +61,6 @@
       <nav class="footer-nav" aria-label="Footer navigation">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
         <a href="./#collections">Collections</a>
-        <span class="footer-owner-tools" data-owner-tools hidden>
-          <a href="./owner.html">Owner</a>
-        </span>
       </nav>
     </div>
   </footer>
@@ -54,11 +69,6 @@
   <script src="./photos.js?v=67.3"></script>
   <script src="./owner-tools.js?v=67.3"></script>
   <script src="./site-version.js?v=67.3"></script>
-  <script src="./photos-data.js?v=67.3"></script>
-  <script src="./hidden-actions.js?v=67.3"></script>
-  <script src="./reserve-store.js?v=67.3"></script>
-  <script src="./photo-gallery.js?v=67.3"></script>
-  <script src="./basket-store.js?v=67.3"></script>
-  <script src="./basket-rail.js?v=67.3"></script>
+  <script src="./order.js?v=67.3"></script>
 </body>
 </html>

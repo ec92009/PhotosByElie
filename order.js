@@ -43,6 +43,8 @@ const buyerEmail = () => params.get("email") || checkoutState().email || "";
 const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
+const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(workerBaseUrl());
+
 const statusText = {
   pending_payment: "Waiting for payment",
   preparing: "Preparing delivery",
@@ -72,7 +74,7 @@ const renderOrder = (order) => {
     <div><dt>Total</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
     <div><dt>Paid</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>
     <div><dt>Mode</dt><dd>${escapeText(order.checkoutMode)}</dd></div>
-    ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>Local ZIP</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
+    ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>${isLocalWorker() ? "Local ZIP" : "Delivery ZIP"}</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
   `;
 
   itemsRoot.innerHTML = (order.items || []).map((item) => `
@@ -91,9 +93,11 @@ const renderOrder = (order) => {
   if (order.delivery?.downloadUrl) {
     currentZipPath = order.delivery.zipKey || "";
     downloadZip.hidden = false;
-    downloadZip.href = `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`;
+    downloadZip.href = isLocalWorker()
+      ? `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`
+      : `${workerBaseUrl()}${order.delivery.downloadUrl}`;
     downloadZip.setAttribute("download", "");
-    if (copyZipPath) copyZipPath.hidden = !currentZipPath;
+    if (copyZipPath) copyZipPath.hidden = !currentZipPath || !isLocalWorker();
   } else {
     currentZipPath = "";
     downloadZip.hidden = true;
@@ -136,7 +140,9 @@ const loadOrder = async () => {
 
 refreshButton?.addEventListener("click", loadOrder);
 downloadZip?.addEventListener("click", () => {
-  status.textContent = "Download requested. If the in-app browser does not show a download, use the Local ZIP path below.";
+  status.textContent = isLocalWorker()
+    ? "Download requested. If the in-app browser does not show a download, use the Local ZIP path below."
+    : "Download requested from the checkout Worker.";
 });
 copyZipPath?.addEventListener("click", async () => {
   if (!currentZipPath) return;

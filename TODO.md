@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.7`.
+- Local visible build: `v67.8`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -18,7 +18,8 @@ Last updated: 2026-05-08
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
-- GitHub Pages is serving `v67.7`; the public mock checkout Worker code is on GitHub, but the Worker is not live until KV ids are configured, the Worker is deployed, and `checkoutWorkerBaseUrl` is set.
+- GitHub Pages is serving `v67.8`; the public mock checkout Worker code is on GitHub, but the Worker is not live until KV ids are configured, the Worker is deployed, and `checkoutWorkerBaseUrl` is set.
+- Wrangler is available through `npx`, but this shell does not currently see `CLOUDFLARE_API_TOKEN`, so Cloudflare deploys are blocked until credentials are exported into the environment.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
 - Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.

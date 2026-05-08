@@ -5,7 +5,7 @@ Last updated: 2026-05-08
 ## Current Facts
 
 - Local visible build: `v67.21`.
-- Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
+- Public catalog validates in external media mode with 506 photos: AI 100, France 101, Portugal 100, Spain 102, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
 - RAW/DNG/NEF files stay off public and private cloud storage. If a buyer wants RAW, they contact Elie directly.
@@ -25,7 +25,7 @@ Last updated: 2026-05-08
 - First cloud mock checkout was verified by API with order `PBE-20260508-D054362044`; the Worker generated `deliveries/photosbyelie-order-PBE-20260508-D054362044.zip` in private R2 and returned a valid ZIP download.
 - Order status now shows explicit mock checkout phases: payment, ZIP build, and download. Cloud ZIP generation failures persist as `delivery_failed`.
 - The Worker expects JPG 6/3/1 MP buyer files to exist in private R2 under `renders/...`; David generated and uploaded the completed private render cache from local Saturn developed masters.
-- Private buyer JPG render verification passed for the full current catalog: 503 photos, 1,509 expected render objects, 1,509 present, 0 missing.
+- Private buyer JPG render verification passed for the full current catalog: 506 photos, 1,518 expected render objects, 1,518 present, 0 missing.
 - Mixed full/JPG 6/3/1 MP API checkout was verified for test order `PBE-20260508-1D7B1CF611` after pre-rendering one test photo's private JPG deliverables.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
@@ -157,4 +157,5 @@ Last updated: 2026-05-08
 - Clarified unpaid order-page copy so direct access before payment reads as an exception instead of the normal post-payment flow.
 - Retired the low-value timed-out private TIFF from the active R2 backlog.
 - Removed the public-R2 extra-object cleanup from the active backlog after the 29 extras were dumped intentionally.
+- Imported 3 more public photos and verified their private masters, private JPG 6/3/1 MP render objects, and public watermarked preview objects in R2.
 - Marked v1 R2 ZIP creation as implemented; remaining delivery work is scale/queueing and public browser proof.

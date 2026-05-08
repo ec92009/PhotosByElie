@@ -2,7 +2,7 @@ export const collections = {
   "france": {
     "number": "01",
     "title": "France",
-    "description": "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 222 in local reserve.",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source. 101 expo photos currently loaded; 222 in local reserve.",
     "accent": "france-gallery",
     "photos": [
       {
@@ -7254,6 +7254,73 @@ export const collections = {
             "path": "2010-2014/20110106 0632 16425.jpg",
             "type": "JPG",
             "bytes": 1946142
+          }
+        ]
+      },
+      {
+        "id": "20110106-0538-14959-855495beec",
+        "className": "p1",
+        "title": "20110106 0538 14959",
+        "caption": "France / 2011-01-06",
+        "full": "JPG master",
+        "megapixels": 8.9,
+        "gallerySrc": "./assets/reserve/france/20110106-0538-14959-855495beec_900.jpg",
+        "imageSrc": "./assets/reserve/france/20110106-0538-14959-855495beec_1800.jpg",
+        "metadata": [
+          {
+            "label": "Keywords",
+            "value": "Family 4+, France, NotMyPhoto"
+          },
+          {
+            "label": "Captured",
+            "value": "2011:01:06 05:38:03"
+          },
+          {
+            "label": "Camera",
+            "value": "NIKON COOLPIX S630"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/75, f/3.5, ISO 64"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.6 mm / 37 mm equivalent"
+          },
+          {
+            "label": "Software",
+            "value": "COOLPIX S630V1.0"
+          },
+          {
+            "label": "Color profile",
+            "value": "sRGB"
+          },
+          {
+            "label": "Original file",
+            "value": "20110106 0538 14959.jpg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 3968 x 2232 / 8.9 MP"
+          },
+          {
+            "label": "Preview file",
+            "value": "20110106-0538-14959-855495beec_1800.jpg / 1800 x 1012 / JPG"
+          }
+        ],
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20110106-0538-14959-855495beec_900.jpg",
+            "detailKey": "expo/20110106-0538-14959-855495beec_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2010-2014/20110106 0538 14959.jpg",
+            "type": "JPG",
+            "bytes": 1929538
           }
         ]
       }
@@ -15030,7 +15097,7 @@ export const collections = {
   "spain": {
     "number": "03",
     "title": "Spain",
-    "description": "Saturn Lightroom archive selections prepared from the Camera source. 100 expo photos currently loaded; 67 in local reserve.",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source. 102 expo photos currently loaded; 67 in local reserve.",
     "accent": "spain-gallery",
     "photos": [
       {
@@ -22462,6 +22529,156 @@ export const collections = {
             "path": "2015-2019/20180515 1513 00404.jpg",
             "type": "JPG",
             "bytes": 17668730
+          }
+        ]
+      },
+      {
+        "id": "20180515-1608-00420-95ca51dd01",
+        "className": "p1",
+        "title": "20180515 1608 00420",
+        "caption": "Spain / Bilbo, Euskadi / 2018-05-15",
+        "full": "JPG master",
+        "megapixels": 20.7,
+        "gallerySrc": "./assets/reserve/spain/20180515-1608-00420-95ca51dd01_900.jpg",
+        "imageSrc": "./assets/reserve/spain/20180515-1608-00420-95ca51dd01_1800.jpg",
+        "metadata": [
+          {
+            "label": "Keywords",
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+          },
+          {
+            "label": "Captured",
+            "value": "2018:05:15 16:08:45"
+          },
+          {
+            "label": "Camera",
+            "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+            "label": "Lens",
+            "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/400, f/10.0, ISO 100"
+          },
+          {
+            "label": "Focal length",
+            "value": "10.0 mm / 15 mm equivalent"
+          },
+          {
+            "label": "Location",
+            "value": "Bilbo, Euskadi, Spain"
+          },
+          {
+            "label": "Software",
+            "value": "Adobe Photoshop Lightroom Classic 7.3.1 (Macintosh)"
+          },
+          {
+            "label": "Color profile",
+            "value": "sRGB IEC61966-2.1"
+          },
+          {
+            "label": "Original file",
+            "value": "20180515 1608 00420.jpg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5568 x 3712 / 20.7 MP"
+          },
+          {
+            "label": "Preview file",
+            "value": "20180515-1608-00420-95ca51dd01_1800.jpg / 1800 x 1200 / JPG"
+          }
+        ],
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20180515-1608-00420-95ca51dd01_900.jpg",
+            "detailKey": "expo/20180515-1608-00420-95ca51dd01_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2015-2019/20180515 1608 00420.jpg",
+            "type": "JPG",
+            "bytes": 13240263
+          }
+        ]
+      },
+      {
+        "id": "20180515-1508-00392-1-63dcf93248",
+        "className": "p2",
+        "title": "20180515 1508 00392 1",
+        "caption": "Spain / Bilbo, Euskadi / 2018-05-15",
+        "full": "JPG master",
+        "megapixels": 112.5,
+        "gallerySrc": "./assets/reserve/spain/20180515-1508-00392-1-63dcf93248_900.jpg",
+        "imageSrc": "./assets/reserve/spain/20180515-1508-00392-1-63dcf93248_1800.jpg",
+        "metadata": [
+          {
+            "label": "Keywords",
+            "value": "Art, Bilbao, Guggenheim museum, Museum, Panoramic, architecture"
+          },
+          {
+            "label": "Captured",
+            "value": "2018:05:15 15:08:41"
+          },
+          {
+            "label": "Camera",
+            "value": "NIKON CORPORATION NIKON D500"
+          },
+          {
+            "label": "Lens",
+            "value": "10.0-20.0 mm f/4.5-5.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/30, f/5.6, ISO 100"
+          },
+          {
+            "label": "Focal length",
+            "value": "20.0 mm / 30 mm equivalent"
+          },
+          {
+            "label": "Location",
+            "value": "Bilbo, Euskadi, Spain"
+          },
+          {
+            "label": "Software",
+            "value": "Adobe Bridge 2024"
+          },
+          {
+            "label": "Color profile",
+            "value": "sRGB IEC61966-2.1"
+          },
+          {
+            "label": "Original file",
+            "value": "20180515 1508 00392_1.jpg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 13673 x 8231 / 112.5 MP"
+          },
+          {
+            "label": "Preview file",
+            "value": "20180515-1508-00392-1-63dcf93248_1800.jpg / 1800 x 1083 / JPG"
+          }
+        ],
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20180515-1508-00392-1-63dcf93248_900.jpg",
+            "detailKey": "expo/20180515-1508-00392-1-63dcf93248_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2015-2019/20180515 1508 00392_1.jpg",
+            "type": "JPG",
+            "bytes": 10894479
           }
         ]
       }

@@ -5,10 +5,10 @@ Use this when moving work between Max, David, or the laptop.
 ## Current Handoff: 2026-05-08 David Pre-Render Checkout
 
 - GitHub sync point: latest `main` commit titled `photosbyelie: prepare private render checkout handoff`.
-- Current visible build in `VERSION`: `v67.11`.
+- Current visible build in `VERSION`: `v67.21`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
+- Public catalog validates in external media mode with 506 photos: AI 100, France 101, Portugal 100, Spain 102, USA 100, Slovakia 2, Mexico 1.
 - Git carries code, docs, generated metadata, worker prototype, architecture artifacts, and tiny shared assets. Public preview JPGs remain out of Git.
 - David owns the developed files. Do not run import/private render generation from this Mac unless the developed source roots are mounted and verified.
 
@@ -36,8 +36,8 @@ cd /Users/ecohen/Dev/photosByElie
 
 ## Current Priority
 
-1. On David, generate/upload unwatermarked private JPG 6/3/1 MP deliverables under `renders/...`.
-2. Verify mixed checkout can ZIP Full + JPG 6 MP + JPG 3 MP + JPG 1 MP from private R2.
+1. Keep new public imports in parity: private master first, private JPG 6/3/1 MP renders next, then public watermarked previews.
+2. Verify mixed checkout can ZIP Full + JPG 6 MP + JPG 3 MP + JPG 1 MP from private R2 for newly added public photos.
 3. Keep checkout USD-only and guest-first.
 4. Move public preview delivery from the Worker `/media/...` bridge to an R2 custom domain later.
 5. Fix the page 4 text collision in the architecture PDF when the infographic deck matters again.
@@ -150,7 +150,7 @@ The render script now prefers David's local developed masters under mounted Satu
 - `jpg-3mp`: about 762 KB
 - `jpg-1mp`: about 274 KB
 
-With those renders present, API checkout order `PBE-20260508-C0BAC13F53` and browser checkout order `PBE-20260508-2C676E5D8F` verified Full resolution + JPG 6 MP + JPG 3 MP + JPG 1 MP, producing a valid ZIP of about 4.5 MB. On David, repeat this for the actual developed-file corpus, then retest from the browser.
+With those renders present, API checkout order `PBE-20260508-C0BAC13F53` and browser checkout order `PBE-20260508-2C676E5D8F` verified Full resolution + JPG 6 MP + JPG 3 MP + JPG 1 MP, producing a valid ZIP of about 4.5 MB. The current 506-photo public catalog has matching private masters and JPG 6/3/1 MP render objects for the newly imported rows as of v67.21.
 
 ## Architecture Artifacts
 

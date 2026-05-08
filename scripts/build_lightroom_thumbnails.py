@@ -1088,27 +1088,6 @@ def render_private_deliverable(source_path: Path, output_path: Path, long_edge: 
 
 def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path: Path, detail_path: Path, source_path: Path) -> dict[str, Any]:
     uploaded: dict[str, Any] = {}
-    if r2_upload_enabled(args, "public"):
-        uploaded["public_previews"] = [
-            r2_put_file(
-                args,
-                args.r2_public_bucket,
-                r2_public_key(args, row, gallery_path),
-                gallery_path,
-                "image/jpeg",
-                args.r2_retries,
-                cache_control="public, max-age=31536000, immutable",
-            ),
-            r2_put_file(
-                args,
-                args.r2_public_bucket,
-                r2_public_key(args, row, detail_path),
-                detail_path,
-                "image/jpeg",
-                args.r2_retries,
-                cache_control="public, max-age=31536000, immutable",
-            ),
-        ]
     if r2_upload_enabled(args, "private"):
         uploaded["private_master"] = r2_put_file(
             args,
@@ -1140,6 +1119,27 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 )
             if private_renders:
                 uploaded["private_renders"] = private_renders
+    if r2_upload_enabled(args, "public"):
+        uploaded["public_previews"] = [
+            r2_put_file(
+                args,
+                args.r2_public_bucket,
+                r2_public_key(args, row, gallery_path),
+                gallery_path,
+                "image/jpeg",
+                args.r2_retries,
+                cache_control="public, max-age=31536000, immutable",
+            ),
+            r2_put_file(
+                args,
+                args.r2_public_bucket,
+                r2_public_key(args, row, detail_path),
+                detail_path,
+                "image/jpeg",
+                args.r2_retries,
+                cache_control="public, max-age=31536000, immutable",
+            ),
+        ]
     return uploaded
 
 

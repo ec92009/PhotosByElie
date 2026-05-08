@@ -62,6 +62,7 @@ Last updated: 2026-05-08
 7. **Add browser smoke coverage.**
    - [Codex] Add Playwright smoke tests for gallery filtering, detail navigation, liked sync, basket sync, and public page loading.
    - [Codex] Make it possible to like/unlike photos directly from collection grid/card views, then cover that interaction in smoke tests.
+   - [Codex] Update collection/gallery zoom so wide screens allow zoom levels 1 through 10 with no extra restriction, while narrow screens stay constrained to 1 through 4.
    - [Codex] Add localhost owner smoke tests for hide/unhide, hidden re-promote, unknown assignment, and metadata save feedback.
    - [Codex] Include missing-media, stale basket, empty-state, and failed-action recovery checks where practical.
 

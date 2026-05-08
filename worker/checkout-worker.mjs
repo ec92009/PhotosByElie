@@ -409,6 +409,7 @@ export const createPhotosByElieWorker = ({
       download: {
         orderId: downloadRecord.orderId,
         zipKey: downloadRecord.zipKey,
+        localZipPath: String(downloadRecord.zipKey || "").startsWith("/") ? downloadRecord.zipKey : null,
         expiresInSeconds: 900,
         mockSignedUrl: `mock-r2://${downloadRecord.zipKey}?token=${encodeURIComponent(token)}`,
       },

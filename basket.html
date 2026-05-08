@@ -7,9 +7,9 @@
   <meta name="description" content="Local basket for selected Photos By Elie mock photo licenses."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=67.1"/>
-  <link rel="stylesheet" href="./styles.css?v=67.1"/>
-  <link rel="stylesheet" href="./photos.css?v=67.1"/>
+  <link rel="stylesheet" href="./shared.css?v=67.2"/>
+  <link rel="stylesheet" href="./styles.css?v=67.2"/>
+  <link rel="stylesheet" href="./photos.css?v=67.2"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
       <a class="is-active" href="./basket.html">Basket</a> <span>|</span>
       <a href="./liked.html">Liked</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v67.1</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v67.2</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -51,7 +51,19 @@
           <p class="license-note">This basket is a static order draft. Final delivery, source availability, and any commercial or AI-related use are confirmed manually before fulfillment.</p>
         </div>
         <dl class="order-summary" data-order-summary></dl>
-        <a class="btn primary" data-order-email href="#">Prepare order email</a>
+        <div class="mock-checkout" data-mock-checkout>
+          <label>
+            <span>Buyer email</span>
+            <input type="email" data-checkout-email autocomplete="email" placeholder="buyer@example.com"/>
+          </label>
+          <div class="mock-checkout-actions">
+            <button class="btn primary" type="button" data-checkout-guest>Pay as guest</button>
+            <button class="btn secondary" type="button" data-mock-pay hidden>Simulate Stripe payment</button>
+          </div>
+          <p class="mock-checkout-note">Mock checkout uses USD and writes local delivery ZIPs when the local Worker is running.</p>
+          <output class="mock-checkout-result" data-checkout-result hidden></output>
+        </div>
+        <a class="btn secondary" data-order-email href="#">Prepare order email</a>
         <textarea class="order-email-draft" data-order-email-draft readonly spellcheck="false" aria-label="Prepared order email" hidden></textarea>
       </div>
     </section>
@@ -70,13 +82,13 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=67.1"></script>
-  <script src="./photos.js?v=67.1"></script>
-  <script src="./owner-tools.js?v=67.1"></script>
-  <script src="./site-version.js?v=67.1"></script>
-  <script src="./photos-data.js?v=67.1"></script>
-  <script src="./basket-store.js?v=67.1"></script>
-  <script src="./liked-store.js?v=67.1"></script>
-  <script src="./basket.js?v=67.1"></script>
+  <script src="./media-config.js?v=67.2"></script>
+  <script src="./photos.js?v=67.2"></script>
+  <script src="./owner-tools.js?v=67.2"></script>
+  <script src="./site-version.js?v=67.2"></script>
+  <script src="./photos-data.js?v=67.2"></script>
+  <script src="./basket-store.js?v=67.2"></script>
+  <script src="./liked-store.js?v=67.2"></script>
+  <script src="./basket.js?v=67.2"></script>
 </body>
 </html>

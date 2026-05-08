@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
+import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 
@@ -146,4 +147,42 @@ test("download endpoint returns a mock signed R2 URL and rate-limits repeat down
 
   const repeatedResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
   assert.equal(repeatedResponse.status, 429);
+});
+
+test("local ZIP delivery creates a real ZIP from preview fallback", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const now = () => new Date("2026-05-07T12:00:00.000Z");
+  const stripe = createMockStripeClient({ randomUUID });
+  const outputDir = fs.mkdtempSync("/tmp/photosbyelie-deliveries-");
+  const worker = createPhotosByElieWorker({
+    catalog,
+    stripe,
+    now,
+    randomUUID,
+    delivery: createLocalZipDelivery({
+      repoRoot: new URL("..", import.meta.url).pathname,
+      outputDir,
+      now,
+    }),
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 200);
+  const paid = await payResponse.json();
+  assert.equal(paid.order.status, "ready");
+  assert.match(paid.order.delivery.zipKey, /photosbyelie-order-PBE-20260507-.*\.zip$/);
+  const zip = fs.readFileSync(paid.order.delivery.zipKey);
+  assert.equal(zip.subarray(0, 4).toString("hex"), "504b0304");
+  assert.ok(zip.includes(Buffer.from("ORDER.txt")));
+
+  fs.rmSync(outputDir, { recursive: true, force: true });
 });

@@ -3,7 +3,7 @@
 This folder contains the first Worker-track implementation for checkout and fulfillment. Stripe is mocked for now, but the Worker keeps the same boundary we want in production:
 
 ```text
-browser basket -> Worker order draft -> mock Stripe checkout -> mock paid webhook -> delivery ZIP record
+browser basket -> Worker order draft -> mock Stripe checkout -> mock paid webhook -> delivery ZIP
 ```
 
 ## What The Worker Owns
@@ -16,7 +16,7 @@ browser basket -> Worker order draft -> mock Stripe checkout -> mock paid webhoo
 - Mock Stripe Checkout Session creation.
 - Mock Stripe webhook verification.
 - Order status transitions.
-- Delivery ZIP metadata and signed-link-style download tokens.
+- Delivery ZIP metadata, local mock ZIP generation, and signed-link-style download tokens.
 
 Stripe owns only the payment track. The browser proposes a basket, but the Worker recalculates price and availability before creating the checkout session.
 
@@ -35,6 +35,15 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /download/:token` | Buyer clicks download | Returns a mock signed R2 URL and applies one-download-per-hour throttling |
 
 ## Guest Checkout Example
+
+For the full local mock flow, run the static site and the local Worker in separate terminals:
+
+```bash
+python3 -m http.server 8000
+node worker/local-server.mjs
+```
+
+Then open `http://localhost:8000/basket.html`, enter a buyer email, choose `Pay as guest`, and use `Simulate Stripe payment`. Mock delivery ZIPs are written to `deliveries/photosbyelie-order-<orderId>.zip`.
 
 ```bash
 curl -sS http://localhost:8787/checkout/guest \
@@ -71,7 +80,7 @@ That simulates the paid webhook and moves the order to `ready`. The resulting de
 deliveries/photosbyelie-order-<orderId>.zip
 ```
 
-In production the mock Stripe client gets replaced by a real Stripe client, and the mock delivery object becomes real R2/ZIP work.
+In production the mock Stripe client gets replaced by a real Stripe client, and the local ZIP adapter becomes real private R2/ZIP work. The local adapter prefers configured developed-master roots from `PBE_DELIVERY_SOURCE_ROOTS` or `PBE_DELIVERY_SOURCE_ROOT`, and falls back to local watermarked previews only for mock testing.
 
 ## Tests
 

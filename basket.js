@@ -19,7 +19,23 @@ const orderIntent = document.querySelector("[data-order-intent]");
 const orderSummary = document.querySelector("[data-order-summary]");
 const orderEmail = document.querySelector("[data-order-email]");
 const orderEmailDraft = document.querySelector("[data-order-email-draft]");
+const checkoutEmail = document.querySelector("[data-checkout-email]");
+const checkoutGuest = document.querySelector("[data-checkout-guest]");
+const mockPay = document.querySelector("[data-mock-pay]");
+const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
+const checkoutStateKey = "photosbyelie-mock-checkout";
+const workerBaseKey = "photosbyelie-worker-base";
+
+const workerBaseUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("workerBase");
+  if (fromQuery) {
+    localStorage.setItem(workerBaseKey, fromQuery.replace(/\/+$/, ""));
+    return fromQuery.replace(/\/+$/, "");
+  }
+  return (localStorage.getItem(workerBaseKey) || "http://localhost:8787").replace(/\/+$/, "");
+};
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -163,6 +179,132 @@ const showOrderEmailDraft = (draft) => {
     orderEmailDraft.select();
   });
 };
+
+const checkoutState = () => {
+  try {
+    return JSON.parse(localStorage.getItem(checkoutStateKey) || "{}");
+  } catch {
+    return {};
+  }
+};
+
+const setCheckoutState = (state) => {
+  localStorage.setItem(checkoutStateKey, JSON.stringify(state || {}));
+};
+
+const digitalCheckoutItems = () => basketStore.read()
+  .map((item) => ({
+    photoId: item.photoId,
+    options: (item.options || []).filter((option) => option.type === "digital").map((option) => ({ id: option.id })),
+  }))
+  .filter((item) => item.options.length);
+
+const checkoutFetch = async (path, options = {}) => {
+  const response = await fetch(`${workerBaseUrl()}${path}`, {
+    ...options,
+    headers: {
+      "content-type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = body?.error?.message || `Worker request failed with HTTP ${response.status}.`;
+    throw new Error(message);
+  }
+  return body;
+};
+
+const moneyFromCents = (value, currency = "usd") =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
+
+const renderCheckoutResult = (body, mode = "checkout") => {
+  if (!checkoutResult) return;
+  const order = body?.order;
+  if (!order) {
+    checkoutResult.hidden = true;
+    checkoutResult.innerHTML = "";
+    return;
+  }
+  const delivery = order.delivery;
+  checkoutResult.hidden = false;
+  checkoutResult.innerHTML = `
+    <strong>${mode === "paid" ? "Mock payment complete" : "Mock Checkout Session ready"}</strong>
+    <span>Order ${escapeText(order.id)} · ${escapeText(order.status)} · ${moneyFromCents(order.amountExpected, order.currency)}</span>
+    ${body.checkout?.url ? `<a href="${escapeText(body.checkout.url)}" target="_blank" rel="noreferrer">${escapeText(body.checkout.sessionId)}</a>` : ""}
+    ${delivery?.downloadUrl ? `<a href="${escapeText(workerBaseUrl() + delivery.downloadUrl)}" target="_blank" rel="noreferrer">Open download token</a>` : ""}
+    ${delivery?.zipKey ? `<code>${escapeText(delivery.zipKey)}</code>` : ""}
+  `;
+};
+
+const syncCheckoutControls = () => {
+  const state = checkoutState();
+  if (mockPay) mockPay.hidden = !state.checkoutSessionId;
+  if (checkoutEmail && state.email && !checkoutEmail.value) checkoutEmail.value = state.email;
+  if (state.lastResponse) renderCheckoutResult(state.lastResponse, state.mode);
+};
+
+checkoutGuest?.addEventListener("click", async () => {
+  const email = String(checkoutEmail?.value || "").trim();
+  const items = digitalCheckoutItems();
+  if (!items.length) {
+    status.textContent = "Mock checkout needs at least one digital asset in the basket.";
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    status.textContent = "Enter a buyer email before starting mock checkout.";
+    checkoutEmail?.focus();
+    return;
+  }
+  checkoutGuest.disabled = true;
+  status.textContent = "Creating mock Checkout Session...";
+  try {
+    const body = await checkoutFetch("/checkout/guest", {
+      method: "POST",
+      body: JSON.stringify({ email, items }),
+    });
+    setCheckoutState({
+      email,
+      orderId: body.order.id,
+      checkoutSessionId: body.checkout.sessionId,
+      lastResponse: body,
+      mode: "checkout",
+    });
+    renderCheckoutResult(body, "checkout");
+    syncCheckoutControls();
+    status.textContent = "Mock Checkout Session ready. Simulate Stripe payment to generate the ZIP.";
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    checkoutGuest.disabled = false;
+  }
+});
+
+mockPay?.addEventListener("click", async () => {
+  const state = checkoutState();
+  if (!state.checkoutSessionId) return;
+  mockPay.disabled = true;
+  status.textContent = "Simulating Stripe payment and generating the delivery ZIP...";
+  try {
+    const body = await checkoutFetch("/mock-stripe/pay", {
+      method: "POST",
+      body: JSON.stringify({ checkoutSessionId: state.checkoutSessionId }),
+    });
+    setCheckoutState({
+      ...state,
+      lastResponse: body,
+      mode: "paid",
+      checkoutSessionId: "",
+    });
+    renderCheckoutResult(body, "paid");
+    syncCheckoutControls();
+    status.textContent = "Mock payment complete. Delivery ZIP generated.";
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    mockPay.disabled = false;
+  }
+});
 
 orderEmail?.addEventListener("click", async (event) => {
   event.preventDefault();
@@ -341,3 +483,4 @@ const renderBasket = () => {
 };
 
 renderBasket();
+syncCheckoutControls();

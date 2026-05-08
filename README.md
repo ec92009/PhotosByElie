@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v67.1`
+- Current visible version: `v67.2`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -97,7 +97,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Resolution choices are limited by verified available megapixels; if only a preview/export is verified, larger options stay hidden.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
-- The basket page generates a static order-intent summary and mail draft from the local basket contents.
+- The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the local mock Worker at `http://localhost:8787` for guest checkout.
 - Product choices now include digital files and physical prints at 4 x 6, 5 x 7, 8 x 10, and 11 x 14 inches.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, plain white, or plain black. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.
@@ -108,7 +108,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 ## Worker Checkout Track
 
-`worker/checkout-worker.mjs` is the first implementation of the trusted checkout/fulfillment track, with Stripe mocked for now. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, ZIP delivery metadata, and signed-link-style download tokens. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, then waits for a paid webhook before marking delivery ready.
+`worker/checkout-worker.mjs` is the first implementation of the trusted checkout/fulfillment track, with Stripe mocked for now. The Worker owns order numbers, USD totals, basket validation, buyer email, payment status, ZIP delivery metadata, and signed-link-style download tokens. Stripe remains the payment authority; the Worker creates an order draft and Checkout Session, then waits for a paid webhook before marking delivery ready. For local end-to-end testing, `worker/local-server.mjs` runs the Worker on `http://localhost:8787` and uses `worker/local-zip-delivery.mjs` to write mock ZIPs under `deliveries/`.
 
 Run the Worker tests from the repo root:
 

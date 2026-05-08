@@ -4,7 +4,7 @@ Last updated: 2026-05-08
 
 ## Current Facts
 
-- Local visible build: `v67.1`.
+- Local visible build: `v67.2`.
 - Public catalog validates in external media mode with 503 photos: AI 100, France 100, Portugal 100, Spain 100, USA 100, Slovakia 2, Mexico 1.
 - Git should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should not be committed.
 - Public previews should live on R2/CDN as baked, strong-watermark files only.
@@ -15,7 +15,7 @@ Last updated: 2026-05-08
 - R2 upload journals are resumable. Cloudflare throttled parallel public/private uploads with `429 Too Many Requests`, so large R2 syncs should run one lane at a time.
 - Public R2 active inventory was live-verified with zero missing active objects after the S3 backend repair pass; the bucket still has stale extra public objects to review before deletion.
 - Private R2 is one object short of the local private inventory because `20220504 141310 00203.tif` timed out during upload.
-- Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe and in-memory storage.
+- Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
 - The architecture PDF now includes an MSC-style checkout/fulfillment page and a non-destructive metadata overrides page, but page 4 still has a known text-overlap defect.
 
@@ -67,13 +67,12 @@ Last updated: 2026-05-08
    - [Codex] Add clearer batch previews and "what will publish" summaries before irreversible-feeling actions.
    - [Codex] Remove obsolete Reserve wording from visible owner UI as it appears.
 
-9. **Wire the static basket to the Worker mock checkout flow.**
-   - [Codex] Add bottom-of-basket checkout choice UI: `Pay as guest` and `Create account / sign in`.
-   - [Codex] Keep guest checkout primary and account checkout secondary.
-   - [Codex] Collect buyer email before mock checkout.
-   - [Codex] Call `/checkout/guest` with the current basket and show the returned mock Stripe URL/order number.
-   - [Codex] Add a small USD-only note: prices are in USD; buyer bank/card may convert locally.
-   - [Codex] Make product options, selected resolution, digital delivery, and mock/real checkout status unmistakable.
+9. **Harden the local mock checkout flow.**
+   - [Codex] Add account checkout UI only after guest checkout feels right.
+   - [Codex] Add a buyer order page or static shell instead of showing Worker JSON/download token output.
+   - [Codex] Make the local ZIP download one click from the browser during mock testing.
+   - [Codex] Expand basket copy/states so unsupported print items are clearly separate from digital ZIP delivery.
+   - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
 
 10. **Make Worker storage durable.**
    - [Codex] Choose D1 vs KV for order records; current likely direction is D1 for queryable order state.
@@ -134,3 +133,4 @@ Last updated: 2026-05-08
 - Added Worker tests and documentation.
 - Completed the public R2 S3 repair pass and live-verified zero missing active public objects.
 - Added the non-destructive metadata overrides infographic page and rebuilt the architecture PDF as 9 pages.
+- Wired the basket to local mock guest checkout and added local ZIP generation for mock paid orders.

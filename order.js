@@ -81,9 +81,9 @@ const phaseCopy = (order) => {
     };
   }
   return {
-    step: "Phase 1 of 3",
-    heading: "Waiting for mock payment",
-    message: "The order draft exists. Complete mock Stripe payment before ZIP generation starts.",
+    step: "Payment not confirmed",
+    heading: "Payment not confirmed",
+    message: "This page normally opens after checkout. If payment was just completed, refresh; otherwise return to checkout and finish payment before delivery starts.",
     current: "pending_payment",
   };
 };

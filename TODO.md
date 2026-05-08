@@ -84,6 +84,7 @@ Last updated: 2026-05-08
 9. **Harden the mock checkout flow.**
    - [Codex] Add account checkout UI only after guest checkout feels right.
    - [Codex] Expand basket copy/states so unsupported print items are clearly separate from digital ZIP delivery.
+   - [Codex] Make the order page entry model explicit: buyers should normally land there only after mock/real payment, while unpaid direct-access states should read as exceptions.
    - [Codex] Browser-test mixed full/JPG 6/3/1 MP checkout after David generates/uploads the private render cache.
    - [Codex] Keep the local Worker default at `http://localhost:8787`, with `?workerBase=` override for testing.
    - [Codex] Add browser smoke coverage for the basket -> mock payment -> order page -> ZIP download path.

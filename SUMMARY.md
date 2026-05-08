@@ -8,7 +8,8 @@ Date: 2026-05-08
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Current visible build in `VERSION`: `v67.7`
-- Local `main` is synced to `origin/main` after the mock checkout/download documentation pass.
+- Local `main` is synced to `origin/main` after the public mock checkout scaffold pass.
+- GitHub Pages was verified serving `v67.7`, including `order.html?v=67.7`; the latest GitHub commit was `184616e photosbyelie: scaffold public mock checkout worker` at verification time.
 - Generated public catalog: 503 photos, with 100 each for AI, France, Portugal, Spain, USA, plus 2 Slovakia and 1 Mexico.
 - GitHub should carry code, docs, generated metadata, and tiny shared assets. Public preview JPGs should stay out of Git and live in R2/CDN.
 - `scripts/cleanup_classified_unknowns_public_r2.py` is being kept as a tracked recovery utility rather than archived.
@@ -48,6 +49,7 @@ Date: 2026-05-08
 - The local server additionally serves `/download-order/:orderId` as an order-ID based ZIP attachment route so already-generated mock ZIP files remain downloadable after an in-memory Worker restart.
 - The in-app browser did not visibly surface attachment downloads, so the order page now makes the generated ZIP path explicit and offers a copy button. Safari downloads the ZIP correctly, so this is a built-in browser limitation rather than a product download failure. For order `PBE-20260508-DF50ABD9A9`, the verified local ZIP was `/Users/ecohen/Dev/PhotosByElie/deliveries/photosbyelie-order-PBE-20260508-DF50ABD9A9.zip`.
 - Public mock checkout can now be wired by setting `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` to the deployed Worker URL. The R2 ZIP adapter currently supports `full` products only; JPG 1/3/6 MP products still need a real cloud resize/export path.
+- The Cloudflare Worker is not live yet. `wrangler.toml` still has placeholder KV namespace IDs, and `media-config.js` still has `checkoutWorkerBaseUrl: ""`.
 
 ## PDF / Infographic Work
 

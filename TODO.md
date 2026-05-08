@@ -18,6 +18,7 @@ Last updated: 2026-05-08
 - Checkout architecture now has a Worker-track prototype in `worker/`, using mock Stripe, in-memory storage, and a local ZIP delivery adapter for end-to-end mock checkout.
 - Local mock checkout now reaches `basket -> Pay as guest -> Simulate Stripe payment -> order page -> Download ZIP / Copy ZIP path`.
 - Public mock checkout now has a deployable Cloudflare Worker entrypoint using KV for durable mock order/download state and private R2 for full-resolution ZIP creation.
+- GitHub Pages is serving `v67.7`; the public mock checkout Worker code is on GitHub, but the Worker is not live until KV ids are configured, the Worker is deployed, and `checkoutWorkerBaseUrl` is set.
 - Safari downloads local mock ZIP files correctly; the built-in browser may not visibly surface attachment downloads, so the Local ZIP / Copy ZIP path fallback is intentional.
 - Checkout v1 is USD-only and guest-first; accounts are optional convenience, not required payment friction.
 - Current idle Cloudflare estimate remains about `$1.37/month` for a full quiet month, assuming roughly 100 GB private/public R2 storage and no meaningful traffic. Report cost changes after massive uploads and before/when starting recurring Worker tasks.

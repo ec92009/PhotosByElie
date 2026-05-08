@@ -48,6 +48,8 @@ The public static site can point to the deployed Worker through `window.photosBy
 
 `wrangler.toml` is checked in with placeholder KV ids. Replace the `ORDERS_KV` ids before deploying.
 
+Public mock checkout is not live until the Worker is deployed and `media-config.js` points `checkoutWorkerBaseUrl` at the deployed Worker URL.
+
 ## Guest Checkout Example
 
 For the full local mock flow, run the static site and the local Worker in separate terminals:

@@ -77,7 +77,7 @@ a:hover{
 .detail-cycle{display:flex;gap:6px}
 .detail-cycle-btn{display:inline-flex;align-items:center;justify-content:center;min-width:82px;border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:6px 10px;font-size:.78rem;font-weight:800;color:var(--text);text-decoration:none}
 .detail-cycle-btn:hover{background:var(--surface-2)}
-.version-switch,.theme-toggle,.language-toggle{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
+.version-switch,.theme-toggle,.language-toggle,.owner-header-logout{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
 .version-switch{display:inline-flex;gap:6px;align-items:center}
 .version-switch a{text-decoration:none;color:var(--muted);font-weight:700}
 .version-switch a.is-active{color:var(--brand)}
@@ -85,9 +85,10 @@ a:hover{
 
 html[data-theme="light"] .mode-dark { display: none; }
 html[data-theme="dark"] .mode-light { display: none; }
-.theme-toggle,.language-toggle { font-weight: 700; text-align: center; cursor:pointer; }
+.theme-toggle,.language-toggle,.owner-header-logout { font-weight: 700; text-align: center; cursor:pointer; }
 .theme-toggle { width: 68px; }
 .language-toggle { min-width: 92px; }
+.owner-header-logout { min-width: 78px; }
 
 main{padding:clamp(4px,1dvh,10px) 0 clamp(30px,5dvh,42px);display:grid;gap:clamp(8px,1.4dvh,14px)}
 h1{margin:0;line-height:1.08;font-size:clamp(2rem,4vw,3.2rem);max-width:18ch}

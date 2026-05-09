@@ -68,7 +68,7 @@
     if (!authPanel || !ownerAuth?.enabled) return;
     const authenticated = authState.authenticated === true;
     const available = authState.available !== false;
-    authPanel.hidden = false;
+    authPanel.hidden = authenticated;
     authPanel.classList.toggle("is-owner-authenticated", authenticated);
     if (controls) controls.hidden = !authenticated;
     if (authHeading) authHeading.textContent = authenticated ? "Signed in" : "Sign in";

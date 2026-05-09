@@ -26,7 +26,7 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.14";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.15";
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);

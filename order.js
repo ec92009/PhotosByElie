@@ -30,14 +30,33 @@ const checkoutState = () => {
   }
 };
 
-const workerBaseUrl = () => {
-  const fromQuery = params.get("workerBase");
-  if (fromQuery) {
-    localStorage.setItem(workerBaseKey, fromQuery.replace(/\/+$/, ""));
-    return fromQuery.replace(/\/+$/, "");
+const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
+const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+const isUnsafePublicWorkerBase = (value) => {
+  if (!value || isLocalPage()) return false;
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol !== "https:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname);
+  } catch {
+    return true;
   }
-  const configured = window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "";
-  return (localStorage.getItem(workerBaseKey) || configured || "http://localhost:8787").replace(/\/+$/, "");
+};
+
+const workerBaseUrl = () => {
+  const fromQuery = normalizedWorkerBase(params.get("workerBase"));
+  if (fromQuery) {
+    if (isUnsafePublicWorkerBase(fromQuery)) {
+      localStorage.removeItem(workerBaseKey);
+    } else {
+      localStorage.setItem(workerBaseKey, fromQuery);
+      return fromQuery;
+    }
+  }
+  const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+  const stored = normalizedWorkerBase(localStorage.getItem(workerBaseKey));
+  if (stored && !isUnsafePublicWorkerBase(stored)) return stored;
+  if (stored) localStorage.removeItem(workerBaseKey);
+  return configured || "http://localhost:8787";
 };
 
 const orderId = () => params.get("id") || checkoutState().orderId || "";

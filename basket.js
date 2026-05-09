@@ -26,18 +26,37 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.22";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.23";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+
+const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
+const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+const isUnsafePublicWorkerBase = (value) => {
+  if (!value || isLocalPage()) return false;
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol !== "https:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname);
+  } catch {
+    return true;
+  }
+};
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
-  const fromQuery = params.get("workerBase");
+  const fromQuery = normalizedWorkerBase(params.get("workerBase"));
   if (fromQuery) {
-    localStorage.setItem(workerBaseKey, fromQuery.replace(/\/+$/, ""));
-    return fromQuery.replace(/\/+$/, "");
+    if (isUnsafePublicWorkerBase(fromQuery)) {
+      localStorage.removeItem(workerBaseKey);
+    } else {
+      localStorage.setItem(workerBaseKey, fromQuery);
+      return fromQuery;
+    }
   }
-  const configured = window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "";
-  return (localStorage.getItem(workerBaseKey) || configured || "http://localhost:8787").replace(/\/+$/, "");
+  const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+  const stored = normalizedWorkerBase(localStorage.getItem(workerBaseKey));
+  if (stored && !isUnsafePublicWorkerBase(stored)) return stored;
+  if (stored) localStorage.removeItem(workerBaseKey);
+  return configured || "http://localhost:8787";
 };
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({

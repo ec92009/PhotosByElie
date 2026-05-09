@@ -1032,11 +1032,15 @@ html[data-theme="light"] .mock-photo.has-image::after{
   text-transform:uppercase;
   box-shadow:0 8px 22px rgba(0,0,0,.2);
 }
-.gallery-like-toggle{
+.gallery-card-actions{
   position:absolute;
   top:8px;
   right:8px;
   z-index:5;
+  display:flex;
+  gap:6px;
+}
+.gallery-action-toggle{
   display:grid;
   place-items:center;
   width:38px;
@@ -1049,16 +1053,21 @@ html[data-theme="light"] .mock-photo.has-image::after{
   cursor:pointer;
   backdrop-filter:blur(10px);
 }
-.gallery-like-toggle span::before{
-  content:"♡";
-  font-size:1.35rem;
-  line-height:1;
+.gallery-action-toggle .md-icon{
+  width:21px;
+  height:21px;
 }
-.gallery-like-toggle.is-liked span::before{
-  content:"♥";
+.gallery-like-toggle.is-liked,
+.gallery-basket-toggle.is-in-basket{
+  background:rgba(0,0,0,.72);
+}
+.gallery-like-toggle.is-liked{
   color:#ff4d64;
 }
-.gallery-like-toggle:focus-visible{
+.gallery-basket-toggle.is-in-basket{
+  color:#9fe6ff;
+}
+.gallery-action-toggle:focus-visible{
   outline:3px solid rgba(255,255,255,.72);
   outline-offset:3px;
 }

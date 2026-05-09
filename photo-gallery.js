@@ -5,6 +5,7 @@ const galleryStatus = document.querySelector("[data-gallery-status]");
 const hiddenActions = window.photosByElieHiddenActions;
 const reserveStore = window.photosByElieReserve;
 const likedStore = window.photosByElieLiked;
+const basketStore = window.photosByElieBasket;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
@@ -39,6 +40,7 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const localizedCollectionTitle = () => t(`collection.${galleryKey}`) || gallery?.title || "";
 const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
+const basketPhotoIds = () => new Set(basketStore?.read?.().map((item) => item.photoId) || []);
 const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
   if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
@@ -444,6 +446,17 @@ const updateGalleryLikeButtons = () => {
     button.classList.toggle("is-liked", isLiked);
     button.setAttribute("aria-pressed", String(isLiked));
     button.setAttribute("aria-label", t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo"));
+    button.innerHTML = window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>";
+  });
+};
+
+const updateGalleryBasketButtons = () => {
+  const basketIds = basketPhotoIds();
+  galleryRoot?.querySelectorAll("[data-gallery-basket]").forEach((button) => {
+    const inBasket = basketIds.has(button.dataset.photoId);
+    button.classList.toggle("is-in-basket", inBasket);
+    button.setAttribute("aria-pressed", String(inBasket));
+    button.setAttribute("aria-label", t(inBasket ? "a11y.remove_from_basket" : "a11y.add_to_basket"));
   });
 };
 
@@ -457,10 +470,36 @@ const toggleGalleryLike = (photo) => {
   updateGalleryLikeButtons();
 };
 
+const defaultBasketOptionFor = (photo) => {
+  const options = window.photosByElieAvailableResolutions
+    ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
+    : (window.photosByElieResolutions || []);
+  return options.find((option) => option.id === "full")
+    || options.find((option) => option.type === "digital")
+    || options[0];
+};
+
+const toggleGalleryBasket = (photo) => {
+  if (!photo?.id || !basketStore) return;
+  const existing = basketStore.read?.().find((item) => item.photoId === photo.id);
+  if (existing) {
+    basketStore.setPhotoOptions({ photoId: photo.id, title: photo.title, collection: gallery.title, options: [] });
+    setGalleryStatus(t("detail.removed_basket", { title: photo.title }));
+  } else {
+    const option = defaultBasketOptionFor(photo);
+    if (!option) return;
+    basketStore.add({ photoId: photo.id, title: photo.title, collection: gallery.title, options: [{ id: option.id }] });
+    setGalleryStatus(t("liked.added_to_basket", { title: photo.title }));
+  }
+  updateGalleryLikeButtons();
+  updateGalleryBasketButtons();
+};
+
 const renderGallery = () => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
   const likedIds = likedPhotoIds();
+  const basketIds = basketPhotoIds();
   writeDetailSequenceContext(photos);
   if (!photos.length) {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
@@ -489,6 +528,7 @@ const renderGallery = () => {
     const hrefAttr = escapeHtml(href);
     const title = escapeHtml(photo.title);
     const isLiked = likedIds.has(photo.id);
+    const inBasket = basketIds.has(photo.id);
     return `
     <article
       class="mock-photo-card"
@@ -507,17 +547,33 @@ const renderGallery = () => {
         ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : ""}
         ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       </a>
-      ${likedStore ? `
-        <button
-          class="gallery-like-toggle${isLiked ? " is-liked" : ""}"
-          type="button"
-          data-gallery-like
-          data-photo-id="${escapeHtml(photo.id)}"
-          aria-label="${escapeHtml(t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo"))}"
-          aria-pressed="${isLiked ? "true" : "false"}"
-        >
-          <span aria-hidden="true"></span>
-        </button>
+      ${(likedStore || basketStore) ? `
+        <div class="gallery-card-actions">
+          ${likedStore ? `
+            <button
+              class="gallery-action-toggle gallery-like-toggle${isLiked ? " is-liked" : ""}"
+              type="button"
+              data-gallery-like
+              data-photo-id="${escapeHtml(photo.id)}"
+              aria-label="${escapeHtml(t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo"))}"
+              aria-pressed="${isLiked ? "true" : "false"}"
+            >
+              ${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}
+            </button>
+          ` : ""}
+          ${basketStore ? `
+            <button
+              class="gallery-action-toggle gallery-basket-toggle${inBasket ? " is-in-basket" : ""}"
+              type="button"
+              data-gallery-basket
+              data-photo-id="${escapeHtml(photo.id)}"
+              aria-label="${escapeHtml(t(inBasket ? "a11y.remove_from_basket" : "a11y.add_to_basket"))}"
+              aria-pressed="${inBasket ? "true" : "false"}"
+            >
+              ${window.photosByElieMdIcon?.("shoppingBasket") || "<span aria-hidden=\"true\"></span>"}
+            </button>
+          ` : ""}
+        </div>
       ` : ""}
       <a class="mock-photo-caption" href="${hrefAttr}" data-photo-caption>${title}</a>
     </article>
@@ -529,6 +585,14 @@ const renderGallery = () => {
       event.stopPropagation();
       const photo = photos.find((candidate) => candidate.id === button.dataset.photoId);
       toggleGalleryLike(photo);
+    });
+  });
+  galleryRoot.querySelectorAll("[data-gallery-basket]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const photo = photos.find((candidate) => candidate.id === button.dataset.photoId);
+      toggleGalleryBasket(photo);
     });
   });
   if (localModerationEnabled) {
@@ -736,4 +800,5 @@ if (galleryRoot && gallery) {
     }
   });
   window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
+  window.addEventListener("photosbyelie:basketchange", updateGalleryBasketButtons);
 }

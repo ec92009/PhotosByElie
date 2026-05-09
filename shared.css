@@ -72,6 +72,28 @@ a:hover{
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
 .header-controls{display:flex;align-items:center;gap:8px;margin-left:auto}
+.header-action-links{display:inline-flex;align-items:center;gap:6px}
+.header-action-link{
+  display:inline-grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface);
+  color:var(--text);
+  text-decoration:none;
+}
+.header-action-link:hover{
+  background:var(--surface-2);
+  color:var(--text);
+}
+.md-icon{
+  width:21px;
+  height:21px;
+  display:block;
+  fill:currentColor;
+}
 .mode-controls{display:flex;align-items:center;gap:8px}
 .detail-header-controls{flex-direction:column;align-items:flex-end;gap:6px}
 .detail-cycle{display:flex;gap:6px}

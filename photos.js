@@ -18,6 +18,10 @@ const translations = {
     'a11y.like_photo': 'Like this photo',
     'a11y.unlike_photo': 'Unlike this photo',
     'a11y.back_to_top': 'Back to top',
+    'a11y.open_liked': 'Open liked photos',
+    'a11y.open_basket': 'Open basket',
+    'a11y.add_to_basket': 'Add to basket',
+    'a11y.remove_from_basket': 'Remove from basket',
     'a11y.bottom_photo_actions': 'Bottom photo actions',
     'a11y.gallery_filters': 'Gallery filters and sorting',
     'a11y.gallery_view_controls': 'Gallery view controls',
@@ -226,6 +230,10 @@ const translations = {
     'a11y.like_photo': 'Aimer cette photo',
     'a11y.unlike_photo': 'Retirer des favoris',
     'a11y.back_to_top': 'Retour en haut',
+    'a11y.open_liked': 'Ouvrir les favoris',
+    'a11y.open_basket': 'Ouvrir le panier',
+    'a11y.add_to_basket': 'Ajouter au panier',
+    'a11y.remove_from_basket': 'Retirer du panier',
     'a11y.bottom_photo_actions': 'Actions photo',
     'a11y.gallery_filters': 'Filtres et tri de la galerie',
     'a11y.gallery_view_controls': 'Commandes d affichage de la galerie',
@@ -434,6 +442,10 @@ const translations = {
     'a11y.like_photo': 'Marcar esta foto',
     'a11y.unlike_photo': 'Quitar de favoritos',
     'a11y.back_to_top': 'Volver arriba',
+    'a11y.open_liked': 'Abrir favoritos',
+    'a11y.open_basket': 'Abrir cesta',
+    'a11y.add_to_basket': 'Agregar a la cesta',
+    'a11y.remove_from_basket': 'Quitar de la cesta',
     'a11y.bottom_photo_actions': 'Acciones de foto',
     'a11y.gallery_filters': 'Filtros y orden de la galeria',
     'a11y.gallery_view_controls': 'Controles de vista de galeria',
@@ -868,6 +880,36 @@ window.photosByElieMediaUrl = (photo, size = 'gallery') => {
   if (!base && window.photosByElieMediaStatus().requiresPublicMedia && key) return '';
   return window.photosByElieLocalMediaUrl(photo, size);
 };
+
+window.photosByElieMdIcon = (name) => {
+  const paths = {
+    favorite: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+    favoriteBorder: 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5 18.5 5 20 6.5 20 8.5c0 2.89-3.14 5.74-7.9 10.05z',
+    shoppingBasket: 'M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42s-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27C3.81 20.39 4.59 21 5.5 21h13c.91 0 1.69-.61 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm3 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z'
+  };
+  const path = paths[name] || paths.favoriteBorder;
+  return `<svg class="md-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${path}"></path></svg>`;
+};
+
+const ensureHeaderActionLinks = () => {
+  const controls = document.querySelector('.header-controls');
+  if (!controls || controls.querySelector('[data-header-actions]')) return;
+  const actions = document.createElement('nav');
+  actions.className = 'header-action-links';
+  actions.dataset.headerActions = '';
+  actions.setAttribute('aria-label', translate('a11y.photo_navigation'));
+  actions.innerHTML = `
+    <a class="header-action-link" href="./liked.html" data-i18n-aria-label="a11y.open_liked" data-i18n-title="a11y.open_liked">
+      ${window.photosByElieMdIcon('favorite')}
+    </a>
+    <a class="header-action-link" href="./basket.html" data-i18n-aria-label="a11y.open_basket" data-i18n-title="a11y.open_basket">
+      ${window.photosByElieMdIcon('shoppingBasket')}
+    </a>
+  `;
+  controls.prepend(actions);
+};
+
+ensureHeaderActionLinks();
 
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';

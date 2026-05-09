@@ -53,6 +53,10 @@ const workerBaseUrl = () => {
     }
   }
   const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+  if (!isLocalPage()) {
+    localStorage.removeItem(workerBaseKey);
+    return configured || "http://localhost:8787";
+  }
   const stored = normalizedWorkerBase(localStorage.getItem(workerBaseKey));
   if (stored && !isUnsafePublicWorkerBase(stored)) return stored;
   if (stored) localStorage.removeItem(workerBaseKey);

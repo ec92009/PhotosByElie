@@ -29,77 +29,83 @@ Last updated: 2026-05-09
    - Confirm it commits/pushes final manifest changes.
    - Record final counts for private render triplets, skipped discarded photos, deleted hidden masters, tests, validation, and failures.
 
-2. **Confirm final R2 coverage.**
+2. **Verify every zippable deliverable is in private R2.**
    - Drive `assets/private-delivery-manifest.json` to full non-discarded catalog coverage.
    - Confirm private masters settle to `10,133 / 10,133` after hidden/discarded master cleanup.
    - Confirm private JPG 1/3/6 MP tiers settle to `10,133 / 10,133`.
    - Confirm every checkout-eligible photo has private full/JPG 6/JPG 3/JPG 1 MP delivery objects.
+   - Spot-check that the Worker can build ZIP contents from private R2 keys, not local files.
 
-3. **Make discard lifecycle first-class in Owner.**
+3. **Hide files that do not belong in the buyer catalog.**
+   - Review visible catalog entries after R2 coverage is complete.
+   - Hide photos that should not be sold or shown before payment testing starts.
+   - Keep hide/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
+
+4. **Make discard lifecycle first-class in Owner.**
    - Add an explicit Owner discard action separate from temporary hide/review.
    - Create durable tombstones for discarded IDs.
    - Delete matching public previews, private masters, and private render JPGs from R2.
    - Keep tombstones in import/export validation so discarded photos cannot return from Saturn.
    - Show discard/delete counts in Owner so bulk quality/duplicate cleanup feels trustworthy.
 
-4. **Set up Stripe test mode.**
+5. **Set up Stripe test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
    - Keep live keys out until test mode proves the full flow.
 
-5. **Run Stripe test checkout end to end.**
+6. **Run Stripe test checkout end to end.**
    - Test successful payment.
    - Test 3D Secure/authentication-required payment.
    - Test declined-card payment.
    - Confirm a verified `checkout.session.completed` webhook marks the order paid.
    - Confirm the Worker builds the ZIP from private R2 and the order page exposes the download.
 
-6. **Make order records production-durable.**
+7. **Make order records production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
    - Keep private R2 as delivery ZIP storage.
    - Rate-limit download links.
 
-7. **Harden owner account/auth.**
+8. **Harden owner account/auth.**
    - Keep the new localhost owner session as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
    - Add clear confirmation around future discard/R2 delete actions.
    - Add browser smoke coverage for locked, login, logout, and unauthorized mutation states.
 
-8. **Move public media off the checkout Worker bridge.**
+9. **Move public media off the checkout Worker bridge.**
    - Attach an R2 custom domain or equivalent public media endpoint.
    - Update `media-config.js`.
    - Retest GitHub Pages gallery/detail/basket media loading.
    - Keep the Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-9. **Design buyer accounts.**
+10. **Design buyer accounts.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-10. **Harden browser smoke coverage.**
+11. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner hide/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Keep public and localhost-only behaviors separate in tests.
 
-11. **Extend Owner dashboard.**
+12. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, hidden queue, unknown queue, and active sweep status.
    - Surface the latest automation/sweep result.
    - Make destructive actions legible before they run.
 
-12. **Keep publish validation as the gate.**
+13. **Keep publish validation as the gate.**
    - Validate hidden/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
    - Keep `npm run validate` mandatory before publish.
 
-13. **Repair and refresh architecture artifacts.**
+14. **Repair and refresh architecture artifacts.**
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-14. **Backburner: repo layout cleanup.**
+15. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
 

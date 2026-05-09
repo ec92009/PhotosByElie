@@ -27,6 +27,7 @@
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
   const r2Card = document.querySelector("[data-owner-r2-card]");
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
+  const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -47,6 +48,21 @@
   const setHtml = (element, value) => {
     if (element && element.innerHTML !== value) element.innerHTML = value;
   };
+
+  const SWEEP_PHASES = [
+    ["prepare", "Prepare workspace"],
+    ["discard-start", "Delete discarded media"],
+    ["camera", "Import Camera sources"],
+    ["leonardo", "Import Leonardo sources"],
+    ["catalog", "Export catalog"],
+    ["worker", "Write worker catalog"],
+    ["sidecar", "Write media sidecar"],
+    ["private", "Backfill private JPGs"],
+    ["discard-final", "Final discard cleanup"],
+    ["test", "Run tests"],
+    ["validate", "Validate publish"],
+    ["commit", "Commit and push"],
+  ].map(([key, label]) => ({ key, label }));
 
   const renderAuthState = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!authPanel || !ownerAuth?.enabled) return;
@@ -183,6 +199,10 @@
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
     const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
     const error = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
+    const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
+    const doneKeys = new Set(lines
+      .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
+      .filter(Boolean));
     let phase = "Starting cloud media sweep";
     if (deleted) phase = "Deleted discarded R2 media";
     if (scan) phase = "Scanning and importing Saturn sources";
@@ -191,34 +211,106 @@
     if (upload) phase = "Creating and uploading missing private JPGs";
     if (processed) phase = "Private JPG backfill pass finished";
     if (manifest) phase = "Refreshing private delivery manifest";
+    if (phaseMarker) phase = phaseMarker.match[2];
     if (error) phase = "Needs attention";
-    return { latest, phase, deleted, scan, started, imported, upload, processed, manifest, error };
+    let phaseKey = phaseMarker?.match?.[1] || "";
+    if (!phaseKey) {
+      if (upload || processed || manifest) phaseKey = "private";
+      else if (scan || started || imported) phaseKey = "camera";
+      else if (deleted) phaseKey = "discard-start";
+      else phaseKey = "prepare";
+    }
+    return { latest, phase, phaseKey, doneKeys, deleted, scan, started, imported, upload, processed, manifest, error };
+  };
+
+  const privateBackfillProgress = (logSummary) => {
+    const uploaded = Number(logSummary?.upload?.match?.[1] || 0);
+    const missing = Math.max(0, ...((window.photosByElieR2Coverage?.rows || [])
+      .filter((row) => String(row.label || "").startsWith("Private JPG"))
+      .map((row) => Number(row.missing || 0))));
+    const total = uploaded + missing;
+    const percent = total ? Math.min(99, Math.round((uploaded / total) * 100)) : (uploaded ? 1 : 0);
+    const detail = total
+      ? `${uploaded.toLocaleString()} of ${total.toLocaleString()}`
+      : `${uploaded.toLocaleString()} photos`;
+    return { percent: Math.max(uploaded ? 1 : 0, percent), detail };
+  };
+
+  const phaseProgress = (phase, logSummary, failed) => {
+    if (failed) return { percent: 100, detail: "Needs attention" };
+    if (phase.key === "discard-start" && logSummary?.deleted) {
+      return { percent: 100, detail: `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private` };
+    }
+    if (phase.key === "camera" && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
+      const selected = Number(logSummary?.scan?.match?.[3] || 0);
+      const current = Number(logSummary?.imported?.match?.[1] || logSummary?.started?.match?.[1] || 0);
+      const percent = selected ? Math.max(4, Math.min(96, Math.round((current / selected) * 100))) : 25;
+      const photo = logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
+      return { percent, detail: selected ? `${current || 1} of ${selected}${photo ? `, ${photo}` : ""}` : "Scanning selected photos" };
+    }
+    if (phase.key === "private" && logSummary?.upload) {
+      return privateBackfillProgress(logSummary);
+    }
+    return { percent: 18, detail: "Running" };
+  };
+
+  const renderSweepPhases = (task, logSummary = null) => {
+    if (!r2Phases) return;
+    if (!task || task.operation !== "repair") {
+      setHtml(r2Phases, "");
+      return;
+    }
+    const active = task.state === "queued" || task.state === "running";
+    const failed = Number(task.failed || 0) > 0 || task.state === "failed";
+    const complete = !active && !failed && task.state === "done";
+    const activeKey = logSummary?.phaseKey || "prepare";
+    const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
+    const doneKeys = logSummary?.doneKeys || new Set();
+    setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
+      const explicitDone = doneKeys.has(phase.key);
+      const inferredDone = active && index < activeIndex;
+      const isActive = phase.key === activeKey && active;
+      const isFailed = phase.key === activeKey && failed;
+      const state = isFailed ? "failed" : (complete || explicitDone || inferredDone) ? "done" : isActive ? "running" : "pending";
+      const progress = state === "done"
+        ? { percent: 100, detail: "Done" }
+        : state === "running"
+          ? phaseProgress(phase, logSummary, false)
+          : state === "failed"
+            ? phaseProgress(phase, logSummary, true)
+            : { percent: 0, detail: "Waiting" };
+      return `
+        <div class="owner-sweep-phase is-${state}">
+          <div class="owner-sweep-phase-copy">
+            <strong>${escapeHtml(phase.label)}</strong>
+            <span>${escapeHtml(progress.detail)}</span>
+          </div>
+          <div class="owner-sweep-bar" aria-label="${escapeHtml(phase.label)} progress">
+            <span style="width:${progress.percent}%"></span>
+          </div>
+        </div>
+      `;
+    }).join(""));
   };
 
   const renderR2RepairProgress = (latest, logSummary = null) => {
     const active = latest.state === "queued" || latest.state === "running";
     const failed = Number(latest.failed || 0);
-    const logName = latest.log ? String(latest.log).split("/").pop() : "";
+    renderSweepPhases(latest, logSummary);
     if (active) {
       setText(r2Summary, logSummary?.phase
         ? `${logSummary.phase}.`
-        : "Repairing R2 coverage with the lock-guarded cloud media sweep. This can run for a long time; reading the log for current counters.");
+        : "Running the lock-guarded cloud media sweep.");
     } else if (failed) {
       setText(r2Summary, logSummary?.phase === "Needs attention"
-        ? "R2 coverage repair needs attention. The latest log line is shown below."
-        : "R2 coverage repair needs attention. Open the log below for the failing phase.");
+        ? "R2 coverage repair needs attention."
+        : "R2 coverage repair stopped before completion.");
     } else {
       setText(r2Summary, "Last R2 coverage repair finished.");
     }
-    const rows = [
-      ["State", latest.state || "unknown"],
-      ["Phase", logSummary?.phase || "Cloud media sweep"],
-      ["Started", latest.started_at ? new Date(latest.started_at).toLocaleString() : "queued"],
-      ["Log", logName || "owner-r2-fix log"],
-    ];
+    const rows = [];
     if (logSummary?.scan) {
-      rows.push(["Scanned", logSummary.scan.match[1]]);
-      rows.push(["Selected", logSummary.scan.match[3]]);
+      rows.push(["Selected", `${logSummary.scan.match[3]} of ${logSummary.scan.match[1]} scanned`]);
     }
     if (logSummary?.started) {
       rows.push(["Current photo", logSummary.started.match[2]]);
@@ -239,9 +331,10 @@
     if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
     if (logSummary?.deleted) rows.push(["Discarded deleted", `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`]);
     if (logSummary?.error) rows.push(["Latest error", logSummary.error.line]);
-    else if (logSummary?.latest) rows.push(["Latest log", logSummary.latest]);
+    else if (logSummary?.latest && !active) rows.push(["Latest log", logSummary.latest]);
     if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
-    const wideLabels = new Set(["Log", "Last photo", "Last rendered", "Latest error", "Latest log"]);
+    if (!rows.length) rows.push(["State", latest.state || "queued"]);
+    const wideLabels = new Set(["Current photo", "Last photo", "Last rendered", "Latest error", "Latest log"]);
     setHtml(r2Counts, rows.map(([label, value]) => `
       <div class="${wideLabels.has(label) ? "is-wide" : ""}">
         <dt>${escapeHtml(label)}</dt>
@@ -276,6 +369,7 @@
     if (!latest) {
       if (!r2Card.hidden) r2Card.hidden = true;
       setHtml(r2Counts, "");
+      renderSweepPhases(null);
       r2RepairActive = false;
       r2RepairLogTaskId = "";
       r2RepairLogSummary = null;
@@ -336,7 +430,10 @@
       ? `Current catalog policy is satisfied for ${formatCount(coverage.catalogPhotos)} photos.`
       : `Coverage needs repair for ${formatCount(coverage.catalogPhotos)} catalog photos.`;
     window.photosByElieR2Coverage = coverage;
-    const observedRenderPhotos = Number(r2RepairLogSummary?.upload?.match?.[1] || 0);
+    const observedRenderPhotos = Math.max(
+      Number(r2RepairLogSummary?.upload?.match?.[1] || 0),
+      Number(r2RepairLogSummary?.imported?.match?.[1] || 0),
+    );
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
       const isPrivateJpg = row.label.startsWith("Private JPG");
       const observed = isPrivateJpg ? observedRenderPhotos : 0;
@@ -355,7 +452,9 @@
         </div>
       `;
     }).join("");
-    r2CoverageNote.textContent = [coverage.recommendation, coverage.note].filter(Boolean).join(" ");
+    r2CoverageNote.textContent = coverage.ok
+      ? "Policy is satisfied for the current catalog."
+      : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
     if (r2FixButton) {
       r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";

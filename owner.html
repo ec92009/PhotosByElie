@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=70.17"/>
-  <link rel="stylesheet" href="./styles.css?v=70.17"/>
-  <link rel="stylesheet" href="./photos.css?v=70.17"/>
+  <link rel="stylesheet" href="./shared.css?v=70.18"/>
+  <link rel="stylesheet" href="./styles.css?v=70.18"/>
+  <link rel="stylesheet" href="./photos.css?v=70.18"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v70.17</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v70.18</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -63,10 +63,13 @@
           <button class="btn secondary" type="button" data-owner-sync-country-keywords>Sync country metadata</button>
         </article>
         <article class="owner-card">
-          <p class="eyebrow">Review</p>
-          <h2>Hidden</h2>
-          <p><span data-owner-hidden-count>0</span> photos are hidden locally.</p>
-          <a class="btn secondary" href="./hidden.html">Review</a>
+          <p class="eyebrow">Products</p>
+          <h2>Physical items</h2>
+          <label class="owner-toggle-control">
+            <input type="checkbox" data-owner-physical-products/>
+            <span>Show print and frame options locally</span>
+          </label>
+          <p>Off by default; the public site stays digital-only.</p>
         </article>
         <article class="owner-card">
           <p class="eyebrow">Visibility</p>
@@ -80,13 +83,10 @@
           </div>
         </article>
         <article class="owner-card">
-          <p class="eyebrow">Products</p>
-          <h2>Physical items</h2>
-          <label class="owner-toggle-control">
-            <input type="checkbox" data-owner-physical-products/>
-            <span>Show print and frame options locally</span>
-          </label>
-          <p>Off by default; the public site stays digital-only.</p>
+          <p class="eyebrow">Review</p>
+          <h2>Hidden</h2>
+          <p><span data-owner-hidden-count>0</span> photos are hidden locally.</p>
+          <a class="btn secondary" href="./hidden.html">Review</a>
         </article>
         <article class="owner-card owner-card-wide">
           <p class="eyebrow">Counts</p>
@@ -125,14 +125,14 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=70.17"></script>
-  <script src="./photos.js?v=70.17"></script>
-  <script src="./owner-auth.js?v=70.17"></script>
-  <script src="./owner-tools.js?v=70.17"></script>
-  <script src="./site-version.js?v=70.17"></script>
-  <script src="./photos-data.js?v=70.17"></script>
-  <script src="./hidden-actions.js?v=70.17"></script>
-  <script src="./reserve-store.js?v=70.17"></script>
-  <script src="./owner.js?v=70.17"></script>
+  <script src="./media-config.js?v=70.18"></script>
+  <script src="./photos.js?v=70.18"></script>
+  <script src="./owner-auth.js?v=70.18"></script>
+  <script src="./owner-tools.js?v=70.18"></script>
+  <script src="./site-version.js?v=70.18"></script>
+  <script src="./photos-data.js?v=70.18"></script>
+  <script src="./hidden-actions.js?v=70.18"></script>
+  <script src="./reserve-store.js?v=70.18"></script>
+  <script src="./owner.js?v=70.18"></script>
 </body>
 </html>

@@ -746,6 +746,7 @@ window.photosByElieRawSourceLabel = (photo) => {
 const normalizePublicMediaBase = (value) => String(value || '').trim().replace(/\/+$/, '');
 const mediaConfig = window.photosByElieMediaConfig || {};
 const mediaBaseStorageKey = 'photosbyelie-public-media-base';
+const isLocalhostMediaPage = window.photosByElieInputMode.isLocalhost();
 const mediaBaseFromQuery = (() => {
   try {
     return normalizePublicMediaBase(new URLSearchParams(window.location.search).get('mediaBase') || '');
@@ -753,6 +754,16 @@ const mediaBaseFromQuery = (() => {
     return '';
   }
 })();
+const isSafePublicMediaBase = (value) => {
+  if (!value || isLocalhostMediaPage) return true;
+  try {
+    const url = new URL(value, window.location.href);
+    const hostname = url.hostname.toLowerCase();
+    return url.protocol === 'https:' && hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '::1';
+  } catch {
+    return false;
+  }
+};
 
 if (mediaBaseFromQuery.toLowerCase() === 'local') {
   try {
@@ -760,15 +771,22 @@ if (mediaBaseFromQuery.toLowerCase() === 'local') {
   } catch {
     // Storage can be unavailable in strict private contexts.
   }
-} else if (mediaBaseFromQuery) {
+} else if (mediaBaseFromQuery && isLocalhostMediaPage) {
   try {
     localStorage.setItem(mediaBaseStorageKey, mediaBaseFromQuery);
+  } catch {
+    // Storage can be unavailable in strict private contexts.
+  }
+} else if (!isLocalhostMediaPage) {
+  try {
+    localStorage.removeItem(mediaBaseStorageKey);
   } catch {
     // Storage can be unavailable in strict private contexts.
   }
 }
 
 const storedMediaBase = (() => {
+  if (!isLocalhostMediaPage) return '';
   try {
     return normalizePublicMediaBase(localStorage.getItem(mediaBaseStorageKey) || '');
   } catch {
@@ -777,13 +795,14 @@ const storedMediaBase = (() => {
 })();
 const configuredMediaBase = normalizePublicMediaBase(mediaConfig.publicBaseUrl);
 const explicitMediaBase = mediaBaseFromQuery && mediaBaseFromQuery.toLowerCase() !== 'local'
+  && isSafePublicMediaBase(mediaBaseFromQuery)
   ? mediaBaseFromQuery
   : '';
-const defaultMediaBase = window.photosByElieInputMode.isLocalhost()
+const defaultMediaBase = isLocalhostMediaPage
   ? ''
-  : storedMediaBase || configuredMediaBase;
+  : configuredMediaBase;
 window.photosByEliePublicMediaBase = normalizePublicMediaBase(
-  explicitMediaBase || window.photosByEliePublicMediaBase || defaultMediaBase
+  explicitMediaBase || (isLocalhostMediaPage ? window.photosByEliePublicMediaBase : '') || defaultMediaBase
 );
 window.photosByEliePublicMediaHostnames = new Set(mediaConfig.publicMediaHostnames || ['ec92009.github.io']);
 window.photosByElieMediaStatus = () => ({

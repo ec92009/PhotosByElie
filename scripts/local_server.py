@@ -26,6 +26,8 @@ from urllib.parse import parse_qs, urlparse
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
 PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
+R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
+R2_FIX_PATH = "/__photosbyelie/r2-fix"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
@@ -122,6 +124,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_PROGRESS_PATH:
             self._handle_r2_progress()
             return
+        if path == R2_COVERAGE_PATH:
+            self._handle_r2_coverage()
+            return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -131,6 +136,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == OWNER_LOGOUT_PATH:
             self._handle_owner_logout()
+            return
+        if path == R2_FIX_PATH:
+            self._handle_r2_fix()
             return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
@@ -179,6 +187,25 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "tasks": _r2_task_snapshot()})
+
+    def _handle_r2_coverage(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        if not self._is_owner_authenticated():
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd())})
+
+    def _handle_r2_fix(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        if not self._is_owner_authenticated():
+            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
+            return
+        task = _start_cloud_media_sweep(Path.cwd())
+        self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
 
     def _handle_owner_session(self) -> None:
         if not self._is_loopback_request():
@@ -1017,6 +1044,148 @@ def _r2_task_snapshot() -> list[dict]:
             key=lambda task: str(task.get("queued_at") or ""),
             reverse=True,
         )
+
+
+def _coverage_row(
+    label: str,
+    present: int,
+    expected: int,
+    bucket: str,
+    object_class: str,
+    covered: int | None = None,
+) -> dict:
+    covered = present if covered is None else covered
+    missing = max(0, expected - covered)
+    extra = max(0, present - expected)
+    return {
+        "label": label,
+        "present": present,
+        "expected": expected,
+        "missing": missing,
+        "extra": extra,
+        "ok": missing == 0 and extra == 0,
+        "bucket": bucket,
+        "objectClass": object_class,
+    }
+
+
+def _r2_coverage_summary(repo_root: Path) -> dict:
+    private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
+    sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
+    records = private_manifest.get("records") if isinstance(private_manifest, dict) else {}
+    if not isinstance(records, dict):
+        records = {}
+    photos = sidecar.get("photos") if isinstance(sidecar, dict) else {}
+    if not isinstance(photos, dict):
+        photos = {}
+
+    expected = max(
+        len(records),
+        len(photos),
+        int(private_manifest.get("catalogPhotos") or 0) if isinstance(private_manifest, dict) else 0,
+    )
+    private_bucket = str(private_manifest.get("privateBucket") or "photosbyelie-private") if isinstance(private_manifest, dict) else "photosbyelie-private"
+    public_bucket = "photosbyelie-public"
+
+    master_present_for_catalog = sum(1 for record in records.values() if record.get("privateMaster", {}).get("present") is True)
+    master_present = int(private_manifest.get("privateMasterPhotoIds") or master_present_for_catalog) if isinstance(private_manifest, dict) else master_present_for_catalog
+    render_present = {
+        product: sum(1 for record in records.values() if record.get("privateRenders", {}).get(product, {}).get("present") is True)
+        for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
+    }
+    public_present = sum(1 for record in records.values() if record.get("publicPreviews", {}).get("present") is True)
+    sidecar_gallery_expected = sum(1 for photo in photos.values() if photo.get("publicPreview", {}).get("galleryKey"))
+    sidecar_detail_expected = sum(1 for photo in photos.values() if photo.get("publicPreview", {}).get("detailKey"))
+    gallery_expected = sidecar_gallery_expected or expected
+    detail_expected = sidecar_detail_expected or expected
+
+    rows = [
+        _coverage_row("Private masters", master_present, expected, private_bucket, "masters", covered=master_present_for_catalog),
+        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], expected, private_bucket, "renders/jpg-6mp"),
+        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], expected, private_bucket, "renders/jpg-3mp"),
+        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], expected, private_bucket, "renders/jpg-1mp"),
+        _coverage_row("Preview low 900px", min(public_present, gallery_expected), gallery_expected, public_bucket, "expo/*_900.jpg"),
+        _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg"),
+    ]
+    missing_rows = [row for row in rows if not row["ok"]]
+    if missing_rows:
+        recommendation = (
+            "Coverage does not match policy. Run the lock-guarded cloud media sweep: it deletes discarded R2 objects, "
+            "imports current Saturn Camera and Leonardo sources, uploads public previews and private masters, renders missing 1/3/6 MP JPG deliverables, validates, commits, and pushes."
+        )
+    else:
+        recommendation = "Coverage matches policy for the current catalog manifest. No R2 repair action is needed."
+    return {
+        "updatedAt": private_manifest.get("updatedAt") if isinstance(private_manifest, dict) else None,
+        "catalogPhotos": expected,
+        "sidecarPhotos": len(photos),
+        "rows": rows,
+        "ok": not missing_rows,
+        "recommendation": recommendation,
+        "fixAvailable": True,
+        "fixCommand": "zsh -lc './scripts/run_cloud_media_sweep.zsh --push'",
+        "note": "Counts come from tracked R2 coverage manifests; refresh with the sweep if you need a live inventory pass.",
+    }
+
+
+def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path) -> None:
+    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    command = ["zsh", "-lc", "./scripts/run_cloud_media_sweep.zsh --push"]
+    with log_path.open("ab") as log:
+        process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["completed"] = 1
+        task["state"] = "done" if process.returncode == 0 else "failed"
+        task["failed"] = 0 if process.returncode == 0 else 1
+        task["return_code"] = process.returncode
+        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+        task["updated_at"] = task["completed_at"]
+
+
+def _start_cloud_media_sweep(repo_root: Path) -> dict:
+    active_states = {"queued", "running"}
+    with R2_BACKGROUND_LOCK:
+        existing = next(
+            (
+                dict(task)
+                for task in R2_BACKGROUND_TASKS.values()
+                if task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
+            ),
+            None,
+        )
+    if existing:
+        return existing
+    task_id = uuid.uuid4().hex
+    queued_at = datetime.now(timezone.utc).isoformat()
+    log_path = repo_root / ".review-logs" / f"owner-r2-fix-{task_id}.log"
+    task = {
+        "id": task_id,
+        "kind": "cloud-media-sweep",
+        "operation": "repair",
+        "photo_id": "catalog",
+        "state": "queued",
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "total": 1,
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "items": [{"command": "zsh -lc './scripts/run_cloud_media_sweep.zsh --push'", "log": str(log_path)}],
+        "errors": [],
+        "log": str(log_path),
+    }
+    with R2_BACKGROUND_LOCK:
+        R2_BACKGROUND_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_cloud_media_sweep_task, args=(task_id, repo_root, log_path), daemon=True)
+    worker.start()
+    return dict(task)
 
 
 def _iso_to_timestamp(value: str) -> float:

@@ -64,7 +64,7 @@ For normal localhost preview with Owner tools, run the small local server instea
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, save owner metadata edits, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
 
 Owner mutation endpoints require a local owner session. Set `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD` before starting the server, or use the one-time login code printed by `scripts/local_server.py` for that server run.
 
@@ -162,6 +162,8 @@ zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 ```
 
 The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera and Leonardo developed sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
+
+The Owner dashboard Fix it button starts this same wrapper through the local helper server when the tracked R2 coverage counts do not match policy.
 
 Dry-run the currently publishable Expo previews:
 

@@ -7,12 +7,12 @@ Date: 2026-05-08
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v70.2`
+- Current visible build: `v70.3`
 - Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,123` catalog photos.
 - Current catalog counts: France `320`, USA `160`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
 - Country, provenance, legacy key references, private master keys, and private render keys live in tracked metadata, especially `assets/media-sidecar.json`.
-- Private delivery manifest is tracked at `assets/private-delivery-manifest.json`; current counts are `10,151` private master photo IDs and `624` complete private JPG 1/3/6 MP render triplets.
+- Private delivery manifest is tracked at `assets/private-delivery-manifest.json`; the Owner R2 coverage panel currently reports `10,151` private master photo IDs for `10,123` catalog photos, `618` private JPG files per 1/3/6 MP tier, and complete `10,123` low/high public preview coverage.
 - Discarded-media tombstones are tracked at `assets/discarded-media-manifest.json`. Current discarded count is `18` photo IDs; those IDs are banned from re-import and their R2 objects are deleted for cost control.
 - A long cloud media sweep is currently running via `scripts/run_cloud_media_sweep.zsh --push` under `.review-logs/cloud-media-sweep.lock`. The scheduled automation uses the same lock and will exit if this run is still alive.
 
@@ -63,7 +63,7 @@ Date: 2026-05-08
 - We chose Stripe as the next business step instead of starting with user accounts.
 - The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
 - Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
-- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.2`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.3`.
 - Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
 - Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
@@ -83,8 +83,8 @@ Date: 2026-05-08
 2. **Run Stripe test checkout end to end.** Verify success, 3D Secure/authentication-required, and declined-card paths before any live keys.
 3. **Confirm paid fulfillment.** Make sure a verified `checkout.session.completed` webhook marks the order paid, builds the ZIP from private R2, and shows the order download.
 4. **Decide production order storage.** Choose whether KV is enough for launch or move queryable order records to D1 before live payments.
-5. **Watch the active cloud media sweep.** Confirm it finishes, commits, pushes, and reports final private render/backfill counts.
-6. **Finish private delivery backfill.** Drive private render triplets from `624` to full non-discarded catalog coverage.
+5. **Watch R2 coverage from Owner.** Use the coverage panel to confirm sweep output, commits, pushes, and final private render/backfill counts.
+6. **Finish private delivery backfill.** Drive private JPG 1/3/6 MP coverage from the current partial coverage to full non-discarded catalog coverage.
 7. **Make discard lifecycle first-class in Owner.** Owner discard should create tombstones, delete public/private R2 bytes, update manifests, and keep the item banned from future Saturn imports.
 8. **Harden Owner account/auth.** Keep localhost owner login working, decide production Owner identity, and add browser coverage for locked/logout/unauthorized states.
 9. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.

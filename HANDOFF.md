@@ -7,9 +7,10 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v70.2`
+- Current visible build: `v70.3`
 - Public catalog: `10,123` eligible cloud-backed photos.
 - Local Owner actions require owner login. `scripts/local_server.py` reads `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD`, or prints a one-time code for that server run. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
+- Owner now has an R2 coverage panel for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews. Fix it starts `scripts/run_cloud_media_sweep.zsh --push` through the local helper server and respects the shared sweep lock.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
@@ -144,7 +145,7 @@ npm run validate
 
 ## Current Priority
 
-1. Let the active/manual cloud media sweep finish and review final counts.
+1. Use the Owner R2 coverage panel to watch private delivery coverage and start the locked sweep when counts drift.
 2. Finish private delivery render-triplet coverage for all non-discarded catalog photos.
 3. Make discard a first-class Owner action that deletes R2 bytes but keeps tombstones.
 4. Move public preview delivery from the checkout Worker `/media/...` bridge to an R2 custom domain.

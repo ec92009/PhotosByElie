@@ -485,6 +485,29 @@ html[data-theme="light"] .photo-art.has-photo::after{
   font-size:1.45rem;
   font-weight:800;
 }
+.owner-coverage-counts{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.owner-coverage-counts div{
+  display:grid;
+  gap:2px;
+}
+.owner-coverage-counts div.needs-work{
+  border-top-color:color-mix(in srgb,#b23b3b 68%,var(--line));
+}
+.owner-coverage-counts div.is-ok{
+  border-top-color:color-mix(in srgb,#2f8f5b 68%,var(--line));
+}
+.owner-coverage-counts small{
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.owner-card-cloud-coverage{
+  grid-column:1 / -1;
+}
 html.is-owner-action-busy,
 html.is-owner-action-busy *{
   cursor:wait !important;

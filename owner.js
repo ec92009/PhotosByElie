@@ -320,9 +320,6 @@
       setText(r2Summary, "Last R2 coverage repair finished.");
     }
     const rows = [];
-    if (logSummary?.scan) {
-      rows.push(["Selected", `${logSummary.scan.match[3]} of ${logSummary.scan.match[1]} scanned`]);
-    }
     if (logSummary?.started && !logSummary?.upload) {
       rows.push(["Current photo", logSummary.started.match[2]]);
       rows.push(["Collection", logSummary.started.match[3]]);
@@ -334,7 +331,6 @@
       rows.push(["Private renders", logSummary.imported.match[5]]);
     }
     if (logSummary?.upload) {
-      rows.push(["Backfilled photos", logSummary.upload.match[1]]);
       const lastPhotoId = logSummary.upload.match[2];
       rows.push(["Last photo", lastPhotoId]);
       rows.push(["Collection", collectionLabelForPhoto(lastPhotoId) || "unknown"]);

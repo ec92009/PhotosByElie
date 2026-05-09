@@ -33,9 +33,19 @@
   let r2RepairLogToken = "";
   let r2RepairActive = false;
   let r2CoverageOk = false;
+  let r2RepairLogSummary = null;
+  let r2RepairLogTaskId = "";
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
+  };
+
+  const setText = (element, value) => {
+    if (element && element.textContent !== value) element.textContent = value;
+  };
+
+  const setHtml = (element, value) => {
+    if (element && element.innerHTML !== value) element.innerHTML = value;
   };
 
   const renderAuthState = (authState = ownerAuth?.state || {}, options = {}) => {
@@ -167,6 +177,7 @@
     };
     const deleted = lastMatch(/^Done\. Deleted ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
     const scan = lastMatch(/^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/);
+    const imported = lastMatch(/^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/);
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
     const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
@@ -174,11 +185,12 @@
     let phase = "Starting cloud media sweep";
     if (deleted) phase = "Deleted discarded R2 media";
     if (scan) phase = "Scanning and importing Saturn sources";
+    if (imported) phase = "Rendering and uploading selected previews";
     if (upload) phase = "Creating and uploading missing private JPGs";
     if (processed) phase = "Private JPG backfill pass finished";
     if (manifest) phase = "Refreshing private delivery manifest";
     if (error) phase = "Needs attention";
-    return { latest, phase, deleted, scan, upload, processed, manifest, error };
+    return { latest, phase, deleted, scan, imported, upload, processed, manifest, error };
   };
 
   const renderR2RepairProgress = (latest, logSummary = null) => {
@@ -186,15 +198,15 @@
     const failed = Number(latest.failed || 0);
     const logName = latest.log ? String(latest.log).split("/").pop() : "";
     if (active) {
-      r2Summary.textContent = logSummary?.phase
+      setText(r2Summary, logSummary?.phase
         ? `${logSummary.phase}.`
-        : "Repairing R2 coverage with the lock-guarded cloud media sweep. This can run for a long time; reading the log for current counters.";
+        : "Repairing R2 coverage with the lock-guarded cloud media sweep. This can run for a long time; reading the log for current counters.");
     } else if (failed) {
-      r2Summary.textContent = logSummary?.phase === "Needs attention"
+      setText(r2Summary, logSummary?.phase === "Needs attention"
         ? "R2 coverage repair needs attention. The latest log line is shown below."
-        : "R2 coverage repair needs attention. Open the log below for the failing phase.";
+        : "R2 coverage repair needs attention. Open the log below for the failing phase.");
     } else {
-      r2Summary.textContent = "Last R2 coverage repair finished.";
+      setText(r2Summary, "Last R2 coverage repair finished.");
     }
     const rows = [
       ["State", latest.state || "unknown"],
@@ -205,6 +217,12 @@
     if (logSummary?.scan) {
       rows.push(["Scanned", logSummary.scan.match[1]]);
       rows.push(["Selected", logSummary.scan.match[3]]);
+    }
+    if (logSummary?.imported) {
+      rows.push(["Rendered photos", logSummary.imported.match[1]]);
+      rows.push(["Last rendered", logSummary.imported.match[2]]);
+      rows.push(["Collection", logSummary.imported.match[3]]);
+      rows.push(["Private renders", logSummary.imported.match[5]]);
     }
     if (logSummary?.upload) {
       rows.push(["Backfilled photos", logSummary.upload.match[1]]);
@@ -217,12 +235,13 @@
     if (logSummary?.error) rows.push(["Latest error", logSummary.error.line]);
     else if (logSummary?.latest) rows.push(["Latest log", logSummary.latest]);
     if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
-    r2Counts.innerHTML = rows.map(([label, value]) => `
-      <div>
+    const wideLabels = new Set(["Log", "Last photo", "Last rendered", "Latest error", "Latest log"]);
+    setHtml(r2Counts, rows.map(([label, value]) => `
+      <div class="${wideLabels.has(label) ? "is-wide" : ""}">
         <dt>${escapeHtml(label)}</dt>
         <dd>${escapeHtml(value)}</dd>
       </div>
-    `).join("");
+    `).join(""));
   };
 
   const loadR2RepairLog = async (task) => {
@@ -236,7 +255,10 @@
       if (!response.ok) throw new Error(`Log ${response.status}`);
       const text = await response.text();
       if (r2RepairLogToken !== token) return;
-      renderR2RepairProgress(task, summarizeR2RepairLog(text));
+      r2RepairLogTaskId = task.id;
+      r2RepairLogSummary = summarizeR2RepairLog(text);
+      renderR2RepairProgress(task, r2RepairLogSummary);
+      renderR2Coverage(window.photosByElieR2Coverage || null);
     } catch {
       renderR2RepairProgress(task);
     }
@@ -246,13 +268,15 @@
     if (!r2Card || !r2Summary || !r2Counts) return;
     const latest = tasks[0];
     if (!latest) {
-      r2Card.hidden = true;
-      r2Counts.innerHTML = "";
+      if (!r2Card.hidden) r2Card.hidden = true;
+      setHtml(r2Counts, "");
       r2RepairActive = false;
+      r2RepairLogTaskId = "";
+      r2RepairLogSummary = null;
       syncR2FixButton();
       return;
     }
-    r2Card.hidden = false;
+    if (r2Card.hidden) r2Card.hidden = false;
     const total = Number(latest.total || 0);
     const completed = Number(latest.completed || 0);
     const failed = Number(latest.failed || 0);
@@ -264,15 +288,15 @@
     const activeVerb = isRepair ? "Repairing" : isDelete ? "Deleting" : "Uploading";
     const noun = isRepair ? "repair" : isDelete ? "delete" : "upload";
     if (isRepair) {
-      renderR2RepairProgress(latest);
+      renderR2RepairProgress(latest, latest.id === r2RepairLogTaskId ? r2RepairLogSummary : null);
       return;
     }
     if (active) {
-      r2Summary.textContent = `${activeVerb} R2 updates: ${completed}/${total} files, ${failed} failed.`;
+      setText(r2Summary, `${activeVerb} R2 updates: ${completed}/${total} files, ${failed} failed.`);
     } else if (failed) {
-      r2Summary.textContent = `R2 ${noun} needs attention: ${failed}/${total} files failed.`;
+      setText(r2Summary, `R2 ${noun} needs attention: ${failed}/${total} files failed.`);
     } else {
-      r2Summary.textContent = `Last R2 ${noun} finished: ${completed} files.`;
+      setText(r2Summary, `Last R2 ${noun} finished: ${completed} files.`);
     }
     const rows = [
       ["State", latest.state || "unknown"],
@@ -282,12 +306,12 @@
       ["Failed", failed],
       ["Uploaded", `${formatBytes(latest.bytes_done)} / ${formatBytes(latest.bytes_total)}`],
     ];
-    r2Counts.innerHTML = rows.map(([label, value]) => `
+    setHtml(r2Counts, rows.map(([label, value]) => `
       <div>
         <dt>${escapeHtml(label)}</dt>
         <dd>${escapeHtml(value)}</dd>
       </div>
-    `).join("");
+    `).join(""));
   };
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
@@ -305,13 +329,26 @@
     r2CoverageSummary.textContent = coverage.ok
       ? `Current catalog policy is satisfied for ${formatCount(coverage.catalogPhotos)} photos.`
       : `Coverage needs repair for ${formatCount(coverage.catalogPhotos)} catalog photos.`;
-    r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => `
-      <div class="${row.ok ? "is-ok" : "needs-work"}">
-        <dt>${escapeHtml(row.label)}</dt>
-        <dd>${formatCount(row.present)} / ${formatCount(row.expected)}</dd>
-        <small>${row.missing ? `${formatCount(row.missing)} missing` : "complete"}${row.extra ? `, ${formatCount(row.extra)} extra` : ""}</small>
-      </div>
-    `).join("");
+    window.photosByElieR2Coverage = coverage;
+    const observedRenderPhotos = Number(r2RepairLogSummary?.upload?.match?.[1] || 0);
+    r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
+      const isPrivateJpg = row.label.startsWith("Private JPG");
+      const observed = isPrivateJpg ? observedRenderPhotos : 0;
+      const present = Math.min(row.expected, row.present + observed);
+      const missing = Math.max(0, row.missing - observed);
+      const detail = [
+        missing ? `${formatCount(missing)} missing` : "complete",
+        row.extra ? `${formatCount(row.extra)} extra` : "",
+        observed ? `${formatCount(observed)} observed this run` : "",
+      ].filter(Boolean).join(", ");
+      return `
+        <div class="${row.ok ? "is-ok" : "needs-work"}">
+          <dt>${escapeHtml(row.label)}</dt>
+          <dd>${formatCount(present)} / ${formatCount(row.expected)}</dd>
+          <small>${escapeHtml(detail)}</small>
+        </div>
+      `;
+    }).join("");
     r2CoverageNote.textContent = [coverage.recommendation, coverage.note].filter(Boolean).join(" ");
     r2CoverageOk = coverage.ok;
     if (r2FixButton) {

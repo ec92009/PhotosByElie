@@ -510,15 +510,24 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-card-cloud-progress{
   grid-column:1 / -1;
+  min-height:420px;
 }
 .owner-card-cloud-progress .owner-counts{
   grid-template-columns:repeat(4,minmax(0,1fr));
+  align-content:start;
+  min-height:250px;
 }
 .owner-card-cloud-progress .owner-counts dd{
   font-size:clamp(1rem,2vw,1.45rem);
   line-height:1.12;
   overflow-wrap:anywhere;
   word-break:break-word;
+}
+.owner-card-cloud-progress .owner-counts div.is-wide{
+  grid-column:1 / -1;
+}
+.owner-card-cloud-progress .owner-counts div.is-wide dd{
+  max-width:100%;
 }
 html.is-owner-action-busy,
 html.is-owner-action-busy *{

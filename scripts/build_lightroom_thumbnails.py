@@ -1505,6 +1505,16 @@ def process_batch(
             failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
             rendered_count += 1
+            if args.dry_run:
+                print(f"{rendered_count}: {slug} selected {gallery_country['slug']}", flush=True)
+            else:
+                public_count = len((row.get("r2") or {}).get("public_previews") or [])
+                private_render_count = len((row.get("r2") or {}).get("private_renders") or [])
+                print(
+                    f"{rendered_count}: {slug} rendered {gallery_country['slug']} "
+                    f"public {public_count} private-renders {private_render_count}",
+                    flush=True,
+                )
             if selection_limit and rendered_count >= selection_limit:
                 break
         except Exception as exc:

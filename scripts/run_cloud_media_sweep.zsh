@@ -90,7 +90,7 @@ node scripts/write_media_sidecar.mjs
 done_phase sidecar
 
 phase private "Backfill private JPGs"
-SYNC_ARGS=(--commit-every 100 --request-timeout-ms 180000 --retries 4)
+SYNC_ARGS=(--commit-every 100 --request-timeout-ms 45000 --retries 1)
 if [[ "$PUSH" == "1" ]]; then
   SYNC_ARGS+=(--push)
 fi

@@ -262,6 +262,48 @@ const loadPrivateInventory = async () => {
   return inventory;
 };
 
+const rememberInventoryKey = (inventory, kind, key) => {
+  const field = kind === "master" ? "masterKeys" : "renderKeys";
+  if (!Array.isArray(inventory[field])) inventory[field] = [];
+  if (key && !inventory[field].includes(key)) inventory[field].push(key);
+};
+
+const hydrateInventoryFromManifest = (inventory, manifest) => {
+  const records = manifest?.records || {};
+  if (!records || typeof records !== "object") return;
+  for (const record of Object.values(records)) {
+    if (!record || typeof record !== "object") continue;
+    const master = record.privateMaster || {};
+    if (master.present && master.key) rememberInventoryKey(inventory, "master", master.key);
+    for (const render of Object.values(record.privateRenders || {})) {
+      if (render?.present && render.key) rememberInventoryKey(inventory, "render", render.key);
+    }
+  }
+};
+
+const hydrateInventoryFromState = async (inventory) => {
+  let text = "";
+  try {
+    text = await fs.readFile(fullPath(statePath), "utf8");
+  } catch {
+    return;
+  }
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    let row;
+    try {
+      row = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (row.status !== "uploaded") continue;
+    for (const key of row.keys || []) {
+      if (String(key).startsWith("masters/")) rememberInventoryKey(inventory, "master", key);
+      if (String(key).startsWith("renders/")) rememberInventoryKey(inventory, "render", key);
+    }
+  }
+};
+
 const buildManifest = async (inventory, publicIdsPayload) => {
   const masterKeysById = new Map();
   for (const key of inventory.masterKeys || []) {
@@ -334,6 +376,11 @@ const maybeCommit = async (processedCount, final = false) => {
 };
 
 const inventory = await loadPrivateInventory();
+const previousManifest = await readJson(manifestPath, null);
+hydrateInventoryFromManifest(inventory, previousManifest);
+await hydrateInventoryFromState(inventory);
+inventory.generatedAt = new Date().toISOString();
+await writeJson(privateInventoryPath, inventory);
 const publicIdsPayload = await readJson(publicPreviewIdsPath, {});
 let manifest = await buildManifest(inventory, publicIdsPayload);
 await writeJson(manifestPath, manifest);
@@ -341,13 +388,8 @@ if (refreshOnly) {
   console.log(`Refreshed ${manifestPath}: ${manifest.privateRenderTripletPhotoIds} complete private render triplets.`);
   process.exit(0);
 }
-const rememberInventoryKey = (kind, key) => {
-  const field = kind === "master" ? "masterKeys" : "renderKeys";
-  if (!Array.isArray(inventory[field])) inventory[field] = [];
-  if (!inventory[field].includes(key)) inventory[field].push(key);
-};
-
 const processed = [];
+const failed = [];
 for (const record of Object.values(manifest.records)) {
   if (record.privateMaster.present && Object.values(record.privateRenders).every((item) => item.present)) continue;
   const photo = catalogById.get(record.id);
@@ -359,13 +401,14 @@ for (const record of Object.values(manifest.records)) {
   }
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-private-renders-"));
   try {
+    console.log(`START ${processed.length + failed.length + 1}: ${record.id}`);
     const size = await dimensionsFor(localSource);
     const uploadedKeys = [];
     if (!record.privateMaster.present) {
       const key = masterKeyFor(photo, source);
       if (!dryRun) {
         await s3Request("PUT", key, await fs.readFile(localSource), contentTypeFor(localSource));
-        rememberInventoryKey("master", key);
+        rememberInventoryKey(inventory, "master", key);
         record.privateMaster.present = true;
         record.privateMaster.key = key;
       }
@@ -379,7 +422,7 @@ for (const record of Object.values(manifest.records)) {
       const key = renderKeyFor(photo, source, productId);
       if (!dryRun) {
         await s3Request("PUT", key, await fs.readFile(outputPath), "image/jpeg");
-        rememberInventoryKey("render", key);
+        rememberInventoryKey(inventory, "render", key);
         record.privateRenders[productId].present = true;
         record.privateRenders[productId].key = key;
       }
@@ -396,6 +439,11 @@ for (const record of Object.values(manifest.records)) {
     }
     console.log(`${processed.length}: ${record.id} ${dryRun ? "would upload" : "uploaded"} ${uploadedKeys.length}`);
     if (limit && processed.length >= limit) break;
+  } catch (error) {
+    failed.push(record.id);
+    const message = error?.message || String(error);
+    await appendJsonl(statePath, { at: new Date().toISOString(), id: record.id, status: "error", error: message });
+    console.log(`${processed.length + failed.length}: ${record.id} failed ${message}`);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -405,3 +453,4 @@ manifest = await buildManifest(inventory, publicIdsPayload);
 await writeJson(manifestPath, manifest);
 if (!dryRun) await maybeCommit(processed.length, true);
 console.log(`Done. Processed ${processed.length} photo${processed.length === 1 ? "" : "s"}.`);
+if (failed.length) console.log(`Skipped ${failed.length} failed photo${failed.length === 1 ? "" : "s"} for a later retry.`);

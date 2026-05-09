@@ -242,8 +242,8 @@ html[data-theme="light"] .photo-art.has-photo::after{
   padding-top:4px;
 }
 .owner-hero{
-  min-height:clamp(150px,23dvh,280px);
-  padding-block:clamp(18px,3dvh,34px);
+  min-height:0;
+  padding-block:clamp(10px,2dvh,18px);
 }
 .owner-hero h1{
   font-size:clamp(2.3rem,5vw,4.6rem);

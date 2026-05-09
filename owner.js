@@ -190,6 +190,9 @@
     if (!r2FixButton) return;
     r2FixButton.disabled = r2CoverageOk || r2RepairActive;
     r2FixButton.textContent = r2RepairActive ? "Repair running" : "Fix it";
+    if (r2CoverageNote && r2RepairActive) {
+      setText(r2CoverageNote, "Repair is running. You do not need to remain on this page while the repair takes place.");
+    }
   };
 
   const summarizeR2RepairLog = (text = "") => {

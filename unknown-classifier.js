@@ -516,7 +516,7 @@
   window.addEventListener("keydown", async (event) => {
     if (!hiddenActions?.enabled) return;
     const key = event.key.toLowerCase();
-    const blockOrUndo = key === "b" || key === "h" || key === "u";
+    const blockOrUndo = key === "x" || key === "b" || key === "h" || key === "u";
     if (blockOrUndo && shouldIgnoreUnknownActionShortcut(event)) return;
     if (!blockOrUndo && shouldIgnoreShortcut(event)) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
@@ -529,7 +529,7 @@
       moveSelection(1);
       return;
     }
-    if (key === "b" || key === "h") {
+    if (key === "x" || key === "b" || key === "h") {
       event.preventDefault();
       const photo = unknownPhotos().find((item) => item.id === selectedPhotoId) || unknownPhotos()[0];
       if (!photo) return;

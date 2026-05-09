@@ -122,7 +122,7 @@ const renderDetailShortcutHint = () => {
   }
   const ownerShortcuts = localModerationEnabled
     ? [
-      `${detailShortcutKey("B")} block`,
+      `${detailShortcutKey("X")} block`,
       `${detailShortcutKey("U")} undo`
     ]
     : [];
@@ -586,7 +586,7 @@ if (localModerationEnabled) {
   window.addEventListener("keydown", async (event) => {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
-    if (key === "b" || key === "h") {
+    if (key === "x" || key === "b" || key === "h") {
       if (hiddenActions.has(photo.id)) {
         status.textContent = `${photo.title} is already Blocked.`;
         return;

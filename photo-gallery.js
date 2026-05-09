@@ -49,7 +49,7 @@ const ensureGalleryKeyboardHint = () => {
   hint.dataset.galleryShortcutHint = "";
   hint.innerHTML = [
     "Owner shortcuts:",
-    `${shortcutKey("B")} block`,
+    `${shortcutKey("X")} block`,
     `${shortcutKey("U")} undo`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
@@ -738,7 +738,7 @@ if (galleryRoot && gallery) {
         event.preventDefault();
         return;
       }
-      if (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
+      if (event.key.toLowerCase() === "x" || event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
         const selected = photos[selectedIndex];
         if (!selected) return;
         try {

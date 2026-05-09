@@ -54,11 +54,15 @@ SCHEMA_VERSION = 4
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
+DEFAULT_R2_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
+DEFAULT_PRIVATE_DELIVERY_STATE = Path(".review-logs/private-deliverable-sync-state.jsonl")
+DEFAULT_PRIVATE_DELIVERY_MANIFEST = Path("assets/private-delivery-manifest.json")
 PRIVATE_RENDER_PRODUCTS = {
     "jpg-6mp": 6,
     "jpg-3mp": 3,
     "jpg-1mp": 1,
 }
+R2_COVERED_KEYS_CACHE: set[str] | None = None
 COUNTRY_ALIASES = {
     "fr": ("france", "France"),
     "france": ("france", "France"),
@@ -967,6 +971,64 @@ def r2_upload_enabled(args: argparse.Namespace, scope: str) -> bool:
     return args.r2_upload == "both" or args.r2_upload == scope
 
 
+def r2_covered_keys() -> set[str]:
+    global R2_COVERED_KEYS_CACHE
+    if R2_COVERED_KEYS_CACHE is not None:
+        return R2_COVERED_KEYS_CACHE
+
+    covered: set[str] = set()
+
+    if DEFAULT_R2_UPLOAD_STATE.exists():
+        with DEFAULT_R2_UPLOAD_STATE.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not row.get("ok"):
+                    continue
+                if row.get("id"):
+                    covered.add(str(row["id"]))
+                if row.get("bucket") and row.get("key"):
+                    covered.add(f"{row['bucket']}/{row['key']}")
+
+    if DEFAULT_PRIVATE_DELIVERY_STATE.exists():
+        with DEFAULT_PRIVATE_DELIVERY_STATE.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if row.get("status") != "uploaded":
+                    continue
+                for key in row.get("keys") or []:
+                    if key:
+                        covered.add(f"{DEFAULT_PRIVATE_BUCKET}/{key}")
+
+    if DEFAULT_PRIVATE_DELIVERY_MANIFEST.exists():
+        try:
+            payload = json.loads(DEFAULT_PRIVATE_DELIVERY_MANIFEST.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            payload = {}
+        private_bucket = str(payload.get("privateBucket") or DEFAULT_PRIVATE_BUCKET)
+        records = payload.get("records") if isinstance(payload, dict) else {}
+        if isinstance(records, dict):
+            for record in records.values():
+                if not isinstance(record, dict):
+                    continue
+                master = record.get("privateMaster") or {}
+                if master.get("present") and master.get("key"):
+                    covered.add(f"{private_bucket}/{master['key']}")
+                renders = record.get("privateRenders") or {}
+                if isinstance(renders, dict):
+                    for render in renders.values():
+                        if isinstance(render, dict) and render.get("present") and render.get("key"):
+                            covered.add(f"{private_bucket}/{render['key']}")
+
+    R2_COVERED_KEYS_CACHE = covered
+    return covered
+
+
 def r2_put_file(
     args: argparse.Namespace,
     bucket: str,
@@ -976,6 +1038,15 @@ def r2_put_file(
     retries: int,
     cache_control: str | None = None,
 ) -> dict[str, Any]:
+    if f"{bucket}/{key}" in r2_covered_keys():
+        return {
+            "bucket": bucket,
+            "key": key,
+            "path": str(path),
+            "bytes": path.stat().st_size,
+            "content_type": content_type,
+        }
+
     if args.r2_backend == "s3":
         missing = [
             name

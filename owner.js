@@ -456,12 +456,13 @@
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
       const isPrivateJpg = row.label.startsWith("Private JPG");
       const isPrivateMasters = row.label === "Private masters";
+      const isAcceptedHiddenExtra = isPrivateMasters && Number(row.missing || 0) === 0 && Number(row.extra || 0) > 0;
       const detail = [
         row.missing ? `${formatCount(row.missing)} missing` : "complete",
         row.extra ? `${formatCount(row.extra)} ${isPrivateMasters ? "hidden" : "extra"}` : "",
       ].filter(Boolean).join(", ");
       return `
-        <div class="${row.ok ? "is-ok" : "needs-work"}">
+        <div class="${row.ok || isAcceptedHiddenExtra ? "is-ok" : "needs-work"}">
           <dt>${escapeHtml(row.label)}</dt>
           <dd>${formatCount(row.present)} / ${formatCount(row.expected)}</dd>
           <small>${escapeHtml(detail)}</small>

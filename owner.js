@@ -30,6 +30,7 @@
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
+  let r2RepairLogToken = "";
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -141,6 +142,98 @@
     `).join("");
   };
 
+  const logUrlForTask = (task) => {
+    const logName = task?.log ? String(task.log).split("/").pop() : "";
+    return logName ? `/.review-logs/${encodeURIComponent(logName)}` : "";
+  };
+
+  const summarizeR2RepairLog = (text = "") => {
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const latest = lines.at(-1) || "";
+    const lastMatch = (pattern) => {
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const match = lines[index].match(pattern);
+        if (match) return { line: lines[index], match };
+      }
+      return null;
+    };
+    const deleted = lastMatch(/^Done\. Deleted ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
+    const scan = lastMatch(/^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/);
+    const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
+    const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
+    const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
+    const error = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
+    let phase = "Starting cloud media sweep";
+    if (deleted) phase = "Deleted discarded R2 media";
+    if (scan) phase = "Scanning and importing Saturn sources";
+    if (upload) phase = "Creating and uploading missing private JPGs";
+    if (processed) phase = "Private JPG backfill pass finished";
+    if (manifest) phase = "Refreshing private delivery manifest";
+    if (error) phase = "Needs attention";
+    return { latest, phase, deleted, scan, upload, processed, manifest, error };
+  };
+
+  const renderR2RepairProgress = (latest, logSummary = null) => {
+    const active = latest.state === "queued" || latest.state === "running";
+    const failed = Number(latest.failed || 0);
+    const logName = latest.log ? String(latest.log).split("/").pop() : "";
+    if (active) {
+      r2Summary.textContent = logSummary?.phase
+        ? `${logSummary.phase}.`
+        : "Repairing R2 coverage with the lock-guarded cloud media sweep. This can run for a long time; reading the log for current counters.";
+    } else if (failed) {
+      r2Summary.textContent = logSummary?.phase === "Needs attention"
+        ? "R2 coverage repair needs attention. The latest log line is shown below."
+        : "R2 coverage repair needs attention. Open the log below for the failing phase.";
+    } else {
+      r2Summary.textContent = "Last R2 coverage repair finished.";
+    }
+    const rows = [
+      ["State", latest.state || "unknown"],
+      ["Phase", logSummary?.phase || "Cloud media sweep"],
+      ["Started", latest.started_at ? new Date(latest.started_at).toLocaleString() : "queued"],
+      ["Log", logName || "owner-r2-fix log"],
+    ];
+    if (logSummary?.scan) {
+      rows.push(["Scanned", logSummary.scan.match[1]]);
+      rows.push(["Selected", logSummary.scan.match[3]]);
+    }
+    if (logSummary?.upload) {
+      rows.push(["Backfilled photos", logSummary.upload.match[1]]);
+      rows.push(["Last photo", logSummary.upload.match[2]]);
+      rows.push(["Objects last", logSummary.upload.match[3]]);
+    }
+    if (logSummary?.manifest) rows.push(["Render triplets", logSummary.manifest.match[1]]);
+    if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
+    if (logSummary?.deleted) rows.push(["Discarded deleted", `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`]);
+    if (logSummary?.error) rows.push(["Latest error", logSummary.error.line]);
+    else if (logSummary?.latest) rows.push(["Latest log", logSummary.latest]);
+    if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
+    r2Counts.innerHTML = rows.map(([label, value]) => `
+      <div>
+        <dt>${escapeHtml(label)}</dt>
+        <dd>${escapeHtml(value)}</dd>
+      </div>
+    `).join("");
+  };
+
+  const loadR2RepairLog = async (task) => {
+    if (!task?.id || task.operation !== "repair") return;
+    const logUrl = logUrlForTask(task);
+    if (!logUrl) return;
+    const token = `${task.id}:${task.updated_at || ""}:${task.state || ""}`;
+    r2RepairLogToken = token;
+    try {
+      const response = await fetch(logUrl, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Log ${response.status}`);
+      const text = await response.text();
+      if (r2RepairLogToken !== token) return;
+      renderR2RepairProgress(task, summarizeR2RepairLog(text));
+    } catch {
+      renderR2RepairProgress(task);
+    }
+  };
+
   const renderR2Progress = (tasks = []) => {
     if (!r2Card || !r2Summary || !r2Counts) return;
     const latest = tasks[0];
@@ -158,28 +251,8 @@
     const isRepair = latest.operation === "repair";
     const activeVerb = isRepair ? "Repairing" : isDelete ? "Deleting" : "Uploading";
     const noun = isRepair ? "repair" : isDelete ? "delete" : "upload";
-    const logName = latest.log ? String(latest.log).split("/").pop() : "";
     if (isRepair) {
-      if (active) {
-        r2Summary.textContent = "Repairing R2 coverage with the lock-guarded cloud media sweep. This can run for a long time; follow the log for the current phase.";
-      } else if (failed) {
-        r2Summary.textContent = "R2 coverage repair needs attention. Open the log below for the failing phase.";
-      } else {
-        r2Summary.textContent = "Last R2 coverage repair finished.";
-      }
-      const rows = [
-        ["State", latest.state || "unknown"],
-        ["Work", "Cloud media sweep"],
-        ["Started", latest.started_at ? new Date(latest.started_at).toLocaleString() : "queued"],
-        ["Log", logName || "owner-r2-fix log"],
-      ];
-      if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
-      r2Counts.innerHTML = rows.map(([label, value]) => `
-        <div>
-          <dt>${escapeHtml(label)}</dt>
-          <dd>${escapeHtml(value)}</dd>
-        </div>
-      `).join("");
+      renderR2RepairProgress(latest);
       return;
     }
     if (active) {
@@ -253,6 +326,7 @@
       const payload = await response.json();
       const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
       renderR2Progress(tasks);
+      if (tasks[0]?.operation === "repair") loadR2RepairLog(tasks[0]);
     } catch {
       renderR2Progress([]);
     }

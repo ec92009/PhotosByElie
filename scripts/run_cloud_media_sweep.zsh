@@ -51,7 +51,7 @@ python3 scripts/build_lightroom_thumbnails.py \
   --hidden-blacklist assets/hidden/hidden-blacklist.json
 
 python3 scripts/build_lightroom_thumbnails.py \
-  --source-root /Volumes/Saturn/Pictures/LR/_All Leonardo \
+  --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
   --output-root assets/reserve \
   --select all \
   --force-country ai \

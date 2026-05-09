@@ -453,12 +453,13 @@
     );
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
       const isPrivateJpg = row.label.startsWith("Private JPG");
+      const isPrivateMasters = row.label === "Private masters";
       const observed = isPrivateJpg ? observedRenderPhotos : 0;
       const present = isPrivateJpg ? Math.min(row.expected, row.present + observed) : row.present;
       const missing = Math.max(0, row.missing - observed);
       const detail = [
         missing ? `${formatCount(missing)} missing` : "complete",
-        row.extra ? `${formatCount(row.extra)} extra` : "",
+        row.extra ? `${formatCount(row.extra)} ${isPrivateMasters ? "hidden" : "extra"}` : "",
         observed ? `${formatCount(observed)} observed this run` : "",
       ].filter(Boolean).join(", ");
       return `

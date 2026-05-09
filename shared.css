@@ -89,6 +89,13 @@ html[data-theme="dark"] .mode-light { display: none; }
 .theme-toggle { width: 68px; }
 .language-toggle { min-width: 92px; }
 .owner-header-logout { min-width: 78px; }
+html[data-theme="dark"] .version-switch,
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .language-toggle,
+html[data-theme="dark"] .owner-header-logout{
+  border-color:color-mix(in srgb,var(--line) 72%,var(--text) 28%);
+  background:var(--surface-2);
+}
 
 main{padding:clamp(4px,1dvh,10px) 0 clamp(30px,5dvh,42px);display:grid;gap:clamp(8px,1.4dvh,14px)}
 h1{margin:0;line-height:1.08;font-size:clamp(2rem,4vw,3.2rem);max-width:18ch}

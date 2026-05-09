@@ -26,7 +26,7 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.21";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.22";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const workerBaseUrl = () => {
@@ -277,6 +277,16 @@ const renderCheckoutResult = (body, mode = "checkout") => {
   `;
 };
 
+const setBasketStatus = (message, { checkout = false, title = t("order.checkout") } = {}) => {
+  if (status) status.textContent = message;
+  if (!checkout || !checkoutResult) return;
+  checkoutResult.hidden = false;
+  checkoutResult.innerHTML = `
+    <strong>${escapeText(title)}</strong>
+    <span>${escapeText(message)}</span>
+  `;
+};
+
 const syncCheckoutControls = () => {
   const state = checkoutState();
   const provider = state.provider || state.lastResponse?.checkout?.provider || "mock-stripe";
@@ -286,20 +296,20 @@ const syncCheckoutControls = () => {
 };
 
 checkoutGuest?.addEventListener("click", async () => {
-  const email = String(checkoutEmail?.value || "").trim();
-  const items = digitalCheckoutItems();
-  if (!items.length) {
-    status.textContent = t("basket.checkout_needs_asset");
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    status.textContent = t("basket.enter_email");
-    checkoutEmail?.focus();
-    return;
-  }
   checkoutGuest.disabled = true;
-  status.textContent = t("basket.creating_checkout");
   try {
+    const email = String(checkoutEmail?.value || "").trim();
+    const items = digitalCheckoutItems();
+    if (!items.length) {
+      setBasketStatus(t("basket.checkout_needs_asset"), { checkout: true });
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setBasketStatus(t("basket.enter_email"), { checkout: true });
+      checkoutEmail?.focus();
+      return;
+    }
+    setBasketStatus(t("basket.creating_checkout"), { checkout: true });
     const body = await checkoutFetch("/checkout/guest", {
       method: "POST",
       body: JSON.stringify({ email, items }),
@@ -316,13 +326,13 @@ checkoutGuest?.addEventListener("click", async () => {
     renderCheckoutResult(body, "checkout");
     syncCheckoutControls();
     if (body.checkout?.provider === "stripe" && body.checkout?.url) {
-      status.textContent = t("basket.opening_stripe");
+      setBasketStatus(t("basket.opening_stripe"));
       window.location.assign(body.checkout.url);
       return;
     }
-    status.textContent = t("basket.mock_ready");
+    setBasketStatus(t("basket.mock_ready"));
   } catch (error) {
-    status.textContent = error.message;
+    setBasketStatus(error?.message || "Checkout could not start.", { checkout: true });
   } finally {
     checkoutGuest.disabled = false;
   }
@@ -332,7 +342,7 @@ mockPay?.addEventListener("click", async () => {
   const state = checkoutState();
   if (!state.checkoutSessionId) return;
   mockPay.disabled = true;
-  status.textContent = t("basket.simulating_payment");
+  setBasketStatus(t("basket.simulating_payment"));
   try {
     const body = await checkoutFetch("/mock-stripe/pay", {
       method: "POST",
@@ -347,10 +357,10 @@ mockPay?.addEventListener("click", async () => {
     });
     renderCheckoutResult(body, "paid");
     syncCheckoutControls();
-    status.textContent = t("basket.mock_complete");
+    setBasketStatus(t("basket.mock_complete"));
     window.location.href = orderPageHref(body.order.id, body.order.buyerEmail || state.email);
   } catch (error) {
-    status.textContent = error.message;
+    setBasketStatus(error?.message || "Mock payment could not complete.", { checkout: true });
   } finally {
     mockPay.disabled = false;
   }

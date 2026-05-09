@@ -1,6 +1,6 @@
 {
   "schema": "photosbyelie.discarded-media-manifest.v1",
-  "updatedAt": "2026-05-08T17:49:53.989Z",
+  "updatedAt": "2026-05-09T20:28:02.375Z",
   "dryRun": false,
   "publicBucket": "photosbyelie-public",
   "privateBucket": "photosbyelie-private",
@@ -75,6 +75,8 @@
     "expo/france/20110106-0634-28072-6c101f40de_900.jpg",
     "expo/france/20110106-0650-15111-66ae093dc8_1800.jpg",
     "expo/france/20110106-0650-15111-66ae093dc8_900.jpg",
+    "expo/unknown/20130326-2207-25784-4b9d7e15d3_1800.jpg",
+    "expo/unknown/20130326-2207-25784-4b9d7e15d3_900.jpg",
     "expo/usa/20130326-2207-25784-4b9d7e15d3_1800.jpg",
     "expo/usa/20130326-2207-25784-4b9d7e15d3_900.jpg",
     "expo/usa/20160916-1609-06444-6a9e325351_1800.jpg",

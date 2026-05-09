@@ -110,6 +110,17 @@
   const countPhotos = (data) => Object.values(data || {})
     .reduce((sum, collection) => sum + (collection.photos?.length || 0), 0);
 
+  const collectionLabelForPhoto = (photoId) => {
+    const id = String(photoId || "");
+    if (!id) return "";
+    for (const [key, collection] of Object.entries(collections || {})) {
+      if ((collection.photos || []).some((photo) => photo.id === id)) {
+        return collection.title || key;
+      }
+    }
+    return "";
+  };
+
   const escapeHtml = (value) => String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -312,11 +323,11 @@
     if (logSummary?.scan) {
       rows.push(["Selected", `${logSummary.scan.match[3]} of ${logSummary.scan.match[1]} scanned`]);
     }
-    if (logSummary?.started) {
+    if (logSummary?.started && !logSummary?.upload) {
       rows.push(["Current photo", logSummary.started.match[2]]);
       rows.push(["Collection", logSummary.started.match[3]]);
     }
-    if (logSummary?.imported) {
+    if (logSummary?.imported && !logSummary?.upload) {
       rows.push(["Rendered photos", logSummary.imported.match[1]]);
       rows.push(["Last rendered", logSummary.imported.match[2]]);
       rows.push(["Collection", logSummary.imported.match[3]]);
@@ -324,13 +335,15 @@
     }
     if (logSummary?.upload) {
       rows.push(["Backfilled photos", logSummary.upload.match[1]]);
-      rows.push(["Last photo", logSummary.upload.match[2]]);
+      const lastPhotoId = logSummary.upload.match[2];
+      rows.push(["Last photo", lastPhotoId]);
+      rows.push(["Collection", collectionLabelForPhoto(lastPhotoId) || "unknown"]);
       rows.push(["Objects last", logSummary.upload.match[3]]);
     }
     if (logSummary?.manifest) rows.push(["Render triplets", logSummary.manifest.match[1]]);
     if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
     if (logSummary?.deleted) rows.push(["Discarded deleted", `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`]);
-    if (logSummary?.error) rows.push(["Latest error", logSummary.error.line]);
+    if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) rows.push(["Latest error", logSummary.error.line]);
     else if (logSummary?.latest && !active) rows.push(["Latest log", logSummary.latest]);
     if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
     if (!rows.length) rows.push(["State", latest.state || "queued"]);

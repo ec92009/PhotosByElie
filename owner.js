@@ -121,6 +121,21 @@
     return "";
   };
 
+  const photoEntryForId = (photoId) => {
+    const id = String(photoId || "");
+    if (!id) return null;
+    for (const [key, collection] of Object.entries(collections || {})) {
+      const photo = (collection.photos || []).find((candidate) => candidate.id === id);
+      if (photo) return { collectionKey: key, collection, photo };
+    }
+    return null;
+  };
+
+  const detailHrefForPhoto = (photoId) => {
+    const href = `./photo.html?id=${encodeURIComponent(photoId)}`;
+    return window.photosByElieVersionedHref?.(href) || href;
+  };
+
   const escapeHtml = (value) => String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -336,6 +351,7 @@
       setText(r2Summary, "Last R2 coverage repair finished.");
     }
     const rows = [];
+    let lastPhotoId = "";
     if (logSummary?.started && !logSummary?.upload) {
       rows.push(["Current photo", logSummary.started.match[2]]);
       rows.push(["Collection", logSummary.started.match[3]]);
@@ -347,7 +363,7 @@
       rows.push(["Private renders", logSummary.imported.match[5]]);
     }
     if (logSummary?.upload) {
-      const lastPhotoId = logSummary.upload.match[2];
+      lastPhotoId = logSummary.upload.match[2];
       rows.push(["Last photo", lastPhotoId]);
       rows.push(["Collection", collectionLabelForPhoto(lastPhotoId) || "unknown"]);
     }
@@ -364,6 +380,43 @@
         <dd>${escapeHtml(value)}</dd>
       </div>
     `).join(""));
+    renderR2PhotoPreview(lastPhotoId);
+  };
+
+  const renderR2PhotoPreview = (photoId) => {
+    if (!r2Card || !r2Counts) return;
+    const existing = r2Card.querySelector("[data-owner-r2-preview]");
+    const entry = photoEntryForId(photoId);
+    if (!entry) {
+      existing?.remove();
+      return;
+    }
+    const { collection, photo } = entry;
+    const src = photo.gallerySrc || photo.imageSrc || "";
+    if (!src) {
+      existing?.remove();
+      return;
+    }
+    const title = photo.title || photo.id;
+    const meta = [
+      collection.title || collectionLabelForPhoto(photo.id) || "Collection",
+      photo.megapixels ? `${photo.megapixels} MP` : "",
+      photo.full || "",
+    ].filter(Boolean).join(" · ");
+    const html = `
+      <a class="owner-r2-preview" data-owner-r2-preview href="${escapeHtml(detailHrefForPhoto(photo.id))}">
+        <span class="owner-r2-preview-image">
+          <img src="${escapeHtml(src)}" alt="${escapeHtml(title)}" loading="lazy"/>
+        </span>
+        <span class="owner-r2-preview-copy">
+          <span>Last photo</span>
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml(meta)}</small>
+        </span>
+      </a>
+    `;
+    if (existing) existing.outerHTML = html;
+    else r2Counts.insertAdjacentHTML("afterend", html);
   };
 
   const loadR2RepairLog = async (task) => {
@@ -379,8 +432,10 @@
       if (r2RepairLogToken !== token) return;
       r2RepairLogTaskId = task.id;
       r2RepairLogSummary = summarizeR2RepairLog(text);
+      if (task.state === "queued" || task.state === "running") {
+        await loadR2Coverage();
+      }
       renderR2RepairProgress(task, r2RepairLogSummary);
-      renderR2Coverage(window.photosByElieR2Coverage || null);
     } catch {
       renderR2RepairProgress(task);
     }

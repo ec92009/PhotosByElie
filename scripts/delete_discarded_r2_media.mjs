@@ -169,6 +169,7 @@ for (const id of hiddenIds) {
   publicKeys.add(`expo/${id}_900.jpg`);
   publicKeys.add(`expo/${id}_1800.jpg`);
 }
+const keyPhotoId = (key) => String(key || "").split("/")[1] || "";
 
 const [masterKeys, renderKeys] = await Promise.all([
   listPrefix(privateBucket, "masters/"),
@@ -183,8 +184,8 @@ if (!dryRun) {
   const privateInventory = await readJson(privateInventoryPath, null);
   if (privateInventory && typeof privateInventory === "object") {
     const deletedPrivateSet = new Set(deletedPrivate);
-    privateInventory.masterKeys = (privateInventory.masterKeys || []).filter((key) => !deletedPrivateSet.has(key));
-    privateInventory.renderKeys = (privateInventory.renderKeys || []).filter((key) => !deletedPrivateSet.has(key));
+    privateInventory.masterKeys = (privateInventory.masterKeys || []).filter((key) => !deletedPrivateSet.has(key) && !hiddenIds.has(keyPhotoId(key)));
+    privateInventory.renderKeys = (privateInventory.renderKeys || []).filter((key) => !deletedPrivateSet.has(key) && !hiddenIds.has(keyPhotoId(key)));
     privateInventory.generatedAt = new Date().toISOString();
     await writeJson(privateInventoryPath, privateInventory);
   }

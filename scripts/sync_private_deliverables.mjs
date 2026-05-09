@@ -30,6 +30,7 @@ const manifestPath = valueFor("--manifest", "assets/private-delivery-manifest.js
 const statePath = valueFor("--state-file", ".review-logs/private-deliverable-sync-state.jsonl");
 const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-public-preview-ids.json");
 const privateInventoryPath = valueFor("--private-inventory", ".review-logs/r2-private-inventory.json");
+const hiddenBlacklistPath = valueFor("--hidden-blacklist", "assets/hidden/hidden-blacklist.json");
 const sourceRootArgs = args.flatMap((arg, index) => arg === "--source-root" ? [args[index + 1]] : []).filter(Boolean);
 
 const firstEnv = (...names) => names.map((name) => process.env[name]).find(Boolean) || "";
@@ -227,6 +228,7 @@ const renderKeyFor = (photo, source, productId) => (
   `renders/${photo.id}/${safeName(basename(source.path), "source")}-${productId}.jpg`
 );
 const masterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
+const keyPhotoId = (key) => String(key || "").split("/")[1] || "";
 const contentTypeFor = (filePath) => {
   const extension = path.extname(filePath).toLowerCase();
   if ([".jpg", ".jpeg"].includes(extension)) return "image/jpeg";
@@ -262,26 +264,38 @@ const loadPrivateInventory = async () => {
   return inventory;
 };
 
-const rememberInventoryKey = (inventory, kind, key) => {
+const loadHiddenPhotoIds = async () => {
+  const payload = await readJson(hiddenBlacklistPath, {});
+  const ids = Array.isArray(payload.photo_ids) ? payload.photo_ids : [];
+  return new Set(ids.filter((id) => typeof id === "string" && id));
+};
+
+const filterHiddenInventoryKeys = (inventory, hiddenIds) => {
+  inventory.masterKeys = (inventory.masterKeys || []).filter((key) => !hiddenIds.has(keyPhotoId(key)));
+  inventory.renderKeys = (inventory.renderKeys || []).filter((key) => !hiddenIds.has(keyPhotoId(key)));
+};
+
+const rememberInventoryKey = (inventory, hiddenIds, kind, key) => {
+  if (hiddenIds.has(keyPhotoId(key))) return;
   const field = kind === "master" ? "masterKeys" : "renderKeys";
   if (!Array.isArray(inventory[field])) inventory[field] = [];
   if (key && !inventory[field].includes(key)) inventory[field].push(key);
 };
 
-const hydrateInventoryFromManifest = (inventory, manifest) => {
+const hydrateInventoryFromManifest = (inventory, hiddenIds, manifest) => {
   const records = manifest?.records || {};
   if (!records || typeof records !== "object") return;
   for (const record of Object.values(records)) {
     if (!record || typeof record !== "object") continue;
     const master = record.privateMaster || {};
-    if (master.present && master.key) rememberInventoryKey(inventory, "master", master.key);
+    if (master.present && master.key) rememberInventoryKey(inventory, hiddenIds, "master", master.key);
     for (const render of Object.values(record.privateRenders || {})) {
-      if (render?.present && render.key) rememberInventoryKey(inventory, "render", render.key);
+      if (render?.present && render.key) rememberInventoryKey(inventory, hiddenIds, "render", render.key);
     }
   }
 };
 
-const hydrateInventoryFromState = async (inventory) => {
+const hydrateInventoryFromState = async (inventory, hiddenIds) => {
   let text = "";
   try {
     text = await fs.readFile(fullPath(statePath), "utf8");
@@ -298,8 +312,8 @@ const hydrateInventoryFromState = async (inventory) => {
     }
     if (row.status !== "uploaded") continue;
     for (const key of row.keys || []) {
-      if (String(key).startsWith("masters/")) rememberInventoryKey(inventory, "master", key);
-      if (String(key).startsWith("renders/")) rememberInventoryKey(inventory, "render", key);
+      if (String(key).startsWith("masters/")) rememberInventoryKey(inventory, hiddenIds, "master", key);
+      if (String(key).startsWith("renders/")) rememberInventoryKey(inventory, hiddenIds, "render", key);
     }
   }
 };
@@ -375,10 +389,13 @@ const maybeCommit = async (processedCount, final = false) => {
   if (push) await run("git", ["push", "origin", "main"], { mutate: true });
 };
 
+const hiddenIds = await loadHiddenPhotoIds();
 const inventory = await loadPrivateInventory();
+filterHiddenInventoryKeys(inventory, hiddenIds);
 const previousManifest = await readJson(manifestPath, null);
-hydrateInventoryFromManifest(inventory, previousManifest);
-await hydrateInventoryFromState(inventory);
+hydrateInventoryFromManifest(inventory, hiddenIds, previousManifest);
+await hydrateInventoryFromState(inventory, hiddenIds);
+filterHiddenInventoryKeys(inventory, hiddenIds);
 inventory.generatedAt = new Date().toISOString();
 await writeJson(privateInventoryPath, inventory);
 const publicIdsPayload = await readJson(publicPreviewIdsPath, {});
@@ -391,6 +408,7 @@ if (refreshOnly) {
 const processed = [];
 const failed = [];
 for (const record of Object.values(manifest.records)) {
+  if (hiddenIds.has(record.id)) continue;
   if (record.privateMaster.present && Object.values(record.privateRenders).every((item) => item.present)) continue;
   const photo = catalogById.get(record.id);
   const source = (photo?.sourceFiles || [])[0] || {};
@@ -408,7 +426,7 @@ for (const record of Object.values(manifest.records)) {
       const key = masterKeyFor(photo, source);
       if (!dryRun) {
         await s3Request("PUT", key, await fs.readFile(localSource), contentTypeFor(localSource));
-        rememberInventoryKey(inventory, "master", key);
+        rememberInventoryKey(inventory, hiddenIds, "master", key);
         record.privateMaster.present = true;
         record.privateMaster.key = key;
       }
@@ -422,7 +440,7 @@ for (const record of Object.values(manifest.records)) {
       const key = renderKeyFor(photo, source, productId);
       if (!dryRun) {
         await s3Request("PUT", key, await fs.readFile(outputPath), "image/jpeg");
-        rememberInventoryKey(inventory, "render", key);
+        rememberInventoryKey(inventory, hiddenIds, "render", key);
         record.privateRenders[productId].present = true;
         record.privateRenders[productId].key = key;
       }

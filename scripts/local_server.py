@@ -1109,12 +1109,9 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     ]
     missing_rows = [row for row in rows if not row["ok"]]
     if missing_rows:
-        recommendation = (
-            "Coverage does not match policy. Run the lock-guarded cloud media sweep: it deletes discarded R2 objects, "
-            "imports current Saturn Camera and Leonardo sources, uploads public previews and private masters, renders missing 1/3/6 MP JPG deliverables, validates, commits, and pushes."
-        )
+        recommendation = "Missing coverage. Run the lock-guarded cloud media sweep."
     else:
-        recommendation = "Coverage matches policy for the current catalog manifest. No R2 repair action is needed."
+        recommendation = "Coverage matches policy for the current catalog manifest."
     return {
         "updatedAt": private_manifest.get("updatedAt") if isinstance(private_manifest, dict) else None,
         "catalogPhotos": expected,
@@ -1124,7 +1121,7 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
         "recommendation": recommendation,
         "fixAvailable": True,
         "fixCommand": "zsh -lc './scripts/run_cloud_media_sweep.zsh --push'",
-        "note": "Counts come from tracked R2 coverage manifests; refresh with the sweep if you need a live inventory pass.",
+        "note": "The sweep repairs R2 and refreshes tracked manifests.",
     }
 
 

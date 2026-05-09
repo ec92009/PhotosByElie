@@ -1,0 +1,52 @@
+{
+  "schema": "photosbyelie.storage-estimate.v1",
+  "updatedAt": "2026-05-09T23:05:56.708Z",
+  "buckets": {
+    "public": "photosbyelie-public",
+    "private": "photosbyelie-private"
+  },
+  "catalog": {
+    "photos": 10133,
+    "sourceBytes": 101107349989
+  },
+  "current": {
+    "publicPreviewObjects": 23186,
+    "publicPreviewBytes": 6988558424,
+    "privateMasterObjects": 5820,
+    "privateMasterBytes": 94992722693,
+    "privateRenderObjects": 17376,
+    "privateRenderBytes": 14585449009,
+    "totalBytes": 116566730126
+  },
+  "blocked": {
+    "photoIds": 4359,
+    "publicPreviewObjects": 17438,
+    "publicPreviewBytesEstimate": 5256037341,
+    "privateMasterObjects": 4341,
+    "privateMasterBytes": 6197086805,
+    "privateRenderObjects": 13023,
+    "privateRenderBytesEstimate": 10931532139,
+    "totalBytesEstimate": 22384656285
+  },
+  "noCleanup": {
+    "totalBytesEstimate": 138951386411
+  },
+  "pricing": {
+    "provider": "Cloudflare R2 Standard storage",
+    "sourceUrl": "https://developers.cloudflare.com/r2/pricing/",
+    "storageUsdPerGbMonth": 0.015,
+    "freeTierGbMonth": 10,
+    "notes": [
+      "Storage only; excludes Class A/Class B request operations.",
+      "R2 billing uses GB-month, not GiB-month. Displayed byte totals use binary units.",
+      "Current R2 object bytes are read from live bucket listings. Blocked/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted."
+    ]
+  },
+  "cost": {
+    "currentMonthlyUsd": 1.7485,
+    "currentMonthlyUsdAfterFreeTier": 1.5985,
+    "noCleanupMonthlyUsdEstimate": 2.0843,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.9343,
+    "avoidedMonthlyUsdEstimate": 0.3358
+  }
+}

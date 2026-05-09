@@ -165,6 +165,14 @@ The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media fro
 
 The Owner dashboard Fix it button starts this same wrapper through the local helper server when the tracked R2 coverage counts do not match policy.
 
+Refresh the Owner storage/cost estimate after a large import, backfill, or blocked-media cleanup:
+
+```bash
+zsh -lc 'node scripts/write_storage_estimate.mjs'
+```
+
+The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted blocked previews/renders are estimated from current average object sizes, while blocked master bytes come from the hidden catalog source metadata.
+
 Dry-run the currently publishable Expo previews:
 
 ```bash

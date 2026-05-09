@@ -100,6 +100,9 @@ done_phase private
 phase discard-final "Final discard cleanup"
 node scripts/delete_discarded_r2_media.mjs --delete --request-timeout-ms 180000 --retries 4
 done_phase discard-final
+phase storage "Refresh storage estimate"
+node scripts/write_storage_estimate.mjs
+done_phase storage
 phase test "Run tests"
 npm test
 done_phase test
@@ -113,12 +116,14 @@ git add \
   assets/expo-manifest.json \
   assets/media-sidecar.json \
   assets/private-delivery-manifest.json \
+  assets/storage-estimate.json \
   photos-data.js \
   worker/photos-catalog.generated.mjs \
   scripts/build_lightroom_thumbnails.py \
   scripts/delete_discarded_r2_media.mjs \
   scripts/run_cloud_media_sweep.zsh \
   scripts/sync_private_deliverables.mjs \
+  scripts/write_storage_estimate.mjs \
   scripts/write_worker_catalog.mjs
 
 if ! git diff --cached --quiet; then

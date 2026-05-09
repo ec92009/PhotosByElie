@@ -30,6 +30,7 @@
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
   const productSettings = window.photosByElieProductSettings;
+  let storageEstimate = null;
   let r2PollTimer = null;
   let r2RepairLogToken = "";
   let r2RepairActive = false;
@@ -59,6 +60,7 @@
     ["sidecar", "Write media sidecar"],
     ["private", "Backfill private JPGs"],
     ["discard-final", "Final discard cleanup"],
+    ["storage", "Refresh storage estimate"],
     ["test", "Run tests"],
     ["validate", "Validate publish"],
     ["commit", "Commit and push"],
@@ -145,7 +147,7 @@
   const formatBytes = (value) => {
     const bytes = Number(value || 0);
     if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-    const units = ["B", "KB", "MB", "GB"];
+    const units = ["B", "KB", "MB", "GB", "TB"];
     let size = bytes;
     let unitIndex = 0;
     while (size >= 1024 && unitIndex < units.length - 1) {
@@ -153,6 +155,13 @@
       unitIndex += 1;
     }
     return `${size >= 10 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
+  };
+
+  const formatUsdMonthly = (value) => {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount) || amount <= 0) return "$0/mo";
+    if (amount < 0.01) return "<$0.01/mo";
+    return `$${amount.toFixed(2)}/mo`;
   };
 
   const allUnknownPhotos = () => {
@@ -188,12 +197,38 @@
       ["Unknown loaded", queue.photos.length],
       ["Unknown assigned", queue.assigned.length],
     ];
+    if (storageEstimate) {
+      const currentBytes = Number(storageEstimate.current?.totalBytes || 0);
+      const noCleanupBytes = Number(storageEstimate.noCleanup?.totalBytesEstimate || 0);
+      const avoidedBytes = Number(storageEstimate.blocked?.totalBytesEstimate || Math.max(0, noCleanupBytes - currentBytes));
+      counts.push(
+        ["R2 storage used", formatBytes(currentBytes)],
+        ["Storage cost now", formatUsdMonthly(storageEstimate.cost?.currentMonthlyUsdAfterFreeTier)],
+        ["If no cleanup", `${formatBytes(noCleanupBytes)} / ${formatUsdMonthly(storageEstimate.cost?.noCleanupMonthlyUsdEstimateAfterFreeTier)}`],
+        ["Blocked storage avoided", `${formatBytes(avoidedBytes)} / ${formatUsdMonthly(storageEstimate.cost?.avoidedMonthlyUsdEstimate)}`],
+        ["R2 storage rate", `$${storageEstimate.pricing?.storageUsdPerGbMonth || 0.015}/GB-month`],
+      );
+    } else {
+      counts.push(["R2 storage estimate", "loading"]);
+    }
     countsRoot.innerHTML = counts.map(([label, value]) => `
       <div>
         <dt>${label}</dt>
         <dd>${value}</dd>
       </div>
     `).join("");
+  };
+
+  const loadStorageEstimate = async () => {
+    try {
+      const href = window.photosByElieVersionedHref?.("./assets/storage-estimate.json") || "./assets/storage-estimate.json";
+      const response = await fetch(href, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Storage estimate ${response.status}`);
+      storageEstimate = await response.json();
+    } catch {
+      storageEstimate = null;
+    }
+    renderCounts();
   };
 
   const logUrlForTask = (task) => {
@@ -605,6 +640,7 @@
     renderAuthState(event.detail || ownerAuth?.state);
   });
 
+  loadStorageEstimate();
   ownerAuth?.refresh?.().then(renderAuthState);
 
   if (physicalProductsToggle) {

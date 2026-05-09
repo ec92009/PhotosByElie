@@ -31,6 +31,8 @@
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
   let r2RepairLogToken = "";
+  let r2RepairActive = false;
+  let r2CoverageOk = false;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -147,6 +149,12 @@
     return logName ? `/.review-logs/${encodeURIComponent(logName)}` : "";
   };
 
+  const syncR2FixButton = () => {
+    if (!r2FixButton) return;
+    r2FixButton.disabled = r2CoverageOk || r2RepairActive;
+    r2FixButton.textContent = r2RepairActive ? "Repair running" : "Fix it";
+  };
+
   const summarizeR2RepairLog = (text = "") => {
     const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     const latest = lines.at(-1) || "";
@@ -240,6 +248,8 @@
     if (!latest) {
       r2Card.hidden = true;
       r2Counts.innerHTML = "";
+      r2RepairActive = false;
+      syncR2FixButton();
       return;
     }
     r2Card.hidden = false;
@@ -249,6 +259,8 @@
     const active = latest.state === "queued" || latest.state === "running";
     const isDelete = latest.operation === "delete";
     const isRepair = latest.operation === "repair";
+    r2RepairActive = isRepair && active;
+    syncR2FixButton();
     const activeVerb = isRepair ? "Repairing" : isDelete ? "Deleting" : "Uploading";
     const noun = isRepair ? "repair" : isDelete ? "delete" : "upload";
     if (isRepair) {
@@ -283,6 +295,7 @@
   const renderR2Coverage = (coverage = null) => {
     if (!r2CoverageCard || !r2CoverageSummary || !r2CoverageCounts || !r2CoverageNote) return;
     if (!coverage) {
+      r2CoverageOk = false;
       r2CoverageSummary.textContent = "R2 coverage is unavailable.";
       r2CoverageCounts.innerHTML = "";
       r2CoverageNote.textContent = "";
@@ -300,9 +313,10 @@
       </div>
     `).join("");
     r2CoverageNote.textContent = [coverage.recommendation, coverage.note].filter(Boolean).join(" ");
+    r2CoverageOk = coverage.ok;
     if (r2FixButton) {
-      r2FixButton.disabled = coverage.ok;
       r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
+      syncR2FixButton();
     }
   };
 
@@ -454,10 +468,14 @@
       const response = await fetch("/__photosbyelie/r2-fix", { method: "POST" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start R2 repair.");
+      r2RepairActive = true;
+      syncR2FixButton();
       setStatus("Cloud media sweep repair started.");
       renderR2Progress([payload.task]);
       loadR2Progress();
     } catch (error) {
+      r2RepairActive = false;
+      syncR2FixButton();
       setStatus(error?.message || "Could not start R2 repair.");
       loadR2Coverage();
     }

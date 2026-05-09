@@ -4,6 +4,7 @@ const galleryRoot = document.querySelector("[data-gallery-root]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
 const hiddenActions = window.photosByElieHiddenActions;
 const reserveStore = window.photosByElieReserve;
+const likedStore = window.photosByElieLiked;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
@@ -37,6 +38,7 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const localizedCollectionTitle = () => t(`collection.${galleryKey}`) || gallery?.title || "";
+const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
 const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
   if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
@@ -435,9 +437,30 @@ const photoAspectRatioStyle = (photo) => {
   return ` style="--photo-aspect-ratio:${dimensions.width} / ${dimensions.height}"`;
 };
 
+const updateGalleryLikeButtons = () => {
+  const likedIds = likedPhotoIds();
+  galleryRoot?.querySelectorAll("[data-gallery-like]").forEach((button) => {
+    const isLiked = likedIds.has(button.dataset.photoId);
+    button.classList.toggle("is-liked", isLiked);
+    button.setAttribute("aria-pressed", String(isLiked));
+    button.setAttribute("aria-label", t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo"));
+  });
+};
+
+const toggleGalleryLike = (photo) => {
+  if (!photo?.id || !likedStore) return;
+  if (likedStore.has?.(photo.id)) {
+    likedStore.remove(photo.id);
+  } else {
+    likedStore.add(photo.id);
+  }
+  updateGalleryLikeButtons();
+};
+
 const renderGallery = () => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
+  const likedIds = likedPhotoIds();
   writeDetailSequenceContext(photos);
   if (!photos.length) {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
@@ -465,6 +488,7 @@ const renderGallery = () => {
     const href = versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
     const hrefAttr = escapeHtml(href);
     const title = escapeHtml(photo.title);
+    const isLiked = likedIds.has(photo.id);
     return `
     <article
       class="mock-photo-card"
@@ -483,10 +507,30 @@ const renderGallery = () => {
         ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : ""}
         ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       </a>
+      ${likedStore ? `
+        <button
+          class="gallery-like-toggle${isLiked ? " is-liked" : ""}"
+          type="button"
+          data-gallery-like
+          data-photo-id="${escapeHtml(photo.id)}"
+          aria-label="${escapeHtml(t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo"))}"
+          aria-pressed="${isLiked ? "true" : "false"}"
+        >
+          <span aria-hidden="true"></span>
+        </button>
+      ` : ""}
       <a class="mock-photo-caption" href="${hrefAttr}" data-photo-caption>${title}</a>
     </article>
   `;
   }).join("");
+  galleryRoot.querySelectorAll("[data-gallery-like]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const photo = photos.find((candidate) => candidate.id === button.dataset.photoId);
+      toggleGalleryLike(photo);
+    });
+  });
   if (localModerationEnabled) {
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {
@@ -549,11 +593,21 @@ if (galleryRoot && gallery) {
       <button type="button" data-gallery-fit-mode="fit" aria-pressed="true" data-i18n="gallery.fit">Fit</button>
       <button type="button" data-gallery-fit-mode="fill" aria-pressed="false" data-i18n="gallery.fill">Fill</button>
     `;
-    viewControls.append(densityControl, fitControl);
+    const topButton = document.createElement("button");
+    topButton.className = "gallery-top-button";
+    topButton.type = "button";
+    topButton.dataset.galleryBackToTop = "";
+    topButton.setAttribute("aria-label", t("a11y.back_to_top"));
+    topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
+    viewControls.append(densityControl, topButton, fitControl);
     document.body.append(viewControls);
     densityInput = densityControl.querySelector("[data-gallery-density]");
     densityValue = densityControl.querySelector("[data-gallery-density-value]");
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
+    topButton.addEventListener("click", () => {
+      const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    });
     densityInput.addEventListener("input", () => {
       localStorage.setItem(densityKey, String(clampDensityColumns(densityInput.value)));
       applyGalleryDensity();
@@ -681,4 +735,5 @@ if (galleryRoot && gallery) {
       renderGallery();
     }
   });
+  window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
 }

@@ -238,16 +238,22 @@
   };
 
   const privateBackfillProgress = (logSummary) => {
+    const privateRows = (window.photosByElieR2Coverage?.rows || [])
+      .filter((row) => String(row.label || "").startsWith("Private JPG"));
     const uploaded = Number(logSummary?.upload?.match?.[1] || 0);
-    const missing = Math.max(0, ...((window.photosByElieR2Coverage?.rows || [])
-      .filter((row) => String(row.label || "").startsWith("Private JPG"))
-      .map((row) => Number(row.missing || 0))));
-    const total = uploaded + missing;
-    const percent = total ? Math.min(99, Math.round((uploaded / total) * 100)) : (uploaded ? 1 : 0);
+    const total = Math.max(
+      0,
+      Number(window.photosByElieR2Coverage?.catalogPhotos || 0),
+      countPhotos(collections),
+      ...privateRows.map((row) => Number(row.expected || 0)),
+    );
+    const complete = privateRows.length ? Math.min(...privateRows.map((row) => Number(row.present || 0))) : uploaded;
+    const current = Number.isFinite(complete) && complete >= 0 ? complete : uploaded;
+    const percent = total ? Math.min(99, Math.round((current / total) * 100)) : (uploaded ? 1 : 0);
     const detail = total
-      ? `${uploaded.toLocaleString()} of ${total.toLocaleString()}`
+      ? `${current.toLocaleString()} of ${total.toLocaleString()}`
       : `${uploaded.toLocaleString()} photos`;
-    return { percent: Math.max(uploaded ? 1 : 0, percent), detail };
+    return { percent: Math.max(current || uploaded ? 1 : 0, percent), detail };
   };
 
   const phaseProgress = (phase, logSummary, failed) => {
@@ -447,25 +453,17 @@
       ? `Current catalog policy is satisfied for ${formatCount(coverage.catalogPhotos)} photos.`
       : `Coverage needs repair for ${formatCount(coverage.catalogPhotos)} catalog photos.`;
     window.photosByElieR2Coverage = coverage;
-    const observedRenderPhotos = Math.max(
-      Number(r2RepairLogSummary?.upload?.match?.[1] || 0),
-      Number(r2RepairLogSummary?.imported?.match?.[1] || 0),
-    );
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
       const isPrivateJpg = row.label.startsWith("Private JPG");
       const isPrivateMasters = row.label === "Private masters";
-      const observed = isPrivateJpg ? observedRenderPhotos : 0;
-      const present = isPrivateJpg ? Math.min(row.expected, row.present + observed) : row.present;
-      const missing = Math.max(0, row.missing - observed);
       const detail = [
-        missing ? `${formatCount(missing)} missing` : "complete",
+        row.missing ? `${formatCount(row.missing)} missing` : "complete",
         row.extra ? `${formatCount(row.extra)} ${isPrivateMasters ? "hidden" : "extra"}` : "",
-        observed ? `${formatCount(observed)} observed this run` : "",
       ].filter(Boolean).join(", ");
       return `
         <div class="${row.ok ? "is-ok" : "needs-work"}">
           <dt>${escapeHtml(row.label)}</dt>
-          <dd>${formatCount(present)} / ${formatCount(row.expected)}</dd>
+          <dd>${formatCount(row.present)} / ${formatCount(row.expected)}</dd>
           <small>${escapeHtml(detail)}</small>
         </div>
       `;

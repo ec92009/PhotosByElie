@@ -4,7 +4,7 @@ Last updated: 2026-05-09
 
 ## Current Facts
 
-- Local visible build: `v70.20`.
+- Local visible build: `v70.21`.
 - Public catalog validates in external media mode with `10,133` photos: France `328`, USA `162`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless hidden/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -17,13 +17,15 @@ Last updated: 2026-05-09
 - Hidden/discarded photos are tombstoned. Their R2 media should be deleted for cost control, while the tombstone stays tracked so Saturn imports do not resurrect them.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints now require an authenticated owner session. `scripts/local_server.py` reads `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD`, or prints a one-time code for the current server run.
-- Current R2 coverage panel shows `10,151` private master IDs for `10,133` catalog photos. The `18` overage is known hidden/discarded masters and is labeled as hidden, not unknown extra work. Private JPG 1/3/6 MP coverage is actively backfilling against the fixed `10,133` catalog denominator; public low/high preview coverage is complete.
+- Current R2 coverage panel shows `10,151` private master IDs for `10,133` catalog photos. The `18` overage is known hidden/discarded masters and is labeled as hidden, not unknown extra work. Private JPG 1/3/6 MP coverage has partially backfilled against the fixed `10,133` catalog denominator; public low/high preview coverage is complete.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
+- Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally remains English.
 
 ## Numbered Backlog
 
-1. **Let the active cloud media sweep finish.**
-   - Confirm the manual run finishes without colliding with the scheduled 03:30 automation.
+1. **Resume and finish the cloud media sweep.**
+   - The latest manual run stopped on an R2 connection timeout during private JPG backfill after thousands of uploads.
+   - Restart through the Owner Fix it button or `zsh -lc './scripts/run_cloud_media_sweep.zsh --push'`; the lock wrapper prevents concurrent runs.
    - Confirm it commits/pushes final manifest changes.
    - Record final counts for private render triplets, skipped discarded photos, deleted hidden masters, tests, validation, and failures.
 
@@ -78,6 +80,7 @@ Last updated: 2026-05-09
 
 10. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
+   - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner hide/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Keep public and localhost-only behaviors separate in tests.
 

@@ -50,6 +50,33 @@ const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+const productLabel = (option) => {
+  const keyById = {
+    full: "product.full",
+    "jpg-6mp": "product.jpg_6",
+    "jpg-3mp": "product.jpg_3",
+    "jpg-1mp": "product.jpg_1",
+  };
+  return t(keyById[option?.id] || (option?.type === "print" ? "product.print" : ""), {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
+};
+const productDetail = (option) => {
+  const detailKeyById = {
+    "jpg-6mp": "product.jpg_6_detail",
+    "jpg-3mp": "product.jpg_3_detail",
+    "jpg-1mp": "product.jpg_1_detail",
+  };
+  if (detailKeyById[option?.id]) return t(detailKeyById[option.id]);
+  if (option?.type === "print") return t("product.print_detail");
+  const source = window.photosByElieOriginalSize?.(photo) || "";
+  if (source) return t("product.original", { source });
+  return t("product.full_detail");
+};
+const frameLabel = (frame) => ({
+  none: t("product.no_frame"),
+  white: t("product.white_frame"),
+  black: t("product.black_frame"),
+}[frame?.id] || frame?.label || "");
 if (window.photosByElieIsPublicHidden?.(photo)) {
   window.location.replace(versionedHref(`./${collectionKey}.html`));
   return;
@@ -100,10 +127,10 @@ const renderDetailShortcutHint = () => {
     ]
     : [];
   detailShortcutHint.innerHTML = [
-    "Shortcuts:",
-    `${detailShortcutKey("L")} like`,
-    `${detailShortcutKey("Left/Right")} previous/next`,
-    `${detailShortcutKey("Double-click")} full screen`,
+    t("detail.shortcuts"),
+    `${detailShortcutKey("L")} ${t("detail.like")}`,
+    `${detailShortcutKey("Left/Right")} ${t("detail.prev_next")}`,
+    `${detailShortcutKey("Double-click")} ${t("detail.full_screen")}`,
     ...ownerShortcuts
   ].join(" <span aria-hidden=\"true\">|</span> ");
   detailShortcutHint.hidden = false;
@@ -230,8 +257,8 @@ if (!photo) {
   document.title = `Photos By Elie | ${collection.title}`;
   document.querySelector("[data-nav-current]").textContent = collection.title;
   document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
-  document.querySelector("[data-photo-title]").textContent = "Archive reset in progress";
-  document.querySelector("[data-photo-meta]").textContent = `${collection.title} / No published photos yet`;
+  document.querySelector("[data-photo-title]").textContent = t("detail.archive_reset_title");
+  document.querySelector("[data-photo-meta]").textContent = t("detail.no_published_meta", { collection: collection.title });
   document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
   document.querySelector("[data-resolution-list]").innerHTML = "";
@@ -240,8 +267,8 @@ if (!photo) {
   metadataRoot.hidden = true;
   const preview = document.querySelector("[data-photo-preview]");
   preview.classList.add(collection.accent);
-  preview.querySelector("[data-photo-preview-title]").textContent = "No published photos yet";
-  if (status) status.textContent = "This gallery is being rebuilt from the Saturn archive.";
+  preview.querySelector("[data-photo-preview-title]").textContent = t("detail.no_published");
+  if (status) status.textContent = t("detail.rebuilding");
 } else {
 if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id === photo.id) && navigateAfterHide()) {
   // The currently requested photo is locally suppressed, so move to the next visible one immediately.
@@ -254,7 +281,7 @@ document.querySelector("[data-photo-meta]").textContent = [
   collection.title,
   window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : photo.full,
   window.photosByElieVerifiedMegapixels && window.photosByElieVerifiedMegapixels(photo)
-    ? `${window.photosByElieVerifiedMegapixels(photo)} MP verified`
+    ? t("detail.mp_verified", { mp: window.photosByElieVerifiedMegapixels(photo) })
     : ""
 ].filter(Boolean).join(" / ");
 document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
@@ -272,14 +299,15 @@ const ensureDetailBottomActions = () => {
   const bottomActions = document.createElement("nav");
   bottomActions.className = "panel mobile-bottom-actions detail-bottom-actions";
   bottomActions.dataset.detailBottomActions = "";
-  bottomActions.setAttribute("aria-label", "Bottom photo actions");
+  bottomActions.setAttribute("aria-label", t("a11y.bottom_photo_actions"));
   bottomActions.innerHTML = `
-    <a class="btn secondary" data-bottom-prev-photo href="./photo.html">Previous</a>
-    <a class="btn secondary" data-bottom-next-photo href="./photo.html">Next</a>
-    <a class="btn secondary" data-bottom-back-link href="./${collectionKey}.html">Back to gallery</a>
+    <a class="btn secondary" data-bottom-prev-photo href="./photo.html" data-i18n="common.previous">Previous</a>
+    <a class="btn secondary" data-bottom-next-photo href="./photo.html" data-i18n="common.next">Next</a>
+    <a class="btn secondary" data-bottom-back-link href="./${collectionKey}.html" data-i18n="common.back_to_gallery">Back to gallery</a>
   `;
   detailMain.append(bottomActions);
   window.photosByElieVersionInternalLinks?.(bottomActions);
+  window.photosByElieI18n?.apply?.();
 };
 
 const syncDetailBottomActions = () => {
@@ -445,7 +473,7 @@ const openFullscreenPreview = () => {
   fullscreenPreview = document.createElement("div");
   fullscreenPreview.className = "detail-fullscreen-preview";
   fullscreenPreview.setAttribute("role", "button");
-  fullscreenPreview.setAttribute("aria-label", `Close full screen preview for ${photo.title}`);
+  fullscreenPreview.setAttribute("aria-label", t("detail.open_full_screen", { title: photo.title }));
   fullscreenPreview.tabIndex = 0;
   const fullscreenImage = document.createElement("img");
   fullscreenImage.src = image;
@@ -478,12 +506,12 @@ const toggleLike = () => {
   if (likedStore.has(photo.id)) {
     likedStore.remove(photo.id);
     syncLikeToggle();
-    status.textContent = `${photo.title} removed from liked photos.`;
+    status.textContent = t("detail.removed_liked", { title: photo.title });
     return;
   }
   likedStore.add({ photoId: photo.id });
   syncLikeToggle();
-  status.textContent = `${photo.title} added to liked photos.`;
+  status.textContent = t("detail.added_liked", { title: photo.title });
 };
 
 if (likeToggle && likedStore) {
@@ -599,19 +627,19 @@ const printConfigMarkup = (option) => {
   return `
     <div class="print-config">
       <label class="print-quantity">
-        <span>Count</span>
+        <span>${t("detail.count")}</span>
         <span class="quantity-stepper">
-          <button type="button" data-print-step="${option.id}" data-step="-1" aria-label="Decrease ${window.photosByElieProductLabel?.(option) || option.label} count">-</button>
+          <button type="button" data-print-step="${option.id}" data-step="-1" aria-label="${t("product.decrease_count", { label: productLabel(option) })}">-</button>
           <input type="number" min="1" max="99" step="1" data-print-quantity="${option.id}" value="${quantity}"/>
-          <button type="button" data-print-step="${option.id}" data-step="1" aria-label="Increase ${window.photosByElieProductLabel?.(option) || option.label} count">+</button>
+          <button type="button" data-print-step="${option.id}" data-step="1" aria-label="${t("product.increase_count", { label: productLabel(option) })}">+</button>
         </span>
       </label>
       <fieldset class="frame-options">
-        <legend>Frame</legend>
+        <legend>${t("detail.frame")}</legend>
         ${frameOptions().map((frame) => `
           <label>
             <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-            <span>${frame.label}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+            <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
           </label>
         `).join("")}
       </fieldset>
@@ -624,8 +652,8 @@ document.querySelector("[data-resolution-list]").innerHTML = availableResolution
     <label class="product-choice">
       <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
       <span>
-        <strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>
-        <small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : option.detail}</small>
+        <strong>${productLabel(option)}</strong>
+        <small>${productDetail(option)}</small>
       </span>
       <b>$${option.price}</b>
     </label>
@@ -644,10 +672,10 @@ const syncSelectionToBasket = () => {
   });
   updateTotal();
   if (!options.length) {
-    status.textContent = existing ? `${photo.title} removed from basket.` : "No basket selections for this photo.";
+    status.textContent = existing ? t("detail.removed_basket", { title: photo.title }) : t("detail.no_selection");
     return;
   }
-  status.textContent = `${photo.title} order selections saved.`;
+  status.textContent = t("detail.saved", { title: photo.title });
 };
 
 document.querySelectorAll("[data-resolution]").forEach((input) => {

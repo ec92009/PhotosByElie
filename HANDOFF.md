@@ -7,7 +7,7 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v70.20`
+- Current visible build: `v70.21`
 - Public catalog: `10,133` eligible cloud-backed photos.
 - Local Owner actions require owner login. `scripts/local_server.py` reads `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD`, or prints a one-time code for that server run. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Owner now has an R2 coverage panel for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews. Fix it starts `scripts/run_cloud_media_sweep.zsh --push` through the local helper server and respects the shared sweep lock. The active progress bar uses the fixed catalog denominator, not a moving log-plus-manifest total.
@@ -19,6 +19,8 @@ Use this when moving work between Max, David, or the laptop.
   - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
 - Owner-discarded photos are tombstoned and must not be re-imported from Saturn. The current 18 private master overage is known hidden/discarded media, labeled as hidden in Owner, and should disappear after cleanup/inventory refresh.
+- The latest manual sweep made substantial private JPG progress, then stopped on an R2 connection timeout during private JPG backfill. Resume with the same lock-guarded wrapper rather than starting a second path.
+- Public pages use the shared language toggle for English/French/Spanish. Owner-only localhost pages are still English-only by design.
 
 ## First Commands On A Machine
 

@@ -7,48 +7,48 @@
   <meta name="description" content="Order status and delivery for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=70.20"/>
-  <link rel="stylesheet" href="./styles.css?v=70.20"/>
-  <link rel="stylesheet" href="./photos.css?v=70.20"/>
+  <link rel="stylesheet" href="./shared.css?v=70.21"/>
+  <link rel="stylesheet" href="./styles.css?v=70.21"/>
+  <link rel="stylesheet" href="./photos.css?v=70.21"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to content</a>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <header class="topbar shell">
-    <nav class="version-switch" aria-label="Site navigation">
+    <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
-      <a href="./">Photos</a> <span>|</span>
-      <a href="./basket.html">Basket</a> <span>|</span>
-      <a href="./liked.html">Liked</a>
+      <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
+      <a href="./basket.html" data-i18n="nav.basket">Basket</a> <span>|</span>
+      <a href="./liked.html" data-i18n="nav.liked">Liked</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v70.20</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v70.21</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
-      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
     </div>
   </header>
   <main id="main-content" class="shell">
     <section class="panel gallery-hero basket-hero">
-      <h1>Order</h1>
+      <h1 data-i18n="order.title">Order</h1>
       <div class="cta">
-        <a class="btn secondary" href="./basket.html">Basket</a>
-        <button class="btn secondary" type="button" data-order-refresh>Refresh</button>
+        <a class="btn secondary" href="./basket.html" data-i18n="nav.basket">Basket</a>
+        <button class="btn secondary" type="button" data-order-refresh data-i18n="common.refresh">Refresh</button>
       </div>
     </section>
     <section class="panel order-panel">
       <div class="order-status-card">
-        <p class="eyebrow">Checkout</p>
-        <h2 data-order-heading>Loading order</h2>
-        <p class="order-phase-label" data-order-phase>Checking order phase</p>
-        <p data-order-message>Checking the checkout Worker for order status.</p>
-        <div class="order-state-rail" aria-label="Order progress">
-          <span data-state-step="pending_payment"><b>1</b><strong>Payment</strong><small>Stripe</small></span>
-          <span data-state-step="preparing"><b>2</b><strong>Build ZIP</strong><small>Private R2</small></span>
-          <span data-state-step="ready"><b>3</b><strong>Download</strong><small>Ready</small></span>
+        <p class="eyebrow" data-i18n="order.checkout">Checkout</p>
+        <h2 data-order-heading data-i18n="order.loading">Loading order</h2>
+        <p class="order-phase-label" data-order-phase data-i18n="order.checking_phase">Checking order phase</p>
+        <p data-order-message data-i18n="order.checking_worker">Checking the checkout Worker for order status.</p>
+        <div class="order-state-rail" aria-label="Order progress" data-i18n-aria-label="a11y.order_progress">
+          <span data-state-step="pending_payment"><b>1</b><strong data-i18n="order.payment">Payment</strong><small data-i18n="order.stripe">Stripe</small></span>
+          <span data-state-step="preparing"><b>2</b><strong data-i18n="order.build_zip">Build ZIP</strong><small data-i18n="order.private_r2">Private R2</small></span>
+          <span data-state-step="ready"><b>3</b><strong data-i18n="order.download">Download</strong><small data-i18n="order.ready_label">Ready</small></span>
         </div>
-        <a class="btn primary" data-download-zip hidden>Download ZIP</a>
+        <a class="btn primary" data-download-zip data-i18n="order.download" hidden>Download</a>
         <button class="btn secondary" type="button" data-copy-zip-path hidden>Copy ZIP path</button>
       </div>
       <dl class="order-detail-grid" data-order-details></dl>
@@ -60,18 +60,18 @@
   <footer class="site-footer">
     <div class="shell">
       <p class="footer-note">© 2026 Photos By Elie</p>
-      <nav class="footer-nav" aria-label="Footer navigation">
+      <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
-        <a href="./#collections">Collections</a>
+        <a href="./#collections" data-i18n="nav.collections">Collections</a>
       </nav>
     </div>
   </footer>
 
-  <script src="./media-config.js?v=70.20"></script>
-  <script src="./photos.js?v=70.20"></script>
-  <script src="./owner-auth.js?v=70.20"></script>
-  <script src="./owner-tools.js?v=70.20"></script>
-  <script src="./site-version.js?v=70.20"></script>
-  <script src="./order.js?v=70.20"></script>
+  <script src="./media-config.js?v=70.21"></script>
+  <script src="./photos.js?v=70.21"></script>
+  <script src="./owner-auth.js?v=70.21"></script>
+  <script src="./owner-tools.js?v=70.21"></script>
+  <script src="./site-version.js?v=70.21"></script>
+  <script src="./order.js?v=70.21"></script>
 </body>
 </html>

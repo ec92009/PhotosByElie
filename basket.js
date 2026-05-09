@@ -26,7 +26,8 @@ const checkoutResult = document.querySelector("[data-checkout-result]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
-const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.20";
+const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "70.21";
+const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const workerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -48,18 +49,39 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 
 const productTypeLabel = (option) => ({
-  digital: "Digital asset",
-  print: "Print",
-  frame: "Frame"
-}[option?.type] || "Product");
+  digital: t("product.digital"),
+  print: t("product.print"),
+  frame: t("product.frame")
+}[option?.type] || t("product.product"));
 
 const productDetail = (photo, option) => {
-  if (!photo || !window.photosByElieProductDetail) return option.detail || "";
-  return window.photosByElieProductDetail(photo, option) || option.detail || "";
+  const detailKeyById = {
+    "jpg-6mp": "product.jpg_6_detail",
+    "jpg-3mp": "product.jpg_3_detail",
+    "jpg-1mp": "product.jpg_1_detail",
+  };
+  if (detailKeyById[option?.id]) return t(detailKeyById[option.id]);
+  if (option?.type === "print") return t("product.print_detail");
+  const source = photo ? window.photosByElieOriginalSize?.(photo) || "" : "";
+  if (source) return t("product.original", { source });
+  return t("product.full_detail");
 };
-const productLabel = (option) => window.photosByElieProductLabel?.(option) || option.label;
+const productLabel = (option) => {
+  const keyById = {
+    full: "product.full",
+    "jpg-6mp": "product.jpg_6",
+    "jpg-3mp": "product.jpg_3",
+    "jpg-1mp": "product.jpg_1",
+  };
+  return t(keyById[option?.id] || (option?.type === "print" ? "product.print" : ""), {}) || window.photosByElieProductLabel?.(option) || option.label;
+};
 const frameOptions = () => window.photosByElieFrameOptions || [];
 const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
+const frameLabel = (frame) => ({
+  none: t("product.no_frame"),
+  white: t("product.white_frame"),
+  black: t("product.black_frame"),
+}[frame?.id] || frame?.label || "");
 const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
@@ -112,13 +134,13 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
   const zipName = `photosbyelie-order-${orderId}.zip`;
 
   orderSummary.innerHTML = `
-    <div><dt>Order ID</dt><dd>${escapeText(orderId)}</dd></div>
-    <div><dt>Photos</dt><dd>${items.length}</dd></div>
-    <div><dt>Assets</dt><dd>${assetCount}</dd></div>
+    <div><dt>${t("basket.order_id")}</dt><dd>${escapeText(orderId)}</dd></div>
+    <div><dt>${t("basket.photos")}</dt><dd>${items.length}</dd></div>
+    <div><dt>${t("basket.assets")}</dt><dd>${assetCount}</dd></div>
     ${shippingHandlingTotal ? `<div><dt>S&H</dt><dd>+${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
     ${shippingHandlingTotal ? `<div><dt>Limited-time discount</dt><dd>-${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
-    <div><dt>Draft total</dt><dd>${formatMoney(total)}</dd></div>
-    <div><dt>Collections</dt><dd>${escapeText(collectionText)}</dd></div>
+    <div><dt>${t("basket.draft_total")}</dt><dd>${formatMoney(total)}</dd></div>
+    <div><dt>${t("basket.collections")}</dt><dd>${escapeText(collectionText)}</dd></div>
   `;
 
   const lines = [
@@ -267,16 +289,16 @@ checkoutGuest?.addEventListener("click", async () => {
   const email = String(checkoutEmail?.value || "").trim();
   const items = digitalCheckoutItems();
   if (!items.length) {
-    status.textContent = "Checkout needs at least one digital asset in the basket.";
+    status.textContent = t("basket.checkout_needs_asset");
     return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    status.textContent = "Enter a buyer email before starting checkout.";
+    status.textContent = t("basket.enter_email");
     checkoutEmail?.focus();
     return;
   }
   checkoutGuest.disabled = true;
-  status.textContent = "Creating Checkout Session...";
+  status.textContent = t("basket.creating_checkout");
   try {
     const body = await checkoutFetch("/checkout/guest", {
       method: "POST",
@@ -294,11 +316,11 @@ checkoutGuest?.addEventListener("click", async () => {
     renderCheckoutResult(body, "checkout");
     syncCheckoutControls();
     if (body.checkout?.provider === "stripe" && body.checkout?.url) {
-      status.textContent = "Opening Stripe Checkout...";
+      status.textContent = t("basket.opening_stripe");
       window.location.assign(body.checkout.url);
       return;
     }
-    status.textContent = "Mock Checkout Session ready. Simulate Stripe payment to generate the ZIP.";
+    status.textContent = t("basket.mock_ready");
   } catch (error) {
     status.textContent = error.message;
   } finally {
@@ -310,7 +332,7 @@ mockPay?.addEventListener("click", async () => {
   const state = checkoutState();
   if (!state.checkoutSessionId) return;
   mockPay.disabled = true;
-  status.textContent = "Simulating Stripe payment and generating the delivery ZIP...";
+  status.textContent = t("basket.simulating_payment");
   try {
     const body = await checkoutFetch("/mock-stripe/pay", {
       method: "POST",
@@ -325,7 +347,7 @@ mockPay?.addEventListener("click", async () => {
     });
     renderCheckoutResult(body, "paid");
     syncCheckoutControls();
-    status.textContent = "Mock payment complete. Delivery ZIP generated.";
+    status.textContent = t("basket.mock_complete");
     window.location.href = orderPageHref(body.order.id, body.order.buyerEmail || state.email);
   } catch (error) {
     status.textContent = error.message;
@@ -358,7 +380,11 @@ const renderBasket = () => {
   const assetCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
   const shippingHandlingTotal = items.reduce((sum, item) => sum + (item.options || []).reduce((shipping, option) => shipping + optionShippingHandlingTotal(option), 0), 0);
 
-  basketTotal.textContent = `${assetCount} ${assetCount === 1 ? "asset" : "assets"}, ${formatMoney(total)}`;
+  basketTotal.textContent = t("basket.assets_total", {
+    count: assetCount,
+    assetWord: t(assetCount === 1 ? "basket.asset_singular" : "basket.asset_plural"),
+    total,
+  });
   emptyState.hidden = items.length !== 0;
   syncOrderIntent(items, assetCount, total, shippingHandlingTotal);
 
@@ -374,7 +400,7 @@ const renderBasket = () => {
       : resolutionOptions;
     const resolutionDetail = (option) => {
       if (!photo || !window.photosByElieProductDetail) return "";
-      return `<small>${window.photosByElieProductDetail(photo, option)}</small>`;
+      return `<small>${productDetail(photo, option)}</small>`;
     };
     const printConfigMarkup = (option) => {
       if (option.type !== "print") return "";
@@ -383,19 +409,19 @@ const renderBasket = () => {
       return `
         <div class="print-config">
           <label class="print-quantity">
-            <span>Count</span>
+            <span>${t("detail.count")}</span>
             <span class="quantity-stepper">
-              <button type="button" data-basket-print-step="${index}" data-option-id="${option.id}" data-step="-1" aria-label="Decrease ${productLabel(option)} count">-</button>
+              <button type="button" data-basket-print-step="${index}" data-option-id="${option.id}" data-step="-1" aria-label="${t("product.decrease_count", { label: productLabel(option) })}">-</button>
               <input type="number" min="1" max="99" step="1" data-basket-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}"/>
-              <button type="button" data-basket-print-step="${index}" data-option-id="${option.id}" data-step="1" aria-label="Increase ${productLabel(option)} count">+</button>
+              <button type="button" data-basket-print-step="${index}" data-option-id="${option.id}" data-step="1" aria-label="${t("product.increase_count", { label: productLabel(option) })}">+</button>
             </span>
           </label>
           <fieldset class="frame-options">
-            <legend>Frame</legend>
+            <legend>${t("detail.frame")}</legend>
             ${frameOptions().map((frame) => `
               <label>
                 <input type="radio" name="basket-frame-${index}-${option.id}" data-basket-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-                <span>${frame.label}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+                <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
               </label>
             `).join("")}
           </fieldset>
@@ -426,7 +452,7 @@ const renderBasket = () => {
       </div>
       <div class="basket-item-actions">
         <strong>${formatMoney(Number(item.total) || 0)}</strong>
-        <button class="btn secondary" type="button" data-remove-item="${index}">Remove</button>
+        <button class="btn secondary" type="button" data-remove-item="${index}">${t("basket.remove")}</button>
       </div>
     </article>
   `}).join("");
@@ -439,7 +465,7 @@ const renderBasket = () => {
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {
       basketStore.remove(Number(button.dataset.removeItem));
-      status.textContent = "Item removed from basket.";
+      status.textContent = t("basket.item_removed");
       renderBasket();
     });
   });
@@ -463,8 +489,8 @@ const renderBasket = () => {
     const selectedOptions = selectedOptionsFor(itemIndex);
     basketStore.updateOptions(itemIndex, selectedOptions);
     status.textContent = selectedOptions.length
-        ? `${item.title} asset choices updated.`
-        : `${item.title} has no selected assets. Use Remove to delete the photo.`;
+        ? t("basket.choices_updated", { title: item.title })
+        : t("basket.no_assets_selected", { title: item.title });
     renderBasket();
   };
 
@@ -512,3 +538,7 @@ const renderBasket = () => {
 
 renderBasket();
 syncCheckoutControls();
+window.addEventListener("photosbyelie:languagechange", () => {
+  renderBasket();
+  syncCheckoutControls();
+});

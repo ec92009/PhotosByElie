@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v70.20`
+- Current visible version: `v70.21`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -36,7 +36,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `shared.css`: copied from the By Elie visual system
 - `styles.css`: copied By Elie animation overrides
 - `photos.css`: photo-specific layout and carousel styles
-- `photos.js`: shared theme and language toggle behavior for subpages
+- `photos.js`: shared theme, translation dictionary, and language toggle behavior for public pages
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
 - `scripts/validate_publish.js`: pre-push generated-data, asset-pair, resolution metadata, and publish-summary check
 - `AGENTS.md`: repo-level working preferences and versioning SOP
@@ -89,7 +89,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The basket page has a reduced hero and a sticky product total band that remains visible while scrolling.
 - The liked page mirrors the basket layout, but rows come from hearted photos and totals count only selected products.
 - The liked page includes bulk selectors for Full, JPG 6 MP, JPG 3 MP, and JPG 1 MP resolution choices.
-- The header includes a single language button cycling English, French, and Spanish; it persists the selected state for later translation work.
+- Public-facing pages share a client-side English/French/Spanish translation layer. The header language button cycles languages, persists the selected state, and translates public navigation, homepage copy, gallery controls/statuses, detail actions, basket/liked flows, and order-status copy. Owner-only tools remain English for now.
 - Detail pages start with no product checked unless that photo is already in the basket.
 - Detail pages support previous/next buttons and left/right arrow keys that continue across collection boundaries on both public and localhost builds.
 - Detail pages support `L` to like/unlike and double click on the preview to open a full-screen overlay that dismisses on click or double click.

@@ -7,6 +7,7 @@ const frameOptions = () => window.photosByElieFrameOptions || [];
 const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
+const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -29,6 +30,32 @@ const emptyState = document.querySelector("[data-empty-liked]");
 const likedTotal = document.querySelector("[data-liked-total]");
 const status = document.querySelector("[data-liked-status]");
 const bulkResolutionButtons = document.querySelectorAll("[data-liked-select-resolution]");
+const productLabel = (option) => {
+  const keyById = {
+    full: "product.full",
+    "jpg-6mp": "product.jpg_6",
+    "jpg-3mp": "product.jpg_3",
+    "jpg-1mp": "product.jpg_1",
+  };
+  return t(keyById[option?.id] || (option?.type === "print" ? "product.print" : ""), {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
+};
+const productDetail = (photo, option) => {
+  const detailKeyById = {
+    "jpg-6mp": "product.jpg_6_detail",
+    "jpg-3mp": "product.jpg_3_detail",
+    "jpg-1mp": "product.jpg_1_detail",
+  };
+  if (detailKeyById[option?.id]) return t(detailKeyById[option.id]);
+  if (option?.type === "print") return t("product.print_detail");
+  const source = photo ? window.photosByElieOriginalSize?.(photo) || "" : "";
+  if (source) return t("product.original", { source });
+  return t("product.full_detail");
+};
+const frameLabel = (frame) => ({
+  none: t("product.no_frame"),
+  white: t("product.white_frame"),
+  black: t("product.black_frame"),
+}[frame?.id] || frame?.label || "");
 
 const availableOptionsForPhoto = (photo) => photo && window.photosByElieAvailableResolutions
   ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
@@ -57,7 +84,7 @@ const optionPayload = (optionIds, photoId) => {
 const selectResolutionForAllLiked = (resolutionId) => {
   const likedItems = likedStore.read();
   if (!likedItems.length) {
-    status.textContent = "No liked photos yet.";
+    status.textContent = t("liked.empty");
     return;
   }
 
@@ -84,10 +111,10 @@ const selectResolutionForAllLiked = (resolutionId) => {
   });
 
   const selectedOption = resolutionOptions.find((option) => option.id === resolutionId);
-  const optionLabel = selectedOption ? window.photosByElieProductLabel?.(selectedOption) || selectedOption.label : "resolution";
+  const optionLabel = selectedOption ? productLabel(selectedOption) : "resolution";
   status.textContent = unavailableCount
-    ? `${optionLabel} selected for ${selectedCount} liked photo(s); ${unavailableCount} unavailable.`
-    : `${optionLabel} selected for ${selectedCount} liked photo(s).`;
+    ? t("liked.selected_some", { option: optionLabel, count: selectedCount, unavailable: unavailableCount })
+    : t("liked.selected_all", { option: optionLabel, count: selectedCount });
   renderLiked();
 };
 
@@ -99,7 +126,11 @@ const renderLiked = () => {
   const total = rowSelections.flat().reduce((sum, option) => sum + optionTotal(option), 0);
   const assetCount = rowSelections.reduce((sum, options) => sum + options.reduce((count, option) => count + optionQuantity(option), 0), 0);
 
-  likedTotal.textContent = `${assetCount} ${assetCount === 1 ? "asset" : "assets"}, ${formatMoney(total)}`;
+  likedTotal.textContent = t("basket.assets_total", {
+    count: assetCount,
+    assetWord: t(assetCount === 1 ? "basket.asset_singular" : "basket.asset_plural"),
+    total,
+  });
   emptyState.hidden = likedItems.length !== 0;
   bulkResolutionButtons.forEach((button) => {
     button.disabled = likedItems.length === 0;
@@ -116,7 +147,7 @@ const renderLiked = () => {
     const availableOptions = availableOptionsForPhoto(photo);
     const resolutionDetail = (option) => {
       if (!photo || !window.photosByElieResolutionDetail) return "";
-      return `<small>${window.photosByElieProductDetail ? window.photosByElieProductDetail(photo, option) : window.photosByElieResolutionDetail(photo, option)}</small>`;
+      return `<small>${productDetail(photo, option)}</small>`;
     };
     const printConfigMarkup = (option) => {
       if (option.type !== "print") return "";
@@ -125,19 +156,19 @@ const renderLiked = () => {
       return `
         <div class="print-config">
           <label class="print-quantity">
-            <span>Count</span>
+            <span>${t("detail.count")}</span>
             <span class="quantity-stepper">
-              <button type="button" data-liked-print-step="${index}" data-option-id="${option.id}" data-step="-1" aria-label="Decrease ${window.photosByElieProductLabel?.(option) || option.label} count">-</button>
+              <button type="button" data-liked-print-step="${index}" data-option-id="${option.id}" data-step="-1" aria-label="${t("product.decrease_count", { label: productLabel(option) })}">-</button>
               <input type="number" min="1" max="99" step="1" data-liked-print-quantity="${index}" data-option-id="${option.id}" value="${optionQuantity(selected)}"/>
-              <button type="button" data-liked-print-step="${index}" data-option-id="${option.id}" data-step="1" aria-label="Increase ${window.photosByElieProductLabel?.(option) || option.label} count">+</button>
+              <button type="button" data-liked-print-step="${index}" data-option-id="${option.id}" data-step="1" aria-label="${t("product.increase_count", { label: productLabel(option) })}">+</button>
             </span>
           </label>
           <fieldset class="frame-options">
-            <legend>Frame</legend>
+            <legend>${t("detail.frame")}</legend>
             ${frameOptions().map((frame) => `
               <label>
                 <input type="radio" name="liked-frame-${index}-${option.id}" data-liked-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-                <span>${frame.label}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+                <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
               </label>
             `).join("")}
           </fieldset>
@@ -158,7 +189,7 @@ const renderLiked = () => {
             <div class="basket-product-row">
             <label class="product-choice">
               <input type="checkbox" data-liked-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-              <span><strong>${window.photosByElieProductLabel?.(option) || option.label}</strong>${resolutionDetail(option)}</span>
+              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
             ${printConfigMarkup(option)}
@@ -168,7 +199,7 @@ const renderLiked = () => {
       </div>
       <div class="basket-item-actions">
         <strong>${formatMoney(itemTotal)}</strong>
-        <button class="btn secondary" type="button" data-remove-liked="${index}">Unlike</button>
+        <button class="btn secondary" type="button" data-remove-liked="${index}">${t("liked.unlike")}</button>
       </div>
     </article>
   `}).join("");
@@ -183,7 +214,7 @@ const renderLiked = () => {
       const item = likedStore.read()[Number(button.dataset.removeLiked)];
       if (!item) return;
       likedStore.remove(item.photoId);
-      status.textContent = `${item.title} removed from liked photos.`;
+      status.textContent = t("liked.removed", { title: item.title });
       renderLiked();
     });
   });
@@ -212,8 +243,8 @@ const renderLiked = () => {
       options: optionPayload(selectedOptions, item.photoId),
     });
     status.textContent = selectedOptions.length
-        ? `${item.title} asset choices added to basket.`
-        : `${item.title} has no selected assets.`;
+        ? t("liked.added_to_basket", { title: item.title })
+        : t("liked.no_assets_selected", { title: item.title });
     renderLiked();
   };
 
@@ -266,3 +297,4 @@ bulkResolutionButtons.forEach((button) => {
 });
 
 renderLiked();
+window.addEventListener("photosbyelie:languagechange", renderLiked);

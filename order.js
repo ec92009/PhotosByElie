@@ -12,6 +12,7 @@ const downloadZip = document.querySelector("[data-download-zip]");
 const copyZipPath = document.querySelector("[data-copy-zip-path]");
 const refreshButton = document.querySelector("[data-order-refresh]");
 let currentZipPath = "";
+const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -47,43 +48,43 @@ const moneyFromCents = (value, currency = "usd") =>
 const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(workerBaseUrl());
 
 const statusText = {
-  pending_payment: "Waiting for payment",
-  preparing: "Building delivery ZIP",
-  delivery_failed: "Delivery blocked",
-  ready: "Ready to download",
+  pending_payment: t("order.waiting_payment"),
+  preparing: t("order.building_zip"),
+  delivery_failed: t("order.delivery_blocked"),
+  ready: t("order.ready_download"),
 };
 
 const phaseCopy = (order) => {
   const deliveryError = order.deliveryError?.message || "";
   if (order.status === "ready") {
     return {
-      step: "Phase 3 of 3",
-      heading: "Ready to download",
-      message: "Payment is complete and the ZIP has been generated from private storage.",
+      step: t("order.phase_3"),
+      heading: t("order.ready_download"),
+      message: t("order.ready_message"),
       current: "ready",
     };
   }
   if (order.status === "delivery_failed") {
     return {
-      step: "Blocked after Phase 2",
-      heading: "Delivery needs attention",
-      message: deliveryError || "Payment is complete, but the Worker could not generate the delivery ZIP.",
+      step: t("order.blocked_phase_2"),
+      heading: t("order.delivery_attention"),
+      message: deliveryError || t("order.delivery_failed"),
       current: "preparing",
       failed: true,
     };
   }
   if (order.status === "preparing") {
     return {
-      step: "Phase 2 of 3",
-      heading: "Building delivery ZIP",
-      message: "Payment is complete. The Worker is reading private R2 masters and writing the ZIP.",
+      step: t("order.phase_2"),
+      heading: t("order.building_zip"),
+      message: t("order.building_message"),
       current: "preparing",
     };
   }
   return {
-    step: "Payment not confirmed",
-    heading: "Payment not confirmed",
-    message: "This page normally opens after checkout. If payment was just completed, refresh; otherwise return to checkout and finish payment before delivery starts.",
+    step: t("order.payment_not_confirmed"),
+    heading: t("order.payment_not_confirmed"),
+    message: t("order.payment_message"),
     current: "pending_payment",
   };
 };
@@ -110,14 +111,14 @@ const renderOrder = (order) => {
   setProgress(order.status);
 
   details.innerHTML = `
-    <div><dt>Order ID</dt><dd>${escapeText(order.id)}</dd></div>
-    <div><dt>Status</dt><dd>${escapeText(order.status)}</dd></div>
-    <div><dt>Email</dt><dd>${escapeText(order.buyerEmail)}</dd></div>
-    <div><dt>Total</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
-    <div><dt>Paid</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>
-    <div><dt>Mode</dt><dd>${escapeText(order.checkoutMode)}</dd></div>
-    ${order.deliveryError?.message ? `<div class="order-local-path"><dt>Delivery note</dt><dd>${escapeText(order.deliveryError.message)}</dd></div>` : ""}
-    ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>${isLocalWorker() ? "Local ZIP" : "Delivery ZIP"}</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
+    <div><dt>${t("basket.order_id")}</dt><dd>${escapeText(order.id)}</dd></div>
+    <div><dt>${t("order.status")}</dt><dd>${escapeText(order.status)}</dd></div>
+    <div><dt>${t("order.email")}</dt><dd>${escapeText(order.buyerEmail)}</dd></div>
+    <div><dt>${t("order.total")}</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
+    <div><dt>${t("order.paid")}</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>
+    <div><dt>${t("order.mode")}</dt><dd>${escapeText(order.checkoutMode)}</dd></div>
+    ${order.deliveryError?.message ? `<div class="order-local-path"><dt>${t("order.delivery_note")}</dt><dd>${escapeText(order.deliveryError.message)}</dd></div>` : ""}
+    ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>${isLocalWorker() ? t("order.local_zip") : t("order.delivery_zip")}</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
   `;
 
   itemsRoot.innerHTML = (order.items || []).map((item) => `
@@ -153,47 +154,48 @@ const loadOrder = async () => {
   const id = orderId();
   const email = buyerEmail();
   if (!id || !email) {
-    heading.textContent = "Order details needed";
-    message.textContent = "Open this page from checkout so the order number and buyer email are available.";
+    heading.textContent = t("order.details_needed");
+    message.textContent = t("order.details_message");
     setProgress("");
     return;
   }
 
-  status.textContent = "Refreshing order...";
+  status.textContent = t("order.refreshing");
   try {
     const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(id)}?email=${encodeURIComponent(email)}`);
     const body = await response.json();
     if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
     renderOrder(body.order);
-    status.textContent = "Order refreshed.";
+    status.textContent = t("order.refreshed");
   } catch (error) {
     const cachedOrder = checkoutState().lastResponse?.order;
     if (cachedOrder?.id === id) {
       renderOrder(cachedOrder);
-      status.textContent = "Showing cached local order. Download uses the generated ZIP file on disk.";
+      status.textContent = t("order.cached");
       return;
     }
-    heading.textContent = "Order unavailable";
+    heading.textContent = t("order.unavailable");
     message.textContent = error.message;
     setProgress("");
     downloadZip.hidden = true;
-    status.textContent = "Could not load order from the local Worker.";
+    status.textContent = t("order.could_not_load");
   }
 };
 
 refreshButton?.addEventListener("click", loadOrder);
 downloadZip?.addEventListener("click", () => {
   status.textContent = isLocalWorker()
-    ? "Download requested. If the in-app browser does not show a download, use the Local ZIP path below."
-    : "Download requested from the checkout Worker.";
+    ? t("order.download_requested_local")
+    : t("order.download_requested_worker");
 });
 copyZipPath?.addEventListener("click", async () => {
   if (!currentZipPath) return;
   try {
     await navigator.clipboard.writeText(currentZipPath);
-    status.textContent = "Local ZIP path copied.";
+    status.textContent = t("order.local_path_copied");
   } catch {
     status.textContent = currentZipPath;
   }
 });
 loadOrder();
+window.addEventListener("photosbyelie:languagechange", loadOrder);

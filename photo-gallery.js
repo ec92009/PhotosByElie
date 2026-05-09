@@ -35,6 +35,8 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "\"": "&quot;",
   "'": "&#39;"
 }[char]));
+const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+const localizedCollectionTitle = () => t(`collection.${galleryKey}`) || gallery?.title || "";
 const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
   if (!galleryRoot || !localModerationEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
@@ -203,43 +205,44 @@ const ensureGalleryFilterControls = () => {
   if (!filterTarget) return;
   filterBar = document.createElement("form");
   filterBar.className = "gallery-filter-bar";
-  filterBar.setAttribute("aria-label", "Gallery filters and sorting");
+  filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
-    <label><span>Orientation</span><select data-gallery-filter="orientation">
-      <option value="all">All</option>
-      <option value="landscape">Landscape</option>
-      <option value="portrait">Portrait</option>
-      <option value="square">Square</option>
+    <label><span data-i18n="gallery.orientation">Orientation</span><select data-gallery-filter="orientation">
+      <option value="all" data-i18n="gallery.all">All</option>
+      <option value="landscape" data-i18n="gallery.landscape">Landscape</option>
+      <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
+      <option value="square" data-i18n="gallery.square">Square</option>
     </select></label>
-    <label><span>Color mood</span><select data-gallery-filter="mood">
-      <option value="all">All</option>
-      <option value="warm">Warm</option>
-      <option value="cool">Cool</option>
-      <option value="neutral">Neutral</option>
-      <option value="vivid">Vivid</option>
+    <label><span data-i18n="gallery.color_mood">Color mood</span><select data-gallery-filter="mood">
+      <option value="all" data-i18n="gallery.all">All</option>
+      <option value="warm" data-i18n="gallery.warm">Warm</option>
+      <option value="cool" data-i18n="gallery.cool">Cool</option>
+      <option value="neutral" data-i18n="gallery.neutral">Neutral</option>
+      <option value="vivid" data-i18n="gallery.vivid">Vivid</option>
     </select></label>
-    <label><span>Subject</span><select data-gallery-filter="subject">
-      <option value="all">All</option>
-      <option value="architecture">Architecture</option>
-      <option value="water">Water/coast</option>
-      <option value="art">Art/museum</option>
-      <option value="people">People</option>
-      <option value="nature">Nature</option>
-      <option value="city">City/travel</option>
+    <label><span data-i18n="gallery.subject">Subject</span><select data-gallery-filter="subject">
+      <option value="all" data-i18n="gallery.all">All</option>
+      <option value="architecture" data-i18n="gallery.architecture">Architecture</option>
+      <option value="water" data-i18n="gallery.water">Water/coast</option>
+      <option value="art" data-i18n="gallery.art">Art/museum</option>
+      <option value="people" data-i18n="gallery.people">People</option>
+      <option value="nature" data-i18n="gallery.nature">Nature</option>
+      <option value="city" data-i18n="gallery.city">City/travel</option>
     </select></label>
-    <label><span>Sort</span><select data-gallery-filter="sort">
-      <option value="newest">Newest first</option>
-      <option value="oldest">Oldest first</option>
-      <option value="collection">Collection order</option>
-      <option value="title">Title</option>
-      <option value="megapixels-desc">Largest MP</option>
-      <option value="megapixels-asc">Smallest MP</option>
-      <option value="price-desc">Highest price</option>
-      <option value="price-asc">Lowest price</option>
+    <label><span data-i18n="gallery.sort">Sort</span><select data-gallery-filter="sort">
+      <option value="newest" data-i18n="gallery.newest">Newest first</option>
+      <option value="oldest" data-i18n="gallery.oldest">Oldest first</option>
+      <option value="collection" data-i18n="gallery.collection_order">Collection order</option>
+      <option value="title" data-i18n="gallery.title">Title</option>
+      <option value="megapixels-desc" data-i18n="gallery.largest_mp">Largest MP</option>
+      <option value="megapixels-asc" data-i18n="gallery.smallest_mp">Smallest MP</option>
+      <option value="price-desc" data-i18n="gallery.highest_price">Highest price</option>
+      <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
-    <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters>Clear</button>
+    <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
   `;
   filterTarget.after(filterBar);
+  window.photosByElieI18n?.apply?.();
   syncFilterControls();
   filterBar.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -440,8 +443,8 @@ const renderGallery = () => {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
     galleryRoot.innerHTML = `
       <article class="mock-photo empty-gallery-card" aria-label="${gallery.title} gallery empty state">
-        <span>${filteredOut ? "No photos match the current filters" : "No locally visible photos in this collection"}</span>
-        ${filteredOut ? '<button class="btn secondary" type="button" data-clear-gallery-empty>Clear filters</button>' : ""}
+        <span>${filteredOut ? t("gallery.no_filter_matches") : t("gallery.no_visible")}</span>
+        ${filteredOut ? `<button class="btn secondary" type="button" data-clear-gallery-empty>${t("gallery.clear_filters")}</button>` : ""}
       </article>
     `;
     galleryRoot.querySelector("[data-clear-gallery-empty]")?.addEventListener("click", () => {
@@ -452,7 +455,7 @@ const renderGallery = () => {
       renderGallery();
     });
     setGalleryStatus(filteredOut
-      ? "Adjust or clear filters to show this collection again."
+      ? t("gallery.adjust_filters")
       : "");
     return;
   }
@@ -501,11 +504,13 @@ const renderGallery = () => {
   applyGalleryDensity();
   applyGalleryFitMode();
   updateSelection();
-  const filterStatus = activeFilterCount() ? `Showing ${photos.length} of ${allPhotos.length} after filters.` : `Showing ${photos.length} photos.`;
+  const filterStatus = activeFilterCount()
+    ? t("gallery.showing_filtered", { count: photos.length, total: allPhotos.length })
+    : t("gallery.showing_count", { count: photos.length });
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
     setGalleryStatus(reserveCount
-      ? `${filterStatus} Reserve refill is available.`
+      ? t("gallery.reserve_available", { status: filterStatus })
       : filterStatus);
   } else {
     setGalleryStatus(filterStatus);
@@ -513,14 +518,14 @@ const renderGallery = () => {
 };
 
 if (galleryRoot && gallery) {
-  document.title = `Photos By Elie | ${gallery.title} Gallery`;
-  document.querySelector("[data-nav-current]").textContent = gallery.title;
+  document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
+  document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
   document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${galleryKey}.html`));
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
-  document.querySelector("[data-gallery-title]").textContent = gallery.title;
+  document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
-  galleryRoot.setAttribute("aria-label", `${gallery.title} photos`);
+  galleryRoot.setAttribute("aria-label", `${localizedCollectionTitle()} ${t("nav.photos").toLowerCase()}`);
   ensureGalleryFilterControls();
   ensureGalleryKeyboardHint();
   renderGallery();
@@ -528,21 +533,21 @@ if (galleryRoot && gallery) {
   if (!viewControls) {
     viewControls = document.createElement("div");
     viewControls.className = "gallery-view-controls";
-    viewControls.setAttribute("aria-label", "Gallery view controls");
+    viewControls.setAttribute("aria-label", t("a11y.gallery_view_controls"));
     const densityControl = document.createElement("label");
     densityControl.className = "gallery-density-control";
     densityControl.innerHTML = `
-      <span>Grid</span>
+      <span data-i18n="gallery.grid">Grid</span>
       <input type="range" min="1" max="${maxDensityColumns()}" step="1" value="${preferredDensityColumns()}" data-gallery-density/>
       <b data-gallery-density-value>${preferredDensityColumns()}</b>
     `;
     const fitControl = document.createElement("div");
     fitControl.className = "gallery-fit-control";
     fitControl.setAttribute("role", "group");
-    fitControl.setAttribute("aria-label", "Gallery image fit");
+    fitControl.setAttribute("aria-label", t("a11y.gallery_image_fit"));
     fitControl.innerHTML = `
-      <button type="button" data-gallery-fit-mode="fit" aria-pressed="true">Fit</button>
-      <button type="button" data-gallery-fit-mode="fill" aria-pressed="false">Fill</button>
+      <button type="button" data-gallery-fit-mode="fit" aria-pressed="true" data-i18n="gallery.fit">Fit</button>
+      <button type="button" data-gallery-fit-mode="fill" aria-pressed="false" data-i18n="gallery.fill">Fill</button>
     `;
     viewControls.append(densityControl, fitControl);
     document.body.append(viewControls);
@@ -571,6 +576,7 @@ if (galleryRoot && gallery) {
     applyGalleryDensity();
     applyGalleryFitMode();
     positionGalleryViewControls();
+    window.photosByElieI18n?.apply?.();
   }
 
   if (localModerationEnabled) {
@@ -666,5 +672,13 @@ if (galleryRoot && gallery) {
   });
   window.addEventListener("photosbyelie:hiddenblacklistchange", () => {
     if (!localModerationEnabled) renderGallery();
+  });
+  window.addEventListener("photosbyelie:languagechange", () => {
+    if (gallery) {
+      document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
+      document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
+      document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
+      renderGallery();
+    }
   });
 }

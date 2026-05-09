@@ -7,32 +7,32 @@
   <meta name="description" content="Mock photo gallery for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=70.20"/>
-  <link rel="stylesheet" href="./styles.css?v=70.20"/>
-  <link rel="stylesheet" href="./photos.css?v=70.20"/>
+  <link rel="stylesheet" href="./shared.css?v=70.21"/>
+  <link rel="stylesheet" href="./styles.css?v=70.21"/>
+  <link rel="stylesheet" href="./photos.css?v=70.21"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body data-gallery="slovakia">
-  <a class="skip-link" href="#main-content">Skip to content</a>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <header class="topbar shell">
-    <nav class="version-switch" aria-label="Site navigation">
+    <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
-      <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" data-nav-current href="./slovakia.html">Gallery</a>
+      <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
+      <a class="is-active" data-nav-current href="./slovakia.html" data-i18n="nav.gallery">Gallery</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v70.20</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v70.21</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
-      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
     </div>
   </header>
   <main id="main-content" class="shell">
     <section class="panel gallery-hero">
-      <h1 data-gallery-title>Gallery</h1>
+      <h1 data-gallery-title data-i18n="nav.gallery">Gallery</h1>
       <p class="gallery-status" data-gallery-status aria-live="polite"></p>
-      <div class="cta" data-gallery-actions><a class="btn secondary" href="./">Back to collections</a></div>
+      <div class="cta" data-gallery-actions><a class="btn secondary" href="./" data-i18n="common.back_to_collections">Back to collections</a></div>
     </section>
     <section class="panel mock-gallery" data-gallery-root></section>
   </main>
@@ -40,26 +40,26 @@
   <footer class="site-footer">
     <div class="shell">
       <p class="footer-note">© 2026 Photos By Elie</p>
-      <nav class="footer-nav" aria-label="Footer navigation">
+      <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
-        <a href="./#collections">Collections</a>
+        <a href="./#collections" data-i18n="nav.collections">Collections</a>
         <span class="footer-owner-tools" data-owner-tools hidden>
-          <a href="./owner.html">Owner</a>
+          <a href="./owner.html" data-i18n="nav.owner">Owner</a>
         </span>
       </nav>
     </div>
   </footer>
 
-  <script src="./media-config.js?v=70.20"></script>
-  <script src="./photos.js?v=70.20"></script>
-  <script src="./owner-auth.js?v=70.20"></script>
-  <script src="./owner-tools.js?v=70.20"></script>
-  <script src="./site-version.js?v=70.20"></script>
-  <script src="./photos-data.js?v=70.20"></script>
-  <script src="./hidden-actions.js?v=70.20"></script>
-  <script src="./reserve-store.js?v=70.20"></script>
-  <script src="./photo-gallery.js?v=70.20"></script>
-  <script src="./basket-store.js?v=70.20"></script>
-  <script src="./basket-rail.js?v=70.20"></script>
+  <script src="./media-config.js?v=70.21"></script>
+  <script src="./photos.js?v=70.21"></script>
+  <script src="./owner-auth.js?v=70.21"></script>
+  <script src="./owner-tools.js?v=70.21"></script>
+  <script src="./site-version.js?v=70.21"></script>
+  <script src="./photos-data.js?v=70.21"></script>
+  <script src="./hidden-actions.js?v=70.21"></script>
+  <script src="./reserve-store.js?v=70.21"></script>
+  <script src="./photo-gallery.js?v=70.21"></script>
+  <script src="./basket-store.js?v=70.21"></script>
+  <script src="./basket-rail.js?v=70.21"></script>
 </body>
 </html>

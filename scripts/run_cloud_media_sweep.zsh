@@ -28,10 +28,19 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+phase() {
+  echo "SWEEP_PHASE $1 $2"
+}
+
+done_phase() {
+  echo "SWEEP_DONE $1"
+}
+
 echo "$$" > "$LOCK_DIR/pid"
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$LOCK_DIR/started_at"
 
 cd "$REPO_ROOT"
+phase prepare "Prepare workspace"
 if [[ -f "$HOME/.zshrc" ]]; then
   source "$HOME/.zshrc"
 fi
@@ -40,16 +49,22 @@ git pull --ff-only origin main
 if [[ ! -d node_modules ]]; then
   npm install
 fi
+done_phase prepare
 
+phase discard-start "Delete discarded media"
 node scripts/delete_discarded_r2_media.mjs --delete --request-timeout-ms 180000 --retries 4
+done_phase discard-start
 
+phase camera "Import Camera sources"
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root /Volumes/Saturn/Pictures/LR/Camera \
   --output-root assets/reserve \
   --r2-upload both \
   --r2-private-renders \
   --hidden-blacklist assets/hidden/hidden-blacklist.json
+done_phase camera
 
+phase leonardo "Import Leonardo sources"
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
   --output-root assets/reserve \
@@ -58,25 +73,41 @@ python3 scripts/build_lightroom_thumbnails.py \
   --r2-upload both \
   --r2-private-renders \
   --hidden-blacklist assets/hidden/hidden-blacklist.json
+done_phase leonardo
 
+phase catalog "Export catalog"
 python3 scripts/export_photos_data.py \
   --selection newest \
   --external-media \
   --review-snapshot assets/hidden/hidden-blacklist.json
+done_phase catalog
 
+phase worker "Write worker catalog"
 node scripts/write_worker_catalog.mjs
+done_phase worker
+phase sidecar "Write media sidecar"
 node scripts/write_media_sidecar.mjs
+done_phase sidecar
 
+phase private "Backfill private JPGs"
 SYNC_ARGS=(--commit-every 100 --request-timeout-ms 180000 --retries 4)
 if [[ "$PUSH" == "1" ]]; then
   SYNC_ARGS+=(--push)
 fi
 node scripts/sync_private_deliverables.mjs "${SYNC_ARGS[@]}"
+done_phase private
 
+phase discard-final "Final discard cleanup"
 node scripts/delete_discarded_r2_media.mjs --delete --request-timeout-ms 180000 --retries 4
+done_phase discard-final
+phase test "Run tests"
 npm test
+done_phase test
+phase validate "Validate publish"
 npm run validate
+done_phase validate
 
+phase commit "Commit and push"
 git add \
   assets/discarded-media-manifest.json \
   assets/expo-manifest.json \
@@ -96,3 +127,4 @@ if ! git diff --cached --quiet; then
     git push origin main
   fi
 fi
+done_phase commit

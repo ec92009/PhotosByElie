@@ -158,6 +158,30 @@
     const isRepair = latest.operation === "repair";
     const activeVerb = isRepair ? "Repairing" : isDelete ? "Deleting" : "Uploading";
     const noun = isRepair ? "repair" : isDelete ? "delete" : "upload";
+    const logName = latest.log ? String(latest.log).split("/").pop() : "";
+    if (isRepair) {
+      if (active) {
+        r2Summary.textContent = "Repairing R2 coverage with the lock-guarded cloud media sweep. This can run for a long time; follow the log for the current phase.";
+      } else if (failed) {
+        r2Summary.textContent = "R2 coverage repair needs attention. Open the log below for the failing phase.";
+      } else {
+        r2Summary.textContent = "Last R2 coverage repair finished.";
+      }
+      const rows = [
+        ["State", latest.state || "unknown"],
+        ["Work", "Cloud media sweep"],
+        ["Started", latest.started_at ? new Date(latest.started_at).toLocaleString() : "queued"],
+        ["Log", logName || "owner-r2-fix log"],
+      ];
+      if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
+      r2Counts.innerHTML = rows.map(([label, value]) => `
+        <div>
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(value)}</dd>
+        </div>
+      `).join("");
+      return;
+    }
     if (active) {
       r2Summary.textContent = `${activeVerb} R2 updates: ${completed}/${total} files, ${failed} failed.`;
     } else if (failed) {

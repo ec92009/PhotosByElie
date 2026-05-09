@@ -177,6 +177,7 @@
     };
     const deleted = lastMatch(/^Done\. Deleted ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
     const scan = lastMatch(/^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/);
+    const started = lastMatch(/^START\s+([0-9,]+):\s+(\S+)\s+(\S+)\s+(.+)/);
     const imported = lastMatch(/^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/);
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
@@ -185,12 +186,13 @@
     let phase = "Starting cloud media sweep";
     if (deleted) phase = "Deleted discarded R2 media";
     if (scan) phase = "Scanning and importing Saturn sources";
+    if (started) phase = "Rendering and uploading selected photo";
     if (imported) phase = "Rendering and uploading selected previews";
     if (upload) phase = "Creating and uploading missing private JPGs";
     if (processed) phase = "Private JPG backfill pass finished";
     if (manifest) phase = "Refreshing private delivery manifest";
     if (error) phase = "Needs attention";
-    return { latest, phase, deleted, scan, imported, upload, processed, manifest, error };
+    return { latest, phase, deleted, scan, started, imported, upload, processed, manifest, error };
   };
 
   const renderR2RepairProgress = (latest, logSummary = null) => {
@@ -217,6 +219,10 @@
     if (logSummary?.scan) {
       rows.push(["Scanned", logSummary.scan.match[1]]);
       rows.push(["Selected", logSummary.scan.match[3]]);
+    }
+    if (logSummary?.started) {
+      rows.push(["Current photo", logSummary.started.match[2]]);
+      rows.push(["Collection", logSummary.started.match[3]]);
     }
     if (logSummary?.imported) {
       rows.push(["Rendered photos", logSummary.imported.match[1]]);
@@ -334,7 +340,7 @@
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
       const isPrivateJpg = row.label.startsWith("Private JPG");
       const observed = isPrivateJpg ? observedRenderPhotos : 0;
-      const present = Math.min(row.expected, row.present + observed);
+      const present = isPrivateJpg ? Math.min(row.expected, row.present + observed) : row.present;
       const missing = Math.max(0, row.missing - observed);
       const detail = [
         missing ? `${formatCount(missing)} missing` : "complete",

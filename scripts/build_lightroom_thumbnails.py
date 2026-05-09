@@ -1471,6 +1471,7 @@ def process_batch(
             row["metadata"] = selected_metadata["display"]
             row["raw_metadata"] = selected_metadata["raw"]
             row["selection_metadata"] = compact_metadata(meta)
+            print(f"START {rendered_count + 1}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
             if selected_metadata["gps"]:
                 gps_manifest[relative_path] = {
                     "id": slug,

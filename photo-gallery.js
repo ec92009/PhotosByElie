@@ -49,7 +49,7 @@ const ensureGalleryKeyboardHint = () => {
   hint.dataset.galleryShortcutHint = "";
   hint.innerHTML = [
     "Owner shortcuts:",
-    `${shortcutKey("H")} hide`,
+    `${shortcutKey("B")} block`,
     `${shortcutKey("U")} undo`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
@@ -738,16 +738,16 @@ if (galleryRoot && gallery) {
         event.preventDefault();
         return;
       }
-      if (event.key.toLowerCase() === "h") {
+      if (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
         const selected = photos[selectedIndex];
         if (!selected) return;
         try {
           await hiddenActions.mark(selected.id);
           selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
           renderGallery();
-          setGalleryStatus(`${selected.title} moved to Hidden.`);
+          setGalleryStatus(`${selected.title} moved to Blocked.`);
         } catch (error) {
-          setGalleryStatus(error?.message || "Could not move photo to Hidden.");
+          setGalleryStatus(error?.message || "Could not move photo to Blocked.");
         }
         event.preventDefault();
         return;
@@ -757,20 +757,20 @@ if (galleryRoot && gallery) {
       try {
         undoneId = await hiddenActions.undo();
       } catch (error) {
-        setGalleryStatus(error?.message || "Could not undo the last hide.");
+        setGalleryStatus(error?.message || "Could not undo the last block.");
         event.preventDefault();
         return;
       }
       renderGallery();
       if (!undoneId) {
-        setGalleryStatus("No local hidden mark to undo.");
+        setGalleryStatus("No local blocked mark to undo.");
         return;
       }
       const nextPhotos = filteredVisiblePhotos();
       const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
       if (restoredIndex >= 0) selectedIndex = restoredIndex;
       updateSelection();
-      setGalleryStatus("Last local hidden mark undone.");
+      setGalleryStatus("Last local blocked mark undone.");
       event.preventDefault();
     });
 

@@ -516,9 +516,9 @@
   window.addEventListener("keydown", async (event) => {
     if (!hiddenActions?.enabled) return;
     const key = event.key.toLowerCase();
-    const hOrU = key === "h" || key === "u";
-    if (hOrU && shouldIgnoreUnknownActionShortcut(event)) return;
-    if (!hOrU && shouldIgnoreShortcut(event)) return;
+    const blockOrUndo = key === "b" || key === "h" || key === "u";
+    if (blockOrUndo && shouldIgnoreUnknownActionShortcut(event)) return;
+    if (!blockOrUndo && shouldIgnoreShortcut(event)) return;
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
       moveSelection(-1);
@@ -529,7 +529,7 @@
       moveSelection(1);
       return;
     }
-    if (key === "h") {
+    if (key === "b" || key === "h") {
       event.preventDefault();
       const photo = unknownPhotos().find((item) => item.id === selectedPhotoId) || unknownPhotos()[0];
       if (!photo) return;
@@ -540,9 +540,9 @@
           selectedPhotoId = "";
           renderPreservingScroll(scrollAnchor);
         });
-        setStatus(`${photo.title} moved from Unknown to Hidden.`);
+        setStatus(`${photo.title} moved from Unknown to Blocked.`);
       } catch (error) {
-        setStatus(error?.message || "Could not move unknown photo to Hidden.");
+        setStatus(error?.message || "Could not move unknown photo to Blocked.");
       }
       return;
     }
@@ -552,12 +552,12 @@
     try {
       restoredId = await hiddenActions.undo(lastHiddenPhotoId);
     } catch (error) {
-      setStatus(error?.message || "Could not undo the hide.");
+      setStatus(error?.message || "Could not undo the block.");
       return;
     }
     if (restoredId) selectedPhotoId = restoredId;
     renderPreservingScroll();
-    setStatus(restoredId ? "Last hidden unknown photo moved back." : "No hidden unknown photo to undo.");
+    setStatus(restoredId ? "Last blocked unknown photo moved back." : "No blocked unknown photo to undo.");
   });
 
   window.addEventListener("photosbyelie:hiddenchange", () => {

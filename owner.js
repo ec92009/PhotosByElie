@@ -183,7 +183,7 @@
     const counts = [
       ["Expo", countPhotos(collections)],
       ["Local preview cache", countPhotos(window.photosByElieReserveData || {})],
-      ["Hidden", hiddenCount],
+      ["Blocked", hiddenCount],
       ["Unknown queue", queue.visible.length],
       ["Unknown loaded", queue.photos.length],
       ["Unknown assigned", queue.assigned.length],
@@ -514,7 +514,7 @@
       const isAcceptedHiddenExtra = isPrivateMasters && Number(row.missing || 0) === 0 && Number(row.extra || 0) > 0;
       const detail = [
         row.missing ? `${formatCount(row.missing)} missing` : "complete",
-        row.extra ? `${formatCount(row.extra)} ${isPrivateMasters ? "hidden" : "extra"}` : "",
+        row.extra ? `${formatCount(row.extra)} ${isPrivateMasters ? "blocked" : "extra"}` : "",
       ].filter(Boolean).join(", ");
       return `
         <div class="${row.ok || isAcceptedHiddenExtra ? "is-ok" : "needs-work"}">
@@ -641,31 +641,31 @@
 
   publishHiddenBlacklistButton?.addEventListener("click", async () => {
     publishHiddenBlacklistButton.disabled = true;
-    setStatus("Syncing the hidden-photo list to R2...");
+    setStatus("Syncing the blocked-photo list to R2...");
     try {
       await hiddenActions.publishHiddenBlacklist?.();
       renderCounts();
       loadR2Progress();
-      setStatus("Hidden list sync queued for R2.");
+      setStatus("Blocked list sync queued for R2.");
     } catch (error) {
-      setStatus(error?.message || "Could not publish hidden blacklist.");
+      setStatus(error?.message || "Could not publish blocked list.");
     } finally {
       publishHiddenBlacklistButton.disabled = false;
     }
   });
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
-    const ok = window.confirm("Delete public preview objects for hidden photos? Publish the hidden list first so galleries know these photos are rejected.");
+    const ok = window.confirm("Delete public preview objects for blocked photos? Publish the blocked list first so galleries know these photos are rejected.");
     if (!ok) return;
     wipeHiddenR2Button.disabled = true;
-    setStatus("Queueing hidden public preview deletes in R2...");
+    setStatus("Queueing blocked public preview deletes in R2...");
     try {
       await hiddenActions.wipeHiddenR2?.();
       renderCounts();
       loadR2Progress();
-      setStatus("Hidden public preview wipe queued.");
+      setStatus("Blocked public preview wipe queued.");
     } catch (error) {
-      setStatus(error?.message || "Could not queue hidden public preview wipe.");
+      setStatus(error?.message || "Could not queue blocked public preview wipe.");
     } finally {
       wipeHiddenR2Button.disabled = false;
     }

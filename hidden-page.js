@@ -83,27 +83,27 @@
           <span>Owner controls are only available on localhost</span>
         </article>
       `;
-      setStatus("Hidden review is locked on the public site.");
+      setStatus("Blocked review is locked on the public site.");
       return;
     }
 
     const photos = hiddenPhotos();
     if (!catalogsLoaded) {
       galleryRoot.innerHTML = `
-        <article class="mock-photo empty-gallery-card" aria-label="Loading hidden photos">
-          <span>Loading hidden photos</span>
+        <article class="mock-photo empty-gallery-card" aria-label="Loading blocked photos">
+          <span>Loading blocked photos</span>
         </article>
       `;
-      setStatus("Loading hidden photo catalogs.");
+      setStatus("Loading blocked photo catalogs.");
       return;
     }
     if (!photos.length) {
       galleryRoot.innerHTML = `
-        <article class="mock-photo empty-gallery-card" aria-label="No hidden photos">
-          <span>No hidden photos</span>
+        <article class="mock-photo empty-gallery-card" aria-label="No blocked photos">
+          <span>No blocked photos</span>
         </article>
       `;
-      setStatus("The hidden gallery is empty.");
+      setStatus("The blocked gallery is empty.");
       return;
     }
 
@@ -137,7 +137,7 @@
     window.photosByElieVersionInternalLinks?.(galleryRoot);
 
     updateSelection();
-    setStatus(`${photos.length} hidden photo${photos.length === 1 ? "" : "s"}.`);
+    setStatus(`${photos.length} blocked photo${photos.length === 1 ? "" : "s"}.`);
   };
 
   window.addEventListener("keydown", async (event) => {

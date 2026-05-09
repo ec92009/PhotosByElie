@@ -122,7 +122,7 @@ const renderDetailShortcutHint = () => {
   }
   const ownerShortcuts = localModerationEnabled
     ? [
-      `${detailShortcutKey("H")} hide`,
+      `${detailShortcutKey("B")} block`,
       `${detailShortcutKey("U")} undo`
     ]
     : [];
@@ -586,16 +586,16 @@ if (localModerationEnabled) {
   window.addEventListener("keydown", async (event) => {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
-    if (key === "h") {
+    if (key === "b" || key === "h") {
       if (hiddenActions.has(photo.id)) {
-        status.textContent = `${photo.title} is already in Hidden.`;
+        status.textContent = `${photo.title} is already Blocked.`;
         return;
       }
       try {
         await hiddenActions.mark(photo.id);
         navigateAfterHide();
       } catch (error) {
-        status.textContent = error?.message || "Could not move photo to Hidden.";
+        status.textContent = error?.message || "Could not move photo to Blocked.";
       }
       return;
     }
@@ -604,12 +604,12 @@ if (localModerationEnabled) {
     try {
       undoneId = await hiddenActions.undo(photo.id);
     } catch (error) {
-      status.textContent = error?.message || "Could not undo the hide.";
+      status.textContent = error?.message || "Could not undo the block.";
       return;
     }
     status.textContent = undoneId
-      ? `${photo.title} moved back from Hidden.`
-      : "No hidden photo to undo.";
+      ? `${photo.title} moved back from Blocked.`
+      : "No blocked photo to undo.";
   });
 
   window.addEventListener("photosbyelie:hiddenchange", () => {

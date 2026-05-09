@@ -265,6 +265,13 @@
     return { percent: 18, detail: "Running" };
   };
 
+  const completedPhaseDetail = (phase, logSummary) => {
+    if (phase.key === "discard-start" && logSummary?.deleted) {
+      return `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`;
+    }
+    return "Done";
+  };
+
   const renderSweepPhases = (task, logSummary = null) => {
     if (!r2Phases) return;
     if (!task || task.operation !== "repair") {
@@ -284,7 +291,7 @@
       const isFailed = phase.key === activeKey && failed;
       const state = isFailed ? "failed" : (complete || explicitDone || inferredDone) ? "done" : isActive ? "running" : "pending";
       const progress = state === "done"
-        ? { percent: 100, detail: "Done" }
+        ? { percent: 100, detail: completedPhaseDetail(phase, logSummary) }
         : state === "running"
           ? phaseProgress(phase, logSummary, false)
           : state === "failed"
@@ -334,11 +341,9 @@
       const lastPhotoId = logSummary.upload.match[2];
       rows.push(["Last photo", lastPhotoId]);
       rows.push(["Collection", collectionLabelForPhoto(lastPhotoId) || "unknown"]);
-      rows.push(["Objects last", logSummary.upload.match[3]]);
     }
     if (logSummary?.manifest) rows.push(["Render triplets", logSummary.manifest.match[1]]);
     if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
-    if (logSummary?.deleted) rows.push(["Discarded deleted", `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`]);
     if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) rows.push(["Latest error", logSummary.error.line]);
     else if (logSummary?.latest && !active) rows.push(["Latest log", logSummary.latest]);
     if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);

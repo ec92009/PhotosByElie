@@ -60,13 +60,19 @@ Last updated: 2026-05-10
    - Keep tombstones in import/export validation so discarded photos cannot return from Saturn.
    - Show discard/delete counts in Owner so bulk quality/duplicate cleanup feels trustworthy.
 
-7. **Set up Stripe test mode.**
+7. **Add Owner price-list maintenance.**
+   - Move digital-file and print/frame prices into an Owner-maintained price list instead of treating the current under-10 items as code constants.
+   - Support adding, editing, disabling, and reordering price entries as the catalog of sellable products grows.
+   - Keep checkout validation tied to the published price list so the Worker and public basket agree on SKU IDs, labels, currencies, and amounts.
+   - Show a clear publish/version step for price changes before they affect buyers.
+
+8. **Set up Stripe test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
    - Keep live keys out until test mode proves the full flow.
 
-8. **Run Stripe test checkout end to end.**
+9. **Run Stripe test checkout end to end.**
    - Test successful payment.
    - Test 3D Secure/authentication-required payment.
    - Test declined-card payment.
@@ -74,13 +80,13 @@ Last updated: 2026-05-10
    - Confirm the Worker builds the ZIP from private R2 and the order page exposes the download.
    - Cover paid-but-ZIP-pending, expired download link, missing private asset, and retryable Worker error states.
 
-9. **Make order records production-durable.**
+10. **Make order records production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
    - Keep private R2 as delivery ZIP storage.
    - Rate-limit download links.
 
-10. **Harden owner account/identity.**
+11. **Harden owner account/identity.**
    - Keep the localhost helper boundary as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
    - Rename `owner-auth.js` to reflect current reality, such as `owner-helper-session.js`, because it now checks helper availability rather than passwords.
@@ -88,41 +94,41 @@ Last updated: 2026-05-10
    - Add clear confirmation around future discard/R2 delete actions.
    - Add browser smoke coverage for locked helper and unauthorized mutation states.
 
-11. **Move public media off the checkout Worker bridge.**
+12. **Move public media off the checkout Worker bridge.**
    - Attach an R2 custom domain or equivalent public media endpoint.
    - Update `media-config.js`.
    - Retest GitHub Pages gallery/detail/basket media loading.
    - Keep the Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-12. **Design buyer accounts.**
+13. **Design buyer accounts.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-13. **Split homepage data from the full catalog.**
+14. **Split homepage data from the full catalog.**
    - Replace the homepage `photos-data.js` dependency with a small homepage manifest.
    - Include only collection names, counts, links, and enough representative preview candidates for the hero stack and collection rail.
    - Keep the initial homepage payload focused on the 14 visible previews instead of the full `10,133`-photo catalog.
 
-14. **Split gallery/catalog data by collection.**
+15. **Split gallery/catalog data by collection.**
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.
 
-15. **Harden browser smoke coverage.**
+16. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner hide/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
-16. **Extend Owner dashboard.**
+17. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, hidden queue, unknown queue, and active sweep status.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-17. **Keep publish validation as the gate.**
+18. **Keep publish validation as the gate.**
    - Validate hidden/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
@@ -130,12 +136,12 @@ Last updated: 2026-05-10
    - Add generated JS/JSON payload size budgets for catalog and gallery performance.
    - Keep `npm run validate` mandatory before publish.
 
-18. **Repair and refresh architecture artifacts.**
+19. **Repair and refresh architecture artifacts.**
    - Document which manifests, generated catalogs, deploy artifacts, local caches, and ignored asset folders are sources of truth.
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-19. **Backburner: repo layout cleanup.**
+20. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.

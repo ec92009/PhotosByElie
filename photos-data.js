@@ -1972,7 +1972,7 @@ window.photosByElieData = {
         title: "20220504 141310 00203",
         caption: "France / 2022-05-04",
         full: "TIF master",
-        megapixels: 34.0,
+        megapixels: 34,
         gallerySrc: "./assets/expo/france/20220504-141310-00203-231d78d849_900.jpg",
         imageSrc: "./assets/expo/france/20220504-141310-00203-231d78d849_1800.jpg",
         metadata: [
@@ -2473,7 +2473,7 @@ window.photosByElieData = {
         title: "Musée Jacquemart André",
         caption: "France / 2019-11-14",
         full: "JPG master",
-        megapixels: 44.0,
+        megapixels: 44,
         gallerySrc: "./assets/expo/france/20191114-1254-15649-pano-05f6c65b28_900.jpg",
         imageSrc: "./assets/expo/france/20191114-1254-15649-pano-05f6c65b28_1800.jpg",
         metadata: [
@@ -2773,7 +2773,7 @@ window.photosByElieData = {
         title: "Chateau de Monte Cristo, France",
         caption: "France / 2018-05-29",
         full: "JPG master",
-        megapixels: 62.0,
+        megapixels: 62,
         gallerySrc: "./assets/expo/france/20180529-1757-15382-4fb563774f_900.jpg",
         imageSrc: "./assets/expo/france/20180529-1757-15382-4fb563774f_1800.jpg",
         metadata: [
@@ -2923,7 +2923,7 @@ window.photosByElieData = {
         title: "20180525 1443 00956",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180525-1443-00956-a9e61b8dde_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1443-00956-a9e61b8dde_1800.jpg",
         metadata: [
@@ -3156,7 +3156,7 @@ window.photosByElieData = {
         title: "20180525 1442 00953",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180525-1442-00953-93073461ca_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1442-00953-93073461ca_1800.jpg",
         metadata: [
@@ -3231,7 +3231,7 @@ window.photosByElieData = {
         title: "20180525 1441 00952",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180525-1441-00952-0be82ccc8d_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1441-00952-0be82ccc8d_1800.jpg",
         metadata: [
@@ -3381,7 +3381,7 @@ window.photosByElieData = {
         title: "20180525 1440 00949",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180525-1440-00949-4323df4391_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1440-00949-4323df4391_1800.jpg",
         metadata: [
@@ -3456,7 +3456,7 @@ window.photosByElieData = {
         title: "20180525 1440 00948",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 15.0,
+        megapixels: 15,
         gallerySrc: "./assets/expo/france/20180525-1440-00948-f9444792d1_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1440-00948-f9444792d1_1800.jpg",
         metadata: [
@@ -3610,7 +3610,7 @@ window.photosByElieData = {
         title: "Le Tarn à Albi",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 18.0,
+        megapixels: 18,
         gallerySrc: "./assets/expo/france/20180525-1439-00945-c37d4fa644_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1439-00945-c37d4fa644_1800.jpg",
         metadata: [
@@ -3689,7 +3689,7 @@ window.photosByElieData = {
         title: "20180525 1420 00944",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180525-1420-00944-6079776b41_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1420-00944-6079776b41_1800.jpg",
         metadata: [
@@ -3764,7 +3764,7 @@ window.photosByElieData = {
         title: "20180525 1419 00943",
         caption: "France / Albi, Occitanie / 2018-05-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180525-1419-00943-554228f741_900.jpg",
         imageSrc: "./assets/expo/france/20180525-1419-00943-554228f741_1800.jpg",
         metadata: [
@@ -3839,7 +3839,7 @@ window.photosByElieData = {
         title: "Galeries Lafayette, Rue Bayard, Toulouse, France",
         caption: "France / Toulouse, Occitanie / 2018-05-24",
         full: "JPG master",
-        megapixels: 17.0,
+        megapixels: 17,
         gallerySrc: "./assets/expo/france/20180524-1746-00941-72deedae61_900.jpg",
         imageSrc: "./assets/expo/france/20180524-1746-00941-72deedae61_1800.jpg",
         metadata: [
@@ -4372,7 +4372,7 @@ window.photosByElieData = {
         title: "Notre Dame de Paris, Quai de Seine",
         caption: "France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-1129-00366-7adb449fbf_900.jpg",
         imageSrc: "./assets/expo/france/20180511-1129-00366-7adb449fbf_1800.jpg",
         metadata: [
@@ -5094,7 +5094,7 @@ window.photosByElieData = {
         title: "20180511 0222 09400",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-09400-a973044da3_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-09400-a973044da3_1800.jpg",
         metadata: [
@@ -5169,7 +5169,7 @@ window.photosByElieData = {
         title: "20180511 0222 00340",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00340-9a82c82a19_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00340-9a82c82a19_1800.jpg",
         metadata: [
@@ -5244,7 +5244,7 @@ window.photosByElieData = {
         title: "20180511 0222 00338",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00338-74375aaab9_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00338-74375aaab9_1800.jpg",
         metadata: [
@@ -5319,7 +5319,7 @@ window.photosByElieData = {
         title: "20180511 0222 00337",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00337-c0db2ef030_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00337-c0db2ef030_1800.jpg",
         metadata: [
@@ -5394,7 +5394,7 @@ window.photosByElieData = {
         title: "20180511 0222 00334",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00334-e1adbd8eea_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00334-e1adbd8eea_1800.jpg",
         metadata: [
@@ -5469,7 +5469,7 @@ window.photosByElieData = {
         title: "20180511 0222 00332",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00332-c7e2c09dd1_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00332-c7e2c09dd1_1800.jpg",
         metadata: [
@@ -5544,7 +5544,7 @@ window.photosByElieData = {
         title: "Bateau Mouche, Seine, Notre Dame de Paris,",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00331-9ce96882fb_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00331-9ce96882fb_1800.jpg",
         metadata: [
@@ -5623,7 +5623,7 @@ window.photosByElieData = {
         title: "20180511 0222 14819",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-14819-411c515f31_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-14819-411c515f31_1800.jpg",
         metadata: [
@@ -5698,7 +5698,7 @@ window.photosByElieData = {
         title: "20180511 0222 00329",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00329-d32b4864ae_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00329-d32b4864ae_1800.jpg",
         metadata: [
@@ -5773,7 +5773,7 @@ window.photosByElieData = {
         title: "20180511 0222 00328",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00328-cd368139de_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00328-cd368139de_1800.jpg",
         metadata: [
@@ -5848,7 +5848,7 @@ window.photosByElieData = {
         title: "20180511 0222 00323",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00323-7d5001a972_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00323-7d5001a972_1800.jpg",
         metadata: [
@@ -5923,7 +5923,7 @@ window.photosByElieData = {
         title: "20180511 0222 00318",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00318-6196bf3804_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00318-6196bf3804_1800.jpg",
         metadata: [
@@ -5998,7 +5998,7 @@ window.photosByElieData = {
         title: "20180511 0222 14822",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-14822-158692002a_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-14822-158692002a_1800.jpg",
         metadata: [
@@ -6073,7 +6073,7 @@ window.photosByElieData = {
         title: "20180511 0222 00314",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00314-244287b3ea_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00314-244287b3ea_1800.jpg",
         metadata: [
@@ -6148,7 +6148,7 @@ window.photosByElieData = {
         title: "20180511 0222 00313",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00313-bac27b3bff_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00313-bac27b3bff_1800.jpg",
         metadata: [
@@ -6223,7 +6223,7 @@ window.photosByElieData = {
         title: "20180511 0222 00308",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00308-4d93b1ab5b_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00308-4d93b1ab5b_1800.jpg",
         metadata: [
@@ -6298,7 +6298,7 @@ window.photosByElieData = {
         title: "20180511 0222 00306",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00306-8650ffa778_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00306-8650ffa778_1800.jpg",
         metadata: [
@@ -6373,7 +6373,7 @@ window.photosByElieData = {
         title: "20180511 0222 00305",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00305-061b793a1b_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00305-061b793a1b_1800.jpg",
         metadata: [
@@ -6448,7 +6448,7 @@ window.photosByElieData = {
         title: "20180511 0222 00303",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00303-7409745ec9_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00303-7409745ec9_1800.jpg",
         metadata: [
@@ -6523,7 +6523,7 @@ window.photosByElieData = {
         title: "20180511 0222 00302",
         caption: "France / Paris, Île-de-France / 2018-05-11",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/france/20180511-0222-00302-b10cba3d0d_900.jpg",
         imageSrc: "./assets/expo/france/20180511-0222-00302-b10cba3d0d_1800.jpg",
         metadata: [
@@ -9933,7 +9933,7 @@ window.photosByElieData = {
         title: "Eglise des Augustins, Toulouse, France",
         caption: "France / 2011-11-02",
         full: "JPG master",
-        megapixels: 8.0,
+        megapixels: 8,
         gallerySrc: "./assets/expo/france/20111102-1227-05325-ab56a019a3_900.jpg",
         imageSrc: "./assets/expo/france/20111102-1227-05325-ab56a019a3_1800.jpg",
         metadata: [
@@ -10004,7 +10004,7 @@ window.photosByElieData = {
         title: "Cloitre des Jacobins, Toulouse, France",
         caption: "France / 2011-11-02",
         full: "JPG master",
-        megapixels: 8.0,
+        megapixels: 8,
         gallerySrc: "./assets/expo/france/20111102-1226-07867-136188a2c1_900.jpg",
         imageSrc: "./assets/expo/france/20111102-1226-07867-136188a2c1_1800.jpg",
         metadata: [
@@ -22695,7 +22695,7 @@ window.photosByElieData = {
         title: "20190723 1419 16523",
         caption: "USA / 2019-07-23",
         full: "JPG master",
-        megapixels: 22.0,
+        megapixels: 22,
         gallerySrc: "./assets/expo/usa/20190723-1419-16523-3d4da421c4_900.jpg",
         imageSrc: "./assets/expo/usa/20190723-1419-16523-3d4da421c4_1800.jpg",
         metadata: [
@@ -24004,7 +24004,7 @@ window.photosByElieData = {
         title: "20180505 1818 00242",
         caption: "USA / Oceanside, California / 2018-05-05",
         full: "JPG master",
-        megapixels: 9.0,
+        megapixels: 9,
         gallerySrc: "./assets/expo/usa/20180505-1818-00242-09c3a7cdc4_900.jpg",
         imageSrc: "./assets/expo/usa/20180505-1818-00242-09c3a7cdc4_1800.jpg",
         metadata: [
@@ -24596,7 +24596,7 @@ window.photosByElieData = {
         title: "20180421 1537 12617",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1537-12617-c2d492125d_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1537-12617-c2d492125d_1800.jpg",
         metadata: [
@@ -24663,7 +24663,7 @@ window.photosByElieData = {
         title: "20180421 1537 12260",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1537-12260-3168497f02_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1537-12260-3168497f02_1800.jpg",
         metadata: [
@@ -24730,7 +24730,7 @@ window.photosByElieData = {
         title: "20180421 1536 12027",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1536-12027-a75b38956b_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1536-12027-a75b38956b_1800.jpg",
         metadata: [
@@ -24797,7 +24797,7 @@ window.photosByElieData = {
         title: "20180421 1536 12740",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1536-12740-41ca079ecc_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1536-12740-41ca079ecc_1800.jpg",
         metadata: [
@@ -24864,7 +24864,7 @@ window.photosByElieData = {
         title: "20180421 1535 12902",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1535-12902-a23ae50fc8_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1535-12902-a23ae50fc8_1800.jpg",
         metadata: [
@@ -24931,7 +24931,7 @@ window.photosByElieData = {
         title: "20180421 1535 11998",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1535-11998-60ef2ba3cc_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1535-11998-60ef2ba3cc_1800.jpg",
         metadata: [
@@ -24998,7 +24998,7 @@ window.photosByElieData = {
         title: "20180421 1535 11896",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1535-11896-ead94a86da_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1535-11896-ead94a86da_1800.jpg",
         metadata: [
@@ -25065,7 +25065,7 @@ window.photosByElieData = {
         title: "20180421 1534 13389",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1534-13389-fa1275c3e3_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1534-13389-fa1275c3e3_1800.jpg",
         metadata: [
@@ -25132,7 +25132,7 @@ window.photosByElieData = {
         title: "20180421 1534 13312",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1534-13312-33eb4527dd_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1534-13312-33eb4527dd_1800.jpg",
         metadata: [
@@ -25199,7 +25199,7 @@ window.photosByElieData = {
         title: "20180421 1533 13173",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1533-13173-45d10d758d_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1533-13173-45d10d758d_1800.jpg",
         metadata: [
@@ -25266,7 +25266,7 @@ window.photosByElieData = {
         title: "20180421 1533 11883",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1533-11883-ffd69b01d5_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1533-11883-ffd69b01d5_1800.jpg",
         metadata: [
@@ -25333,7 +25333,7 @@ window.photosByElieData = {
         title: "20180421 1533 12811",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1533-12811-2986b315ce_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1533-12811-2986b315ce_1800.jpg",
         metadata: [
@@ -25400,7 +25400,7 @@ window.photosByElieData = {
         title: "20180421 1324 12174",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1324-12174-267523668a_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1324-12174-267523668a_1800.jpg",
         metadata: [
@@ -25467,7 +25467,7 @@ window.photosByElieData = {
         title: "20180421 1321 13662",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1321-13662-6be2c782e6_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1321-13662-6be2c782e6_1800.jpg",
         metadata: [
@@ -25534,7 +25534,7 @@ window.photosByElieData = {
         title: "20180421 1319 13379",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1319-13379-458588499c_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1319-13379-458588499c_1800.jpg",
         metadata: [
@@ -25601,7 +25601,7 @@ window.photosByElieData = {
         title: "20180421 1317 11952",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1317-11952-9b706e99b8_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1317-11952-9b706e99b8_1800.jpg",
         metadata: [
@@ -25668,7 +25668,7 @@ window.photosByElieData = {
         title: "20180421 1315 12105",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1315-12105-b5fb72a520_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1315-12105-b5fb72a520_1800.jpg",
         metadata: [
@@ -25735,7 +25735,7 @@ window.photosByElieData = {
         title: "20180421 1314 12535",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1314-12535-0e5de0d6d0_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1314-12535-0e5de0d6d0_1800.jpg",
         metadata: [
@@ -25802,7 +25802,7 @@ window.photosByElieData = {
         title: "20180421 1314 12194",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1314-12194-9720f6f4fc_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1314-12194-9720f6f4fc_1800.jpg",
         metadata: [
@@ -25869,7 +25869,7 @@ window.photosByElieData = {
         title: "20180421 1313 12291",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1313-12291-8e3ec8452a_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1313-12291-8e3ec8452a_1800.jpg",
         metadata: [
@@ -25936,7 +25936,7 @@ window.photosByElieData = {
         title: "20180421 1313 12169",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1313-12169-c895ce5df7_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1313-12169-c895ce5df7_1800.jpg",
         metadata: [
@@ -26003,7 +26003,7 @@ window.photosByElieData = {
         title: "20180421 1307 11535",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1307-11535-f8010916d2_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1307-11535-f8010916d2_1800.jpg",
         metadata: [
@@ -26070,7 +26070,7 @@ window.photosByElieData = {
         title: "20180421 1303 12279",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1303-12279-a30f818e53_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1303-12279-a30f818e53_1800.jpg",
         metadata: [
@@ -26137,7 +26137,7 @@ window.photosByElieData = {
         title: "20180421 1302 13327",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1302-13327-ede937ff43_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1302-13327-ede937ff43_1800.jpg",
         metadata: [
@@ -26204,7 +26204,7 @@ window.photosByElieData = {
         title: "20180421 1302 13484",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1302-13484-de314daaef_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1302-13484-de314daaef_1800.jpg",
         metadata: [
@@ -26271,7 +26271,7 @@ window.photosByElieData = {
         title: "20180421 1301 11781",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1301-11781-9af05e8a71_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1301-11781-9af05e8a71_1800.jpg",
         metadata: [
@@ -26338,7 +26338,7 @@ window.photosByElieData = {
         title: "20180421 1301 13630",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1301-13630-2e7556e274_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1301-13630-2e7556e274_1800.jpg",
         metadata: [
@@ -26405,7 +26405,7 @@ window.photosByElieData = {
         title: "20180421 1301 13471",
         caption: "USA / 2018-04-21",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/usa/20180421-1301-13471-a2bc5324f5_900.jpg",
         imageSrc: "./assets/expo/usa/20180421-1301-13471-a2bc5324f5_1800.jpg",
         metadata: [
@@ -26772,7 +26772,7 @@ window.photosByElieData = {
         title: "20180414 152504 00097",
         caption: "USA / Ocean Beach, Ocean Beach, CA / 2018-04-14",
         full: "JPG master",
-        megapixels: 99.0,
+        megapixels: 99,
         gallerySrc: "./assets/expo/usa/20180414-152504-00097-9494439789_900.jpg",
         imageSrc: "./assets/expo/usa/20180414-152504-00097-9494439789_1800.jpg",
         metadata: [
@@ -26847,7 +26847,7 @@ window.photosByElieData = {
         title: "La Jolla, CA, Scripps Coastal Reserve",
         caption: "USA / San Diego, California / 2018-04-05",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180405-1909-00200-06da187409_900.jpg",
         imageSrc: "./assets/expo/usa/20180405-1909-00200-06da187409_1800.jpg",
         metadata: [
@@ -26926,7 +26926,7 @@ window.photosByElieData = {
         title: "La Jolla, CA, Scripps Coastal Reserve",
         caption: "USA / San Diego, California / 2018-04-05",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180405-1909-00199-2cb05463d8_900.jpg",
         imageSrc: "./assets/expo/usa/20180405-1909-00199-2cb05463d8_1800.jpg",
         metadata: [
@@ -29072,7 +29072,7 @@ window.photosByElieData = {
         title: "Seaside State Beach, Cloudy Sunset",
         caption: "USA / Solana Beach, California / 2018-02-27",
         full: "JPG master",
-        megapixels: 43.0,
+        megapixels: 43,
         gallerySrc: "./assets/expo/usa/20180227-1741-00104-e98801052d_900.jpg",
         imageSrc: "./assets/expo/usa/20180227-1741-00104-e98801052d_1800.jpg",
         metadata: [
@@ -29309,7 +29309,7 @@ window.photosByElieData = {
         title: "Oceanside Harbor Village",
         caption: "USA / Oceanside, California / 2018-02-24",
         full: "JPG master",
-        megapixels: 14.0,
+        megapixels: 14,
         gallerySrc: "./assets/expo/usa/20180224-1446-00097-f9e2a1929a_900.jpg",
         imageSrc: "./assets/expo/usa/20180224-1446-00097-f9e2a1929a_1800.jpg",
         metadata: [
@@ -30941,7 +30941,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1817-00068-815dc6c271_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1817-00068-815dc6c271_1800.jpg",
         metadata: [
@@ -31107,7 +31107,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1817-00066-4daa200389_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1817-00066-4daa200389_1800.jpg",
         metadata: [
@@ -31190,7 +31190,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1817-00065-477cf9a0c8_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1817-00065-477cf9a0c8_1800.jpg",
         metadata: [
@@ -31273,7 +31273,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1817-00064-419e83e6e6_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1817-00064-419e83e6e6_1800.jpg",
         metadata: [
@@ -31522,7 +31522,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1815-00062-b5ef84fe92_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1815-00062-b5ef84fe92_1800.jpg",
         metadata: [
@@ -31605,7 +31605,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1813-00061-f38fd1051d_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1813-00061-f38fd1051d_1800.jpg",
         metadata: [
@@ -31854,7 +31854,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1810-00059-44eb6fd278_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1810-00059-44eb6fd278_1800.jpg",
         metadata: [
@@ -31937,7 +31937,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1810-00058-16dcf3e4ea_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1810-00058-16dcf3e4ea_1800.jpg",
         metadata: [
@@ -32020,7 +32020,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1809-00057-5d56be5106_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1809-00057-5d56be5106_1800.jpg",
         metadata: [
@@ -32103,7 +32103,7 @@ window.photosByElieData = {
         title: "Del Mar Dog Beach at Sunset",
         caption: "USA / Del Mar, California / 2018-01-30",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20180130-1807-00056-ce796ea795_900.jpg",
         imageSrc: "./assets/expo/usa/20180130-1807-00056-ce796ea795_1800.jpg",
         metadata: [
@@ -32186,7 +32186,7 @@ window.photosByElieData = {
         title: "Horse Mom and Child, Pauma Valley, California, USA",
         caption: "USA / 2017-12-10",
         full: "JPG master",
-        megapixels: 96.0,
+        megapixels: 96,
         gallerySrc: "./assets/expo/usa/20171210-1536-16046-enhanced-sr-7b190fdf6f_900.jpg",
         imageSrc: "./assets/expo/usa/20171210-1536-16046-enhanced-sr-7b190fdf6f_1800.jpg",
         metadata: [
@@ -32261,7 +32261,7 @@ window.photosByElieData = {
         title: "20171210 Horse Mom and Child, Pauma Valley, California, USA",
         caption: "USA / 2017-12-10",
         full: "JPG master",
-        megapixels: 96.0,
+        megapixels: 96,
         gallerySrc: "./assets/expo/usa/20171210-1536-15417-enhanced-sr-14ffa0b0f3_900.jpg",
         imageSrc: "./assets/expo/usa/20171210-1536-15417-enhanced-sr-14ffa0b0f3_1800.jpg",
         metadata: [
@@ -32908,7 +32908,7 @@ window.photosByElieData = {
         title: "Wild Animals at the zoo",
         caption: "USA / San Diego, California / 2016-11-06",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20161106-1622-27069-edit-0a10c13eb6_900.jpg",
         imageSrc: "./assets/expo/usa/20161106-1622-27069-edit-0a10c13eb6_1800.jpg",
         metadata: [
@@ -32987,7 +32987,7 @@ window.photosByElieData = {
         title: "Wild Animals at the zoo",
         caption: "USA / San Diego, California / 2016-11-06",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20161106-1622-03567-edit-edit-fd53d9a73d_900.jpg",
         imageSrc: "./assets/expo/usa/20161106-1622-03567-edit-edit-fd53d9a73d_1800.jpg",
         metadata: [
@@ -33066,7 +33066,7 @@ window.photosByElieData = {
         title: "Wild Animals at the zoo",
         caption: "USA / 2016-11-06",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20161106-1622-03567-edit-eb43eef3fa_900.jpg",
         imageSrc: "./assets/expo/usa/20161106-1622-03567-edit-eb43eef3fa_1800.jpg",
         metadata: [
@@ -33524,7 +33524,7 @@ window.photosByElieData = {
         title: "San Diego Balboa park Museums and Gardens",
         caption: "USA / San Diego, California / 2016-09-25",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/usa/20160925-1524-00041-f21924756f_900.jpg",
         imageSrc: "./assets/expo/usa/20160925-1524-00041-f21924756f_1800.jpg",
         metadata: [
@@ -33970,7 +33970,7 @@ window.photosByElieData = {
         title: "20160221 1420 01300",
         caption: "USA / 2016-02-21",
         full: "JPG master",
-        megapixels: 26.0,
+        megapixels: 26,
         gallerySrc: "./assets/expo/usa/20160221-1420-01300-23ee766e22_900.jpg",
         imageSrc: "./assets/expo/usa/20160221-1420-01300-23ee766e22_1800.jpg",
         metadata: [
@@ -34021,7 +34021,7 @@ window.photosByElieData = {
         title: "20150416 1213 25583",
         caption: "USA / 2015-04-16",
         full: "JPG master",
-        megapixels: 8.0,
+        megapixels: 8,
         gallerySrc: "./assets/expo/usa/20150416-1213-25583-4d3099c123_900.jpg",
         imageSrc: "./assets/expo/usa/20150416-1213-25583-4d3099c123_1800.jpg",
         metadata: [
@@ -34313,7 +34313,7 @@ window.photosByElieData = {
         title: "20141221 1313 00111",
         caption: "USA / 2014-12-21",
         full: "JPG master",
-        megapixels: 8.0,
+        megapixels: 8,
         gallerySrc: "./assets/expo/usa/20141221-1313-00111-ee3b408e47_900.jpg",
         imageSrc: "./assets/expo/usa/20141221-1313-00111-ee3b408e47_1800.jpg",
         metadata: [
@@ -34459,7 +34459,7 @@ window.photosByElieData = {
         title: "20120509 1911 16138",
         caption: "USA / 2012-05-09",
         full: "JPG master",
-        megapixels: 8.0,
+        megapixels: 8,
         gallerySrc: "./assets/expo/usa/20120509-1911-16138-212b05fe71_900.jpg",
         imageSrc: "./assets/expo/usa/20120509-1911-16138-212b05fe71_1800.jpg",
         metadata: [
@@ -34526,7 +34526,7 @@ window.photosByElieData = {
         title: "20120509 1910 26961",
         caption: "USA / 2012-05-09",
         full: "JPG master",
-        megapixels: 8.0,
+        megapixels: 8,
         gallerySrc: "./assets/expo/usa/20120509-1910-26961-f0cbd541fa_900.jpg",
         imageSrc: "./assets/expo/usa/20120509-1910-26961-f0cbd541fa_1800.jpg",
         metadata: [
@@ -34672,7 +34672,7 @@ window.photosByElieData = {
         title: "20220705 164358 00121 Pano",
         caption: "Spain / 2022-07-05",
         full: "JPG master",
-        megapixels: 146.0,
+        megapixels: 146,
         gallerySrc: "./assets/expo/spain/20220705-164358-00121-pano-28e2885b71_900.jpg",
         imageSrc: "./assets/expo/spain/20220705-164358-00121-pano-28e2885b71_1800.jpg",
         metadata: [
@@ -34743,7 +34743,7 @@ window.photosByElieData = {
         title: "20220705 164409 00126 Pano",
         caption: "Spain / 2022-07-05",
         full: "JPG master",
-        megapixels: 56.0,
+        megapixels: 56,
         gallerySrc: "./assets/expo/spain/20220705-164409-00126-pano-75c4163f8e_900.jpg",
         imageSrc: "./assets/expo/spain/20220705-164409-00126-pano-75c4163f8e_1800.jpg",
         metadata: [
@@ -37331,7 +37331,7 @@ window.photosByElieData = {
         title: "20180523 1253 00923",
         caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-23",
         full: "JPG master",
-        megapixels: 20.0,
+        megapixels: 20,
         gallerySrc: "./assets/expo/spain/20180523-1253-00923-9853f3d6a1_900.jpg",
         imageSrc: "./assets/expo/spain/20180523-1253-00923-9853f3d6a1_1800.jpg",
         metadata: [
@@ -37931,7 +37931,7 @@ window.photosByElieData = {
         title: "20180523 1202 00913",
         caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-23",
         full: "JPG master",
-        megapixels: 14.0,
+        megapixels: 14,
         gallerySrc: "./assets/expo/spain/20180523-1202-00913-897a1ed221_900.jpg",
         imageSrc: "./assets/expo/spain/20180523-1202-00913-897a1ed221_1800.jpg",
         metadata: [
@@ -38231,7 +38231,7 @@ window.photosByElieData = {
         title: "20180523 1158 00909",
         caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-23",
         full: "JPG master",
-        megapixels: 10.0,
+        megapixels: 10,
         gallerySrc: "./assets/expo/spain/20180523-1158-00909-ae9141c3d6_900.jpg",
         imageSrc: "./assets/expo/spain/20180523-1158-00909-ae9141c3d6_1800.jpg",
         metadata: [
@@ -38381,7 +38381,7 @@ window.photosByElieData = {
         title: "20180523 1158 00907",
         caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-23",
         full: "JPG master",
-        megapixels: 18.0,
+        megapixels: 18,
         gallerySrc: "./assets/expo/spain/20180523-1158-00907-6ce2b12655_900.jpg",
         imageSrc: "./assets/expo/spain/20180523-1158-00907-6ce2b12655_1800.jpg",
         metadata: [
@@ -38831,7 +38831,7 @@ window.photosByElieData = {
         title: "20180522 1326 00894",
         caption: "Spain / Madrid, Comunidad de Madrid / 2018-05-22",
         full: "JPG master",
-        megapixels: 14.0,
+        megapixels: 14,
         gallerySrc: "./assets/expo/spain/20180522-1326-00894-70f247c8bf_900.jpg",
         imageSrc: "./assets/expo/spain/20180522-1326-00894-70f247c8bf_1800.jpg",
         metadata: [
@@ -44456,7 +44456,7 @@ window.photosByElieData = {
         title: "20180515 1638 00444",
         caption: "Spain / Bilbo, Euskadi / 2018-05-15",
         full: "JPG master",
-        megapixels: 25.0,
+        megapixels: 25,
         gallerySrc: "./assets/expo/spain/20180515-1638-00444-dc30222093_900.jpg",
         imageSrc: "./assets/expo/spain/20180515-1638-00444-dc30222093_1800.jpg",
         metadata: [
@@ -45506,7 +45506,7 @@ window.photosByElieData = {
         title: "20180515 1553 00417",
         caption: "Spain / Bilbo, Euskadi / 2018-05-15",
         full: "JPG master",
-        megapixels: 15.0,
+        megapixels: 15,
         gallerySrc: "./assets/expo/spain/20180515-1553-00417-ce4188ec98_900.jpg",
         imageSrc: "./assets/expo/spain/20180515-1553-00417-ce4188ec98_1800.jpg",
         metadata: [
@@ -46406,7 +46406,7 @@ window.photosByElieData = {
         title: "20180515 1510 00398",
         caption: "Spain / Bilbo, Euskadi / 2018-05-15",
         full: "JPG master",
-        megapixels: 16.0,
+        megapixels: 16,
         gallerySrc: "./assets/expo/spain/20180515-1510-00398-b6b2dcafad_900.jpg",
         imageSrc: "./assets/expo/spain/20180515-1510-00398-b6b2dcafad_1800.jpg",
         metadata: [
@@ -46481,7 +46481,7 @@ window.photosByElieData = {
         title: "20180515 1510 00397",
         caption: "Spain / Bilbo, Euskadi / 2018-05-15",
         full: "JPG master",
-        megapixels: 16.0,
+        megapixels: 16,
         gallerySrc: "./assets/expo/spain/20180515-1510-00397-3fdd5ba3db_900.jpg",
         imageSrc: "./assets/expo/spain/20180515-1510-00397-3fdd5ba3db_1800.jpg",
         metadata: [
@@ -46556,7 +46556,7 @@ window.photosByElieData = {
         title: "20180515 1509 00395",
         caption: "Spain / Bilbo, Euskadi / 2018-05-15",
         full: "JPG master",
-        megapixels: 14.0,
+        megapixels: 14,
         gallerySrc: "./assets/expo/spain/20180515-1509-00395-990efe55c7_900.jpg",
         imageSrc: "./assets/expo/spain/20180515-1509-00395-990efe55c7_1800.jpg",
         metadata: [
@@ -46631,7 +46631,7 @@ window.photosByElieData = {
         title: "20180515 1509 00394",
         caption: "Spain / Bilbo, Euskadi / 2018-05-15",
         full: "JPG master",
-        megapixels: 17.0,
+        megapixels: 17,
         gallerySrc: "./assets/expo/spain/20180515-1509-00394-1c47ab8c12_900.jpg",
         imageSrc: "./assets/expo/spain/20180515-1509-00394-1c47ab8c12_1800.jpg",
         metadata: [
@@ -47235,7 +47235,7 @@ window.photosByElieData = {
         title: "20191206 0605 17192",
         caption: "Mexico / 2019-12-06",
         full: "JPG master",
-        megapixels: 107.0,
+        megapixels: 107,
         gallerySrc: "./assets/expo/mexico/20191206-0605-17192-85701a04f9_900.jpg",
         imageSrc: "./assets/expo/mexico/20191206-0605-17192-85701a04f9_1800.jpg",
         metadata: [
@@ -53699,7 +53699,7 @@ window.photosByElieData = {
         title: "Young full body robotic female with nothing on, with a glowing r",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/young-full-body-robotic-female-with-nothing-on-with-a-glowi-2-upscale-6cccb04c-7b19-4505-8c23-0aa8397f9ccc-jpgx2-9bb1be7243_900.jpg",
         imageSrc: "./assets/expo/ai/young-full-body-robotic-female-with-nothing-on-with-a-glowi-2-upscale-6cccb04c-7b19-4505-8c23-0aa8397f9ccc-jpgx2-9bb1be7243_1800.jpg",
         metadata: [
@@ -53746,7 +53746,7 @@ window.photosByElieData = {
         title: "Young full body robotic female with nothing on, with a glowing r",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/young-full-body-robotic-female-with-nothing-on-with-a-glowi-0-upscale-c97f5ef6-c8fd-4d6a-b2e3-28c6eb72c1ac-jpgx2-c22815a061_900.jpg",
         imageSrc: "./assets/expo/ai/young-full-body-robotic-female-with-nothing-on-with-a-glowi-0-upscale-c97f5ef6-c8fd-4d6a-b2e3-28c6eb72c1ac-jpgx2-c22815a061_1800.jpg",
         metadata: [
@@ -54404,7 +54404,7 @@ window.photosByElieData = {
         title: "Young full body female with nothing on, abstract organic, lush style, organic , a woman, perfect nose, prefect lips, ful",
         caption: "AI",
         full: "JPG master",
-        megapixels: 5.0,
+        megapixels: 5,
         gallerySrc: "./assets/expo/ai/young-full-body-female-with-nothing-on-abstract-organic-lu-3-upscale-cca11bf6-f9d4-45da-ba5c-13014d2e9037-8fd56e7d0d_900.jpg",
         imageSrc: "./assets/expo/ai/young-full-body-female-with-nothing-on-abstract-organic-lu-3-upscale-cca11bf6-f9d4-45da-ba5c-13014d2e9037-8fd56e7d0d_1800.jpg",
         metadata: [
@@ -56049,7 +56049,7 @@ window.photosByElieData = {
         title: "Young Charlize Theron, full body female with nothing on, abstract organic, geometric rusted steel, fractured  fungus for",
         caption: "AI",
         full: "JPG master",
-        megapixels: 7.0,
+        megapixels: 7,
         gallerySrc: "./assets/expo/ai/young-charlize-theron-full-body-female-with-nothing-on-abs-1-upscale-6a4496e7-1a84-4034-a67a-7eb181e0d422-481049f9cb_900.jpg",
         imageSrc: "./assets/expo/ai/young-charlize-theron-full-body-female-with-nothing-on-abs-1-upscale-6a4496e7-1a84-4034-a67a-7eb181e0d422-481049f9cb_1800.jpg",
         metadata: [
@@ -78913,7 +78913,7 @@ window.photosByElieData = {
         title: "Tesla bot, working on another Tesla bot. In the background, another Tesla bot bringing parts of a Tesla bot",
         caption: "AI",
         full: "JPG master",
-        megapixels: 27.0,
+        megapixels: 27,
         gallerySrc: "./assets/expo/ai/tesla-bot-working-on-another-tesla-bot-in-the-background-1-upscale-9ce15c0b-98c4-4d64-bba7-ef1038b0994a-jpgx2-ed388ed761_900.jpg",
         imageSrc: "./assets/expo/ai/tesla-bot-working-on-another-tesla-bot-in-the-background-1-upscale-9ce15c0b-98c4-4d64-bba7-ef1038b0994a-jpgx2-ed388ed761_1800.jpg",
         metadata: [
@@ -78960,7 +78960,7 @@ window.photosByElieData = {
         title: "Tesla bot, working on another Tesla bot. In the background, another Tesla bot bringing parts of a Tesla bot",
         caption: "AI",
         full: "JPG master",
-        megapixels: 27.0,
+        megapixels: 27,
         gallerySrc: "./assets/expo/ai/tesla-bot-working-on-another-tesla-bot-in-the-background-0-upscale-976663b4-a89c-42d4-ae51-0aa902c25764-jpgx2-cd2db8f7d5_900.jpg",
         imageSrc: "./assets/expo/ai/tesla-bot-working-on-another-tesla-bot-in-the-background-0-upscale-976663b4-a89c-42d4-ae51-0aa902c25764-jpgx2-cd2db8f7d5_1800.jpg",
         metadata: [
@@ -79054,7 +79054,7 @@ window.photosByElieData = {
         title: "Terraced Rice Patties, Abstract background ink line decoration painting landscape artistic conception, sunset",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/terraced-rice-patties-abstract-background-ink-line-decorati-1-upscale-aa631d0e-53cc-4037-8370-ff4e91978033-jpgx2-5532e57aeb_900.jpg",
         imageSrc: "./assets/expo/ai/terraced-rice-patties-abstract-background-ink-line-decorati-1-upscale-aa631d0e-53cc-4037-8370-ff4e91978033-jpgx2-5532e57aeb_1800.jpg",
         metadata: [
@@ -79101,7 +79101,7 @@ window.photosByElieData = {
         title: "Terraced Rice Patties, Abstract background ink line decoration painting landscape artistic conception, sunset",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/terraced-rice-patties-abstract-background-ink-line-decorati-0-upscale-cba9e10c-ea30-4982-a93b-86e1cba4a6aa-jpgx2-7e9ae62248_900.jpg",
         imageSrc: "./assets/expo/ai/terraced-rice-patties-abstract-background-ink-line-decorati-0-upscale-cba9e10c-ea30-4982-a93b-86e1cba4a6aa-jpgx2-7e9ae62248_1800.jpg",
         metadata: [
@@ -93248,7 +93248,7 @@ window.photosByElieData = {
         title: "[ricky gervais] as a wise old man, presenting holding of golden",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/ricky-gervais-as-a-wise-old-man-presenting-holding-of-gol-1-upscale-daec33ee-a1fd-4eed-8621-af60fd05eea2-jpgx2-803384c9b9_900.jpg",
         imageSrc: "./assets/expo/ai/ricky-gervais-as-a-wise-old-man-presenting-holding-of-gol-1-upscale-daec33ee-a1fd-4eed-8621-af60fd05eea2-jpgx2-803384c9b9_1800.jpg",
         metadata: [
@@ -93389,7 +93389,7 @@ window.photosByElieData = {
         title: "[ricky gervais] as a wise old man, presenting holding of golden dividers, long white beard and hair, in gold and deep re",
         caption: "AI",
         full: "JPG master",
-        megapixels: 21.0,
+        megapixels: 21,
         gallerySrc: "./assets/expo/ai/ricky-gervais-as-a-wise-old-man-presenting-holding-of-gol-0-upscale-8f6411b1-0b0b-4919-94d2-144d105770c7-jpgx2-38c6e646e2_900.jpg",
         imageSrc: "./assets/expo/ai/ricky-gervais-as-a-wise-old-man-presenting-holding-of-gol-0-upscale-8f6411b1-0b0b-4919-94d2-144d105770c7-jpgx2-38c6e646e2_1800.jpg",
         metadata: [
@@ -96726,7 +96726,7 @@ window.photosByElieData = {
         title: "princess",
         caption: "AI",
         full: "JPG master",
-        megapixels: 23.0,
+        megapixels: 23,
         gallerySrc: "./assets/expo/ai/princess-1-upscale-2b240c36-6485-4f7c-8417-61f8f62c436b-jpgx2-6feb3e2a4f_900.jpg",
         imageSrc: "./assets/expo/ai/princess-1-upscale-2b240c36-6485-4f7c-8417-61f8f62c436b-jpgx2-6feb3e2a4f_1800.jpg",
         metadata: [
@@ -97149,7 +97149,7 @@ window.photosByElieData = {
         title: "princess",
         caption: "AI",
         full: "JPG master",
-        megapixels: 23.0,
+        megapixels: 23,
         gallerySrc: "./assets/expo/ai/princess-0-upscale-4dc1886c-c78d-424c-a01f-adfe83f82259-jpgx2-3fd94fb7d5_900.jpg",
         imageSrc: "./assets/expo/ai/princess-0-upscale-4dc1886c-c78d-424c-a01f-adfe83f82259-jpgx2-3fd94fb7d5_1800.jpg",
         metadata: [
@@ -100165,7 +100165,7 @@ window.photosByElieData = {
         title: "Paris. Trocadero, Eiffel Tower, River Seine, France, sunset",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/paris-trocadero-eiffel-tower-river-seine-france-sunset-0-upscale-2c31081f-0aff-499f-a171-4dacba5baa81-jpgx2-cba4249f6e_900.jpg",
         imageSrc: "./assets/expo/ai/paris-trocadero-eiffel-tower-river-seine-france-sunset-0-upscale-2c31081f-0aff-499f-a171-4dacba5baa81-jpgx2-cba4249f6e_1800.jpg",
         metadata: [
@@ -100212,7 +100212,7 @@ window.photosByElieData = {
         title: "Paris. Grand Palais. Pont Neuf, road, France",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-1-upscale-4c7c02ee-5475-4475-8cc7-77d1225fe652-jpgx2-e88a840db7_900.jpg",
         imageSrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-1-upscale-4c7c02ee-5475-4475-8cc7-77d1225fe652-jpgx2-e88a840db7_1800.jpg",
         metadata: [
@@ -100259,7 +100259,7 @@ window.photosByElieData = {
         title: "Paris. Grand Palais. Pont Neuf, road, France",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-1-upscale-0ac6d324-919c-4a5b-8e72-a8f7d64d4dd3-jpgx2-5feffb6696_900.jpg",
         imageSrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-1-upscale-0ac6d324-919c-4a5b-8e72-a8f7d64d4dd3-jpgx2-5feffb6696_1800.jpg",
         metadata: [
@@ -100306,7 +100306,7 @@ window.photosByElieData = {
         title: "Paris. Grand Palais. Pont Neuf, road, France",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-0-upscale-989e4049-edcc-413c-8f29-513bec913889-jpgx2-f35eac95fa_900.jpg",
         imageSrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-0-upscale-989e4049-edcc-413c-8f29-513bec913889-jpgx2-f35eac95fa_1800.jpg",
         metadata: [
@@ -100353,7 +100353,7 @@ window.photosByElieData = {
         title: "Paris. Grand Palais. Pont Neuf, road, France",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-0-upscale-221ae8b5-db69-4df6-b99a-816b93a21ef5-jpgx2-c673097c94_900.jpg",
         imageSrc: "./assets/expo/ai/paris-grand-palais-pont-neuf-road-france-0-upscale-221ae8b5-db69-4df6-b99a-816b93a21ef5-jpgx2-c673097c94_1800.jpg",
         metadata: [
@@ -104301,7 +104301,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, view of London. Big ben. bus and road, telephone. England",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-view-of-london-big-ben-bus-and-roa-1-upscale-1cb4cac6-c73f-4bb1-995d-83267465fd7a-jpgx2-fa641211af_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-view-of-london-big-ben-bus-and-roa-1-upscale-1cb4cac6-c73f-4bb1-995d-83267465fd7a-jpgx2-fa641211af_1800.jpg",
         metadata: [
@@ -104348,7 +104348,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, view of London. Big ben. bus and road, telephone. England",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-view-of-london-big-ben-bus-and-roa-0-upscale-738a2b6d-a770-4d4d-8907-4ac3eaae270c-jpgx2-ba7a60f8ed_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-view-of-london-big-ben-bus-and-roa-0-upscale-738a2b6d-a770-4d4d-8907-4ac3eaae270c-jpgx2-ba7a60f8ed_1800.jpg",
         metadata: [
@@ -104395,7 +104395,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, street view of london. Artwork. Big ben. couple and red umbrella, bus and road, telephone. Black",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-1-upscale-f274df9d-95ba-4180-bf37-00a080727758-jpgx2-149eb88bfa_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-1-upscale-f274df9d-95ba-4180-bf37-00a080727758-jpgx2-149eb88bfa_1800.jpg",
         metadata: [
@@ -104442,7 +104442,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, street view of london. Artwork. Big ben. bus and road, telephone. England",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-1-upscale-ef09026b-9a92-4732-bb6e-f34dd2cb033b-jpgx2-f5127ad8e4_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-1-upscale-ef09026b-9a92-4732-bb6e-f34dd2cb033b-jpgx2-f5127ad8e4_1800.jpg",
         metadata: [
@@ -104489,7 +104489,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, street view of london. Artwork. Big ben. couple and red umbrella, bus and road, telephone. Black",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-1-upscale-3a11499c-e945-4ff2-87d8-ea1ad6556edb-jpgx2-d515e0b7c7_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-1-upscale-3a11499c-e945-4ff2-87d8-ea1ad6556edb-jpgx2-d515e0b7c7_1800.jpg",
         metadata: [
@@ -104536,7 +104536,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, street view of london. Artwork. Big ben. couple and red umbrella, bus and road, telephone. Black",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-0-upscale-b7ad17f5-13ae-4572-9b5d-8fcaeaed8695-jpgx2-16e9481661_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-0-upscale-b7ad17f5-13ae-4572-9b5d-8fcaeaed8695-jpgx2-16e9481661_1800.jpg",
         metadata: [
@@ -104583,7 +104583,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, street view of london. Artwork. Big ben. couple and red umbrella, bus and road, telephone. Black",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-0-upscale-9e6f06ca-ee20-4c7e-96fe-7c4c2dd0cb1b-jpgx2-1e80db71e0_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-0-upscale-9e6f06ca-ee20-4c7e-96fe-7c4c2dd0cb1b-jpgx2-1e80db71e0_1800.jpg",
         metadata: [
@@ -104630,7 +104630,7 @@ window.photosByElieData = {
         title: "oil painting on canvas, street view of london. Artwork. Big ben. bus and road, telephone. England",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-0-upscale-4c6d10ef-db8c-4746-b5b1-92b3e3b1981b-jpgx2-bc31ff1e53_900.jpg",
         imageSrc: "./assets/expo/ai/oil-painting-on-canvas-street-view-of-london-artwork-big-0-upscale-4c6d10ef-db8c-4746-b5b1-92b3e3b1981b-jpgx2-bc31ff1e53_1800.jpg",
         metadata: [
@@ -104865,7 +104865,7 @@ window.photosByElieData = {
         title: "Oceanside, ocean, beach, jetty, pelicans on handrail, sand, long",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/oceanside-ocean-beach-jetty-pelicans-on-handrail-sand-3-upscale-876052dd-04c6-41f8-82e4-05fd8f0411e3-jpgx2-fd98b83ac6_900.jpg",
         imageSrc: "./assets/expo/ai/oceanside-ocean-beach-jetty-pelicans-on-handrail-sand-3-upscale-876052dd-04c6-41f8-82e4-05fd8f0411e3-jpgx2-fd98b83ac6_1800.jpg",
         metadata: [
@@ -117171,7 +117171,7 @@ window.photosByElieData = {
         title: "modern skyscraper, sleek, impressive, imposing, reflective, futu",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/modern-skyscraper-sleek-impressive-imposing-reflective-1-upscale-062824dd-14a1-4757-adbf-9f19ed0b9f71-jpgx2-f6c556cea9_900.jpg",
         imageSrc: "./assets/expo/ai/modern-skyscraper-sleek-impressive-imposing-reflective-1-upscale-062824dd-14a1-4757-adbf-9f19ed0b9f71-jpgx2-f6c556cea9_1800.jpg",
         metadata: [
@@ -117265,7 +117265,7 @@ window.photosByElieData = {
         title: "modern skyscraper, sleek, impressive, imposing, reflective, futu",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/modern-skyscraper-sleek-impressive-imposing-reflective-0-upscale-6c31249e-d5a4-4a1d-81fa-02095783c44e-jpgx2-04c23378bc_900.jpg",
         imageSrc: "./assets/expo/ai/modern-skyscraper-sleek-impressive-imposing-reflective-0-upscale-6c31249e-d5a4-4a1d-81fa-02095783c44e-jpgx2-04c23378bc_1800.jpg",
         metadata: [
@@ -117594,7 +117594,7 @@ window.photosByElieData = {
         title: "modern family room, huge flat screen TV, single fireplace, fur rug, wood flooring",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-single-fireplace-f-1-upscale-3ba2e3c0-7896-43bb-a6e4-dc3a7a86652e-jpgx2-56ed4214f3_900.jpg",
         imageSrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-single-fireplace-f-1-upscale-3ba2e3c0-7896-43bb-a6e4-dc3a7a86652e-jpgx2-56ed4214f3_1800.jpg",
         metadata: [
@@ -117641,7 +117641,7 @@ window.photosByElieData = {
         title: "modern family room, huge flat screen TV, single fireplace, fur rug, wood flooring",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-single-fireplace-f-0-upscale-315ac303-ba1e-49e9-ac09-539c6fdd2d1b-jpgx2-ccb082c551_900.jpg",
         imageSrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-single-fireplace-f-0-upscale-315ac303-ba1e-49e9-ac09-539c6fdd2d1b-jpgx2-ccb082c551_1800.jpg",
         metadata: [
@@ -117688,7 +117688,7 @@ window.photosByElieData = {
         title: "modern family room, huge flat screen TV, huge fireplace, fur rug, wood flooring",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-huge-fireplace-fur-1-upscale-7bd0508a-5869-4919-b2f0-5970e4c5731f-jpgx2-483dc7b542_900.jpg",
         imageSrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-huge-fireplace-fur-1-upscale-7bd0508a-5869-4919-b2f0-5970e4c5731f-jpgx2-483dc7b542_1800.jpg",
         metadata: [
@@ -117735,7 +117735,7 @@ window.photosByElieData = {
         title: "modern family room, huge flat screen TV, huge fireplace, fur rug, wood flooring",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-huge-fireplace-fur-0-upscale-dbd8f96b-63db-49f0-a6cc-a04b722813a1-jpgx2-4b94541a3b_900.jpg",
         imageSrc: "./assets/expo/ai/modern-family-room-huge-flat-screen-tv-huge-fireplace-fur-0-upscale-dbd8f96b-63db-49f0-a6cc-a04b722813a1-jpgx2-4b94541a3b_1800.jpg",
         metadata: [
@@ -118534,7 +118534,7 @@ window.photosByElieData = {
         title: "modern bathroom",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/modern-bathroom-1-upscale-8e411105-9a1d-4d7c-baea-27004d56d6d7-jpgx2-e46fd8d9e4_900.jpg",
         imageSrc: "./assets/expo/ai/modern-bathroom-1-upscale-8e411105-9a1d-4d7c-baea-27004d56d6d7-jpgx2-e46fd8d9e4_1800.jpg",
         metadata: [
@@ -118628,7 +118628,7 @@ window.photosByElieData = {
         title: "modern bathroom",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/modern-bathroom-0-upscale-ca675b3a-489a-45e7-94bf-447b5c18da37-jpgx2-d37099124b_900.jpg",
         imageSrc: "./assets/expo/ai/modern-bathroom-0-upscale-ca675b3a-489a-45e7-94bf-447b5c18da37-jpgx2-d37099124b_1800.jpg",
         metadata: [
@@ -122106,7 +122106,7 @@ window.photosByElieData = {
         title: "Meg Ryan as a stunningly beatuiful ranger,elden ring, dark arts,",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/meg-ryan-as-a-stunningly-beatuiful-ranger-elden-ring-dark-a-1-upscale-070c1ad2-1b78-419d-a60a-fea07f7068e8-jpgx2-38f5bfb319_900.jpg",
         imageSrc: "./assets/expo/ai/meg-ryan-as-a-stunningly-beatuiful-ranger-elden-ring-dark-a-1-upscale-070c1ad2-1b78-419d-a60a-fea07f7068e8-jpgx2-38f5bfb319_1800.jpg",
         metadata: [
@@ -122200,7 +122200,7 @@ window.photosByElieData = {
         title: "Meg Ryan as a stunningly beatuiful ranger,elden ring, dark arts,",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/meg-ryan-as-a-stunningly-beatuiful-ranger-elden-ring-dark-a-0-upscale-185b7da3-7893-42de-8a35-f5a39a520d56-jpgx2-d6db5f4a5f_900.jpg",
         imageSrc: "./assets/expo/ai/meg-ryan-as-a-stunningly-beatuiful-ranger-elden-ring-dark-a-0-upscale-185b7da3-7893-42de-8a35-f5a39a520d56-jpgx2-d6db5f4a5f_1800.jpg",
         metadata: [
@@ -123798,7 +123798,7 @@ window.photosByElieData = {
         title: "(masterpiece), realistic, stunning hyperrealistic photograph, ex",
         caption: "AI",
         full: "JPG master",
-        megapixels: 39.0,
+        megapixels: 39,
         gallerySrc: "./assets/expo/ai/masterpiece-realistic-stunning-hyperrealistic-photograph-0-upscale-403fedeb-4068-4e66-b068-fc05486a13a4-jpgx4-6a75d46122_900.jpg",
         imageSrc: "./assets/expo/ai/masterpiece-realistic-stunning-hyperrealistic-photograph-0-upscale-403fedeb-4068-4e66-b068-fc05486a13a4-jpgx4-6a75d46122_1800.jpg",
         metadata: [
@@ -123892,7 +123892,7 @@ window.photosByElieData = {
         title: "(masterpiece), realistic, stunning hyperrealistic photograph, ex",
         caption: "AI",
         full: "JPG master",
-        megapixels: 39.0,
+        megapixels: 39,
         gallerySrc: "./assets/expo/ai/masterpiece-realistic-stunning-hyperrealistic-photograph-0-upscale-146ff908-99ba-46ba-8f2f-954bd0df39a0-jpgx4-81b765ea91_900.jpg",
         imageSrc: "./assets/expo/ai/masterpiece-realistic-stunning-hyperrealistic-photograph-0-upscale-146ff908-99ba-46ba-8f2f-954bd0df39a0-jpgx4-81b765ea91_1800.jpg",
         metadata: [
@@ -123939,7 +123939,7 @@ window.photosByElieData = {
         title: "(masterpiece), realistic, (portrait of a girl), beautiful face,",
         caption: "AI",
         full: "JPG master",
-        megapixels: 23.0,
+        megapixels: 23,
         gallerySrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-c6ff5d84-a867-48c7-8d45-64f472bd7db3-jpgx2-aa11f83b8e_900.jpg",
         imageSrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-c6ff5d84-a867-48c7-8d45-64f472bd7db3-jpgx2-aa11f83b8e_1800.jpg",
         metadata: [
@@ -123986,7 +123986,7 @@ window.photosByElieData = {
         title: "(masterpiece), realistic, (portrait of a girl), beautiful face,",
         caption: "AI",
         full: "JPG master",
-        megapixels: 23.0,
+        megapixels: 23,
         gallerySrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-5cf63c57-f4d5-4bc8-8906-ab719f64de0f-jpgx2-5bfe8288cb_900.jpg",
         imageSrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-1-upscale-5cf63c57-f4d5-4bc8-8906-ab719f64de0f-jpgx2-5bfe8288cb_1800.jpg",
         metadata: [
@@ -124033,7 +124033,7 @@ window.photosByElieData = {
         title: "(masterpiece), realistic, (portrait of a girl), beautiful face,",
         caption: "AI",
         full: "JPG master",
-        megapixels: 23.0,
+        megapixels: 23,
         gallerySrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-0-upscale-ff2c967e-c56a-4872-acea-bdf079b6d3c0-jpgx2-f342cdca2e_900.jpg",
         imageSrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-0-upscale-ff2c967e-c56a-4872-acea-bdf079b6d3c0-jpgx2-f342cdca2e_1800.jpg",
         metadata: [
@@ -124127,7 +124127,7 @@ window.photosByElieData = {
         title: "(masterpiece), realistic, (portrait of a girl), beautiful face,",
         caption: "AI",
         full: "JPG master",
-        megapixels: 23.0,
+        megapixels: 23,
         gallerySrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-0-upscale-89855691-8240-4b81-bd32-313e1f49d91d-jpgx2-f19300985e_900.jpg",
         imageSrc: "./assets/expo/ai/masterpiece-realistic-portrait-of-a-girl-beautiful-fa-0-upscale-89855691-8240-4b81-bd32-313e1f49d91d-jpgx2-f19300985e_1800.jpg",
         metadata: [
@@ -131318,7 +131318,7 @@ window.photosByElieData = {
         title: "London. Big ben. bus and road, telephone. England",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/london-big-ben-bus-and-road-telephone-england-1-upscale-a1afd740-9f17-4772-a5d5-246727574fc6-jpgx2-ad5ec28189_900.jpg",
         imageSrc: "./assets/expo/ai/london-big-ben-bus-and-road-telephone-england-1-upscale-a1afd740-9f17-4772-a5d5-246727574fc6-jpgx2-ad5ec28189_1800.jpg",
         metadata: [
@@ -131365,7 +131365,7 @@ window.photosByElieData = {
         title: "London. Big ben. bus and road, telephone. England",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/london-big-ben-bus-and-road-telephone-england-0-upscale-89741291-d74e-4d36-a74e-141f091052d4-jpgx2-16c8a063dc_900.jpg",
         imageSrc: "./assets/expo/ai/london-big-ben-bus-and-road-telephone-england-0-upscale-89741291-d74e-4d36-a74e-141f091052d4-jpgx2-16c8a063dc_1800.jpg",
         metadata: [
@@ -136065,7 +136065,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, sunset lighting",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-d5be43a2-80a6-4f10-bd2c-76421de2e0af-jpgx2-bdfb46b1f1_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-d5be43a2-80a6-4f10-bd2c-76421de2e0af-jpgx2-bdfb46b1f1_1800.jpg",
         metadata: [
@@ -136112,7 +136112,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, hazy morning",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-b67d392b-92cf-4d05-b757-f43a68ca58e6-jpgx2-bf8a69e09a_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-b67d392b-92cf-4d05-b757-f43a68ca58e6-jpgx2-bf8a69e09a_1800.jpg",
         metadata: [
@@ -136300,7 +136300,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-739dae29-c079-4114-b75f-e5c7a2e7bf0e-jpgx2-3190381686_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-739dae29-c079-4114-b75f-e5c7a2e7bf0e-jpgx2-3190381686_1800.jpg",
         metadata: [
@@ -136347,7 +136347,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, hazy morning",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-6be5204f-921b-4961-bad6-05688cb73f0c-jpgx2-581b206796_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-6be5204f-921b-4961-bad6-05688cb73f0c-jpgx2-581b206796_1800.jpg",
         metadata: [
@@ -136394,7 +136394,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, sunset lighting, brigh",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-49a5ef20-9cac-4c6e-b7e3-c98a0b4ddb5f-jpgx2-5703cd77bf_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-49a5ef20-9cac-4c6e-b7e3-c98a0b4ddb5f-jpgx2-5703cd77bf_1800.jpg",
         metadata: [
@@ -136441,7 +136441,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, hazy morning",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-30d98eb3-4a99-464c-b88c-d37754b107cf-jpgx2-5e4701eb05_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-30d98eb3-4a99-464c-b88c-d37754b107cf-jpgx2-5e4701eb05_1800.jpg",
         metadata: [
@@ -136488,7 +136488,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, sunset lighting, brigh",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-226c4111-fc06-40f1-b8e3-f653fe0848a2-jpgx2-fa9de1ddba_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-226c4111-fc06-40f1-b8e3-f653fe0848a2-jpgx2-fa9de1ddba_1800.jpg",
         metadata: [
@@ -136535,7 +136535,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, blue hour",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-001575c0-c09b-4b01-8a6e-3cf9d2b36071-jpgx2-28d3807f80_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-1-upscale-001575c0-c09b-4b01-8a6e-3cf9d2b36071-jpgx2-28d3807f80_1800.jpg",
         metadata: [
@@ -136582,7 +136582,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, hazy morning",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-daa935c1-95ce-4677-96cf-b150fed0f277-jpgx2-5730966582_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-daa935c1-95ce-4677-96cf-b150fed0f277-jpgx2-5730966582_1800.jpg",
         metadata: [
@@ -136676,7 +136676,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, hazy morning",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-985d4c32-6df9-428c-84d3-998d3b0f1ccc-jpgx2-f49005993d_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-985d4c32-6df9-428c-84d3-998d3b0f1ccc-jpgx2-f49005993d_1800.jpg",
         metadata: [
@@ -136723,7 +136723,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, blue hour",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-8d5144b2-7411-4744-b197-29b885eba648-jpgx2-78f06f639d_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-8d5144b2-7411-4744-b197-29b885eba648-jpgx2-78f06f639d_1800.jpg",
         metadata: [
@@ -136770,7 +136770,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, hazy morning",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-86a6ee2f-9177-4826-89e1-d54b648d8d70-jpgx2-bac50bf3f0_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-86a6ee2f-9177-4826-89e1-d54b648d8d70-jpgx2-bac50bf3f0_1800.jpg",
         metadata: [
@@ -136817,7 +136817,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, sunset lighting",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-8289a138-cb52-4f7a-af3b-f53e4eaf0321-jpgx2-d21589c3d4_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-8289a138-cb52-4f7a-af3b-f53e4eaf0321-jpgx2-d21589c3d4_1800.jpg",
         metadata: [
@@ -136958,7 +136958,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-44d5165e-d4b9-436b-afcf-ef5d43ea4f25-jpgx2-7a3a0935c9_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-44d5165e-d4b9-436b-afcf-ef5d43ea4f25-jpgx2-7a3a0935c9_1800.jpg",
         metadata: [
@@ -137005,7 +137005,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, sunset lighting, brigh",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-3f412ba5-f16f-42bf-ae83-41eb127ce5d2-jpgx2-20a103700c_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-3f412ba5-f16f-42bf-ae83-41eb127ce5d2-jpgx2-20a103700c_1800.jpg",
         metadata: [
@@ -137052,7 +137052,7 @@ window.photosByElieData = {
         title: "Japanese village, Abstract background ink line decoration painting landscape artistic conception, sunset lighting, brigh",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-17bd596e-2501-41a0-a728-f7b7ce7346a6-jpgx2-c7d08a0bbe_900.jpg",
         imageSrc: "./assets/expo/ai/japanese-village-abstract-background-ink-line-decoration-pa-0-upscale-17bd596e-2501-41a0-a728-f7b7ce7346a6-jpgx2-c7d08a0bbe_1800.jpg",
         metadata: [
@@ -143977,7 +143977,7 @@ window.photosByElieData = {
         title: "Hestia - The goddess of the hearth and home prominent in the for",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/hestia-the-goddess-of-the-hearth-and-home-prominent-in-the-3-upscale-ab35d9a8-6655-4657-adc0-e90f3d30f905-jpgx2-2fb59243ec_900.jpg",
         imageSrc: "./assets/expo/ai/hestia-the-goddess-of-the-hearth-and-home-prominent-in-the-3-upscale-ab35d9a8-6655-4657-adc0-e90f3d30f905-jpgx2-2fb59243ec_1800.jpg",
         metadata: [
@@ -144400,7 +144400,7 @@ window.photosByElieData = {
         title: "Hera - The queen of the gods and the goddess of marriage and chi",
         caption: "AI",
         full: "JPG master",
-        megapixels: 28.0,
+        megapixels: 28,
         gallerySrc: "./assets/expo/ai/hera-the-queen-of-the-gods-and-the-goddess-of-marriage-and-1-upscale-aae6f128-e726-435c-86b4-7377bd8d0b0a-jpgx2-58f0a2dd25_900.jpg",
         imageSrc: "./assets/expo/ai/hera-the-queen-of-the-gods-and-the-goddess-of-marriage-and-1-upscale-aae6f128-e726-435c-86b4-7377bd8d0b0a-jpgx2-58f0a2dd25_1800.jpg",
         metadata: [
@@ -162257,7 +162257,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring, 15 ft caisson ceilings, heavy purple dra",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-1-upscale-e5000813-9c61-48b0-bc0c-5bcff0b92834-jpgx2-312649b2b7_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-1-upscale-e5000813-9c61-48b0-bc0c-5bcff0b92834-jpgx2-312649b2b7_1800.jpg",
         metadata: [
@@ -162304,7 +162304,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring, 15 ft caisson ceilings",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-1-upscale-b6278fa6-ee44-469b-b297-7188aac1e7f6-jpgx2-08ee045471_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-1-upscale-b6278fa6-ee44-469b-b297-7188aac1e7f6-jpgx2-08ee045471_1800.jpg",
         metadata: [
@@ -162351,7 +162351,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring, 15 ft ceilings",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-1-upscale-a380e5ad-5f82-47e0-ae9c-f5134897c7c7-jpgx2-39215456a9_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-1-upscale-a380e5ad-5f82-47e0-ae9c-f5134897c7c7-jpgx2-39215456a9_1800.jpg",
         metadata: [
@@ -162445,7 +162445,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring, 15 ft caisson ceilings",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-cca8f650-fb07-430a-bbf4-933828336e6c-jpgx2-d25a5134fb_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-cca8f650-fb07-430a-bbf4-933828336e6c-jpgx2-d25a5134fb_1800.jpg",
         metadata: [
@@ -162492,7 +162492,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring, 15 ft caisson ceilings, heavy purple dra",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-9062f58d-6d8d-4dac-9b41-32b1b633b89a-jpgx2-264ad0d199_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-9062f58d-6d8d-4dac-9b41-32b1b633b89a-jpgx2-264ad0d199_1800.jpg",
         metadata: [
@@ -162539,7 +162539,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-3ac35a2c-4b34-45c8-868e-b2c991f0279a-jpgx2-155916c7a7_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-3ac35a2c-4b34-45c8-868e-b2c991f0279a-jpgx2-155916c7a7_1800.jpg",
         metadata: [
@@ -162586,7 +162586,7 @@ window.photosByElieData = {
         title: "Empire style family room, single fireplace, Aubusson tapestries, wood flooring, 15 ft ceilings",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-2720e9bb-afd0-4d8f-bb52-b1430f922f4a-jpgx2-773a531da4_900.jpg",
         imageSrc: "./assets/expo/ai/empire-style-family-room-single-fireplace-aubusson-tapestr-0-upscale-2720e9bb-afd0-4d8f-bb52-b1430f922f4a-jpgx2-773a531da4_1800.jpg",
         metadata: [
@@ -212116,7 +212116,7 @@ window.photosByElieData = {
         title: "[arnold scharzenegger] as a wise old man, presenting holding of golden dividers, long white beard and hair, in gold and",
         caption: "AI",
         full: "JPG master",
-        megapixels: 21.0,
+        megapixels: 21,
         gallerySrc: "./assets/expo/ai/arnold-scharzenegger-as-a-wise-old-man-presenting-holding-1-upscale-9f70156c-ffd9-4147-a18a-fad2c13de4c7-jpgx2-8fc3e4cefc_900.jpg",
         imageSrc: "./assets/expo/ai/arnold-scharzenegger-as-a-wise-old-man-presenting-holding-1-upscale-9f70156c-ffd9-4147-a18a-fad2c13de4c7-jpgx2-8fc3e4cefc_1800.jpg",
         metadata: [
@@ -212163,7 +212163,7 @@ window.photosByElieData = {
         title: "[arnold scharzenegger] as a wise old man, presenting holding of golden dividers, long white beard and hair, in gold and",
         caption: "AI",
         full: "JPG master",
-        megapixels: 21.0,
+        megapixels: 21,
         gallerySrc: "./assets/expo/ai/arnold-scharzenegger-as-a-wise-old-man-presenting-holding-0-upscale-d0583fd8-a362-4079-8e96-c409b207d6eb-jpgx2-8363d48888_900.jpg",
         imageSrc: "./assets/expo/ai/arnold-scharzenegger-as-a-wise-old-man-presenting-holding-0-upscale-d0583fd8-a362-4079-8e96-c409b207d6eb-jpgx2-8363d48888_1800.jpg",
         metadata: [
@@ -217145,7 +217145,7 @@ window.photosByElieData = {
         title: "An artistic rendering of a Japanese fishing village, with a huge",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-with-a-1-upscale-df596248-cc8c-48f2-85ae-99e3e0934619-jpgx2-43d169622c_900.jpg",
         imageSrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-with-a-1-upscale-df596248-cc8c-48f2-85ae-99e3e0934619-jpgx2-43d169622c_1800.jpg",
         metadata: [
@@ -217192,7 +217192,7 @@ window.photosByElieData = {
         title: "An artistic rendering of a Japanese fishing village, with a huge",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-with-a-0-upscale-d3086e67-ee02-4f0a-818b-8d5beaae89fc-jpgx2-f51b8c5ad7_900.jpg",
         imageSrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-with-a-0-upscale-d3086e67-ee02-4f0a-818b-8d5beaae89fc-jpgx2-f51b8c5ad7_1800.jpg",
         metadata: [
@@ -217239,7 +217239,7 @@ window.photosByElieData = {
         title: "An artistic rendering of a Japanese fishing village,  a sunset s",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-a-suns-1-upscale-ba17d72b-6ada-4d20-8d3a-6e3c4d152637-jpgx2-92b3a2aae7_900.jpg",
         imageSrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-a-suns-1-upscale-ba17d72b-6ada-4d20-8d3a-6e3c4d152637-jpgx2-92b3a2aae7_1800.jpg",
         metadata: [
@@ -217286,7 +217286,7 @@ window.photosByElieData = {
         title: "An artistic rendering of a Japanese fishing village,  a sunset s",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-a-suns-0-upscale-f0405d92-72bb-404c-a8ea-b07507ce4f0a-jpgx2-752110471a_900.jpg",
         imageSrc: "./assets/expo/ai/an-artistic-rendering-of-a-japanese-fishing-village-a-suns-0-upscale-f0405d92-72bb-404c-a8ea-b07507ce4f0a-jpgx2-752110471a_1800.jpg",
         metadata: [
@@ -223294,7 +223294,7 @@ window.photosByElieData = {
         title: "Abstract background ink line decoration painting landscape artistic conception",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-1-upscale-a0056531-d277-4262-ac3c-a9aeb4167ad9-jpgx2-63b6b67971_900.jpg",
         imageSrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-1-upscale-a0056531-d277-4262-ac3c-a9aeb4167ad9-jpgx2-63b6b67971_1800.jpg",
         metadata: [
@@ -223341,7 +223341,7 @@ window.photosByElieData = {
         title: "Abstract background ink line decoration painting landscape artistic conception",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-1-upscale-6676fc07-e540-46f8-86fc-baecf484199d-jpgx2-abf57f98f9_900.jpg",
         imageSrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-1-upscale-6676fc07-e540-46f8-86fc-baecf484199d-jpgx2-abf57f98f9_1800.jpg",
         metadata: [
@@ -223482,7 +223482,7 @@ window.photosByElieData = {
         title: "Abstract background ink line decoration painting landscape artistic conception",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-0-upscale-b84c7051-c930-4ddf-95f4-eec044b9714e-jpgx2-473721f84f_900.jpg",
         imageSrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-0-upscale-b84c7051-c930-4ddf-95f4-eec044b9714e-jpgx2-473721f84f_1800.jpg",
         metadata: [
@@ -223529,7 +223529,7 @@ window.photosByElieData = {
         title: "Abstract background ink line decoration painting landscape artis",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-0-upscale-a0577215-1231-43c1-8a3c-cc1f594a1ec5-jpgx2-1af13be739_900.jpg",
         imageSrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-0-upscale-a0577215-1231-43c1-8a3c-cc1f594a1ec5-jpgx2-1af13be739_1800.jpg",
         metadata: [
@@ -223576,7 +223576,7 @@ window.photosByElieData = {
         title: "Abstract background ink line decoration painting landscape artistic conception",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-0-upscale-723cdd2c-6a0f-47a3-9361-9bbe6f5416c3-jpgx2-28f84b3c31_900.jpg",
         imageSrc: "./assets/expo/ai/abstract-background-ink-line-decoration-painting-landscape-a-0-upscale-723cdd2c-6a0f-47a3-9361-9bbe6f5416c3-jpgx2-28f84b3c31_1800.jpg",
         metadata: [
@@ -232255,7 +232255,7 @@ window.photosByElieData = {
         title: "A stylized landscape of a Japanese fishing village, with a huge",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/a-stylized-landscape-of-a-japanese-fishing-village-with-a-h-1-upscale-8301cac3-36bb-476d-8028-63a0679007f1-jpgx2-2a98db11fa_900.jpg",
         imageSrc: "./assets/expo/ai/a-stylized-landscape-of-a-japanese-fishing-village-with-a-h-1-upscale-8301cac3-36bb-476d-8028-63a0679007f1-jpgx2-2a98db11fa_1800.jpg",
         metadata: [
@@ -232302,7 +232302,7 @@ window.photosByElieData = {
         title: "A stylized landscape of a Japanese fishing village, with a huge fish swimming in the foreground and a sunset sky, render",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/a-stylized-landscape-of-a-japanese-fishing-village-with-a-h-0-upscale-88bfd4f3-d4cb-404c-9aed-91889165d954-jpgx2-5be2a57159_900.jpg",
         imageSrc: "./assets/expo/ai/a-stylized-landscape-of-a-japanese-fishing-village-with-a-h-0-upscale-88bfd4f3-d4cb-404c-9aed-91889165d954-jpgx2-5be2a57159_1800.jpg",
         metadata: [
@@ -246496,7 +246496,7 @@ window.photosByElieData = {
         title: "A painting of a Japanese fishing village, with a huge fish swimm",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/a-painting-of-a-japanese-fishing-village-with-a-huge-fish-s-1-upscale-8a750086-d059-48df-94fc-1aa43ba5ecd6-jpgx2-f40edb9191_900.jpg",
         imageSrc: "./assets/expo/ai/a-painting-of-a-japanese-fishing-village-with-a-huge-fish-s-1-upscale-8a750086-d059-48df-94fc-1aa43ba5ecd6-jpgx2-f40edb9191_1800.jpg",
         metadata: [
@@ -246543,7 +246543,7 @@ window.photosByElieData = {
         title: "A painting of a Japanese fishing village, with a huge fish swimm",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/a-painting-of-a-japanese-fishing-village-with-a-huge-fish-s-0-upscale-af73c5b9-8f83-48fe-bb4c-36ba70e590ca-jpgx2-c5ae821656_900.jpg",
         imageSrc: "./assets/expo/ai/a-painting-of-a-japanese-fishing-village-with-a-huge-fish-s-0-upscale-af73c5b9-8f83-48fe-bb4c-36ba70e590ca-jpgx2-c5ae821656_1800.jpg",
         metadata: [
@@ -254768,7 +254768,7 @@ window.photosByElieData = {
         title: "A Japanese fishing village, illuminated by the setting sun, wit",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/a-japanese-fishing-village-illuminated-by-the-setting-sun-1-upscale-070b7c1e-7b28-4012-a55f-2ed31cfba03c-jpgx2-3a4f7fabc7_900.jpg",
         imageSrc: "./assets/expo/ai/a-japanese-fishing-village-illuminated-by-the-setting-sun-1-upscale-070b7c1e-7b28-4012-a55f-2ed31cfba03c-jpgx2-3a4f7fabc7_1800.jpg",
         metadata: [
@@ -254815,7 +254815,7 @@ window.photosByElieData = {
         title: "A Japanese fishing village, illuminated by the setting sun, wit",
         caption: "AI",
         full: "JPG master",
-        megapixels: 29.0,
+        megapixels: 29,
         gallerySrc: "./assets/expo/ai/a-japanese-fishing-village-illuminated-by-the-setting-sun-0-upscale-a2ef4efb-f178-4e06-8b8a-3e3d54ca0a49-jpgx2-5c61a47c82_900.jpg",
         imageSrc: "./assets/expo/ai/a-japanese-fishing-village-illuminated-by-the-setting-sun-0-upscale-a2ef4efb-f178-4e06-8b8a-3e3d54ca0a49-jpgx2-5c61a47c82_1800.jpg",
         metadata: [
@@ -279139,7 +279139,7 @@ window.photosByElieData = {
         title: "20220521 144639 04546",
         caption: "Portugal / 2022-05-21",
         full: "JPG master",
-        megapixels: 46.0,
+        megapixels: 46,
         gallerySrc: "./assets/expo/portugal/20220521-144639-04546-3394e60cbe_900.jpg",
         imageSrc: "./assets/expo/portugal/20220521-144639-04546-3394e60cbe_1800.jpg",
         metadata: [
@@ -280626,7 +280626,7 @@ window.photosByElieData = {
         title: "20180520 1731 00738",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1731-00738-1d66a4c1ca_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1731-00738-1d66a4c1ca_1800.jpg",
         metadata: [
@@ -280701,7 +280701,7 @@ window.photosByElieData = {
         title: "20180520 1701 00737",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1701-00737-a4a3b7e860_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1701-00737-a4a3b7e860_1800.jpg",
         metadata: [
@@ -281151,7 +281151,7 @@ window.photosByElieData = {
         title: "20180520 1605 00724",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1605-00724-c27b7d6b75_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1605-00724-c27b7d6b75_1800.jpg",
         metadata: [
@@ -281226,7 +281226,7 @@ window.photosByElieData = {
         title: "20180520 1600 00723",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1600-00723-18e975037f_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1600-00723-18e975037f_1800.jpg",
         metadata: [
@@ -281376,7 +281376,7 @@ window.photosByElieData = {
         title: "20180520 1552 00720",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 12.0,
+        megapixels: 12,
         gallerySrc: "./assets/expo/portugal/20180520-1552-00720-23215109c7_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1552-00720-23215109c7_1800.jpg",
         metadata: [
@@ -281526,7 +281526,7 @@ window.photosByElieData = {
         title: "20180520 1536 00718",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1536-00718-35083a49ec_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1536-00718-35083a49ec_1800.jpg",
         metadata: [
@@ -281751,7 +281751,7 @@ window.photosByElieData = {
         title: "20180520 1535 00715",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1535-00715-795e204a97_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1535-00715-795e204a97_1800.jpg",
         metadata: [
@@ -282051,7 +282051,7 @@ window.photosByElieData = {
         title: "20180520 1214 00711",
         caption: "Portugal / Colares, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1214-00711-e2f6cea4ad_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1214-00711-e2f6cea4ad_1800.jpg",
         metadata: [
@@ -282126,7 +282126,7 @@ window.photosByElieData = {
         title: "20180520 1213 00710",
         caption: "Portugal / Colares, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1213-00710-6ddf308af9_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1213-00710-6ddf308af9_1800.jpg",
         metadata: [
@@ -282201,7 +282201,7 @@ window.photosByElieData = {
         title: "20180520 1213 00709",
         caption: "Portugal / Colares, Lisboa / 2018-05-20",
         full: "JPG master",
-        megapixels: 24.0,
+        megapixels: 24,
         gallerySrc: "./assets/expo/portugal/20180520-1213-00709-5aba10818d_900.jpg",
         imageSrc: "./assets/expo/portugal/20180520-1213-00709-5aba10818d_1800.jpg",
         metadata: [
@@ -287368,7 +287368,7 @@ window.photosByElieData = {
         title: "20180519 1323 00609",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-19",
         full: "JPG master",
-        megapixels: 15.0,
+        megapixels: 15,
         gallerySrc: "./assets/expo/portugal/20180519-1323-00609-8acf5ae002_900.jpg",
         imageSrc: "./assets/expo/portugal/20180519-1323-00609-8acf5ae002_1800.jpg",
         metadata: [
@@ -288268,7 +288268,7 @@ window.photosByElieData = {
         title: "20180519 1303 00590",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-19",
         full: "JPG master",
-        megapixels: 30.0,
+        megapixels: 30,
         gallerySrc: "./assets/expo/portugal/20180519-1303-00590-5a73dfed14_900.jpg",
         imageSrc: "./assets/expo/portugal/20180519-1303-00590-5a73dfed14_1800.jpg",
         metadata: [
@@ -289168,7 +289168,7 @@ window.photosByElieData = {
         title: "20180518 1857 00577",
         caption: "Portugal / Cascais, Lisboa / 2018-05-18",
         full: "JPG master",
-        megapixels: 20.0,
+        megapixels: 20,
         gallerySrc: "./assets/expo/portugal/20180518-1857-00577-1cac9c1962_900.jpg",
         imageSrc: "./assets/expo/portugal/20180518-1857-00577-1cac9c1962_1800.jpg",
         metadata: [
@@ -292314,7 +292314,7 @@ window.photosByElieData = {
         title: "20180517 2208 00500",
         caption: "Portugal / Cascais, Lisboa / 2018-05-17",
         full: "JPG master",
-        megapixels: 17.0,
+        megapixels: 17,
         gallerySrc: "./assets/expo/portugal/20180517-2208-00500-d164887094_900.jpg",
         imageSrc: "./assets/expo/portugal/20180517-2208-00500-d164887094_1800.jpg",
         metadata: [
@@ -292914,7 +292914,7 @@ window.photosByElieData = {
         title: "20180517 2132 00488",
         caption: "Portugal / Cascais, Lisboa / 2018-05-17",
         full: "JPG master",
-        megapixels: 16.0,
+        megapixels: 16,
         gallerySrc: "./assets/expo/portugal/20180517-2132-00488-18ec1fa871_900.jpg",
         imageSrc: "./assets/expo/portugal/20180517-2132-00488-18ec1fa871_1800.jpg",
         metadata: [
@@ -293364,7 +293364,7 @@ window.photosByElieData = {
         title: "20180517 1438 00480",
         caption: "Portugal / 2018-05-17",
         full: "JPG master",
-        megapixels: 30.0,
+        megapixels: 30,
         gallerySrc: "./assets/expo/portugal/20180517-1438-00480-f357ee72c1_900.jpg",
         imageSrc: "./assets/expo/portugal/20180517-1438-00480-f357ee72c1_1800.jpg",
         metadata: [
@@ -294098,7 +294098,7 @@ window.photosByElieData = {
         title: "20180517 1157 00468",
         caption: "Portugal / Lisboa, Lisboa / 2018-05-17",
         full: "JPG master",
-        megapixels: 18.0,
+        megapixels: 18,
         gallerySrc: "./assets/expo/portugal/20180517-1157-00468-cccce40ef1_900.jpg",
         imageSrc: "./assets/expo/portugal/20180517-1157-00468-cccce40ef1_1800.jpg",
         metadata: [
@@ -295179,8 +295179,6 @@ window.photosByElieData = {
       },
     ]
   },
-};
-window.photosByElieOwnerData = {
   unknown: {
     number: "08",
     title: "Unknown",
@@ -295190,6 +295188,10 @@ window.photosByElieOwnerData = {
     ]
   },
 };
+window.photosByElieOwnerData = {
+  unknown: window.photosByElieData.unknown,
+};
+delete window.photosByElieData.unknown;
 window.photosByElieResolutions = [
   { id: "full", type: "digital", label: "Full resolution", detail: "Original source file at native resolution", price: 45 },
   { id: "jpg-6mp", type: "digital", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18, minMegapixels: 6 },

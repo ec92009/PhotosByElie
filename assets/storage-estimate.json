@@ -1,13 +1,13 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-09T23:05:56.708Z",
+  "updatedAt": "2026-05-10T10:41:22.066Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
   },
   "catalog": {
-    "photos": 10133,
-    "sourceBytes": 101107349989
+    "photos": 5792,
+    "sourceBytes": 94959663562
   },
   "current": {
     "publicPreviewObjects": 23186,
@@ -22,14 +22,14 @@
     "photoIds": 4359,
     "publicPreviewObjects": 17438,
     "publicPreviewBytesEstimate": 5256037341,
-    "privateMasterObjects": 4341,
-    "privateMasterBytes": 6197086805,
-    "privateRenderObjects": 13023,
-    "privateRenderBytesEstimate": 10931532139,
-    "totalBytesEstimate": 22384656285
+    "privateMasterObjects": 28,
+    "privateMasterBytes": 6161367829,
+    "privateRenderObjects": 0,
+    "privateRenderBytesEstimate": 0,
+    "totalBytesEstimate": 11417405170
   },
   "noCleanup": {
-    "totalBytesEstimate": 138951386411
+    "totalBytesEstimate": 127984135296
   },
   "pricing": {
     "provider": "Cloudflare R2 Standard storage",
@@ -45,8 +45,8 @@
   "cost": {
     "currentMonthlyUsd": 1.7485,
     "currentMonthlyUsdAfterFreeTier": 1.5985,
-    "noCleanupMonthlyUsdEstimate": 2.0843,
-    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.9343,
-    "avoidedMonthlyUsdEstimate": 0.3358
+    "noCleanupMonthlyUsdEstimate": 1.9198,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.7698,
+    "avoidedMonthlyUsdEstimate": 0.1713
   }
 }

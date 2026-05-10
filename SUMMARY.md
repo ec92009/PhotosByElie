@@ -101,6 +101,7 @@ Date: 2026-05-10
 - Owner now shows an editable local price-list table for the current four digital resolutions, four print sizes, frame add-ons, and mock shipping/handling amounts.
 - Physical print/frame products are off by default for buyers again. Owner keeps a deliberate localhost toggle for local review, using a new setting so old local storage cannot silently re-enable prints.
 - Opening Owner now forces the language state back to English before the app scripts load.
+- The private R2 deliverable coverage / flat ZIP input check is accepted as done for now and retired from the active backlog.
 - Print frame choices now use a horizontal row, and Owner price editing collapses white/black frame prices into one shared frame add-on value per print size.
 - Print product labels now preserve their dimensions on Liked, Basket, detail, and the basket rail.
 - Frame labels now read White frame and Black frame without the extra "plain" wording.
@@ -109,23 +110,22 @@ Date: 2026-05-10
 
 ## Fresh Backlog
 
-1. **Verify every zippable deliverable is in private R2.** Drive private master and JPG 1/3/6 MP delivery coverage to complete active-catalog coverage, then spot-check ZIP build inputs.
-2. **Continue Owner curation/blocking.** Review remaining visible photos and block anything that should not be sold before payment testing starts.
-3. **Add gallery search.** Search public galleries and Owner review surfaces by title and keywords first, with filename/country/description as secondary signals.
-4. **Add collection-wide keyword removal.** Let Owner remove one keyword from an entire collection with before/after counts and a confirmation preview.
-5. **Make discard lifecycle first-class in Owner.** Add a clear discard action that deletes public/private R2 bytes while keeping durable tombstones.
-6. **Publish Owner price-list changes.** The Owner page now edits local product prices; next add an explicit publish step so the Worker/public basket share the edited SKU IDs, labels, currencies, and amounts.
-7. **Add optional Owner XMP sidecar save.** Add a deliberate maintenance button for writing Lightroom-style sidecars beside masters from manifest metadata.
-8. **Set up Stripe test mode.** Configure test secrets, webhook endpoint, and Worker environment.
-9. **Run Stripe test checkout end to end.** Cover success, 3D Secure, declined payment, webhook paid transition, ZIP build, and download.
-10. **Make order records production-durable.** Decide D1 vs KV and store queryable order state.
-11. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
-12. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
-13. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
-14. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
-15. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
-16. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
-17. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.
-18. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
-19. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
-20. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.
+1. **Continue Owner curation/blocking.** Review remaining visible photos and block anything that should not be sold before payment testing starts.
+2. **Add gallery search.** Search public galleries and Owner review surfaces by title and keywords first, with filename/country/description as secondary signals.
+3. **Add collection-wide keyword removal.** Let Owner remove one keyword from an entire collection with before/after counts and a confirmation preview.
+4. **Make discard lifecycle first-class in Owner.** Add a clear discard action that deletes public/private R2 bytes while keeping durable tombstones.
+5. **Publish Owner price-list changes.** The Owner page now edits local product prices; next add an explicit publish step so the Worker/public basket share the edited SKU IDs, labels, currencies, and amounts.
+6. **Add optional Owner XMP sidecar save.** Add a deliberate maintenance button for writing Lightroom-style sidecars beside masters from manifest metadata.
+7. **Set up Stripe test mode.** Configure test secrets, webhook endpoint, and Worker environment.
+8. **Run Stripe test checkout end to end.** Cover success, 3D Secure, declined payment, webhook paid transition, ZIP build, and download.
+9. **Make order records production-durable.** Decide D1 vs KV and store queryable order state.
+10. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
+11. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
+12. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
+13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
+14. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
+15. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
+16. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.
+17. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
+18. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
+19. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.

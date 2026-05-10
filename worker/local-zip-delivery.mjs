@@ -183,6 +183,7 @@ export const createLocalZipDelivery = ({
       ...rendered.flatMap((entry) => [
         `Photo ID: ${entry.item.photoId}`,
         `Title: ${entry.item.title}`,
+        ...(entry.item.keywords?.length ? [`Keywords: ${entry.item.keywords.join(", ")}`] : []),
         `Product: ${entry.product.label}`,
         `Delivered file: ${entry.name}`,
         `Source mode: ${entry.sourceKind}`,

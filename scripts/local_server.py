@@ -639,6 +639,36 @@ def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_gr
     }
 
 
+def _write_worker_catalog(repo_root: Path) -> dict:
+    started = time.perf_counter()
+    try:
+        result = subprocess.run(
+            ["node", "scripts/write_worker_catalog.mjs"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        output = getattr(error, "stderr", "") or getattr(error, "stdout", "") or str(error)
+        return {
+            "ok": False,
+            "path": "worker/photos-catalog.generated.mjs",
+            "error": output.strip(),
+        }
+    return {
+        "ok": True,
+        "path": (result.stdout or "worker/photos-catalog.generated.mjs").strip(),
+        "elapsed_ms": round((time.perf_counter() - started) * 1000),
+    }
+
+
+def _write_catalog_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> tuple[dict, dict]:
+    site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+    worker_catalog = _write_worker_catalog(repo_root)
+    return site_state, worker_catalog
+
+
 def _split_keyword_text(value: object) -> list[str]:
     if isinstance(value, list):
         keywords = []
@@ -1375,11 +1405,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
 
     if action == "sync-country-keywords":
         keyword_updates = _sync_collection_keywords(repo_root, expo_groups, reserve_groups, hidden_groups)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         return {
             "ok": True,
             "action": action,
             "keyword_updates": keyword_updates,
-            "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups),
+            "worker_catalog": worker_catalog,
+            "site": site_state,
         }
 
     if action == "publish-hidden-blacklist":
@@ -1437,6 +1469,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 seen_r2_items.add(identifier)
                 r2_items.append(item)
         r2_task = _start_r2_upload_task(photo_id, r2_items)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         return {
             "ok": True,
             "action": action,
@@ -1452,7 +1485,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "errors": file_updates["errors"][:20],
             },
             "r2_upload_task": r2_task,
-            "site": _write_state(repo_root, expo_groups, reserve_groups, hidden_groups),
+            "metadata": {
+                "photo_id": photo_id,
+                "title": title,
+                "keywords": keywords,
+            },
+            "worker_catalog": worker_catalog,
+            "site": site_state,
         }
 
     if action == "assign-country":
@@ -1505,7 +1544,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             })
             _set_action_progress(operation_id, total_photos, index)
         _set_action_progress(operation_id, total_photos, total_photos)
-        site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         action_log = _record_country_assignments(repo_root, target_slug, moved, skipped)
         return {
             "ok": True,
@@ -1516,6 +1555,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "skipped": skipped,
             "action_log": action_log,
             "keyword_updates": keyword_updates,
+            "worker_catalog": worker_catalog,
             "site": site_state,
         }
 
@@ -1572,7 +1612,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             expo_groups[target_slug].append(restored)
         moved = {"from": "hidden", "from_slug": hidden_slug, "to": "expo", "to_slug": target_slug, "mode": "blacklist"}
 
-    site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+    site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
     r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
     return {
         "ok": True,
@@ -1580,6 +1620,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "photo_id": photo_id,
         "moved": moved,
         "r2_blacklist_task": r2_task,
+        "worker_catalog": worker_catalog,
         "site": site_state,
     }
 

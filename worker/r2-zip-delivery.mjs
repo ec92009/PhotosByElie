@@ -25,6 +25,7 @@ const orderManifest = (order, rendered) => [
   ...rendered.flatMap((entry) => [
     `Photo ID: ${entry.photoId}`,
     `Title: ${entry.title}`,
+    ...(entry.keywords?.length ? [`Keywords: ${entry.keywords.join(", ")}`] : []),
     `Product: ${entry.productLabel}`,
     `Delivered file: ${entry.name}`,
     `Private source key: ${entry.sourceKey}`,
@@ -84,6 +85,8 @@ export const createR2ZipDelivery = ({
         customMetadata: {
           photoId: item.photoId,
           productId: product.id,
+          title: item.title || "",
+          keywords: (item.keywords || []).join(", "),
           sourceKey: item.source.privateMasterKey,
           generatedAt: now().toISOString(),
           watermark: "none",
@@ -113,6 +116,7 @@ export const createR2ZipDelivery = ({
         rendered.push({
           photoId: item.photoId,
           title: item.title,
+          keywords: item.keywords || [],
           productId: product.id,
           productLabel: product.label,
           sourceKey: item.source.privateMasterKey,

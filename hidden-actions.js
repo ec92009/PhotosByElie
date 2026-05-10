@@ -100,8 +100,44 @@
     return ids;
   };
 
+  const setMetadataValue = (photo, label, value) => {
+    if (!photo) return;
+    const metadata = Array.isArray(photo.metadata) ? photo.metadata : [];
+    const existing = metadata.find((item) => item?.label === label);
+    if (existing) {
+      existing.value = value;
+    } else {
+      metadata.unshift({ label, value });
+    }
+    photo.metadata = metadata;
+  };
+
+  const applyMetadataEdit = (photo, metadata) => {
+    if (!photo || !metadata?.photo_id || photo.id !== metadata.photo_id) return;
+    const title = String(metadata.title || "").trim();
+    const keywords = Array.isArray(metadata.keywords)
+      ? metadata.keywords.join(", ")
+      : String(metadata.keywords || "").trim();
+    if (title) {
+      photo.title = title;
+      setMetadataValue(photo, "Metadata title", title);
+    }
+    setMetadataValue(photo, "Keywords", keywords);
+    if (Array.isArray(metadata.keywords)) photo.keywords = metadata.keywords;
+  };
+
+  const applyMetadataEditToSite = (site, metadata) => {
+    if (!site || !metadata?.photo_id) return;
+    ["data", "owner", "reserve", "hidden"].forEach((section) => {
+      Object.values(site[section] || {}).forEach((collection) => {
+        (collection?.photos || []).forEach((photo) => applyMetadataEdit(photo, metadata));
+      });
+    });
+  };
+
   const applyServerState = (result) => {
     if (!result?.site) return result;
+    applyMetadataEditToSite(result.site, result.metadata);
     window.photosByElieData = result.site.data || {};
     window.photosByElieOwnerData = result.site.owner || {};
     window.photosByElieReserveData = result.site.reserve || {};
@@ -178,6 +214,13 @@
       if (!response.ok || !payload?.ok) {
         if (response.status === 401) ownerAuth?.markSignedOut?.();
         throw new Error(payload?.error || `Photo action failed: ${action}`);
+      }
+      if (action === "update-photo-metadata" && !payload.metadata) {
+        payload.metadata = {
+          photo_id: requestPayload.photo_id,
+          title: requestPayload.title,
+          keywords: requestPayload.keywords,
+        };
       }
       return applyServerState(payload);
     } finally {

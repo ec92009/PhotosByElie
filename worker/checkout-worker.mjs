@@ -58,6 +58,27 @@ const originalDimensions = (photo) => {
   return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
 };
 
+const metadataValue = (photo, label) =>
+  (photo?.metadata || []).find((item) => item.label === label)?.value || "";
+
+const splitKeywords = (value) => {
+  if (Array.isArray(value)) return value.flatMap(splitKeywords);
+  return String(value || "")
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const keywordsForPhoto = (photo) => {
+  const seen = new Set();
+  return splitKeywords(photo?.keywords || metadataValue(photo, "Keywords")).filter((keyword) => {
+    const normalized = keyword.toLowerCase();
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+};
+
 const verifiedMegapixels = (photo) => {
   if (Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length) return Number(photo.megapixels) || 0;
   const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";
@@ -165,6 +186,7 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
     orderItems.push({
       photoId: photo.id,
       title: photo.title,
+      keywords: keywordsForPhoto(photo),
       collectionKey,
       collectionTitle,
       source: {
@@ -193,6 +215,7 @@ const publicOrder = (order) => ({
   items: order.items.map((item) => ({
     photoId: item.photoId,
     title: item.title,
+    keywords: item.keywords || [],
     collection: item.collectionTitle,
     products: item.products.map((product) => ({
       id: product.id,

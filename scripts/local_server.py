@@ -900,84 +900,6 @@ def _metadata_upload_items_for_paths(repo_root: Path, photo: dict, paths: list[P
     return items
 
 
-def _run_metadata_file_sync_task(task_id: str, repo_root: Path, photo_id: str, photos: list[dict], title: str, keywords: list[str]) -> None:
-    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
-    file_updates = {"updated": 0, "skipped": 0, "errors": []}
-    r2_items: list[UploadItem] = []
-    seen_r2_items: set[str] = set()
-    for photo in photos:
-        result = _sync_photo_metadata_files(repo_root, photo, title, keywords)
-        file_updates["updated"] += int(result.get("updated") or 0)
-        file_updates["skipped"] += int(result.get("skipped") or 0)
-        file_updates["errors"].extend(result.get("errors") or [])
-        updated_paths = [Path(item) for item in result.get("updated_paths", [])]
-        for item in _metadata_upload_items_for_paths(repo_root, photo, updated_paths):
-            identifier = r2_upload_id(item)
-            if identifier in seen_r2_items:
-                continue
-            seen_r2_items.add(identifier)
-            r2_items.append(item)
-        with R2_BACKGROUND_LOCK:
-            task = R2_BACKGROUND_TASKS.get(task_id)
-            if not task:
-                return
-            task["completed"] = int(task.get("completed") or 0) + 1
-            task["file_updates"] = {
-                **file_updates,
-                "error_count": len(file_updates["errors"]),
-                "errors": file_updates["errors"][:20],
-            }
-            task["updated_at"] = datetime.now(timezone.utc).isoformat()
-    r2_task = _start_r2_upload_task(photo_id, r2_items) if r2_items else None
-    _update_r2_task(
-        task_id,
-        state="failed" if file_updates["errors"] else "done",
-        completed_at=datetime.now(timezone.utc).isoformat(),
-        failed=len(file_updates["errors"]),
-        file_updates={
-            **file_updates,
-            "error_count": len(file_updates["errors"]),
-            "errors": file_updates["errors"][:20],
-        },
-        r2_upload_task=r2_task,
-    )
-
-
-def _start_metadata_file_sync_task(repo_root: Path, photo_id: str, photos: list[dict], title: str, keywords: list[str]) -> dict | None:
-    if not photos:
-        return None
-    task_id = uuid.uuid4().hex
-    queued_at = datetime.now(timezone.utc).isoformat()
-    task = {
-        "id": task_id,
-        "kind": "metadata-file-sync",
-        "operation": "metadata",
-        "photo_id": photo_id,
-        "state": "queued",
-        "queued_at": queued_at,
-        "started_at": None,
-        "completed_at": None,
-        "updated_at": queued_at,
-        "total": len(photos),
-        "completed": 0,
-        "failed": 0,
-        "bytes_total": 0,
-        "bytes_done": 0,
-        "items": [{"photo_id": photo_id, "title": title}],
-        "errors": [],
-        "file_updates": {"updated": 0, "skipped": 0, "error_count": 0, "errors": []},
-    }
-    with R2_BACKGROUND_LOCK:
-        R2_BACKGROUND_TASKS[task_id] = task
-    worker = threading.Thread(
-        target=_run_metadata_file_sync_task,
-        args=(task_id, repo_root, photo_id, photos, title, keywords),
-        daemon=True,
-    )
-    worker.start()
-    return dict(task)
-
-
 def _update_r2_task(task_id: str, **updates: object) -> None:
     with R2_BACKGROUND_LOCK:
         task = R2_BACKGROUND_TASKS.get(task_id)
@@ -1390,22 +1312,6 @@ def _sync_asset_keyword(repo_root: Path, photo: dict, keyword: str) -> dict:
     return {"updated": updated, "skipped": skipped, "errors": errors, "updated_paths": updated_paths}
 
 
-def _sync_photo_metadata_files(repo_root: Path, photo: dict, title: str, keywords: list[str]) -> dict:
-    updated = 0
-    skipped = 0
-    errors = []
-    updated_paths = []
-    for path in _photo_file_paths(repo_root, photo):
-        rel = path.relative_to(repo_root).as_posix() if path.is_relative_to(repo_root) else str(path)
-        try:
-            _write_file_metadata(path, title=title, keywords=keywords)
-            updated += 1
-            updated_paths.append(str(path))
-        except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
-            errors.append(f"{rel}: {error}")
-    return {"updated": updated, "skipped": skipped, "errors": errors, "updated_paths": updated_paths}
-
-
 def _apply_collection_keyword(repo_root: Path, photo: dict, slug: str, sync_assets: bool = True) -> dict:
     keyword = COLLECTION_KEYWORD_TARGETS.get(slug)
     if not keyword:
@@ -1527,15 +1433,12 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if not matches:
             raise ValueError(f"photo not found: {photo_id}")
         metadata_changed = 0
-        metadata_photos = []
         for _state, _slug, photo in matches:
             title_changed = _set_photo_title(photo, title)
             keywords_changed = _set_photo_keywords(photo, keywords)
             if title_changed or keywords_changed:
                 metadata_changed += 1
-            metadata_photos.append(copy_photo(photo))
         site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        metadata_file_task = _start_metadata_file_sync_task(repo_root, photo_id, metadata_photos, title, keywords)
         return {
             "ok": True,
             "action": action,
@@ -1550,9 +1453,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "skipped": 0,
                 "error_count": 0,
                 "errors": [],
-                "state": "queued",
+                "state": "manifest-only",
             },
-            "metadata_file_task": metadata_file_task,
             "metadata": {
                 "photo_id": photo_id,
                 "title": title,

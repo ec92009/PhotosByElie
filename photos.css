@@ -1565,9 +1565,25 @@ body.detail-fullscreen-active{
   display:none;
 }
 .mock-checkout-result span,
+.mock-checkout-result button,
 .mock-checkout-result a,
 .mock-checkout-result code{
   overflow-wrap:anywhere;
+}
+.mock-checkout-result button{
+  width:max-content;
+  border:0;
+  background:transparent;
+  color:var(--link);
+  padding:0;
+  font:inherit;
+  font-weight:800;
+  text-align:left;
+  text-decoration:underline;
+  text-decoration-color:var(--link-decoration);
+  text-decoration-thickness:2px;
+  text-underline-offset:.16em;
+  cursor:pointer;
 }
 .mock-checkout-result a,
 .mock-checkout-result a:visited{
@@ -1577,8 +1593,13 @@ body.detail-fullscreen-active{
   text-decoration-thickness:2px;
   text-underline-offset:.16em;
 }
+.mock-checkout-result button:hover,
 .mock-checkout-result a:hover{
   color:var(--link-hover);
+}
+.mock-checkout-result button:disabled{
+  cursor:wait;
+  opacity:.65;
 }
 .mock-checkout-result code{
   color:var(--muted);
@@ -1739,8 +1760,8 @@ body.detail-fullscreen-active{
 }
 .basket-item{
   display:grid;
-  grid-template-columns:148px minmax(0,1fr) auto;
-  gap:14px;
+  grid-template-columns:minmax(320px,50%) minmax(0,1fr) auto;
+  gap:18px;
   align-items:start;
   position:relative;
   isolation:isolate;
@@ -1777,10 +1798,22 @@ html[data-theme="dark"] .basket-item.has-row-bg::before{
   opacity:.13;
 }
 .basket-thumb{
-  width:148px;
-  min-height:74px;
-  height:74px;
-  align-self:stretch;
+  width:100%;
+  min-height:0;
+  height:auto;
+  align-self:start;
+  aspect-ratio:var(--photo-aspect-ratio,16 / 9);
+}
+.basket-thumb.has-image img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+.basket-thumb.is-pano img{
+  object-position:center top;
 }
 .basket-thumb.has-image::after{
   background-size:112px 60px;
@@ -2020,16 +2053,14 @@ html[data-theme="light"] .detail-preview.has-image::after{
     grid-template-columns:1fr;
   }
   .basket-item{
-    grid-template-columns:124px minmax(0,1fr);
+    grid-template-columns:1fr;
   }
   .basket-item-actions{
-    grid-column:2;
+    grid-column:1;
     justify-items:start;
   }
   .basket-thumb{
-    width:124px;
-    min-height:62px;
-    height:62px;
+    width:100%;
   }
   .basket-total-band{
     top:90px;

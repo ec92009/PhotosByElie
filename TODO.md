@@ -4,7 +4,7 @@ Last updated: 2026-05-10
 
 ## Current Facts
 
-- Local visible build: `v71.17`.
+- Local visible build: `v71.18`.
 - Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -150,7 +150,9 @@ Last updated: 2026-05-10
 
 ## Completed Recently
 
-- Added `g`/`G` gallery density keyboard shortcuts and bumped the visible build to `v71.17`.
+- Widened basket thumbnails to about half the row on desktop, with panoramas aligned to the top of the basket card.
+- Made the local mock-checkout result action simulate payment instead of opening a fake mock Stripe URL.
+- Added `g`/`G` gallery density keyboard shortcuts.
 - Refreshed docs around media immutability, manifest-only Owner edits, Blocked terminology, and XMP sidecar maintenance as an explicit future Owner action.
 - Fixed Back to gallery from detail so it restores the originating gallery, filters/sort context, selected photo, and scroll position.
 - Retired the Expo cap and promoted the full cloud-backed catalog.

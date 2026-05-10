@@ -110,6 +110,28 @@ const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) |
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 const optionShippingHandlingTotal = (option) => window.photosByElieOptionShippingHandlingTotal?.(option) || 0;
 
+const metadataValue = (photo, label) => (
+  (photo?.metadata || []).find((item) => item.label === label)?.value || ""
+);
+
+const previewDimensions = (photo) => {
+  const value = metadataValue(photo, "Preview file") || metadataValue(photo, "Original size");
+  const match = value.match(/(\d+)\s*x\s*(\d+)/i);
+  if (!match) return null;
+  return { width: Number(match[1]), height: Number(match[2]) };
+};
+
+const basketThumbStyle = (photo) => {
+  const dimensions = previewDimensions(photo);
+  if (!dimensions?.width || !dimensions?.height) return "";
+  return ` style="--photo-aspect-ratio:${dimensions.width} / ${dimensions.height}"`;
+};
+
+const isPanorama = (photo) => {
+  const dimensions = previewDimensions(photo);
+  return Boolean(dimensions?.width && dimensions?.height && dimensions.width / dimensions.height >= 2.1);
+};
+
 const fallbackGuid = () => [
   Date.now().toString(16),
   Math.random().toString(16).slice(2, 10),
@@ -291,10 +313,15 @@ const renderCheckoutResult = (body, mode = "checkout") => {
     ? (mockMode ? "Mock payment complete" : "Payment complete")
     : (mockMode ? "Mock Checkout Session ready" : "Stripe Checkout ready");
   const checkoutLinkText = mockMode ? "Open mock Checkout Session" : "Open Stripe Checkout";
+  const checkoutAction = body.checkout?.url
+    ? (mockMode
+      ? `<button type="button" data-mock-checkout-pay>${checkoutLinkText}</button>`
+      : `<a href="${escapeText(body.checkout.url)}" target="_blank" rel="noreferrer">${checkoutLinkText}</a>`)
+    : "";
   checkoutResult.innerHTML = `
     <strong>${title}</strong>
     <span>Order ${escapeText(order.id)} · ${escapeText(order.status)} · ${moneyFromCents(order.amountExpected, order.currency)}</span>
-    ${body.checkout?.url ? `<a href="${escapeText(body.checkout.url)}" target="_blank" rel="noreferrer">${checkoutLinkText}</a>` : ""}
+    ${checkoutAction}
     ${delivery?.downloadUrl ? `<a href="${escapeText(workerBaseUrl() + delivery.downloadUrl)}" target="_blank" rel="noreferrer">Open download token</a>` : ""}
     ${delivery?.zipKey ? `<code>${escapeText(delivery.zipKey)}</code>` : ""}
   `;
@@ -361,10 +388,12 @@ checkoutGuest?.addEventListener("click", async () => {
   }
 });
 
-mockPay?.addEventListener("click", async () => {
+const simulateMockPayment = async () => {
   const state = checkoutState();
   if (!state.checkoutSessionId) return;
-  mockPay.disabled = true;
+  if (mockPay) mockPay.disabled = true;
+  const inlineButton = checkoutResult?.querySelector("[data-mock-checkout-pay]");
+  if (inlineButton) inlineButton.disabled = true;
   setBasketStatus(t("basket.simulating_payment"));
   try {
     const body = await checkoutFetch("/mock-stripe/pay", {
@@ -385,8 +414,20 @@ mockPay?.addEventListener("click", async () => {
   } catch (error) {
     setBasketStatus(error?.message || "Mock payment could not complete.", { checkout: true });
   } finally {
-    mockPay.disabled = false;
+    if (mockPay) mockPay.disabled = false;
+    if (inlineButton) inlineButton.disabled = false;
   }
+};
+
+mockPay?.addEventListener("click", async () => {
+  await simulateMockPayment();
+});
+
+checkoutResult?.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-mock-checkout-pay]");
+  if (!button) return;
+  event.preventDefault();
+  await simulateMockPayment();
 });
 
 orderEmail?.addEventListener("click", async (event) => {
@@ -425,6 +466,8 @@ const renderBasket = () => {
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
+    const panoClass = isPanorama(photo) ? "is-pano" : "";
+    const thumbStyle = basketThumbStyle(photo);
     const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
     const selectedOptionById = new Map((item.options || []).map((option) => [option.id, option]));
@@ -463,7 +506,7 @@ const renderBasket = () => {
     };
     return `
     <article class="basket-item ${imageSrc ? "has-row-bg" : ""}" data-basket-row-bg="${escapeText(imageSrc)}">
-      <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
+      <a class="basket-thumb mock-photo ${thumbClasses} ${panoClass} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}"${thumbStyle}>
         ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
       </a>

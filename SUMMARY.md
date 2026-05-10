@@ -102,6 +102,7 @@ Date: 2026-05-10
 - Print frame choices now use a horizontal row, and Owner price editing collapses plain white/plain black frame prices into one shared frame add-on value per print size.
 - Print product labels now preserve their dimensions on Liked, Basket, detail, and the basket rail.
 - Frame labels now read White frame and Black frame without the extra "plain" wording.
+- Delivery ZIPs now place all delivered image files at the archive root beside `ORDER.txt`, instead of creating one subfolder per photo.
 
 ## Fresh Backlog
 

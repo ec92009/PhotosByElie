@@ -316,9 +316,8 @@ def main() -> int:
         if not source:
             missing.append(photo)
             continue
-        photo_dir = staging_dir / f"{photo.index:02d}-{safe_name(photo.photo_id, f'photo-{photo.index}')}"
         for product in unique_products(photo.products):
-            output = photo_dir / f"{safe_name(photo.photo_id, 'photo')}-{product.product_id}.jpg"
+            output = staging_dir / f"{safe_name(photo.photo_id, 'photo')}-{product.product_id}.jpg"
             if args.dry_run:
                 print(f"DRY RUN {source} -> {output}")
             else:

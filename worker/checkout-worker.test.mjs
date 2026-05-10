@@ -325,6 +325,8 @@ test("local ZIP delivery creates a real ZIP from preview fallback", async () => 
   const zip = fs.readFileSync(paid.order.delivery.zipKey);
   assert.equal(zip.subarray(0, 4).toString("hex"), "504b0304");
   assert.ok(zip.includes(Buffer.from("ORDER.txt")));
+  assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-1mp.jpg`)));
+  assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-1mp.jpg`)));
 
   fs.rmSync(outputDir, { recursive: true, force: true });
 });
@@ -429,6 +431,8 @@ test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   const zip = Buffer.from(privateR2._debug.get(firstDelivery.zipKey).body);
   assert.ok(zip.includes(Buffer.from(`${photoId}-full.jpg`)));
   assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-3mp.jpg`)));
+  assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-full.jpg`)));
+  assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-3mp.jpg`)));
 });
 
 test("deployed Worker serves public R2 previews through the media route", async () => {

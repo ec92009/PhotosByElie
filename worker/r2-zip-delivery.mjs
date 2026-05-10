@@ -111,7 +111,7 @@ export const createR2ZipDelivery = ({
           ? sourceBytes
           : await getOrCreateRenderedJpg({ item, product, sourceBytes });
         const ext = isFullResolution ? extensionFor(item.source.path) : "jpg";
-        const name = `${safeName(item.photoId, "photo")}/${safeName(item.photoId, "photo")}-${product.id}.${ext}`;
+        const name = `${safeName(item.photoId, "photo")}-${safeName(product.id, "product")}.${ext}`;
         entries.push({ name, data: isFullResolution ? data : data.data });
         rendered.push({
           photoId: item.photoId,

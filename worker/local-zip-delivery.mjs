@@ -153,7 +153,7 @@ export const createLocalZipDelivery = ({
   const renderProduct = async ({ item, product, source, stagingDir }) => {
     const productId = product.id;
     const outputName = `${safeName(item.photoId, "photo")}-${safeName(productId, "product")}.jpg`;
-    const outputPath = path.join(stagingDir, `${safeName(item.photoId, "photo")}`, outputName);
+    const outputPath = path.join(stagingDir, outputName);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
     const sipsArgs = ["-s", "format", "jpeg", "-s", "formatOptions", "90"];

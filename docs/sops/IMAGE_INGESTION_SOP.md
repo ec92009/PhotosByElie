@@ -13,7 +13,7 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Canonical Lightroom camera archive: `/Volumes/Saturn/Pictures/LR/Camera`
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, or `.tiff`.
 - Do not import DNG, NEF, or other raw camera files. Develop/export them first.
-- Lightroom sidecars should sit next to the image files as `.xmp` files when metadata is not embedded.
+- Lightroom sidecars may sit next to the image files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
@@ -78,7 +78,7 @@ The builder is designed to be interrupted and resumed.
 
 ## Privacy Rules
 
-- Keep `assets/reserve` and `assets/hidden` untracked except for their `.gitkeep` folder placeholders.
+- Keep `assets/reserve` and `assets/hidden` untracked except for tracked blocked-list/tombstone files already in Git.
 - Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are the handoff trail for localhost Unknown-to-country moves. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Do not paste exact GPS coordinates into public site data.
 - Review public keywords before promoting them into `photos-data.js`.
@@ -91,8 +91,8 @@ Promotion is automated by live Owner actions first, with exporter/review snapsho
 
 1. Build or refresh `assets/reserve/manifest.json`.
 2. Prefer H/U/P and Unknown assignment in the localhost Owner surfaces; those actions move files immediately.
-3. Run `scripts/apply_review_snapshot.py` or `scripts/export_photos_data.py --regular-cap N`.
-4. Confirm Expo contains only publishable watermarked JPEGs under `assets/expo/<country>/`.
+3. Run `scripts/export_photos_data.py --external-media` to publish every eligible cloud-backed preview.
+4. Confirm Expo excludes blocked, discarded, RAW-only, and otherwise ineligible photos.
 5. Run the visible versioning SOP when the public gallery changes.
 
 We are walking away from the old Curation Pass workflow. Review snapshots are retained only for audit trails and emergency batch rebuilds.

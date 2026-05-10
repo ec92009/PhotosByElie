@@ -64,7 +64,7 @@ For normal localhost preview with Owner tools, run the small local server instea
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page update the blocked blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
 
 Owner mutation endpoints are unlocked on localhost by the helper server without a password.
 
@@ -74,18 +74,18 @@ For a temporary private-LAN review session, bind to all interfaces and opt in to
 python3 scripts/local_server.py 8000 --bind 0.0.0.0 --allow-lan-owner
 ```
 
-We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; `.pbe-review` snapshots remain only as audit files and as a fallback for larger rebuilds.
+We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; review snapshots are retained only as historical audit files.
 
-The Owner page writes the current Expo cap into each review snapshot, and the cleaner honors that payload value unless you pass an explicit `--expo-cap` override. This cap is a maximum, not a required fill count: collections with fewer valid JPEG pairs publish fewer photos. For standalone bootstrap exports, the exporter randomly samples eligible photos in each collection, writes the selected set, records the random seed in `assets/expo-manifest.json`, and writes ignored localhost reserve data to `assets/reserve/reserve-data.json`:
+The Expo cap is retired. For standalone exports, omit `--expo-cap` so the exporter publishes every eligible cloud-backed preview that is not blocked, discarded, RAW-only, or otherwise ineligible:
 
 ```bash
-python3 scripts/export_photos_data.py --expo-cap 30
+python3 scripts/export_photos_data.py
 ```
 
 For the GitHub-code/R2-media publishing model, write the same public catalog and Expo manifest without copying preview JPGs into tracked `assets/expo`:
 
 ```bash
-python3 scripts/export_photos_data.py --expo-cap 100 --external-media
+python3 scripts/export_photos_data.py --external-media
 ```
 
 After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and legacy country-prefixed provenance:
@@ -94,37 +94,37 @@ After changing the generated catalog, refresh the media sidecar so each flat pub
 node scripts/write_media_sidecar.mjs
 ```
 
-For normal H/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H hides by adding the photo to the Hidden blacklist, U removes the most recent hide, and P on the Hidden page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
+For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X blocks by adding the photo to the blocked blacklist, U removes the most recent block, and P on the Blocked page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
 
-For larger batch rebuilds, export a review snapshot from the localhost Owner page and apply it with the cleaner:
+If an older review snapshot needs to be replayed, use `scripts/asset_state.py` directly:
 
 ```bash
-python3 scripts/apply_review_snapshot.py \
+python3 scripts/asset_state.py \
   ~/Downloads/photosbyelie-review.pbe-review \
   --rebuild-missing-manifests
 ```
 
-The exported review snapshot records the browser's current Expo state, the Expo cap, and owner country assignments from the Unknown queue. The cleaner applies country assignments and regenerates the public catalog by preserving browser-reviewed picks first, then random-filling remaining slots from eligible current/local-cache candidates. Country-assigned Unknowns are eligible to fill their newly assigned collection in that same pass.
+That compatibility path applies country assignments and blocked choices from the snapshot. It is not the normal Owner flow anymore.
 
-Because the local preview cache and Hidden review data are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local preview-cache manifest. In that case the cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
+Because the local preview cache and blocked review data are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local preview-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
 
 ```bash
-python3 scripts/apply_review_snapshot.py \
+python3 scripts/asset_state.py \
   ~/Downloads/photosbyelie-review.pbe-review \
   --asset-source ~/Dev/photosByElie-full-assets
 ```
 
 Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroom and AI manifests from source archives before applying the pass. Override with `--source-root` or `--ai-source-root` when the archives are mounted somewhere else.
 
-For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of a random draw. Use `--seed N` to recreate a previous random draw.
+For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of the default ordering. Use `--seed N` only with legacy capped/randomized export experiments.
 
-The active storage contract is: Git tracks code/metadata and tiny assets; `assets/reserve` is an ignored local preview cache; Hidden is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
+The active storage contract is: Git tracks code/metadata and tiny assets; `assets/reserve` is an ignored local preview cache; Blocked is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
 
 ## Publish Validation
 
 `validate_publish.js` checks the generated public catalog before publishing. It loads `photos-data.js`, verifies duplicate photo IDs, collection page shells, resolution availability metadata, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
 
-The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update both `export_photos_data.py` and `apply_review_snapshot.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
+The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
 
 Run the validator before pushing public site changes:
 
@@ -138,7 +138,7 @@ When GitHub Pages is serving code and metadata while public previews live in R2/
 node scripts/validate_publish.js --external-media
 ```
 
-Use `--summary` when preparing a push. The summary prints collection counts, local preview-cache/Hidden asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
+Use `--summary` when preparing a push. The summary prints collection counts, local preview-cache/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
 
 ```bash
 node scripts/validate_publish.js --summary
@@ -171,7 +171,7 @@ Refresh the Owner storage/cost estimate after a large import, backfill, or block
 zsh -lc 'node scripts/write_storage_estimate.mjs'
 ```
 
-The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted blocked previews/renders are estimated from current average object sizes, while blocked master bytes come from the hidden catalog source metadata.
+The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted blocked previews/renders are estimated from current average object sizes, while blocked master bytes come from the blocked catalog source metadata.
 
 Dry-run the currently publishable Expo previews:
 
@@ -279,7 +279,7 @@ Run it only after confirming no public/private R2 upload lane is active. The scr
 
 ## Local Asset Sync
 
-`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track preview-cache or Hidden data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
+`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track preview-cache or blocked data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
 
 The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
 

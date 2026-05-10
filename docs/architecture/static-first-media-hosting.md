@@ -31,7 +31,7 @@ Each photo also has a curation state:
 
 - Expo.
 - Reserve.
-- Hidden.
+- Blocked.
 
 Those states should be metadata and/or storage location concerns. They should not force GitHub to carry the full media vault.
 
@@ -89,7 +89,7 @@ Expected private storage contents:
 - Lazily generated clean delivery sizes, such as 6MP, 3MP, and 1MP.
 - Delivery ZIP files stored under the purchase order ID.
 
-Smaller clean delivery derivatives do not need to be generated ahead of time. They can be created on first purchase/download request, saved, and reused.
+Smaller clean delivery derivatives are generated/uploaded by the media pipeline and then reused. After masters, private render triplets, and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; blocked/discarded cleanup is the exception.
 
 Delivery ZIP files should remain available for future re-download under their purchase order ID. Access should be rate-limited, with a rough starting rule of no more than one delivery ZIP download per order per hour. The exact rule can change later, but the intent is to avoid accidental or hostile repeated downloads.
 

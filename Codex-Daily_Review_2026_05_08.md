@@ -11,7 +11,7 @@
 
 ## UX
 - Keyboard navigation + like/basket sync is strong; it’s the kind of polish that makes browsing feel “fast”.
-- Owner-only flows (`owner.html`, Unknown/Hidden) are correctly localhost-gated; keep that boundary explicit in code and copy.
+- Owner-only flows (`owner.html`, Unknown/Blocked) are correctly localhost-gated; keep that boundary explicit in code and copy.
 
 ## Misc
 - Versioning discipline (`VERSION`, `site-version.js`) is excellent for cache busting on GitHub Pages.

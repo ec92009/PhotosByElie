@@ -6,7 +6,7 @@ Last updated: 2026-05-10
 
 - Local visible build: `v71.16`.
 - Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
-- The Expo cap is retired. Publish all eligible cloud-backed previews unless hidden/discarded or explicitly ineligible.
+- The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
 - Buyer deliverables are private and unwatermarked: full developed sources under `masters/...`, JPG 1/3/6 MP files under `renders/...`.
 - Uploaded masters, private render triplets, and public previews are treated as immutable media objects after upload. Owner edits change manifests/catalogs; the normal exception is blocked/discarded cleanup deleting media while keeping tombstones.
@@ -15,7 +15,7 @@ Last updated: 2026-05-10
   - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
 - Reserve is only an ignored local import/preview cache. It is not a long-term review state.
-- Hidden/discarded photos are tombstoned. Their R2 media should be deleted for cost control, while the tombstone stays tracked so Saturn imports do not resurrect them.
+- Blocked/discarded photos are tombstoned. Their R2 media should be deleted for cost control, while the tombstone stays tracked so Saturn imports do not resurrect them.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
 - Owner Current state now reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier `18` stale local blocked records were removed from the ignored Owner state.
@@ -35,7 +35,7 @@ Last updated: 2026-05-10
 2. **Continue Owner curation/blocking.**
    - Review visible catalog entries after R2 coverage is complete.
    - Block photos that should not be sold or shown before payment testing starts.
-   - Keep hide/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
+   - Keep block/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
 
 3. **Add gallery search.**
    - Add search on both public/end-user galleries and Owner review surfaces.
@@ -50,7 +50,7 @@ Last updated: 2026-05-10
    - Keep an explicit publish step so the Worker catalog and public manifests receive the changed keywords.
 
 5. **Make discard lifecycle first-class in Owner.**
-   - Add an explicit Owner discard action separate from temporary hide/review.
+   - Add an explicit Owner discard action separate from temporary block/review.
    - Create durable tombstones for discarded IDs.
    - Delete matching public previews, private masters, and private render JPGs from R2.
    - Keep tombstones in import/export validation so discarded photos cannot return from Saturn.
@@ -119,18 +119,18 @@ Last updated: 2026-05-10
 16. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
-   - Cover Owner hide/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
+   - Cover Owner block/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
 17. **Extend Owner dashboard.**
-   - Keep dense counts for catalog, private delivery coverage, discarded tombstones, hidden queue, unknown queue, and active sweep status.
+   - Keep dense counts for catalog, private delivery coverage, discarded tombstones, blocked queue, unknown queue, and active sweep status.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
 18. **Keep publish validation as the gate.**
-   - Validate hidden/discarded exclusions.
+   - Validate blocked/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
    - Add catalog/manifest consistency checks across `photos-data.js`, `worker/photos-catalog.generated.mjs`, sidecars, and delivery manifests.
@@ -161,6 +161,6 @@ Last updated: 2026-05-10
 - Added discarded-media R2 cleanup tooling.
 - Added daily cloud media sweep automation with lock-guarded wrapper.
 - Started a manual cloud media sweep with the same wrapper used by automation.
-- Added localhost-only Owner helper endpoints for catalog, metadata, Hidden, Unknown, R2 progress, and R2 action endpoints.
+- Added localhost-only Owner helper endpoints for catalog, metadata, Blocked, Unknown, R2 progress, and R2 action endpoints.
 - Added Owner R2 coverage counts with a repair button that starts the lock-guarded cloud media sweep.
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.

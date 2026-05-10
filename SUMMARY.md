@@ -30,7 +30,7 @@ Date: 2026-05-10
 - Saturn is the steady-state source of truth for new developed photos. The catalog is a repair/backfill input only when the repo and cloud are temporarily out of sync.
 - Camera imports scan `/Volumes/Saturn/Pictures/LR/Camera`.
 - Leonardo/AI imports scan `/Volumes/Saturn/Pictures/LR/_All Leonardo`.
-- Owner-hidden/discarded photos are tombstoned: delete their R2 bytes, keep their IDs as permanent do-not-resurrect records.
+- Owner-blocked/discarded photos are tombstoned: delete their R2 bytes, keep their IDs as permanent do-not-resurrect records.
 - Uploaded masters, private render triplets, and public previews are treated as immutable media objects after upload. Normal Owner metadata/country edits mutate manifests/catalogs only; future Lightroom-style XMP sidecar saves should be an explicit Owner maintenance button.
 
 ## Automation
@@ -53,8 +53,8 @@ Date: 2026-05-10
 ## Recent Decisions
 
 - Reserve is no longer a product/review concept. `assets/reserve` is only an ignored local preview/import cache.
-- The old Expo cap is retired. The public catalog should include all eligible cloud-backed previews unless a photo is hidden/discarded or otherwise ineligible.
-- Discard is stronger than hide: discarded photos should disappear from paid storage while their tombstone remains tracked.
+- The old Expo cap is retired. The public catalog should include all eligible cloud-backed previews unless a photo is blocked/discarded or otherwise ineligible.
+- Discard is stronger than block: discarded photos should disappear from paid storage while their tombstone remains tracked.
 - Large R2 operations should be resumable, one active sweep at a time, and checkpointed through Git.
 - Payment comes before buyer accounts. Guest checkout remains the first payment path.
 - Real Stripe Checkout is wired in code, but live payments are not ready until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout flows are verified.
@@ -65,12 +65,12 @@ Date: 2026-05-10
 - We chose Stripe as the next business step instead of starting with user accounts.
 - The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
 - Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
-- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v71.13`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v71.16`.
 - Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
 - Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
 - Commit pushed for the Stripe wiring: `f0e1746 photosbyelie: wire Stripe checkout`.
-- The Owner dashboard was tightened while the private backfill sweep ran: Sign out moved to the header, the Owner hero was reduced to a compact heading, Hidden and Hidden sync were grouped together, dark-mode header buttons were made more visible, and the R2 sweep card now uses stacked progress bars.
+- The Owner dashboard was tightened while the private backfill sweep ran: Sign out moved to the header, the Owner hero was reduced to a compact heading, Blocked and Blocked sync were grouped together, dark-mode header buttons were made more visible, and the R2 sweep card now uses stacked progress bars.
 - The active sweep progress bar now uses active-catalog coverage instead of adding live log progress to checkpointed manifest missing counts. The earlier `13,615`-style denominator was a moving target caused by double-counting across two live signals.
 - Started the pre-launch translation promise while avoiding media-pipeline changes: public-facing pages now share an English/French/Spanish translation layer for navigation, homepage copy, gallery filters/statuses, detail actions, basket/liked flows, and order-status copy. Owner-only tooling remains English-only for now.
 - Owner language stays English-only; pressing the language button in Owner gives a small beep instead of pretending to switch languages.
@@ -80,6 +80,7 @@ Date: 2026-05-10
 - The Owner page now refreshes several panels in place, including Current state, R2 catalog coverage, and R2 background work.
 - During cloud upload, Owner can preview the last uploaded photo directly from the file already being uploaded, without re-downloading it.
 - Local duplicate cleanup for AI/upscaled files was explored; when near-duplicate source/upscale sets appear, keep the upscaled image and remove the lower-resolution original from the sellable set.
+- Owner metadata and country edits are now manifest-only. Uploaded masters, private render triplets, and public previews should not be rewritten after upload; optional Lightroom-style XMP sidecar writing belongs behind an explicit Owner button.
 
 ## Verification
 
@@ -96,18 +97,19 @@ Date: 2026-05-10
 2. **Continue Owner curation/blocking.** Review remaining visible photos and block anything that should not be sold before payment testing starts.
 3. **Add gallery search.** Search public galleries and Owner review surfaces by title and keywords first, with filename/country/description as secondary signals.
 4. **Add collection-wide keyword removal.** Let Owner remove one keyword from an entire collection with before/after counts and a confirmation preview.
-5. **Return from detail to the gallery photo we left from.** Restore gallery, filters, sort, and scroll/focus when leaving detail.
-6. **Make discard lifecycle first-class in Owner.** Add a clear discard action that deletes public/private R2 bytes while keeping durable tombstones.
-7. **Set up Stripe test mode.** Configure test secrets, webhook endpoint, and Worker environment.
-8. **Run Stripe test checkout end to end.** Cover success, 3D Secure, declined payment, webhook paid transition, ZIP build, and download.
-9. **Make order records production-durable.** Decide D1 vs KV and store queryable order state.
-10. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
-11. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
-12. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
-13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
-14. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
-15. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
-16. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.
-17. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
-18. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
-19. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.
+5. **Make discard lifecycle first-class in Owner.** Add a clear discard action that deletes public/private R2 bytes while keeping durable tombstones.
+6. **Add Owner price-list maintenance.** Move product prices into an Owner-maintained list that publishes cleanly to the Worker/public basket.
+7. **Add optional Owner XMP sidecar save.** Add a deliberate maintenance button for writing Lightroom-style sidecars beside masters from manifest metadata.
+8. **Set up Stripe test mode.** Configure test secrets, webhook endpoint, and Worker environment.
+9. **Run Stripe test checkout end to end.** Cover success, 3D Secure, declined payment, webhook paid transition, ZIP build, and download.
+10. **Make order records production-durable.** Decide D1 vs KV and store queryable order state.
+11. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
+12. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
+13. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
+14. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
+15. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
+16. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
+17. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.
+18. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
+19. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
+20. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.

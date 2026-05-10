@@ -52,6 +52,8 @@ const ensureGalleryKeyboardHint = () => {
     "Owner shortcuts:",
     `${shortcutKey("X")} block`,
     `${shortcutKey("U")} undo`,
+    `${shortcutKey("T")} title`,
+    `${shortcutKey("K")} keywords`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
     `${shortcutKey("Double-click")} detail`
@@ -146,6 +148,31 @@ const clearPendingGalleryReturn = () => {
 const metadataValue = (photo, label) => (
   (photo?.metadata || []).find((item) => item.label === label)?.value || ""
 );
+
+const splitKeywordText = (value) => String(value || "")
+  .split(/[;,]/)
+  .map((keyword) => keyword.trim())
+  .filter(Boolean);
+
+const uniqueKeywords = (items) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const setMetadataValue = (photo, label, value) => {
+  if (!Array.isArray(photo.metadata)) photo.metadata = [];
+  const item = photo.metadata.find((entry) => entry.label === label);
+  if (item) {
+    item.value = value;
+    return;
+  }
+  photo.metadata.unshift({ label, value });
+};
 
 const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
 
@@ -514,6 +541,87 @@ const toggleGalleryLike = (photo) => {
   updateGalleryLikeButtons();
 };
 
+const openOwnerMetadataModal = (photo, field) => {
+  if (!localModerationEnabled || !photo) return;
+  const isKeywords = field === "keywords";
+  const dialog = document.createElement("dialog");
+  dialog.className = "owner-metadata-modal";
+  const title = isKeywords ? "Edit keywords" : "Edit title";
+  const currentKeywords = metadataValue(photo, "Keywords");
+  const value = isKeywords ? currentKeywords : (photo.title || "");
+  const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
+  dialog.innerHTML = `
+    <form class="owner-metadata-modal-form" method="dialog">
+      <h2>${escapeHtml(title)}</h2>
+      ${image ? `
+        <figure class="owner-metadata-modal-preview">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(photo.title || title)}"/>
+        </figure>
+      ` : ""}
+      <label>
+        <span>${isKeywords ? "Keywords" : "Title"}</span>
+        ${isKeywords
+          ? `<textarea rows="4" data-owner-modal-field>${escapeHtml(value)}</textarea>`
+          : `<input type="text" value="${escapeHtml(value)}" data-owner-modal-field/>`
+        }
+      </label>
+      <div class="owner-metadata-modal-actions">
+        <button class="btn secondary" type="button" data-owner-modal-cancel>Cancel</button>
+        <button class="btn" type="submit">Save</button>
+      </div>
+    </form>
+  `;
+  const form = dialog.querySelector("form");
+  const input = dialog.querySelector("[data-owner-modal-field]");
+  const saveButton = dialog.querySelector("button[type='submit']");
+  const closeWithoutSaving = () => {
+    if (dialog.open) dialog.close("cancel");
+  };
+  dialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeWithoutSaving();
+  });
+  dialog.querySelector("[data-owner-modal-cancel]")?.addEventListener("click", closeWithoutSaving);
+  input?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeWithoutSaving();
+      return;
+    }
+    if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    event.preventDefault();
+    form.requestSubmit();
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    saveButton.disabled = true;
+    const nextTitle = isKeywords ? (photo.title || "") : String(input.value || "").trim();
+    const nextKeywords = isKeywords
+      ? uniqueKeywords(splitKeywordText(input.value)).join(", ")
+      : currentKeywords;
+    try {
+      await hiddenActions.updatePhotoMetadata?.(photo.id, { title: nextTitle, keywords: nextKeywords });
+      photo.title = nextTitle;
+      setMetadataValue(photo, "Metadata title", nextTitle);
+      setMetadataValue(photo, "Keywords", nextKeywords);
+      const currentId = photo.id;
+      const nextIndex = filteredVisiblePhotos().findIndex((item) => item.id === currentId);
+      if (nextIndex >= 0) selectedIndex = nextIndex;
+      renderGallery();
+      setGalleryStatus(`${photo.title} metadata saved.`);
+      dialog.close("save");
+    } catch (error) {
+      saveButton.disabled = false;
+      setGalleryStatus(error?.message || "Could not save metadata.");
+    }
+  });
+  dialog.addEventListener("close", () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  input?.focus();
+  input?.select?.();
+};
+
 const defaultBasketOptionFor = (photo) => {
   const options = window.photosByElieAvailableResolutions
     ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
@@ -784,6 +892,13 @@ if (galleryRoot && gallery) {
         const selected = photos[selectedIndex];
         if (!selected) return;
         window.location.assign(versionedHref(`./photo.html?id=${selected.id}`));
+        event.preventDefault();
+        return;
+      }
+      if (event.key.toLowerCase() === "t" || event.key.toLowerCase() === "k") {
+        const selected = photos[selectedIndex];
+        if (!selected) return;
+        openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");
         event.preventDefault();
         return;
       }

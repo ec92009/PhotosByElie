@@ -51,6 +51,13 @@ const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#39;",
+}[char]));
 const productLabel = (option) => {
   const keyById = {
     full: "product.full",
@@ -124,7 +131,9 @@ const renderDetailShortcutHint = () => {
   const ownerShortcuts = localModerationEnabled
     ? [
       `${detailShortcutKey("X")} block`,
-      `${detailShortcutKey("U")} undo`
+      `${detailShortcutKey("U")} undo`,
+      `${detailShortcutKey("T")} title`,
+      `${detailShortcutKey("K")} keywords`
     ]
     : [];
   detailShortcutHint.innerHTML = [
@@ -456,6 +465,89 @@ const ensureOwnerMetadataEditor = () => {
   metadataRoot.before(editor);
 };
 
+const openOwnerMetadataModal = (field) => {
+  if (!localModerationEnabled || !photo) return;
+  const isKeywords = field === "keywords";
+  const dialog = document.createElement("dialog");
+  dialog.className = "owner-metadata-modal";
+  const title = isKeywords ? "Edit keywords" : "Edit title";
+  const currentKeywords = metadataValue(photo, "Keywords");
+  const value = isKeywords ? currentKeywords : (photo.title || "");
+  const image = window.photosByElieMediaUrl?.(photo, "detail") || window.photosByElieMediaUrl?.(photo, "gallery") || "";
+  dialog.innerHTML = `
+    <form class="owner-metadata-modal-form" method="dialog">
+      <h2>${title}</h2>
+      ${image ? `
+        <figure class="owner-metadata-modal-preview">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(photo.title || title)}"/>
+        </figure>
+      ` : ""}
+      <label>
+        <span>${isKeywords ? "Keywords" : "Title"}</span>
+        ${isKeywords
+          ? `<textarea rows="4" data-owner-modal-field>${escapeHtml(value)}</textarea>`
+          : `<input type="text" value="${escapeHtml(value)}" data-owner-modal-field/>`
+        }
+      </label>
+      <div class="owner-metadata-modal-actions">
+        <button class="btn secondary" type="button" data-owner-modal-cancel>Cancel</button>
+        <button class="btn" type="submit">Save</button>
+      </div>
+    </form>
+  `;
+  const form = dialog.querySelector("form");
+  const input = dialog.querySelector("[data-owner-modal-field]");
+  const saveButton = dialog.querySelector("button[type='submit']");
+  const closeWithoutSaving = () => {
+    if (dialog.open) dialog.close("cancel");
+  };
+  dialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeWithoutSaving();
+  });
+  dialog.querySelector("[data-owner-modal-cancel]")?.addEventListener("click", closeWithoutSaving);
+  input?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeWithoutSaving();
+      return;
+    }
+    if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    event.preventDefault();
+    form.requestSubmit();
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    saveButton.disabled = true;
+    const titleValue = isKeywords ? (photo.title || "") : String(input.value || "").trim();
+    const keywordValue = isKeywords
+      ? uniqueKeywords(splitKeywordText(input.value)).join(", ")
+      : currentKeywords;
+    try {
+      await hiddenActions.updatePhotoMetadata?.(photo.id, { title: titleValue, keywords: keywordValue });
+      photo.title = titleValue;
+      setMetadataValue(photo, "Metadata title", titleValue);
+      setMetadataValue(photo, "Keywords", keywordValue);
+      syncTitleUi();
+      renderMetadataRows();
+      const inlineTitleInput = document.querySelector("[data-owner-title]");
+      const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
+      if (inlineTitleInput) inlineTitleInput.value = titleValue;
+      if (inlineKeywordInput) inlineKeywordInput.value = keywordValue;
+      status.textContent = `${photo.title} metadata saved.`;
+      dialog.close("save");
+    } catch (error) {
+      saveButton.disabled = false;
+      status.textContent = error?.message || "Could not save metadata.";
+    }
+  });
+  dialog.addEventListener("close", () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  input?.focus();
+  input?.select?.();
+};
+
 renderMetadataRows();
 ensureOwnerMetadataEditor();
 
@@ -616,6 +708,11 @@ if (localModerationEnabled) {
   window.addEventListener("keydown", async (event) => {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
+    if (key === "t" || key === "k") {
+      openOwnerMetadataModal(key === "k" ? "keywords" : "title");
+      event.preventDefault();
+      return;
+    }
     if (key === "x" || key === "b" || key === "h") {
       if (hiddenActions.has(photo.id)) {
         status.textContent = `${photo.title} is already Blocked.`;

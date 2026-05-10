@@ -8,13 +8,33 @@ const homeCollections = [
   "slovakia",
 ];
 
+const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#39;",
+}[char]));
+
+const galleryHrefForKey = (key) => window.photosByElieVersionedHref?.(`./${key}.html`) || `./${key}.html`;
+
+const isBlockedPhoto = (photo) => {
+  const id = photo?.id;
+  if (!id) return false;
+  return Boolean(
+    window.photosByEliePublicHiddenIds?.has?.(id)
+    || window.photosByElieHiddenActions?.has?.(id)
+  );
+};
+
 const randomPhotoForCollection = (collection) => {
   const publicPhotos = window.photosByElieFilterPublicHidden?.(collection?.photos || []) || (collection?.photos || []);
   const photos = window.photosByElieHiddenActions?.filterPhotos
     ? window.photosByElieHiddenActions.filterPhotos(publicPhotos)
     : publicPhotos;
-  if (!photos.length) return null;
-  return photos[Math.floor(Math.random() * photos.length)];
+  const availablePhotos = photos.filter((photo) => !isBlockedPhoto(photo));
+  if (!availablePhotos.length) return null;
+  return availablePhotos[Math.floor(Math.random() * availablePhotos.length)];
 };
 
 const representativeImageForPhoto = (photo) => {
@@ -25,10 +45,15 @@ const representativeImageForPhoto = (photo) => {
 };
 
 const applyRepresentativePhoto = (element, photo) => {
-  if (!element || !photo) return;
+  if (!element) return;
+  element.classList.remove("has-photo");
+  element.style.removeProperty("--photo-image");
+  delete element.dataset.photoId;
+  if (!photo) return;
   const image = representativeImageForPhoto(photo);
   if (!image) return;
   element.classList.add("has-photo");
+  if (photo.id) element.dataset.photoId = photo.id;
   element.style.setProperty("--photo-image", `url('${image}')`);
 };
 
@@ -43,7 +68,10 @@ const buildHeroStack = () => {
     const image = representativeImageForPhoto(photo);
     const hasPhoto = image ? "has-photo" : "";
     const style = image ? ` style="--photo-image:url('${image}')"` : "";
-    return `<span class="photo-print ${key} ${hasPhoto}"${style}><span class="hand-label">${collection.title}</span></span>`;
+    const title = escapeHtml(collection.title);
+    const href = escapeHtml(galleryHrefForKey(key));
+    const photoId = escapeHtml(photo?.id || "");
+    return `<a class="photo-print ${key} ${hasPhoto}" href="${href}" data-home-stack-card data-photo-id="${photoId}" aria-label="${title} gallery"${style}><span class="hand-label">${title}</span></a>`;
   }).join("");
 };
 
@@ -68,6 +96,9 @@ window.addEventListener("photosbyelie:carouselturn", refreshSamples);
 window.addEventListener("photosbyelie:hiddenblacklistchange", refreshSamples);
 window.addEventListener("photosbyelie:hiddenchange", refreshSamples);
 (async () => {
-  await window.photosByElieHiddenActionsReady;
+  await Promise.allSettled([
+    window.photosByElieHiddenBlacklistReady,
+    window.photosByElieHiddenActionsReady,
+  ]);
   refreshSamples();
 })();

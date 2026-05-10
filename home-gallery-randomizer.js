@@ -7,6 +7,7 @@ const homeCollections = [
   "portugal",
   "slovakia",
 ];
+const homeData = () => window.photosByElieData || window.photosByElieHomeData || {};
 
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -60,7 +61,7 @@ const applyRepresentativePhoto = (element, photo) => {
 const buildHeroStack = () => {
   const root = document.querySelector("[data-home-stack]");
   if (!root) return;
-  const data = window.photosByElieData || {};
+  const data = homeData();
   root.innerHTML = homeCollections.map((key) => {
     const collection = data[key];
     if (!collection) return "";
@@ -76,7 +77,7 @@ const buildHeroStack = () => {
 };
 
 const applyCarouselPhotos = () => {
-  const data = window.photosByElieData || {};
+  const data = homeData();
   document.querySelectorAll("[data-gallery-key]").forEach((card) => {
     const key = card.dataset.galleryKey;
     const art = card.querySelector(".photo-art");
@@ -93,6 +94,7 @@ const refreshSamples = () => {
 
 window.photosByElieHomeRandomizer = { refreshSamples };
 window.addEventListener("photosbyelie:carouselturn", refreshSamples);
+window.addEventListener("photosbyelie:catalogloaded", refreshSamples);
 window.addEventListener("photosbyelie:hiddenblacklistchange", refreshSamples);
 window.addEventListener("photosbyelie:hiddenchange", refreshSamples);
 (async () => {

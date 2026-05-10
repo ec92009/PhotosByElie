@@ -69,7 +69,7 @@ const pathFromStatusLine = (line) => line.slice(3).replace(/^.* -> /, "");
 const isPublishPath = (file) => {
   if (!file) return false;
   if (file === "VERSION" || file === "README.md" || file === "SUMMARY.md" || file === "TODO.md") return true;
-  if (file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json") return true;
+  if (file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json") return true;
   if (file === "assets/private-delivery-manifest.json") return true;
   if (file.startsWith("assets/expo/")) return true;
   if (file.startsWith("scripts/")) return true;
@@ -82,6 +82,14 @@ const loadPhotoData = () => {
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
   return sandbox.window;
+};
+
+const loadHomeData = () => {
+  const dataPath = path.join(repoRoot, "home-data.js");
+  const sandbox = { window: {}, console };
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
+  return sandbox.window.photosByElieHomeData || {};
 };
 
 const cleanLocalReference = (reference) => String(reference || "")
@@ -103,6 +111,7 @@ const pairFor = (reference) => {
 
 const validate = () => {
   const windowData = loadPhotoData();
+  const homeData = loadHomeData();
   const collections = windowData.photosByElieData || {};
   const resolutions = windowData.photosByElieResolutions || [];
   const availableResolutions = windowData.photosByElieAvailableResolutions;
@@ -235,6 +244,27 @@ const validate = () => {
     });
   });
 
+  Object.entries(collections).forEach(([collectionKey, collection]) => {
+    const homeCollection = homeData[collectionKey];
+    if (!homeCollection) {
+      errors.push(`home-data.js is missing ${collectionKey}.`);
+      return;
+    }
+    if (Number(homeCollection.count || 0) !== (collection.photos || []).length) {
+      errors.push(`home-data.js ${collectionKey} count does not match photos-data.js.`);
+    }
+    const samples = homeCollection.photos || [];
+    if (!samples.length && (collection.photos || []).length) {
+      errors.push(`home-data.js ${collectionKey} has no sample photos.`);
+    }
+    samples.forEach((photo) => {
+      if (!photo?.id) errors.push(`home-data.js ${collectionKey} sample is missing an id.`);
+      if (!photo?.media?.publicPreview?.galleryKey && !photo?.gallerySrc) {
+        errors.push(`home-data.js ${photo?.id || collectionKey} sample is missing gallery media.`);
+      }
+    });
+  });
+
   const sidecarPath = path.join(repoRoot, "assets", "media-sidecar.json");
   if (!fs.existsSync(sidecarPath)) {
     errors.push("assets/media-sidecar.json is missing.");
@@ -293,7 +323,7 @@ const printSummary = (collections) => {
   }, 0);
   const assetCatalogChanged = changed.filter((line) => {
     const file = pathFromStatusLine(line);
-    return file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json" || file.startsWith("assets/expo/");
+    return file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json" || file.startsWith("assets/expo/");
   });
   const diffStat = runGit("git diff --stat -- .");
 

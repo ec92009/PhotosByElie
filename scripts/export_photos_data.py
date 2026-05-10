@@ -34,6 +34,7 @@ REGULAR_ASSET_ROOT = Path("assets/expo")
 RESERVE_ASSET_ROOT = Path("assets/reserve")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
+HOME_SAMPLE_COUNT = 4
 
 
 def ensure_state_folders(root: Path) -> None:
@@ -219,6 +220,63 @@ def copy_regular_assets(repo_root: Path, regular_rows: list[tuple[dict, str]]) -
             shutil.copy2(source, target)
             copied[derivative] += 1
     return copied
+
+
+def home_photo_object(photo: dict) -> dict:
+    return {
+        "id": photo.get("id"),
+        "title": photo.get("title"),
+        "gallerySrc": photo.get("gallerySrc"),
+        "imageSrc": photo.get("imageSrc"),
+        "media": photo.get("media") or {},
+    }
+
+
+def write_home_data_from_collections(repo_root: Path, collections: dict[str, dict]) -> Path:
+    payload: dict[str, dict] = {}
+    for slug in PUBLIC_ORDER:
+        collection = collections.get(slug) or {}
+        number, title, accent, description = LABELS[slug]
+        photos = collection.get("photos") or []
+        payload[slug] = {
+            "number": collection.get("number") or number,
+            "title": collection.get("title") or title,
+            "description": collection.get("description") or description,
+            "accent": collection.get("accent") or accent,
+            "count": len(photos),
+            "href": f"./{slug}.html",
+            "photos": [home_photo_object(photo) for photo in photos[:HOME_SAMPLE_COUNT]],
+        }
+    output = repo_root / "home-data.js"
+    output.write_text(
+        "window.photosByElieHomeData = "
+        + json.dumps(payload, ensure_ascii=False, indent=2)
+        + ";\n",
+        encoding="utf-8",
+    )
+    return output
+
+
+def write_home_data(
+    repo_root: Path,
+    regular_groups: dict[str, list[tuple[dict, str]]],
+) -> Path:
+    collections: dict[str, dict] = {}
+    for slug in PUBLIC_ORDER:
+        number, title, accent, description = LABELS[slug]
+        photos = []
+        for index, (row, mode) in enumerate(regular_groups.get(slug, [])):
+            gallery_rel = f"./{regular_asset_rel(row, 'gallery')}"
+            detail_rel = f"./{regular_asset_rel(row, 'detail')}"
+            photos.append(photo_object_data(row, mode, index, title, gallery_rel, detail_rel))
+        collections[slug] = {
+            "number": number,
+            "title": title,
+            "description": description,
+            "accent": accent,
+            "photos": photos,
+        }
+    return write_home_data_from_collections(repo_root, collections)
 
 
 def write_regular_manifest(
@@ -569,6 +627,7 @@ def write_photos_data(
             resolved_seed,
         )
         write_reserve_data(repo_root, reserve_groups)
+    write_home_data(repo_root, regular_groups)
 
     def collection_lines(slug: str) -> list[str]:
         number, title, accent, description = LABELS[slug]

@@ -102,6 +102,7 @@ Date: 2026-05-10
 - Physical print/frame products are off by default for buyers again. Owner keeps a deliberate localhost toggle for local review, using a new setting so old local storage cannot silently re-enable prints.
 - Opening Owner now forces the language state back to English before the app scripts load.
 - The private R2 deliverable coverage / flat ZIP input check is accepted as done for now and retired from the active backlog.
+- Homepage first render now uses tiny `home-data.js`; `home-catalog-loader.js` downloads the full `photos-data.js` catalog afterward for basket/liked context.
 - Print frame choices now use a horizontal row, and Owner price editing collapses white/black frame prices into one shared frame add-on value per print size.
 - Print product labels now preserve their dimensions on Liked, Basket, detail, and the basket rail.
 - Frame labels now read White frame and Black frame without the extra "plain" wording.
@@ -122,10 +123,9 @@ Date: 2026-05-10
 10. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
 11. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
 12. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
-13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
-14. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
-15. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
-16. **Extend Owner dashboard.** Surface latest sweep result, add counters/refresh controls to Blocked sync and blocked-preview cleanup, and provide a guided ingest/classify/block/validate/publish flow.
-17. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
-18. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
-19. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.
+13. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
+14. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
+15. **Extend Owner dashboard.** Surface latest sweep result, add counters/refresh controls to Blocked sync and blocked-preview cleanup, and provide a guided ingest/classify/block/validate/publish flow.
+16. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
+17. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
+18. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.

@@ -117,8 +117,10 @@ git add \
   assets/media-sidecar.json \
   assets/private-delivery-manifest.json \
   assets/storage-estimate.json \
+  home-data.js \
   photos-data.js \
   worker/photos-catalog.generated.mjs \
+  scripts/export_photos_data.py \
   scripts/build_lightroom_thumbnails.py \
   scripts/delete_discarded_r2_media.mjs \
   scripts/run_cloud_media_sweep.zsh \

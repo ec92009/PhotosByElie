@@ -24,6 +24,7 @@ from export_photos_data import (
     expo_state_from_payload,
     reserve_only_ids_from_payload,
     write_photos_data,
+    write_home_data_from_collections,
 )
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed
@@ -592,9 +593,20 @@ def helper_lines() -> list[str]:
 
 
 def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]]) -> None:
+    home_collections = {}
     lines = ["window.photosByElieData = {"]
     for slug in ORDER:
-        lines += collection_lines(slug, regular_groups.get(slug, []))
+        photos = regular_groups.get(slug, [])
+        lines += collection_lines(slug, photos)
+        if slug != "unknown":
+            number, title, accent, description = LABELS[slug]
+            home_collections[slug] = {
+                "number": number,
+                "title": title,
+                "description": description,
+                "accent": accent,
+                "photos": [copy_photo(photo) for photo in photos],
+            }
     lines += [
         "};",
         "window.photosByElieOwnerData = {",
@@ -604,6 +616,7 @@ def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[
     ]
     lines += helper_lines()
     (repo_root / "photos-data.js").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    write_home_data_from_collections(repo_root, home_collections)
 
 
 def write_reserve_data_from_site(repo_root: Path, reserve_groups: dict[str, list[dict]]) -> None:

@@ -4,7 +4,7 @@ Last updated: 2026-05-10
 
 ## Current Facts
 
-- Local visible build: `v71.26`.
+- Local visible build: `v71.27`.
 - Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -24,6 +24,7 @@ Last updated: 2026-05-10
 - Delivery ZIPs are flat: delivered image files sit at the archive root beside `ORDER.txt`, not inside per-photo folders.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
 - Physical print/frame products are off by default for buyers; Owner has a deliberate localhost toggle for local review while product pricing/publishing is still backlog work.
+- Homepage first render uses the tiny `home-data.js` manifest; the full `photos-data.js` catalog now downloads in the background for basket/liked context.
 
 ## Numbered Backlog
 
@@ -102,31 +103,26 @@ Last updated: 2026-05-10
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-13. **Split homepage data from the full catalog.**
-   - Replace the homepage `photos-data.js` dependency with a small homepage manifest.
-   - Include only collection names, counts, links, and enough representative preview candidates for the hero stack and collection rail.
-   - Keep the initial homepage payload focused on the 14 visible previews instead of the full `5,792`-photo Expo catalog.
-
-14. **Split gallery/catalog data by collection.**
+13. **Split gallery/catalog data by collection.**
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.
 
-15. **Harden browser smoke coverage.**
+14. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner block/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
-16. **Extend Owner dashboard.**
+15. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, blocked queue, unknown queue, and active sweep status.
    - Add counters and refresh buttons to the Blocked sync / Delete blocked previews panel so Owner can see how many blocked IDs are published and how many blocked preview objects still need cleanup.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-17. **Keep publish validation as the gate.**
+16. **Keep publish validation as the gate.**
    - Validate blocked/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
@@ -134,12 +130,12 @@ Last updated: 2026-05-10
    - Add generated JS/JSON payload size budgets for catalog and gallery performance.
    - Keep `npm run validate` mandatory before publish.
 
-18. **Repair and refresh architecture artifacts.**
+17. **Repair and refresh architecture artifacts.**
    - Document which manifests, generated catalogs, deploy artifacts, local caches, and ignored asset folders are sources of truth.
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-19. **Backburner: repo layout cleanup.**
+18. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
@@ -147,6 +143,7 @@ Last updated: 2026-05-10
 
 ## Completed Recently
 
+- Split the homepage first render from the full catalog: `index.html` now uses `home-data.js` immediately and downloads `photos-data.js` in the background.
 - Accepted the private R2 deliverable coverage / flat ZIP input check as done for now and retired it from the active backlog.
 - Widened basket thumbnails to about half the row on desktop, with panoramas aligned to the top of the basket card.
 - Made the local mock-checkout result action simulate payment instead of opening a fake mock Stripe URL.

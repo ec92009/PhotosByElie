@@ -21,6 +21,7 @@ const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const diversityBucketMinutes = 10;
 const defaultFilterState = {
+  query: "",
   orientation: "all",
   mood: "all",
   subject: "all",
@@ -186,6 +187,12 @@ const photoSearchText = (photo) => [
   metadataValue(photo, "Preview file")
 ].filter(Boolean).join(" ").toLowerCase();
 
+const gallerySearchText = (photo) => [
+  photo?.title,
+  metadataValue(photo, "Keywords"),
+  Array.isArray(photo?.keywords) ? photo.keywords.join(" ") : photo?.keywords
+].filter(Boolean).join(" ").toLowerCase();
+
 const previewDimensions = (photo) => {
   const value = metadataValue(photo, "Preview file") || metadataValue(photo, "Original size");
   const match = value.match(/(\d+)\s*x\s*(\d+)/i);
@@ -242,10 +249,23 @@ const maxAvailablePrice = (photo) => {
   return Math.max(0, ...available.map((option) => option.price || 0));
 };
 
-const activeFilterCount = () => ["orientation", "mood", "subject"]
-  .filter((key) => filterState[key] && filterState[key] !== "all").length;
+const searchTerms = () => String(filterState.query || "")
+  .trim()
+  .toLowerCase()
+  .split(/\s+/)
+  .filter(Boolean);
+
+const activeFilterCount = () => (
+  ["orientation", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
+  + (searchTerms().length ? 1 : 0)
+);
 
 const matchesFilterState = (photo) => {
+  const terms = searchTerms();
+  if (terms.length) {
+    const text = gallerySearchText(photo);
+    if (!terms.every((term) => text.includes(term))) return false;
+  }
   if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
   if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
   if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
@@ -271,6 +291,10 @@ const syncFilterControls = () => {
   filterBar.querySelectorAll("[data-gallery-filter]").forEach((control) => {
     control.value = filterState[control.dataset.galleryFilter] || "all";
   });
+  const searchInput = filterBar.querySelector("[data-gallery-search]");
+  if (searchInput) searchInput.value = filterState.query || "";
+  const keywordInput = filterBar.querySelector("[data-owner-remove-keyword]");
+  if (keywordInput) keywordInput.value = "";
 };
 
 const ensureGalleryFilterControls = () => {
@@ -281,6 +305,7 @@ const ensureGalleryFilterControls = () => {
   filterBar.className = "gallery-filter-bar";
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
+    <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
     <label><span data-i18n="gallery.orientation">Orientation</span><select data-gallery-filter="orientation">
       <option value="all" data-i18n="gallery.all">All</option>
       <option value="landscape" data-i18n="gallery.landscape">Landscape</option>
@@ -314,6 +339,10 @@ const ensureGalleryFilterControls = () => {
       <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
+    ${localModerationEnabled ? `
+      <label class="gallery-owner-keyword-tool"><span>Remove keyword from ${escapeHtml(gallery.title || galleryKey)}</span><input type="text" data-owner-remove-keyword placeholder="Keyword"/></label>
+      <button class="btn secondary gallery-owner-keyword-button" type="button" data-owner-remove-collection-keyword>Remove keyword</button>
+    ` : ""}
   `;
   filterTarget.after(filterBar);
   window.photosByElieI18n?.apply?.();
@@ -329,12 +358,39 @@ const ensureGalleryFilterControls = () => {
     selectedIndex = 0;
     renderGallery();
   });
+  filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
+    filterState = { ...filterState, query: event.target.value };
+    selectedIndex = 0;
+    renderGallery();
+  });
   filterBar.querySelector("[data-clear-gallery-filters]")?.addEventListener("click", () => {
     filterState = { ...defaultFilterState };
     writeFilterState();
     syncFilterControls();
     selectedIndex = 0;
     renderGallery();
+  });
+  filterBar.querySelector("[data-owner-remove-collection-keyword]")?.addEventListener("click", async () => {
+    const input = filterBar.querySelector("[data-owner-remove-keyword]");
+    const keyword = String(input?.value || "").trim();
+    if (!keyword) {
+      setGalleryStatus("Enter a keyword to remove.");
+      input?.focus();
+      return;
+    }
+    const ok = window.confirm(`Remove "${keyword}" from every ${gallery.title || galleryKey} photo keyword list?`);
+    if (!ok) return;
+    setGalleryStatus(`Removing "${keyword}" from ${gallery.title || galleryKey} keywords...`);
+    try {
+      const result = await hiddenActions.removeCollectionKeyword?.(galleryKey, keyword);
+      gallery = window.photosByElieData?.[galleryKey];
+      renderGallery();
+      const changed = result?.keyword_removal?.changed || 0;
+      setGalleryStatus(`Removed "${keyword}" from ${changed} ${gallery.title || galleryKey} photo(s).`);
+      if (input) input.value = "";
+    } catch (error) {
+      setGalleryStatus(error?.message || "Could not remove keyword.");
+    }
   });
 };
 

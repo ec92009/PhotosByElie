@@ -735,6 +735,49 @@ def _set_photo_keywords(photo: dict, keywords: list[str]) -> bool:
     return changed
 
 
+def _remove_photo_keyword(photo: dict, keyword: str) -> bool:
+    target = str(keyword or "").strip().casefold()
+    if not target:
+        return False
+    changed = False
+    if "keywords" in photo:
+        current_keywords = _unique_keywords(_split_keyword_text(photo.get("keywords")))
+        next_keywords = [item for item in current_keywords if item.casefold() != target]
+        if next_keywords != current_keywords:
+            photo["keywords"] = next_keywords
+            changed = True
+
+    keyword_item = _metadata_item(photo, "Keywords")
+    if keyword_item:
+        current_keywords = _unique_keywords(_split_keyword_text(keyword_item.get("value")))
+        next_keywords = [item for item in current_keywords if item.casefold() != target]
+        next_value = ", ".join(next_keywords)
+        if keyword_item.get("value") != next_value:
+            keyword_item["value"] = next_value
+            changed = True
+    return changed
+
+
+def _remove_collection_keyword(*state_groups: dict[str, list[dict]], slug: str, keyword: str) -> dict:
+    scanned = 0
+    changed = 0
+    states: dict[str, int] = {}
+    for state_index, groups in enumerate(state_groups):
+        state_name = ["expo", "reserve", "hidden"][state_index] if state_index < 3 else f"state-{state_index + 1}"
+        for photo in groups.get(slug, []):
+            scanned += 1
+            if _remove_photo_keyword(photo, keyword):
+                changed += 1
+                states[state_name] = states.get(state_name, 0) + 1
+    return {
+        "gallery_key": slug,
+        "keyword": str(keyword or "").strip(),
+        "scanned": scanned,
+        "changed": changed,
+        "states": states,
+    }
+
+
 def _ensure_photo_keyword(photo: dict, keyword: str) -> bool:
     if not keyword:
         return False
@@ -1367,9 +1410,9 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
 def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     action = payload.get("action")
     photo_id = payload.get("photo_id")
-    if action not in {"hide", "undo-hide", "promote-hidden", "return-to-reserve", "assign-country", "sync-country-keywords", "update-photo-metadata", "publish-hidden-blacklist", "wipe-hidden-r2"}:
+    if action not in {"hide", "undo-hide", "promote-hidden", "return-to-reserve", "assign-country", "sync-country-keywords", "remove-collection-keyword", "update-photo-metadata", "publish-hidden-blacklist", "wipe-hidden-r2"}:
         raise ValueError("unsupported photo action")
-    if action not in {"assign-country", "sync-country-keywords", "publish-hidden-blacklist", "wipe-hidden-r2"} and (not isinstance(photo_id, str) or not photo_id):
+    if action not in {"assign-country", "sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2"} and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
     if action == "assign-country":
         target_slug = payload.get("gallery_key") or payload.get("country")
@@ -1394,6 +1437,30 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "ok": True,
             "action": action,
             "keyword_updates": keyword_updates,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
+
+    if action == "remove-collection-keyword":
+        target_slug = str(payload.get("gallery_key") or "").strip()
+        if target_slug not in COLLECTION_KEYWORD_TARGETS:
+            raise ValueError("gallery_key must be a collection slug")
+        keyword = str(payload.get("keyword") or "").strip()
+        if not keyword:
+            raise ValueError("keyword must be a non-empty string")
+        keyword_removal = _remove_collection_keyword(expo_groups, reserve_groups, hidden_groups, slug=target_slug, keyword=keyword)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        return {
+            "ok": True,
+            "action": action,
+            "keyword_removal": keyword_removal,
+            "file_updates": {
+                "updated": 0,
+                "skipped": 0,
+                "error_count": 0,
+                "errors": [],
+                "state": "manifest-only",
+            },
             "worker_catalog": worker_catalog,
             "site": site_state,
         }

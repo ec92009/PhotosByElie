@@ -1072,7 +1072,8 @@ body[data-gallery] .gallery-hero{
   letter-spacing:.08em;
   text-transform:uppercase;
 }
-.gallery-filter-bar select{
+.gallery-filter-bar select,
+.gallery-filter-bar input{
   width:100%;
   min-height:42px;
   border:1px solid var(--line);
@@ -1084,6 +1085,16 @@ body[data-gallery] .gallery-hero{
   font-size:.9rem;
   font-weight:700;
   text-transform:none;
+}
+.gallery-filter-bar input{
+  padding:0 10px;
+}
+.gallery-search-label,
+.gallery-owner-keyword-tool{
+  grid-column:span 2;
+}
+.gallery-owner-keyword-button{
+  min-height:42px;
 }
 .gallery-filter-clear{
   min-height:42px;

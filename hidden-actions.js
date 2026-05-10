@@ -200,7 +200,7 @@
     if (ownerAuth?.enabled && !authorized) {
       throw new Error("Owner helper server required.");
     }
-    const photoOptionalActions = ["sync-country-keywords", "publish-hidden-blacklist", "wipe-hidden-r2"];
+    const photoOptionalActions = ["sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2"];
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
@@ -406,6 +406,14 @@
     return photoAction("sync-country-keywords", null);
   };
 
+  const removeCollectionKeyword = async (galleryKey, keyword) => {
+    if (!enabled || !galleryKey || !String(keyword || "").trim()) return null;
+    return photoAction("remove-collection-keyword", null, {
+      gallery_key: galleryKey,
+      keyword,
+    });
+  };
+
   const publishHiddenBlacklist = async () => {
     if (!enabled) return null;
     return photoAction("publish-hidden-blacklist", null);
@@ -459,6 +467,7 @@
     assignUnknownsToCountry,
     promoteHidden,
     publishHiddenBlacklist,
+    removeCollectionKeyword,
     returnToReserve,
     setOwnerBusy,
     updateOwnerBusy,

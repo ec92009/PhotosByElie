@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v71.21`
+- Current visible version: `v71.23`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -107,6 +107,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `assets/private-delivery-manifest.json` tracks private master/render coverage for catalog photos.
 - `assets/discarded-media-manifest.json` tracks owner-discarded tombstones and R2 object cleanup so deleted photos do not return from future Saturn scans.
 - Product choices now include digital files and physical prints at 4 x 6, 5 x 7, 8 x 10, and 11 x 14 inches.
+- Owner shows an editable local price-list table for the current digital resolutions, print sizes, frame add-ons, and mock S&H amounts.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, plain white, or plain black. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.
 - Downloads have free shipping and handling. Physical prints show a mock S&H amount by size, added and removed as a limited-time discount so the payable mock total stays unchanged.

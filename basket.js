@@ -1,5 +1,6 @@
 const formatMoney = (value) => `$${value}`;
 const allCollections = window.photosByElieData || {};
+window.photosByElieProductSettings?.applyPriceOverrides?.();
 const resolutionOptions = window.photosByElieResolutions || [];
 const basketStore = window.photosByElieBasket;
 
@@ -109,28 +110,6 @@ const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, 
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 const optionShippingHandlingTotal = (option) => window.photosByElieOptionShippingHandlingTotal?.(option) || 0;
-
-const metadataValue = (photo, label) => (
-  (photo?.metadata || []).find((item) => item.label === label)?.value || ""
-);
-
-const previewDimensions = (photo) => {
-  const value = metadataValue(photo, "Preview file") || metadataValue(photo, "Original size");
-  const match = value.match(/(\d+)\s*x\s*(\d+)/i);
-  if (!match) return null;
-  return { width: Number(match[1]), height: Number(match[2]) };
-};
-
-const basketThumbStyle = (photo) => {
-  const dimensions = previewDimensions(photo);
-  if (!dimensions?.width || !dimensions?.height) return "";
-  return ` style="--photo-aspect-ratio:${dimensions.width} / ${dimensions.height}"`;
-};
-
-const isPanorama = (photo) => {
-  const dimensions = previewDimensions(photo);
-  return Boolean(dimensions?.width && dimensions?.height && dimensions.width / dimensions.height >= 2.1);
-};
 
 const basketUsesWideRows = () => window.matchMedia?.("(min-width: 761px)")?.matches ?? true;
 
@@ -483,8 +462,8 @@ const renderBasket = () => {
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
-    const panoClass = isPanorama(photo) ? "is-pano" : "";
-    const thumbStyle = basketThumbStyle(photo);
+    const panoClass = window.photosByEliePhotoIsPanorama?.(photo) ? "is-pano" : "";
+    const thumbStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     const selectedIds = new Set((item.options || []).map((option) => option.id));
     const selectedOptionById = new Map((item.options || []).map((option) => [option.id, option]));

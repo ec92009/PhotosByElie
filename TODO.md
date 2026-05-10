@@ -4,7 +4,7 @@ Last updated: 2026-05-10
 
 ## Current Facts
 
-- Local visible build: `v71.21`.
+- Local visible build: `v71.23`.
 - Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -56,8 +56,9 @@ Last updated: 2026-05-10
    - Keep tombstones in import/export validation so discarded photos cannot return from Saturn.
    - Show discard/delete counts in Owner so bulk quality/duplicate cleanup feels trustworthy.
 
-6. **Add Owner price-list maintenance.**
-   - Move digital-file and print/frame prices into an Owner-maintained price list instead of treating the current under-10 items as code constants.
+6. **Publish Owner price-list changes.**
+   - Current state: Owner shows an editable local table of active digital, print, frame, and mock S&H prices.
+   - Move edited digital-file and print/frame prices from local Owner storage into a published price list instead of treating the current under-10 items as code constants.
    - Support adding, editing, disabling, and reordering price entries as the catalog of sellable products grows.
    - Keep checkout validation tied to the published price list so the Worker and public basket agree on SKU IDs, labels, currencies, and amounts.
    - Show a clear publish/version step for price changes before they affect buyers.

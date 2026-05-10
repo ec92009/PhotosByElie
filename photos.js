@@ -153,8 +153,12 @@ const translations = {
     'liked.select_all_6': 'Select all 6 MP',
     'liked.select_all_3': 'Select all 3 MP',
     'liked.select_all_1': 'Select all 1 MP',
+    'liked.select_all_option': 'Select all {option}',
+    'liked.deselect_all_option': 'Deselect all {option}',
     'liked.selected_some': '{option} selected for {count} liked photo(s); {unavailable} unavailable.',
     'liked.selected_all': '{option} selected for {count} liked photo(s).',
+    'liked.deselected_some': '{option} deselected for {count} liked photo(s); {unavailable} unavailable.',
+    'liked.deselected_all': '{option} deselected for {count} liked photo(s).',
     'liked.unlike': 'Unlike',
     'liked.removed': '{title} removed from liked photos.',
     'liked.added_to_basket': '{title} asset choices added to basket.',
@@ -367,8 +371,12 @@ const translations = {
     'liked.select_all_6': 'Tout choisir en 6 MP',
     'liked.select_all_3': 'Tout choisir en 3 MP',
     'liked.select_all_1': 'Tout choisir en 1 MP',
+    'liked.select_all_option': 'Tout choisir en {option}',
+    'liked.deselect_all_option': 'Tout retirer en {option}',
     'liked.selected_some': '{option} choisi pour {count} photo(s) favorite(s); {unavailable} indisponible(s).',
     'liked.selected_all': '{option} choisi pour {count} photo(s) favorite(s).',
+    'liked.deselected_some': '{option} retire pour {count} photo(s) favorite(s); {unavailable} indisponible(s).',
+    'liked.deselected_all': '{option} retire pour {count} photo(s) favorite(s).',
     'liked.unlike': 'Retirer',
     'liked.removed': '{title} retire des favoris.',
     'liked.added_to_basket': 'Choix de fichiers ajoutes au panier pour {title}.',
@@ -581,8 +589,12 @@ const translations = {
     'liked.select_all_6': 'Seleccionar todo 6 MP',
     'liked.select_all_3': 'Seleccionar todo 3 MP',
     'liked.select_all_1': 'Seleccionar todo 1 MP',
+    'liked.select_all_option': 'Seleccionar todo {option}',
+    'liked.deselect_all_option': 'Deseleccionar todo {option}',
     'liked.selected_some': '{option} seleccionado para {count} foto(s) favorita(s); {unavailable} no disponible(s).',
     'liked.selected_all': '{option} seleccionado para {count} foto(s) favorita(s).',
+    'liked.deselected_some': '{option} deseleccionado para {count} foto(s) favorita(s); {unavailable} no disponible(s).',
+    'liked.deselected_all': '{option} deseleccionado para {count} foto(s) favorita(s).',
     'liked.unlike': 'Quitar',
     'liked.removed': '{title} quitada de favoritos.',
     'liked.added_to_basket': 'Opciones de archivos agregadas a la cesta para {title}.',
@@ -720,9 +732,62 @@ const writeProductSettings = (settings) => {
     // Storage can be unavailable in strict private contexts.
   }
 };
+let productPriceDefaults = null;
+const captureProductPriceDefaults = () => {
+  if (productPriceDefaults || !Array.isArray(window.photosByElieResolutions)) return productPriceDefaults;
+  productPriceDefaults = {
+    options: Object.fromEntries((window.photosByElieResolutions || []).map((option) => [option.id, Number(option.price) || 0])),
+    frames: Object.fromEntries((window.photosByElieFrameOptions || []).map((frame) => [frame.id, {
+      price: Number(frame.price) || 0,
+      prices: { ...(frame.prices || {}) },
+    }])),
+    shippingHandling: { ...(window.photosByElieShippingHandlingPrices || {}) },
+  };
+  return productPriceDefaults;
+};
+const cleanPriceOverrides = (overrides = {}) => ({
+  options: Object.fromEntries(Object.entries(overrides.options || {})
+    .map(([id, value]) => [id, Math.max(0, Number(value) || 0)])),
+  frames: Object.fromEntries(Object.entries(overrides.frames || {}).map(([id, frame]) => [id, {
+    price: Math.max(0, Number(frame?.price) || 0),
+    prices: Object.fromEntries(Object.entries(frame?.prices || {})
+      .map(([optionId, value]) => [optionId, Math.max(0, Number(value) || 0)])),
+  }])),
+  shippingHandling: Object.fromEntries(Object.entries(overrides.shippingHandling || {})
+    .map(([id, value]) => [id, Math.max(0, Number(value) || 0)])),
+});
+const applyProductPriceOverrides = () => {
+  const defaults = captureProductPriceDefaults();
+  if (!defaults) return {};
+  const overrides = cleanPriceOverrides(readProductSettings().priceOverrides || {});
+  (window.photosByElieResolutions || []).forEach((option) => {
+    option.price = overrides.options[option.id] ?? defaults.options[option.id] ?? (Number(option.price) || 0);
+  });
+  (window.photosByElieFrameOptions || []).forEach((frame) => {
+    const frameDefaults = defaults.frames[frame.id] || {};
+    const frameOverrides = overrides.frames[frame.id] || {};
+    frame.price = frameOverrides.price ?? frameDefaults.price ?? (Number(frame.price) || 0);
+    frame.prices = { ...(frameDefaults.prices || {}), ...(frameOverrides.prices || {}) };
+  });
+  window.photosByElieShippingHandlingPrices = {
+    ...(defaults.shippingHandling || {}),
+    ...(overrides.shippingHandling || {}),
+  };
+  return overrides;
+};
+const saveProductPriceOverrides = (overrides = {}) => {
+  const settings = { ...readProductSettings(), priceOverrides: cleanPriceOverrides(overrides) };
+  writeProductSettings(settings);
+  applyProductPriceOverrides();
+  window.dispatchEvent(new CustomEvent('photosbyelie:productsettingschange', { detail: settings }));
+  return settings.priceOverrides;
+};
 
 window.photosByElieProductSettings = {
   read: readProductSettings,
+  priceOverrides: () => cleanPriceOverrides(readProductSettings().priceOverrides || {}),
+  savePriceOverrides: saveProductPriceOverrides,
+  applyPriceOverrides: applyProductPriceOverrides,
   physicalProductsEnabled: () => (
     window.photosByElieInputMode.isLocalhost()
     && readProductSettings().physicalProductsEnabled === true
@@ -887,6 +952,31 @@ window.photosByElieMediaUrl = (photo, size = 'gallery') => {
   return window.photosByElieLocalMediaUrl(photo, size);
 };
 
+window.photosByElieMetadataValue = (photo, label) => (
+  (photo?.metadata || []).find((item) => item.label === label)?.value || ''
+);
+
+window.photosByEliePreviewDimensions = (photo) => {
+  const value = window.photosByElieMetadataValue(photo, 'Preview file')
+    || window.photosByElieMetadataValue(photo, 'Original size');
+  const match = String(value).match(/(\d+)\s*x\s*(\d+)/i);
+  if (!match) return null;
+  return { width: Number(match[1]), height: Number(match[2]) };
+};
+
+window.photosByEliePhotoAspectStyle = (photo) => {
+  const dimensions = window.photosByEliePreviewDimensions(photo);
+  if (!dimensions?.width || !dimensions?.height) return '';
+  return ` style="--photo-aspect-ratio:${dimensions.width} / ${dimensions.height}"`;
+};
+
+window.photosByEliePhotoIsPanorama = (photo) => {
+  const dimensions = window.photosByEliePreviewDimensions(photo);
+  return Boolean(dimensions?.width && dimensions?.height && dimensions.width / dimensions.height >= 2.1);
+};
+
+window.photosByElieCssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
+
 window.photosByElieMdIcon = (name) => {
   const paths = {
     favorite: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
@@ -916,6 +1006,12 @@ const ensureHeaderActionLinks = () => {
 };
 
 ensureHeaderActionLinks();
+
+document.querySelectorAll('[data-back-to-top]').forEach((button) => {
+  button.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
 
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';

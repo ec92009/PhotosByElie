@@ -573,6 +573,76 @@ html[data-theme="light"] .photo-art.has-photo::after{
   grid-column:1 / -1;
   min-height:0;
 }
+.owner-card-price-list{
+  grid-column:1 / -1;
+}
+.owner-price-list{
+  overflow-x:auto;
+  border:1px solid var(--line);
+  background:var(--surface);
+}
+.owner-price-table{
+  width:100%;
+  min-width:620px;
+  border-collapse:collapse;
+}
+.owner-price-table th,
+.owner-price-table td{
+  border-bottom:1px solid var(--line);
+  padding:10px 12px;
+  text-align:left;
+  vertical-align:top;
+}
+.owner-price-table thead th{
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.owner-price-table tbody th{
+  width:23%;
+  color:var(--text);
+  font-size:.98rem;
+  font-weight:800;
+}
+.owner-price-table td{
+  color:var(--muted);
+  font-weight:700;
+}
+.owner-price-table td:nth-child(3),
+.owner-price-table td:nth-child(n+4){
+  color:var(--text);
+  white-space:nowrap;
+}
+.owner-price-field{
+  display:grid;
+  gap:4px;
+}
+.owner-price-field span{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+}
+.owner-price-field input{
+  width:86px;
+  min-height:34px;
+  border:1px solid var(--line);
+  background:var(--bg);
+  color:var(--text);
+  font:inherit;
+  font-size:.95rem;
+  font-weight:800;
+  letter-spacing:0;
+  padding:6px 8px;
+}
+.owner-price-table tbody tr:last-child th,
+.owner-price-table tbody tr:last-child td{
+  border-bottom:0;
+}
 .owner-sweep-phases{
   display:grid;
   gap:9px;
@@ -1817,6 +1887,9 @@ body.detail-fullscreen-active{
 .basket-thumb.is-pano img{
   object-position:center top;
 }
+.liked-thumb{
+  aspect-ratio:var(--photo-aspect-ratio,16 / 9);
+}
 .basket-thumb.has-image::before{
   content:none;
 }
@@ -1889,14 +1962,15 @@ html[data-theme="light"] .detail-preview.has-image::after{
 }
 .print-config{
   display:grid;
-  grid-template-columns:auto minmax(0,1fr);
-  gap:10px;
+  grid-template-columns:1fr;
+  gap:12px;
   align-items:start;
   padding-left:32px;
 }
 .print-quantity{
   display:grid;
   gap:4px;
+  justify-self:start;
   color:var(--muted);
   font-size:.74rem;
   font-weight:800;
@@ -1943,9 +2017,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   border-radius:0;
 }
 .frame-options{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(104px,1fr));
+  gap:6px;
   margin:0;
   padding:0;
   border:0;
@@ -1959,12 +2033,18 @@ html[data-theme="light"] .detail-preview.has-image::after{
   text-transform:uppercase;
 }
 .frame-options label{
-  display:flex;
-  gap:5px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:6px;
   align-items:center;
+  min-height:34px;
+  border:1px solid var(--line);
+  background:var(--bg);
   color:var(--text);
-  font-size:.84rem;
+  font-size:.78rem;
   font-weight:750;
+  line-height:1.2;
+  padding:6px 8px;
 }
 .frame-options input{
   width:14px;
@@ -1985,6 +2065,30 @@ html[data-theme="light"] .detail-preview.has-image::after{
 }
 .basket-rail{
   display:none;
+}
+.back-to-top-fixed{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:50;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:42px;
+  padding:0 16px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--text);
+  color:var(--bg);
+  box-shadow:0 14px 36px var(--shadow);
+  font:inherit;
+  font-size:.9rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.back-to-top-fixed:hover,
+.back-to-top-fixed:focus-visible{
+  transform:translateY(-1px);
 }
 @media (max-width:1100px){
   .order-intent-panel{
@@ -2041,6 +2145,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
     grid-template-columns:1fr;
     padding-left:28px;
   }
+  .frame-options{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
   .order-intent-panel{
     grid-template-columns:1fr;
   }
@@ -2070,6 +2177,10 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   .basket-total-band{
     top:90px;
+  }
+  .back-to-top-fixed{
+    right:12px;
+    bottom:12px;
   }
   .photo-metadata{
     grid-template-columns:1fr;

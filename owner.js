@@ -22,6 +22,7 @@
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
+  const priceListRoot = document.querySelector("[data-owner-price-list]");
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -146,6 +147,99 @@
       unitIndex += 1;
     }
     return `${size >= 10 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
+  };
+
+  const formatMoney = (value) => {
+    const amount = Number(value || 0);
+    return Number.isFinite(amount) ? `$${amount.toFixed(amount % 1 ? 2 : 0)}` : "$0";
+  };
+
+  const productLabel = (option) => window.photosByElieProductLabel?.(option) || option?.label || option?.id || "";
+  const productDetail = (option) => option?.detail || "";
+  const renderPriceList = () => {
+    if (!priceListRoot) return;
+    productSettings?.applyPriceOverrides?.();
+    const options = window.photosByElieResolutions || [];
+    const frames = window.photosByElieFrameOptions || [];
+    const digitalOptions = options.filter((option) => option.type !== "print");
+    const printOptions = options.filter((option) => option.type === "print");
+    const frameColumns = frames.filter((frame) => frame.id !== "none");
+    const frameGroupIds = frameColumns.map((frame) => frame.id).join(",");
+    const framePrice = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
+    const frameGroupPrice = (option) => frameColumns.length ? framePrice(frameColumns[0], option) : 0;
+    const shippingPrice = (option) => window.photosByElieOptionShippingHandlingUnitPrice?.(option) || 0;
+    const priceInput = ({ kind, id, optionId = "", value, label }) => `
+      <label class="owner-price-field">
+        <span>${escapeHtml(label)}</span>
+        <input type="number" min="0" step="1" inputmode="decimal" value="${escapeHtml(value)}"
+          data-owner-price-kind="${kind}" data-owner-price-id="${escapeHtml(id)}" data-owner-price-option="${escapeHtml(optionId)}"/>
+      </label>
+    `;
+    const digitalRows = digitalOptions.map((option) => `
+      <tr>
+        <th scope="row">${escapeHtml(productLabel(option))}</th>
+        <td>${escapeHtml(productDetail(option))}</td>
+        <td>${priceInput({ kind: "option", id: option.id, value: option.price, label: `${productLabel(option)} base price` })}</td>
+        <td colspan="2">Digital delivery</td>
+      </tr>
+    `).join("");
+    const printRows = printOptions.map((option) => `
+      <tr>
+        <th scope="row">${escapeHtml(productLabel(option))}</th>
+        <td>${escapeHtml(productDetail(option))}</td>
+        <td>${priceInput({ kind: "option", id: option.id, value: option.price, label: `${productLabel(option)} base price` })}</td>
+        <td>${priceInput({
+          kind: "frame-group",
+          id: frameGroupIds,
+          optionId: option.id,
+          value: frameGroupPrice(option),
+          label: `Frame add-on for ${productLabel(option)}`,
+        })}</td>
+        <td>${priceInput({ kind: "shipping", id: option.id, value: shippingPrice(option), label: `${productLabel(option)} shipping and handling` })}</td>
+      </tr>
+    `).join("");
+    priceListRoot.innerHTML = `
+      <table class="owner-price-table">
+        <thead>
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Detail</th>
+            <th scope="col">Base</th>
+            <th scope="col">Frame</th>
+            <th scope="col">S&amp;H</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${digitalRows}
+          ${printRows}
+        </tbody>
+      </table>
+    `;
+    priceListRoot.querySelectorAll("[data-owner-price-kind]").forEach((input) => {
+      input.addEventListener("change", () => {
+        const overrides = productSettings?.priceOverrides?.() || {};
+        const value = Math.max(0, Number(input.value) || 0);
+        input.value = String(value);
+        if (input.dataset.ownerPriceKind === "option") {
+          overrides.options = { ...(overrides.options || {}), [input.dataset.ownerPriceId]: value };
+        } else if (input.dataset.ownerPriceKind === "frame-group") {
+          const frameIds = String(input.dataset.ownerPriceId || "").split(",").filter(Boolean);
+          const optionId = input.dataset.ownerPriceOption;
+          overrides.frames = { ...(overrides.frames || {}) };
+          frameIds.forEach((frameId) => {
+            const frame = overrides.frames?.[frameId] || {};
+            overrides.frames[frameId] = {
+              ...frame,
+              prices: { ...(frame.prices || {}), [optionId]: value },
+            };
+          });
+        } else if (input.dataset.ownerPriceKind === "shipping") {
+          overrides.shippingHandling = { ...(overrides.shippingHandling || {}), [input.dataset.ownerPriceId]: value };
+        }
+        productSettings?.savePriceOverrides?.(overrides);
+        setStatus("Price list saved locally.");
+      });
+    });
   };
 
   const allUnknownPhotos = () => {
@@ -630,6 +724,7 @@
   }
 
   if (controls) controls.hidden = true;
+  renderPriceList();
 
   window.addEventListener("photosbyelie:ownerauthchange", (event) => {
     renderOwnerAvailability(event.detail || ownerAuth?.state);

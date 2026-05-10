@@ -1,6 +1,9 @@
 (() => {
   const basketKey = "photosbyelie-basket";
-  const resolutions = () => window.photosByElieResolutions || [];
+  const resolutions = () => {
+    window.photosByElieProductSettings?.applyPriceOverrides?.();
+    return window.photosByElieResolutions || [];
+  };
   const frameOptions = () => window.photosByElieFrameOptions || [];
   const collections = () => window.photosByElieData || {};
   const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;

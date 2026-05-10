@@ -6,6 +6,7 @@ if (window.photosByElieHidden?.enabled) {
   await window.photosByElieHidden.load();
 }
 await window.photosByElieHiddenBlacklistReady;
+window.photosByElieProductSettings?.applyPriceOverrides?.();
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
 const collections = window.photosByElieData || {};

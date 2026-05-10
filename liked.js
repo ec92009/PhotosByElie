@@ -1,5 +1,6 @@
 const formatMoney = (value) => `$${value}`;
 const allCollections = window.photosByElieData || {};
+window.photosByElieProductSettings?.applyPriceOverrides?.();
 const resolutionOptions = window.photosByElieResolutions || [];
 const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
@@ -15,7 +16,6 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "\"": "&quot;",
   "'": "&#39;"
 }[char]));
-const cssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
 
 const photoForLikedItem = (item) => {
   const entry = Object.values(allCollections).find((collection) =>
@@ -61,6 +61,36 @@ const availableOptionsForPhoto = (photo) => photo && window.photosByElieAvailabl
   ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
   : resolutionOptions;
 
+const bulkOptionLabel = (resolutionId) => ({
+  full: t("product.full"),
+  "jpg-6mp": "6 MP",
+  "jpg-3mp": "3 MP",
+  "jpg-1mp": "1 MP",
+}[resolutionId] || productLabel(resolutionOptions.find((option) => option.id === resolutionId)));
+
+const bulkResolutionState = (likedItems, basketByPhoto, resolutionId) => likedItems.reduce((state, item) => {
+  const { photo } = photoForLikedItem(item);
+  const targetOption = availableOptionsForPhoto(photo).find((option) => option.id === resolutionId);
+  if (!targetOption) return state;
+  state.eligible += 1;
+  const selectedIds = new Set((basketByPhoto.get(item.photoId)?.options || []).map((option) => option.id));
+  if (selectedIds.has(resolutionId)) state.selected += 1;
+  return state;
+}, { eligible: 0, selected: 0 });
+
+const syncBulkResolutionButtons = (likedItems, basketByPhoto) => {
+  bulkResolutionButtons.forEach((button) => {
+    const resolutionId = button.dataset.likedSelectResolution;
+    const state = bulkResolutionState(likedItems, basketByPhoto, resolutionId);
+    const allSelected = state.eligible > 0 && state.selected === state.eligible;
+    button.disabled = state.eligible === 0;
+    button.setAttribute("aria-pressed", allSelected ? "true" : "false");
+    button.textContent = t(allSelected ? "liked.deselect_all_option" : "liked.select_all_option", {
+      option: bulkOptionLabel(resolutionId),
+    });
+  });
+};
+
 const optionPayload = (optionIds, photoId) => {
   const { photo } = photoForLikedItem({ photoId });
   const availableOptions = availableOptionsForPhoto(photo);
@@ -81,14 +111,17 @@ const optionPayload = (optionIds, photoId) => {
     });
 };
 
-const selectResolutionForAllLiked = (resolutionId) => {
+const toggleResolutionForAllLiked = (resolutionId) => {
   const likedItems = likedStore.read();
   if (!likedItems.length) {
     status.textContent = t("liked.empty");
     return;
   }
 
-  let selectedCount = 0;
+  const basketByPhoto = new Map(basketStore.read().map((item) => [item.photoId, item]));
+  const state = bulkResolutionState(likedItems, basketByPhoto, resolutionId);
+  const shouldSelect = !(state.eligible > 0 && state.selected === state.eligible);
+  let changedCount = 0;
   let unavailableCount = 0;
   likedItems.forEach((item) => {
     const { photo } = photoForLikedItem(item);
@@ -100,21 +133,27 @@ const selectResolutionForAllLiked = (resolutionId) => {
 
     const existing = basketStore.read().find((basketItem) => basketItem.photoId === item.photoId);
     const checkedIds = new Set((existing?.options || []).map((option) => option.id));
-    checkedIds.add(resolutionId);
+    if (shouldSelect) {
+      checkedIds.add(resolutionId);
+    } else {
+      checkedIds.delete(resolutionId);
+    }
     basketStore.setPhotoOptions({
       photoId: item.photoId,
       title: item.title,
       collection: item.collection,
       options: optionPayload([...checkedIds], item.photoId),
     });
-    selectedCount += 1;
+    changedCount += 1;
   });
 
   const selectedOption = resolutionOptions.find((option) => option.id === resolutionId);
   const optionLabel = selectedOption ? productLabel(selectedOption) : "resolution";
+  const statusKey = shouldSelect ? "liked.selected_some" : "liked.deselected_some";
+  const allStatusKey = shouldSelect ? "liked.selected_all" : "liked.deselected_all";
   status.textContent = unavailableCount
-    ? t("liked.selected_some", { option: optionLabel, count: selectedCount, unavailable: unavailableCount })
-    : t("liked.selected_all", { option: optionLabel, count: selectedCount });
+    ? t(statusKey, { option: optionLabel, count: changedCount, unavailable: unavailableCount })
+    : t(allStatusKey, { option: optionLabel, count: changedCount });
   renderLiked();
 };
 
@@ -132,15 +171,14 @@ const renderLiked = () => {
     total,
   });
   emptyState.hidden = likedItems.length !== 0;
-  bulkResolutionButtons.forEach((button) => {
-    button.disabled = likedItems.length === 0;
-  });
+  syncBulkResolutionButtons(likedItems, basketByPhoto);
 
   likedRoot.innerHTML = likedItems.map((item, index) => {
     const { collection, photo } = photoForLikedItem(item);
     const basketItem = basketByPhoto.get(item.photoId);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
     const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
+    const thumbStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const selectedIds = new Set((basketItem?.options || []).map((option) => option.id));
     const selectedOptionById = new Map((basketItem?.options || []).map((option) => [option.id, option]));
     const itemTotal = (basketItem?.options || []).reduce((sum, option) => sum + optionTotal(option), 0);
@@ -176,8 +214,8 @@ const renderLiked = () => {
       `;
     };
     return `
-    <article class="basket-item ${imageSrc ? "has-row-bg" : ""}" data-basket-row-bg="${escapeText(imageSrc)}">
-      <a class="basket-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}">
+    <article class="basket-item">
+      <a class="basket-thumb liked-thumb mock-photo ${thumbClasses} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}"${thumbStyle}>
         ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
       </a>
@@ -203,11 +241,6 @@ const renderLiked = () => {
       </div>
     </article>
   `}).join("");
-
-  document.querySelectorAll("[data-basket-row-bg]").forEach((row) => {
-    const rowBg = row.dataset.basketRowBg || "";
-    if (rowBg) row.style.setProperty("--basket-row-bg", cssUrlValue(rowBg));
-  });
 
   document.querySelectorAll("[data-remove-liked]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -292,7 +325,7 @@ const renderLiked = () => {
 
 bulkResolutionButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    selectResolutionForAllLiked(button.dataset.likedSelectResolution);
+    toggleResolutionForAllLiked(button.dataset.likedSelectResolution);
   });
 });
 

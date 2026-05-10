@@ -7,7 +7,7 @@ Date: 2026-05-10
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v71.21`
+- Current visible build: `v71.23`
 - Analyzed catalog contains `10,133` photos; public Expo publishes `5,792` eligible cloud-backed previews after blocked exclusions, not a capped sample.
 - Current Expo catalog counts: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -65,7 +65,7 @@ Date: 2026-05-10
 - We chose Stripe as the next business step instead of starting with user accounts.
 - The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
 - Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
-- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v71.21`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v71.23`.
 - Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
 - Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
@@ -94,9 +94,12 @@ Date: 2026-05-10
 - Discard cleanup deleted the current discarded public preview objects from R2 and recorded the tombstones in `assets/discarded-media-manifest.json`.
 - Stripe wiring verification passed with `node --test worker/checkout-worker.test.mjs` (`10/10`) and `npm run validate`.
 - Translation verification passed through browser smoke checks on home, France gallery, basket, liked, and order pages with no console/page errors.
-- Gallery density shortcut verification passed in the built-in browser on `usa.html?v=71.21`: `G` changed grid `2 -> 3`, then `g` changed `3 -> 2`.
-- Basket page verification loaded `basket.html?v=71.21` in the built-in browser with no console errors; the narrow basket layout remains unchanged while the wide layout now caps previews to the resolution-list height.
+- Gallery density shortcut verification passed in the built-in browser on `usa.html?v=71.23`: `G` changed grid `2 -> 3`, then `g` changed `3 -> 2`.
+- Basket page verification loaded `basket.html?v=71.23` in the built-in browser with no console errors; the narrow basket layout remains unchanged while the wide layout now caps previews to the resolution-list height.
 - Order delivery now exposes a selectable ZIP location field with the local path and download URL so app-browser shells without a downloads UI are still usable.
+- Likes page rows now share the Basket thumbnail/aspect helper, the four bulk resolution buttons toggle between Select all and Deselect all independently, and Basket/Liked both carry a fixed Back to top control.
+- Owner now shows an editable local price-list table for the current four digital resolutions, four print sizes, frame add-ons, and mock shipping/handling amounts.
+- Print frame choices now use a horizontal row, and Owner price editing collapses plain white/plain black frame prices into one shared frame add-on value per print size.
 
 ## Fresh Backlog
 
@@ -105,7 +108,7 @@ Date: 2026-05-10
 3. **Add gallery search.** Search public galleries and Owner review surfaces by title and keywords first, with filename/country/description as secondary signals.
 4. **Add collection-wide keyword removal.** Let Owner remove one keyword from an entire collection with before/after counts and a confirmation preview.
 5. **Make discard lifecycle first-class in Owner.** Add a clear discard action that deletes public/private R2 bytes while keeping durable tombstones.
-6. **Add Owner price-list maintenance.** Move product prices into an Owner-maintained list that publishes cleanly to the Worker/public basket.
+6. **Publish Owner price-list changes.** The Owner page now edits local product prices; next add an explicit publish step so the Worker/public basket share the edited SKU IDs, labels, currencies, and amounts.
 7. **Add optional Owner XMP sidecar save.** Add a deliberate maintenance button for writing Lightroom-style sidecars beside masters from manifest metadata.
 8. **Set up Stripe test mode.** Configure test secrets, webhook endpoint, and Worker environment.
 9. **Run Stripe test checkout end to end.** Cover success, 3D Secure, declined payment, webhook paid transition, ZIP build, and download.

@@ -125,7 +125,7 @@ Date: 2026-05-10
 13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
 14. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
 15. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
-16. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.
+16. **Extend Owner dashboard.** Surface latest sweep result, add counters/refresh controls to Blocked sync and blocked-preview cleanup, and provide a guided ingest/classify/block/validate/publish flow.
 17. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
 18. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
 19. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.

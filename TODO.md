@@ -121,6 +121,7 @@ Last updated: 2026-05-10
 
 16. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, blocked queue, unknown queue, and active sweep status.
+   - Add counters and refresh buttons to the Blocked sync / Delete blocked previews panel so Owner can see how many blocked IDs are published and how many blocked preview objects still need cleanup.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.

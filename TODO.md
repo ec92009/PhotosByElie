@@ -83,6 +83,8 @@ Last updated: 2026-05-10
 10. **Harden owner account/identity.**
    - Keep the localhost helper boundary as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
+   - Rename `owner-auth.js` to reflect current reality, such as `owner-helper-session.js`, because it now checks helper availability rather than passwords.
+   - Audit adjacent Owner naming that still says auth/login/session where the product behavior is really localhost helper availability.
    - Add clear confirmation around future discard/R2 delete actions.
    - Add browser smoke coverage for locked helper and unauthorized mutation states.
 
@@ -136,6 +138,8 @@ Last updated: 2026-05-10
 19. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
+   - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
+   - Keep compatibility redirects or careful cache-bust updates for any renamed public HTML/JS entrypoints.
 
 ## Completed Recently
 

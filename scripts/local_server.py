@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import os
 import ipaddress
 import json
 import mimetypes
@@ -961,6 +962,7 @@ def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "h
 
 def _r2_task_snapshot() -> list[dict]:
     cutoff = time.time() - 60 * 60
+    active_states = {"queued", "running"}
     with R2_BACKGROUND_LOCK:
         stale = [
             task_id
@@ -971,11 +973,81 @@ def _r2_task_snapshot() -> list[dict]:
         ]
         for task_id in stale:
             R2_BACKGROUND_TASKS.pop(task_id, None)
-        return sorted(
-            [dict(task) for task in R2_BACKGROUND_TASKS.values()],
-            key=lambda task: str(task.get("queued_at") or ""),
-            reverse=True,
-        )
+        tasks = [dict(task) for task in R2_BACKGROUND_TASKS.values()]
+    has_active_sweep = any(
+        task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
+        for task in tasks
+    )
+    if not has_active_sweep:
+        external = _external_cloud_media_sweep_task(Path.cwd())
+        if external:
+            tasks.append(external)
+    return sorted(
+        tasks,
+        key=lambda task: (
+            0 if task.get("state") in active_states else 1,
+            str(task.get("queued_at") or ""),
+        ),
+    )
+
+
+def _live_cloud_media_sweep_pid(repo_root: Path) -> int | None:
+    pid_path = repo_root / ".review-logs" / "cloud-media-sweep.lock" / "pid"
+    try:
+        pid = int(pid_path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return None
+    return pid
+
+
+def _latest_cloud_media_sweep_log(repo_root: Path) -> Path | None:
+    log_root = repo_root / ".review-logs"
+    try:
+        logs = list(log_root.glob("cloud-media-sweep-resume-*.log"))
+    except OSError:
+        return None
+    if not logs:
+        return None
+    return max(logs, key=lambda path: path.stat().st_mtime)
+
+
+def _external_cloud_media_sweep_task(repo_root: Path) -> dict | None:
+    pid = _live_cloud_media_sweep_pid(repo_root)
+    if pid is None:
+        return None
+    started_path = repo_root / ".review-logs" / "cloud-media-sweep.lock" / "started_at"
+    try:
+        started_at = started_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        started_at = datetime.now(timezone.utc).isoformat()
+    log_path = _latest_cloud_media_sweep_log(repo_root)
+    updated_at = datetime.now(timezone.utc).isoformat()
+    task = {
+        "id": f"external-cloud-media-sweep-{pid}",
+        "kind": "cloud-media-sweep",
+        "operation": "repair",
+        "photo_id": "catalog",
+        "state": "running",
+        "queued_at": started_at,
+        "started_at": started_at,
+        "completed_at": None,
+        "updated_at": updated_at,
+        "total": 1,
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "external_pid": pid,
+        "items": [{"command": "existing lock-guarded cloud media sweep", "log": str(log_path) if log_path else ""}],
+        "errors": [],
+    }
+    if log_path:
+        task["log"] = str(log_path)
+    return task
 
 
 def _coverage_row(
@@ -984,17 +1056,20 @@ def _coverage_row(
     expected: int,
     bucket: str,
     object_class: str,
-    covered: int | None = None,
+    blocked_excluded: int = 0,
+    blocked_present: int = 0,
 ) -> dict:
-    covered = present if covered is None else covered
-    missing = max(0, expected - covered)
+    missing = max(0, expected - present)
     extra = max(0, present - expected)
     return {
         "label": label,
         "present": present,
         "expected": expected,
+        "totalExpected": expected + blocked_excluded,
         "missing": missing,
         "extra": extra,
+        "blockedExcluded": blocked_excluded,
+        "blockedPresent": blocked_present,
         "ok": missing == 0 and extra == 0,
         "bucket": bucket,
         "objectClass": object_class,
@@ -1004,6 +1079,10 @@ def _coverage_row(
 def _r2_coverage_summary(repo_root: Path) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
+    hidden_blacklist = _read_json_file(repo_root / "assets/hidden/hidden-blacklist.json", {})
+    hidden_photo_ids = set()
+    if isinstance(hidden_blacklist, dict) and isinstance(hidden_blacklist.get("photo_ids"), list):
+        hidden_photo_ids = {str(photo_id) for photo_id in hidden_blacklist["photo_ids"] if photo_id}
     records = private_manifest.get("records") if isinstance(private_manifest, dict) else {}
     if not isinstance(records, dict):
         records = {}
@@ -1018,26 +1097,39 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     )
     private_bucket = str(private_manifest.get("privateBucket") or "photosbyelie-private") if isinstance(private_manifest, dict) else "photosbyelie-private"
     public_bucket = "photosbyelie-public"
+    record_items = [(str(photo_id), record) for photo_id, record in records.items() if isinstance(record, dict)]
+    active_records = [(photo_id, record) for photo_id, record in record_items if photo_id not in hidden_photo_ids]
+    blocked_records = [(photo_id, record) for photo_id, record in record_items if photo_id in hidden_photo_ids]
+    active_expected = len(active_records) or expected
+    blocked_excluded = len(blocked_records)
 
-    master_present_for_catalog = sum(1 for record in records.values() if record.get("privateMaster", {}).get("present") is True)
+    master_present_for_catalog = sum(1 for _photo_id, record in active_records if record.get("privateMaster", {}).get("present") is True)
     master_present = int(private_manifest.get("privateMasterPhotoIds") or master_present_for_catalog) if isinstance(private_manifest, dict) else master_present_for_catalog
     render_present = {
-        product: sum(1 for record in records.values() if record.get("privateRenders", {}).get(product, {}).get("present") is True)
+        product: sum(1 for _photo_id, record in active_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
         for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
     }
-    public_present = sum(1 for record in records.values() if record.get("publicPreviews", {}).get("present") is True)
+    blocked_present = {
+        "master": sum(1 for _photo_id, record in blocked_records if record.get("privateMaster", {}).get("present") is True),
+        "public": sum(1 for _photo_id, record in blocked_records if record.get("publicPreviews", {}).get("present") is True),
+        **{
+            product: sum(1 for _photo_id, record in blocked_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
+            for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
+        },
+    }
+    public_present = sum(1 for _photo_id, record in active_records if record.get("publicPreviews", {}).get("present") is True)
     sidecar_gallery_expected = sum(1 for photo in photos.values() if photo.get("publicPreview", {}).get("galleryKey"))
     sidecar_detail_expected = sum(1 for photo in photos.values() if photo.get("publicPreview", {}).get("detailKey"))
-    gallery_expected = sidecar_gallery_expected or expected
-    detail_expected = sidecar_detail_expected or expected
+    gallery_expected = active_expected if sidecar_gallery_expected else active_expected
+    detail_expected = active_expected if sidecar_detail_expected else active_expected
 
     rows = [
-        _coverage_row("Private masters", master_present, expected, private_bucket, "masters", covered=master_present_for_catalog),
-        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], expected, private_bucket, "renders/jpg-6mp"),
-        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], expected, private_bucket, "renders/jpg-3mp"),
-        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], expected, private_bucket, "renders/jpg-1mp"),
-        _coverage_row("Preview low 900px", min(public_present, gallery_expected), gallery_expected, public_bucket, "expo/*_900.jpg"),
-        _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg"),
+        _coverage_row("Private masters", master_present_for_catalog, active_expected, private_bucket, "masters", blocked_excluded, blocked_present["master"]),
+        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], active_expected, private_bucket, "renders/jpg-6mp", blocked_excluded, blocked_present["jpg-6mp"]),
+        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], active_expected, private_bucket, "renders/jpg-3mp", blocked_excluded, blocked_present["jpg-3mp"]),
+        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], active_expected, private_bucket, "renders/jpg-1mp", blocked_excluded, blocked_present["jpg-1mp"]),
+        _coverage_row("Preview low 900px", min(public_present, gallery_expected), gallery_expected, public_bucket, "expo/*_900.jpg", blocked_excluded, blocked_present["public"]),
+        _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg", blocked_excluded, blocked_present["public"]),
     ]
     missing_rows = [row for row in rows if not row["ok"]]
     if missing_rows:
@@ -1047,6 +1139,8 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     return {
         "updatedAt": private_manifest.get("updatedAt") if isinstance(private_manifest, dict) else None,
         "catalogPhotos": expected,
+        "activeCatalogPhotos": active_expected,
+        "blockedCatalogPhotos": blocked_excluded,
         "sidecarPhotos": len(photos),
         "rows": rows,
         "ok": not missing_rows,
@@ -1063,19 +1157,34 @@ def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path) -
     command = ["zsh", "-lc", "./scripts/run_cloud_media_sweep.zsh --push"]
     with log_path.open("ab") as log:
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
+    coverage = _r2_coverage_summary(repo_root)
+    coverage_ok = bool(coverage.get("ok"))
+    errors = []
+    failed = process.returncode != 0 or not coverage_ok
+    if process.returncode != 0:
+        errors.append(f"cloud media sweep exited {process.returncode}")
+    if not coverage_ok:
+        rows = coverage.get("rows") if isinstance(coverage, dict) else []
+        missing = max((int(row.get("missing") or 0) for row in rows if isinstance(row, dict)), default=0)
+        errors.append(f"coverage still missing {missing:,} catalog photos")
     with R2_BACKGROUND_LOCK:
         task = R2_BACKGROUND_TASKS.get(task_id)
         if not task:
             return
         task["completed"] = 1
-        task["state"] = "done" if process.returncode == 0 else "failed"
-        task["failed"] = 0 if process.returncode == 0 else 1
+        task["state"] = "failed" if failed else "done"
+        task["failed"] = 1 if failed else 0
         task["return_code"] = process.returncode
+        task["coverage_ok"] = coverage_ok
+        task["errors"] = errors
         task["completed_at"] = datetime.now(timezone.utc).isoformat()
         task["updated_at"] = task["completed_at"]
 
 
 def _start_cloud_media_sweep(repo_root: Path) -> dict:
+    external = _external_cloud_media_sweep_task(repo_root)
+    if external:
+        return external
     active_states = {"queued", "running"}
     with R2_BACKGROUND_LOCK:
         existing = next(

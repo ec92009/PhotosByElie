@@ -7,11 +7,11 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v71.8`
+- Current visible build: `v71.9`
 - Analyzed catalog: `10,133` photos. Public Expo catalog: `5,792` publishable cloud-backed photos after blocked exclusions.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Owner now has an R2 coverage panel for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews. Fix it starts `scripts/run_cloud_media_sweep.zsh --push` through the local helper server and respects the shared sweep lock. The active progress bar uses active-catalog coverage, not a moving log-plus-manifest total.
-- Owner Current state is simplified to Analyzed / Blocked / Expo. As of `v71.8`, it reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos.
+- Owner Current state is simplified to Analyzed / Blocked / Expo. As of `v71.9`, it reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.

@@ -82,6 +82,7 @@ if (window.photosByElieIsPublicHidden?.(photo)) {
   return;
 }
 const detailSequenceKey = "photosbyelie-detail-sequence";
+const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const metadataValue = (targetPhoto, label) => (
   (targetPhoto?.metadata || []).find((item) => item.label === label)?.value || ""
 );
@@ -172,6 +173,16 @@ const detailScopeEntries = () => {
   );
 };
 
+const readGallerySequencePayload = () => {
+  try {
+    const payload = JSON.parse(sessionStorage.getItem(detailSequenceKey) || "null");
+    if (!payload || payload.source !== "gallery" || !Array.isArray(payload.photoIds)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+};
+
 const detailSequence = () => detailScopeEntries().flatMap(([scopeKey, scopeCollection]) =>
   visiblePhotosFor(scopeKey, scopeCollection, {
     includeReserveOnly: isReserveCollection,
@@ -184,18 +195,13 @@ const detailSequence = () => detailScopeEntries().flatMap(([scopeKey, scopeColle
 );
 
 const galleryDetailSequence = () => {
-  try {
-    const payload = JSON.parse(sessionStorage.getItem(detailSequenceKey) || "null");
-    if (!payload || payload.source !== "gallery" || !Array.isArray(payload.photoIds)) return null;
-    if (!payload.photoIds.includes(photo?.id)) return null;
-    const byId = new Map(detailSequence().map((item) => [item.photo.id, item]));
-    const ordered = payload.photoIds
-      .map((id) => byId.get(id))
-      .filter(Boolean);
-    return ordered.some((item) => item.photo.id === photo.id) ? ordered : null;
-  } catch {
-    return null;
-  }
+  const payload = readGallerySequencePayload();
+  if (!payload?.photoIds.includes(photo?.id)) return null;
+  const byId = new Map(detailSequence().map((item) => [item.photo.id, item]));
+  const ordered = payload.photoIds
+    .map((id) => byId.get(id))
+    .filter(Boolean);
+  return ordered.some((item) => item.photo.id === photo.id) ? ordered : null;
 };
 
 const activeDetailSequence = () => galleryDetailSequence() || detailSequence();
@@ -284,7 +290,28 @@ document.querySelector("[data-photo-meta]").textContent = [
     ? t("detail.mp_verified", { mp: window.photosByElieVerifiedMegapixels(photo) })
     : ""
 ].filter(Boolean).join(" / ");
-document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
+
+const galleryReturnCollectionKey = () => {
+  const payload = readGallerySequencePayload();
+  if (payload?.photoIds.includes(photo?.id) && payload.collectionKey) return payload.collectionKey;
+  return collectionKey;
+};
+const writeGalleryReturnState = () => {
+  const payload = readGallerySequencePayload();
+  try {
+    sessionStorage.setItem(galleryReturnStateKey, JSON.stringify({
+      source: "detail",
+      collectionKey: galleryReturnCollectionKey(),
+      photoId: photo.id,
+      photoIds: payload?.photoIds || [photo.id],
+      filterState: payload?.filterState || null,
+      createdAt: Date.now()
+    }));
+  } catch {
+    // Normal link navigation still works if sessionStorage is unavailable.
+  }
+};
+document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${galleryReturnCollectionKey()}.html`));
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");
 const nextPhotoLink = document.querySelector("[data-next-photo]");
@@ -344,6 +371,9 @@ if (prevPhotoLink && nextPhotoLink) {
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
 }
 syncDetailBottomActions();
+document.querySelectorAll("[data-back-link], [data-bottom-back-link]").forEach((link) => {
+  link.addEventListener("click", writeGalleryReturnState);
+});
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
 const renderMetadataRows = () => {

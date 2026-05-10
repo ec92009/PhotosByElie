@@ -19,6 +19,7 @@ let fitModeButtons = [];
 let viewControls = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
+const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const diversityBucketMinutes = 10;
 const defaultFilterState = {
   orientation: "all",
@@ -77,6 +78,25 @@ const readFilterState = () => {
 
 let filterState = readFilterState();
 
+let pendingGalleryReturnState = null;
+try {
+  const payload = JSON.parse(sessionStorage.getItem(galleryReturnStateKey) || "null");
+  const maxReturnAgeMs = 1000 * 60 * 60 * 2;
+  if (
+    payload?.source === "detail"
+    && payload.collectionKey === galleryKey
+    && payload.photoId
+    && Date.now() - Number(payload.createdAt || 0) < maxReturnAgeMs
+  ) {
+    pendingGalleryReturnState = payload;
+    if (payload.filterState && typeof payload.filterState === "object") {
+      filterState = { ...defaultFilterState, ...payload.filterState };
+    }
+  }
+} catch {
+  pendingGalleryReturnState = null;
+}
+
 const writeFilterState = () => {
   const persistedState = Object.fromEntries(
     persistedFilterKeys.map((key) => [key, filterState[key] || defaultFilterState[key]])
@@ -97,6 +117,30 @@ const writeDetailSequenceContext = (photos) => {
   } catch {
     // Detail navigation can fall back to the full catalog if sessionStorage is unavailable.
   }
+};
+
+const restorePendingGalleryReturn = () => {
+  const photoId = pendingGalleryReturnState?.photoId;
+  if (!photoId || !galleryRoot) return;
+  pendingGalleryReturnState = null;
+  try {
+    sessionStorage.removeItem(galleryReturnStateKey);
+  } catch {}
+  const card = [...galleryRoot.querySelectorAll("[data-photo-id]")]
+    .find((item) => item.dataset.photoId === photoId);
+  if (!card) return;
+  window.requestAnimationFrame(() => {
+    card.scrollIntoView({ block: "center", inline: "nearest" });
+    card.querySelector("[data-photo-link]")?.focus?.({ preventScroll: true });
+  });
+};
+
+const clearPendingGalleryReturn = () => {
+  if (!pendingGalleryReturnState) return;
+  pendingGalleryReturnState = null;
+  try {
+    sessionStorage.removeItem(galleryReturnStateKey);
+  } catch {}
 };
 
 const metadataValue = (photo, label) => (
@@ -501,6 +545,10 @@ const renderGallery = () => {
   const likedIds = likedPhotoIds();
   const basketIds = basketPhotoIds();
   writeDetailSequenceContext(photos);
+  const returnPhotoId = pendingGalleryReturnState?.photoId || "";
+  const returnIndex = returnPhotoId ? photos.findIndex((photo) => photo.id === returnPhotoId) : -1;
+  if (returnIndex >= 0) selectedIndex = returnIndex;
+  if (returnPhotoId && returnIndex < 0) clearPendingGalleryReturn();
   if (!photos.length) {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
     galleryRoot.innerHTML = `
@@ -611,7 +659,8 @@ const renderGallery = () => {
   window.photosByElieVersionInternalLinks?.(galleryRoot);
   applyGalleryDensity();
   applyGalleryFitMode();
-  updateSelection();
+  updateSelection({ scroll: returnIndex < 0 });
+  if (returnIndex >= 0) restorePendingGalleryReturn();
   const filterStatus = activeFilterCount()
     ? t("gallery.showing_filtered", { count: photos.length, total: allPhotos.length })
     : t("gallery.showing_count", { count: photos.length });

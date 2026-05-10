@@ -1718,6 +1718,31 @@ body.detail-fullscreen-active{
   font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
   font-size:.88rem;
 }
+.order-copy-field{
+  display:grid;
+  gap:6px;
+}
+.order-copy-field[hidden]{
+  display:none;
+}
+.order-copy-field span{
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.order-copy-field textarea{
+  width:100%;
+  min-height:84px;
+  resize:vertical;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  color:var(--text);
+  padding:10px;
+  font:800 .82rem/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  overflow-wrap:anywhere;
+}
 .order-items{
   display:grid;
   gap:10px;

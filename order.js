@@ -10,8 +10,11 @@ const itemsRoot = document.querySelector("[data-order-items]");
 const status = document.querySelector("[data-order-status]");
 const downloadZip = document.querySelector("[data-download-zip]");
 const copyZipPath = document.querySelector("[data-copy-zip-path]");
+const zipCopyField = document.querySelector("[data-zip-copy-field]");
+const zipLocation = document.querySelector("[data-zip-location]");
 const refreshButton = document.querySelector("[data-order-refresh]");
 let currentZipPath = "";
+let currentDownloadHref = "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -69,6 +72,47 @@ const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
 const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(workerBaseUrl());
+
+const downloadHrefFor = (order) => {
+  if (!order.delivery?.downloadUrl) return "";
+  return isLocalWorker()
+    ? `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`
+    : `${workerBaseUrl()}${order.delivery.downloadUrl}`;
+};
+
+const syncZipLocationField = () => {
+  if (!zipCopyField || !zipLocation) return;
+  const lines = [
+    currentZipPath,
+    currentDownloadHref ? `Download URL: ${currentDownloadHref}` : "",
+  ].filter(Boolean);
+  zipCopyField.hidden = lines.length === 0;
+  zipLocation.value = lines.join("\n");
+};
+
+const selectZipLocation = () => {
+  if (!zipLocation || zipLocation.hidden) return;
+  zipLocation.focus();
+  zipLocation.select();
+};
+
+const copyText = async (value) => {
+  if (!value) return false;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fall through to the selectable-field copy path below.
+    }
+  }
+  selectZipLocation();
+  try {
+    return document.execCommand?.("copy") || false;
+  } catch {
+    return false;
+  }
+};
 
 const statusText = {
   pending_payment: t("order.waiting_payment"),
@@ -159,18 +203,19 @@ const renderOrder = (order) => {
 
   if (order.delivery?.downloadUrl) {
     currentZipPath = order.delivery.zipKey || "";
+    currentDownloadHref = downloadHrefFor(order);
     downloadZip.hidden = false;
-    downloadZip.href = isLocalWorker()
-      ? `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`
-      : `${workerBaseUrl()}${order.delivery.downloadUrl}`;
+    downloadZip.href = currentDownloadHref;
     downloadZip.setAttribute("download", "");
     if (copyZipPath) copyZipPath.hidden = !currentZipPath || !isLocalWorker();
   } else {
     currentZipPath = "";
+    currentDownloadHref = "";
     downloadZip.hidden = true;
     downloadZip.removeAttribute("href");
     if (copyZipPath) copyZipPath.hidden = true;
   }
+  syncZipLocationField();
 };
 
 const loadOrder = async () => {
@@ -180,6 +225,9 @@ const loadOrder = async () => {
     heading.textContent = t("order.details_needed");
     message.textContent = t("order.details_message");
     setProgress("");
+    currentZipPath = "";
+    currentDownloadHref = "";
+    syncZipLocationField();
     return;
   }
 
@@ -200,7 +248,10 @@ const loadOrder = async () => {
     heading.textContent = t("order.unavailable");
     message.textContent = error.message;
     setProgress("");
+    currentZipPath = "";
+    currentDownloadHref = "";
     downloadZip.hidden = true;
+    syncZipLocationField();
     status.textContent = t("order.could_not_load");
   }
 };
@@ -213,12 +264,11 @@ downloadZip?.addEventListener("click", () => {
 });
 copyZipPath?.addEventListener("click", async () => {
   if (!currentZipPath) return;
-  try {
-    await navigator.clipboard.writeText(currentZipPath);
-    status.textContent = t("order.local_path_copied");
-  } catch {
-    status.textContent = currentZipPath;
-  }
+  selectZipLocation();
+  const copied = await copyText(currentZipPath);
+  status.textContent = copied
+    ? t("order.local_path_copied")
+    : t("order.copy_failed_select");
 });
 loadOrder();
 window.addEventListener("photosbyelie:languagechange", loadOrder);

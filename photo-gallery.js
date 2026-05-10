@@ -483,6 +483,19 @@ const applyGalleryDensity = () => {
   if (densityValue) densityValue.textContent = `${columns}`;
 };
 
+const setGalleryDensityColumns = (columns) => {
+  const nextColumns = clampDensityColumns(columns);
+  localStorage.setItem(densityKey, String(nextColumns));
+  applyGalleryDensity();
+  updateSelection({ scroll: false });
+  return nextColumns;
+};
+
+const stepGalleryDensity = (direction) => {
+  const currentColumns = preferredDensityColumns();
+  return setGalleryDensityColumns(currentColumns + direction);
+};
+
 const preferredFitMode = () => (
   localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit"
 );
@@ -853,9 +866,7 @@ if (galleryRoot && gallery) {
       window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
     });
     densityInput.addEventListener("input", () => {
-      localStorage.setItem(densityKey, String(clampDensityColumns(densityInput.value)));
-      applyGalleryDensity();
-      updateSelection({ scroll: false });
+      setGalleryDensityColumns(densityInput.value);
     });
     fitControl.addEventListener("click", (event) => {
       const button = event.target.closest("[data-gallery-fit-mode]");
@@ -881,10 +892,17 @@ if (galleryRoot && gallery) {
       if (target.isContentEditable) return;
       if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
     }
-    if (event.key.toLowerCase() !== "z") return;
-    const nextMode = toggleGalleryFitMode();
-    setGalleryStatus(nextMode === "fill" ? "Fill view." : "Fit view.");
-    event.preventDefault();
+    if (event.key === "g" || event.key === "G") {
+      const nextColumns = stepGalleryDensity(event.key === "G" ? 1 : -1);
+      setGalleryStatus(`Grid ${nextColumns}.`);
+      event.preventDefault();
+      return;
+    }
+    if (event.key.toLowerCase() === "z") {
+      const nextMode = toggleGalleryFitMode();
+      setGalleryStatus(nextMode === "fill" ? "Fill view." : "Fit view.");
+      event.preventDefault();
+    }
   });
   window.addEventListener("photosbyelie:owneractionerror", (event) => {
     setGalleryStatus(event.detail?.message || "Owner action failed.");

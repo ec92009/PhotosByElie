@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v71.16`
+- Current visible version: `v71.17`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -72,7 +72,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Local owner mutation endpoints are unlocked on localhost by the helper server without a password. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.
 - The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Current state is intentionally compact: Analyzed / Blocked / Expo.
 - Every page has the shared footer band; the Owner link appears only on localhost.
-- On localhost gallery pages, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
+- On gallery pages, `g` makes the grid less dense/larger and `G` makes it denser/smaller; on localhost, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - Gallery filters cover orientation, color mood, and subject, with Sort defaulting to Newest first on first display.
 - When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
 - Subtle keyboard reminders appear above localhost review grids and detail previews, with public detail pages showing the `L` like shortcut.

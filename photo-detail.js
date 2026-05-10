@@ -60,13 +60,14 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "'": "&#39;",
 }[char]));
 const productLabel = (option) => {
+  if (option?.type === "print") return window.photosByElieProductLabel?.(option) || option?.label || t("product.print");
   const keyById = {
     full: "product.full",
     "jpg-6mp": "product.jpg_6",
     "jpg-3mp": "product.jpg_3",
     "jpg-1mp": "product.jpg_1",
   };
-  return t(keyById[option?.id] || (option?.type === "print" ? "product.print" : ""), {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
+  return t(keyById[option?.id] || "", {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
 };
 const productDetail = (option) => {
   const detailKeyById = {

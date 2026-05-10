@@ -6,13 +6,14 @@
   const formatMoney = (value) => `$${value}`;
   const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
   const productLabel = (option) => {
+    if (option?.type === "print") return window.photosByElieProductLabel?.(option) || option?.label || t("product.print");
     const keyById = {
       full: "product.full",
       "jpg-6mp": "product.jpg_6",
       "jpg-3mp": "product.jpg_3",
       "jpg-1mp": "product.jpg_1",
     };
-    return t(keyById[option?.id] || (option?.type === "print" ? "product.print" : ""), {}) || option?.label || "";
+    return t(keyById[option?.id] || "", {}) || option?.label || "";
   };
   const rail = document.createElement("aside");
   rail.className = "basket-rail";

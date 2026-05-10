@@ -4,7 +4,7 @@ Last updated: 2026-05-10
 
 ## Current Facts
 
-- Local visible build: `v71.23`.
+- Local visible build: `v71.24`.
 - Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.

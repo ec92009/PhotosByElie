@@ -41,71 +41,98 @@ Last updated: 2026-05-10
    - Hide photos that should not be sold or shown before payment testing starts.
    - Keep hide/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
 
-4. **Make discard lifecycle first-class in Owner.**
+4. **Add gallery search.**
+   - Add search on both public/end-user galleries and Owner review surfaces.
+   - Search titles and keywords first; include filename, country/collection, and description as secondary matches.
+   - Preserve current filters/sort/review context while search is active.
+   - Keep search responsive on the full AI-heavy catalog.
+
+5. **Return from detail to the gallery photo we left from.**
+   - Store the originating gallery, filters, sort, and photo ID when opening detail.
+   - When navigating back to gallery, restore the gallery state and scroll/focus to that photo.
+   - Keep browser back behavior natural on mobile and desktop.
+
+6. **Make discard lifecycle first-class in Owner.**
    - Add an explicit Owner discard action separate from temporary hide/review.
    - Create durable tombstones for discarded IDs.
    - Delete matching public previews, private masters, and private render JPGs from R2.
    - Keep tombstones in import/export validation so discarded photos cannot return from Saturn.
    - Show discard/delete counts in Owner so bulk quality/duplicate cleanup feels trustworthy.
 
-5. **Set up Stripe test mode.**
+7. **Set up Stripe test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
    - Keep live keys out until test mode proves the full flow.
 
-6. **Run Stripe test checkout end to end.**
+8. **Run Stripe test checkout end to end.**
    - Test successful payment.
    - Test 3D Secure/authentication-required payment.
    - Test declined-card payment.
    - Confirm a verified `checkout.session.completed` webhook marks the order paid.
    - Confirm the Worker builds the ZIP from private R2 and the order page exposes the download.
+   - Cover paid-but-ZIP-pending, expired download link, missing private asset, and retryable Worker error states.
 
-7. **Make order records production-durable.**
+9. **Make order records production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
    - Keep private R2 as delivery ZIP storage.
    - Rate-limit download links.
 
-8. **Harden owner account/identity.**
+10. **Harden owner account/identity.**
    - Keep the localhost helper boundary as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
    - Add clear confirmation around future discard/R2 delete actions.
    - Add browser smoke coverage for locked helper and unauthorized mutation states.
 
-9. **Move public media off the checkout Worker bridge.**
+11. **Move public media off the checkout Worker bridge.**
    - Attach an R2 custom domain or equivalent public media endpoint.
    - Update `media-config.js`.
    - Retest GitHub Pages gallery/detail/basket media loading.
    - Keep the Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-10. **Design buyer accounts.**
+12. **Design buyer accounts.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-11. **Harden browser smoke coverage.**
+13. **Split homepage data from the full catalog.**
+   - Replace the homepage `photos-data.js` dependency with a small homepage manifest.
+   - Include only collection names, counts, links, and enough representative preview candidates for the hero stack and collection rail.
+   - Keep the initial homepage payload focused on the 14 visible previews instead of the full `10,133`-photo catalog.
+
+14. **Split gallery/catalog data by collection.**
+   - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
+   - Load only the current collection catalog when opening a gallery page.
+   - Keep shared public metadata separate from private delivery/Owner manifests.
+
+15. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner hide/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
+   - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
-12. **Extend Owner dashboard.**
+16. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, hidden queue, unknown queue, and active sweep status.
    - Surface the latest automation/sweep result.
+   - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-13. **Keep publish validation as the gate.**
+17. **Keep publish validation as the gate.**
    - Validate hidden/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
+   - Add catalog/manifest consistency checks across `photos-data.js`, `worker/photos-catalog.generated.mjs`, sidecars, and delivery manifests.
+   - Add generated JS/JSON payload size budgets for catalog and gallery performance.
    - Keep `npm run validate` mandatory before publish.
 
-14. **Repair and refresh architecture artifacts.**
+18. **Repair and refresh architecture artifacts.**
+   - Document which manifests, generated catalogs, deploy artifacts, local caches, and ignored asset folders are sources of truth.
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-15. **Backburner: repo layout cleanup.**
+19. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
 

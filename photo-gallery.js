@@ -582,36 +582,49 @@ const openOwnerMetadataModal = (photo, field) => {
     closeWithoutSaving();
   });
   dialog.querySelector("[data-owner-modal-cancel]")?.addEventListener("click", closeWithoutSaving);
-  input?.addEventListener("keydown", (event) => {
+  dialog.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
       closeWithoutSaving();
       return;
     }
-    if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    if (!["Enter", "Return"].includes(event.key) || event.metaKey || event.ctrlKey || event.altKey) return;
     event.preventDefault();
-    form.requestSubmit();
+    if (!saveButton.disabled) form.requestSubmit();
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (saveButton.disabled) return;
     saveButton.disabled = true;
     const nextTitle = isKeywords ? (photo.title || "") : String(input.value || "").trim();
     const nextKeywords = isKeywords
       ? uniqueKeywords(splitKeywordText(input.value)).join(", ")
       : currentKeywords;
+    if (!nextTitle) {
+      saveButton.disabled = false;
+      setGalleryStatus("Title cannot be empty.");
+      input.focus();
+      return;
+    }
+    const previousTitle = photo.title || "";
+    const previousKeywords = currentKeywords;
+    dialog.close("save");
+    photo.title = nextTitle;
+    setMetadataValue(photo, "Metadata title", nextTitle);
+    setMetadataValue(photo, "Keywords", nextKeywords);
+    const currentId = photo.id;
+    const nextIndex = filteredVisiblePhotos().findIndex((item) => item.id === currentId);
+    if (nextIndex >= 0) selectedIndex = nextIndex;
+    renderGallery();
+    setGalleryStatus("Saving metadata...");
     try {
       await hiddenActions.updatePhotoMetadata?.(photo.id, { title: nextTitle, keywords: nextKeywords });
-      photo.title = nextTitle;
-      setMetadataValue(photo, "Metadata title", nextTitle);
-      setMetadataValue(photo, "Keywords", nextKeywords);
-      const currentId = photo.id;
-      const nextIndex = filteredVisiblePhotos().findIndex((item) => item.id === currentId);
-      if (nextIndex >= 0) selectedIndex = nextIndex;
-      renderGallery();
       setGalleryStatus(`${photo.title} metadata saved.`);
-      dialog.close("save");
     } catch (error) {
-      saveButton.disabled = false;
+      photo.title = previousTitle;
+      setMetadataValue(photo, "Metadata title", previousTitle);
+      setMetadataValue(photo, "Keywords", previousKeywords);
+      renderGallery();
       setGalleryStatus(error?.message || "Could not save metadata.");
     }
   });

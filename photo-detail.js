@@ -506,38 +506,56 @@ const openOwnerMetadataModal = (field) => {
     closeWithoutSaving();
   });
   dialog.querySelector("[data-owner-modal-cancel]")?.addEventListener("click", closeWithoutSaving);
-  input?.addEventListener("keydown", (event) => {
+  dialog.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
       closeWithoutSaving();
       return;
     }
-    if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    if (!["Enter", "Return"].includes(event.key) || event.metaKey || event.ctrlKey || event.altKey) return;
     event.preventDefault();
-    form.requestSubmit();
+    if (!saveButton.disabled) form.requestSubmit();
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (saveButton.disabled) return;
     saveButton.disabled = true;
     const titleValue = isKeywords ? (photo.title || "") : String(input.value || "").trim();
     const keywordValue = isKeywords
       ? uniqueKeywords(splitKeywordText(input.value)).join(", ")
       : currentKeywords;
+    if (!titleValue) {
+      saveButton.disabled = false;
+      status.textContent = "Title cannot be empty.";
+      input.focus();
+      return;
+    }
+    const previousTitle = photo.title || "";
+    const previousKeywords = currentKeywords;
+    dialog.close("save");
+    photo.title = titleValue;
+    setMetadataValue(photo, "Metadata title", titleValue);
+    setMetadataValue(photo, "Keywords", keywordValue);
+    syncTitleUi();
+    renderMetadataRows();
+    const inlineTitleInput = document.querySelector("[data-owner-title]");
+    const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
+    if (inlineTitleInput) inlineTitleInput.value = titleValue;
+    if (inlineKeywordInput) inlineKeywordInput.value = keywordValue;
+    status.textContent = "Saving metadata...";
     try {
       await hiddenActions.updatePhotoMetadata?.(photo.id, { title: titleValue, keywords: keywordValue });
-      photo.title = titleValue;
-      setMetadataValue(photo, "Metadata title", titleValue);
-      setMetadataValue(photo, "Keywords", keywordValue);
+      status.textContent = `${photo.title} metadata saved.`;
+    } catch (error) {
+      photo.title = previousTitle;
+      setMetadataValue(photo, "Metadata title", previousTitle);
+      setMetadataValue(photo, "Keywords", previousKeywords);
       syncTitleUi();
       renderMetadataRows();
       const inlineTitleInput = document.querySelector("[data-owner-title]");
       const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
-      if (inlineTitleInput) inlineTitleInput.value = titleValue;
-      if (inlineKeywordInput) inlineKeywordInput.value = keywordValue;
-      status.textContent = `${photo.title} metadata saved.`;
-      dialog.close("save");
-    } catch (error) {
-      saveButton.disabled = false;
+      if (inlineTitleInput) inlineTitleInput.value = previousTitle;
+      if (inlineKeywordInput) inlineKeywordInput.value = previousKeywords;
       status.textContent = error?.message || "Could not save metadata.";
     }
   });

@@ -16,6 +16,7 @@ Use this when moving work between Max, David, or the laptop.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
+- Buyer delivery ZIPs are flat: delivered files sit at the archive root beside `ORDER.txt`, with no per-photo folders.
 - Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalogs only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
 - RAW files are not public-site or cloud-storage inputs.
 - Saturn developed-source folders are the steady-state upstream:

@@ -21,6 +21,7 @@ Last updated: 2026-05-10
 - Owner Current state now reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier `18` stale local blocked records were removed from the ignored Owner state.
 - Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest should be updated by the sweep/cleanup tooling rather than hand-edited.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
+- Delivery ZIPs are flat: delivered image files sit at the archive root beside `ORDER.txt`, not inside per-photo folders.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally remains English.
 
 ## Numbered Backlog
@@ -30,7 +31,7 @@ Last updated: 2026-05-10
    - Confirm private masters settle to complete active-catalog coverage.
    - Confirm private JPG 1/3/6 MP tiers settle to complete active-catalog coverage.
    - Confirm every checkout-eligible photo has private full/JPG 6/JPG 3/JPG 1 MP delivery objects.
-   - Spot-check that the Worker can build ZIP contents from private R2 keys, not local files.
+   - Spot-check that the Worker can build flat ZIP contents from private R2 keys, not local files.
 
 2. **Continue Owner curation/blocking.**
    - Review visible catalog entries after R2 coverage is complete.

@@ -99,10 +99,11 @@ Date: 2026-05-10
 - Order delivery now exposes a selectable ZIP location field with the local path and download URL so app-browser shells without a downloads UI are still usable.
 - Likes page rows now share the Basket thumbnail/aspect helper, the four bulk resolution buttons toggle between Select all and Deselect all independently, and Basket/Liked both carry a fixed Back to top control.
 - Owner now shows an editable local price-list table for the current four digital resolutions, four print sizes, frame add-ons, and mock shipping/handling amounts.
-- Print frame choices now use a horizontal row, and Owner price editing collapses plain white/plain black frame prices into one shared frame add-on value per print size.
+- Print frame choices now use a horizontal row, and Owner price editing collapses white/black frame prices into one shared frame add-on value per print size.
 - Print product labels now preserve their dimensions on Liked, Basket, detail, and the basket rail.
 - Frame labels now read White frame and Black frame without the extra "plain" wording.
 - Delivery ZIPs now place all delivered image files at the archive root beside `ORDER.txt`, instead of creating one subfolder per photo.
+- The existing visible local order ZIP for `PBE-20260510-E9D70B6DC2` was flattened in place, and the local mock Worker was restarted so new mock deliveries use the flat layout.
 
 ## Fresh Backlog
 

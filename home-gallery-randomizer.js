@@ -66,4 +66,8 @@ const refreshSamples = () => {
 window.photosByElieHomeRandomizer = { refreshSamples };
 window.addEventListener("photosbyelie:carouselturn", refreshSamples);
 window.addEventListener("photosbyelie:hiddenblacklistchange", refreshSamples);
-refreshSamples();
+window.addEventListener("photosbyelie:hiddenchange", refreshSamples);
+(async () => {
+  await window.photosByElieHiddenActionsReady;
+  refreshSamples();
+})();

@@ -118,6 +118,10 @@
   border-color:transparent;
   box-shadow:none;
 }
+.carousel-wrap.is-enhanced .photo-collection-card.is-visible-click-target{
+  cursor:pointer;
+  pointer-events:auto;
+}
 .photo-art{
   --photo-scene:linear-gradient(135deg,var(--surface-2),var(--line));
   position:relative;

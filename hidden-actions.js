@@ -415,4 +415,7 @@
     updatePhotoMetadata,
     wipeHiddenR2,
   };
+  window.photosByElieHiddenActionsReady = enabled
+    ? syncFromPublishedBlacklist().catch(() => read())
+    : Promise.resolve([]);
 })();

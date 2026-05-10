@@ -99,6 +99,8 @@ Date: 2026-05-10
 - Order delivery now exposes a selectable ZIP location field with the local path and download URL so app-browser shells without a downloads UI are still usable.
 - Likes page rows now share the Basket thumbnail/aspect helper, the four bulk resolution buttons toggle between Select all and Deselect all independently, and Basket/Liked both carry a fixed Back to top control.
 - Owner now shows an editable local price-list table for the current four digital resolutions, four print sizes, frame add-ons, and mock shipping/handling amounts.
+- Physical print/frame products are off by default for buyers again. Owner keeps a deliberate localhost toggle for local review, using a new setting so old local storage cannot silently re-enable prints.
+- Opening Owner now forces the language state back to English before the app scripts load.
 - Print frame choices now use a horizontal row, and Owner price editing collapses white/black frame prices into one shared frame add-on value per print size.
 - Print product labels now preserve their dimensions on Liked, Basket, detail, and the basket rail.
 - Frame labels now read White frame and Black frame without the extra "plain" wording.

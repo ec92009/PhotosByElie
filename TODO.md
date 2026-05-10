@@ -22,7 +22,8 @@ Last updated: 2026-05-10
 - Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest should be updated by the sweep/cleanup tooling rather than hand-edited.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
 - Delivery ZIPs are flat: delivered image files sit at the archive root beside `ORDER.txt`, not inside per-photo folders.
-- Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally remains English.
+- Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
+- Physical print/frame products are off by default for buyers; Owner has a deliberate localhost toggle for local review while product pricing/publishing is still backlog work.
 
 ## Numbered Backlog
 

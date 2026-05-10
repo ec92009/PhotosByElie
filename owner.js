@@ -733,10 +733,25 @@
   ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
 
   if (physicalProductsToggle) {
-    physicalProductsToggle.checked = productSettings?.physicalProductsEnabled?.() === true;
+    const physicalAvailable = productSettings?.physicalProductsAvailable?.() === true;
+    physicalProductsToggle.checked = physicalAvailable && productSettings?.physicalProductsEnabled?.() === true;
+    physicalProductsToggle.disabled = !physicalAvailable;
+    physicalProductsToggle.closest("label")?.classList.toggle("is-disabled", !physicalAvailable);
+    const labelText = physicalProductsToggle.closest("label")?.querySelector("span");
+    if (!physicalAvailable && labelText) {
+      labelText.textContent = "Print and frame options paused";
+    }
   }
 
   physicalProductsToggle?.addEventListener("change", () => {
+    if (physicalProductsToggle.checked) {
+      const confirmed = window.confirm("Show physical print and frame products on this localhost Owner session?");
+      if (!confirmed) {
+        physicalProductsToggle.checked = false;
+        setStatus("Physical print and frame products remain hidden.");
+        return;
+      }
+    }
     const enabled = productSettings?.setPhysicalProductsEnabled?.(physicalProductsToggle.checked) === true;
     physicalProductsToggle.checked = enabled;
     setStatus(enabled

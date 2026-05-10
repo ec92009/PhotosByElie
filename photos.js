@@ -717,6 +717,8 @@ window.photosByElieInputMode = {
 };
 
 const productSettingsKey = 'photosbyelie-product-settings';
+const physicalProductsToggleKey = 'physicalGoodsEnabled';
+const physicalProductsAvailable = true;
 const readProductSettings = () => {
   try {
     const parsed = JSON.parse(localStorage.getItem(productSettingsKey) || '{}');
@@ -788,16 +790,23 @@ window.photosByElieProductSettings = {
   priceOverrides: () => cleanPriceOverrides(readProductSettings().priceOverrides || {}),
   savePriceOverrides: saveProductPriceOverrides,
   applyPriceOverrides: applyProductPriceOverrides,
+  physicalProductsAvailable: () => physicalProductsAvailable,
   physicalProductsEnabled: () => (
+    physicalProductsAvailable
+    &&
     window.photosByElieInputMode.isLocalhost()
-    && readProductSettings().physicalProductsEnabled === true
+    && readProductSettings()[physicalProductsToggleKey] === true
   ),
   setPhysicalProductsEnabled: (enabled) => {
     if (!window.photosByElieInputMode.isLocalhost()) return false;
-    const settings = { ...readProductSettings(), physicalProductsEnabled: Boolean(enabled) };
+    const settings = {
+      ...readProductSettings(),
+      physicalProductsEnabled: false,
+      [physicalProductsToggleKey]: physicalProductsAvailable && Boolean(enabled),
+    };
     writeProductSettings(settings);
     window.dispatchEvent(new CustomEvent('photosbyelie:productsettingschange', { detail: settings }));
-    return settings.physicalProductsEnabled;
+    return settings[physicalProductsToggleKey];
   }
 };
 

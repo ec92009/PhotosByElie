@@ -929,10 +929,38 @@ const setLanguage = (language) => {
   }));
 };
 
+const beepUnavailableLanguage = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.value = 440;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.18);
+    oscillator.addEventListener('ended', () => context.close(), { once: true });
+  } catch {
+    // Some browsers block Web Audio even inside a click; staying English is the important behavior.
+  }
+};
+
 if (languageBtn) {
-  const savedLanguage = localStorage.getItem(languageKey);
+  const ownerEnglishOnly = languageBtn.hasAttribute('data-owner-english-only');
+  const savedLanguage = ownerEnglishOnly ? 'en' : localStorage.getItem(languageKey);
   setLanguage(savedLanguage);
   languageBtn.addEventListener('click', () => {
+    if (ownerEnglishOnly) {
+      setLanguage('en');
+      beepUnavailableLanguage();
+      return;
+    }
     const currentIndex = languages.findIndex((item) => item.code === root.dataset.language);
     const nextLanguage = languages[(currentIndex + 1) % languages.length];
     setLanguage(nextLanguage.code);

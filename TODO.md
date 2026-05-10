@@ -4,7 +4,7 @@ Last updated: 2026-05-10
 
 ## Current Facts
 
-- Local visible build: `v70.33`.
+- Local visible build: `v71.8`.
 - Public catalog validates in external media mode with `10,133` photos: France `328`, USA `162`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless hidden/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -17,35 +17,36 @@ Last updated: 2026-05-10
 - Hidden/discarded photos are tombstoned. Their R2 media should be deleted for cost control, while the tombstone stays tracked so Saturn imports do not resurrect them.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
-- Current R2 coverage panel shows `10,151` private master IDs for `10,133` catalog photos. The `18` overage is known hidden/discarded masters and is labeled as hidden, not unknown extra work. Private JPG 1/3/6 MP coverage has partially backfilled against the fixed `10,133` catalog denominator; public low/high preview coverage is complete.
+- Owner Current state now reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier `18` stale local blocked records were removed from the ignored Owner state.
+- Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest is owned by the active sweep while it is running.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally remains English.
 
 ## Numbered Backlog
 
-1. **Resume and finish the cloud media sweep.**
-   - The latest manual run stopped on an R2 connection timeout during private JPG backfill after thousands of uploads.
-   - Restart through the Owner Fix it button or `zsh -lc './scripts/run_cloud_media_sweep.zsh --push'`; the lock wrapper prevents concurrent runs.
-   - Confirm it commits/pushes final manifest changes.
-   - Record final counts for private render triplets, skipped discarded photos, deleted hidden masters, tests, validation, and failures.
-
-2. **Verify every zippable deliverable is in private R2.**
+1. **Verify every zippable deliverable is in private R2.**
    - Drive `assets/private-delivery-manifest.json` to full non-discarded catalog coverage.
-   - Confirm private masters settle to `10,133 / 10,133` after hidden/discarded master cleanup.
-   - Confirm private JPG 1/3/6 MP tiers settle to `10,133 / 10,133`.
+   - Confirm private masters settle to complete active-catalog coverage.
+   - Confirm private JPG 1/3/6 MP tiers settle to complete active-catalog coverage.
    - Confirm every checkout-eligible photo has private full/JPG 6/JPG 3/JPG 1 MP delivery objects.
    - Spot-check that the Worker can build ZIP contents from private R2 keys, not local files.
 
-3. **Hide files that do not belong in the buyer catalog.**
+2. **Continue Owner curation/blocking.**
    - Review visible catalog entries after R2 coverage is complete.
-   - Hide photos that should not be sold or shown before payment testing starts.
+   - Block photos that should not be sold or shown before payment testing starts.
    - Keep hide/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
 
-4. **Add gallery search.**
+3. **Add gallery search.**
    - Add search on both public/end-user galleries and Owner review surfaces.
    - Search titles and keywords first; include filename, country/collection, and description as secondary matches.
    - Preserve current filters/sort/review context while search is active.
    - Keep search responsive on the full AI-heavy catalog.
+
+4. **Add collection-wide keyword removal.**
+   - Let Owner choose a collection and remove one keyword from every photo in that collection.
+   - Update catalog metadata, local preview JPEG metadata, and resolved source exports when available.
+   - Show before/after counts and a confirmation preview before writing.
+   - Queue changed media for quiet R2 sync when previews or metadata sidecars need refresh.
 
 5. **Return from detail to the gallery photo we left from.**
    - Store the originating gallery, filters, sort, and photo ID when opening detail.
@@ -139,6 +140,7 @@ Last updated: 2026-05-10
 ## Completed Recently
 
 - Retired the Expo cap and promoted the full cloud-backed catalog.
+- Marked the manual cloud media sweep follow-up as finished and removed it from active backlog.
 - Flattened public R2 preview keys.
 - Added `assets/media-sidecar.json` provenance for public/private key mapping.
 - Added `assets/private-delivery-manifest.json`.

@@ -246,6 +246,15 @@
     return normalized;
   };
 
+  const syncFromPublishedBlacklist = async () => {
+    if (!enabled) return read();
+    const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
+    const response = await fetch(href, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Blocked list ${response.status}`);
+    const payload = await response.json();
+    return write(payload?.photo_ids || []);
+  };
+
   const writeHistory = (items) => {
     const normalized = normalize(items);
     if (enabled) localStorage.setItem(historyKey, JSON.stringify(normalized));
@@ -398,6 +407,7 @@
     updateOwnerBusy,
     setCountryAssignment,
     setCountryAssignments,
+    syncFromPublishedBlacklist,
     syncCountryKeywords,
     undo,
     unmark,

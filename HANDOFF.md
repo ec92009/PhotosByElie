@@ -7,10 +7,11 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v70.33`
+- Current visible build: `v71.8`
 - Public catalog: `10,133` eligible cloud-backed photos.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
-- Owner now has an R2 coverage panel for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews. Fix it starts `scripts/run_cloud_media_sweep.zsh --push` through the local helper server and respects the shared sweep lock. The active progress bar uses the fixed catalog denominator, not a moving log-plus-manifest total.
+- Owner now has an R2 coverage panel for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews. Fix it starts `scripts/run_cloud_media_sweep.zsh --push` through the local helper server and respects the shared sweep lock. The active progress bar uses active-catalog coverage, not a moving log-plus-manifest total.
+- Owner Current state is simplified to Analyzed / Blocked / Expo. As of `v71.8`, it reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
@@ -18,8 +19,8 @@ Use this when moving work between Max, David, or the laptop.
 - Saturn developed-source folders are the steady-state upstream:
   - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
-- Owner-discarded photos are tombstoned and must not be re-imported from Saturn. The current 18 private master overage is known hidden/discarded media, labeled as hidden in Owner, and should disappear after cleanup/inventory refresh.
-- The latest manual sweep made substantial private JPG progress, then stopped on an R2 connection timeout during private JPG backfill. Resume with the same lock-guarded wrapper rather than starting a second path.
+- Owner-discarded photos are tombstoned and must not be re-imported from Saturn. The earlier `18` stale local blocked records were removed from the ignored Owner state; if they return from upstream, block/delete them with the normal batch.
+- A lock-guarded manual sweep is currently running from Owner Fix it. Let it finish or inspect the lock/log before starting another path.
 - Public pages use the shared language toggle for English/French/Spanish. Owner-only localhost pages are still English-only by design.
 
 ## First Commands On A Machine
@@ -148,7 +149,7 @@ npm run validate
 ## Current Priority
 
 1. Let the active cloud media sweep finish and confirm its final commit/push.
-2. Confirm private masters settle to `10,133 / 10,133` and private JPG 1/3/6 MP coverage becomes complete.
+2. Confirm private masters and private JPG 1/3/6 MP coverage become complete for the active Expo catalog.
 3. Make discard a first-class Owner action that deletes R2 bytes but keeps tombstones.
 4. Configure Stripe test mode and verify hosted checkout/webhook/ZIP delivery end to end.
 5. Move public preview delivery from the checkout Worker `/media/...` bridge to an R2 custom domain.

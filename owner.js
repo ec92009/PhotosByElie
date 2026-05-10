@@ -22,8 +22,8 @@
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
+  const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
-  let storageEstimate = null;
   let r2PollTimer = null;
   let r2RepairLogToken = "";
   let r2RepairActive = false;
@@ -43,6 +43,15 @@
     if (element && element.innerHTML !== value) element.innerHTML = value;
   };
 
+  const setRefreshBusy = (kind, busy) => {
+    refreshButtons
+      .filter((button) => button.dataset.ownerRefresh === kind)
+      .forEach((button) => {
+        button.disabled = busy;
+        button.classList.toggle("is-refreshing", busy);
+      });
+  };
+
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
     ["discard-start", "Delete discarded media"],
@@ -57,6 +66,7 @@
     ["test", "Run tests"],
     ["validate", "Validate publish"],
     ["commit", "Commit and push"],
+    ["coverage", "Recheck coverage"],
   ].map(([key, label]) => ({ key, label }));
 
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
@@ -66,7 +76,7 @@
     if (locked) locked.hidden = available;
     if (available) {
       setStatus("Owner controls unlocked on localhost.");
-      renderCounts();
+      refreshCountsFromSource();
       loadR2Coverage();
       startR2Polling();
       if (options.scrollToControls && controls) {
@@ -82,6 +92,16 @@
 
   const countPhotos = (data) => Object.values(data || {})
     .reduce((sum, collection) => sum + (collection.photos?.length || 0), 0);
+
+  const collectionPhotoIdSet = (data) => {
+    const ids = new Set();
+    Object.values(data || {}).forEach((collection) => {
+      (collection.photos || []).forEach((photo) => {
+        if (photo?.id) ids.add(photo.id);
+      });
+    });
+    return ids;
+  };
 
   const collectionLabelForPhoto = (photoId) => {
     const id = String(photoId || "");
@@ -128,13 +148,6 @@
     return `${size >= 10 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
   };
 
-  const formatUsdMonthly = (value) => {
-    const amount = Number(value || 0);
-    if (!Number.isFinite(amount) || amount <= 0) return "$0/mo";
-    if (amount < 0.01) return "<$0.01/mo";
-    return `$${amount.toFixed(2)}/mo`;
-  };
-
   const allUnknownPhotos = () => {
     const regular = window.photosByElieOwnerData?.unknown?.photos || [];
     const reserve = window.photosByElieReserveData?.unknown?.photos || [];
@@ -156,48 +169,34 @@
 
   const renderCounts = () => {
     if (!countsRoot || !hiddenActions?.enabled) return;
-    const hiddenCount = hiddenActions.read().length;
+    const hiddenIds = hiddenActions.read();
+    const hiddenCount = hiddenIds.length;
+    const expoTotal = countPhotos(collections);
+    const expoPhotoIds = collectionPhotoIdSet(collections);
+    const blockedInExpo = hiddenIds.filter((photoId) => expoPhotoIds.has(photoId)).length;
+    const expoActive = Math.max(0, expoTotal - blockedInExpo);
+    const analyzedTotal = expoActive + hiddenCount;
     const queue = unknownQueueState();
     if (unknownCountRoot) unknownCountRoot.textContent = String(queue.visible.length);
     if (hiddenCountRoot) hiddenCountRoot.textContent = String(hiddenCount);
     const counts = [
-      ["Expo", countPhotos(collections)],
-      ["Local preview cache", countPhotos(window.photosByElieReserveData || {})],
-      ["Blocked", hiddenCount],
-      ["Unknown queue", queue.visible.length],
-      ["Unknown loaded", queue.photos.length],
-      ["Unknown assigned", queue.assigned.length],
+      { label: "Analyzed", value: formatCount(analyzedTotal) },
+      { label: "Blocked", value: formatCount(hiddenCount) },
+      { label: "Expo", value: formatCount(expoActive), className: "is-expo" },
     ];
-    if (storageEstimate) {
-      const currentBytes = Number(storageEstimate.current?.totalBytes || 0);
-      const noCleanupBytes = Number(storageEstimate.noCleanup?.totalBytesEstimate || 0);
-      const avoidedBytes = Number(storageEstimate.blocked?.totalBytesEstimate || Math.max(0, noCleanupBytes - currentBytes));
-      counts.push(
-        ["R2 storage used", formatBytes(currentBytes)],
-        ["Storage cost now", formatUsdMonthly(storageEstimate.cost?.currentMonthlyUsdAfterFreeTier)],
-        ["If no cleanup", `${formatBytes(noCleanupBytes)} / ${formatUsdMonthly(storageEstimate.cost?.noCleanupMonthlyUsdEstimateAfterFreeTier)}`],
-        ["Blocked storage avoided", `${formatBytes(avoidedBytes)} / ${formatUsdMonthly(storageEstimate.cost?.avoidedMonthlyUsdEstimate)}`],
-        ["R2 storage rate", `$${storageEstimate.pricing?.storageUsdPerGbMonth || 0.015}/GB-month`],
-      );
-    } else {
-      counts.push(["R2 storage estimate", "loading"]);
-    }
-    countsRoot.innerHTML = counts.map(([label, value]) => `
-      <div>
+    countsRoot.innerHTML = counts.map(({ label, value, className }) => `
+      <div${className ? ` class="${className}"` : ""}>
         <dt>${label}</dt>
         <dd>${value}</dd>
       </div>
     `).join("");
   };
 
-  const loadStorageEstimate = async () => {
+  const refreshCountsFromSource = async () => {
     try {
-      const href = window.photosByElieVersionedHref?.("./assets/storage-estimate.json") || "./assets/storage-estimate.json";
-      const response = await fetch(href, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Storage estimate ${response.status}`);
-      storageEstimate = await response.json();
+      await hiddenActions.syncFromPublishedBlacklist?.();
     } catch {
-      storageEstimate = null;
+      // Keep the local owner list usable if the static blocked list cannot be fetched.
     }
     renderCounts();
   };
@@ -277,8 +276,18 @@
     return { percent: Math.max(current || uploaded ? 1 : 0, percent), detail };
   };
 
+  const coverageMissingCount = () => Math.max(
+    0,
+    ...(window.photosByElieR2Coverage?.rows || []).map((row) => Number(row.missing || 0)),
+  );
+
+  const coverageMissingDetail = () => {
+    const missing = coverageMissingCount();
+    return missing ? `${formatCount(missing)} missing` : "Still missing coverage";
+  };
+
   const phaseProgress = (phase, logSummary, failed) => {
-    if (failed) return { percent: 100, detail: "Needs attention" };
+    if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
     if (phase.key === "discard-start" && logSummary?.deleted) {
       return { percent: 100, detail: `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private` };
     }
@@ -299,6 +308,7 @@
     if (phase.key === "discard-start" && logSummary?.deleted) {
       return `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`;
     }
+    if (phase.key === "coverage") return "Satisfied";
     return "Done";
   };
 
@@ -309,14 +319,15 @@
       return;
     }
     const active = task.state === "queued" || task.state === "running";
-    const failed = Number(task.failed || 0) > 0 || task.state === "failed";
+    const coverageIncomplete = !active && task.state === "done" && r2CoverageOk === false;
+    const failed = Number(task.failed || 0) > 0 || task.state === "failed" || coverageIncomplete;
     const complete = !active && !failed && task.state === "done";
-    const activeKey = logSummary?.phaseKey || "prepare";
+    const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
     const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
-      const inferredDone = active && index < activeIndex;
+      const inferredDone = (active || coverageIncomplete) && index < activeIndex;
       const isActive = phase.key === activeKey && active;
       const isFailed = phase.key === activeKey && failed;
       const state = isFailed ? "failed" : (complete || explicitDone || inferredDone) ? "done" : isActive ? "running" : "pending";
@@ -343,14 +354,24 @@
 
   const renderR2RepairProgress = (latest, logSummary = null) => {
     const active = latest.state === "queued" || latest.state === "running";
-    const failed = Number(latest.failed || 0);
+    const coverageIncomplete = !active && latest.state === "done" && r2CoverageOk === false;
+    const failureCount = Number(latest.failed || 0);
+    const failed = failureCount > 0 || latest.state === "failed" || coverageIncomplete;
     renderSweepPhases(latest, logSummary);
     if (active) {
-      setText(r2Summary, logSummary?.phase
-        ? `${logSummary.phase}.`
-        : "Running the lock-guarded cloud media sweep.");
+      if (latest.external_pid) {
+        setText(r2Summary, logSummary?.phase
+          ? `${logSummary.phase}. Existing sweep pid ${latest.external_pid}.`
+          : `Cloud media sweep is already running with pid ${latest.external_pid}.`);
+      } else {
+        setText(r2Summary, logSummary?.phase
+          ? `${logSummary.phase}.`
+          : "Running the lock-guarded cloud media sweep.");
+      }
     } else if (failed) {
-      setText(r2Summary, logSummary?.phase === "Needs attention"
+      setText(r2Summary, coverageIncomplete
+        ? `R2 repair finished, but coverage is still missing (${coverageMissingDetail()}).`
+        : logSummary?.phase === "Needs attention"
         ? "R2 coverage repair needs attention."
         : "R2 coverage repair stopped before completion.");
     } else {
@@ -358,6 +379,7 @@
     }
     const rows = [];
     let lastPhotoId = "";
+    if (latest.external_pid) rows.push(["Sweep PID", latest.external_pid]);
     if (logSummary?.started && !logSummary?.upload) {
       rows.push(["Current photo", logSummary.started.match[2]]);
       rows.push(["Collection", logSummary.started.match[3]]);
@@ -375,9 +397,11 @@
     }
     if (logSummary?.manifest) rows.push(["Render triplets", logSummary.manifest.match[1]]);
     if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
+    if (coverageIncomplete) rows.push(["Coverage", coverageMissingDetail()]);
+    if (Array.isArray(latest.errors) && latest.errors.length) rows.push(["Latest error", latest.errors.at(-1)]);
     if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) rows.push(["Latest error", logSummary.error.line]);
     else if (logSummary?.latest && !active) rows.push(["Latest log", logSummary.latest]);
-    if (!active) rows.push(["Result", failed ? `${failed} failed` : "complete"]);
+    if (!active) rows.push(["Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete"]);
     if (!rows.length) rows.push(["State", latest.state || "queued"]);
     const wideLabels = new Set(["Current photo", "Last photo", "Last rendered", "Latest error", "Latest log"]);
     setHtml(r2Counts, rows.map(([label, value]) => `
@@ -438,9 +462,7 @@
       if (r2RepairLogToken !== token) return;
       r2RepairLogTaskId = task.id;
       r2RepairLogSummary = summarizeR2RepairLog(text);
-      if (task.state === "queued" || task.state === "running") {
-        await loadR2Coverage();
-      }
+      await loadR2Coverage();
       renderR2RepairProgress(task, r2RepairLogSummary);
     } catch {
       renderR2RepairProgress(task);
@@ -510,20 +532,23 @@
       if (r2FixButton) r2FixButton.disabled = true;
       return;
     }
+    const activeCatalogPhotos = Number(coverage.activeCatalogPhotos || coverage.catalogPhotos || 0);
+    const blockedCatalogPhotos = Number(coverage.blockedCatalogPhotos || 0);
     r2CoverageSummary.textContent = coverage.ok
-      ? `Current catalog policy is satisfied for ${formatCount(coverage.catalogPhotos)} photos.`
-      : `Coverage needs repair for ${formatCount(coverage.catalogPhotos)} catalog photos.`;
+      ? blockedCatalogPhotos
+        ? `Current catalog policy is satisfied for ${formatCount(activeCatalogPhotos)} active photos; ${formatCount(blockedCatalogPhotos)} blocked photos are excluded.`
+        : `Current catalog policy is satisfied for ${formatCount(activeCatalogPhotos)} photos.`
+      : `Coverage needs repair for ${formatCount(activeCatalogPhotos)} active catalog photos.`;
     window.photosByElieR2Coverage = coverage;
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
-      const isPrivateJpg = row.label.startsWith("Private JPG");
-      const isPrivateMasters = row.label === "Private masters";
-      const isAcceptedHiddenExtra = isPrivateMasters && Number(row.missing || 0) === 0 && Number(row.extra || 0) > 0;
       const detail = [
-        row.missing ? `${formatCount(row.missing)} missing` : "complete",
-        row.extra ? `${formatCount(row.extra)} ${isPrivateMasters ? "blocked" : "extra"}` : "",
+        row.missing ? `${formatCount(row.missing)} active missing` : "active complete",
+        row.blockedExcluded ? `${formatCount(row.blockedExcluded)} blocked excluded` : "",
+        row.blockedPresent ? `${formatCount(row.blockedPresent)} blocked still present` : "",
+        row.extra ? `${formatCount(row.extra)} extra` : "",
       ].filter(Boolean).join(", ");
       return `
-        <div class="${row.ok || isAcceptedHiddenExtra ? "is-ok" : "needs-work"}">
+        <div class="${row.ok ? "is-ok" : "needs-work"}">
           <dt>${escapeHtml(row.label)}</dt>
           <dd>${formatCount(row.present)} / ${formatCount(row.expected)}</dd>
           <small>${escapeHtml(detail)}</small>
@@ -531,7 +556,9 @@
       `;
     }).join("");
     r2CoverageNote.textContent = coverage.ok
-      ? "Policy is satisfied for the current catalog."
+      ? blockedCatalogPhotos
+        ? "Policy is satisfied for active catalog photos; blocked media is intentionally absent from R2 coverage."
+        : "Policy is satisfied for the current catalog."
       : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
     if (r2FixButton) {
@@ -560,9 +587,31 @@
       const payload = await response.json();
       const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
       renderR2Progress(tasks);
-      if (tasks[0]?.operation === "repair") loadR2RepairLog(tasks[0]);
+      if (tasks[0]?.operation === "repair") await loadR2RepairLog(tasks[0]);
+      return tasks;
     } catch {
       renderR2Progress([]);
+      return [];
+    }
+  };
+
+  const refreshOwnerPanel = async (kind) => {
+    setRefreshBusy(kind, true);
+    try {
+      if (kind === "counts") {
+        await refreshCountsFromSource();
+        setStatus("Current state refreshed.");
+      } else if (kind === "coverage") {
+        await loadR2Coverage();
+        setStatus("R2 catalog coverage refreshed.");
+      } else if (kind === "progress") {
+        await loadR2Progress();
+        setStatus("R2 background work refreshed.");
+      }
+    } catch (error) {
+      setStatus(error?.message || "Could not refresh this Owner panel.");
+    } finally {
+      setRefreshBusy(kind, false);
     }
   };
 
@@ -586,7 +635,6 @@
     renderOwnerAvailability(event.detail || ownerAuth?.state);
   });
 
-  loadStorageEstimate();
   ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
 
   if (physicalProductsToggle) {
@@ -677,13 +725,19 @@
     }
   });
 
+  refreshButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      refreshOwnerPanel(button.dataset.ownerRefresh || "");
+    });
+  });
+
   window.addEventListener("photosbyelie:hiddenchange", renderCounts);
 
   reserveStore?.load?.().then(() => {
     if (ownerAuth?.state?.available) renderCounts();
   });
   if (ownerAuth?.state?.available) {
-    renderCounts();
+    refreshCountsFromSource();
     loadR2Coverage();
     startR2Polling();
   }

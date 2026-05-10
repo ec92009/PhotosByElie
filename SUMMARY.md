@@ -1,20 +1,21 @@
 # Conversation Summary
 
-Date: 2026-05-09
+Date: 2026-05-10
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v70.33`
+- Current visible build: `v71.8`
 - Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,133` catalog photos.
 - Current catalog counts: France `328`, USA `162`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
 - Country, provenance, legacy key references, private master keys, and private render keys live in tracked metadata, especially `assets/media-sidecar.json`.
-- Private delivery manifest is tracked at `assets/private-delivery-manifest.json`; as of this refresh, the Owner R2 coverage panel reports `10,151` private master photo IDs for `10,133` catalog photos, where the `18` overage is hidden/discarded masters waiting for the cleanup pass. Private JPG 1/3/6 MP coverage is actively backfilling and the public low/high preview tiers are complete for the catalog.
-- Discarded-media tombstones are tracked at `assets/discarded-media-manifest.json`. Current discarded count is `18` photo IDs; those IDs are banned from re-import and their R2 objects are deleted for cost control.
-- The latest long cloud media sweep stopped during private JPG backfill on an R2 connection timeout after thousands of successful uploads. Resume it through Owner Fix it or `zsh -lc './scripts/run_cloud_media_sweep.zsh --push'`; the scheduled automation uses the same lock and will avoid concurrent runs.
+- Owner Current state is intentionally simple: `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier extra `18` stale local blocked records were removed from the local ignored Owner state.
+- Private delivery manifest is tracked at `assets/private-delivery-manifest.json`; the Owner R2 coverage panel now reports active-catalog coverage against the `5,792` Expo photos and excludes blocked photos from the repair target.
+- `assets/discarded-media-manifest.json` is the tracked generated cleanup record. It is currently being touched by the active cloud sweep, so do not hand-edit or stage it mid-run.
+- A lock-guarded cloud media sweep is active from Owner Fix it (`scripts/run_cloud_media_sweep.zsh --push`); use the Owner progress panel or `.review-logs/cloud-media-sweep-resume-20260510-112138.log` to monitor it rather than starting a second uploader.
 
 ## Media Contract
 
@@ -63,15 +64,21 @@ Date: 2026-05-09
 - We chose Stripe as the next business step instead of starting with user accounts.
 - The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
 - Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
-- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.33`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v71.8`.
 - Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
 - Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
 - Commit pushed for the Stripe wiring: `f0e1746 photosbyelie: wire Stripe checkout`.
 - The Owner dashboard was tightened while the private backfill sweep ran: Sign out moved to the header, the Owner hero was reduced to a compact heading, Hidden and Hidden sync were grouped together, dark-mode header buttons were made more visible, and the R2 sweep card now uses stacked progress bars.
 - The active sweep progress bar now uses the fixed catalog denominator (`10,133`) instead of adding live log progress to checkpointed manifest missing counts. The earlier `13,615`-style denominator was a moving target caused by double-counting across two live signals.
-- The Owner coverage row for private masters now says `18 hidden` instead of `18 extra`, matching the fact that all 18 master-only IDs are tombstoned/hidden and should be removed by cleanup rather than treated as mysterious surplus.
 - Started the pre-launch translation promise while avoiding media-pipeline changes: public-facing pages now share an English/French/Spanish translation layer for navigation, homepage copy, gallery filters/statuses, detail actions, basket/liked flows, and order-status copy. Owner-only tooling remains English-only for now.
+- Owner language stays English-only; pressing the language button in Owner gives a small beep instead of pretending to switch languages.
+- Owner password protection was removed for localhost use; the local helper server is the gate for mutation endpoints.
+- Hidden language was renamed to Blocked throughout the Owner flow, and the `X` key is accepted as the curation shortcut to block a photo.
+- The Owner counts panel was simplified after cleaning stale records: Analyzed / Blocked / Expo, with Expo styled green.
+- The Owner page now refreshes several panels in place, including Current state, R2 catalog coverage, and R2 background work.
+- During cloud upload, Owner can preview the last uploaded photo directly from the file already being uploaded, without re-downloading it.
+- Local duplicate cleanup for AI/upscaled files was explored; when near-duplicate source/upscale sets appear, keep the upscaled image and remove the lower-resolution original from the sellable set.
 
 ## Verification
 
@@ -84,15 +91,22 @@ Date: 2026-05-09
 
 ## Fresh Backlog
 
-1. **Resume and finish the cloud media sweep.** The last manual run made substantial private JPG progress, then stopped on an R2 connection timeout; restart with the lock-guarded wrapper and watch for final tests, validation, commit, and push.
-2. **Confirm final R2 coverage.** Verify private masters are `10,133 / 10,133` after the 18 hidden/discarded master objects are deleted or scrubbed from inventory, and verify private JPG 1/3/6 MP tiers are complete.
-3. **Make discard lifecycle first-class in Owner.** Add a clear discard action that tombstones IDs, deletes public/private R2 bytes, refreshes manifests, and prevents Saturn imports from resurrecting rejected photos.
-4. **Set up Stripe test mode.** Create/sign into Stripe, collect the test secret key, create the `/stripe-webhook` endpoint, and record the webhook secret as a Worker secret.
-5. **Run Stripe test checkout end to end.** Verify successful payment, 3D Secure/authentication-required payment, declined-card payment, webhook order-paid transition, ZIP build, and order download.
-6. **Decide production order storage.** Choose whether KV is enough for launch or move queryable order records to D1 before live payments.
-7. **Harden Owner identity path.** Keep the localhost helper boundary working, decide production Owner identity, and add browser coverage for locked helper and unauthorized states.
-8. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.
-9. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery without slowing guest purchase.
-10. **Harden browser smoke coverage.** Cover gallery controls, basket, Stripe checkout, order status, Owner hide/discard, and Unknown assignment.
-11. **Refresh architecture artifacts.** Fix the known page 4 text collision and refresh diagrams once account/payment decisions settle.
-12. **Backburner: repo layout cleanup.** Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
+1. **Verify every zippable deliverable is in private R2.** Drive private master and JPG 1/3/6 MP delivery coverage to complete active-catalog coverage, then spot-check ZIP build inputs.
+2. **Continue Owner curation/blocking.** Review remaining visible photos and block anything that should not be sold before payment testing starts.
+3. **Add gallery search.** Search public galleries and Owner review surfaces by title and keywords first, with filename/country/description as secondary signals.
+4. **Add collection-wide keyword removal.** Let Owner remove one keyword from an entire collection with before/after counts and a confirmation preview.
+5. **Return from detail to the gallery photo we left from.** Restore gallery, filters, sort, and scroll/focus when leaving detail.
+6. **Make discard lifecycle first-class in Owner.** Add a clear discard action that deletes public/private R2 bytes while keeping durable tombstones.
+7. **Set up Stripe test mode.** Configure test secrets, webhook endpoint, and Worker environment.
+8. **Run Stripe test checkout end to end.** Cover success, 3D Secure, declined payment, webhook paid transition, ZIP build, and download.
+9. **Make order records production-durable.** Decide D1 vs KV and store queryable order state.
+10. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
+11. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
+12. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
+13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `10,133` photo records.
+14. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
+15. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
+16. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.
+17. **Keep publish validation as the gate.** Strengthen manifest parity, exclusion, and payload-size checks.
+18. **Repair and refresh architecture artifacts.** Update source-of-truth diagrams after media/payment decisions settle.
+19. **Backburner: repo layout cleanup.** Revisit folder structure after media/payment paths stabilize.

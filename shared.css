@@ -88,6 +88,11 @@ a:hover{
   background:var(--surface-2);
   color:var(--text);
 }
+.header-buy-link{
+  font-size:1.2rem;
+  font-weight:900;
+  line-height:1;
+}
 .md-icon{
   width:21px;
   height:21px;

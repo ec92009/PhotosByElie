@@ -29,6 +29,7 @@ const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
 const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "71.13";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+let checkoutHashScrollDone = false;
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
 const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -531,6 +532,10 @@ const renderBasket = () => {
   `}).join("");
 
   window.requestAnimationFrame(syncBasketPreviewHeights);
+  if (!checkoutHashScrollDone && window.location.hash === "#checkout" && !orderIntent.hidden) {
+    checkoutHashScrollDone = true;
+    window.requestAnimationFrame(() => orderIntent.scrollIntoView({ block: "end", behavior: "smooth" }));
+  }
 
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {

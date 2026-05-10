@@ -1005,6 +1005,10 @@ window.photosByElieMdIcon = (name) => {
 const ensureHeaderActionLinks = () => {
   const controls = document.querySelector('.header-controls');
   if (!controls || controls.querySelector('[data-header-actions]')) return;
+  const showBuyAction = document.body?.classList.contains('commerce-page');
+  const buyHref = window.location.pathname.endsWith('/basket.html') || window.location.pathname.endsWith('basket.html')
+    ? '#checkout'
+    : './basket.html#checkout';
   const actions = document.createElement('nav');
   actions.className = 'header-action-links';
   actions.dataset.headerActions = '';
@@ -1016,6 +1020,11 @@ const ensureHeaderActionLinks = () => {
     <a class="header-action-link" href="./basket.html" data-i18n-aria-label="a11y.open_basket" data-i18n-title="a11y.open_basket">
       ${window.photosByElieMdIcon('shoppingBasket')}
     </a>
+    ${showBuyAction ? `
+      <a class="header-action-link header-buy-link" href="${buyHref}" aria-label="Checkout" title="Checkout">
+        <span aria-hidden="true">$</span>
+      </a>
+    ` : ''}
   `;
   controls.prepend(actions);
 };

@@ -49,6 +49,7 @@ const ensureGalleryKeyboardHint = () => {
   hint.innerHTML = [
     "Owner shortcuts:",
     `${shortcutKey("X")} block`,
+    `${shortcutKey("L")} like`,
     `${shortcutKey("U")} undo`,
     `${shortcutKey("T")} title`,
     `${shortcutKey("K")} keywords`,
@@ -444,6 +445,35 @@ const setGalleryStatus = (message) => {
   if (galleryStatus) galleryStatus.textContent = message;
 };
 
+const nearestVisiblePhotoIndex = () => {
+  const cards = [...(galleryRoot?.querySelectorAll("[data-photo-index]") || [])];
+  if (!cards.length) return selectedIndex;
+  const viewportCenter = window.innerHeight / 2;
+  const nearest = cards
+    .map((card) => {
+      const rect = card.getBoundingClientRect();
+      const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+      const centerDistance = Math.abs((rect.top + rect.bottom) / 2 - viewportCenter);
+      return {
+        index: Number(card.dataset.photoIndex || 0),
+        visibleHeight,
+        centerDistance
+      };
+    })
+    .filter((item) => item.visibleHeight > 0)
+    .sort((a, b) => a.centerDistance - b.centerDistance)[0];
+  return Number.isInteger(nearest?.index) ? nearest.index : selectedIndex;
+};
+
+const selectedShortcutPhoto = () => {
+  const photos = filteredVisiblePhotos();
+  if (!photos.length) return null;
+  if (!localModerationEnabled) selectedIndex = nearestVisiblePhotoIndex();
+  selectedIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
+  updateSelection({ scroll: false });
+  return photos[selectedIndex];
+};
+
 const maxDensityColumns = () => {
   if (window.matchMedia("(max-width:760px)").matches) return 3;
   return 10;
@@ -543,13 +573,16 @@ const updateGalleryLikeButtons = () => {
 };
 
 const toggleGalleryLike = (photo) => {
-  if (!photo?.id || !likedStore) return;
+  if (!photo?.id || !likedStore) return null;
   if (likedStore.has?.(photo.id)) {
     likedStore.remove(photo.id);
+    updateGalleryLikeButtons();
+    return false;
   } else {
     likedStore.add(photo.id);
   }
   updateGalleryLikeButtons();
+  return true;
 };
 
 const openOwnerMetadataModal = (photo, field) => {
@@ -835,6 +868,15 @@ if (galleryRoot && gallery) {
       const nextColumns = stepGalleryDensity(event.key === "G" ? 1 : -1);
       setGalleryStatus(`Grid ${nextColumns}.`);
       event.preventDefault();
+      return;
+    }
+    if (event.key.toLowerCase() === "l") {
+      const selected = selectedShortcutPhoto();
+      const liked = toggleGalleryLike(selected);
+      if (selected && liked !== null) {
+        setGalleryStatus(t(liked ? "detail.added_liked" : "detail.removed_liked", { title: selected.title }));
+        event.preventDefault();
+      }
       return;
     }
     if (event.key.toLowerCase() === "z") {

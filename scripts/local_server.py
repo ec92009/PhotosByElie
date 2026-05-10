@@ -878,7 +878,7 @@ def _metadata_upload_items_for_paths(repo_root: Path, photo: dict, paths: list[P
                 continue
             item = UploadItem(
                 bucket=DEFAULT_PUBLIC_BUCKET,
-                key=r2_public_key(DEFAULT_PUBLIC_PREFIX, rel),
+                key=r2_public_key(DEFAULT_PUBLIC_PREFIX, photo, rel),
                 path=path,
                 content_type="image/jpeg",
                 cache_control="public, max-age=31536000, immutable",

@@ -19,7 +19,7 @@ Last updated: 2026-05-10
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
 - Owner Current state now reads `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier `18` stale local blocked records were removed from the ignored Owner state.
-- Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest is owned by the active sweep while it is running.
+- Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest should be updated by the sweep/cleanup tooling rather than hand-edited.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally remains English.
 
@@ -150,6 +150,8 @@ Last updated: 2026-05-10
 
 ## Completed Recently
 
+- Added `g`/`G` gallery density keyboard shortcuts and bumped the visible build to `v71.17`.
+- Refreshed docs around media immutability, manifest-only Owner edits, Blocked terminology, and XMP sidecar maintenance as an explicit future Owner action.
 - Fixed Back to gallery from detail so it restores the originating gallery, filters/sort context, selected photo, and scroll position.
 - Retired the Expo cap and promoted the full cloud-backed catalog.
 - Marked the manual cloud media sweep follow-up as finished and removed it from active backlog.

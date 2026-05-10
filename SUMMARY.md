@@ -14,8 +14,8 @@ Date: 2026-05-10
 - Country, provenance, legacy key references, private master keys, and private render keys live in tracked metadata, especially `assets/media-sidecar.json`.
 - Owner Current state is intentionally simple: `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier extra `18` stale local blocked records were removed from the local ignored Owner state.
 - Private delivery manifest is tracked at `assets/private-delivery-manifest.json`; the Owner R2 coverage panel now reports active-catalog coverage against the `5,792` Expo photos and excludes blocked photos from the repair target.
-- `assets/discarded-media-manifest.json` is the tracked generated cleanup record. It is currently being touched by the active cloud sweep, so do not hand-edit or stage it mid-run.
-- A lock-guarded cloud media sweep is active from Owner Fix it (`scripts/run_cloud_media_sweep.zsh --push`); use the Owner progress panel or `.review-logs/cloud-media-sweep-resume-20260510-112138.log` to monitor it rather than starting a second uploader.
+- `assets/discarded-media-manifest.json` is the tracked generated cleanup record. Let the sweep/cleanup tooling update it rather than hand-editing it.
+- The latest Owner-started cloud media sweep finished tests, validation, commit, and push in `.review-logs/cloud-media-sweep-resume-20260510-112138.log`. Inspect the lock/log before starting another sweep so only one uploader runs at a time.
 
 ## Media Contract
 
@@ -81,6 +81,8 @@ Date: 2026-05-10
 - During cloud upload, Owner can preview the last uploaded photo directly from the file already being uploaded, without re-downloading it.
 - Local duplicate cleanup for AI/upscaled files was explored; when near-duplicate source/upscale sets appear, keep the upscaled image and remove the lower-resolution original from the sellable set.
 - Owner metadata and country edits are now manifest-only. Uploaded masters, private render triplets, and public previews should not be rewritten after upload; optional Lightroom-style XMP sidecar writing belongs behind an explicit Owner button.
+- Docs were refreshed around media immutability, Blocked terminology, the retired Expo cap, manifest-only Owner edits, and the real `scripts/asset_state.py` compatibility path for old review snapshots.
+- Gallery grid density now has keyboard shortcuts for everyone: `g` makes photos larger by reducing columns, while `G` makes the grid denser by adding columns.
 
 ## Verification
 
@@ -90,6 +92,7 @@ Date: 2026-05-10
 - Discard cleanup deleted the current discarded public preview objects from R2 and recorded the tombstones in `assets/discarded-media-manifest.json`.
 - Stripe wiring verification passed with `node --test worker/checkout-worker.test.mjs` (`10/10`) and `npm run validate`.
 - Translation verification passed through browser smoke checks on home, France gallery, basket, liked, and order pages with no console/page errors.
+- Gallery density shortcut verification passed in the built-in browser on `usa.html?v=71.17`: `G` changed grid `2 -> 3`, then `g` changed `3 -> 2`.
 
 ## Fresh Backlog
 

@@ -1312,13 +1312,22 @@ def _sync_asset_keyword(repo_root: Path, photo: dict, keyword: str) -> dict:
     return {"updated": updated, "skipped": skipped, "errors": errors, "updated_paths": updated_paths}
 
 
-def _apply_collection_keyword(repo_root: Path, photo: dict, slug: str, sync_assets: bool = True) -> dict:
+def _apply_collection_keyword(repo_root: Path, photo: dict, slug: str, sync_assets: bool = False) -> dict:
     keyword = COLLECTION_KEYWORD_TARGETS.get(slug)
     if not keyword:
-        return {"keyword": "", "metadata_changed": False, "assets": {"updated": 0, "skipped": 0, "errors": []}}
+        return {
+            "keyword": "",
+            "metadata_changed": False,
+            "caption_changed": False,
+            "assets": {"updated": 0, "skipped": 0, "errors": [], "state": "manifest-only"},
+        }
     metadata_changed = _ensure_photo_keyword(photo, keyword)
     caption_changed = _ensure_country_caption(photo, slug)
-    assets = _sync_asset_keyword(repo_root, photo, keyword) if sync_assets else {"updated": 0, "skipped": 0, "errors": []}
+    assets = (
+        _sync_asset_keyword(repo_root, photo, keyword)
+        if sync_assets
+        else {"updated": 0, "skipped": 0, "errors": [], "state": "manifest-only"}
+    )
     return {
         "keyword": keyword,
         "metadata_changed": metadata_changed,
@@ -1333,32 +1342,23 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
     asset_updated = 0
     asset_skipped = 0
     errors = []
-    r2_items: list[UploadItem] = []
-    seen_r2_items: set[str] = set()
     for groups in state_groups:
         for slug, keyword in COLLECTION_KEYWORD_TARGETS.items():
             for photo in groups.get(slug, []):
                 photos_seen += 1
-                result = _apply_collection_keyword(repo_root, photo, slug)
+                result = _apply_collection_keyword(repo_root, photo, slug, sync_assets=False)
                 if result["metadata_changed"] or result["caption_changed"]:
                     metadata_changed += 1
                 asset_updated += result["assets"].get("updated", 0)
                 asset_skipped += result["assets"].get("skipped", 0)
                 errors.extend(result["assets"].get("errors", []))
-                updated_paths = [Path(item) for item in result["assets"].get("updated_paths", [])]
-                for item in _metadata_upload_items_for_paths(repo_root, photo, updated_paths):
-                    identifier = r2_upload_id(item)
-                    if identifier in seen_r2_items:
-                        continue
-                    seen_r2_items.add(identifier)
-                    r2_items.append(item)
-    r2_task = _start_r2_upload_task("country-keywords", r2_items)
     return {
         "photos_seen": photos_seen,
         "metadata_changed": metadata_changed,
         "asset_updated": asset_updated,
         "asset_skipped": asset_skipped,
-        "r2_upload_task": r2_task,
+        "r2_upload_task": None,
+        "state": "manifest-only",
         "errors": errors[:20],
         "error_count": len(errors),
     }

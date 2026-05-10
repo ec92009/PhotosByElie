@@ -652,16 +652,15 @@
 
   syncCountryKeywordsButton?.addEventListener("click", async () => {
     syncCountryKeywordsButton.disabled = true;
-    setStatus("Syncing country metadata into the catalog, local image files, and cloud queue...");
+    setStatus("Syncing country metadata into the catalog...");
     try {
       const result = await hiddenActions.syncCountryKeywords?.();
       const updates = result?.keyword_updates || {};
-      const fileCount = updates.asset_updated || 0;
       const metadataCount = updates.metadata_changed || 0;
       const errorCount = updates.error_count || 0;
       renderCounts();
       loadR2Progress();
-      setStatus(`Country metadata synced: ${metadataCount} catalog rows changed, ${fileCount} local files updated${errorCount ? `, ${errorCount} file errors` : ""}.`);
+      setStatus(`Country metadata synced: ${metadataCount} catalog rows changed${errorCount ? `, ${errorCount} file errors` : ""}.`);
     } catch (error) {
       setStatus(error?.message || "Could not sync country metadata.");
     } finally {

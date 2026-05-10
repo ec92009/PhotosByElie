@@ -7,7 +7,7 @@ Date: 2026-05-10
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v71.13`
+- Current visible build: `v71.16`
 - Analyzed catalog contains `10,133` photos; public Expo publishes `5,792` eligible cloud-backed previews after blocked exclusions, not a capped sample.
 - Current Expo catalog counts: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -31,6 +31,7 @@ Date: 2026-05-10
 - Camera imports scan `/Volumes/Saturn/Pictures/LR/Camera`.
 - Leonardo/AI imports scan `/Volumes/Saturn/Pictures/LR/_All Leonardo`.
 - Owner-hidden/discarded photos are tombstoned: delete their R2 bytes, keep their IDs as permanent do-not-resurrect records.
+- Uploaded masters, private render triplets, and public previews are treated as immutable media objects after upload. Normal Owner metadata/country edits mutate manifests/catalogs only; future Lightroom-style XMP sidecar saves should be an explicit Owner maintenance button.
 
 ## Automation
 

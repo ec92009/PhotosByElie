@@ -6,8 +6,6 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import ipaddress
-import os
-import secrets
 import json
 import mimetypes
 import re
@@ -36,15 +34,12 @@ LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
 OWNER_SESSION_COOKIE = "pbe_owner_session"
-OWNER_SESSION_SECONDS = 12 * 60 * 60
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 ACTION_PROGRESS: dict[str, dict] = {}
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
-OWNER_SESSIONS: dict[str, float] = {}
-OWNER_SESSION_LOCK = threading.Lock()
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
@@ -153,9 +148,6 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        if not self._is_owner_authenticated():
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
-            return
         try:
             payload = self._read_json_body()
             result = apply_photo_action(Path.cwd(), payload)
@@ -171,9 +163,6 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        if not self._is_owner_authenticated():
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
-            return
         query = parse_qs(urlparse(self.path).query)
         operation_id = (query.get("operation_id") or [""])[0]
         progress = ACTION_PROGRESS.get(operation_id) if operation_id else None
@@ -183,26 +172,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        if not self._is_owner_authenticated():
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
-            return
         self._send_json(HTTPStatus.OK, {"ok": True, "tasks": _r2_task_snapshot()})
 
     def _handle_r2_coverage(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        if not self._is_owner_authenticated():
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
-            return
         self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd())})
 
     def _handle_r2_fix(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
-            return
-        if not self._is_owner_authenticated():
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login required"})
             return
         task = _start_cloud_media_sweep(Path.cwd())
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
@@ -217,29 +197,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        try:
-            payload = self._read_json_body()
-        except ValueError as error:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
-            return
-        password = str(payload.get("password") or "")
-        expected_password = getattr(self.server, "owner_password", "")
-        if not expected_password or not secrets.compare_digest(password, expected_password):
-            self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "owner login failed"})
-            return
-        token = secrets.token_urlsafe(32)
-        expires_at = time.time() + OWNER_SESSION_SECONDS
-        with OWNER_SESSION_LOCK:
-            OWNER_SESSIONS[token] = expires_at
-        response = self._owner_session_payload(token=token)
+        raw_length = self.headers.get("Content-Length")
+        if raw_length:
+            try:
+                length = min(int(raw_length), MAX_BODY_BYTES)
+            except ValueError:
+                length = 0
+            if length > 0:
+                self.rfile.read(length)
         self._send_json(
             HTTPStatus.OK,
-            response,
+            self._owner_session_payload(),
             extra_headers={
-                "Set-Cookie": (
-                    f"{OWNER_SESSION_COOKIE}={token}; Path=/; Max-Age={OWNER_SESSION_SECONDS}; "
-                    "HttpOnly; SameSite=Strict"
-                )
+                "Set-Cookie": f"{OWNER_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
             },
         )
 
@@ -247,13 +217,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        token = self._owner_session_token()
-        if token:
-            with OWNER_SESSION_LOCK:
-                OWNER_SESSIONS.pop(token, None)
         self._send_json(
             HTTPStatus.OK,
-            {"ok": True, "authenticated": False},
+            {"ok": True, "authenticated": True},
             extra_headers={
                 "Set-Cookie": f"{OWNER_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
             },
@@ -268,34 +234,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return _is_private_lan_address(host)
         return False
 
-    def _owner_session_payload(self, token: str | None = None) -> dict:
+    def _owner_session_payload(self) -> dict:
         return {
             "ok": True,
-            "authenticated": self._is_owner_authenticated(token=token),
-            "sessionSeconds": OWNER_SESSION_SECONDS,
-            "passwordConfigured": getattr(self.server, "owner_password_source", "generated") != "generated",
-            "passwordSource": getattr(self.server, "owner_password_source", "generated"),
+            "authenticated": True,
+            "sessionSeconds": 0,
+            "passwordConfigured": False,
+            "passwordSource": "none",
         }
-
-    def _owner_session_token(self) -> str | None:
-        cookies = self.headers.get("Cookie", "")
-        for part in cookies.split(";"):
-            name, separator, value = part.strip().partition("=")
-            if separator and name == OWNER_SESSION_COOKIE and value:
-                return value
-        return None
-
-    def _is_owner_authenticated(self, token: str | None = None) -> bool:
-        token = token or self._owner_session_token()
-        if not token:
-            return False
-        now = time.time()
-        with OWNER_SESSION_LOCK:
-            expires_at = OWNER_SESSIONS.get(token)
-            if not expires_at or expires_at <= now:
-                OWNER_SESSIONS.pop(token, None)
-                return False
-            return True
 
     def _read_json_body(self) -> dict:
         raw_length = self.headers.get("Content-Length")
@@ -331,31 +277,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Serve Photos By Elie locally with owner helper endpoints.")
     parser.add_argument("port", nargs="?", type=int, default=8000)
     parser.add_argument("--bind", default="127.0.0.1", help="Address to bind. Defaults to 127.0.0.1.")
-    parser.add_argument("--allow-lan-owner", action="store_true", help="Allow password-gated owner helper endpoints from private LAN clients.")
+    parser.add_argument("--allow-lan-owner", action="store_true", help="Allow owner helper endpoints from private LAN clients.")
     args = parser.parse_args()
 
-    owner_password = (
-        os.environ.get("PHOTOSBYELIE_OWNER_PASSWORD")
-        or os.environ.get("PBE_OWNER_PASSWORD")
-        or ""
-    )
-    owner_password_source = "PHOTOSBYELIE_OWNER_PASSWORD/PBE_OWNER_PASSWORD" if owner_password else "generated"
-    if not owner_password:
-        owner_password = secrets.token_urlsafe(12)
-
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
-    server.owner_password = owner_password
-    server.owner_password_source = owner_password_source
     server.allow_lan_owner = args.allow_lan_owner
     url_host = "localhost" if args.bind in {"127.0.0.1", "::1"} else args.bind
     print(f"Serving Photos By Elie at http://{url_host}:{args.port}/")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
-    if owner_password_source == "generated":
-        print(f"Owner login code for this server session: {owner_password}")
-    else:
-        print(f"Owner login password loaded from {owner_password_source}")
+    print("Owner helper endpoints are enabled on loopback without a password.")
     if args.allow_lan_owner:
-        print("Owner helper endpoints are enabled for private LAN clients with the owner password.")
+        print("Owner helper endpoints are enabled for private LAN clients without a password.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

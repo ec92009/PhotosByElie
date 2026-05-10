@@ -7,7 +7,7 @@ Date: 2026-05-09
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v70.27`
+- Current visible build: `v70.33`
 - Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,133` catalog photos.
 - Current catalog counts: France `328`, USA `162`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -63,7 +63,7 @@ Date: 2026-05-09
 - We chose Stripe as the next business step instead of starting with user accounts.
 - The Worker now selects real Stripe when `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are configured, while preserving mock Stripe for local development.
 - Browser checkout now redirects to hosted Stripe Checkout when the Worker returns `provider: "stripe"`.
-- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.27`.
+- Public checkout/order copy was changed from mock-only language to Stripe-capable language, and the visible build moved through `v69.1`; current local docs now show `v70.33`.
 - Stripe docs were checked for hosted Checkout Sessions, raw-body webhook signature verification, and test cards.
 - Confirmed that Stripe offers test card numbers, including the standard successful Visa test card `4242 4242 4242 4242`.
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
@@ -90,7 +90,7 @@ Date: 2026-05-09
 4. **Set up Stripe test mode.** Create/sign into Stripe, collect the test secret key, create the `/stripe-webhook` endpoint, and record the webhook secret as a Worker secret.
 5. **Run Stripe test checkout end to end.** Verify successful payment, 3D Secure/authentication-required payment, declined-card payment, webhook order-paid transition, ZIP build, and order download.
 6. **Decide production order storage.** Choose whether KV is enough for launch or move queryable order records to D1 before live payments.
-7. **Harden Owner auth/account path.** Keep localhost owner login working, decide production Owner identity, and add browser coverage for locked, login, logout, and unauthorized states.
+7. **Harden Owner identity path.** Keep the localhost helper boundary working, decide production Owner identity, and add browser coverage for locked helper and unauthorized states.
 8. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent public media domain and update `media-config.js`.
 9. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery without slowing guest purchase.
 10. **Harden browser smoke coverage.** Cover gallery controls, basket, Stripe checkout, order status, Owner hide/discard, and Unknown assignment.

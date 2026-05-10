@@ -66,12 +66,12 @@ python3 scripts/local_server.py 8000
 
 This still serves the same static site files, but adds localhost-only endpoints that let the Owner page save `.pbe-review` files directly into `~/Downloads`, update the Hidden blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
 
-Owner mutation endpoints require a local owner session. Set `PHOTOSBYELIE_OWNER_PASSWORD` or `PBE_OWNER_PASSWORD` before starting the server, or use the one-time login code printed by `scripts/local_server.py` for that server run.
+Owner mutation endpoints are unlocked on localhost by the helper server without a password.
 
-For a temporary private-LAN review session, bind to all interfaces and opt in to password-gated LAN owner endpoints:
+For a temporary private-LAN review session, bind to all interfaces and opt in to LAN owner endpoints:
 
 ```bash
-PHOTOSBYELIE_OWNER_PASSWORD=... python3 scripts/local_server.py 8000 --bind 0.0.0.0 --allow-lan-owner
+python3 scripts/local_server.py 8000 --bind 0.0.0.0 --allow-lan-owner
 ```
 
 We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; `.pbe-review` snapshots remain only as audit files and as a fallback for larger rebuilds.

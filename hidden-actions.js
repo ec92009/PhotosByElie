@@ -159,9 +159,9 @@
 
   const photoAction = async (action, photoId, extra = {}) => {
     if (!enabled) return null;
-    const authorized = await ownerAuth?.requireAuth?.(`Owner login required for ${action}.`);
+    const authorized = await ownerAuth?.requireAuth?.(`Start the local Photos By Elie server for ${action}.`);
     if (ownerAuth?.enabled && !authorized) {
-      throw new Error("Owner login required.");
+      throw new Error("Owner helper server required.");
     }
     const photoOptionalActions = ["sync-country-keywords", "publish-hidden-blacklist", "wipe-hidden-r2"];
     const requestPayload = { action, ...extra };

@@ -462,7 +462,6 @@ const renderBasket = () => {
   emptyState.hidden = items.length !== 0;
   syncOrderIntent(items, assetCount, total, shippingHandlingTotal);
 
-  const cssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
   basketRoot.innerHTML = items.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
@@ -505,7 +504,7 @@ const renderBasket = () => {
       `;
     };
     return `
-    <article class="basket-item ${imageSrc ? "has-row-bg" : ""}" data-basket-row-bg="${escapeText(imageSrc)}">
+    <article class="basket-item">
       <a class="basket-thumb mock-photo ${thumbClasses} ${panoClass} ${imageSrc ? "has-image" : ""}" href="./photo.html?id=${item.photoId}" aria-label="Open ${item.title}"${thumbStyle}>
         ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
@@ -532,11 +531,6 @@ const renderBasket = () => {
       </div>
     </article>
   `}).join("");
-
-  document.querySelectorAll("[data-basket-row-bg]").forEach((row) => {
-    const rowBg = row.dataset.basketRowBg || "";
-    if (rowBg) row.style.setProperty("--basket-row-bg", cssUrlValue(rowBg));
-  });
 
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {

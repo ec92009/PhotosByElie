@@ -54,7 +54,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Public collections are ordered France, USA, Spain, Mexico, AI, Portugal, and Slovakia.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
-- Owner Unknown counts use the same current-queue filter as the Unknown page, so old browser assignment history does not subtract unrelated photos.
+- Owner Unknown counts show only photos that still need a country assignment; photos already assigned or blocked no longer reduce unrelated counts.
 - Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
 - Public previews currently resolve through the deployed Worker `/media/...` route backed by `photosbyelie-public`; move `publicBaseUrl` to an R2 custom domain when that is attached.
 - `assets/expo` can stay empty or local-only once the public R2 bucket has the baked-watermark previews; use `node scripts/validate_publish.js --external-media` for that publishing mode.

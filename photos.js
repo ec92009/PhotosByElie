@@ -1016,12 +1016,6 @@ const ensureHeaderActionLinks = () => {
 
 ensureHeaderActionLinks();
 
-document.querySelectorAll('[data-back-to-top]').forEach((button) => {
-  button.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-});
-
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
   localStorage.setItem(key, root.dataset.theme);

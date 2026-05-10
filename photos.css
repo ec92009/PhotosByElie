@@ -2066,30 +2066,6 @@ html[data-theme="light"] .detail-preview.has-image::after{
 .basket-rail{
   display:none;
 }
-.back-to-top-fixed{
-  position:fixed;
-  right:18px;
-  bottom:18px;
-  z-index:50;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-height:42px;
-  padding:0 16px;
-  border:1px solid var(--line);
-  border-radius:999px;
-  background:var(--text);
-  color:var(--bg);
-  box-shadow:0 14px 36px var(--shadow);
-  font:inherit;
-  font-size:.9rem;
-  font-weight:800;
-  cursor:pointer;
-}
-.back-to-top-fixed:hover,
-.back-to-top-fixed:focus-visible{
-  transform:translateY(-1px);
-}
 @media (max-width:1100px){
   .order-intent-panel{
     grid-template-columns:minmax(220px,.75fr) minmax(280px,1fr);
@@ -2177,10 +2153,6 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   .basket-total-band{
     top:90px;
-  }
-  .back-to-top-fixed{
-    right:12px;
-    bottom:12px;
   }
   .photo-metadata{
     grid-template-columns:1fr;

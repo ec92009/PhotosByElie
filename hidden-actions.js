@@ -11,6 +11,7 @@
   let ownerBusyCount = 0;
   let ownerBusyMessage = "";
   let queuedPhotoAction = Promise.resolve();
+  const pendingHiddenIds = new Set();
 
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
@@ -28,18 +29,23 @@
     return normalize(ids);
   };
 
-  const read = () => {
-    if (!enabled) return [];
-    const loadedHiddenIds = hiddenIdsFromLoadedData();
-    if (loadedHiddenIds) {
-      localStorage.setItem(key, JSON.stringify(loadedHiddenIds));
-      return loadedHiddenIds;
-    }
+  const readStoredHiddenIds = () => {
     try {
       return normalize(JSON.parse(localStorage.getItem(key) || "[]"));
     } catch {
       return [];
     }
+  };
+
+  const read = () => {
+    if (!enabled) return [];
+    const loadedHiddenIds = hiddenIdsFromLoadedData();
+    const storedHiddenIds = readStoredHiddenIds();
+    return normalize([
+      ...(loadedHiddenIds || []),
+      ...storedHiddenIds,
+      ...pendingHiddenIds,
+    ]);
   };
 
   const readHistory = () => {
@@ -97,8 +103,9 @@
 
   const writeLoadedHiddenIds = () => {
     const ids = hiddenIdsFromLoadedData() || [];
-    if (enabled) localStorage.setItem(key, JSON.stringify(ids));
-    return ids;
+    const mergedIds = normalize([...ids, ...pendingHiddenIds]);
+    if (enabled) localStorage.setItem(key, JSON.stringify(mergedIds));
+    return mergedIds;
   };
 
   const setMetadataValue = (photo, label, value) => {
@@ -340,9 +347,13 @@
     const current = read();
     if (current.includes(photoId)) return current;
     forgetReserveOnly([photoId]);
+    pendingHiddenIds.add(photoId);
     const nextItems = write([...current, photoId]);
     writeHistory([...readHistory(), photoId]);
-    enqueuePhotoAction("hide", photoId).catch((error) => {
+    enqueuePhotoAction("hide", photoId).then(() => {
+      pendingHiddenIds.delete(photoId);
+    }).catch((error) => {
+      pendingHiddenIds.delete(photoId);
       const latest = read();
       if (latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
       window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {

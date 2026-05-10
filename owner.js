@@ -10,6 +10,9 @@
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
   const discardedCountRoot = document.querySelector("[data-owner-discarded-count]");
+  const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
+  const blockedPublishedCountRoot = document.querySelector("[data-owner-blocked-published-count]");
+  const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
   const publishHiddenBlacklistButton = document.querySelector("[data-owner-publish-hidden-blacklist]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
@@ -79,6 +82,7 @@
     if (available) {
       setStatus("Owner controls unlocked on localhost.");
       refreshCountsFromSource();
+      refreshBlockedSyncPanel();
       loadR2Coverage();
       startR2Polling();
       if (options.scrollToControls && controls) {
@@ -285,6 +289,28 @@
         <dd>${value}</dd>
       </div>
     `).join("");
+    if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount(hiddenCount);
+  };
+
+  const blockedPreviewCountFromCoverage = () => Math.max(
+    0,
+    ...(window.photosByElieR2Coverage?.rows || []).map((row) => Number(row.blockedPresent || 0)),
+  );
+
+  const refreshBlockedSyncPanel = async () => {
+    if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount((hiddenActions.read?.() || []).length);
+    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedPreviewCountFromCoverage());
+    if (!blockedPublishedCountRoot) return;
+    try {
+      const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
+      const response = await fetch(href, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Blocked list ${response.status}`);
+      const payload = await response.json();
+      const ids = new Set((Array.isArray(payload.photo_ids) ? payload.photo_ids : []).filter(Boolean));
+      blockedPublishedCountRoot.textContent = formatCount(ids.size);
+    } catch {
+      blockedPublishedCountRoot.textContent = "0";
+    }
   };
 
   const refreshDiscardedCount = async () => {
@@ -681,6 +707,7 @@
         : "Policy is satisfied for the current catalog."
       : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
+    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedPreviewCountFromCoverage());
     if (r2FixButton) {
       r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
       syncR2FixButton();
@@ -721,6 +748,10 @@
       if (kind === "counts") {
         await refreshCountsFromSource();
         setStatus("Current state refreshed.");
+      } else if (kind === "blocked-sync") {
+        await loadR2Coverage();
+        await refreshBlockedSyncPanel();
+        setStatus("Blocked sync refreshed.");
       } else if (kind === "coverage") {
         await loadR2Coverage();
         setStatus("R2 catalog coverage refreshed.");
@@ -810,6 +841,7 @@
     try {
       await hiddenActions.publishHiddenBlacklist?.();
       renderCounts();
+      await refreshBlockedSyncPanel();
       loadR2Progress();
       setStatus("Blocked list sync queued for R2.");
     } catch (error) {
@@ -827,6 +859,8 @@
     try {
       await hiddenActions.wipeHiddenR2?.();
       renderCounts();
+      await loadR2Coverage();
+      await refreshBlockedSyncPanel();
       loadR2Progress();
       setStatus("Blocked public preview wipe queued.");
     } catch (error) {
@@ -869,16 +903,19 @@
   window.addEventListener("photosbyelie:hiddenchange", () => {
     renderCounts();
     refreshDiscardedCount();
+    refreshBlockedSyncPanel();
   });
 
   reserveStore?.load?.().then(() => {
     if (ownerAuth?.state?.available) {
       renderCounts();
       refreshDiscardedCount();
+      refreshBlockedSyncPanel();
     }
   });
   if (ownerAuth?.state?.available) {
     refreshCountsFromSource();
+    refreshBlockedSyncPanel();
     loadR2Coverage();
     startR2Polling();
   }

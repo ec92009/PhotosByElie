@@ -804,7 +804,12 @@ const renderGallery = () => {
           </button>
         </div>
       ` : ""}
-      <a class="mock-photo-caption" href="${hrefAttr}" data-photo-caption>${title}</a>
+      <a
+        class="mock-photo-caption${localModerationEnabled ? " is-owner-editable" : ""}"
+        href="${hrefAttr}"
+        data-photo-caption
+        ${localModerationEnabled ? `data-owner-title-edit aria-label="Edit title for ${title}" title="Edit title"` : ""}
+      >${title}</a>
     </article>
   `;
   }).join("");
@@ -817,6 +822,17 @@ const renderGallery = () => {
     });
   });
   if (localModerationEnabled) {
+    galleryRoot.querySelectorAll("[data-owner-title-edit]").forEach((caption) => {
+      caption.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const card = caption.closest("[data-photo-index]");
+        selectedIndex = Number(card?.dataset.photoIndex || 0);
+        updateSelection({ scroll: false });
+        const selected = photos[selectedIndex];
+        if (selected) openOwnerMetadataModal(selected, "title");
+      });
+    });
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {
         event.preventDefault();

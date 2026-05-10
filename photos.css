@@ -546,6 +546,13 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-counts div.is-expo dd{
   color:color-mix(in srgb,#2f8f5b 84%,var(--text));
 }
+.owner-compact-counts{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.owner-compact-counts dd{
+  font-size:1.05rem;
+}
 .owner-coverage-counts{
   grid-template-columns:repeat(3,minmax(0,1fr));
 }
@@ -1204,6 +1211,16 @@ html[data-theme="light"] .mock-photo.has-image::after{
   text-decoration:underline;
   text-decoration-thickness:1px;
   text-underline-offset:3px;
+}
+.mock-photo-caption.is-owner-editable{
+  cursor:text;
+  text-decoration-line:underline;
+  text-decoration-style:dotted;
+  text-decoration-thickness:1px;
+  text-underline-offset:3px;
+}
+.mock-photo-caption.is-owner-editable:hover{
+  color:var(--accent);
 }
 .raw-source-badge{
   position:absolute;

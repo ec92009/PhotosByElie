@@ -410,9 +410,9 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .about-grid{grid-template-columns:1fr}
   .topbar{flex-wrap:wrap;gap:8px;padding:10px 0;align-items:flex-start}
   .version-switch{flex:1 1 100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
-  .header-controls{margin-left:auto}
+  .header-controls{width:100%;margin-left:0;justify-content:flex-end}
   .detail-cycle-btn{min-width:74px;padding:6px 9px}
-  .brand{font-size:.95rem;max-width:calc(100% - 184px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .brand{width:100%;max-width:100%;font-size:clamp(.82rem,4vw,.95rem);flex:1 1 100%;min-width:0;overflow:visible;text-overflow:clip;white-space:normal}
   .panel,.card,.carousel-wrap,.carousel-item{min-width:0}
   .lead,.card p,h1{overflow-wrap:anywhere}
 }

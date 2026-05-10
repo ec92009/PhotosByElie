@@ -497,6 +497,16 @@ const applyGalleryFitMode = () => {
   });
 };
 
+const setGalleryFitMode = (mode) => {
+  fitMode = mode === "fill" ? "fill" : "fit";
+  localStorage.setItem(fitModeKey, fitMode);
+  applyGalleryFitMode();
+  updateSelection({ scroll: false });
+  return fitMode;
+};
+
+const toggleGalleryFitMode = () => setGalleryFitMode(fitMode === "fill" ? "fit" : "fill");
+
 const positionGalleryViewControls = () => {
   if (!viewControls) return;
   const topbar = document.querySelector(".topbar");
@@ -850,10 +860,7 @@ if (galleryRoot && gallery) {
     fitControl.addEventListener("click", (event) => {
       const button = event.target.closest("[data-gallery-fit-mode]");
       if (!button) return;
-      fitMode = button.dataset.galleryFitMode === "fill" ? "fill" : "fit";
-      localStorage.setItem(fitModeKey, fitMode);
-      applyGalleryFitMode();
-      updateSelection({ scroll: false });
+      setGalleryFitMode(button.dataset.galleryFitMode);
     });
     window.addEventListener("resize", () => {
       applyGalleryDensity();
@@ -866,6 +873,22 @@ if (galleryRoot && gallery) {
     positionGalleryViewControls();
     window.photosByElieI18n?.apply?.();
   }
+
+  window.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      if (target.isContentEditable) return;
+      if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
+    }
+    if (event.key.toLowerCase() !== "z") return;
+    const nextMode = toggleGalleryFitMode();
+    setGalleryStatus(nextMode === "fill" ? "Fill view." : "Fit view.");
+    event.preventDefault();
+  });
+  window.addEventListener("photosbyelie:owneractionerror", (event) => {
+    setGalleryStatus(event.detail?.message || "Owner action failed.");
+  });
 
   if (localModerationEnabled) {
     window.addEventListener("keydown", async (event) => {

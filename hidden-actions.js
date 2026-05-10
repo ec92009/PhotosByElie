@@ -10,6 +10,7 @@
   const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
   let ownerBusyCount = 0;
   let ownerBusyMessage = "";
+  let queuedPhotoAction = Promise.resolve();
 
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
@@ -228,6 +229,11 @@
     }
   };
 
+  const enqueuePhotoAction = (action, photoId, extra = {}) => {
+    queuedPhotoAction = queuedPhotoAction.catch(() => {}).then(() => photoAction(action, photoId, extra));
+    return queuedPhotoAction;
+  };
+
   const readCountryAssignments = () => {
     if (!enabled) return {};
     try {
@@ -331,11 +337,19 @@
 
   const mark = async (photoId) => {
     if (!enabled || !photoId) return read();
-    if (read().includes(photoId)) return read();
+    const current = read();
+    if (current.includes(photoId)) return current;
     forgetReserveOnly([photoId]);
+    const nextItems = write([...current, photoId]);
     writeHistory([...readHistory(), photoId]);
-    await photoAction("hide", photoId);
-    return read();
+    enqueuePhotoAction("hide", photoId).catch((error) => {
+      const latest = read();
+      if (latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
+      window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
+        detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Blocked." },
+      }));
+    });
+    return nextItems;
   };
 
   const unmark = (photoId) => {

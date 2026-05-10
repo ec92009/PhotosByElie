@@ -213,7 +213,7 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
         ...item.options.map((option) => {
           const unitPrice = window.photosByElieOptionUnitPrice?.(option) || Number(option.price) || 0;
           const quantity = optionQuantity(option);
-          const frameText = option.type === "print" ? `; frame: ${option.frame?.label || "No frame"}` : "";
+          const frameText = option.type === "print" ? `; frame: ${frameLabel(option.frame)}` : "";
           const shippingHandling = optionShippingHandlingTotal(option);
           const shippingText = option.type === "print"
             ? `; S&H ${formatMoney(shippingHandling)}; limited-time discount -${formatMoney(shippingHandling)}`

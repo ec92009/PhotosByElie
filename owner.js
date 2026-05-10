@@ -9,6 +9,7 @@
   const countsRoot = document.querySelector("[data-owner-counts]");
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
+  const discardedCountRoot = document.querySelector("[data-owner-discarded-count]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
   const publishHiddenBlacklistButton = document.querySelector("[data-owner-publish-hidden-blacklist]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
@@ -286,6 +287,30 @@
     `).join("");
   };
 
+  const refreshDiscardedCount = async () => {
+    if (!discardedCountRoot) return;
+    try {
+      const json = async (path) => {
+        const href = window.photosByElieVersionedHref?.(path) || path;
+        const response = await fetch(href, { cache: "no-store" });
+        if (!response.ok) return {};
+        return response.json();
+      };
+      const [tombstone, cleanup] = await Promise.all([
+        json("./assets/discarded/discarded-photo-ids.json"),
+        json("./assets/discarded-media-manifest.json"),
+      ]);
+      const ids = new Set([
+        ...(Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : []),
+        ...(Array.isArray(tombstone.photos) ? tombstone.photos.map((photo) => photo?.id) : []),
+        ...(Array.isArray(cleanup.discardedPhotoIds) ? cleanup.discardedPhotoIds : []),
+      ].filter(Boolean));
+      discardedCountRoot.textContent = String(ids.size);
+    } catch {
+      discardedCountRoot.textContent = "0";
+    }
+  };
+
   const refreshCountsFromSource = async () => {
     try {
       await hiddenActions.syncFromPublishedBlacklist?.();
@@ -293,6 +318,7 @@
       // Keep the local owner list usable if the static blocked list cannot be fetched.
     }
     renderCounts();
+    refreshDiscardedCount();
   };
 
   const logUrlForTask = (task) => {
@@ -840,10 +866,16 @@
     });
   });
 
-  window.addEventListener("photosbyelie:hiddenchange", renderCounts);
+  window.addEventListener("photosbyelie:hiddenchange", () => {
+    renderCounts();
+    refreshDiscardedCount();
+  });
 
   reserveStore?.load?.().then(() => {
-    if (ownerAuth?.state?.available) renderCounts();
+    if (ownerAuth?.state?.available) {
+      renderCounts();
+      refreshDiscardedCount();
+    }
   });
   if (ownerAuth?.state?.available) {
     refreshCountsFromSource();

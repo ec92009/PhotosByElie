@@ -30,7 +30,7 @@ Date: 2026-05-10
 - Saturn is the steady-state source of truth for new developed photos. The catalog is a repair/backfill input only when the repo and cloud are temporarily out of sync.
 - Camera imports scan `/Volumes/Saturn/Pictures/LR/Camera`.
 - Leonardo/AI imports scan `/Volumes/Saturn/Pictures/LR/_All Leonardo`.
-- Owner-blocked/discarded photos are tombstoned: delete their R2 bytes, keep their IDs as permanent do-not-resurrect records.
+- Blocked and discarded are now separate Owner states. Blocked hides a photo from public galleries; discarded removes it from active catalog state, records a durable tombstone, and feeds public/private R2 media cleanup.
 - Uploaded masters, private render triplets, and public previews are treated as immutable media objects after upload. Normal Owner metadata/country edits mutate manifests/catalogs only; future Lightroom-style XMP sidecar saves should be an explicit Owner maintenance button.
 
 ## Automation
@@ -41,7 +41,7 @@ Date: 2026-05-10
 - The wrapper uses `.review-logs/cloud-media-sweep.lock`; if a prior sweep is active, the scheduled run exits without starting a second uploader.
 - The sweep:
   1. Pulls latest `main`.
-  2. Deletes R2 media for discarded tombstones.
+  2. Deletes R2 media for `assets/discarded/discarded-photo-ids.json` tombstones plus older cleanup history.
   3. Scans Saturn Camera and Leonardo developed-source folders.
   4. Imports/uploads only non-discarded candidates.
   5. Regenerates `photos-data.js`, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
@@ -54,7 +54,7 @@ Date: 2026-05-10
 
 - Reserve is no longer a product/review concept. `assets/reserve` is only an ignored local preview/import cache.
 - The old Expo cap is retired. The public catalog should include all eligible cloud-backed previews unless a photo is blocked/discarded or otherwise ineligible.
-- Discard is stronger than block: discarded photos should disappear from paid storage while their tombstone remains tracked.
+- Discard is stronger than block: Owner can press `D` in galleries or Blocked review to remove the photo from active catalog state, queue media deletion, and keep the tombstone tracked.
 - Large R2 operations should be resumable, one active sweep at a time, and checkpointed through Git.
 - Payment comes before buyer accounts. Guest checkout remains the first payment path.
 - Real Stripe Checkout is wired in code, but live payments are not ready until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout flows are verified.
@@ -91,7 +91,7 @@ Date: 2026-05-10
 - `npm test` passed after the sweep/automation tooling changes.
 - `npm run validate` passed in external media mode.
 - The private delivery sync probe uploaded live private render triplets and moved the manifest count upward before the automation wrapper was added.
-- Discard cleanup deleted the current discarded public preview objects from R2 and recorded the tombstones in `assets/discarded-media-manifest.json`.
+- Discard cleanup records durable IDs in `assets/discarded/discarded-photo-ids.json`; `assets/discarded-media-manifest.json` is now the generated cleanup record rather than the primary tombstone source.
 - Stripe wiring verification passed with `node --test worker/checkout-worker.test.mjs` (`10/10`) and `npm run validate`.
 - Translation verification passed through browser smoke checks on home, France gallery, basket, liked, and order pages with no console/page errors.
 - Gallery density shortcut verification passed in the built-in browser on `usa.html?v=71.25`: `G` changed grid `2 -> 3`, then `g` changed `3 -> 2`.

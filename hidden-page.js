@@ -181,9 +181,26 @@
       event.preventDefault();
       return;
     }
-    if (event.key.toLowerCase() !== "p") return;
     const selected = photos[selectedIndex];
     if (!selected) return;
+    if (event.key.toLowerCase() === "d") {
+      const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis removes it from Blocked and keeps a tombstone so imports do not bring it back.`);
+      if (!confirmed) {
+        event.preventDefault();
+        return;
+      }
+      try {
+        await hiddenActions.discard?.(selected.id);
+        selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
+        render();
+        setStatus(`${selected.title} discarded.`);
+      } catch (error) {
+        setStatus(error?.message || "Could not discard photo.");
+      }
+      event.preventDefault();
+      return;
+    }
+    if (event.key.toLowerCase() !== "p") return;
     try {
       await hiddenActions.promoteHidden(selected.id);
       selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));

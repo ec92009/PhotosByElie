@@ -273,6 +273,12 @@ def parse_args() -> argparse.Namespace:
         "--hidden-blacklist",
         type=Path,
         default=Path("assets/hidden/hidden-blacklist.json"),
+        help="Owner blocked tombstones. Matching photo ids are skipped before render/upload.",
+    )
+    parser.add_argument(
+        "--discarded-tombstone",
+        type=Path,
+        default=Path("assets/discarded/discarded-photo-ids.json"),
         help="Owner discard tombstones. Matching photo ids are skipped before render/upload.",
     )
     return parser.parse_args()
@@ -1316,7 +1322,10 @@ def load_discarded_photo_ids(path: Path) -> set[str]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return set()
-    values = payload.get("photo_ids") if isinstance(payload, dict) else []
+    values = []
+    if isinstance(payload, dict):
+        values = (payload.get("photo_ids") or []) + (payload.get("discardedPhotoIds") or [])
+        values += [photo.get("id") for photo in payload.get("photos") or [] if isinstance(photo, dict)]
     return {value for value in values or [] if isinstance(value, str) and value}
 
 
@@ -1607,7 +1616,11 @@ def main() -> int:
     args.source_root = source_root
     args.developed_root = args.developed_root.expanduser().resolve() if args.developed_root else None
     args.output_root = args.output_root.expanduser()
-    args.discarded_photo_ids = load_discarded_photo_ids(args.hidden_blacklist.expanduser())
+    args.discarded_photo_ids = (
+        load_discarded_photo_ids(args.hidden_blacklist.expanduser())
+        | load_discarded_photo_ids(args.discarded_tombstone.expanduser())
+        | load_discarded_photo_ids(Path("assets/discarded-media-manifest.json"))
+    )
     year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")

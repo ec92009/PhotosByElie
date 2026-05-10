@@ -352,6 +352,15 @@
     return nextItems;
   };
 
+  const discard = async (photoId) => {
+    if (!enabled || !photoId) return null;
+    forgetReserveOnly([photoId]);
+    removePromotionEverywhere(photoId);
+    const result = await photoAction("discard", photoId);
+    unmark(photoId);
+    return result;
+  };
+
   const unmark = (photoId) => {
     if (!enabled || !photoId) return read();
     forgetReserveOnly([photoId]);
@@ -465,6 +474,7 @@
     readCountryAssignments,
     readReserveOnly,
     assignUnknownsToCountry,
+    discard,
     promoteHidden,
     publishHiddenBlacklist,
     removeCollectionKeyword,

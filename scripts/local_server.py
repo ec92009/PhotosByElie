@@ -95,6 +95,9 @@ SOURCE_ROOT_CANDIDATES = [
 ]
 HIDDEN_BLACKLIST_PATH = HIDDEN_ASSET_ROOT / "hidden-blacklist.json"
 HIDDEN_BLACKLIST_R2_KEY = "hidden-blacklist.json"
+DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
+DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
+PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 
 
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
@@ -613,6 +616,110 @@ def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[d
                     )
                 )
     return items
+
+
+def _legacy_discarded_photo_ids(repo_root: Path) -> set[str]:
+    payload = _read_json_file(repo_root / DISCARDED_MEDIA_MANIFEST_PATH, {})
+    if not isinstance(payload, dict):
+        return set()
+    values = payload.get("discardedPhotoIds") or []
+    return {value for value in values if isinstance(value, str) and value}
+
+
+def _read_discarded_tombstone(repo_root: Path) -> dict:
+    payload = _read_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, {})
+    if not isinstance(payload, dict):
+        payload = {}
+    photos = payload.get("photos") if isinstance(payload.get("photos"), list) else []
+    photo_ids = set(_legacy_discarded_photo_ids(repo_root))
+    photo_ids.update(value for value in payload.get("photo_ids") or [] if isinstance(value, str) and value)
+    photo_ids.update(photo.get("id") for photo in photos if isinstance(photo, dict) and isinstance(photo.get("id"), str))
+    return {
+        "format": payload.get("format") or "photosbyelie-discarded-photo-ids",
+        "version": 1,
+        "updated_at": payload.get("updated_at"),
+        "photo_ids": sorted(photo_ids),
+        "public_preview_keys": sorted({
+            key
+            for key in payload.get("public_preview_keys") or []
+            if isinstance(key, str) and key
+        }),
+        "private_keys": sorted({
+            key
+            for key in payload.get("private_keys") or []
+            if isinstance(key, str) and key
+        }),
+        "photos": [photo for photo in photos if isinstance(photo, dict) and photo.get("id")],
+    }
+
+
+def _discarded_photo_ids(repo_root: Path) -> set[str]:
+    return set(_read_discarded_tombstone(repo_root).get("photo_ids") or [])
+
+
+def _source_basename(source: dict) -> str:
+    return Path(str(source.get("path") or "")).name
+
+
+def _safe_r2_source_name(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "source"
+
+
+def _discarded_private_keys(photo: dict) -> list[str]:
+    photo_id = str(photo.get("id") or "")
+    if not photo_id:
+        return []
+    keys = []
+    for source in photo.get("sourceFiles") or []:
+        if not isinstance(source, dict):
+            continue
+        source_name = _source_basename(source)
+        if not source_name:
+            continue
+        keys.append(f"{DEFAULT_PRIVATE_PREFIX.strip('/')}/{photo_id}/{source_name}")
+        safe_name = _safe_r2_source_name(source_name)
+        keys.extend(f"renders/{photo_id}/{safe_name}-{product_id}.jpg" for product_id in PRIVATE_RENDER_PRODUCTS)
+    return sorted(set(keys))
+
+
+def _discarded_delete_items(repo_root: Path, photo: dict, source_slug: str) -> list[UploadItem]:
+    placeholder = repo_root / DISCARDED_TOMBSTONE_PATH
+    items = []
+    seen = set()
+    for bucket, keys in (
+        (DEFAULT_PUBLIC_BUCKET, _hidden_public_preview_keys(photo, source_slug)),
+        (DEFAULT_PRIVATE_BUCKET, _discarded_private_keys(photo)),
+    ):
+        for key in keys:
+            identifier = f"{bucket}/{key}"
+            if identifier in seen:
+                continue
+            seen.add(identifier)
+            items.append(
+                UploadItem(
+                    bucket=bucket,
+                    key=key,
+                    path=placeholder,
+                    content_type=mimetypes.guess_type(key)[0] or "application/octet-stream",
+                )
+            )
+    return items
+
+
+def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = None) -> dict:
+    payload = _read_discarded_tombstone(repo_root)
+    photos = list(payload.get("photos") or [])
+    if discarded_photo:
+        photo_id = discarded_photo.get("id")
+        photos = [photo for photo in photos if photo.get("id") != photo_id]
+        photos.append(discarded_photo)
+        payload["photo_ids"] = sorted(set(payload.get("photo_ids") or []) | {photo_id})
+        payload["public_preview_keys"] = sorted(set(payload.get("public_preview_keys") or []) | set(discarded_photo.get("public_preview_keys") or []))
+        payload["private_keys"] = sorted(set(payload.get("private_keys") or []) | set(discarded_photo.get("private_keys") or []))
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    payload["photos"] = sorted(photos, key=lambda photo: str(photo.get("id") or ""))
+    _write_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, payload)
+    return payload
 
 
 def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
@@ -1410,7 +1517,7 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
 def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     action = payload.get("action")
     photo_id = payload.get("photo_id")
-    if action not in {"hide", "undo-hide", "promote-hidden", "return-to-reserve", "assign-country", "sync-country-keywords", "remove-collection-keyword", "update-photo-metadata", "publish-hidden-blacklist", "wipe-hidden-r2"}:
+    if action not in {"hide", "undo-hide", "promote-hidden", "return-to-reserve", "discard", "assign-country", "sync-country-keywords", "remove-collection-keyword", "update-photo-metadata", "publish-hidden-blacklist", "wipe-hidden-r2"}:
         raise ValueError("unsupported photo action")
     if action not in {"assign-country", "sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2"} and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
@@ -1425,6 +1532,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     ensure_state_folders(repo_root / "assets/expo")
     ensure_state_folders(repo_root / "assets/reserve")
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
+    (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)
 
     expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
@@ -1592,6 +1700,56 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "skipped": skipped,
             "action_log": action_log,
             "keyword_updates": keyword_updates,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
+
+    if action == "discard":
+        hidden_found = _find_and_remove(hidden_groups, photo_id)
+        expo_found = _find_and_remove(expo_groups, photo_id)
+        reserve_found = _find_and_remove(reserve_groups, photo_id)
+        found = hidden_found or expo_found or reserve_found
+        source_state = "hidden" if hidden_found else "expo" if expo_found else "reserve"
+        if not found:
+            if photo_id in _discarded_photo_ids(repo_root):
+                site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+                tombstone = _write_discarded_tombstone(repo_root)
+                return {
+                    "ok": True,
+                    "action": action,
+                    "photo_id": photo_id,
+                    "message": "already discarded",
+                    "discarded_count": len(tombstone.get("photo_ids") or []),
+                    "worker_catalog": worker_catalog,
+                    "site": site_state,
+                }
+            raise ValueError(f"photo not found in Expo, Reserve, or Blocked: {photo_id}")
+        source_slug, source_photo = found
+        _source_state, original_slug = _hidden_provenance(source_photo, "expo", source_slug)
+        source_assets = _photo_asset_paths(source_photo)
+        public_preview_keys = _hidden_public_preview_keys(source_photo, original_slug)
+        private_keys = _discarded_private_keys(source_photo)
+        tombstone_entry = {
+            "id": photo_id,
+            "title": source_photo.get("title") or photo_id,
+            "discarded_at": datetime.now(timezone.utc).isoformat(),
+            "from_state": source_state,
+            "from_slug": source_slug,
+            "source_slug": original_slug,
+            "asset_paths": source_assets,
+            "public_preview_keys": public_preview_keys,
+            "private_keys": private_keys,
+        }
+        tombstone = _write_discarded_tombstone(repo_root, tombstone_entry)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        r2_task = _start_r2_delete_task(photo_id, _discarded_delete_items(repo_root, source_photo, original_slug), "discarded-media-wipe")
+        return {
+            "ok": True,
+            "action": action,
+            "photo_id": photo_id,
+            "moved": {"from": source_state, "from_slug": source_slug, "to": "discarded", "to_slug": original_slug},
+            "discarded_count": len(tombstone.get("photo_ids") or []),
+            "r2_delete_task": r2_task,
             "worker_catalog": worker_catalog,
             "site": site_state,
         }

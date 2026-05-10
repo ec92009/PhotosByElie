@@ -13,7 +13,10 @@ const valueFor = (name, fallback = "") => {
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const publicBucket = valueFor("--public-bucket", "photosbyelie-public");
 const privateBucket = valueFor("--private-bucket", "photosbyelie-private");
-const tombstonePath = valueFor("--hidden-blacklist", "assets/hidden/hidden-blacklist.json");
+const tombstonePath = valueFor(
+  "--discarded-tombstone",
+  valueFor("--hidden-blacklist", "assets/discarded/discarded-photo-ids.json")
+);
 const outputPath = valueFor("--output", "assets/discarded-media-manifest.json");
 const privateInventoryPath = valueFor("--private-inventory", ".review-logs/r2-private-inventory.json");
 const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-public-preview-ids.json");
@@ -148,9 +151,17 @@ const deleteKeys = async (bucket, keys) => {
 };
 
 const tombstone = await readJson(tombstonePath, {});
-const hiddenIds = new Set((Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : [])
+const previousManifest = await readJson(outputPath, {});
+const discardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : [])
   .filter((id) => typeof id === "string" && id));
-if (!hiddenIds.size) {
+(Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
+  .filter((id) => typeof id === "string" && id)
+  .forEach((id) => discardedIds.add(id));
+(Array.isArray(tombstone.photos) ? tombstone.photos : [])
+  .map((photo) => photo?.id)
+  .filter((id) => typeof id === "string" && id)
+  .forEach((id) => discardedIds.add(id));
+if (!discardedIds.size) {
   await writeJson(outputPath, {
     schema: "photosbyelie.discarded-media-manifest.v1",
     updatedAt: new Date().toISOString(),
@@ -159,13 +170,16 @@ if (!hiddenIds.size) {
     publicKeys: [],
     privateKeys: [],
   });
-  console.log("No hidden/discarded photo ids found.");
+  console.log("No discarded photo ids found.");
   process.exit(0);
 }
 
 const publicKeys = new Set((Array.isArray(tombstone.public_preview_keys) ? tombstone.public_preview_keys : [])
   .filter((key) => typeof key === "string" && key));
-for (const id of hiddenIds) {
+(Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : [])
+  .filter((key) => typeof key === "string" && key)
+  .forEach((key) => publicKeys.add(key));
+for (const id of discardedIds) {
   publicKeys.add(`expo/${id}_900.jpg`);
   publicKeys.add(`expo/${id}_1800.jpg`);
 }
@@ -175,23 +189,30 @@ const [masterKeys, renderKeys] = await Promise.all([
   listPrefix(privateBucket, "masters/"),
   listPrefix(privateBucket, "renders/"),
 ]);
-const privateKeys = [...masterKeys, ...renderKeys].filter((key) => hiddenIds.has(key.split("/")[1]));
+const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => discardedIds.has(key.split("/")[1])));
+(Array.isArray(tombstone.private_keys) ? tombstone.private_keys : [])
+  .filter((key) => typeof key === "string" && key)
+  .forEach((key) => privateKeys.add(key));
+(Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : [])
+  .filter((key) => typeof key === "string" && key)
+  .filter((key) => discardedIds.has(keyPhotoId(key)))
+  .forEach((key) => privateKeys.add(key));
 
 const deletedPublic = await deleteKeys(publicBucket, [...publicKeys].sort());
-const deletedPrivate = await deleteKeys(privateBucket, privateKeys.sort());
+const deletedPrivate = await deleteKeys(privateBucket, [...privateKeys].sort());
 
 if (!dryRun) {
   const privateInventory = await readJson(privateInventoryPath, null);
   if (privateInventory && typeof privateInventory === "object") {
     const deletedPrivateSet = new Set(deletedPrivate);
-    privateInventory.masterKeys = (privateInventory.masterKeys || []).filter((key) => !deletedPrivateSet.has(key) && !hiddenIds.has(keyPhotoId(key)));
-    privateInventory.renderKeys = (privateInventory.renderKeys || []).filter((key) => !deletedPrivateSet.has(key) && !hiddenIds.has(keyPhotoId(key)));
+    privateInventory.masterKeys = (privateInventory.masterKeys || []).filter((key) => !deletedPrivateSet.has(key) && !discardedIds.has(keyPhotoId(key)));
+    privateInventory.renderKeys = (privateInventory.renderKeys || []).filter((key) => !deletedPrivateSet.has(key) && !discardedIds.has(keyPhotoId(key)));
     privateInventory.generatedAt = new Date().toISOString();
     await writeJson(privateInventoryPath, privateInventory);
   }
   const publicPreviewIds = await readJson(publicPreviewIdsPath, null);
   if (publicPreviewIds && typeof publicPreviewIds === "object" && Array.isArray(publicPreviewIds.complete_pairs)) {
-    const deletedIds = new Set([...hiddenIds]);
+    const deletedIds = new Set([...discardedIds]);
     publicPreviewIds.complete_pairs = publicPreviewIds.complete_pairs.filter((id) => !deletedIds.has(id));
     publicPreviewIds.generatedAt = new Date().toISOString();
     await writeJson(publicPreviewIdsPath, publicPreviewIds);
@@ -204,9 +225,9 @@ await writeJson(outputPath, {
   dryRun,
   publicBucket,
   privateBucket,
-  discardedPhotoIds: [...hiddenIds].sort(),
+  discardedPhotoIds: [...discardedIds].sort(),
   publicKeys: deletedPublic,
   privateKeys: deletedPrivate,
 });
 
-console.log(`Done. ${dryRun ? "Would delete" : "Deleted"} ${deletedPublic.length} public and ${deletedPrivate.length} private object references for ${hiddenIds.size} discarded photos.`);
+console.log(`Done. ${dryRun ? "Would delete" : "Deleted"} ${deletedPublic.length} public and ${deletedPrivate.length} private object references for ${discardedIds.size} discarded photos.`);

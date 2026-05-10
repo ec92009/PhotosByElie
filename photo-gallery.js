@@ -50,6 +50,7 @@ const ensureGalleryKeyboardHint = () => {
   hint.innerHTML = [
     "Owner shortcuts:",
     `${shortcutKey("X")} block`,
+    `${shortcutKey("D")} discard`,
     `${shortcutKey("L")} like`,
     `${shortcutKey("U")} undo`,
     `${shortcutKey("T")} title`,
@@ -1003,6 +1004,25 @@ if (galleryRoot && gallery) {
           setGalleryStatus(`${selected.title} moved to Blocked.`);
         } catch (error) {
           setGalleryStatus(error?.message || "Could not move photo to Blocked.");
+        }
+        event.preventDefault();
+        return;
+      }
+      if (event.key.toLowerCase() === "d") {
+        const selected = photos[selectedIndex];
+        if (!selected) return;
+        const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis removes it from the catalog and keeps a tombstone so imports do not bring it back.`);
+        if (!confirmed) {
+          event.preventDefault();
+          return;
+        }
+        try {
+          await hiddenActions.discard?.(selected.id);
+          selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
+          renderGallery();
+          setGalleryStatus(`${selected.title} discarded.`);
+        } catch (error) {
+          setGalleryStatus(error?.message || "Could not discard photo.");
         }
         event.preventDefault();
         return;

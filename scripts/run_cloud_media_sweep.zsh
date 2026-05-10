@@ -52,7 +52,7 @@ fi
 done_phase prepare
 
 phase discard-start "Delete discarded media"
-node scripts/delete_discarded_r2_media.mjs --delete --request-timeout-ms 180000 --retries 4
+node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 done_phase discard-start
 
 phase camera "Import Camera sources"
@@ -61,7 +61,8 @@ python3 scripts/build_lightroom_thumbnails.py \
   --output-root assets/reserve \
   --r2-upload both \
   --r2-private-renders \
-  --hidden-blacklist assets/hidden/hidden-blacklist.json
+  --hidden-blacklist assets/hidden/hidden-blacklist.json \
+  --discarded-tombstone assets/discarded/discarded-photo-ids.json
 done_phase camera
 
 phase leonardo "Import Leonardo sources"
@@ -72,7 +73,8 @@ python3 scripts/build_lightroom_thumbnails.py \
   --force-country ai \
   --r2-upload both \
   --r2-private-renders \
-  --hidden-blacklist assets/hidden/hidden-blacklist.json
+  --hidden-blacklist assets/hidden/hidden-blacklist.json \
+  --discarded-tombstone assets/discarded/discarded-photo-ids.json
 done_phase leonardo
 
 phase catalog "Export catalog"
@@ -98,7 +100,7 @@ node scripts/sync_private_deliverables.mjs "${SYNC_ARGS[@]}"
 done_phase private
 
 phase discard-final "Final discard cleanup"
-node scripts/delete_discarded_r2_media.mjs --delete --request-timeout-ms 180000 --retries 4
+node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 done_phase discard-final
 phase storage "Refresh storage estimate"
 node scripts/write_storage_estimate.mjs

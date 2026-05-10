@@ -132,6 +132,24 @@ const isPanorama = (photo) => {
   return Boolean(dimensions?.width && dimensions?.height && dimensions.width / dimensions.height >= 2.1);
 };
 
+const basketUsesWideRows = () => window.matchMedia?.("(min-width: 761px)")?.matches ?? true;
+
+const syncBasketPreviewHeights = () => {
+  document.querySelectorAll(".basket-item").forEach((item) => {
+    const thumb = item.querySelector(".basket-thumb");
+    const main = item.querySelector(".basket-item-main");
+    if (!thumb || !main) return;
+    if (!basketUsesWideRows()) {
+      thumb.style.removeProperty("--basket-thumb-height");
+      return;
+    }
+    const mainHeight = Math.ceil(main.getBoundingClientRect().height);
+    if (mainHeight > 0) {
+      thumb.style.setProperty("--basket-thumb-height", `${mainHeight}px`);
+    }
+  });
+};
+
 const fallbackGuid = () => [
   Date.now().toString(16),
   Math.random().toString(16).slice(2, 10),
@@ -509,7 +527,7 @@ const renderBasket = () => {
         ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}"/>` : ""}
         <span>${item.title}</span>
       </a>
-      <div>
+      <div class="basket-item-main">
         <p class="eyebrow">${item.collection || "Collection"}</p>
         <h3>${item.title}</h3>
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
@@ -531,6 +549,8 @@ const renderBasket = () => {
       </div>
     </article>
   `}).join("");
+
+  window.requestAnimationFrame(syncBasketPreviewHeights);
 
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -608,6 +628,8 @@ const renderBasket = () => {
 
 renderBasket();
 syncCheckoutControls();
+window.addEventListener("resize", syncBasketPreviewHeights);
+window.addEventListener("load", syncBasketPreviewHeights);
 window.addEventListener("photosbyelie:languagechange", () => {
   renderBasket();
   syncCheckoutControls();

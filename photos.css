@@ -1772,7 +1772,7 @@ body.detail-fullscreen-active{
 .basket-thumb{
   width:100%;
   min-height:0;
-  height:auto;
+  height:var(--basket-thumb-height, auto);
   align-self:start;
   aspect-ratio:var(--photo-aspect-ratio,16 / 9);
 }
@@ -1785,7 +1785,7 @@ body.detail-fullscreen-active{
   inset:0;
   width:100%;
   height:100%;
-  object-fit:contain;
+  object-fit:cover;
   object-position:center;
   background:var(--bg);
 }
@@ -2041,6 +2041,7 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   .basket-thumb{
     width:100%;
+    height:auto;
   }
   .basket-total-band{
     top:90px;

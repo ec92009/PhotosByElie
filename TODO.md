@@ -40,18 +40,26 @@ Last updated: 2026-05-10
    - Keep checkout validation tied to the published price list so the Worker and public basket agree on SKU IDs, labels, currencies, and amounts.
    - Show a clear publish/version step for price changes before they affect buyers.
 
-3. **Add optional Owner XMP sidecar save.**
+3. **Replace keyword removal with Owner keyword cleanup modal.**
+   - Replace the current narrow collection-keyword removal control with one Owner-page button for keyword cleanup across all countries plus AI.
+   - Open a modal listing every current keyword with its photo count and a checkbox.
+   - Include Done to close without changes.
+   - Include Delete checked with a confirmation step before removing keywords from catalog metadata.
+   - Apply deletes across all countries plus AI; do not rewrite already uploaded masters, private renders, public previews, or XMP sidecars.
+   - Show before/after counts and refresh Owner counts/status after completion.
+
+4. **Add optional Owner XMP sidecar save.**
    - Add a deliberate Owner button to write Lightroom-style XMP sidecars beside masters from manifest metadata.
    - Keep this separate from normal title/keyword/country edits so media and sidecars are not quietly rewritten.
    - Show counts, destination paths, and errors before/after the sidecar save.
 
-4. **Set up Stripe test mode.**
+5. **Set up Stripe test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
    - Keep live keys out until test mode proves the full flow.
 
-5. **Run Stripe test checkout end to end.**
+6. **Run Stripe test checkout end to end.**
    - Test successful payment.
    - Test 3D Secure/authentication-required payment.
    - Test declined-card payment.
@@ -59,13 +67,13 @@ Last updated: 2026-05-10
    - Confirm the Worker builds the ZIP from private R2 and the order page exposes the download.
    - Cover paid-but-ZIP-pending, expired download link, missing private asset, and retryable Worker error states.
 
-6. **Make order records production-durable.**
+7. **Make order records production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
    - Keep private R2 as delivery ZIP storage.
    - Rate-limit download links.
 
-7. **Harden owner account/identity.**
+8. **Harden owner account/identity.**
    - Keep the localhost helper boundary as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
    - Rename `owner-auth.js` to reflect current reality, such as `owner-helper-session.js`, because it now checks helper availability rather than passwords.
@@ -73,37 +81,37 @@ Last updated: 2026-05-10
    - Add clear confirmation around future discard/R2 delete actions.
    - Add browser smoke coverage for locked helper and unauthorized mutation states.
 
-8. **Move public media off the checkout Worker bridge.**
+9. **Move public media off the checkout Worker bridge.**
    - Attach an R2 custom domain or equivalent public media endpoint.
    - Update `media-config.js`.
    - Retest GitHub Pages gallery/detail/basket media loading.
    - Keep the Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-9. **Design buyer accounts.**
+10. **Design buyer accounts.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-10. **Split gallery/catalog data by collection.**
+11. **Split gallery/catalog data by collection.**
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.
 
-11. **Harden browser smoke coverage.**
+12. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner block/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
-12. **Extend Owner dashboard.**
+13. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, blocked queue, unknown queue, and active sweep status.
    - Add counters and refresh buttons to the Blocked sync / Delete blocked previews panel so Owner can see how many blocked IDs are published and how many blocked preview objects still need cleanup.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-13. **Keep publish validation as the gate.**
+14. **Keep publish validation as the gate.**
    - Validate blocked/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
@@ -111,12 +119,12 @@ Last updated: 2026-05-10
    - Add generated JS/JSON payload size budgets for catalog and gallery performance.
    - Keep `npm run validate` mandatory before publish.
 
-14. **Repair and refresh architecture artifacts.**
+15. **Repair and refresh architecture artifacts.**
    - Document which manifests, generated catalogs, deploy artifacts, local caches, and ignored asset folders are sources of truth.
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-15. **Backburner: repo layout cleanup.**
+16. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
@@ -125,7 +133,7 @@ Last updated: 2026-05-10
 ## Completed Recently
 
 - Added gallery search on public/Owner gallery surfaces with title and keyword matching.
-- Added collection-wide keyword removal for Owner, using manifest-only metadata changes.
+- Added an initial collection-wide keyword removal path for Owner; this should be replaced by the planned checkbox modal workflow.
 - Split the homepage first render from the full catalog: `index.html` now uses `home-data.js` immediately and downloads `photos-data.js` in the background.
 - Accepted the private R2 deliverable coverage / flat ZIP input check as done for now and retired it from the active backlog.
 - Widened basket thumbnails to about half the row on desktop, with panoramas aligned to the top of the basket card.

@@ -8,8 +8,8 @@ Date: 2026-05-10
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Current visible build: `v71.8`
-- Public catalog now publishes all eligible cloud-backed previews, not a capped sample: `10,133` catalog photos.
-- Current catalog counts: France `328`, USA `162`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`, Unknown `0`.
+- Analyzed catalog contains `10,133` photos; public Expo publishes `5,792` eligible cloud-backed previews after blocked exclusions, not a capped sample.
+- Current Expo catalog counts: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`, Unknown `0`.
 - Public preview storage is flat and country-free: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
 - Country, provenance, legacy key references, private master keys, and private render keys live in tracked metadata, especially `assets/media-sidecar.json`.
 - Owner Current state is intentionally simple: `10,133` analyzed, `4,341` blocked, and `5,792` Expo photos. The earlier extra `18` stale local blocked records were removed from the local ignored Owner state.
@@ -70,7 +70,7 @@ Date: 2026-05-10
 - Current practical next step is to create/sign into Stripe on the Mac, then configure test-mode Worker secrets and webhook endpoint.
 - Commit pushed for the Stripe wiring: `f0e1746 photosbyelie: wire Stripe checkout`.
 - The Owner dashboard was tightened while the private backfill sweep ran: Sign out moved to the header, the Owner hero was reduced to a compact heading, Hidden and Hidden sync were grouped together, dark-mode header buttons were made more visible, and the R2 sweep card now uses stacked progress bars.
-- The active sweep progress bar now uses the fixed catalog denominator (`10,133`) instead of adding live log progress to checkpointed manifest missing counts. The earlier `13,615`-style denominator was a moving target caused by double-counting across two live signals.
+- The active sweep progress bar now uses active-catalog coverage instead of adding live log progress to checkpointed manifest missing counts. The earlier `13,615`-style denominator was a moving target caused by double-counting across two live signals.
 - Started the pre-launch translation promise while avoiding media-pipeline changes: public-facing pages now share an English/French/Spanish translation layer for navigation, homepage copy, gallery filters/statuses, detail actions, basket/liked flows, and order-status copy. Owner-only tooling remains English-only for now.
 - Owner language stays English-only; pressing the language button in Owner gives a small beep instead of pretending to switch languages.
 - Owner password protection was removed for localhost use; the local helper server is the gate for mutation endpoints.
@@ -103,7 +103,7 @@ Date: 2026-05-10
 10. **Harden Owner identity path.** Keep localhost helper behavior clear and decide production Owner identity.
 11. **Move public preview serving off the checkout Worker bridge.** Attach an R2 custom domain or equivalent media endpoint.
 12. **Design buyer accounts after guest checkout works.** Model saved orders, re-downloads, email verification, and recovery.
-13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `10,133` photo records.
+13. **Split homepage data from the full catalog.** Serve a small homepage manifest instead of all `5,792` Expo photo records.
 14. **Split gallery/catalog data by collection.** Load only the current collection catalog on gallery pages.
 15. **Harden browser smoke coverage.** Cover public flows, language toggles, Owner block/discard, Unknown assignment, and large-catalog performance.
 16. **Extend Owner dashboard.** Surface latest sweep result and a guided ingest/classify/block/validate/publish flow.

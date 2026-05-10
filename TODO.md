@@ -5,7 +5,7 @@ Last updated: 2026-05-10
 ## Current Facts
 
 - Local visible build: `v71.8`.
-- Public catalog validates in external media mode with `10,133` photos: France `328`, USA `162`, Spain `169`, Mexico `2`, AI/Leonardo `9,253`, Portugal `217`, Slovakia `2`.
+- Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless hidden/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
 - Buyer deliverables are private and unwatermarked: full developed sources under `masters/...`, JPG 1/3/6 MP files under `renders/...`.
@@ -108,7 +108,7 @@ Last updated: 2026-05-10
 14. **Split homepage data from the full catalog.**
    - Replace the homepage `photos-data.js` dependency with a small homepage manifest.
    - Include only collection names, counts, links, and enough representative preview candidates for the hero stack and collection rail.
-   - Keep the initial homepage payload focused on the 14 visible previews instead of the full `10,133`-photo catalog.
+   - Keep the initial homepage payload focused on the 14 visible previews instead of the full `5,792`-photo Expo catalog.
 
 15. **Split gallery/catalog data by collection.**
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.

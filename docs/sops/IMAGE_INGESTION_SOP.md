@@ -11,10 +11,12 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 ## Source Convention
 
 - Canonical Lightroom camera archive: `/Volumes/Saturn/Pictures/LR/Camera`
+- Apple Photos album exports for small source-agnostic import tests: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, or `.tiff`.
 - Do not import DNG, NEF, or other raw camera files. Develop/export them first.
 - Lightroom sidecars may sit next to the image files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
+- Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites

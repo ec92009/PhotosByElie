@@ -65,6 +65,20 @@ python3 scripts/build_lightroom_thumbnails.py \
   --discarded-tombstone assets/discarded/discarded-photo-ids.json
 done_phase camera
 
+APPLE_PHOTO_ALBUMS_ROOT="/Volumes/Saturn/Pictures/LR/Apple Photo Albums"
+if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
+  phase apple-photo-albums "Import Apple Photos album sources"
+  python3 scripts/build_lightroom_thumbnails.py \
+    --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
+    --output-root assets/reserve \
+    --select all \
+    --r2-upload both \
+    --r2-private-renders \
+    --hidden-blacklist assets/hidden/hidden-blacklist.json \
+    --discarded-tombstone assets/discarded/discarded-photo-ids.json
+  done_phase apple-photo-albums
+fi
+
 phase leonardo "Import Leonardo sources"
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \

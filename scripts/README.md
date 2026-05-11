@@ -41,6 +41,16 @@ python3 scripts/build_lightroom_thumbnails.py \
   --batch-size 50
 ```
 
+For Apple Photos album exports, folder membership is the selection signal, but country inference should still decide the gallery bucket:
+
+```bash
+python3 scripts/build_lightroom_thumbnails.py \
+  --source-root "/Volumes/Saturn/Pictures/LR/Apple Photo Albums" \
+  --output-root assets/reserve \
+  --select all \
+  --batch-size 50
+```
+
 Outputs:
 
 - `assets/reserve/<country>/*_900.jpg`: watermarked gallery thumbnails.
@@ -236,7 +246,7 @@ For an already-published photo, render/upload just its private JPG deliverables:
 zsh -ic 'node scripts/render_private_deliverables.mjs --photo-id <photo-id>'
 ```
 
-On David, `render_private_deliverables.mjs` first looks for the developed file under mounted local source roots such as `/Volumes/Saturn/Pictures/LR/Camera`, then falls back to private R2 only if the local master is not present. Add `--source-root /path/to/developed/files` or set `PBE_DELIVERY_SOURCE_ROOTS` when the developed corpus is mounted somewhere else. If S3 backend credentials are present, the private render and importer upload paths use the S3 backend automatically; you can also force it explicitly:
+On David, `render_private_deliverables.mjs` first looks for the developed file under mounted local source roots such as `/Volumes/Saturn/Pictures/LR/Camera` and `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`, then falls back to private R2 only if the local master is not present. Add `--source-root /path/to/developed/files` or set `PBE_DELIVERY_SOURCE_ROOTS` when the developed corpus is mounted somewhere else. If S3 backend credentials are present, the private render and importer upload paths use the S3 backend automatically; you can also force it explicitly:
 
 ```bash
 PBE_R2_BACKEND=s3 \

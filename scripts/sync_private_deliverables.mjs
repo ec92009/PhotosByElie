@@ -185,10 +185,13 @@ const run = (command, commandArgs, options = {}) => new Promise((resolve, reject
 
 const defaultRoots = [
   "/Volumes/Saturn/Pictures/LR/Camera",
+  "/Volumes/Saturn/Pictures/LR/Apple Photo Albums",
   "/Volumes/Saturn/Pictures/LR/_All Leonardo",
   "/Volumes/Saturn-1/Pictures/LR/Camera",
+  "/Volumes/Saturn-1/Pictures/LR/Apple Photo Albums",
   "/Volumes/Saturn-1/Pictures/LR/_All Leonardo",
   path.join(os.homedir(), "Pictures/LR/Camera"),
+  path.join(os.homedir(), "Pictures/LR/Apple Photo Albums"),
   path.join(os.homedir(), "Pictures/LR/_All Leonardo"),
 ];
 const sourceRoots = [...sourceRootArgs, ...defaultRoots];

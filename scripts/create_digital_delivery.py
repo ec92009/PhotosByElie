@@ -19,7 +19,10 @@ from pathlib import Path
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn-1/Pictures/LR/Camera"),
+    Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
+    Path("/Volumes/Saturn-1/Pictures/LR/Apple Photo Albums"),
     Path.home() / "Pictures/LR/Camera",
+    Path.home() / "Pictures/LR/Apple Photo Albums",
     Path.home() / "Pictures/LR/2024",
     Path.home() / "Pictures/LR",
 ]

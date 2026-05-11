@@ -46,8 +46,14 @@ const sourceType = (source) => String(source?.type || basename(source?.path).spl
 const rawTypes = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 const defaultSourceRoots = [
   "/Volumes/Saturn/Pictures/LR/Camera",
+  "/Volumes/Saturn/Pictures/LR/Apple Photo Albums",
+  "/Volumes/Saturn/Pictures/LR/_All Leonardo",
   "/Volumes/Saturn-1/Pictures/LR/Camera",
+  "/Volumes/Saturn-1/Pictures/LR/Apple Photo Albums",
+  "/Volumes/Saturn-1/Pictures/LR/_All Leonardo",
   path.join(os.homedir(), "Pictures/LR/Camera"),
+  path.join(os.homedir(), "Pictures/LR/Apple Photo Albums"),
+  path.join(os.homedir(), "Pictures/LR/_All Leonardo"),
   path.join(os.homedir(), "Pictures/LR/2024"),
 ];
 

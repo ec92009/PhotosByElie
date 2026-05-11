@@ -87,10 +87,12 @@ COLLECTION_KEYWORD_TARGETS = {
 }
 SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
+    Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
     Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
     Path("/Volumes/Saturn/Pictures/LR"),
     Path("/Volumes/Saturn"),
     Path.home() / "Pictures/LR/Camera",
+    Path.home() / "Pictures/LR/Apple Photo Albums",
     Path.home() / "Pictures/LR/_All Leonardo",
 ]
 HIDDEN_BLACKLIST_PATH = HIDDEN_ASSET_ROOT / "hidden-blacklist.json"

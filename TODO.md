@@ -13,6 +13,7 @@ Last updated: 2026-05-11
 - RAW files are not for the public site or cloud storage. Developed sources only.
 - Saturn is the upstream source for new developed photos:
   - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
+  - Apple Photos album exports: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
 - Reserve is only an ignored local import/preview cache. It is not a long-term review state.
 - Blocked and discarded are separate tombstone concepts. Blocked hides a photo from galleries while leaving media in place until preview cleanup; discarded removes it from active catalog state and feeds R2 media cleanup while keeping a permanent do-not-resurrect record.

@@ -17,6 +17,8 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Lightroom sidecars may sit next to the image files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
+- Keep Apple Photos still-image exports at full pixel size. If explicit JPEG quality control is needed, post-process exported corrected JPEGs to quality 90 without resizing; do not switch to RAW/NEF for the public pipeline.
+- MOV/MP4 video exports are intentionally ignored by the current still-photo importer until the video pipeline is designed.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites

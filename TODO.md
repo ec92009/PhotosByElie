@@ -15,6 +15,8 @@ Last updated: 2026-05-11
   - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
   - Apple Photos album exports: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
+- Apple Photos album stills should stay full pixel size when exported/imported. If we need explicit JPEG control, normalize to JPEG quality 90 without resizing after export; Photos AppleScript does not expose a reliable quality knob.
+- Video import and presentation are not part of the current photo pipeline. Apple Photos mixed-album tests can export MOV files, but videos are backlog until we design 4K source handling, thumbnails, playback, storage, and checkout rules.
 - Reserve is only an ignored local import/preview cache. It is not a long-term review state.
 - Blocked and discarded are separate tombstone concepts. Blocked hides a photo from galleries while leaving media in place until preview cleanup; discarded removes it from active catalog state and feeds R2 media cleanup while keeping a permanent do-not-resurrect record.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
@@ -98,21 +100,28 @@ Last updated: 2026-05-11
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.
 
-12. **Harden browser smoke coverage.**
+12. **Design video import and presentation pipeline.**
+   - Decide whether videos are public gallery items, Owner-only review items, buyer deliverables, or a separate collection type.
+   - Preserve 4K where available; determine whether that requires original video export rather than Photos' normal rendered export.
+   - Generate video thumbnails/posters, duration metadata, orientation, codec/resolution fields, and gallery cards that do not confuse still-photo purchase flows.
+   - Add R2 storage rules for public previews/posters and private video masters or deliverables.
+   - Keep MOV/MP4 files out of the existing still-photo importer until this is deliberately implemented.
+
+13. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner block/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
-13. **Extend Owner dashboard.**
+14. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, blocked queue, unknown queue, and active sweep status.
    - Add counters and refresh buttons to the Blocked sync / Delete blocked previews panel so Owner can see how many blocked IDs are published and how many blocked preview objects still need cleanup.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-14. **Keep publish validation as the gate.**
+15. **Keep publish validation as the gate.**
    - Validate blocked/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
@@ -120,12 +129,12 @@ Last updated: 2026-05-11
    - Add generated JS/JSON payload size budgets for catalog and gallery performance.
    - Keep `npm run validate` mandatory before publish.
 
-15. **Repair and refresh architecture artifacts.**
+16. **Repair and refresh architecture artifacts.**
    - Document which manifests, generated catalogs, deploy artifacts, local caches, and ignored asset folders are sources of truth.
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-16. **Backburner: repo layout cleanup.**
+17. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.

@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=72.0"/>
-  <link rel="stylesheet" href="./styles.css?v=72.0"/>
-  <link rel="stylesheet" href="./photos.css?v=72.0"/>
+  <link rel="stylesheet" href="./shared.css?v=72.1"/>
+  <link rel="stylesheet" href="./styles.css?v=72.1"/>
+  <link rel="stylesheet" href="./photos.css?v=72.1"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v72.0</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v72.1</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -46,6 +46,29 @@
           <h2>Country metadata</h2>
           <p>Stamp each gallery photo with its country in the catalog, local image metadata, and queued cloud copies.</p>
           <button class="btn secondary" type="button" data-owner-sync-country-keywords>Sync country metadata</button>
+        </article>
+        <article class="owner-card">
+          <p class="eyebrow">Provenance</p>
+          <h2>Camera / AI split</h2>
+          <p>Origin is tracked per photo so gallery filters, pricing, and checkout stay separated.</p>
+          <dl class="owner-counts owner-compact-counts">
+            <div>
+              <dt>Camera</dt>
+              <dd data-owner-origin-camera-count>0</dd>
+            </div>
+            <div>
+              <dt>AI</dt>
+              <dd data-owner-origin-ai-count>0</dd>
+            </div>
+            <div>
+              <dt>AI share</dt>
+              <dd data-owner-origin-ai-share>0%</dd>
+            </div>
+          </dl>
+          <div class="owner-origin-actions">
+            <a class="btn secondary" href="./france.html">Camera galleries</a>
+            <a class="btn secondary" href="./ai.html">AI images</a>
+          </div>
         </article>
         <article class="owner-card">
           <p class="eyebrow">Products</p>
@@ -151,14 +174,14 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=72.0"></script>
-  <script src="./photos.js?v=72.0"></script>
-  <script src="./owner-auth.js?v=72.0"></script>
-  <script src="./owner-tools.js?v=72.0"></script>
-  <script src="./site-version.js?v=72.0"></script>
-  <script src="./photos-data.js?v=72.0"></script>
-  <script src="./hidden-actions.js?v=72.0"></script>
-  <script src="./reserve-store.js?v=72.0"></script>
-  <script src="./owner.js?v=72.0"></script>
+  <script src="./media-config.js?v=72.1"></script>
+  <script src="./photos.js?v=72.1"></script>
+  <script src="./owner-auth.js?v=72.1"></script>
+  <script src="./owner-tools.js?v=72.1"></script>
+  <script src="./site-version.js?v=72.1"></script>
+  <script src="./photos-data.js?v=72.1"></script>
+  <script src="./hidden-actions.js?v=72.1"></script>
+  <script src="./reserve-store.js?v=72.1"></script>
+  <script src="./owner.js?v=72.1"></script>
 </body>
 </html>

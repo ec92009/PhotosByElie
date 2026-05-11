@@ -52,6 +52,11 @@ const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
+const localizedCollectionTitle = () => {
+  const key = `collection.${collectionKey}`;
+  const translated = t(key);
+  return translated && translated !== key ? translated : collection.title;
+};
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -86,6 +91,12 @@ const frameLabel = (frame) => ({
   white: t("product.white_frame"),
   black: t("product.black_frame"),
 }[frame?.id] || frame?.label || "");
+const photoOrigin = photo ? (window.photosByEliePhotoOrigin?.(photo, collectionKey) || "camera") : "camera";
+const photoOriginLabel = photo ? (() => {
+  const key = photoOrigin === "ai" ? "origin.ai" : "origin.camera";
+  const translated = t(key);
+  return translated && translated !== key ? translated : window.photosByEliePhotoOriginLabel?.(photo, collectionKey);
+})() : "";
 if (window.photosByElieIsPublicHidden?.(photo)) {
   window.location.replace(versionedHref(`./${collectionKey}.html`));
   return;
@@ -95,6 +106,19 @@ const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const metadataValue = (targetPhoto, label) => (
   (targetPhoto?.metadata || []).find((item) => item.label === label)?.value || ""
 );
+const setPhotoMetaText = (value) => {
+  const metaRoot = document.querySelector("[data-photo-meta]");
+  if (!metaRoot) return;
+  metaRoot.removeAttribute("data-i18n");
+  metaRoot.textContent = value;
+};
+const setCollectionNav = () => {
+  const currentNav = document.querySelector("[data-nav-current]");
+  if (!currentNav) return;
+  currentNav.dataset.i18n = `collection.${collectionKey}`;
+  currentNav.textContent = localizedCollectionTitle();
+  currentNav.setAttribute("href", versionedHref(`./${collectionKey}.html`));
+};
 const splitKeywordText = (value) => String(value || "")
   .split(/[;,]/)
   .map((keyword) => keyword.trim())
@@ -272,10 +296,9 @@ const likeToggle = document.querySelector("[data-like-toggle]");
 
 if (!photo) {
   document.title = `Photos By Elie | ${collection.title}`;
-  document.querySelector("[data-nav-current]").textContent = collection.title;
-  document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
+  setCollectionNav();
   document.querySelector("[data-photo-title]").textContent = t("detail.archive_reset_title");
-  document.querySelector("[data-photo-meta]").textContent = t("detail.no_published_meta", { collection: collection.title });
+  setPhotoMetaText(t("detail.no_published_meta", { collection: collection.title }));
   document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
   document.querySelector("[data-resolution-list]").innerHTML = "";
@@ -291,16 +314,16 @@ if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id 
   // The currently requested photo is locally suppressed, so move to the next visible one immediately.
 } else {
 document.title = `Photos By Elie | ${photo.title}`;
-document.querySelector("[data-nav-current]").textContent = collection.title;
-document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
+setCollectionNav();
 document.querySelector("[data-photo-title]").textContent = photo.title;
-document.querySelector("[data-photo-meta]").textContent = [
+setPhotoMetaText([
   collection.title,
+  photoOriginLabel,
   window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : photo.full,
   window.photosByElieVerifiedMegapixels && window.photosByElieVerifiedMegapixels(photo)
     ? t("detail.mp_verified", { mp: window.photosByElieVerifiedMegapixels(photo) })
     : ""
-].filter(Boolean).join(" / ");
+].filter(Boolean).join(" / "));
 
 const galleryReturnCollectionKey = () => {
   const payload = readGallerySequencePayload();
@@ -392,8 +415,12 @@ const renderMetadataRows = () => {
   const metadata = Array.isArray(photo.metadata)
     ? photo.metadata.filter((item) => item.label && item.value && !hiddenLabels.has(String(item.label).toLowerCase()))
     : [];
-  metadataRoot.hidden = metadata.length === 0;
-  metadataRoot.replaceChildren(...metadata.map((item) => {
+  const rows = [
+    { label: "Origin", value: photoOriginLabel },
+    ...metadata,
+  ].filter((item) => item.label && item.value);
+  metadataRoot.hidden = rows.length === 0;
+  metadataRoot.replaceChildren(...rows.map((item) => {
     const row = document.createElement("div");
     const label = document.createElement("dt");
     const value = document.createElement("dd");

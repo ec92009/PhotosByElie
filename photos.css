@@ -555,6 +555,15 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-compact-counts dd{
   font-size:1.05rem;
 }
+.owner-origin-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.owner-origin-actions .btn{
+  justify-content:center;
+  min-height:40px;
+}
 .owner-coverage-counts{
   grid-template-columns:repeat(3,minmax(0,1fr));
 }
@@ -1235,6 +1244,29 @@ html[data-theme="light"] .mock-photo.has-image::after{
   line-height:1;
   text-transform:uppercase;
   box-shadow:0 8px 22px rgba(0,0,0,.2);
+}
+.photo-origin-badge{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  z-index:4;
+  max-width:calc(100% - 16px);
+  padding:4px 7px 3px;
+  border:1px solid rgba(255,255,255,.46);
+  background:rgba(0,0,0,.64);
+  color:#fff;
+  font-size:.68rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  line-height:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+  box-shadow:0 8px 22px rgba(0,0,0,.2);
+}
+.photo-origin-badge.is-ai{
+  background:rgba(21,62,86,.78);
 }
 .gallery-card-actions{
   position:absolute;

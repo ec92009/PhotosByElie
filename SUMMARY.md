@@ -7,7 +7,7 @@ Date: 2026-05-11
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v72.0`
+- Current visible build: `v72.1`
 - Business direction has shifted from building infrastructure to making the site sell: payments, delivery trust, offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog currently has `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - Blocked catalog state currently has `4,384` blocked photos. Discarded tombstones are currently empty.
@@ -37,7 +37,7 @@ Date: 2026-05-11
 - The next serious revenue milestone is proving Stripe in test mode end to end: success, 3D Secure/authentication-required, declined card, verified webhook, private R2 ZIP build, order page download, and failure states.
 - Delivery ZIPs are flat: files sit at the archive root beside `ORDER.txt`, with no per-photo subfolders.
 - Physical print/frame products are off by default for buyers. Owner still has a deliberate localhost toggle for local review, but digital checkout should be proven first.
-- Published default prices now distinguish original-photo downloads from lower AI-origin downloads, and the Worker validates against those tiered prices. A dedicated price-list data file is still a high-priority cleanup item.
+- Published default prices now distinguish camera-photo downloads from lower AI-origin downloads, and the Worker validates against first-class `sourceOrigin` rather than only the collection slug. A dedicated price-list data file is still a high-priority cleanup item.
 - The offer still needs buyer-facing packaging: licensing language, resolution explanations, Full resolution meaning, AI-origin clarity, delivery expectations, refund/contact copy, bundles, and launch pricing.
 
 ## Product/UX Decisions Made
@@ -48,6 +48,7 @@ Date: 2026-05-11
 - `X` and `H` are accepted as block shortcuts; `D` is the stronger discard action.
 - Public pages have English/French/Spanish translation support.
 - Gallery search exists by title/keyword.
+- Gallery filters and detail metadata now expose camera vs AI origin, and the Owner dashboard has a Camera / AI split card for active catalog counts.
 - Homepage first render uses tiny `home-data.js`, then downloads the full catalog in the background.
 - Gallery density shortcuts exist: `g` makes thumbnails larger/less dense, `G` makes the grid denser.
 - `Z` toggles fit/fill.

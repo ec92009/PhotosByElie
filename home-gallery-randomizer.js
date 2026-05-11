@@ -19,6 +19,11 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 }[char]));
 
 const galleryHrefForKey = (key) => window.photosByElieVersionedHref?.(`./${key}.html`) || `./${key}.html`;
+const collectionTitleForKey = (key, collection) => (
+  window.photosByElieI18n?.t?.(`collection.${key}`)
+  || collection?.title
+  || key
+);
 
 const isBlockedPhoto = (photo) => {
   const id = photo?.id;
@@ -70,7 +75,7 @@ const buildHeroStack = () => {
     const image = representativeImageForPhoto(photo);
     const hasPhoto = image ? "has-photo" : "";
     const style = image ? ` style="--photo-image:url('${image}')"` : "";
-    const title = escapeHtml(collection.title);
+    const title = escapeHtml(collectionTitleForKey(key, collection));
     const href = escapeHtml(galleryHrefForKey(key));
     const photoId = escapeHtml(photo?.id || "");
     return `<a class="photo-print ${key} ${hasPhoto}" href="${href}" data-home-stack-card data-photo-id="${photoId}" aria-label="${title} gallery"${style}><span class="hand-label">${title}</span></a>`;

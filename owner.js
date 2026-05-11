@@ -10,6 +10,9 @@
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
   const discardedCountRoot = document.querySelector("[data-owner-discarded-count]");
+  const originCameraCountRoot = document.querySelector("[data-owner-origin-camera-count]");
+  const originAiCountRoot = document.querySelector("[data-owner-origin-ai-count]");
+  const originAiShareRoot = document.querySelector("[data-owner-origin-ai-share]");
   const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
   const blockedPublishedCountRoot = document.querySelector("[data-owner-blocked-published-count]");
   const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
@@ -109,6 +112,25 @@
     return ids;
   };
 
+  const originCountsForCollections = (data, excludedIds = new Set()) => (
+    Object.entries(data || {}).reduce((counts, [collectionKey, collection]) => {
+      (collection.photos || []).forEach((photo) => {
+        if (!photo?.id || excludedIds.has(photo.id)) return;
+        const origin = window.photosByEliePhotoOrigin?.(photo, collectionKey) || "camera";
+        counts[origin === "ai" ? "ai" : "camera"] += 1;
+      });
+      return counts;
+    }, { camera: 0, ai: 0 })
+  );
+
+  const renderOriginSplit = (hiddenIds = []) => {
+    const counts = originCountsForCollections(collections, new Set(hiddenIds));
+    const total = counts.camera + counts.ai;
+    if (originCameraCountRoot) originCameraCountRoot.textContent = formatCount(counts.camera);
+    if (originAiCountRoot) originAiCountRoot.textContent = formatCount(counts.ai);
+    if (originAiShareRoot) originAiShareRoot.textContent = total ? `${Math.round((counts.ai / total) * 100)}%` : "0%";
+  };
+
   const collectionLabelForPhoto = (photoId) => {
     const id = String(photoId || "");
     if (!id) return "";
@@ -168,7 +190,7 @@
     const frames = window.photosByElieFrameOptions || [];
     const digitalOptions = options.filter((option) => option.type !== "print");
     const printOptions = options.filter((option) => option.type === "print");
-    const priceTiers = window.photosByEliePriceTiers || { original: { label: "Original photo" } };
+    const priceTiers = window.photosByEliePriceTiers || { original: { label: "Camera photo" } };
     const digitalTierIds = Object.keys(priceTiers);
     const frameColumns = frames.filter((frame) => frame.id !== "none");
     const frameGroupIds = frameColumns.map((frame) => frame.id).join(",");
@@ -293,6 +315,7 @@
     const expoActive = Math.max(0, expoTotal - blockedInExpo);
     const analyzedTotal = expoActive + hiddenCount;
     const queue = unknownQueueState();
+    renderOriginSplit(hiddenIds);
     if (unknownCountRoot) unknownCountRoot.textContent = String(queue.visible.length);
     if (hiddenCountRoot) hiddenCountRoot.textContent = String(hiddenCount);
     const counts = [

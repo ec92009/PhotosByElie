@@ -150,6 +150,10 @@
     window.photosByElieOwnerData = result.site.owner || {};
     window.photosByElieReserveData = result.site.reserve || {};
     window.photosByElieHiddenData = result.site.hidden || {};
+    window.photosByElieApplyCollectionOrigins?.(window.photosByElieData);
+    window.photosByElieApplyCollectionOrigins?.(window.photosByElieOwnerData);
+    window.photosByElieApplyCollectionOrigins?.(window.photosByElieReserveData);
+    window.photosByElieApplyCollectionOrigins?.(window.photosByElieHiddenData);
     localStorage.removeItem(reservePromotionsKey);
     const items = writeLoadedHiddenIds();
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items, result } }));

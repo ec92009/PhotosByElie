@@ -21,6 +21,9 @@
     .replace(/"/g, "&quot;");
 
   const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
+  const photoOrigin = (photo) => window.photosByEliePhotoOrigin?.(photo, photo?.galleryKey) || "camera";
+  const photoOriginLabel = (photo) => window.photosByEliePhotoOriginLabel?.(photo, photo?.galleryKey) || "Camera photo";
+  const photoOriginShortLabel = (photo) => window.photosByEliePhotoOriginShortLabel?.(photo, photo?.galleryKey) || "Camera";
 
   const allPhotoIndex = () => {
     const byId = new Map();
@@ -110,17 +113,20 @@
     galleryRoot.innerHTML = photos.map((photo, index) => {
       const src = window.photosByElieMediaUrl?.(photo, "gallery") || "";
       const rawLabel = rawSourceLabel(photo);
+      const origin = photoOrigin(photo);
+      const originLabel = photoOriginLabel(photo);
       const href = photo.source === "missing" ? "" : versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
       return `
         <article
           class="mock-photo ${photo.collectionAccent} ${photo.className} ${src ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
-          aria-label="${escapeHtml(photo.title)}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
+          aria-label="${escapeHtml(photo.title)}, ${escapeHtml(originLabel)}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
           data-photo-index="${index}"
           data-photo-id="${escapeHtml(photo.id)}"
           data-photo-href="${href}"
         >
           ${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(photo.title)}"/>` : `<span>${escapeHtml(photo.title)}</span>`}
           ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
+          <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(photoOriginShortLabel(photo))}</span>
         </article>
       `;
     }).join("");

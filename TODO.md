@@ -4,7 +4,7 @@ Last updated: 2026-05-11
 
 ## Current Facts
 
-- Local visible build: `v72.0`.
+- Local visible build: `v72.1`.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -30,6 +30,7 @@ Last updated: 2026-05-11
 - Homepage first render uses the tiny `home-data.js` manifest; the full `photos-data.js` catalog now downloads in the background for basket/liked context.
 - Public previews are served directly from the `photosbyelie-public` `r2.dev` media endpoint; the checkout Worker is no longer on the browse-time preview path.
 - Business priority is now revenue: make checkout trustworthy, package the offer clearly, drive qualified visitors, and keep Owner tooling focused on sales-enabling operations.
+- Camera photos and AI-origin images are now split by first-class catalog origin. Public galleries can filter by origin, detail pages show it, Owner shows Camera / AI counts, and checkout pricing validates against origin.
 
 ## Numbered Backlog
 
@@ -59,7 +60,7 @@ Last updated: 2026-05-11
    - Add simple FAQ/help copy for licensing, personal/commercial use, delivery time, refunds, and contact.
 
 4. **Publish a real price and offer strategy.**
-   - Current state: Published defaults now distinguish original-photo digital prices from lower AI-origin digital prices, and Owner shows editable local table inputs for active digital tiers, print sizes, frame add-ons, and mock S&H prices.
+   - Current state: Published defaults now distinguish camera-photo digital prices from lower AI-origin digital prices, and Owner shows editable local table inputs for active digital tiers, print sizes, frame add-ons, and mock S&H prices.
    - Move the published defaults out of generated-code constants into a dedicated price-list data file shared by public basket and Worker validation.
    - Support adding, editing, disabling, and reordering price entries as the catalog of sellable products grows.
    - Keep checkout validation tied to the published price list so the Worker and public basket agree on SKU IDs, labels, currencies, and amounts.
@@ -204,5 +205,6 @@ Last updated: 2026-05-11
 - Started a manual cloud media sweep with the same wrapper used by automation.
 - Added localhost-only Owner helper endpoints for catalog, metadata, Blocked, Unknown, R2 progress, and R2 action endpoints.
 - Added Owner R2 coverage counts with a repair button that starts the lock-guarded cloud media sweep.
+- Added first-class Camera / AI origin handling across gallery filters, detail metadata, Owner counts, and Worker checkout pricing.
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.
 - Moved public preview delivery off the checkout Worker bridge by enabling the public R2 `r2.dev` endpoint and pointing `media-config.js` at it.

@@ -168,6 +168,19 @@ const validate = () => {
       if (photo.media?.publicPreview?.allowed === false) {
         errors.push(`${photo.id} is marked ineligible for public preview upload.`);
       }
+      const origin = typeof windowData.photosByEliePhotoOrigin === "function"
+        ? windowData.photosByEliePhotoOrigin(photo, collectionKey)
+        : photo.sourceOrigin;
+      if (!["camera", "ai"].includes(origin)) {
+        errors.push(`${photo.id} has invalid sourceOrigin: ${photo.sourceOrigin || "(missing)"}.`);
+      }
+      const expectedPricingTier = origin === "ai" ? "ai" : "original";
+      if (photo.pricingTier && photo.pricingTier !== expectedPricingTier) {
+        errors.push(`${photo.id} pricingTier ${photo.pricingTier} does not match sourceOrigin ${origin}.`);
+      }
+      if (collectionKey === "ai" && origin !== "ai") {
+        errors.push(`${photo.id} is in the AI collection but is not marked as AI origin.`);
+      }
 
       const publicPreview = photo.media?.publicPreview || {};
       const publicGalleryKey = String(publicPreview.galleryKey || "");

@@ -53,6 +53,7 @@
       .then((response) => (response.ok ? response.json() : {}))
       .then((payload) => {
         window.photosByElieReserveData = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+        window.photosByElieApplyCollectionOrigins?.(window.photosByElieReserveData);
         return window.photosByElieReserveData;
       })
       .catch(() => ({}));

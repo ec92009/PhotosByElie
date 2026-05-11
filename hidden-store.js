@@ -18,6 +18,7 @@
       .then((response) => (response.ok ? response.json() : {}))
       .then((payload) => {
         window.photosByElieHiddenData = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+        window.photosByElieApplyCollectionOrigins?.(window.photosByElieHiddenData);
         return window.photosByElieHiddenData;
       })
       .catch(() => ({}));

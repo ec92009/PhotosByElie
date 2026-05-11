@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v72.0`
+- Current visible version: `v72.1`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -55,7 +55,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 ## Current Behavior
 
-- Public collections are ordered France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia.
+- Public collections are ordered France, USA, Spain, Mexico, AI Images, Italy, Portugal, and Slovakia.
+- Catalog photos now carry a first-class `sourceOrigin` value (`camera` or `ai`). Gallery filters, detail metadata, Owner counts, price tiers, and Worker checkout validation all use that origin instead of relying only on the `ai` collection slug.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or blocked no longer reduce unrelated counts.
@@ -75,10 +76,10 @@ Use the GitHub Pages URL above after pushing to `main`.
 - We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
 - The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, blocked blacklist updates, Unknown assignment, metadata edits, and R2 maintenance.
 - Local owner mutation endpoints are unlocked on localhost by the helper server without a password. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.
-- The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Current state is intentionally compact: Analyzed / Blocked / Expo.
+- The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Current state is intentionally compact: Analyzed / Blocked / Expo, with a separate Camera / AI provenance split.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On gallery pages, `g` makes the grid less dense/larger and `G` makes it denser/smaller; on localhost, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
-- Gallery filters cover orientation, color mood, and subject, with Sort defaulting to Newest first on first display.
+- Gallery filters cover orientation, camera/AI origin, color mood, and subject, with Sort defaulting to Newest first on first display.
 - When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
 - Subtle keyboard reminders appear above localhost review grids and detail previews, with public detail pages showing the `L` like shortcut.
 - Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost review.
@@ -113,8 +114,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `assets/private-delivery-manifest.json` tracks private master/render coverage for catalog photos.
 - `assets/discarded/discarded-photo-ids.json` is the durable owner discard tombstone list. `assets/discarded-media-manifest.json` is the generated R2 cleanup record built from those tombstones plus older cleanup history.
 - Product choices are digital-only by default. Owner can deliberately enable physical print/frame options on localhost with the Physical items toggle for local review.
-- Published digital prices now use separate defaults for original photos and AI-origin images. Original photo downloads start at $8 for 1 MP and $65 for full resolution; AI-origin downloads start at $4 for 1 MP and $25 for full resolution.
-- Owner shows an editable local price-list table for the current original/AI digital resolution tiers, print sizes, frame add-ons, and mock S&H amounts.
+- Published digital prices now use separate defaults for camera photos and AI-origin images. Camera photo downloads start at $8 for 1 MP and $65 for full resolution; AI-origin downloads start at $4 for 1 MP and $25 for full resolution.
+- Owner shows an editable local price-list table for the current camera/AI digital resolution tiers, print sizes, frame add-ons, and mock S&H amounts.
 - Physical print defaults are open-edition launch prices: $12 for 4x6, $18 for 5x7, $32 for 8x10, and $48 for 11x14 before optional framing.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, white frame, or black frame. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.

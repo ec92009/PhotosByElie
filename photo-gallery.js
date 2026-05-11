@@ -23,11 +23,12 @@ const diversityBucketMinutes = 10;
 const defaultFilterState = {
   query: "",
   orientation: "all",
+  origin: "all",
   mood: "all",
   subject: "all",
   sort: "newest"
 };
-const persistedFilterKeys = ["orientation", "mood", "subject"];
+const persistedFilterKeys = ["orientation", "origin", "mood", "subject"];
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
@@ -39,7 +40,11 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "'": "&#39;"
 }[char]));
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
-const localizedCollectionTitle = () => t(`collection.${galleryKey}`) || gallery?.title || "";
+const localizedCollectionTitle = () => {
+  const key = `collection.${galleryKey}`;
+  const translated = t(key);
+  return translated && translated !== key ? translated : gallery?.title || "";
+};
 const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
 const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
 const ensureGalleryKeyboardHint = () => {
@@ -210,6 +215,13 @@ const photoOrientation = (photo) => {
   return "square";
 };
 
+const photoOrigin = (photo) => window.photosByEliePhotoOrigin?.(photo, galleryKey) || "camera";
+const photoOriginLabel = (photo) => t(photoOrigin(photo) === "ai" ? "origin.ai" : "origin.camera");
+const photoOriginShortLabel = (photo) => (
+  window.photosByEliePhotoOriginShortLabel?.(photo, galleryKey)
+  || (photoOrigin(photo) === "ai" ? "AI" : "Camera")
+);
+
 const photoMoodTags = (photo) => {
   const text = photoSearchText(photo);
   const tags = new Set();
@@ -257,7 +269,7 @@ const searchTerms = () => String(filterState.query || "")
   .filter(Boolean);
 
 const activeFilterCount = () => (
-  ["orientation", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
+  ["orientation", "origin", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
   + (searchTerms().length ? 1 : 0)
 );
 
@@ -268,6 +280,7 @@ const matchesFilterState = (photo) => {
     if (!terms.every((term) => text.includes(term))) return false;
   }
   if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
+  if (filterState.origin !== "all" && photoOrigin(photo) !== filterState.origin) return false;
   if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
   if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
   return true;
@@ -310,6 +323,11 @@ const ensureGalleryFilterControls = () => {
       <option value="landscape" data-i18n="gallery.landscape">Landscape</option>
       <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
       <option value="square" data-i18n="gallery.square">Square</option>
+    </select></label>
+    <label><span data-i18n="gallery.origin">Origin</span><select data-gallery-filter="origin">
+      <option value="all" data-i18n="gallery.all">All</option>
+      <option value="camera" data-i18n="origin.camera">Camera photo</option>
+      <option value="ai" data-i18n="origin.ai">AI image</option>
     </select></label>
     <label><span data-i18n="gallery.color_mood">Color mood</span><select data-gallery-filter="mood">
       <option value="all" data-i18n="gallery.all">All</option>
@@ -739,6 +757,9 @@ const renderGallery = () => {
   }
   galleryRoot.innerHTML = photos.map((photo, index) => {
     const rawLabel = rawSourceLabel(photo);
+    const origin = photoOrigin(photo);
+    const originLabel = photoOriginLabel(photo);
+    const originShortLabel = photoOriginShortLabel(photo);
     const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     const href = versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
     const hrefAttr = escapeHtml(href);
@@ -747,7 +768,7 @@ const renderGallery = () => {
     return `
     <article
       class="mock-photo-card"
-      aria-label="Open ${title}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
+      aria-label="Open ${title}, ${escapeHtml(originLabel)}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
       data-photo-index="${index}"
       data-photo-id="${escapeHtml(photo.id)}"
       data-photo-href="${hrefAttr}"
@@ -761,6 +782,7 @@ const renderGallery = () => {
       >
         ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : ""}
         ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
+        <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
       </a>
       ${likedStore ? `
         <div class="gallery-card-actions">
@@ -837,10 +859,18 @@ const renderGallery = () => {
 
 if (galleryRoot && gallery) {
   document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
-  document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
-  document.querySelector("[data-nav-current]").setAttribute("href", versionedHref(`./${galleryKey}.html`));
+  const currentNav = document.querySelector("[data-nav-current]");
+  if (currentNav) {
+    currentNav.dataset.i18n = `collection.${galleryKey}`;
+    currentNav.textContent = localizedCollectionTitle();
+    currentNav.setAttribute("href", versionedHref(`./${galleryKey}.html`));
+  }
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
-  document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
+  const titleRoot = document.querySelector("[data-gallery-title]");
+  if (titleRoot) {
+    titleRoot.dataset.i18n = `collection.${galleryKey}`;
+    titleRoot.textContent = localizedCollectionTitle();
+  }
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${localizedCollectionTitle()} ${t("nav.photos").toLowerCase()}`);

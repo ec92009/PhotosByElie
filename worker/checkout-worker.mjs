@@ -30,7 +30,14 @@ const cents = (dollars) => Math.round(Number(dollars || 0) * 100);
 
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
 
-const pricingTierFor = (photo, collectionKey) => String(photo?.pricingTier || (collectionKey === "ai" ? "ai" : "original"));
+const photoOriginFor = (photo, collectionKey) => {
+  const origin = String(photo?.sourceOrigin || photo?.origin || "").toLowerCase();
+  if (origin === "ai" || origin === "camera") return origin;
+  if (String(photo?.pricingTier || "").toLowerCase() === "ai") return "ai";
+  return collectionKey === "ai" ? "ai" : "camera";
+};
+
+const pricingTierFor = (photo, collectionKey) => photoOriginFor(photo, collectionKey) === "ai" ? "ai" : "original";
 
 const optionPriceFor = (photo, collectionKey, option) =>
   Number(option?.prices?.[pricingTierFor(photo, collectionKey)] ?? option?.price ?? 0);
@@ -148,6 +155,7 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
     }
 
     const { photo, collectionKey, collectionTitle } = entry;
+    const sourceOrigin = photoOriginFor(photo, collectionKey);
     const availableIds = new Set(catalog.availableOptionsFor(photo).map((option) => option.id));
     const source = (photo.sourceFiles || []).find((candidate) => !RAW_SOURCE_TYPES.has(sourceType(candidate)));
     if (!source) {
@@ -195,6 +203,7 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
       keywords: keywordsForPhoto(photo),
       collectionKey,
       collectionTitle,
+      sourceOrigin,
       source: {
         type: sourceType(source),
         path: source.path,
@@ -223,6 +232,7 @@ const publicOrder = (order) => ({
     title: item.title,
     keywords: item.keywords || [],
     collection: item.collectionTitle,
+    sourceOrigin: item.sourceOrigin || "camera",
     products: item.products.map((product) => ({
       id: product.id,
       label: product.label,

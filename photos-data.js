@@ -298744,11 +298744,42 @@ window.photosByElieOwnerData = {
   unknown: window.photosByElieData.unknown,
 };
 delete window.photosByElieData.unknown;
-Object.entries(window.photosByElieData || {}).forEach(([slug, collection]) => {
-  (collection.photos || []).forEach((photo) => {
-    photo.pricingTier = slug === "ai" ? "ai" : "original";
+window.photosByElieOriginTypes = {
+  camera: { label: "Camera photo", shortLabel: "Camera" },
+  ai: { label: "AI image", shortLabel: "AI" }
+};
+window.photosByEliePhotoOrigin = (photo, collectionKey = "") => {
+  const origin = String(photo?.sourceOrigin || photo?.origin || "").toLowerCase();
+  if (origin === "ai" || origin === "camera") return origin;
+  if (String(photo?.pricingTier || "").toLowerCase() === "ai") return "ai";
+  const sourceText = [
+    photo?.caption,
+    ...(photo?.sourceFiles || []).map((source) => source?.path),
+    ...(photo?.metadata || []).map((item) => item?.value)
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (sourceText.includes("leonardo")) return "ai";
+  return String(collectionKey || "").toLowerCase() === "ai" ? "ai" : "camera";
+};
+window.photosByEliePhotoOriginLabel = (photo, collectionKey = "") => {
+  const origin = window.photosByEliePhotoOrigin(photo, collectionKey);
+  return window.photosByElieOriginTypes?.[origin]?.label || "Camera photo";
+};
+window.photosByEliePhotoOriginShortLabel = (photo, collectionKey = "") => {
+  const origin = window.photosByEliePhotoOrigin(photo, collectionKey);
+  return window.photosByElieOriginTypes?.[origin]?.shortLabel || "Camera";
+};
+window.photosByElieApplyCollectionOrigins = (collections = {}) => {
+  Object.entries(collections || {}).forEach(([slug, collection]) => {
+    (collection.photos || []).forEach((photo) => {
+      const origin = window.photosByEliePhotoOrigin(photo, slug);
+      photo.sourceOrigin = origin;
+      photo.pricingTier = origin === "ai" ? "ai" : "original";
+    });
   });
-});
+  return collections;
+};
+window.photosByElieApplyCollectionOrigins(window.photosByElieData);
+window.photosByElieApplyCollectionOrigins(window.photosByElieOwnerData);
 window.photosByElieResolutions = [
   { id: "full", type: "digital", label: "Full resolution", detail: "Original source file at native resolution", price: 65, prices: { original: 65, ai: 25 } },
   { id: "jpg-6mp", type: "digital", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 28, prices: { original: 28, ai: 14 }, minMegapixels: 6 },
@@ -298760,7 +298791,7 @@ window.photosByElieResolutions = [
   { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 48, minMegapixels: 10 }
 ];
 window.photosByEliePriceTiers = {
-  original: { label: "Original photo" },
+  original: { label: "Camera photo" },
   ai: { label: "AI image" }
 };
 window.photosByElieFrameOptions = [
@@ -298775,8 +298806,8 @@ window.photosByElieShippingHandlingPrices = {
   "print-11x14": 16
 };
 
-window.photosByEliePricingTier = (photo) => photo?.pricingTier || "original";
-window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Original photo";
+window.photosByEliePricingTier = (photo) => window.photosByEliePhotoOrigin(photo) === "ai" ? "ai" : "original";
+window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";
 window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);
 
 window.photosByEliePreviewMegapixels = (photo) => {

@@ -228,6 +228,8 @@
   };
 
   const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
+  const photoOriginLabel = (photo) => window.photosByEliePhotoOriginLabel?.(photo, "unknown") || "Camera photo";
+  const photoOriginShortLabel = (photo) => window.photosByEliePhotoOriginShortLabel?.(photo, "unknown") || "Camera";
 
   const closeFullscreenPreview = () => {
     fullscreenPreview?.remove();
@@ -333,6 +335,8 @@
     root.innerHTML = photos.map((photo) => {
       const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
       const rawLabel = rawSourceLabel(photo);
+      const origin = window.photosByEliePhotoOrigin?.(photo, "unknown") || "camera";
+      const originLabel = photoOriginLabel(photo);
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;
       const dayHints = adjacentDayHints(photo, countryDayIndex);
@@ -343,9 +347,10 @@
             ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(photo.title)}"/>` : ""}
             ${image ? '<span class="unknown-missing-preview">Missing preview</span>' : ""}
             ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
+            <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(photoOriginShortLabel(photo))}</span>
           </div>
           <div class="unknown-card-body">
-            <p class="eyebrow">${escapeHtml(photo.source)}</p>
+            <p class="eyebrow">${escapeHtml(photo.source)} / ${escapeHtml(originLabel)}</p>
             <h2>${escapeHtml(photo.title)}</h2>
             <p>${escapeHtml(capture || photo.caption || photo.id)}</p>
             <dl class="unknown-metadata">

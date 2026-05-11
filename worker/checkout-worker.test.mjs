@@ -161,6 +161,47 @@ test("AI collection digital products use the AI price tier", async () => {
   assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 400);
 });
 
+test("sourceOrigin controls digital pricing independently of collection", async () => {
+  const catalog = createCatalogIndex({
+    collections: {
+      france: {
+        title: "France",
+        photos: [{
+          id: "ai-origin-in-camera-gallery",
+          title: "AI-origin test image",
+          sourceOrigin: "ai",
+          megapixels: 12,
+          sourceFiles: [{ path: "ai-origin-test.jpg", type: "JPG" }],
+          metadata: [{ label: "Original size", value: "JPEG / 4000 x 3000 / 12 MP" }],
+        }],
+      },
+    },
+    resolutions: [
+      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
+    ],
+  });
+  const randomUUID = deterministicIds();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId: "ai-origin-in-camera-gallery", options: [{ id: "full" }, { id: "jpg-1mp" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  assert.equal(body.order.items[0].collection, "France");
+  assert.equal(body.order.amountExpected, 2900);
+});
+
 test("real Stripe client creates hosted Checkout Sessions with order metadata", async () => {
   let stripeRequest;
   const stripe = createStripeClient({

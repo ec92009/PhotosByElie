@@ -110,11 +110,21 @@ COUNTRY_HINTS = {
     "madrid": ("spain", "Spain"),
     "barcelona": ("spain", "Spain"),
     "bilbao": ("spain", "Spain"),
+    "cadiz": ("spain", "Spain"),
+    "cordoba": ("spain", "Spain"),
+    "córdoba": ("spain", "Spain"),
     "basque country": ("spain", "Spain"),
     "euzkadi": ("spain", "Spain"),
     "pays basque": ("spain", "Spain"),
+    "malaga": ("spain", "Spain"),
+    "málaga": ("spain", "Spain"),
+    "nerja": ("spain", "Spain"),
     "puerto vallarta": ("mexico", "Mexico"),
+    "ronda": ("spain", "Spain"),
+    "seville": ("spain", "Spain"),
+    "sevilla": ("spain", "Spain"),
     "bratislava": ("slovakia", "Slovakia"),
+    "valencia": ("spain", "Spain"),
 }
 GPS_COUNTRY_BOUNDS = {
     "usa": ((24.0, 49.5), (-125.0, -66.0), "United States"),
@@ -575,7 +585,7 @@ def normalize_country(value: Any) -> tuple[str, str] | None:
     return (slug or "unknown", text)
 
 
-def infer_gallery_country(location: dict[str, Any], keywords: list[str]) -> dict[str, str]:
+def infer_gallery_country(location: dict[str, Any], keywords: list[str], path_hints: list[str] | None = None) -> dict[str, str]:
     explicit = normalize_country(location.get("country"))
     if explicit:
         slug, label = explicit
@@ -593,6 +603,14 @@ def infer_gallery_country(location: dict[str, Any], keywords: list[str]) -> dict
             if hint in text:
                 slug, label = country
                 return {"slug": slug, "label": label, "source": "location_hint"}
+    for value in path_hints or []:
+        if not value:
+            continue
+        text = str(value).casefold()
+        for hint, country in COUNTRY_HINTS.items():
+            if hint in text:
+                slug, label = country
+                return {"slug": slug, "label": label, "source": "path_hint"}
     return {"slug": "unknown", "label": "Unknown", "source": "unresolved"}
 
 
@@ -686,7 +704,7 @@ def dimension_facts(meta: dict[str, Any]) -> dict[str, Any]:
     return facts
 
 
-def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.Namespace) -> dict[str, Any]:
+def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.Namespace, relative_path: str = "") -> dict[str, Any]:
     extract_gps = args.include_gps or not args.redact_gps
     include_private_keywords = args.include_private_keywords or not args.redact_private_keywords
     gps_tags = ["GPSLatitude", "GPSLongitude", "GPSAltitude", "GPSPosition"]
@@ -726,7 +744,7 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
     }
     gallery_country = (
         forced_gallery_country(args.force_country)
-        or infer_gallery_country(location, keywords)
+        or infer_gallery_country(location, keywords, [relative_path, *Path(relative_path).parts])
     )
     if gallery_country["slug"] == "unknown" and gps:
         gallery_country = infer_gallery_country_from_gps(gps) or gallery_country
@@ -1527,7 +1545,7 @@ def process_batch(
                 failures.pop(relative_path, None)
                 append_state(state_path, {**base_state, "status": "discarded"})
                 continue
-            selected_metadata = merged_selected_metadata(source, metadata_path, args)
+            selected_metadata = merged_selected_metadata(source, metadata_path, args, relative_path)
             gallery_country = selected_metadata["gallery_country"]
             gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug)
             row = {

@@ -76,7 +76,7 @@ Stripe's standard successful test Visa is `4242 4242 4242 4242` with any future 
 For the full local mock flow, run the static site and the local Worker in separate terminals:
 
 ```bash
-python3 -m http.server 8000
+python3 scripts/local_server.py 8000
 node worker/local-server.mjs
 ```
 

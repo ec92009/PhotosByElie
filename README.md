@@ -6,13 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v71.25`
+- Current visible version: `v71.41`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
-- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Portugal, and Slovakia collections
-- `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`, `portugal.html`, `slovakia.html`: thin gallery shells rendered from shared photo data
+- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia collections
+- `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`, `italy.html`, `portugal.html`, `slovakia.html`: thin gallery shells rendered from shared photo data
 - `unknown.html`: localhost-only Owner queue for classifying unknown photos into real country galleries
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
@@ -55,7 +55,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 
 ## Current Behavior
 
-- Public collections are ordered France, USA, Spain, Mexico, AI, Portugal, and Slovakia.
+- Public collections are ordered France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or blocked no longer reduce unrelated counts.

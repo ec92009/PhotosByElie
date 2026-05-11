@@ -129,6 +129,7 @@ export const createLocalZipDelivery = ({
 } = {}) => {
   const roots = sourceRoots.map((root) => path.resolve(root));
   const reserveRoot = path.join(repoRoot, "assets", "reserve");
+  const importCacheRoot = path.join(repoRoot, "tmp", "import-cache");
 
   const resolveSource = async (item) => {
     const sourcePath = item.source?.path || "";
@@ -143,6 +144,8 @@ export const createLocalZipDelivery = ({
     const candidates = [
       path.join(reserveRoot, previewPath),
       path.join(reserveRoot, item.collectionKey || "", previewName),
+      path.join(importCacheRoot, previewPath),
+      path.join(importCacheRoot, item.collectionKey || "", previewName),
     ];
     for (const candidate of candidates) {
       if (previewPath && await exists(candidate)) return { filePath: candidate, kind: "preview-fallback" };

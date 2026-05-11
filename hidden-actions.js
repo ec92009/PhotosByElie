@@ -7,7 +7,7 @@
   const reserveOnlyKey = "photosbyelie-reserve-only";
   const countryAssignmentsKey = "photosbyelie-country-assignments";
   const photoActionEndpoint = "/__photosbyelie/photo-action";
-  const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
+  const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
   let ownerBusyCount = 0;
   let ownerBusyMessage = "";
   let queuedPhotoAction = Promise.resolve();

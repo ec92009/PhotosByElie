@@ -4,6 +4,7 @@ const homeCollections = [
   "spain",
   "mexico",
   "ai",
+  "italy",
   "portugal",
   "slovakia",
 ];

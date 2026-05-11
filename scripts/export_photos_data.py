@@ -18,19 +18,23 @@ LABELS = {
     "spain": ("03", "Spain", "spain-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
     "mexico": ("04", "Mexico", "mexico-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
     "ai": ("05", "AI", "ai-gallery", "Leonardo archive selections prepared from the Saturn Lightroom AI source."),
-    "portugal": ("06", "Portugal", "portugal-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
-    "slovakia": ("07", "Slovakia", "slovakia-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
-    "unknown": ("08", "Unknown", "unknown-gallery", "Saturn Lightroom selections that still need a final gallery assignment."),
+    "italy": ("06", "Italy", "italy-gallery", "Saturn and Apple Photos archive selections prepared from Italian sources."),
+    "portugal": ("07", "Portugal", "portugal-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
+    "slovakia": ("08", "Slovakia", "slovakia-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
+    "unknown": ("09", "Unknown", "unknown-gallery", "Saturn Lightroom selections that still need a final gallery assignment."),
 }
 
-ORDER = ["france", "usa", "spain", "mexico", "ai", "portugal", "slovakia", "unknown"]
+ORDER = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia", "unknown"]
 PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown"]
 OWNER_ORDER = ["unknown"]
-COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
+COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 DEFAULT_REGULAR_CAP = None
 DEFAULT_SELECTION_MODE = "random"
 DIVERSITY_BUCKET_MINUTES = 10
+DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
+DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 REGULAR_ASSET_ROOT = Path("assets/expo")
+IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 RESERVE_ASSET_ROOT = Path("assets/reserve")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
@@ -48,7 +52,7 @@ def ensure_state_folders(root: Path) -> None:
 
 def manifest_specs(repo_root: Path) -> list[tuple[Path, str]]:
     return [
-        (repo_root / "assets/reserve/manifest.json", "reserve"),
+        (repo_root / IMPORT_CACHE_ROOT / "manifest.json", "import-cache"),
     ]
 
 
@@ -130,7 +134,7 @@ def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
 
 
 def source_asset_root(repo_root: Path, mode: str) -> Path:
-    return repo_root / RESERVE_ASSET_ROOT
+    return repo_root / IMPORT_CACHE_ROOT
 
 
 def regular_asset_rel(row: dict, derivative: str) -> str:
@@ -140,7 +144,7 @@ def regular_asset_rel(row: dict, derivative: str) -> str:
 
 
 def source_derivative_rel(row: dict, mode: str, derivative: str) -> str:
-    return f"./{RESERVE_ASSET_ROOT.as_posix()}/{row['derivatives'][derivative]}"
+    return f"./{IMPORT_CACHE_ROOT.as_posix()}/{row['derivatives'][derivative]}"
 
 
 def derivative_files_exist(repo_root: Path, row: dict, mode: str) -> bool:
@@ -150,6 +154,41 @@ def derivative_files_exist(repo_root: Path, row: dict, mode: str) -> bool:
         and (source_asset_root(repo_root, mode) / derivatives[derivative]).exists()
         for derivative in ("gallery", "detail")
     )
+
+
+def load_uploaded_public_keys(repo_root: Path) -> set[str]:
+    path = repo_root / DEFAULT_UPLOAD_STATE
+    if not path.exists():
+        return set()
+    uploaded: set[str] = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if row.get("bucket") == DEFAULT_PUBLIC_BUCKET and row.get("key"):
+            uploaded.add(str(row["key"]))
+    return uploaded
+
+
+def public_derivatives_uploaded(row: dict, uploaded_public_keys: set[str]) -> bool:
+    previews = (row.get("r2") or {}).get("public_previews") or []
+    r2_keys = {
+        str(item.get("key") or "")
+        for item in previews
+        if isinstance(item, dict) and item.get("bucket") == DEFAULT_PUBLIC_BUCKET
+    }
+    expected = {
+        public_media_key(row, str((row.get("derivatives") or {}).get(derivative) or ""))
+        for derivative in ("gallery", "detail")
+    }
+    return bool(expected) and expected <= (r2_keys | uploaded_public_keys)
+
+
+def derivative_files_available(repo_root: Path, row: dict, mode: str, uploaded_public_keys: set[str]) -> bool:
+    return derivative_files_exist(repo_root, row, mode) or public_derivatives_uploaded(row, uploaded_public_keys)
 
 
 def photo_object_data(
@@ -590,9 +629,10 @@ def write_photos_data(
 ) -> Path:
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
     country_assignments = country_assignments or {}
+    uploaded_public_keys = load_uploaded_public_keys(repo_root)
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
-            if not derivative_files_exist(repo_root, row, mode):
+            if not derivative_files_available(repo_root, row, mode, uploaded_public_keys):
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
             gallery_country = row.get("gallery_country") or {}

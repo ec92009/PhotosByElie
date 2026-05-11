@@ -2,7 +2,7 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable local preview-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF masters before importing them.
+`build_lightroom_thumbnails.py` scans developed photo exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF masters before importing them.
 
 Required tools: `python3`, `exiftool`, `sips`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
 
@@ -19,14 +19,14 @@ Useful options:
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root /Volumes/Saturn-1/Pictures/LR/Camera \
-  --output-root assets/reserve \
+  --output-root tmp/import-cache \
   --years 2024-2026 \
   --batch-size 50 \
   --gallery-max 900 \
   --detail-max 1800
 ```
 
-Resume on another machine by pointing `--source-root` at that machine's developed export folder. The script scans folders and files in reverse lexical order so newer year/month/day folders are handled first, tracks photos by relative path, and writes checkpoints to `assets/reserve/.build-state.jsonl`, so already-inspected files and already-rendered derivatives are skipped.
+Resume on another machine by pointing `--source-root` at that machine's developed export folder. The script scans folders and files in reverse lexical order so newer year/month/day folders are handled first, tracks photos by relative path, and writes checkpoints to `tmp/import-cache/.build-state.jsonl`, so already-inspected files and already-rendered derivatives are skipped.
 
 Use `--years 2024` for one year or `--years 2022-2024` for an inclusive range. The filter uses the first four-digit year found in each photo's path relative to the `Camera` folder.
 
@@ -35,7 +35,7 @@ For Leonardo/AI folders where files are already selected by presence rather than
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
-  --output-root assets/reserve \
+  --output-root tmp/import-cache \
   --select all \
   --force-country ai \
   --batch-size 50
@@ -46,27 +46,29 @@ For Apple Photos album exports, folder membership is the selection signal, but c
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root "/Volumes/Saturn/Pictures/LR/Apple Photo Albums" \
-  --output-root assets/reserve \
+  --output-root tmp/import-cache \
   --select all \
   --batch-size 50
 ```
 
 Outputs:
 
-- `assets/reserve/<country>/*_900.jpg`: watermarked gallery thumbnails.
-- `assets/reserve/<country>/*_1800.jpg`: watermarked detail-page images.
-- `assets/reserve/manifest.json`: selected photos, derivative paths, full keyword set, rating/color label when present, and web-facing display metadata.
-- `assets/reserve/keywords.json`: keyword counts and photo references for filter UI.
-- `assets/reserve/collections.json`: generated indexes for years, countries, regions, cities, orientations, and source formats.
-- `assets/reserve/failures.json`: render/extraction errors that need attention.
-- `assets/reserve/gps-metadata.json`: exact GPS coordinates keyed by the same relative photo paths.
-- `assets/reserve/.build-state.jsonl`: append-only resume checkpoint.
+- `tmp/import-cache/<country>/*_900.jpg`: watermarked gallery thumbnails.
+- `tmp/import-cache/<country>/*_1800.jpg`: watermarked detail-page images.
+- `tmp/import-cache/manifest.json`: selected photos, derivative paths, full keyword set, rating/color label when present, and web-facing display metadata.
+- `tmp/import-cache/keywords.json`: keyword counts and photo references for filter UI.
+- `tmp/import-cache/collections.json`: generated indexes for years, countries, regions, cities, orientations, and source formats.
+- `tmp/import-cache/failures.json`: render/extraction errors that need attention.
+- `tmp/import-cache/gps-metadata.json`: exact GPS coordinates keyed by the same relative photo paths.
+- `tmp/import-cache/.build-state.jsonl`: append-only resume checkpoint.
+
+When `--r2-upload public` or `--r2-upload both` is enabled, confirmed-upload preview JPGs are removed from `tmp/import-cache` by default; the manifest, checkpoints, keyword indexes, GPS file, and diagnostics remain. Use `--keep-uploaded-tmp` only when deliberately debugging local staging files.
 
 By default the public manifest preserves all Lightroom keywords, while exact GPS coordinates are written to the separate ignored GPS file. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local preview-cache manifest into `photos-data.js` and writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys are flat by photo ID under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `photos-data.js` and writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys are flat by photo ID under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -116,7 +118,7 @@ python3 scripts/asset_state.py \
 
 That compatibility path applies country assignments and blocked choices from the snapshot. It is not the normal Owner flow anymore.
 
-Because the local preview cache and blocked review data are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local preview-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
+Because the local import cache and blocked review data are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local import-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
 
 ```bash
 python3 scripts/asset_state.py \
@@ -128,7 +130,32 @@ Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroo
 
 For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of the default ordering. Use `--seed N` only with legacy capped/randomized export experiments.
 
-The active storage contract is: Git tracks code/metadata and tiny assets; `assets/reserve` is an ignored local preview cache; Blocked is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
+The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/import-cache` is the ignored disposable import/render workspace; `assets/reserve` remains only as localhost compatibility data; Blocked is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
+
+## State SQLite
+
+`build_photo_state_db.py` creates an ignored local SQLite database at `tmp/photo-state.sqlite` so the current photo universe can be inspected without opening every JSON/JS manifest by hand. It combines the public catalog, homepage manifest, import cache, Expo manifest, private delivery manifest, media sidecar, blocked/discarded tombstones, compatibility Reserve data, and R2 upload/delete logs.
+
+```bash
+python3 scripts/build_photo_state_db.py
+open -a "DB Browser for SQLite" tmp/photo-state.sqlite
+```
+
+Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
+
+The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
+
+```bash
+python3 scripts/build_photo_state_db.py
+```
+
+For a temporary local watcher while actively debugging state changes, run:
+
+```bash
+PBE_PHOTO_STATE_DB_INTERVAL=600 ./scripts/watch_photo_state_db.zsh
+```
+
+Stop it with `Ctrl-C`. The database lives under `tmp/`, so it is disposable and ignored by Git.
 
 ## Publish Validation
 
@@ -148,7 +175,7 @@ When GitHub Pages is serving code and metadata while public previews live in R2/
 node scripts/validate_publish.js --external-media
 ```
 
-Use `--summary` when preparing a push. The summary prints collection counts, local preview-cache/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
+Use `--summary` when preparing a push. The summary prints collection counts, local import-cache/Reserve/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
 
 ```bash
 node scripts/validate_publish.js --summary
@@ -159,7 +186,7 @@ node scripts/validate_publish.js --summary
 `sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:
 
 - public watermarked previews go to `photosbyelie-public` under flat keys such as `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
-- local preview-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
+- local import-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
 - private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
 - unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker only zips them after payment
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
@@ -189,7 +216,7 @@ Dry-run the currently publishable Expo previews:
 python3 scripts/sync_r2_media.py --scope public
 ```
 
-Dry-run the full public browsing set, including local preview-cache previews:
+Dry-run the full public browsing set, including local import-cache previews:
 
 ```bash
 python3 scripts/sync_r2_media.py --scope public --include-reserve
@@ -208,7 +235,7 @@ Run one lane at a time unless there is a strong reason not to. Public and privat
 Recommended public preview resume command:
 
 ```bash
-python3 scripts/sync_r2_media.py --scope public --include-reserve --upload --workers 4 --request-min-interval 0.75
+python3 scripts/sync_r2_media.py --scope public --include-reserve --upload --clean-uploaded-tmp --workers 4 --request-min-interval 0.75
 ```
 
 Recommended private master resume command, after public previews finish:
@@ -273,7 +300,7 @@ python3 scripts/sync_r2_media.py \
 
 The S3 backend uses Python stdlib SigV4 signing and does not need Wrangler login state. Keep the same one-lane rule and start with a small `--limit 1` upload if credentials or bucket permissions were just created. Dry runs do not require credentials because they only build the local inventory.
 
-After the public bucket contains only final baked-watermark previews and public access is enabled through an R2 dev URL or custom domain, put that URL in `media-config.js` as `publicBaseUrl`. Public pages can also be tested temporarily with `?mediaBase=https://example.invalid/path`; use `?mediaBase=local` to clear the stored override.
+The public bucket currently exposes baked-watermark previews through the `r2.dev` URL in `media-config.js` as `publicBaseUrl`, with CORS managed by `docs/r2-public-cors.json`. Public-facing localhost pages use that public media base by default so local testing pays the same network/cache cost as deployed visitors. Owner-only pages keep local staging behavior unless an explicit `?mediaBase=https://...` override is supplied. Use `?mediaBase=local` to force local preview files for a debugging session.
 
 ## Classified Unknown Public R2 Cleanup
 
@@ -289,7 +316,7 @@ Run it only after confirming no public/private R2 upload lane is active. The scr
 
 ## Local Asset Sync
 
-`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track preview-cache or blocked data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
+`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track compatibility Reserve or blocked data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The disposable import cache under `tmp/import-cache` should be rebuilt or uploaded, not handed off through Git. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
 
 The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
 

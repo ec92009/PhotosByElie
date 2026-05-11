@@ -33,7 +33,7 @@ OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
-COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "portugal", "slovakia"}
+COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 OWNER_SESSION_COOKIE = "pbe_owner_session"
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
@@ -112,6 +112,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             reserve_path = Path.cwd() / "assets/reserve" / request_path.removeprefix("/assets/expo/")
             if reserve_path.exists():
                 return str(reserve_path)
+            import_cache_path = Path.cwd() / "tmp/import-cache" / request_path.removeprefix("/assets/expo/")
+            if import_cache_path.exists():
+                return str(import_cache_path)
         return str(translated)
 
     def do_GET(self) -> None:
@@ -147,7 +150,11 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def end_headers(self) -> None:
-        self.send_header("Cache-Control", "no-store")
+        path = self.path.split("?", 1)[0]
+        if path in {"", "/"} or path.endswith(".html"):
+            self.send_header("Cache-Control", "no-cache, max-age=0, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
         super().end_headers()
 
     def _handle_photo_action(self) -> None:
@@ -986,6 +993,10 @@ def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:
         reserve_path = repo_root / reserve_rel
         if reserve_path.exists():
             _append_unique_path(paths, reserve_path)
+        import_cache_rel = "tmp/import-cache/" + rel.removeprefix("assets/expo/")
+        import_cache_path = repo_root / import_cache_rel
+        if import_cache_path.exists():
+            _append_unique_path(paths, import_cache_path)
     elif rel.startswith("assets/reserve/"):
         expo_rel = "assets/expo/" + rel.removeprefix("assets/reserve/")
         expo_path = repo_root / expo_rel

@@ -34,6 +34,7 @@ DEFAULT_THROTTLE_FILE = Path(".review-logs/r2-upload-throttle.lock")
 S3_REGION = "auto"
 S3_SERVICE = "s3"
 HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
+IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn-1/Pictures/LR/Camera"),
@@ -96,6 +97,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--s3-endpoint", default=os.environ.get("R2_S3_ENDPOINT", ""))
     parser.add_argument("--upload", action="store_true", help="Actually upload. Without this, only prints a dry-run inventory.")
     parser.add_argument("--delete", action="store_true", help="Delete the inventoried objects from R2.")
+    parser.add_argument(
+        "--clean-uploaded-tmp",
+        action="store_true",
+        help="After successful upload, remove uploaded files that live under tmp/import-cache.",
+    )
     parser.add_argument("--json", action="store_true", help="Print machine-readable inventory summary.")
     args = parser.parse_args()
     if args.upload and args.delete:
@@ -145,7 +151,7 @@ def hidden_photo_ids(repo_root: Path) -> set[str]:
 
 
 def source_rows_by_id(repo_root: Path) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-    reserve_payload = load_json(repo_root / "assets/reserve/manifest.json", {})
+    reserve_payload = load_json(repo_root / IMPORT_CACHE_ROOT / "manifest.json", {})
     reserve_rows = reserve_payload.get("photos") if isinstance(reserve_payload, dict) else []
     rows = [row for row in reserve_rows or [] if isinstance(row, dict)]
     return {row["id"]: row for row in rows if row.get("id")}, rows, reserve_payload
@@ -166,7 +172,7 @@ def expo_derivative_path(repo_root: Path, expo_row: dict[str, Any], source_row: 
 
     source_rel = clean_asset_ref((source_row.get("derivatives") or {}).get(derivative))
     if source_rel:
-        path = repo_root / "assets/reserve" / source_rel
+        path = repo_root / IMPORT_CACHE_ROOT / source_rel
         if path.exists():
             return path
         return path
@@ -190,7 +196,7 @@ def public_upload_items(repo_root: Path, args: argparse.Namespace, rows_by_id: d
     if args.include_reserve:
         for row in reserve_rows:
             for rel in (row.get("derivatives") or {}).values():
-                candidates.append((row, repo_root / "assets/reserve" / clean_asset_ref(rel)))
+                candidates.append((row, repo_root / IMPORT_CACHE_ROOT / clean_asset_ref(rel)))
 
     for row, path in candidates:
         photo_id = str(row.get("id") or "")
@@ -619,6 +625,7 @@ def upload(
     s3_access_key_id: str,
     s3_secret_access_key: str,
     s3_endpoint: str,
+    clean_uploaded_tmp: bool = False,
 ) -> int:
     failed = 0
     lock = threading.Lock()
@@ -654,11 +661,26 @@ def upload(
             else:
                 uploaded_bytes += item.path.stat().st_size
                 append_upload_state(state_file, item, lock)
+                if clean_uploaded_tmp:
+                    clean_uploaded_tmp_path(item.path)
             if index % 25 == 0 or index == len(items):
                 elapsed = max(1, time.monotonic() - started)
                 mib = uploaded_bytes / (1024 * 1024)
                 print(f"progress {index}/{len(items)} failed={failed} uploaded={mib:.1f} MiB rate={mib / elapsed:.2f} MiB/s", flush=True)
     return failed
+
+
+def clean_uploaded_tmp_path(path: Path) -> None:
+    try:
+        relative = path.resolve().relative_to((Path.cwd() / IMPORT_CACHE_ROOT).resolve())
+    except ValueError:
+        return
+    if not relative.parts or path.name in {"manifest.json", "keywords.json", "collections.json", "failures.json", "gps-metadata.json"}:
+        return
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        return
 
 
 def delete_items(
@@ -825,6 +847,7 @@ def main() -> int:
         args.s3_access_key_id,
         args.s3_secret_access_key,
         args.s3_endpoint,
+        args.clean_uploaded_tmp,
     ) else 0
 
 

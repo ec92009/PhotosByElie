@@ -50,6 +50,7 @@ const translations = {
     'collection.spain': 'Spain',
     'collection.mexico': 'Mexico',
     'collection.ai': 'AI',
+    'collection.italy': 'Italy',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovakia',
     'common.back_to_collections': 'Back to collections',
@@ -270,6 +271,7 @@ const translations = {
     'collection.spain': 'Espagne',
     'collection.mexico': 'Mexique',
     'collection.ai': 'IA',
+    'collection.italy': 'Italie',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovaquie',
     'common.back_to_collections': 'Retour aux collections',
@@ -490,6 +492,7 @@ const translations = {
     'collection.spain': 'España',
     'collection.mexico': 'México',
     'collection.ai': 'IA',
+    'collection.italy': 'Italia',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Eslovaquia',
     'common.back_to_collections': 'Volver a colecciones',
@@ -851,6 +854,14 @@ const normalizePublicMediaBase = (value) => String(value || '').trim().replace(/
 const mediaConfig = window.photosByElieMediaConfig || {};
 const mediaBaseStorageKey = 'photosbyelie-public-media-base';
 const isLocalhostMediaPage = window.photosByElieInputMode.isLocalhost();
+const localPathname = (() => {
+  try {
+    return (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  } catch {
+    return 'index.html';
+  }
+})();
+const localOwnerMediaPages = new Set(['owner.html', 'hidden.html', 'unknown.html']);
 const mediaBaseFromQuery = (() => {
   try {
     return normalizePublicMediaBase(new URLSearchParams(window.location.search).get('mediaBase') || '');
@@ -902,11 +913,15 @@ const explicitMediaBase = mediaBaseFromQuery && mediaBaseFromQuery.toLowerCase()
   && isSafePublicMediaBase(mediaBaseFromQuery)
   ? mediaBaseFromQuery
   : '';
-const defaultMediaBase = isLocalhostMediaPage
-  ? ''
-  : configuredMediaBase;
+const localMediaBaseDisabled = mediaBaseFromQuery.toLowerCase() === 'local';
+const shouldUsePublicMediaBase = !isLocalhostMediaPage || !localOwnerMediaPages.has(localPathname);
+const defaultMediaBase = shouldUsePublicMediaBase
+  ? configuredMediaBase
+  : '';
 window.photosByEliePublicMediaBase = normalizePublicMediaBase(
-  explicitMediaBase || (isLocalhostMediaPage ? window.photosByEliePublicMediaBase : '') || defaultMediaBase
+  localMediaBaseDisabled
+    ? ''
+    : (explicitMediaBase || storedMediaBase || (isLocalhostMediaPage ? window.photosByEliePublicMediaBase : '') || defaultMediaBase)
 );
 window.photosByEliePublicMediaHostnames = new Set(mediaConfig.publicMediaHostnames || ['ec92009.github.io']);
 window.photosByElieMediaStatus = () => ({

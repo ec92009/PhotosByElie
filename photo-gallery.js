@@ -294,8 +294,6 @@ const syncFilterControls = () => {
   });
   const searchInput = filterBar.querySelector("[data-gallery-search]");
   if (searchInput) searchInput.value = filterState.query || "";
-  const keywordInput = filterBar.querySelector("[data-owner-remove-keyword]");
-  if (keywordInput) keywordInput.value = "";
 };
 
 const ensureGalleryFilterControls = () => {
@@ -340,10 +338,6 @@ const ensureGalleryFilterControls = () => {
       <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
-    ${localModerationEnabled ? `
-      <label class="gallery-owner-keyword-tool"><span>Remove keyword from ${escapeHtml(gallery.title || galleryKey)}</span><input type="text" data-owner-remove-keyword placeholder="Keyword"/></label>
-      <button class="btn secondary gallery-owner-keyword-button" type="button" data-owner-remove-collection-keyword>Remove keyword</button>
-    ` : ""}
   `;
   filterTarget.after(filterBar);
   window.photosByElieI18n?.apply?.();
@@ -370,28 +364,6 @@ const ensureGalleryFilterControls = () => {
     syncFilterControls();
     selectedIndex = 0;
     renderGallery();
-  });
-  filterBar.querySelector("[data-owner-remove-collection-keyword]")?.addEventListener("click", async () => {
-    const input = filterBar.querySelector("[data-owner-remove-keyword]");
-    const keyword = String(input?.value || "").trim();
-    if (!keyword) {
-      setGalleryStatus("Enter a keyword to remove.");
-      input?.focus();
-      return;
-    }
-    const ok = window.confirm(`Remove "${keyword}" from every ${gallery.title || galleryKey} photo keyword list?`);
-    if (!ok) return;
-    setGalleryStatus(`Removing "${keyword}" from ${gallery.title || galleryKey} keywords...`);
-    try {
-      const result = await hiddenActions.removeCollectionKeyword?.(galleryKey, keyword);
-      gallery = window.photosByElieData?.[galleryKey];
-      renderGallery();
-      const changed = result?.keyword_removal?.changed || 0;
-      setGalleryStatus(`Removed "${keyword}" from ${changed} ${gallery.title || galleryKey} photo(s).`);
-      if (input) input.value = "";
-    } catch (error) {
-      setGalleryStatus(error?.message || "Could not remove keyword.");
-    }
   });
 };
 

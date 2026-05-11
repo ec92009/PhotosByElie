@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="${PBE_REPO_ROOT:-/Users/ecohen/Dev/photosByElie}"
 LOCK_DIR="$REPO_ROOT/.review-logs/cloud-media-sweep.lock"
 LOG_ROOT="$REPO_ROOT/.review-logs"
+IMPORT_CACHE_ROOT="${PBE_IMPORT_CACHE_ROOT:-tmp/import-cache}"
 PUSH=0
 
 for arg in "$@"; do
@@ -55,10 +56,15 @@ phase discard-start "Delete discarded media"
 node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 done_phase discard-start
 
+phase import-cache "Prepare import cache"
+rm -rf "$IMPORT_CACHE_ROOT"
+mkdir -p "$IMPORT_CACHE_ROOT"
+done_phase import-cache
+
 phase camera "Import Camera sources"
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root /Volumes/Saturn/Pictures/LR/Camera \
-  --output-root assets/reserve \
+  --output-root "$IMPORT_CACHE_ROOT" \
   --r2-upload both \
   --r2-private-renders \
   --hidden-blacklist assets/hidden/hidden-blacklist.json \
@@ -70,7 +76,7 @@ if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
   phase apple-photo-albums "Import Apple Photos album sources"
   python3 scripts/build_lightroom_thumbnails.py \
     --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
-    --output-root assets/reserve \
+    --output-root "$IMPORT_CACHE_ROOT" \
     --select all \
     --r2-upload both \
     --r2-private-renders \
@@ -82,7 +88,7 @@ fi
 phase leonardo "Import Leonardo sources"
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
-  --output-root assets/reserve \
+  --output-root "$IMPORT_CACHE_ROOT" \
   --select all \
   --force-country ai \
   --r2-upload both \
@@ -151,3 +157,7 @@ if ! git diff --cached --quiet; then
   fi
 fi
 done_phase commit
+
+phase cleanup-cache "Clean import cache"
+rm -rf "$IMPORT_CACHE_ROOT"
+done_phase cleanup-cache

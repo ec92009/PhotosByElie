@@ -8,10 +8,10 @@ The script is intentionally interrupt/resume friendly:
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
 
-Developed JPG/TIFF sources are imported into Reserve only when Lightroom marks
-them green with rating 4 or higher. RAW/DNG/NEF files are owner-local source
-material only; their embedded previews are not imported, published, or uploaded.
-Expo is filled later by the review/export scripts.
+Developed JPG/TIFF sources are imported into a disposable local import cache only
+when Lightroom marks them green with rating 4 or higher. RAW/DNG/NEF files are
+owner-local source material only; their embedded previews are not imported,
+published, or uploaded. Expo is filled later by the review/export scripts.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path.home() / "Pictures/LR/2024",
 ]
 DEFAULT_SOURCE_ROOT = DEFAULT_SOURCE_ROOT_CANDIDATES[0]
-DEFAULT_OUTPUT_ROOT = Path("assets/reserve")
+DEFAULT_OUTPUT_ROOT = Path("tmp/import-cache")
 DEFAULT_WATERMARK = "PhotosByElie Preview - Not Licensed"
 DEFAULT_GALLERY_MAX = 900
 DEFAULT_DETAIL_MAX = 1800
@@ -258,6 +258,11 @@ def parse_args() -> argparse.Namespace:
         "--r2-private-renders",
         action="store_true",
         help="When private R2 upload is enabled, also render/upload unwatermarked JPG 6/3/1 MP buyer deliverables under private renders/ keys.",
+    )
+    parser.add_argument(
+        "--keep-uploaded-tmp",
+        action="store_true",
+        help="Keep tmp/import-cache preview JPGs after confirmed public R2 upload. By default, uploaded preview JPGs are removed from the disposable tmp workspace.",
     )
     parser.add_argument(
         "--include-private-keywords",
@@ -1220,6 +1225,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 )
             if private_renders:
                 uploaded["private_renders"] = private_renders
+            shutil.rmtree(render_root, ignore_errors=True)
     if r2_upload_enabled(args, "public"):
         uploaded["public_previews"] = [
             r2_put_file(
@@ -1242,6 +1248,22 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
             ),
         ]
     return uploaded
+
+
+def cleanup_uploaded_tmp_previews(args: argparse.Namespace, r2_assets: dict[str, Any], paths: list[Path]) -> list[str]:
+    if args.keep_uploaded_tmp:
+        return []
+    public_previews = r2_assets.get("public_previews") or []
+    if len(public_previews) < len(paths):
+        return []
+    removed: list[str] = []
+    for path in paths:
+        try:
+            path.unlink(missing_ok=True)
+            removed.append(str(path))
+        except OSError:
+            pass
+    return removed
 
 
 def load_manifest(path: Path) -> dict[str, dict[str, Any]]:
@@ -1596,10 +1618,13 @@ def process_batch(
                 }
                 r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source)
                 if r2_assets:
+                    removed_tmp = cleanup_uploaded_tmp_previews(args, r2_assets, [gallery_path, detail_path])
                     row["r2"] = {
                         "uploaded_at": now_iso(),
                         **r2_assets,
                     }
+                    if removed_tmp:
+                        row["tmp_removed_after_upload"] = removed_tmp
             manifest[relative_path] = row
             failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})

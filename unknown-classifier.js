@@ -5,7 +5,7 @@
   const status = document.querySelector("[data-unknown-status]");
   const shortcutHint = document.querySelector("[data-unknown-shortcut-hint]");
   const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
-  const targetCountries = ["france", "usa", "spain", "mexico", "portugal", "slovakia"];
+  const targetCountries = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
   let selectedPhotoId = "";
   let lastHiddenPhotoId = "";
   let fullscreenPreview = null;

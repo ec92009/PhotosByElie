@@ -34,6 +34,7 @@ COUNTRY_ASSIGNMENT_LABELS = {
     "usa": "USA",
     "spain": "Spain",
     "mexico": "Mexico",
+    "italy": "Italy",
     "portugal": "Portugal",
     "slovakia": "Slovakia",
 }
@@ -43,6 +44,7 @@ AI_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn-1/Pictures/LR/_All Leonardo"),
     Path.home() / "Pictures/LR/_All Leonardo",
 ]
+IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 
 HIDDEN_ASSET_ROOT = Path("assets/hidden")
 MODERATION_LOG_ROOT = Path(".review-logs")
@@ -82,8 +84,8 @@ def rebuild_missing_manifests(
 
     jobs = [
         {
-            "manifest": repo_root / "assets/reserve/manifest.json",
-            "output": "assets/reserve",
+            "manifest": repo_root / IMPORT_CACHE_ROOT / "manifest.json",
+            "output": str(IMPORT_CACHE_ROOT),
             "args": [],
             "source": resolve_optional_source_root(
                 source_root,
@@ -92,8 +94,8 @@ def rebuild_missing_manifests(
             ),
         },
         {
-            "manifest": repo_root / "assets/reserve/manifest.json",
-            "output": "assets/reserve",
+            "manifest": repo_root / IMPORT_CACHE_ROOT / "manifest.json",
+            "output": str(IMPORT_CACHE_ROOT),
             "args": ["--select", "all", "--force-country", "ai"],
             "source": resolve_optional_source_root(ai_source_root, AI_SOURCE_ROOT_CANDIDATES, "AI"),
             "append_after_camera": True,

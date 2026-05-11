@@ -1,35 +1,35 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-10T10:41:22.066Z",
+  "updatedAt": "2026-05-11T18:52:07.776Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
   },
   "catalog": {
-    "photos": 5792,
-    "sourceBytes": 94959663562
+    "photos": 5844,
+    "sourceBytes": 96249678040
   },
   "current": {
-    "publicPreviewObjects": 23186,
-    "publicPreviewBytes": 6988558424,
-    "privateMasterObjects": 5820,
-    "privateMasterBytes": 94992722693,
-    "privateRenderObjects": 17376,
-    "privateRenderBytes": 14585449009,
-    "totalBytes": 116566730126
+    "publicPreviewObjects": 23300,
+    "publicPreviewBytes": 7039578931,
+    "privateMasterObjects": 5914,
+    "privateMasterBytes": 96839643092,
+    "privateRenderObjects": 17658,
+    "privateRenderBytes": 14919485889,
+    "totalBytes": 118798707912
   },
   "blocked": {
     "photoIds": 4359,
     "publicPreviewObjects": 17438,
-    "publicPreviewBytesEstimate": 5256037341,
+    "publicPreviewBytesEstimate": 5268505468,
     "privateMasterObjects": 28,
-    "privateMasterBytes": 6161367829,
+    "privateMasterBytes": 6268944356,
     "privateRenderObjects": 0,
     "privateRenderBytesEstimate": 0,
-    "totalBytesEstimate": 11417405170
+    "totalBytesEstimate": 11537449824
   },
   "noCleanup": {
-    "totalBytesEstimate": 127984135296
+    "totalBytesEstimate": 130336157736
   },
   "pricing": {
     "provider": "Cloudflare R2 Standard storage",
@@ -43,10 +43,10 @@
     ]
   },
   "cost": {
-    "currentMonthlyUsd": 1.7485,
-    "currentMonthlyUsdAfterFreeTier": 1.5985,
-    "noCleanupMonthlyUsdEstimate": 1.9198,
-    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.7698,
-    "avoidedMonthlyUsdEstimate": 0.1713
+    "currentMonthlyUsd": 1.782,
+    "currentMonthlyUsdAfterFreeTier": 1.632,
+    "noCleanupMonthlyUsdEstimate": 1.955,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.805,
+    "avoidedMonthlyUsdEstimate": 0.1731
   }
 }

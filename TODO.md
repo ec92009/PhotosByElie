@@ -4,7 +4,7 @@ Last updated: 2026-05-11
 
 ## Current Facts
 
-- Local visible build: `v71.37`.
+- Local visible build: `v71.41`.
 - Public Expo catalog validates in external media mode with `5,792` publishable photos: France `324`, USA `158`, Spain `169`, Mexico `2`, AI/Leonardo `4,920`, Portugal `217`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -17,7 +17,7 @@ Last updated: 2026-05-11
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
 - Apple Photos album stills should stay full pixel size when exported/imported. If we need explicit JPEG control, normalize to JPEG quality 90 without resizing after export; Photos AppleScript does not expose a reliable quality knob.
 - Video import and presentation are not part of the current photo pipeline. Apple Photos mixed-album tests can export MOV files, but videos are backlog until we design 4K source handling, thumbnails, playback, storage, and checkout rules.
-- Reserve is only an ignored local import/preview cache. It is not a long-term review state.
+- `tmp/import-cache` is the ignored disposable import/render workspace. `assets/reserve` is retained only for localhost Reserve compatibility data; it is not a long-term review state.
 - Blocked and discarded are separate tombstone concepts. Blocked hides a photo from galleries while leaving media in place until preview cleanup; discarded removes it from active catalog state and feeds R2 media cleanup while keeping a permanent do-not-resurrect record.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
@@ -28,6 +28,7 @@ Last updated: 2026-05-11
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
 - Physical print/frame products are off by default for buyers; Owner has a deliberate localhost toggle for local review while product pricing/publishing is still backlog work.
 - Homepage first render uses the tiny `home-data.js` manifest; the full `photos-data.js` catalog now downloads in the background for basket/liked context.
+- Public previews are served directly from the `photosbyelie-public` `r2.dev` media endpoint; the checkout Worker is no longer on the browse-time preview path.
 
 ## Numbered Backlog
 
@@ -51,18 +52,34 @@ Last updated: 2026-05-11
    - Apply deletes across all countries plus AI; do not rewrite already uploaded masters, private renders, public previews, or XMP sidecars.
    - Show before/after counts and refresh Owner counts/status after completion.
 
-4. **Add optional Owner XMP sidecar save.**
+4. **Make country collections open-ended.**
+   - Stop treating countries as a finite fixed code list in Owner workflows.
+   - Let imports send photos with unknown/new geography into Unknown when they cannot confidently map to an existing collection.
+   - In Owner Unknown assignment, show the current known countries plus `Other...` in the country selector.
+   - When Owner chooses `Other...`, prompt for a new country name such as Greece, Morocco, Israel, or any older archive country we have not imported yet.
+   - Create the new collection metadata, slug, Owner assignment target, public gallery route/data, homepage collection entry, translations, and styling from that Owner-provided country name.
+   - Keep existing fixed-country behavior as the compatibility path until dynamic collection generation is designed safely.
+
+5. **Add optional Owner XMP sidecar save.**
    - Add a deliberate Owner button to write Lightroom-style XMP sidecars beside masters from manifest metadata.
    - Keep this separate from normal title/keyword/country edits so media and sidecars are not quietly rewritten.
    - Show counts, destination paths, and errors before/after the sidecar save.
 
-5. **Set up Stripe test mode.**
+6. **Add gallery multi-select Owner metadata edits.**
+   - Allow Owner to select multiple gallery cards with Shift-click ranges and Command-click toggles.
+   - Keep keyboard selection and single-card detail navigation understandable when multi-select is active.
+   - Pressing `T` with multiple photos selected should open a batch title modal with clear behavior, likely either a shared replacement title or a structured title pattern before implementation.
+   - Pressing `K` with multiple photos selected should add comma-separated keywords to every selected photo without replacing existing keywords.
+   - Show selected count, before/after keyword effects, and confirmation for potentially broad edits.
+   - Persist through the existing manifest-only Owner metadata path; do not rewrite uploaded masters, private renders, public previews, or XMP sidecars.
+
+7. **Set up Stripe test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
    - Keep live keys out until test mode proves the full flow.
 
-6. **Run Stripe test checkout end to end.**
+8. **Run Stripe test checkout end to end.**
    - Test successful payment.
    - Test 3D Secure/authentication-required payment.
    - Test declined-card payment.
@@ -70,13 +87,13 @@ Last updated: 2026-05-11
    - Confirm the Worker builds the ZIP from private R2 and the order page exposes the download.
    - Cover paid-but-ZIP-pending, expired download link, missing private asset, and retryable Worker error states.
 
-7. **Make order records production-durable.**
+9. **Make order records production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
    - Keep private R2 as delivery ZIP storage.
    - Rate-limit download links.
 
-8. **Harden owner account/identity.**
+10. **Harden owner account/identity.**
    - Keep the localhost helper boundary as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
    - Rename `owner-auth.js` to reflect current reality, such as `owner-helper-session.js`, because it now checks helper availability rather than passwords.
@@ -84,44 +101,51 @@ Last updated: 2026-05-11
    - Add clear confirmation around future discard/R2 delete actions.
    - Add browser smoke coverage for locked helper and unauthorized mutation states.
 
-9. **Move public media off the checkout Worker bridge.**
-   - Attach an R2 custom domain or equivalent public media endpoint.
-   - Update `media-config.js`.
-   - Retest GitHub Pages gallery/detail/basket media loading.
-   - Keep the Worker focused on checkout/order/delivery, not public thumbnail serving.
+11. **Replace temporary `r2.dev` media URL with a custom media domain.**
+   - Attach an R2 custom domain such as `media.photosbyelie.com`.
+   - Update `media-config.js` from the temporary `r2.dev` URL to the custom domain.
+   - Retest GitHub Pages gallery/detail/basket media loading and public hidden-blacklist fetches.
+   - Keep the checkout Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-10. **Design buyer accounts.**
+12. **Design buyer accounts.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-11. **Split gallery/catalog data by collection.**
+13. **Split gallery/catalog data by collection.**
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.
 
-12. **Design video import and presentation pipeline.**
+14. **Improve variable-height gallery layout.**
+   - Use a Pinterest-style masonry column layout for mixed panorama, landscape, square, and portrait photos.
+   - Preserve the current density controls and fit/fill behavior while avoiding large visual holes between rows.
+   - Prefer a deterministic client-side layout based on known preview dimensions so it does not reshuffle after images load.
+   - Keep keyboard selection, Owner block/discard shortcuts, likes, and detail navigation stable when layout positions change.
+   - Keep a future justified-row gallery as a separate buyer-polish idea, not the current target.
+
+15. **Design video import and presentation pipeline.**
    - Decide whether videos are public gallery items, Owner-only review items, buyer deliverables, or a separate collection type.
    - Preserve 4K where available; determine whether that requires original video export rather than Photos' normal rendered export.
    - Generate video thumbnails/posters, duration metadata, orientation, codec/resolution fields, and gallery cards that do not confuse still-photo purchase flows.
    - Add R2 storage rules for public previews/posters and private video masters or deliverables.
    - Keep MOV/MP4 files out of the existing still-photo importer until this is deliberately implemented.
 
-13. **Harden browser smoke coverage.**
+16. **Harden browser smoke coverage.**
    - Cover gallery grid/fill/fit controls, sorting, filters, detail navigation, likes, basket, checkout, order status, and ZIP download path.
    - Include language-toggle smoke checks for English, French, and Spanish on homepage, gallery, basket, liked, and order pages.
    - Cover Owner block/discard, Unknown assignment, metadata save feedback, and failed-action recovery.
    - Add large-catalog load and lazy-loading checks so `photos-data.js` growth does not quietly slow the public gallery.
    - Keep public and localhost-only behaviors separate in tests.
 
-14. **Extend Owner dashboard.**
+17. **Extend Owner dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, blocked queue, unknown queue, and active sweep status.
    - Add counters and refresh buttons to the Blocked sync / Delete blocked previews panel so Owner can see how many blocked IDs are published and how many blocked preview objects still need cleanup.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-15. **Keep publish validation as the gate.**
+18. **Keep publish validation as the gate.**
    - Validate blocked/discarded exclusions.
    - Validate public preview to private delivery parity.
    - Validate sidecar/private-delivery/discarded-media manifests.
@@ -129,12 +153,12 @@ Last updated: 2026-05-11
    - Add generated JS/JSON payload size budgets for catalog and gallery performance.
    - Keep `npm run validate` mandatory before publish.
 
-16. **Repair and refresh architecture artifacts.**
+19. **Repair and refresh architecture artifacts.**
    - Document which manifests, generated catalogs, deploy artifacts, local caches, and ignored asset folders are sources of truth.
    - Fix the known page 4 text collision in the architecture PDF.
    - Refresh diagrams after account/auth/payment decisions settle.
 
-17. **Backburner: repo layout cleanup.**
+20. **Backburner: repo layout cleanup.**
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
@@ -165,3 +189,4 @@ Last updated: 2026-05-11
 - Added localhost-only Owner helper endpoints for catalog, metadata, Blocked, Unknown, R2 progress, and R2 action endpoints.
 - Added Owner R2 coverage counts with a repair button that starts the lock-guarded cloud media sweep.
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.
+- Moved public preview delivery off the checkout Worker bridge by enabling the public R2 `r2.dev` endpoint and pointing `media-config.js` at it.

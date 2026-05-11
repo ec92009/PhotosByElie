@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 324,
+    "count": 296,
     "href": "./france.html",
     "photos": [
       {
@@ -70,7 +70,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 158,
+    "count": 161,
     "href": "./usa.html",
     "photos": [
       {
@@ -136,62 +136,62 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 169,
+    "count": 223,
     "href": "./spain.html",
     "photos": [
       {
-        "id": "20220705-164431-00139-pano-92425313d3",
-        "title": "20220705 164431 00139 Pano",
-        "gallerySrc": "./assets/expo/spain/20220705-164431-00139-pano-92425313d3_900.jpg",
-        "imageSrc": "./assets/expo/spain/20220705-164431-00139-pano-92425313d3_1800.jpg",
+        "id": "d5h-2946-c744a8409c",
+        "title": "D5H 2946",
+        "gallerySrc": "./assets/expo/spain/d5h-2946-c744a8409c_900.jpg",
+        "imageSrc": "./assets/expo/spain/d5h-2946-c744a8409c_1800.jpg",
         "media": {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164431-00139-pano-92425313d3_900.jpg",
-            "detailKey": "expo/20220705-164431-00139-pano-92425313d3_1800.jpg"
+            "galleryKey": "expo/d5h-2946-c744a8409c_900.jpg",
+            "detailKey": "expo/d5h-2946-c744a8409c_1800.jpg"
           }
         }
       },
       {
-        "id": "20220705-164358-00121-pano-28e2885b71",
-        "title": "20220705 164358 00121 Pano",
-        "gallerySrc": "./assets/expo/spain/20220705-164358-00121-pano-28e2885b71_900.jpg",
-        "imageSrc": "./assets/expo/spain/20220705-164358-00121-pano-28e2885b71_1800.jpg",
+        "id": "d5h-2945-864593e516",
+        "title": "D5H 2945",
+        "gallerySrc": "./assets/expo/spain/d5h-2945-864593e516_900.jpg",
+        "imageSrc": "./assets/expo/spain/d5h-2945-864593e516_1800.jpg",
         "media": {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164358-00121-pano-28e2885b71_900.jpg",
-            "detailKey": "expo/20220705-164358-00121-pano-28e2885b71_1800.jpg"
+            "galleryKey": "expo/d5h-2945-864593e516_900.jpg",
+            "detailKey": "expo/d5h-2945-864593e516_1800.jpg"
           }
         }
       },
       {
-        "id": "20220705-164409-00126-pano-75c4163f8e",
-        "title": "20220705 164409 00126 Pano",
-        "gallerySrc": "./assets/expo/spain/20220705-164409-00126-pano-75c4163f8e_900.jpg",
-        "imageSrc": "./assets/expo/spain/20220705-164409-00126-pano-75c4163f8e_1800.jpg",
+        "id": "d5h-2944-68e4f5655f",
+        "title": "D5H 2944",
+        "gallerySrc": "./assets/expo/spain/d5h-2944-68e4f5655f_900.jpg",
+        "imageSrc": "./assets/expo/spain/d5h-2944-68e4f5655f_1800.jpg",
         "media": {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164409-00126-pano-75c4163f8e_900.jpg",
-            "detailKey": "expo/20220705-164409-00126-pano-75c4163f8e_1800.jpg"
+            "galleryKey": "expo/d5h-2944-68e4f5655f_900.jpg",
+            "detailKey": "expo/d5h-2944-68e4f5655f_1800.jpg"
           }
         }
       },
       {
-        "id": "20220705-164412-00127-pano-13a8791aa3",
-        "title": "20220705 164412 00127 Pano",
-        "gallerySrc": "./assets/expo/spain/20220705-164412-00127-pano-13a8791aa3_900.jpg",
-        "imageSrc": "./assets/expo/spain/20220705-164412-00127-pano-13a8791aa3_1800.jpg",
+        "id": "d5h-2943-cb7846f993",
+        "title": "D5H 2943",
+        "gallerySrc": "./assets/expo/spain/d5h-2943-cb7846f993_900.jpg",
+        "imageSrc": "./assets/expo/spain/d5h-2943-cb7846f993_1800.jpg",
         "media": {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164412-00127-pano-13a8791aa3_900.jpg",
-            "detailKey": "expo/20220705-164412-00127-pano-13a8791aa3_1800.jpg"
+            "galleryKey": "expo/d5h-2943-cb7846f993_900.jpg",
+            "detailKey": "expo/d5h-2943-cb7846f993_1800.jpg"
           }
         }
       }
@@ -207,7 +207,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20191207-1718-19516-5bc74a12ce",
-        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+        "title": "20191207 1718 19516",
         "gallerySrc": "./assets/expo/mexico/20191207-1718-19516-5bc74a12ce_900.jpg",
         "imageSrc": "./assets/expo/mexico/20191207-1718-19516-5bc74a12ce_1800.jpg",
         "media": {
@@ -221,7 +221,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20191206-0605-17192-85701a04f9",
-        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+        "title": "20191206 0605 17192",
         "gallerySrc": "./assets/expo/mexico/20191206-0605-17192-85701a04f9_900.jpg",
         "imageSrc": "./assets/expo/mexico/20191206-0605-17192-85701a04f9_1800.jpg",
         "media": {
@@ -301,12 +301,78 @@ window.photosByElieHomeData = {
       }
     ]
   },
-  "portugal": {
+  "italy": {
     "number": "06",
+    "title": "Italy",
+    "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
+    "accent": "italy-gallery",
+    "count": 24,
+    "href": "./italy.html",
+    "photos": [
+      {
+        "id": "img-1219-570b09bebb",
+        "title": "IMG 1219",
+        "gallerySrc": "./assets/expo/italy/img-1219-570b09bebb_900.jpg",
+        "imageSrc": "./assets/expo/italy/img-1219-570b09bebb_1800.jpg",
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1219-570b09bebb_900.jpg",
+            "detailKey": "expo/img-1219-570b09bebb_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1218-fe487846d6",
+        "title": "IMG 1218",
+        "gallerySrc": "./assets/expo/italy/img-1218-fe487846d6_900.jpg",
+        "imageSrc": "./assets/expo/italy/img-1218-fe487846d6_1800.jpg",
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1218-fe487846d6_900.jpg",
+            "detailKey": "expo/img-1218-fe487846d6_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1217-fba9ecc01d",
+        "title": "IMG 1217",
+        "gallerySrc": "./assets/expo/italy/img-1217-fba9ecc01d_900.jpg",
+        "imageSrc": "./assets/expo/italy/img-1217-fba9ecc01d_1800.jpg",
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1217-fba9ecc01d_900.jpg",
+            "detailKey": "expo/img-1217-fba9ecc01d_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1216-601dd6c052",
+        "title": "IMG 1216",
+        "gallerySrc": "./assets/expo/italy/img-1216-601dd6c052_900.jpg",
+        "imageSrc": "./assets/expo/italy/img-1216-601dd6c052_1800.jpg",
+        "media": {
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1216-601dd6c052_900.jpg",
+            "detailKey": "expo/img-1216-601dd6c052_1800.jpg"
+          }
+        }
+      }
+    ]
+  },
+  "portugal": {
+    "number": "07",
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 217,
+    "count": 216,
     "href": "./portugal.html",
     "photos": [
       {
@@ -368,7 +434,7 @@ window.photosByElieHomeData = {
     ]
   },
   "slovakia": {
-    "number": "07",
+    "number": "08",
     "title": "Slovakia",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "slovakia-gallery",

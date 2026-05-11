@@ -4,7 +4,7 @@ Repeatable workflow for importing Lightroom-selected photos into the static Phot
 
 ## Scope
 
-Use this SOP when adding or refreshing real-photo galleries from developed Lightroom exports. The automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests into local Reserve; Expo is filled later by live Owner review or export tooling.
+Use this SOP when adding or refreshing real-photo galleries from developed Lightroom exports. The automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests into a disposable local import cache; Expo is filled later by live Owner review or export tooling.
 
 Do not use this SOP for repo-only documentation edits, CSS-only page polish, or manual one-off fixes to existing gallery data.
 
@@ -55,7 +55,7 @@ Recommended focused scan for a year or year range:
 ```bash
 python3 scripts/build_lightroom_thumbnails.py \
   --source-root /Volumes/Saturn/Pictures/LR/Camera \
-  --output-root assets/reserve \
+  --output-root tmp/import-cache \
   --years 2024 \
   --batch-size 50
 ```
@@ -66,24 +66,24 @@ Use `--limit N` for a small trial and `--dry-run` when checking selection behavi
 
 The builder is designed to be interrupted and resumed.
 
-- `assets/reserve/.build-state.jsonl` records inspected and selected source paths.
+- `tmp/import-cache/.build-state.jsonl` records inspected and selected source paths.
 - Existing derivatives are skipped unless `--force` is used.
 - If a manifest row exists but a derivative is missing, rerunning from a source archive can regenerate that derivative.
 - Use the same `--output-root` when resuming so checkpoints and manifests stay aligned.
 
 ## Outputs
 
-- `assets/reserve/<country>/*_900.jpg`: watermarked gallery thumbnails.
-- `assets/reserve/<country>/*_1800.jpg`: watermarked detail-page images.
-- `assets/reserve/manifest.json`: selected photo metadata and derivative references.
-- `assets/reserve/keywords.json`: keyword counts and photo references for future filtering.
-- `assets/reserve/collections.json`: generated indexes for years, locations, orientation, source formats, and gallery countries.
-- `assets/reserve/failures.json`: extraction or render failures to inspect before publishing.
-- `assets/reserve/gps-metadata.json`: exact GPS metadata, ignored by Git.
+- `tmp/import-cache/<country>/*_900.jpg`: watermarked gallery thumbnails.
+- `tmp/import-cache/<country>/*_1800.jpg`: watermarked detail-page images.
+- `tmp/import-cache/manifest.json`: selected photo metadata and derivative references.
+- `tmp/import-cache/keywords.json`: keyword counts and photo references for future filtering.
+- `tmp/import-cache/collections.json`: generated indexes for years, locations, orientation, source formats, and gallery countries.
+- `tmp/import-cache/failures.json`: extraction or render failures to inspect before publishing.
+- `tmp/import-cache/gps-metadata.json`: exact GPS metadata, ignored by Git.
 
 ## Privacy Rules
 
-- Keep `assets/reserve` and `assets/hidden` untracked except for tracked blocked-list/tombstone files already in Git.
+- Keep `tmp/import-cache`, `assets/reserve`, and `assets/hidden` untracked except for tracked blocked-list/tombstone files already in Git. `tmp/import-cache` is disposable after media is uploaded and manifests are regenerated.
 - Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are the handoff trail for localhost Unknown-to-country moves. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Do not paste exact GPS coordinates into public site data.
 - Review public keywords before promoting them into `photos-data.js`.
@@ -94,7 +94,7 @@ The builder is designed to be interrupted and resumed.
 
 Promotion is automated by live Owner actions first, with exporter/review snapshots as fallback tools:
 
-1. Build or refresh `assets/reserve/manifest.json`.
+1. Build or refresh `tmp/import-cache/manifest.json`.
 2. Prefer H/U/P and Unknown assignment in the localhost Owner surfaces; those actions move files immediately.
 3. Run `scripts/export_photos_data.py --external-media` to publish every eligible cloud-backed preview.
 4. Confirm Expo excludes blocked, discarded, RAW-only, and otherwise ineligible photos.
@@ -120,7 +120,7 @@ PY
 git diff --check
 ```
 
-Also inspect `assets/reserve/failures.json`. Empty `failures` means the latest build did not record outstanding extraction or render errors.
+Also inspect `tmp/import-cache/failures.json`. Empty `failures` means the latest build did not record outstanding extraction or render errors.
 
 For user-visible gallery changes, preview the active pages locally and follow `SHOW_ME_SOP.md` for reporting URLs and the visible version.
 

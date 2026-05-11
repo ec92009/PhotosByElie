@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Order</title>
-  <meta name="description" content="Order status and delivery for Photos By Elie."/>
+  <title>Photos By Elie | Gallery</title>
+  <meta name="description" content="Mock photo gallery for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
   <link rel="stylesheet" href="./shared.css?v=71.41"/>
@@ -14,14 +14,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-gallery="italy">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <header class="topbar shell">
     <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
-      <a href="./basket.html" data-i18n="nav.basket">Basket</a> <span>|</span>
-      <a href="./liked.html" data-i18n="nav.liked">Liked</a>
+      <a class="is-active" data-nav-current href="./italy.html" data-i18n="nav.gallery">Gallery</a>
     </nav>
     <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v71.41</div>
     <div class="header-controls">
@@ -30,35 +29,12 @@
     </div>
   </header>
   <main id="main-content" class="shell">
-    <section class="panel gallery-hero basket-hero">
-      <h1 data-i18n="order.title">Order</h1>
-      <div class="cta">
-        <a class="btn secondary" href="./basket.html" data-i18n="nav.basket">Basket</a>
-        <button class="btn secondary" type="button" data-order-refresh data-i18n="common.refresh">Refresh</button>
-      </div>
+    <section class="panel gallery-hero">
+      <h1 data-gallery-title data-i18n="nav.gallery">Gallery</h1>
+      <p class="gallery-status" data-gallery-status aria-live="polite"></p>
+      <div class="cta" data-gallery-actions><a class="btn secondary" href="./" data-i18n="common.back_to_collections">Back to collections</a></div>
     </section>
-    <section class="panel order-panel">
-      <div class="order-status-card">
-        <p class="eyebrow" data-i18n="order.checkout">Checkout</p>
-        <h2 data-order-heading data-i18n="order.loading">Loading order</h2>
-        <p class="order-phase-label" data-order-phase data-i18n="order.checking_phase">Checking order phase</p>
-        <p data-order-message data-i18n="order.checking_worker">Checking the checkout Worker for order status.</p>
-        <div class="order-state-rail" aria-label="Order progress" data-i18n-aria-label="a11y.order_progress">
-          <span data-state-step="pending_payment"><b>1</b><strong data-i18n="order.payment">Payment</strong><small data-i18n="order.stripe">Stripe</small></span>
-          <span data-state-step="preparing"><b>2</b><strong data-i18n="order.build_zip">Build ZIP</strong><small data-i18n="order.private_r2">Private R2</small></span>
-          <span data-state-step="ready"><b>3</b><strong data-i18n="order.download">Download</strong><small data-i18n="order.ready_label">Ready</small></span>
-        </div>
-        <a class="btn primary" data-download-zip data-i18n="order.download" hidden>Download</a>
-        <button class="btn secondary" type="button" data-copy-zip-path hidden>Copy ZIP path</button>
-        <label class="order-copy-field" data-zip-copy-field hidden>
-          <span data-i18n="order.zip_location">ZIP location</span>
-          <textarea data-zip-location readonly></textarea>
-        </label>
-      </div>
-      <dl class="order-detail-grid" data-order-details></dl>
-      <div class="order-items" data-order-items></div>
-      <p class="basket-status" data-order-status aria-live="polite"></p>
-    </section>
+    <section class="panel mock-gallery" data-gallery-root></section>
   </main>
 
   <footer class="site-footer">
@@ -67,6 +43,9 @@
       <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
         <a href="./#collections" data-i18n="nav.collections">Collections</a>
+        <span class="footer-owner-tools" data-owner-tools hidden>
+          <a href="./owner.html" data-i18n="nav.owner">Owner</a>
+        </span>
       </nav>
     </div>
   </footer>
@@ -76,6 +55,12 @@
   <script src="./owner-auth.js?v=71.41"></script>
   <script src="./owner-tools.js?v=71.41"></script>
   <script src="./site-version.js?v=71.41"></script>
-  <script src="./order.js?v=71.41"></script>
+  <script src="./photos-data.js?v=71.41"></script>
+  <script src="./hidden-actions.js?v=71.41"></script>
+  <script src="./reserve-store.js?v=71.41"></script>
+  <script src="./liked-store.js?v=71.41"></script>
+  <script src="./basket-store.js?v=71.41"></script>
+  <script src="./photo-gallery.js?v=71.41"></script>
+  <script src="./basket-rail.js?v=71.41"></script>
 </body>
 </html>

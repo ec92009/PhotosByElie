@@ -311,6 +311,7 @@ const printSummary = (collections) => {
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
   const totalPhotos = collectionRows.reduce((sum, row) => sum + row.count, 0);
   const expoStats = folderStats(path.join(repoRoot, "assets", "expo"));
+  const importCacheStats = folderStats(path.join(repoRoot, "tmp", "import-cache"));
   const reserveStats = folderStats(path.join(repoRoot, "assets", "reserve"));
   const hiddenStats = folderStats(path.join(repoRoot, "assets", "hidden"));
   const statusOutput = runGit("git status --short -- .");
@@ -332,7 +333,8 @@ const printSummary = (collections) => {
   console.log(`Photos: ${totalPhotos}`);
   collectionRows.forEach((row) => console.log(`- ${row.title}: ${row.count}`));
   console.log(`Expo assets: ${expoStats.files} files, ${formatBytes(expoStats.bytes)}`);
-  console.log(`Reserve assets: ${reserveStats.files} files, ${formatBytes(reserveStats.bytes)} (ignored/local)`);
+  console.log(`Import cache: ${importCacheStats.files} files, ${formatBytes(importCacheStats.bytes)} (ignored/tmp)`);
+  console.log(`Reserve compatibility data: ${reserveStats.files} files, ${formatBytes(reserveStats.bytes)} (ignored/local)`);
   console.log(`Hidden assets: ${hiddenStats.files} files, ${formatBytes(hiddenStats.bytes)} (ignored/local)`);
   console.log(`Media validation: ${externalMedia ? "external R2/CDN keys" : "local Expo asset files"}`);
   console.log(`Changed Expo/catalog files: ${assetCatalogChanged.length}`);

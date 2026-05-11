@@ -93,6 +93,7 @@
 .photo-print.usa{--photo-scene:linear-gradient(140deg,#f3f4f5 0 20%,#335f7d 20% 38%,#a83b37 38% 50%,#d8a94d 50% 70%,#222 70% 100%);left:26%;top:0%;transform:rotate(6deg);z-index:3}
 .photo-print.spain{--photo-scene:linear-gradient(145deg,#edcf86 0 24%,#c65335 24% 42%,#f4ead7 42% 58%,#24524f 58% 100%);left:54%;top:6%;transform:rotate(-4deg);z-index:4}
 .photo-print.mexico{--photo-scene:linear-gradient(135deg,#f3c24e 0 20%,#c64637 20% 38%,#1f7770 38% 58%,#f7ead5 58% 76%,#262626 76% 100%);left:11%;top:32%;transform:rotate(8deg);z-index:5}
+.photo-print.italy{--photo-scene:linear-gradient(135deg,#3b6f52 0 22%,#f5efe1 22% 50%,#bb3d34 50% 68%,#d6b56a 68% 100%);left:40%;top:44%;transform:rotate(-7deg);z-index:6}
 .photo-print.ai{--photo-scene:radial-gradient(circle at 26% 28%,#f4f4f4 0 7%,transparent 8%),radial-gradient(circle at 78% 20%,#b9c7d8 0 12%,transparent 13%),linear-gradient(135deg,#191919 0 22%,#724e83 22% 42%,#2e6e70 42% 64%,#e0d8bd 64% 100%);left:40%;top:29%;transform:rotate(-8deg);z-index:6}
 .photo-print.portugal{--photo-scene:linear-gradient(125deg,#224c42 0 28%,#efe3c8 28% 48%,#a33f34 48% 66%,#d1a15b 66% 100%);left:67%;top:30%;transform:rotate(10deg);z-index:5}
 .photo-print.slovakia{--photo-scene:linear-gradient(125deg,#2f4768 0 28%,#f0efe8 28% 46%,#b23d3c 46% 64%,#d0b36b 64% 100%);left:22%;top:60%;transform:rotate(-5deg);z-index:4}
@@ -173,6 +174,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .photo-art.spain{--photo-scene:linear-gradient(120deg,#efc35f 0 20%,#d76a3c 20% 35%,#f8edd6 35% 52%,#255c59 52% 100%)}
 .photo-art.mexico{--photo-scene:linear-gradient(125deg,#f2bd3f 0 19%,#bd4037 19% 35%,#23746d 35% 55%,#f6ead8 55% 72%,#222 72% 100%)}
 .photo-art.ai{--photo-scene:radial-gradient(circle at 26% 28%,#f4f4f4 0 7%,transparent 8%),radial-gradient(circle at 78% 20%,#b9c7d8 0 12%,transparent 13%),linear-gradient(135deg,#191919 0 22%,#724e83 22% 42%,#2e6e70 42% 64%,#e0d8bd 64% 100%)}
+.photo-art.italy{--photo-scene:linear-gradient(125deg,#2f6c51 0 24%,#f4ecdd 24% 48%,#b23b32 48% 66%,#d4b46b 66% 100%)}
 .photo-art.portugal{--photo-scene:linear-gradient(125deg,#224c42 0 28%,#efe3c8 28% 48%,#a33f34 48% 66%,#d1a15b 66% 100%)}
 .photo-art.slovakia{--photo-scene:linear-gradient(125deg,#2f4768 0 28%,#f0efe8 28% 46%,#b23d3c 46% 64%,#d0b36b 64% 100%)}
 .photo-art.unknown{--photo-scene:linear-gradient(125deg,#353535 0 26%,#5b6672 26% 48%,#d6d0bf 48% 72%,#8d8f93 72% 100%)}
@@ -1096,12 +1098,8 @@ body[data-gallery] .gallery-hero{
 .gallery-filter-bar input{
   padding:0 10px;
 }
-.gallery-search-label,
-.gallery-owner-keyword-tool{
+.gallery-search-label{
   grid-column:span 2;
-}
-.gallery-owner-keyword-button{
-  min-height:42px;
 }
 .gallery-filter-clear{
   min-height:42px;

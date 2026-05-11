@@ -7,7 +7,7 @@ Date: 2026-05-11
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v71.41`
+- Current visible build: `v72.0`
 - Business direction has shifted from building infrastructure to making the site sell: payments, delivery trust, offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog currently has `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - Blocked catalog state currently has `4,384` blocked photos. Discarded tombstones are currently empty.
@@ -37,7 +37,7 @@ Date: 2026-05-11
 - The next serious revenue milestone is proving Stripe in test mode end to end: success, 3D Secure/authentication-required, declined card, verified webhook, private R2 ZIP build, order page download, and failure states.
 - Delivery ZIPs are flat: files sit at the archive root beside `ORDER.txt`, with no per-photo subfolders.
 - Physical print/frame products are off by default for buyers. Owner still has a deliberate localhost toggle for local review, but digital checkout should be proven first.
-- Owner price editing exists locally; publishing a real price list shared by the public basket and Worker is now a high-priority business item.
+- Published default prices now distinguish original-photo downloads from lower AI-origin downloads, and the Worker validates against those tiered prices. A dedicated price-list data file is still a high-priority cleanup item.
 - The offer still needs buyer-facing packaging: licensing language, resolution explanations, Full resolution meaning, AI-origin clarity, delivery expectations, refund/contact copy, bundles, and launch pricing.
 
 ## Product/UX Decisions Made
@@ -69,7 +69,7 @@ Date: 2026-05-11
 1. **Prove Stripe checkout in test mode.** Configure Stripe secrets/webhook, test success, 3D Secure, declined card, verified webhook, ZIP build, download, and failure states.
 2. **Make checkout and delivery production-durable.** Choose D1 vs KV, store durable order state, rate-limit downloads, and make order/delivery copy trustworthy.
 3. **Package the buyer offer clearly.** Clarify licensing, resolution labels, Full resolution, AI-origin handling, delivery expectations, refunds, and contact.
-4. **Publish a real price and offer strategy.** Move local Owner prices into a published price list shared by public basket and Worker; add launch pricing, bundles, collection packs, and future promo hooks.
+4. **Publish a real price and offer strategy.** Move generated-code price defaults into a dedicated price-list data file shared by public basket and Worker; add launch pricing, bundles, collection packs, and future promo hooks.
 5. **Curate the first sellable storefront.** Pick strongest collections/images, block weak or unsuitable photos, and make the public catalog feel intentional.
 6. **Add conversion analytics.** Track privacy-conscious funnel events from view to ZIP download and report top viewed/liked/sold photos.
 7. **Improve public discovery and SEO.** Add page titles, descriptions, Open Graph, canonical URLs, sitemap, structured data, and search-friendly image metadata.

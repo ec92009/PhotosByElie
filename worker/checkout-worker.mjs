@@ -30,6 +30,11 @@ const cents = (dollars) => Math.round(Number(dollars || 0) * 100);
 
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
 
+const pricingTierFor = (photo, collectionKey) => String(photo?.pricingTier || (collectionKey === "ai" ? "ai" : "original"));
+
+const optionPriceFor = (photo, collectionKey, option) =>
+  Number(option?.prices?.[pricingTierFor(photo, collectionKey)] ?? option?.price ?? 0);
+
 const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
 const defaultNow = () => new Date();
@@ -165,14 +170,15 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
           code: "unsupported_product_type",
         });
       }
+      const optionPrice = optionPriceFor(photo, collectionKey, catalogOption);
       options.push({
         id: catalogOption.id,
         type: "digital",
         label: catalogOption.label,
         detail: catalogOption.id === "full" ? `Original: ${originalSize(photo)}` : catalogOption.detail,
         quantity: 1,
-        unitAmount: cents(catalogOption.price),
-        amount: cents(catalogOption.price),
+        unitAmount: cents(optionPrice),
+        amount: cents(optionPrice),
       });
     }
 

@@ -168,11 +168,14 @@
     const frames = window.photosByElieFrameOptions || [];
     const digitalOptions = options.filter((option) => option.type !== "print");
     const printOptions = options.filter((option) => option.type === "print");
+    const priceTiers = window.photosByEliePriceTiers || { original: { label: "Original photo" } };
+    const digitalTierIds = Object.keys(priceTiers);
     const frameColumns = frames.filter((frame) => frame.id !== "none");
     const frameGroupIds = frameColumns.map((frame) => frame.id).join(",");
     const framePrice = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
     const frameGroupPrice = (option) => frameColumns.length ? framePrice(frameColumns[0], option) : 0;
     const shippingPrice = (option) => window.photosByElieOptionShippingHandlingUnitPrice?.(option) || 0;
+    const optionTierPrice = (option, tier) => Number(option?.prices?.[tier] ?? option?.price ?? 0);
     const priceInput = ({ kind, id, optionId = "", value, label }) => `
       <label class="owner-price-field">
         <span>${escapeHtml(label)}</span>
@@ -184,7 +187,15 @@
       <tr>
         <th scope="row">${escapeHtml(productLabel(option))}</th>
         <td>${escapeHtml(productDetail(option))}</td>
-        <td>${priceInput({ kind: "option", id: option.id, value: option.price, label: `${productLabel(option)} base price` })}</td>
+        ${digitalTierIds.map((tier) => `
+          <td>${priceInput({
+            kind: "option-tier",
+            id: option.id,
+            optionId: tier,
+            value: optionTierPrice(option, tier),
+            label: `${priceTiers[tier]?.label || tier} ${productLabel(option)} price`,
+          })}</td>
+        `).join("")}
         <td colspan="2">Digital delivery</td>
       </tr>
     `).join("");
@@ -193,6 +204,7 @@
         <th scope="row">${escapeHtml(productLabel(option))}</th>
         <td>${escapeHtml(productDetail(option))}</td>
         <td>${priceInput({ kind: "option", id: option.id, value: option.price, label: `${productLabel(option)} base price` })}</td>
+        <td>Same print price</td>
         <td>${priceInput({
           kind: "frame-group",
           id: frameGroupIds,
@@ -209,7 +221,7 @@
           <tr>
             <th scope="col">Product</th>
             <th scope="col">Detail</th>
-            <th scope="col">Base</th>
+            ${digitalTierIds.map((tier) => `<th scope="col">${escapeHtml(priceTiers[tier]?.label || tier)}</th>`).join("")}
             <th scope="col">Frame</th>
             <th scope="col">S&amp;H</th>
           </tr>
@@ -227,6 +239,11 @@
         input.value = String(value);
         if (input.dataset.ownerPriceKind === "option") {
           overrides.options = { ...(overrides.options || {}), [input.dataset.ownerPriceId]: value };
+        } else if (input.dataset.ownerPriceKind === "option-tier") {
+          const optionId = input.dataset.ownerPriceId;
+          const tier = input.dataset.ownerPriceOption;
+          overrides.optionPrices = { ...(overrides.optionPrices || {}) };
+          overrides.optionPrices[optionId] = { ...(overrides.optionPrices[optionId] || {}), [tier]: value };
         } else if (input.dataset.ownerPriceKind === "frame-group") {
           const frameIds = String(input.dataset.ownerPriceId || "").split(",").filter(Boolean);
           const optionId = input.dataset.ownerPriceOption;

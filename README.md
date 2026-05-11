@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v71.41`
+- Current visible version: `v72.0`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -113,7 +113,9 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `assets/private-delivery-manifest.json` tracks private master/render coverage for catalog photos.
 - `assets/discarded/discarded-photo-ids.json` is the durable owner discard tombstone list. `assets/discarded-media-manifest.json` is the generated R2 cleanup record built from those tombstones plus older cleanup history.
 - Product choices are digital-only by default. Owner can deliberately enable physical print/frame options on localhost with the Physical items toggle for local review.
-- Owner shows an editable local price-list table for the current digital resolutions, print sizes, frame add-ons, and mock S&H amounts.
+- Published digital prices now use separate defaults for original photos and AI-origin images. Original photo downloads start at $8 for 1 MP and $65 for full resolution; AI-origin downloads start at $4 for 1 MP and $25 for full resolution.
+- Owner shows an editable local price-list table for the current original/AI digital resolution tiers, print sizes, frame add-ons, and mock S&H amounts.
+- Physical print defaults are open-edition launch prices: $12 for 4x6, $18 for 5x7, $32 for 8x10, and $48 for 11x14 before optional framing.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.
 - Selected prints carry a count stepper and a per-print frame choice: no frame, white frame, or black frame. Using the count stepper or choosing a frame selects that print automatically, and frame mock prices scale by print size.
 - Downloads have free shipping and handling. Physical prints show a mock S&H amount by size, added and removed as a limited-time discount so the payable mock total stays unchanged.

@@ -52,8 +52,9 @@ const testWorker = () => {
   return { worker, stripe, store };
 };
 
-const firstDeliverablePhotoId = (catalog) => {
+const firstDeliverablePhotoId = (catalog, collectionKey = null) => {
   for (const [photoId, entry] of catalog.photos.entries()) {
+    if (collectionKey && entry.collectionKey !== collectionKey) continue;
     const options = catalog.availableOptionsFor(entry.photo).map((option) => option.id);
     if (entry.photo.sourceFiles?.length && options.includes("full") && options.includes("jpg-3mp")) {
       return photoId;
@@ -137,9 +138,27 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.order.id, /^PBE-20260507-/);
   assert.equal(body.order.status, "pending_payment");
   assert.equal(body.order.currency, "usd");
-  assert.equal(body.order.amountExpected, 5500);
+  assert.equal(body.order.amountExpected, 8100);
   assert.equal(body.order.items[0].products.length, 2);
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
+});
+
+test("AI collection digital products use the AI price tier", async () => {
+  const catalog = loadCatalog();
+  const { worker } = testWorker();
+  const photoId = firstDeliverablePhotoId(catalog, "ai");
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-1mp" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  assert.equal(body.order.items[0].collection, "AI");
+  assert.equal(body.order.amountExpected, 2900);
+  assert.equal(body.order.items[0].products.find((item) => item.id === "full").amount, 2500);
+  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 400);
 });
 
 test("real Stripe client creates hosted Checkout Sessions with order metadata", async () => {
@@ -237,7 +256,7 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   assert.equal(payResponse.status, 200);
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
-  assert.equal(paid.order.amountPaid, 4500);
+  assert.equal(paid.order.amountPaid, 6500);
   assert.match(paid.order.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-20260507-/);
   assert.match(paid.order.delivery.downloadUrl, /^\/download\/dl_/);
 

@@ -8,8 +8,15 @@ const sandbox = { window: {}, console, Intl };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(repoRoot, "photos-data.js"), "utf8"), sandbox);
 
+const workerCollections = Object.fromEntries(
+  Object.entries(sandbox.window.photosByElieData || {}).map(([key, collection]) => [key, {
+    ...collection,
+    photos: (collection.photos || []).map(({ pricingTier: _pricingTier, ...photo }) => photo),
+  }])
+);
+
 const lines = [
-  `export const collections = ${JSON.stringify(sandbox.window.photosByElieData || {}, null, 2)};`,
+  `export const collections = ${JSON.stringify(workerCollections, null, 2)};`,
   `export const resolutions = ${JSON.stringify(sandbox.window.photosByElieResolutions || [], null, 2)};`,
   `export const frameOptions = ${JSON.stringify(sandbox.window.photosByElieFrameOptions || [], null, 2)};`,
   "",

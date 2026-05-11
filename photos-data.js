@@ -298744,27 +298744,40 @@ window.photosByElieOwnerData = {
   unknown: window.photosByElieData.unknown,
 };
 delete window.photosByElieData.unknown;
+Object.entries(window.photosByElieData || {}).forEach(([slug, collection]) => {
+  (collection.photos || []).forEach((photo) => {
+    photo.pricingTier = slug === "ai" ? "ai" : "original";
+  });
+});
 window.photosByElieResolutions = [
-  { id: "full", type: "digital", label: "Full resolution", detail: "Original source file at native resolution", price: 45 },
-  { id: "jpg-6mp", type: "digital", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 18, minMegapixels: 6 },
-  { id: "jpg-3mp", type: "digital", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 10, minMegapixels: 3 },
-  { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 5, minMegapixels: 1 },
+  { id: "full", type: "digital", label: "Full resolution", detail: "Original source file at native resolution", price: 65, prices: { original: 65, ai: 25 } },
+  { id: "jpg-6mp", type: "digital", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 28, prices: { original: 28, ai: 14 }, minMegapixels: 6 },
+  { id: "jpg-3mp", type: "digital", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 16, prices: { original: 16, ai: 8 }, minMegapixels: 3 },
+  { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
   { id: "print-4x6", type: "print", label: "Print", dimensions: { imperial: "4 x 6 in", metric: "10 x 15 cm" }, detail: "Small classic photo print", price: 12, minMegapixels: 1 },
   { id: "print-5x7", type: "print", label: "Print", dimensions: { imperial: "5 x 7 in", metric: "13 x 18 cm" }, detail: "Popular gift and desk frame size", price: 18, minMegapixels: 2 },
-  { id: "print-8x10", type: "print", label: "Print", dimensions: { imperial: "8 x 10 in", metric: "20 x 25 cm" }, detail: "Popular wall and shelf print size", price: 28, minMegapixels: 6 },
-  { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 42, minMegapixels: 10 }
+  { id: "print-8x10", type: "print", label: "Print", dimensions: { imperial: "8 x 10 in", metric: "20 x 25 cm" }, detail: "Popular wall and shelf print size", price: 32, minMegapixels: 6 },
+  { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 48, minMegapixels: 10 }
 ];
+window.photosByEliePriceTiers = {
+  original: { label: "Original photo" },
+  ai: { label: "AI image" }
+};
 window.photosByElieFrameOptions = [
   { id: "none", label: "No frame", price: 0 },
-  { id: "white", label: "Plain white frame", price: 22, prices: { "print-4x6": 16, "print-5x7": 22, "print-8x10": 34, "print-11x14": 48 } },
-  { id: "black", label: "Plain black frame", price: 22, prices: { "print-4x6": 16, "print-5x7": 22, "print-8x10": 34, "print-11x14": 48 } }
+  { id: "white", label: "Plain white frame", price: 37, prices: { "print-4x6": 33, "print-5x7": 37, "print-8x10": 53, "print-11x14": 77 } },
+  { id: "black", label: "Plain black frame", price: 37, prices: { "print-4x6": 33, "print-5x7": 37, "print-8x10": 53, "print-11x14": 77 } }
 ];
 window.photosByElieShippingHandlingPrices = {
-  "print-4x6": 5,
-  "print-5x7": 6,
-  "print-8x10": 9,
-  "print-11x14": 12
+  "print-4x6": 7,
+  "print-5x7": 8,
+  "print-8x10": 12,
+  "print-11x14": 16
 };
+
+window.photosByEliePricingTier = (photo) => photo?.pricingTier || "original";
+window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Original photo";
+window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);
 
 window.photosByEliePreviewMegapixels = (photo) => {
   const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";
@@ -298785,7 +298798,7 @@ window.photosByElieAvailableResolutions = (photo, options = window.photosByElieR
   return options.filter((option) =>
     (physicalProductsEnabled || option.type !== "print")
     && (!option.minMegapixels || megapixels >= option.minMegapixels)
-  );
+  ).map((option) => ({ ...option, price: window.photosByElieOptionPrice(photo, option) }));
 };
 
 window.photosByElieFormatLabel = (source) => {

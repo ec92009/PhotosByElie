@@ -28,10 +28,12 @@
   };
 
   const normalizeOptions = (options = [], photoId = null) => {
-    const availableIds = new Set(availableOptionsForPhotoId(photoId).map((option) => option.id));
+    const availableOptions = availableOptionsForPhotoId(photoId);
+    const availableById = new Map(availableOptions.map((option) => [option.id, option]));
+    const availableIds = new Set(availableOptions.map((option) => option.id));
     const seen = new Set();
     return options.reduce((next, option) => {
-      const source = optionById(option.id) || option;
+      const source = availableById.get(option.id) || optionById(option.id) || option;
       if (!source?.id || !availableIds.has(source.id) || seen.has(source.id)) return next;
       seen.add(source.id);
       const normalized = { id: source.id, type: source.type || "digital", label: source.label, detail: source.detail, dimensions: source.dimensions, price: source.price };

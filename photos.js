@@ -748,6 +748,7 @@ const captureProductPriceDefaults = () => {
   if (productPriceDefaults || !Array.isArray(window.photosByElieResolutions)) return productPriceDefaults;
   productPriceDefaults = {
     options: Object.fromEntries((window.photosByElieResolutions || []).map((option) => [option.id, Number(option.price) || 0])),
+    optionPrices: Object.fromEntries((window.photosByElieResolutions || []).map((option) => [option.id, { ...(option.prices || {}) }])),
     frames: Object.fromEntries((window.photosByElieFrameOptions || []).map((frame) => [frame.id, {
       price: Number(frame.price) || 0,
       prices: { ...(frame.prices || {}) },
@@ -759,6 +760,10 @@ const captureProductPriceDefaults = () => {
 const cleanPriceOverrides = (overrides = {}) => ({
   options: Object.fromEntries(Object.entries(overrides.options || {})
     .map(([id, value]) => [id, Math.max(0, Number(value) || 0)])),
+  optionPrices: Object.fromEntries(Object.entries(overrides.optionPrices || {}).map(([id, prices]) => [id, (
+    Object.fromEntries(Object.entries(prices || {})
+      .map(([tier, value]) => [tier, Math.max(0, Number(value) || 0)]))
+  )])),
   frames: Object.fromEntries(Object.entries(overrides.frames || {}).map(([id, frame]) => [id, {
     price: Math.max(0, Number(frame?.price) || 0),
     prices: Object.fromEntries(Object.entries(frame?.prices || {})
@@ -772,7 +777,11 @@ const applyProductPriceOverrides = () => {
   if (!defaults) return {};
   const overrides = cleanPriceOverrides(readProductSettings().priceOverrides || {});
   (window.photosByElieResolutions || []).forEach((option) => {
-    option.price = overrides.options[option.id] ?? defaults.options[option.id] ?? (Number(option.price) || 0);
+    option.prices = { ...(defaults.optionPrices?.[option.id] || {}), ...(overrides.optionPrices?.[option.id] || {}) };
+    option.price = overrides.options[option.id] ?? option.prices.original ?? defaults.options[option.id] ?? (Number(option.price) || 0);
+    if (Object.prototype.hasOwnProperty.call(overrides.options, option.id) && option.prices.original !== undefined) {
+      option.prices.original = option.price;
+    }
   });
   (window.photosByElieFrameOptions || []).forEach((frame) => {
     const frameDefaults = defaults.frames[frame.id] || {};

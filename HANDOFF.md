@@ -7,7 +7,7 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v71.41`
+- Current visible build: `v72.0`
 - Latest pushed commit: `a04000ce photosbyelie: refresh business backlog docs`
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
@@ -21,7 +21,7 @@ Use this when moving work between Max, David, or the laptop.
 - Buyer delivery ZIPs are flat: delivered files sit at the archive root beside `ORDER.txt`, with no per-photo folders.
 - Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalogs only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
 - Physical print/frame products are buyer-hidden by default. Owner can deliberately enable them on localhost for review, but digital checkout should be proven first.
-- Owner has local price editing; publishing a real price list shared by the public basket and Worker is now a high-priority business item.
+- Owner has local price editing. Published defaults now distinguish original-photo digital downloads from lower AI-origin downloads, with print/frame launch prices also refreshed; moving those defaults into a dedicated shared price-list file remains high priority.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
 
 ## First Commands On A Machine

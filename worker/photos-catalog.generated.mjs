@@ -298738,14 +298738,22 @@ export const resolutions = [
     "type": "digital",
     "label": "Full resolution",
     "detail": "Original source file at native resolution",
-    "price": 45
+    "price": 65,
+    "prices": {
+      "original": 65,
+      "ai": 25
+    }
   },
   {
     "id": "jpg-6mp",
     "type": "digital",
     "label": "JPG 6 MP",
     "detail": "Long edge export for print and premium web",
-    "price": 18,
+    "price": 28,
+    "prices": {
+      "original": 28,
+      "ai": 14
+    },
     "minMegapixels": 6
   },
   {
@@ -298753,7 +298761,11 @@ export const resolutions = [
     "type": "digital",
     "label": "JPG 3 MP",
     "detail": "Listing, portfolio, and editorial web use",
-    "price": 10,
+    "price": 16,
+    "prices": {
+      "original": 16,
+      "ai": 8
+    },
     "minMegapixels": 3
   },
   {
@@ -298761,7 +298773,11 @@ export const resolutions = [
     "type": "digital",
     "label": "JPG 1 MP",
     "detail": "Small web preview and social draft use",
-    "price": 5,
+    "price": 8,
+    "prices": {
+      "original": 8,
+      "ai": 4
+    },
     "minMegapixels": 1
   },
   {
@@ -298797,7 +298813,7 @@ export const resolutions = [
       "metric": "20 x 25 cm"
     },
     "detail": "Popular wall and shelf print size",
-    "price": 28,
+    "price": 32,
     "minMegapixels": 6
   },
   {
@@ -298809,7 +298825,7 @@ export const resolutions = [
       "metric": "28 x 36 cm"
     },
     "detail": "Larger display print with manual crop review",
-    "price": 42,
+    "price": 48,
     "minMegapixels": 10
   }
 ];
@@ -298822,23 +298838,23 @@ export const frameOptions = [
   {
     "id": "white",
     "label": "Plain white frame",
-    "price": 22,
+    "price": 37,
     "prices": {
-      "print-4x6": 16,
-      "print-5x7": 22,
-      "print-8x10": 34,
-      "print-11x14": 48
+      "print-4x6": 33,
+      "print-5x7": 37,
+      "print-8x10": 53,
+      "print-11x14": 77
     }
   },
   {
     "id": "black",
     "label": "Plain black frame",
-    "price": 22,
+    "price": 37,
     "prices": {
-      "print-4x6": 16,
-      "print-5x7": 22,
-      "print-8x10": 34,
-      "print-11x14": 48
+      "print-4x6": 33,
+      "print-5x7": 37,
+      "print-8x10": 53,
+      "print-11x14": 77
     }
   }
 ];

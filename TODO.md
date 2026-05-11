@@ -4,7 +4,7 @@ Last updated: 2026-05-11
 
 ## Current Facts
 
-- Local visible build: `v71.41`.
+- Local visible build: `v72.0`.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -59,8 +59,8 @@ Last updated: 2026-05-11
    - Add simple FAQ/help copy for licensing, personal/commercial use, delivery time, refunds, and contact.
 
 4. **Publish a real price and offer strategy.**
-   - Current state: Owner shows an editable local table of active digital, print, frame, and mock S&H prices.
-   - Move edited digital-file and print/frame prices from local Owner storage into a published price list instead of treating the current under-10 items as code constants.
+   - Current state: Published defaults now distinguish original-photo digital prices from lower AI-origin digital prices, and Owner shows editable local table inputs for active digital tiers, print sizes, frame add-ons, and mock S&H prices.
+   - Move the published defaults out of generated-code constants into a dedicated price-list data file shared by public basket and Worker validation.
    - Support adding, editing, disabling, and reordering price entries as the catalog of sellable products grows.
    - Keep checkout validation tied to the published price list so the Worker and public basket agree on SKU IDs, labels, currencies, and amounts.
    - Add business levers: launch pricing, bundle discounts, collection packs, “buy all liked,” and optional promo codes later.

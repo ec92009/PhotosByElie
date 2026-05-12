@@ -39,6 +39,7 @@ IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 RESERVE_ASSET_ROOT = Path("assets/reserve")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
+DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
 HOME_SAMPLE_COUNT = 4
 
 
@@ -98,8 +99,33 @@ def caption_from_row(row: dict, gallery_title: str) -> str:
     return " / ".join(parts)
 
 
-def normalize_metadata(row: dict) -> list[dict]:
+def split_keyword_text(value: object) -> list[str]:
+    if isinstance(value, list):
+        keywords: list[str] = []
+        for item in value:
+            keywords.extend(split_keyword_text(item))
+        return keywords
+    return [part.strip() for part in str(value or "").split(",") if part.strip()]
+
+
+def clean_keywords(values: object, keyword_blacklist: set[str]) -> list[str]:
+    keywords: list[str] = []
+    seen: set[str] = set()
+    for keyword in split_keyword_text(values):
+        normalized = keyword.casefold()
+        if normalized in seen or normalized in keyword_blacklist:
+            continue
+        seen.add(normalized)
+        keywords.append(keyword)
+    return keywords
+
+
+def normalize_metadata(row: dict, keyword_blacklist: set[str] | None = None) -> list[dict]:
+    keyword_blacklist = keyword_blacklist or set()
     items = list(row.get("metadata") or [])
+    for item in items:
+        if item.get("label") == "Keywords":
+            item["value"] = ", ".join(clean_keywords(item.get("value"), keyword_blacklist))
     deriv = (row.get("derivative_files") or {}).get("detail") or {}
     width = deriv.get("width")
     height = deriv.get("height")
@@ -112,6 +138,17 @@ def normalize_metadata(row: dict) -> list[dict]:
             }
         )
     return items
+
+
+def sanitize_keyword_metadata(row: dict, keyword_blacklist: set[str]) -> dict:
+    if not keyword_blacklist:
+        return row
+    row = dict(row)
+    if "keywords" in row:
+        row["keywords"] = clean_keywords(row.get("keywords"), keyword_blacklist)
+    if "metadata" in row:
+        row["metadata"] = normalize_metadata(row, keyword_blacklist)
+    return row
 
 
 def source_files(row: dict) -> list[dict]:
@@ -466,6 +503,16 @@ def load_json(path: Path, fallback: object) -> object:
         return fallback
 
 
+def load_keyword_blacklist(path: Path | None) -> set[str]:
+    if not path:
+        return set()
+    payload = load_json(path.expanduser(), {})
+    keywords = payload.get("keywords") if isinstance(payload, dict) else None
+    if not isinstance(keywords, list):
+        return set()
+    return {str(keyword).strip().casefold() for keyword in keywords if str(keyword).strip()}
+
+
 def blacklist_ids_from_payload(payload: dict) -> set[str]:
     return {photo_id for photo_id in payload.get("photo_ids", []) if isinstance(photo_id, str)}
 
@@ -645,15 +692,18 @@ def write_photos_data(
     pinned_regular_ids: dict[str, list[str]] | None = None,
     reserve_only_ids: set[str] | None = None,
     country_assignments: dict[str, str] | None = None,
+    keyword_blacklist: set[str] | None = None,
 ) -> Path:
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
     country_assignments = country_assignments or {}
+    keyword_blacklist = keyword_blacklist or set()
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
             if not derivative_files_available(repo_root, row, mode, uploaded_public_keys):
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
+            row = sanitize_keyword_metadata(row, keyword_blacklist)
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)
             if slug not in LABELS:
@@ -896,6 +946,7 @@ if __name__ == "__main__":
     parser.add_argument("--selection", choices=("random", "newest"), default=DEFAULT_SELECTION_MODE)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--review-snapshot", "--blacklist", dest="review_snapshot", type=Path, default=None, help="Optional Review Snapshot file to apply hidden, reserve, and classification choices.")
+    parser.add_argument("--keyword-blacklist", type=Path, default=DEFAULT_KEYWORD_BLACKLIST, help="Owner metadata keywords to omit from generated public/reserve catalogs.")
     parser.add_argument("--no-sync-assets", action="store_true")
     parser.add_argument("--external-media", action="store_true", help="Write public metadata/R2 keys without copying JPG derivatives into tracked assets/expo.")
     args = parser.parse_args()
@@ -904,6 +955,7 @@ if __name__ == "__main__":
     hidden_ids = hidden_ids_from_current_state(repo_root) | blacklist_ids_from_payload(review_payload)
     country_assignments = country_assignments_from_owner_index(repo_root)
     country_assignments.update(country_assignments_from_payload(review_payload))
+    keyword_blacklist = load_keyword_blacklist(repo_root / args.keyword_blacklist)
     result = write_photos_data(
         repo_root,
         regular_cap=args.regular_cap,
@@ -915,5 +967,6 @@ if __name__ == "__main__":
         pinned_regular_ids=expo_state_from_payload(review_payload),
         reserve_only_ids=reserve_only_ids_from_payload(review_payload),
         country_assignments=country_assignments,
+        keyword_blacklist=keyword_blacklist,
     )
     print(result)

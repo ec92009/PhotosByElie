@@ -64,7 +64,7 @@ Outputs:
 
 When `--r2-upload public` or `--r2-upload both` is enabled, confirmed-upload preview JPGs are removed from `tmp/import-cache` by default; the manifest, checkpoints, keyword indexes, GPS file, and diagnostics remain. Use `--keep-uploaded-tmp` only when deliberately debugging local staging files.
 
-By default the public manifest preserves all Lightroom keywords, while exact GPS coordinates are written to the separate ignored GPS file. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
+By default the import metadata omits owner-blacklisted keyword strings from `assets/owner-actions/keyword-blacklist.json`. This blacklist affects only generated keyword metadata and keyword indexes; it does not block, discard, skip, or rewrite any photo/JPG. Use `--keyword-blacklist <path>` to point at a different metadata-only keyword blacklist. Exact GPS coordinates are written to the separate ignored GPS file by default. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
 
 ## Public Catalog Export
 
@@ -99,6 +99,8 @@ For the GitHub-code/R2-media publishing model, write the same public catalog and
 ```bash
 python3 scripts/export_photos_data.py --external-media
 ```
+
+Public catalog export also applies `assets/owner-actions/keyword-blacklist.json` to keyword metadata, so regenerating from an older import manifest will not reintroduce blacklisted keyword strings. It does not use the keyword blacklist to decide which photos are published.
 
 After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and legacy country-prefixed provenance:
 

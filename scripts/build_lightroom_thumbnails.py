@@ -57,6 +57,7 @@ DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_R2_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 DEFAULT_PRIVATE_DELIVERY_STATE = Path(".review-logs/private-deliverable-sync-state.jsonl")
 DEFAULT_PRIVATE_DELIVERY_MANIFEST = Path("assets/private-delivery-manifest.json")
+DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
 PRIVATE_RENDER_PRODUCTS = {
     "jpg-6mp": 6,
     "jpg-3mp": 3,
@@ -295,6 +296,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("assets/discarded/discarded-photo-ids.json"),
         help="Owner discard tombstones. Matching photo ids are skipped before render/upload.",
+    )
+    parser.add_argument(
+        "--keyword-blacklist",
+        type=Path,
+        default=DEFAULT_KEYWORD_BLACKLIST,
+        help="Owner metadata keywords to omit from generated manifests and keyword indexes.",
     )
     return parser.parse_args()
 
@@ -554,7 +561,21 @@ def list_value(value: Any) -> list[str]:
     return [part.strip() for part in str(value).split(",") if part.strip()]
 
 
-def cleaned_keywords(meta: dict[str, Any], include_private: bool) -> list[str]:
+def load_keyword_blacklist(path: Path | None) -> set[str]:
+    if not path:
+        return set()
+    expanded = path.expanduser()
+    if not expanded.exists():
+        return set()
+    payload = json.loads(expanded.read_text(encoding="utf-8"))
+    keywords = payload.get("keywords") if isinstance(payload, dict) else None
+    if not isinstance(keywords, list):
+        return set()
+    return {str(keyword).strip().casefold() for keyword in keywords if str(keyword).strip()}
+
+
+def cleaned_keywords(meta: dict[str, Any], include_private: bool, keyword_blacklist: set[str] | None = None) -> list[str]:
+    keyword_blacklist = keyword_blacklist or set()
     values: list[str] = []
     for key in ("Subject", "Keywords"):
         values.extend(list_value(meta.get(key)))
@@ -565,10 +586,37 @@ def cleaned_keywords(meta: dict[str, Any], include_private: bool) -> list[str]:
         if normalized in seen:
             continue
         seen.add(normalized)
+        if normalized in keyword_blacklist:
+            continue
         if not include_private and PRIVATE_KEYWORD_PATTERN.search(value):
             continue
         deduped.append(value)
     return deduped
+
+
+def filter_keywords(values: Any, keyword_blacklist: set[str]) -> list[str]:
+    if not keyword_blacklist:
+        return list_value(values)
+    filtered: list[str] = []
+    seen: set[str] = set()
+    for value in list_value(values):
+        normalized = value.casefold()
+        if normalized in seen or normalized in keyword_blacklist:
+            continue
+        seen.add(normalized)
+        filtered.append(value)
+    return filtered
+
+
+def sanitize_manifest_keywords(manifest: dict[str, dict[str, Any]], keyword_blacklist: set[str]) -> None:
+    if not keyword_blacklist:
+        return
+    for photo in manifest.values():
+        if "keywords" in photo:
+            photo["keywords"] = filter_keywords(photo.get("keywords"), keyword_blacklist)
+        for item in photo.get("metadata", []) or []:
+            if item.get("label") == "Keywords":
+                item["value"] = ", ".join(filter_keywords(item.get("value"), keyword_blacklist))
 
 
 def metadata_value(meta: dict[str, Any], *keys: str) -> Any:
@@ -719,7 +767,7 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
     merged = {**source_meta, **{key: value for key, value in lightroom_meta.items() if value not in (None, "")}}
     merged.pop("SourceFile", None)
     gps = {key: merged.pop(key) for key in gps_tags if key in merged}
-    keywords = cleaned_keywords(merged, include_private_keywords)
+    keywords = cleaned_keywords(merged, include_private_keywords, args.keyword_blacklist_values)
     capture = parse_exif_datetime(metadata_value(merged, "DateTimeOriginal", "CreateDate"))
     dimensions = dimension_facts(merged)
     display = []
@@ -1659,6 +1707,8 @@ def main() -> int:
     args.source_root = source_root
     args.developed_root = args.developed_root.expanduser().resolve() if args.developed_root else None
     args.output_root = args.output_root.expanduser()
+    args.keyword_blacklist = args.keyword_blacklist.expanduser()
+    args.keyword_blacklist_values = load_keyword_blacklist(args.keyword_blacklist)
     args.discarded_photo_ids = (
         load_discarded_photo_ids(args.hidden_blacklist.expanduser())
         | load_discarded_photo_ids(args.discarded_tombstone.expanduser())
@@ -1679,6 +1729,7 @@ def main() -> int:
     state_path = args.output_root / ".build-state.jsonl"
     args.output_root.mkdir(parents=True, exist_ok=True)
     manifest = load_manifest(manifest_path)
+    sanitize_manifest_keywords(manifest, args.keyword_blacklist_values)
     gps_manifest = load_gps_manifest(gps_manifest_path) if not args.redact_gps else {}
     failures = load_failures(failures_path)
     state = load_latest_state(state_path) if not args.force else {}

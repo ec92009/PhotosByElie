@@ -51,7 +51,6 @@ Last updated: 2026-05-12
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
    - Keep private R2 as delivery ZIP storage.
-   - Rate-limit download links.
    - Add receipts/order lookup language that tells buyers exactly where the ZIP will appear and how long it remains available.
 
 3. **Package the buyer offer clearly.**
@@ -184,6 +183,7 @@ Last updated: 2026-05-12
    - Generate video thumbnails/posters, duration metadata, orientation, codec/resolution fields, and gallery cards that do not confuse still-photo purchase flows.
    - Add R2 storage rules for public previews/posters and private video masters or deliverables.
    - Keep MOV/MP4 files out of the existing still-photo importer until this is deliberately implemented.
+   - Keep ZIP download throttling intentionally minimal: allow up to 3 downloads during the first hour after purchase, then no more than 1 download per day. Do not add other download restrictions unless abuse or sales volume proves they are needed.
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.

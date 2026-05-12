@@ -10,6 +10,13 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
 - For changes intended to be viewed externally, commit and push once complete unless the user asks not to.
 
+## Max/David Handoff Direction
+
+- On machines whose `hostname` or ComputerName starts with `David`, treat `MAX2DAVID.md` as read-only inbound instructions from Max.
+- On David machines, send reports, decisions, and recommended prompt/spec changes to `DAVID2MAX.md`; do not edit `MAX2DAVID.md` unless the user explicitly asks.
+- On machines whose `hostname` or ComputerName starts with `Max`, use the inverse direction: write David-facing instructions in `MAX2DAVID.md` and read David reports from `DAVID2MAX.md`.
+- When unsure, run `hostname` and `scutil --get ComputerName` before editing either handoff file.
+
 ## Defaults
 
 - Prefer `rg` and `rg --files` for search.

@@ -16,6 +16,18 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-12 David Handoff Direction Fix
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `65e40a01`
+- Result: Confirmed this host is David, so outbound notes for the other computer belong in `DAVID2MAX.md`.
+- Changes made:
+  - Added sticky hostname-based handoff direction rules to `AGENTS.md` and `HANDOFF.md`.
+  - Restored `MAX2DAVID.md` to inbound-only content by removing David-side prompt edits previously made from this machine.
+- Commit pushed: yes, this commit
+- Notes: On David, `MAX2DAVID.md` is read-only inbound from Max; prompt/spec recommendations should be written here in `DAVID2MAX.md` unless the user explicitly asks otherwise.
+
 ## 2026-05-12 Nightly Title/Keyword Review Queue
 
 - Machine: David

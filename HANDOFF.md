@@ -2,6 +2,12 @@
 
 Use this when moving work between Max, David, or the laptop.
 
+## Handoff Direction
+
+- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID.md` as inbound instructions and write outbound notes for Max in `DAVID2MAX.md`.
+- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound reports and write outbound instructions for David in `MAX2DAVID.md`.
+- Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
+
 ## Current Handoff: 2026-05-11 Revenue Track
 
 - Repo: `/Users/ecohen/Dev/photosByElie`

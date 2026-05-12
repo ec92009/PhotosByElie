@@ -207,7 +207,7 @@ Use the page to approve proposals and save a separate approvals JSON file under 
 - public watermarked previews go to `photosbyelie-public` under flat keys such as `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
 - local import-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
 - private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
-- unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker only zips them after payment
+- unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker streams paid files one by one after payment
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
 - IDs listed in owner discard tombstones are skipped for import/upload and should be deleted from public and private R2 by `delete_discarded_r2_media.mjs`; the tombstone stays tracked so Saturn scans do not resurrect discarded photos
 
@@ -220,6 +220,14 @@ zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera and Leonardo developed sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
 
 The Owner dashboard Fix it button starts this same wrapper through the local helper server when the tracked R2 coverage counts do not match policy.
+
+The stricter master-chain repair checks live R2 rather than cached manifests. It lists private masters first, derives the allowed private render triplets and public previews, restores missing catalog masters from Saturn/local source roots before cleanup, regenerates missing private render triplets, removes derivative ghosts only when `--prune` is set, and rewrites the private-delivery/public-preview inventory manifests when `--repair`, `--prune`, or `--write-manifests` is used:
+
+```bash
+zsh -lc 'node scripts/repair_r2_master_chain.mjs --repair --prune'
+```
+
+Run without flags for a report-only audit. The daily automation `Photos By Elie R2 master-chain repair` runs the repair/prune pass, then tests and validates.
 
 Refresh the Owner storage/cost estimate after a large import, backfill, or blocked-media cleanup:
 

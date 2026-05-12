@@ -52,6 +52,71 @@ export const createR2ZipDelivery = ({
   if (!privateBucket) throw new Error("createR2ZipDelivery requires a privateBucket R2 binding.");
   if (!deliveryBucket) throw new Error("createR2ZipDelivery requires a deliveryBucket R2 binding.");
 
+  const deliveryUnavailableError = (missing) => Object.assign(
+    new Error(`Checkout is blocked because ${missing.length} delivery file${missing.length === 1 ? " is" : "s are"} not ready in private storage.`),
+    {
+      status: 409,
+      code: "delivery_assets_unavailable",
+      details: { missing },
+    },
+  );
+
+  const validateOrder = async (order) => {
+    const missing = [];
+
+    for (const item of order.items) {
+      for (const product of item.products) {
+        if (product.id === "full") {
+          const object = await privateBucket.get(item.source.privateMasterKey);
+          if (!object) {
+            missing.push({
+              photoId: item.photoId,
+              productId: product.id,
+              productLabel: product.label,
+              code: "missing_private_master",
+              objectKey: item.source.privateMasterKey,
+            });
+          }
+          continue;
+        }
+
+        const renderKeys = renderedJpgKeys(item, product);
+        let cachedRender = null;
+        for (const candidateRenderKey of renderKeys) {
+          cachedRender = await deliveryBucket.get(candidateRenderKey);
+          if (cachedRender) break;
+        }
+        if (cachedRender) continue;
+
+        const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id);
+        if (canRender) {
+          const sourceObject = await privateBucket.get(item.source.privateMasterKey);
+          if (!sourceObject) {
+            missing.push({
+              photoId: item.photoId,
+              productId: product.id,
+              productLabel: product.label,
+              code: "missing_private_master",
+              objectKey: item.source.privateMasterKey,
+            });
+          }
+          continue;
+        }
+
+        missing.push({
+          photoId: item.photoId,
+          productId: product.id,
+          productLabel: product.label,
+          code: "missing_private_render",
+          objectKey: renderKeys[0],
+        });
+      }
+    }
+
+    if (missing.length) throw deliveryUnavailableError(missing);
+    return { ok: true };
+  };
+
   const createDelivery = async (order) => {
     const files = [];
 
@@ -213,6 +278,7 @@ export const createR2ZipDelivery = ({
   };
 
   return {
+    validateOrder,
     createDelivery,
     getDownloadResponse,
   };

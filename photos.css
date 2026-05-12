@@ -2192,6 +2192,12 @@ body.detail-fullscreen-active{
   background:var(--surface-2);
   padding:10px;
 }
+.order-file-downloads li.is-ready{
+  border-color:color-mix(in srgb,#2d6b56 48%,var(--line));
+}
+.order-file-downloads li.is-pending{
+  color:var(--muted);
+}
 .order-file-downloads strong,
 .order-file-downloads small,
 .order-file-downloads output{
@@ -2209,6 +2215,10 @@ body.detail-fullscreen-active{
   height:8px;
   margin-top:7px;
   accent-color:#2d6b56;
+}
+.order-file-downloads button:disabled{
+  cursor:wait;
+  opacity:.48;
 }
 .order-line{
   display:grid;

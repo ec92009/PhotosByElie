@@ -3,7 +3,7 @@
 This folder contains the Worker-track implementation for checkout and fulfillment. It supports real Stripe Checkout when Stripe secrets are configured, and keeps a mock Stripe path for local/testing work:
 
 ```text
-browser basket -> Worker order draft -> Stripe Checkout -> signed paid webhook -> delivery ZIP
+browser basket -> Worker availability check -> Stripe Checkout -> signed paid webhook -> private file downloads
 ```
 
 ## What The Worker Owns
@@ -13,10 +13,11 @@ browser basket -> Worker order draft -> Stripe Checkout -> signed paid webhook -
 - USD-only totals.
 - Basket snapshots.
 - Photo/product validation against the public catalog.
+- Private R2 delivery availability validation before Stripe opens.
 - Stripe Checkout Session creation.
 - Stripe webhook verification from the raw request body and `Stripe-Signature` header.
 - Order status transitions.
-- Delivery ZIP metadata, local mock ZIP generation, and signed-link-style download tokens.
+- Per-file delivery metadata, local mock ZIP generation, and signed-link-style download tokens.
 
 Stripe owns only the payment track. The browser proposes a basket, but the Worker recalculates price and availability before creating the checkout session.
 
@@ -27,12 +28,12 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | Route | Trigger | Result |
 |---|---|---|
 | `GET /health` | Runtime check | Returns Worker status and fixed currency |
-| `POST /checkout/guest` | Buyer chooses guest checkout | Creates `pending_payment` order and Stripe Checkout URL |
+| `POST /checkout/guest` | Buyer chooses guest checkout | Validates selected private R2 files, then creates `pending_payment` order and Stripe Checkout URL |
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
-| `GET /download/:token` | Buyer clicks download | Returns a mock signed R2 URL and applies one-download-per-hour throttling |
+| `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
 `worker/local-server.mjs` also provides `GET /download-order/:orderId` for local-only mock testing. It serves the generated ZIP directly from `deliveries/` by order ID, which keeps downloads working after the in-memory mock Worker state has been restarted.
 
@@ -45,7 +46,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 - `PRIVATE_MEDIA` reads private developed masters from R2.
 - `DELIVERY_MEDIA` serves private buyer downloads. It can point at the same private R2 bucket for the mock phase.
 
-The public static site points checkout to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter passes full-resolution masters through unchanged and reads JPG 6 MP, 3 MP, and 1 MP products from private R2 `renders/...` keys. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later per-file downloads. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file gets its own download token.
+The public static site points checkout to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged, and reads JPG 6 MP, 3 MP, and 1 MP products from private R2 `renders/...` keys. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later per-file downloads. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file gets its own download token and repeat downloads are allowed.
 
 The current checkout Worker is live at:
 
@@ -66,7 +67,7 @@ Live payment is blocked until test mode proves the full flow:
 - Successful card payment reaches `checkout.session.completed`.
 - 3D Secure/authentication-required payment returns to the order page cleanly.
 - Declined card does not mark the order paid.
-- A verified webhook builds the private R2 delivery ZIP and exposes the order download.
+- A verified webhook records private R2 delivery files and exposes per-file download tokens.
 - Stripe receipts remain payment records only; PhotosByElie delivery links stay in the Worker/order flow.
 
 Stripe's standard successful test Visa is `4242 4242 4242 4242` with any future expiry and any 3-digit CVC. Use Stripe's current test-card list for 3D Secure and decline scenarios.

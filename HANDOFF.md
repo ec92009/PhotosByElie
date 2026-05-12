@@ -21,10 +21,10 @@ Use this when moving work between Max, David, or the laptop.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Public browsing now loads previews directly from the public R2 `r2.dev` endpoint: `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev`.
-- The checkout Worker is no longer in the public preview hot path. Keep it focused on checkout, order state, Stripe/webhook handling, ZIP creation, and delivery.
+- The checkout Worker is no longer in the public preview hot path. Keep it focused on checkout, order state, Stripe/webhook handling, pre-Stripe private-file validation, and delivery.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
-- Buyer delivery ZIPs are flat: delivered files sit at the archive root beside `ORDER.txt`, with no per-photo folders.
+- Public buyer delivery uses per-file private R2 download tokens. Local mock delivery can still generate flat ZIPs for test convenience.
 - Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalogs only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
 - Physical print/frame products are buyer-hidden by default. Owner can deliberately enable them on localhost for review, but digital checkout should be proven first.
 - Owner has local price editing. Published defaults now distinguish camera-photo digital downloads from lower AI-origin downloads, with print/frame launch prices also refreshed; moving those defaults into a dedicated shared price-list file remains high priority.
@@ -63,11 +63,11 @@ cd /Users/ecohen/Dev/PhotosByElie
    - Create/sign into Stripe on the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Register `/stripe-webhook`.
-   - Test successful payment, 3D Secure/authentication-required payment, declined card, verified webhook, private R2 ZIP build, order page download, and failure states.
+   - Test successful payment, 3D Secure/authentication-required payment, declined card, verified webhook, private R2 per-file delivery, order page download, and failure states.
 
 2. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for order state.
-   - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
+   - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
    - Rate-limit downloads.
    - Make receipt/order/download copy explicit and trustworthy.
 
@@ -91,6 +91,8 @@ cd /Users/ecohen/Dev/PhotosByElie
 - Daily automation: `photosbyelie-daily-cloud-media-sweep`
 - It runs `zsh -lc './scripts/run_cloud_media_sweep.zsh --push'` so credentials from `~/.zshrc` are available.
 - The wrapper uses `.review-logs/cloud-media-sweep.lock`; if a manual run is still active, the scheduled run exits without starting a second uploader.
+- Daily automation: `Photos By Elie R2 master-chain repair`
+- It runs `node scripts/repair_r2_master_chain.mjs --repair --prune` through the app automation. The pass reads live R2 masters first, restores missing catalog masters from Saturn/local sources, repairs private render triplets, prunes derivative ghosts, and refreshes the private-delivery/public-preview inventory manifests.
 - A manual run can be started with:
 
 ```bash
@@ -169,6 +171,12 @@ Backfill private delivery render triplets:
 node scripts/sync_private_deliverables.mjs --commit-every 100 --push
 ```
 
+Repair the live R2 master/derivative chain from source roots before buyer-facing checkout tests:
+
+```bash
+zsh -lc 'node scripts/repair_r2_master_chain.mjs --repair --prune'
+```
+
 Delete discarded R2 media while preserving tombstones:
 
 ```bash
@@ -187,7 +195,7 @@ zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 - Public Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Real Stripe is wired behind Worker configuration; mock Stripe remains the local/default path until test-mode secrets and webhooks are configured.
 - Checkout is guest-first and USD-only.
-- Worker owns order ID, buyer email, USD total, basket snapshot, status, delivery ZIP metadata, and mock signed download tokens.
+- Worker owns order ID, buyer email, USD total, basket snapshot, status, delivery file metadata, and signed-link-style download tokens.
 - Routes currently implemented:
   - `GET /health`
   - `POST /checkout/guest`

@@ -2,7 +2,6 @@ import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 
 const ORDER_CURRENCY = "usd";
-const DOWNLOAD_RATE_LIMIT_MS = 60 * 60 * 1000;
 const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body, null, 2), {
@@ -314,6 +313,19 @@ export const createPhotosByElieWorker = ({
     const amountExpected = items.reduce((sum, item) => sum + item.subtotal, 0);
     const createdAt = now().toISOString();
     const orderId = createOrderId(now, randomUUID);
+    if (typeof deliveryClient.validateOrder === "function") {
+      await deliveryClient.validateOrder({
+        id: orderId,
+        checkoutMode,
+        buyerEmail,
+        currency: ORDER_CURRENCY,
+        amountExpected,
+        amountPaid: 0,
+        items,
+        createdAt,
+        updatedAt: createdAt,
+      });
+    }
     const receiptDescription = [
       `PhotosByElie order ${orderId}.`,
       `Your download is usually ready within about 10 minutes at ${ordersUrl}.`,
@@ -534,9 +546,6 @@ export const createPhotosByElieWorker = ({
     const downloadRecord = await store.getDownload(token);
     if (!downloadRecord) return errorJson(404, "unknown_download", "Download link was not found.");
     const nowDate = now();
-    if (downloadRecord.lastDownloadAt && nowDate.getTime() - new Date(downloadRecord.lastDownloadAt).getTime() < DOWNLOAD_RATE_LIMIT_MS) {
-      return errorJson(429, "download_rate_limited", "This order was downloaded recently. Try again later.");
-    }
     await store.recordDownload(token, nowDate.toISOString());
     if (typeof deliveryClient.getDownloadResponse === "function") {
       return deliveryClient.getDownloadResponse(downloadRecord);
@@ -561,18 +570,18 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/health") {
         return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY });
       }
-      if (request.method === "POST" && path === "/checkout/guest") return createCheckout(request, "guest");
-      if (request.method === "POST" && path === "/checkout/account") return createCheckout(request, "account");
-      if (request.method === "POST" && path === "/stripe-webhook") return stripeWebhook(request);
-      if (request.method === "POST" && path === "/mock-stripe/pay") return mockPay(request);
+      if (request.method === "POST" && path === "/checkout/guest") return await createCheckout(request, "guest");
+      if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");
+      if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
+      if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
       const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
-      if (request.method === "GET" && orderSessionMatch) return getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
+      if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);
-      if (request.method === "GET" && orderMatch) return getOrder(request, decodeURIComponent(orderMatch[1]));
+      if (request.method === "GET" && orderMatch) return await getOrder(request, decodeURIComponent(orderMatch[1]));
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);
-      if (request.method === "GET" && downloadMatch) return download(request, decodeURIComponent(downloadMatch[1]));
+      if (request.method === "GET" && downloadMatch) return await download(request, decodeURIComponent(downloadMatch[1]));
     } catch (error) {
-      return errorJson(error.status || 500, error.code || "worker_error", error.message);
+      return errorJson(error.status || 500, error.code || "worker_error", error.message, error.details);
     }
     return errorJson(404, "not_found", "Worker route was not found.");
   };

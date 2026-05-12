@@ -333,7 +333,7 @@ test("webhook rejects paid sessions whose amount does not match the order", asyn
   assert.equal(body.error.code, "amount_mismatch");
 });
 
-test("download endpoint returns a mock signed R2 URL and rate-limits repeat downloads", async () => {
+test("download endpoint returns a mock signed R2 URL and allows repeat downloads", async () => {
   const catalog = loadCatalog();
   const { worker } = testWorker();
   const photoId = firstDeliverablePhotoId(catalog);
@@ -354,7 +354,7 @@ test("download endpoint returns a mock signed R2 URL and rate-limits repeat down
   assert.match(download.download.mockSignedUrl, /^mock-r2:\/\/deliveries\//);
 
   const repeatedResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
-  assert.equal(repeatedResponse.status, 429);
+  assert.equal(repeatedResponse.status, 200);
 });
 
 test("local ZIP delivery creates a real ZIP from preview fallback", async () => {
@@ -437,6 +437,26 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
   assert.equal(downloadResponse.headers.get("content-type"), "image/jpeg");
   const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
   assert.ok(fileBytes.includes(Buffer.from("private developed master bytes")));
+});
+
+test("deployed Worker blocks checkout when private delivery files are missing", async () => {
+  const catalog = loadCatalog();
+  const photoId = firstDeliverablePhotoId(catalog);
+  const env = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: createFakeR2(),
+    DELIVERY_MEDIA: createFakeR2(),
+    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+  };
+
+  const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }), env);
+  assert.equal(checkoutResponse.status, 409);
+  const body = await checkoutResponse.json();
+  assert.equal(body.error.code, "delivery_assets_unavailable");
+  assert.equal(body.error.details.missing[0].code, "missing_private_master");
 });
 
 test("R2 ZIP delivery renders and privately caches JPG products", async () => {

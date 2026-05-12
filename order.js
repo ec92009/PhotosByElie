@@ -98,6 +98,31 @@ const downloadHrefFor = (order) => {
 
 const deliveryFileHref = (file) => file?.downloadUrl ? `${workerBaseUrl()}${file.downloadUrl}` : "";
 
+const deliveryRowsFor = (order) => {
+  const readyFiles = order.delivery?.files || [];
+  const readyByKey = new Map(readyFiles.map((file) => [`${file.photoId}::${file.productId}`, file]));
+  const rows = [];
+  for (const item of order.items || []) {
+    for (const product of item.products || []) {
+      const readyFile = readyByKey.get(`${item.photoId}::${product.id}`);
+      rows.push({
+        photoId: item.photoId,
+        title: item.title,
+        collection: item.collection,
+        productId: product.id,
+        productLabel: product.label,
+        amount: product.amount,
+        name: readyFile?.name || `${item.photoId}-${product.id}`,
+        downloadUrl: readyFile?.downloadUrl || "",
+        bytes: readyFile?.bytes || 0,
+        contentType: readyFile?.contentType || "application/octet-stream",
+        ready: Boolean(readyFile?.downloadUrl),
+      });
+    }
+  }
+  return rows;
+};
+
 const syncZipLocationField = () => {
   if (!zipCopyField || !zipLocation) return;
   const lines = [
@@ -195,7 +220,7 @@ const scheduleOrderRefresh = (order) => {
 };
 
 const renderOrder = (order) => {
-  currentDeliveryFiles = order.delivery?.files || [];
+  currentDeliveryFiles = deliveryRowsFor(order);
   const copy = phaseCopy(order);
   heading.textContent = copy.heading || statusText[order.status] || order.status;
   if (phase) {
@@ -217,32 +242,41 @@ const renderOrder = (order) => {
     ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>${isLocalWorker() ? t("order.local_zip") : t("order.delivery_zip")}</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
   `;
 
-  const deliveryFilesMarkup = currentDeliveryFiles.length ? `
+  const hasActualDeliveryFiles = Boolean(order.delivery?.files?.length);
+  const showDeliveryStack = currentDeliveryFiles.length && (
+    order.status === "preparing" ||
+    order.status === "delivery_failed" ||
+    hasActualDeliveryFiles
+  );
+  const readyFileCount = currentDeliveryFiles.filter((file) => file.ready).length;
+  const deliveryFilesMarkup = showDeliveryStack ? `
     <section class="order-file-downloads" aria-label="${escapeText(t("order.delivery_files"))}">
       <div class="order-file-downloads-header">
         <div>
           <p class="eyebrow">${escapeText(t("order.delivery_files"))}</p>
-          <h3>${escapeText(t("order.files_ready"))}</h3>
+          <h3>${escapeText(order.status === "ready" ? t("order.files_ready") : t("order.files_preparing"))}</h3>
+          <p>${escapeText(t("order.files_ready_count", { ready: readyFileCount, total: currentDeliveryFiles.length }))}</p>
         </div>
-        <button class="btn primary" type="button" data-download-all-files>${escapeText(t("order.download_all_files"))}</button>
+        <button class="btn primary" type="button" data-download-all-files${readyFileCount ? "" : " disabled"}>${escapeText(t("order.download_all_files"))}</button>
       </div>
       <ol>
         ${currentDeliveryFiles.map((file, index) => `
-          <li data-file-row="${index}">
+          <li class="${file.ready ? "is-ready" : "is-pending"}" data-file-row="${index}">
             <div>
               <strong>${escapeText(file.name)}</strong>
+              <small>${escapeText(file.collection || "")}${file.collection ? " · " : ""}${escapeText(file.title || file.photoId || "")}</small>
               <small>${escapeText(file.productLabel || file.productId || "")}${file.bytes ? ` · ${escapeText(bytesLabel(file.bytes))}` : ""}</small>
-              <progress value="0" max="100" data-file-progress="${index}"></progress>
+              <progress ${file.ready ? "value=\"100\"" : ""} max="100" data-file-progress="${index}"></progress>
             </div>
-            <output data-file-status="${index}">${escapeText(t("order.file_ready"))}</output>
-            <button class="btn secondary" type="button" data-download-file="${index}">${escapeText(t("order.download_file"))}</button>
+            <output data-file-status="${index}">${escapeText(file.ready ? t("order.file_ready") : (order.status === "delivery_failed" ? t("order.file_needs_attention") : t("order.file_preparing")))}</output>
+            <button class="btn secondary" type="button" data-download-file="${index}"${file.ready ? "" : " disabled"}>${escapeText(t("order.download_file"))}</button>
           </li>
         `).join("")}
       </ol>
     </section>
   ` : "";
 
-  itemsRoot.innerHTML = `${deliveryFilesMarkup}${(order.items || []).map((item) => `
+  const orderLinesMarkup = (order.items || []).map((item) => `
     <article class="order-line">
       <div>
         <p class="eyebrow">${escapeText(item.collection)}</p>
@@ -253,9 +287,10 @@ const renderOrder = (order) => {
         ${(item.products || []).map((product) => `<li>${escapeText(product.label)} · ${moneyFromCents(product.amount, order.currency)}</li>`).join("")}
       </ul>
     </article>
-  `).join("")}`;
+  `).join("");
+  itemsRoot.innerHTML = showDeliveryStack ? deliveryFilesMarkup : orderLinesMarkup;
 
-  if (order.delivery?.downloadUrl && !currentDeliveryFiles.length) {
+  if (order.delivery?.downloadUrl && !hasActualDeliveryFiles) {
     currentZipPath = order.delivery.zipKey || "";
     currentDownloadHref = downloadHrefFor(order);
     downloadZip.hidden = false;
@@ -403,6 +438,7 @@ itemsRoot?.addEventListener("click", async (event) => {
   if (allButton) {
     allButton.setAttribute("disabled", "");
     for (let index = 0; index < currentDeliveryFiles.length; index += 1) {
+      if (!currentDeliveryFiles[index]?.ready) continue;
       await downloadDeliveryFile(currentDeliveryFiles[index], index);
     }
     allButton.removeAttribute("disabled");

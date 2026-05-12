@@ -4,7 +4,7 @@ Last updated: 2026-05-12
 
 ## Current Facts
 
-- Local visible build: `v73.0`.
+- Local visible build: `v73.7`.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -23,8 +23,9 @@ Last updated: 2026-05-12
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
 - Owner Current state now reads roughly `10,228` analyzed, `4,384` blocked, and `5,844` Expo photos after the recent Italy import; counts should be refreshed from generated state before launch decisions.
 - Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest should be updated by the sweep/cleanup tooling rather than hand-edited.
+- Checkout now validates selected private R2 masters/renders before opening Stripe, so buyers cannot pay for files that are not ready. Daily automation `Photos By Elie R2 master-chain repair` restores missing masters from Saturn/local sources first, repairs private render triplets, then prunes derivative ghosts from R2/manifests.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
-- Delivery ZIPs are flat: delivered image files sit at the archive root beside `ORDER.txt`, not inside per-photo folders.
+- Public cloud delivery uses per-file private download tokens instead of building one large ZIP in the Worker. Local mock delivery can still write flat ZIPs for test convenience.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
 - Physical print/frame products are off by default for buyers; Owner has a deliberate localhost toggle for local review while product pricing/publishing is still backlog work.
 - Print-on-demand sampling is required before physical products return publicly. Shortlist samples should cover US and Europe fulfillment quality, packaging, landed cost, API/integration fit, and support responsiveness.
@@ -46,14 +47,14 @@ Last updated: 2026-05-12
    - Test 3D Secure/authentication-required payment.
    - Test declined-card payment.
    - Confirm a verified `checkout.session.completed` webhook marks the order paid.
-   - Confirm the Worker builds the ZIP from private R2 and the order page exposes the download.
-   - Cover paid-but-ZIP-pending, expired download link, missing private asset, and retryable Worker error states.
+   - Confirm the Worker validates private R2 files before Stripe opens and the order page exposes paid per-file downloads.
+   - Cover paid-but-delivery-pending, expired download link, missing private asset, and retryable Worker error states.
 
 2. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
-   - Store order ID, buyer email, basket snapshot, expected/paid amount, status, ZIP key, and download timing.
-   - Keep private R2 as delivery ZIP storage.
-   - Add receipts/order lookup language that tells buyers exactly where the ZIP will appear and how long it remains available.
+   - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
+   - Keep private R2 as private delivery storage.
+   - Add receipts/order lookup language that tells buyers exactly where downloads will appear and how long links remain available.
 
 3. **Package the buyer offer clearly.**
    - Decide the first public offer: digital-only single assets, bundles, or collection packs.
@@ -77,7 +78,7 @@ Last updated: 2026-05-12
    - Keep block/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
 
 6. **Add conversion analytics.**
-   - Track privacy-conscious funnel events: homepage view, collection view, search/filter use, like, add to basket, basket view, checkout started, payment completed, ZIP downloaded.
+   - Track privacy-conscious funnel events: homepage view, collection view, search/filter use, like, add to basket, basket view, checkout started, payment completed, file downloaded.
    - Track collection and product type so we learn what actually sells.
    - Store raw paid-order facts durably enough to synthesize marketing reports on demand: order items, photo IDs, collection/country, source origin, product/format ID, unit count, line revenue, paid timestamp, and download events.
    - Prefer on-demand reporting from raw order/item/download records at first rather than maintaining denormalized per-photo or per-country sales counters that can go stale.
@@ -124,6 +125,7 @@ Last updated: 2026-05-12
    - Continue testing density controls and fit/fill behavior across very mixed collections.
    - Keep keyboard selection, Owner block/discard shortcuts, likes, and detail navigation stable when layout positions change.
    - Keep a future justified-row gallery as a separate buyer-polish idea, not the current target.
+   - Replace leaked translation keys in gallery filter controls, such as `gallery.min_size` and `gallery.any_size`, with clear buyer/Owner-facing labels.
 
 13. **Add buyer account or order recovery only if needed.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
@@ -187,7 +189,7 @@ Last updated: 2026-05-12
    - Generate video thumbnails/posters, duration metadata, orientation, codec/resolution fields, and gallery cards that do not confuse still-photo purchase flows.
    - Add R2 storage rules for public previews/posters and private video masters or deliverables.
    - Keep MOV/MP4 files out of the existing still-photo importer until this is deliberately implemented.
-   - Keep ZIP download throttling intentionally minimal: allow up to 3 downloads during the first hour after purchase, then no more than 1 download per day. Do not add other download restrictions unless abuse or sales volume proves they are needed.
+   - Keep file-download throttling intentionally minimal. Repeat downloads are currently allowed; do not add restrictions unless abuse or sales volume proves they are needed.
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
@@ -221,4 +223,5 @@ Last updated: 2026-05-12
 - Added first-class Camera / AI origin handling across gallery filters, detail metadata, Owner counts, and Worker checkout pricing.
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.
 - Moved public preview delivery off the checkout Worker bridge by enabling the public R2 `r2.dev` endpoint and pointing `media-config.js` at it.
+- Added pre-Stripe private delivery availability checks, repeatable per-file downloads, and daily master-chain repair/prune automation.
 - Factored gallery card rendering into `gallery-card.js` and moved Blocked review onto the same card/masonry treatment as public galleries.

@@ -78,6 +78,10 @@ Last updated: 2026-05-12
 6. **Add conversion analytics.**
    - Track privacy-conscious funnel events: homepage view, collection view, search/filter use, like, add to basket, basket view, checkout started, payment completed, ZIP downloaded.
    - Track collection and product type so we learn what actually sells.
+   - Store raw paid-order facts durably enough to synthesize marketing reports on demand: order items, photo IDs, collection/country, source origin, product/format ID, unit count, line revenue, paid timestamp, and download events.
+   - Prefer on-demand reporting from raw order/item/download records at first rather than maintaining denormalized per-photo or per-country sales counters that can go stale.
+   - Report format performance by both headcount/units sold and revenue, including `full`, `jpg-6mp`, `jpg-3mp`, and `jpg-1mp`.
+   - Report photo and collection performance by paid revenue, units sold, order count, and download count for marketing decisions.
    - Add lightweight dashboards or reports for revenue, conversion rate, abandoned baskets, and top viewed/liked photos.
    - Keep local Owner activity out of buyer analytics.
 

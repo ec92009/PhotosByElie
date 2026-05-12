@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 ## Current Facts
 
@@ -27,6 +27,7 @@ Last updated: 2026-05-11
 - Delivery ZIPs are flat: delivered image files sit at the archive root beside `ORDER.txt`, not inside per-photo folders.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
 - Physical print/frame products are off by default for buyers; Owner has a deliberate localhost toggle for local review while product pricing/publishing is still backlog work.
+- Print-on-demand sampling is required before physical products return publicly. Shortlist samples should cover US and Europe fulfillment quality, packaging, landed cost, API/integration fit, and support responsiveness.
 - Homepage first render uses the tiny `home-data.js` manifest; the full `photos-data.js` catalog now downloads in the background for basket/liked context.
 - Public previews are served directly from the `photosbyelie-public` `r2.dev` media endpoint; the checkout Worker is no longer on the browse-time preview path.
 - Business priority is now revenue: make checkout trustworthy, package the offer clearly, drive qualified visitors, and keep Owner tooling focused on sales-enabling operations.
@@ -125,6 +126,10 @@ Last updated: 2026-05-11
 
 14. **Decide when physical goods return.**
    - Keep physical print/frame products off by default while digital checkout is being proven.
+   - Order POD samples before re-enabling buyer-facing prints or framed prints.
+   - Sample the same stress-test set across shortlisted shops: one dark photo, one detailed architecture/travel photo, one saturated AI-origin image, and one black-and-white or neutral image.
+   - Compare US/EU candidates from the research: Prodigi as the first automation candidate; Printful, Gelato, and theprintspace for cross-market sampling; WHCC as a premium US backup; WhiteWall or Saal Digital as premium Europe backups.
+   - Score print quality, color accuracy, crop handling, frame quality, packaging, white-label presentation, shipping speed, landed cost, refunds/damage handling, and API/manual workflow fit.
    - Re-enable only when pricing, fulfillment, shipping, refunds, and customer support are clear.
    - Treat print/frame work as a higher-touch sales channel, not a blocker for digital launch.
 

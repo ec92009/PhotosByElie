@@ -16,6 +16,7 @@ const refreshButton = document.querySelector("[data-order-refresh]");
 let currentZipPath = "";
 let currentDownloadHref = "";
 let refreshTimer = null;
+let currentDeliveryFiles = [];
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -73,6 +74,19 @@ const checkoutSessionId = () => params.get("session_id") || checkoutState().chec
 const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
+const bytesLabel = (value) => {
+  const bytes = Number(value || 0);
+  if (!bytes) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let amount = bytes;
+  let unit = 0;
+  while (amount >= 1024 && unit < units.length - 1) {
+    amount /= 1024;
+    unit += 1;
+  }
+  return `${amount >= 10 || unit === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[unit]}`;
+};
+
 const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(workerBaseUrl());
 
 const downloadHrefFor = (order) => {
@@ -81,6 +95,8 @@ const downloadHrefFor = (order) => {
     ? `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`
     : `${workerBaseUrl()}${order.delivery.downloadUrl}`;
 };
+
+const deliveryFileHref = (file) => file?.downloadUrl ? `${workerBaseUrl()}${file.downloadUrl}` : "";
 
 const syncZipLocationField = () => {
   if (!zipCopyField || !zipLocation) return;
@@ -179,6 +195,7 @@ const scheduleOrderRefresh = (order) => {
 };
 
 const renderOrder = (order) => {
+  currentDeliveryFiles = order.delivery?.files || [];
   const copy = phaseCopy(order);
   heading.textContent = copy.heading || statusText[order.status] || order.status;
   if (phase) {
@@ -200,7 +217,32 @@ const renderOrder = (order) => {
     ${order.delivery?.zipKey ? `<div class="order-local-path"><dt>${isLocalWorker() ? t("order.local_zip") : t("order.delivery_zip")}</dt><dd>${escapeText(order.delivery.zipKey)}</dd></div>` : ""}
   `;
 
-  itemsRoot.innerHTML = (order.items || []).map((item) => `
+  const deliveryFilesMarkup = currentDeliveryFiles.length ? `
+    <section class="order-file-downloads" aria-label="${escapeText(t("order.delivery_files"))}">
+      <div class="order-file-downloads-header">
+        <div>
+          <p class="eyebrow">${escapeText(t("order.delivery_files"))}</p>
+          <h3>${escapeText(t("order.files_ready"))}</h3>
+        </div>
+        <button class="btn primary" type="button" data-download-all-files>${escapeText(t("order.download_all_files"))}</button>
+      </div>
+      <ol>
+        ${currentDeliveryFiles.map((file, index) => `
+          <li data-file-row="${index}">
+            <div>
+              <strong>${escapeText(file.name)}</strong>
+              <small>${escapeText(file.productLabel || file.productId || "")}${file.bytes ? ` · ${escapeText(bytesLabel(file.bytes))}` : ""}</small>
+              <progress value="0" max="100" data-file-progress="${index}"></progress>
+            </div>
+            <output data-file-status="${index}">${escapeText(t("order.file_ready"))}</output>
+            <button class="btn secondary" type="button" data-download-file="${index}">${escapeText(t("order.download_file"))}</button>
+          </li>
+        `).join("")}
+      </ol>
+    </section>
+  ` : "";
+
+  itemsRoot.innerHTML = `${deliveryFilesMarkup}${(order.items || []).map((item) => `
     <article class="order-line">
       <div>
         <p class="eyebrow">${escapeText(item.collection)}</p>
@@ -211,9 +253,9 @@ const renderOrder = (order) => {
         ${(item.products || []).map((product) => `<li>${escapeText(product.label)} · ${moneyFromCents(product.amount, order.currency)}</li>`).join("")}
       </ul>
     </article>
-  `).join("");
+  `).join("")}`;
 
-  if (order.delivery?.downloadUrl) {
+  if (order.delivery?.downloadUrl && !currentDeliveryFiles.length) {
     currentZipPath = order.delivery.zipKey || "";
     currentDownloadHref = downloadHrefFor(order);
     downloadZip.hidden = false;
@@ -229,6 +271,61 @@ const renderOrder = (order) => {
   }
   syncZipLocationField();
   scheduleOrderRefresh(order);
+};
+
+const triggerBlobDownload = (blob, filename) => {
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = filename || "photosbyelie-delivery-file";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
+const setFileProgress = (index, percent, text) => {
+  const progress = itemsRoot.querySelector(`[data-file-progress="${index}"]`);
+  const output = itemsRoot.querySelector(`[data-file-status="${index}"]`);
+  if (progress) progress.value = Math.max(0, Math.min(100, percent));
+  if (output) output.textContent = text;
+};
+
+const downloadDeliveryFile = async (file, index) => {
+  const button = itemsRoot.querySelector(`[data-download-file="${index}"]`);
+  const href = deliveryFileHref(file);
+  if (!href) return;
+  button?.setAttribute("disabled", "");
+  setFileProgress(index, 2, t("order.file_downloading"));
+  try {
+    const response = await fetch(href);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const total = Number(response.headers.get("content-length")) || Number(file.bytes || 0);
+    if (!response.body?.getReader) {
+      const blob = await response.blob();
+      triggerBlobDownload(blob, file.name);
+      setFileProgress(index, 100, t("order.file_downloaded"));
+      return;
+    }
+    const reader = response.body.getReader();
+    const chunks = [];
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      const percent = total ? Math.round((received / total) * 100) : 50;
+      setFileProgress(index, percent, total ? `${bytesLabel(received)} / ${bytesLabel(total)}` : bytesLabel(received));
+    }
+    const blob = new Blob(chunks, { type: response.headers.get("content-type") || file.contentType || "application/octet-stream" });
+    triggerBlobDownload(blob, file.name);
+    setFileProgress(index, 100, t("order.file_downloaded"));
+  } catch (error) {
+    setFileProgress(index, 0, `${t("order.file_failed")} ${error.message}`);
+  } finally {
+    button?.removeAttribute("disabled");
+  }
 };
 
 const loadOrder = async () => {
@@ -294,6 +391,23 @@ const loadOrder = async () => {
 };
 
 refreshButton?.addEventListener("click", loadOrder);
+itemsRoot?.addEventListener("click", async (event) => {
+  const fileButton = event.target.closest("[data-download-file]");
+  if (fileButton) {
+    const index = Number(fileButton.dataset.downloadFile);
+    const file = currentDeliveryFiles[index];
+    if (file) await downloadDeliveryFile(file, index);
+    return;
+  }
+  const allButton = event.target.closest("[data-download-all-files]");
+  if (allButton) {
+    allButton.setAttribute("disabled", "");
+    for (let index = 0; index < currentDeliveryFiles.length; index += 1) {
+      await downloadDeliveryFile(currentDeliveryFiles[index], index);
+    }
+    allButton.removeAttribute("disabled");
+  }
+});
 downloadZip?.addEventListener("click", () => {
   status.textContent = isLocalWorker()
     ? t("order.download_requested_local")

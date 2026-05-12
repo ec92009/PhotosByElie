@@ -244,6 +244,16 @@ const publicOrder = (order) => ({
     zipKey: order.delivery.zipKey,
     downloadUrl: order.delivery.downloadUrl,
     readyAt: order.delivery.readyAt,
+    files: (order.delivery.files || []).map((file) => ({
+      photoId: file.photoId,
+      productId: file.productId,
+      productLabel: file.productLabel,
+      name: file.name,
+      downloadUrl: file.downloadUrl,
+      bytes: file.bytes || 0,
+      contentType: file.contentType || "application/octet-stream",
+      cacheHit: file.cacheHit,
+    })),
   } : null,
   deliveryError: order.deliveryError ? {
     code: order.deliveryError.code || "delivery_failed",
@@ -411,18 +421,34 @@ export const createPhotosByElieWorker = ({
         zipKey: deliveryResult.zipKey,
         downloadUrl: deliveryResult.downloadUrl,
         readyAt: deliveryResult.readyAt || readyAt,
+        files: deliveryResult.files || [],
         items: deliveryResult.items || [],
       },
       updatedAt: readyAt,
     };
     await store.putOrder(ready);
-    await store.putDownload({
-      token: deliveryResult.token,
-      orderId: ready.id,
-      zipKey: deliveryResult.zipKey,
-      createdAt: readyAt,
-      downloadCount: 0,
-    });
+    if (Array.isArray(deliveryResult.files) && deliveryResult.files.length) {
+      await Promise.all(deliveryResult.files.map((file) => store.putDownload({
+        token: file.token,
+        orderId: ready.id,
+        objectKey: file.objectKey,
+        filename: file.name,
+        contentType: file.contentType,
+        bytes: file.bytes || 0,
+        photoId: file.photoId,
+        productId: file.productId,
+        createdAt: readyAt,
+        downloadCount: 0,
+      })));
+    } else if (deliveryResult.token) {
+      await store.putDownload({
+        token: deliveryResult.token,
+        orderId: ready.id,
+        zipKey: deliveryResult.zipKey,
+        createdAt: readyAt,
+        downloadCount: 0,
+      });
+    }
     return ready;
   };
 

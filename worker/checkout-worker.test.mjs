@@ -397,7 +397,7 @@ test("local ZIP delivery creates a real ZIP from preview fallback", async () => 
   fs.rmSync(outputDir, { recursive: true, force: true });
 });
 
-test("deployed Worker mock checkout writes and downloads a private R2 ZIP", async () => {
+test("deployed Worker mock checkout writes and downloads private R2 files", async () => {
   const catalog = loadCatalog();
   const photoId = firstDeliverablePhotoId(catalog);
   const sourcePath = sourcePathForPhoto(catalog, photoId);
@@ -428,16 +428,15 @@ test("deployed Worker mock checkout writes and downloads a private R2 ZIP", asyn
   assert.equal(payResponse.status, 200);
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
-  assert.match(paid.order.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-/);
+  assert.equal(paid.order.delivery.files.length, 1);
+  assert.equal(paid.order.delivery.files[0].productId, "full");
 
-  const token = paid.order.delivery.downloadUrl.split("/").pop();
+  const token = paid.order.delivery.files[0].downloadUrl.split("/").pop();
   const downloadResponse = await deployedWorker.fetch(new Request(`https://worker.test/download/${token}`), env);
   assert.equal(downloadResponse.status, 200);
-  assert.equal(downloadResponse.headers.get("content-type"), "application/zip");
-  const zip = Buffer.from(await downloadResponse.arrayBuffer());
-  assert.equal(zip.subarray(0, 4).toString("hex"), "504b0304");
-  assert.ok(zip.includes(Buffer.from("ORDER.txt")));
-  assert.ok(zip.includes(Buffer.from("private developed master bytes")));
+  assert.equal(downloadResponse.headers.get("content-type"), "image/jpeg");
+  const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
+  assert.ok(fileBytes.includes(Buffer.from("private developed master bytes")));
 });
 
 test("R2 ZIP delivery renders and privately caches JPG products", async () => {
@@ -494,11 +493,9 @@ test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   assert.match(renderKeys[0], /jpg-3mp\.jpg$/);
   assert.equal(privateR2._debug.get(renderKeys[0]).httpMetadata.contentType, "image/jpeg");
   assert.equal(privateR2._debug.get(renderKeys[0]).customMetadata.watermark, "none");
-  const zip = Buffer.from(privateR2._debug.get(firstDelivery.zipKey).body);
-  assert.ok(zip.includes(Buffer.from(`${photoId}-full.jpg`)));
-  assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-3mp.jpg`)));
-  assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-full.jpg`)));
-  assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-3mp.jpg`)));
+  assert.deepEqual(firstDelivery.files.map((file) => file.name), [`${photoId}-full.jpg`, `${photoId}-jpg-3mp.jpg`]);
+  assert.equal(firstDelivery.files[1].objectKey, renderKeys[0]);
+  assert.equal(firstDelivery.files[1].downloadUrl.startsWith("/download/"), true);
 });
 
 test("R2 ZIP delivery reuses cached JPG products without reading the private master", async () => {
@@ -565,8 +562,8 @@ test("R2 ZIP delivery reuses cached JPG products without reading the private mas
   assert.equal(masterReads, 0);
   assert.equal(result.items[0].cacheHit, true);
   assert.equal(result.items[0].renderKey, renderKey);
-  const zip = Buffer.from(privateR2._debug.get(result.zipKey).body);
-  assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-3mp.jpg`)));
+  assert.equal(result.files[0].name, `${photoId}-jpg-3mp.jpg`);
+  assert.equal(result.files[0].objectKey, renderKey);
 });
 
 test("deployed Worker serves public R2 previews through the media route", async () => {

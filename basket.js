@@ -338,8 +338,8 @@ const setBasketStatus = (message, { checkout = false, title = t("order.checkout"
 
 const syncCheckoutControls = () => {
   const state = checkoutState();
-  const provider = state.provider || state.lastResponse?.checkout?.provider || "mock-stripe";
-  if (mockPay) mockPay.hidden = !(state.checkoutSessionId && provider === "mock-stripe");
+  const provider = state.provider || state.lastResponse?.checkout?.provider || "stripe";
+  if (mockPay) mockPay.hidden = !(isLocalPage() && state.checkoutSessionId && provider === "mock-stripe");
   if (checkoutEmail && state.email && !checkoutEmail.value) checkoutEmail.value = state.email;
   if (state.lastResponse) renderCheckoutResult(state.lastResponse, state.mode);
 };

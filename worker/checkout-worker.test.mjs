@@ -501,6 +501,74 @@ test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-3mp.jpg`)));
 });
 
+test("R2 ZIP delivery reuses cached JPG products without reading the private master", async () => {
+  const photoId = "20220506-160631-03403-51426edaac";
+  const privateKey = `masters/${photoId}/20220506 160631 03403.jpg`;
+  const renderKey = `renders/${photoId}/20220506-160631-03403.jpg-jpg-3mp.jpg`;
+  const privateR2 = createFakeR2({
+    [privateKey]: {
+      body: createTestJpeg(120, 80),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+    [renderKey]: {
+      body: createTestJpeg(60, 40),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const originalGet = privateR2.get;
+  let masterReads = 0;
+  privateR2.get = async (key) => {
+    const object = await originalGet(key);
+    if (!object || key !== privateKey) return object;
+    return {
+      ...object,
+      arrayBuffer: async () => {
+        masterReads += 1;
+        return object.arrayBuffer();
+      },
+    };
+  };
+
+  const delivery = createR2ZipDelivery({
+    privateBucket: privateR2,
+    deliveryBucket: privateR2,
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID: deterministicIds(),
+    renderer: {
+      canRender: () => true,
+      render: async () => {
+        throw new Error("Renderer should not be called for a cached private JPG.");
+      },
+    },
+  });
+  const order = {
+    id: "PBE-CACHED",
+    buyerEmail: "buyer@example.com",
+    currency: "usd",
+    amountPaid: 1600,
+    amountExpected: 1600,
+    items: [{
+      photoId,
+      title: "Les Invalides, Paris",
+      source: {
+        path: "2022/JPG/05/06/20220506 160631 03403.jpg",
+        privateMasterKey: privateKey,
+        dimensions: { width: 6000, height: 4000 },
+      },
+      products: [
+        { id: "jpg-3mp", label: "JPG 3 MP" },
+      ],
+    }],
+  };
+
+  const result = await delivery.createDelivery(order);
+  assert.equal(masterReads, 0);
+  assert.equal(result.items[0].cacheHit, true);
+  assert.equal(result.items[0].renderKey, renderKey);
+  const zip = Buffer.from(privateR2._debug.get(result.zipKey).body);
+  assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-3mp.jpg`)));
+});
+
 test("deployed Worker serves public R2 previews through the media route", async () => {
   const publicR2 = createFakeR2({
     "expo/france/sample_900.jpg": {

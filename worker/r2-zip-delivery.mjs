@@ -12,8 +12,20 @@ const extensionFor = (path) => {
 
 const basename = (path) => String(path || "").split(/[\\/]/).pop();
 
-const renderedJpgKey = (item, product) =>
-  `renders/${safeName(item.photoId, "photo")}/${safeName(basename(item.source.path), "source")}-${safeName(product.id, "product")}.jpg`;
+const photoBaseName = (item) => {
+  const sourceExt = extensionFor(item.source?.path);
+  const idStem = String(item.photoId || "").replace(/-[a-f0-9]{10}$/i, "");
+  return `${idStem || basename(item.source?.path).replace(/\.[A-Za-z0-9]+$/, "")}.${sourceExt}`;
+};
+
+const renderedJpgKeys = (item, product) => {
+  const folder = safeName(item.photoId, "photo");
+  const productName = safeName(product.id, "product");
+  return Array.from(new Set([
+    `renders/${folder}/${safeName(basename(item.source.path), "source")}-${productName}.jpg`,
+    `renders/${folder}/${safeName(photoBaseName(item), "source")}-${productName}.jpg`,
+  ]));
+};
 
 const orderManifest = (order, rendered) => [
   "Photos By Elie digital delivery",
@@ -53,15 +65,17 @@ export const createR2ZipDelivery = ({
     const rendered = [];
     const entries = [];
 
-    const getOrCreateRenderedJpg = async ({ item, product, sourceBytes }) => {
-      const renderKey = renderedJpgKey(item, product);
-      const cached = await deliveryBucket.get(renderKey);
-      if (cached) {
-        return {
-          data: new Uint8Array(await cached.arrayBuffer()),
-          renderKey,
-          cacheHit: true,
-        };
+    const getOrCreateRenderedJpg = async ({ item, product, readSourceBytes }) => {
+      const [renderKey, ...fallbackRenderKeys] = renderedJpgKeys(item, product);
+      for (const candidateRenderKey of [renderKey, ...fallbackRenderKeys]) {
+        const cached = await deliveryBucket.get(candidateRenderKey);
+        if (cached) {
+          return {
+            data: new Uint8Array(await cached.arrayBuffer()),
+            renderKey: candidateRenderKey,
+            cacheHit: true,
+          };
+        }
       }
       const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id);
       if (!canRender) {
@@ -71,6 +85,7 @@ export const createR2ZipDelivery = ({
         });
       }
 
+      const sourceBytes = await readSourceBytes();
       const data = await renderer.render({
         sourceBytes,
         sourceKey: item.source.privateMasterKey,
@@ -96,20 +111,25 @@ export const createR2ZipDelivery = ({
     };
 
     for (const item of order.items) {
-      const object = await privateBucket.get(item.source.privateMasterKey);
-      if (!object) {
-        throw Object.assign(new Error(`Private R2 master is missing: ${item.source.privateMasterKey}`), {
-          status: 409,
-          code: "missing_private_master",
-        });
-      }
-      const sourceBytes = new Uint8Array(await object.arrayBuffer());
+      let sourceBytes = null;
+      const readSourceBytes = async () => {
+        if (sourceBytes) return sourceBytes;
+        const object = await privateBucket.get(item.source.privateMasterKey);
+        if (!object) {
+          throw Object.assign(new Error(`Private R2 master is missing: ${item.source.privateMasterKey}`), {
+            status: 409,
+            code: "missing_private_master",
+          });
+        }
+        sourceBytes = new Uint8Array(await object.arrayBuffer());
+        return sourceBytes;
+      };
 
       for (const product of item.products) {
         const isFullResolution = product.id === "full";
         const data = isFullResolution
-          ? sourceBytes
-          : await getOrCreateRenderedJpg({ item, product, sourceBytes });
+          ? await readSourceBytes()
+          : await getOrCreateRenderedJpg({ item, product, readSourceBytes });
         const ext = isFullResolution ? extensionFor(item.source.path) : "jpg";
         const name = `${safeName(item.photoId, "photo")}-${safeName(product.id, "product")}.${ext}`;
         entries.push({ name, data: isFullResolution ? data : data.data });

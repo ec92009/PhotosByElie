@@ -15,6 +15,7 @@ const zipLocation = document.querySelector("[data-zip-location]");
 const refreshButton = document.querySelector("[data-order-refresh]");
 let currentZipPath = "";
 let currentDownloadHref = "";
+let refreshTimer = null;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -162,10 +163,19 @@ const setProgress = (state) => {
     const stepState = step.dataset.stateStep;
     const isFailed = state === "delivery_failed";
     const activeState = isFailed ? "preparing" : state;
+    const isProcessing = state === "pending_payment" || state === "preparing";
     step.classList.toggle("is-active", stepState === activeState);
+    step.classList.toggle("is-processing", isProcessing && stepState === activeState);
     step.classList.toggle("is-failed", isFailed && stepState === "preparing");
     step.classList.toggle("is-complete", state === "ready" || ((state === "preparing" || isFailed) && stepState === "pending_payment"));
   });
+};
+
+const scheduleOrderRefresh = (order) => {
+  window.clearTimeout(refreshTimer);
+  refreshTimer = null;
+  if (!["pending_payment", "preparing"].includes(order?.status)) return;
+  refreshTimer = window.setTimeout(loadOrder, order.status === "preparing" ? 5000 : 2500);
 };
 
 const renderOrder = (order) => {
@@ -174,6 +184,7 @@ const renderOrder = (order) => {
   if (phase) {
     phase.textContent = copy.step;
     phase.classList.toggle("is-failed", Boolean(copy.failed));
+    phase.classList.toggle("is-processing", ["pending_payment", "preparing"].includes(order.status));
   }
   message.textContent = copy.message;
   setProgress(order.status);
@@ -217,9 +228,12 @@ const renderOrder = (order) => {
     if (copyZipPath) copyZipPath.hidden = true;
   }
   syncZipLocationField();
+  scheduleOrderRefresh(order);
 };
 
 const loadOrder = async () => {
+  window.clearTimeout(refreshTimer);
+  refreshTimer = null;
   const id = orderId();
   const email = buyerEmail();
   const sessionId = checkoutSessionId();

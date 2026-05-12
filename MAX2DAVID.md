@@ -214,3 +214,55 @@ Expected output in `DAVID2MAX.md`:
 
 1. keyword — count — reason
 ```
+
+## Automation 10: Nightly Title/Keyword Review Queue
+
+Schedule: nightly at 02:00 Madrid time on David.
+
+Goal:
+
+Prepare a human-review page for improving weak photo titles and keyword metadata. David must not apply the proposed metadata changes directly. Owner/Max reviews the page, approves changes, and only then should approved metadata be applied.
+
+Batch rules:
+
+- Work from newest photos backward in time.
+- Each night, select the most recent 100 photos that do not already have the metadata flag `Title_Keywords_Reviewed`.
+- Use capture date/sort metadata when available; otherwise fall back to current catalog order or filename date.
+- Skip photos already carrying `Title_Keywords_Reviewed` so the next run moves to the next older batch.
+- If fewer than 100 unreviewed photos remain, prepare whatever remains.
+
+Metadata rules:
+
+- Review only catalog/manifest metadata.
+- Do not rewrite JPG/source embedded metadata.
+- Do not modify public preview images, private masters, or private render files.
+- Do not use the keyword blacklist to filter photos. The keyword blacklist only blocks useless keyword strings from metadata.
+- Proposed keywords must avoid entries from `assets/owner-actions/keyword-blacklist.json`.
+- After Owner approval, the approved catalog metadata should add `Title_Keywords_Reviewed` as the review flag so that photo is skipped in future nightly batches.
+
+First implementation prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, design and implement a nightly Owner review workflow for title/keyword cleanup. Create a generated review page or localhost Owner page that lists the next 100 newest photos missing the metadata flag Title_Keywords_Reviewed. For each photo, show thumbnail, current title, current keywords, proposed improved title, proposed improved keywords, and enough source metadata to judge the proposal. Save proposals in a tracked owner-action metadata file, not in image files. Do not auto-apply proposals. Add a clear Owner approval path for later green-lighting changes. Validate, commit, push, and report the page URL/path and proposal file in DAVID2MAX.md.
+```
+
+Recurring nightly prompt for David after the workflow exists:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, pull main and generate the next nightly Title/Keywords review batch: newest 100 photos without Title_Keywords_Reviewed. Refresh the review page/proposal metadata for Owner review only. Do not apply metadata changes and do not rewrite JPG/source metadata. Commit and push the updated review/proposal files if they changed. Append a short dated report to DAVID2MAX.md with batch size, newest/oldest capture date in the batch, proposal file path, review page path/URL, and any photos skipped because metadata was insufficient.
+```
+
+Expected output in `DAVID2MAX.md`:
+
+```text
+## YYYY-MM-DD Nightly Title/Keyword Review Queue
+
+- Batch size:
+- Newest photo/date:
+- Oldest photo/date:
+- Proposal file:
+- Review page:
+- Photos skipped:
+- Commit pushed:
+- Notes:
+```

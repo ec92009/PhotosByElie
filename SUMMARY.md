@@ -55,6 +55,7 @@ Date: 2026-05-11
 - Gallery pages have the `L` like shortcut.
 - Basket and Liked pages share a more consistent row layout, bulk resolution toggles, and digital-only default product behavior.
 - Owner title/keyword edits are manifest-only and should inform Worker deliverables through regenerated catalogs, not by rewriting JPEG metadata.
+- `assets/owner-actions/keyword-blacklist.json` is the durable metadata-only keyword blacklist. Import/export generation should strip those keyword strings from catalog metadata and keyword indexes, while never using that list to filter photos or rewrite JPG/source metadata.
 - The collection list now includes Italy from the Pisa import. Future country support should become open-ended rather than hard-coded.
 
 ## Automation And Operations

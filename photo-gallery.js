@@ -23,12 +23,11 @@ const diversityBucketMinutes = 10;
 const defaultFilterState = {
   query: "",
   orientation: "all",
-  origin: "all",
   mood: "all",
   subject: "all",
   sort: "newest"
 };
-const persistedFilterKeys = ["orientation", "origin", "mood", "subject"];
+const persistedFilterKeys = ["orientation", "mood", "subject"];
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
@@ -269,7 +268,7 @@ const searchTerms = () => String(filterState.query || "")
   .filter(Boolean);
 
 const activeFilterCount = () => (
-  ["orientation", "origin", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
+  ["orientation", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
   + (searchTerms().length ? 1 : 0)
 );
 
@@ -280,7 +279,6 @@ const matchesFilterState = (photo) => {
     if (!terms.every((term) => text.includes(term))) return false;
   }
   if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
-  if (filterState.origin !== "all" && photoOrigin(photo) !== filterState.origin) return false;
   if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
   if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
   return true;
@@ -324,11 +322,6 @@ const ensureGalleryFilterControls = () => {
       <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
       <option value="square" data-i18n="gallery.square">Square</option>
     </select></label>
-    <label><span data-i18n="gallery.origin">Origin</span><select data-gallery-filter="origin">
-      <option value="all" data-i18n="gallery.all">All</option>
-      <option value="camera" data-i18n="origin.camera">Camera photo</option>
-      <option value="ai" data-i18n="origin.ai">AI image</option>
-    </select></label>
     <label><span data-i18n="gallery.color_mood">Color mood</span><select data-gallery-filter="mood">
       <option value="all" data-i18n="gallery.all">All</option>
       <option value="warm" data-i18n="gallery.warm">Warm</option>
@@ -345,7 +338,7 @@ const ensureGalleryFilterControls = () => {
       <option value="nature" data-i18n="gallery.nature">Nature</option>
       <option value="city" data-i18n="gallery.city">City/travel</option>
     </select></label>
-    <label><span data-i18n="gallery.sort">Sort</span><select data-gallery-filter="sort">
+    <label class="gallery-sort-label"><span data-i18n="gallery.sort">Sort</span><select data-gallery-filter="sort">
       <option value="newest" data-i18n="gallery.newest">Newest first</option>
       <option value="oldest" data-i18n="gallery.oldest">Oldest first</option>
       <option value="collection" data-i18n="gallery.collection_order">Collection order</option>

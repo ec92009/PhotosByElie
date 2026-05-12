@@ -13,7 +13,11 @@
     document.body.append(element);
   });
 
-  const runWhenIdle = (callback) => {
+  const runWhenCatalogIsUseful = (callback) => {
+    if (document.querySelector("[data-home-discovery]")) {
+      window.setTimeout(callback, 0);
+      return;
+    }
     if ("requestIdleCallback" in window) {
       window.requestIdleCallback(callback, { timeout: 1200 });
       return;
@@ -22,7 +26,7 @@
   };
 
   window.photosByElieFullCatalogReady = new Promise((resolve) => {
-    runWhenIdle(async () => {
+    runWhenCatalogIsUseful(async () => {
       try {
         await loadScript("./photos-data.js");
         window.dispatchEvent(new CustomEvent("photosbyelie:catalogloaded", {

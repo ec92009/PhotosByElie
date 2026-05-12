@@ -211,7 +211,7 @@ const detailScopeEntries = () => {
 const readGallerySequencePayload = () => {
   try {
     const payload = JSON.parse(sessionStorage.getItem(detailSequenceKey) || "null");
-    if (!payload || payload.source !== "gallery" || !Array.isArray(payload.photoIds)) return null;
+    if (!payload || !["gallery", "home"].includes(payload.source) || !Array.isArray(payload.photoIds)) return null;
     return payload;
   } catch {
     return null;
@@ -327,11 +327,18 @@ setPhotoMetaText([
 
 const galleryReturnCollectionKey = () => {
   const payload = readGallerySequencePayload();
-  if (payload?.photoIds.includes(photo?.id) && payload.collectionKey) return payload.collectionKey;
+  if (payload?.source === "gallery" && payload?.photoIds.includes(photo?.id) && payload.collectionKey) return payload.collectionKey;
   return collectionKey;
 };
+const isHomeDetailSequence = () => {
+  const payload = readGallerySequencePayload();
+  return Boolean(payload?.source === "home" && payload.photoIds.includes(photo?.id));
+};
+const detailBackHref = () => (isHomeDetailSequence() ? "./#discover" : `./${galleryReturnCollectionKey()}.html`);
+const detailBackLabelKey = () => (isHomeDetailSequence() ? "common.back_to_search" : "common.back_to_gallery");
 const writeGalleryReturnState = () => {
   const payload = readGallerySequencePayload();
+  if (payload?.source === "home") return;
   try {
     sessionStorage.setItem(galleryReturnStateKey, JSON.stringify({
       source: "detail",
@@ -345,7 +352,10 @@ const writeGalleryReturnState = () => {
     // Normal link navigation still works if sessionStorage is unavailable.
   }
 };
-document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${galleryReturnCollectionKey()}.html`));
+const backLink = document.querySelector("[data-back-link]");
+backLink.setAttribute("href", versionedHref(detailBackHref()));
+backLink.dataset.i18n = detailBackLabelKey();
+backLink.textContent = t(detailBackLabelKey());
 
 const prevPhotoLink = document.querySelector("[data-prev-photo]");
 const nextPhotoLink = document.querySelector("[data-next-photo]");
@@ -378,12 +388,17 @@ const syncDetailBottomActions = () => {
   const bottomPrev = bottomActions.querySelector("[data-bottom-prev-photo]");
   const bottomNext = bottomActions.querySelector("[data-bottom-next-photo]");
   const bottomBack = bottomActions.querySelector("[data-bottom-back-link]");
+  const topBack = document.querySelector("[data-back-link]");
   const prevHref = prevPhotoLink?.getAttribute("href");
   const nextHref = nextPhotoLink?.getAttribute("href");
-  const backHref = document.querySelector("[data-back-link]")?.getAttribute("href") || `./${collectionKey}.html`;
+  const backHref = topBack?.getAttribute("href") || `./${collectionKey}.html`;
   if (prevHref) bottomPrev?.setAttribute("href", versionedHref(prevHref));
   if (nextHref) bottomNext?.setAttribute("href", versionedHref(nextHref));
-  if (bottomBack) bottomBack.setAttribute("href", versionedHref(backHref));
+  if (bottomBack) {
+    bottomBack.setAttribute("href", versionedHref(backHref));
+    bottomBack.dataset.i18n = topBack?.dataset.i18n || "common.back_to_gallery";
+    bottomBack.textContent = topBack?.textContent || t(bottomBack.dataset.i18n);
+  }
   bottomPrev?.toggleAttribute("hidden", !prevHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
   bottomNext?.toggleAttribute("hidden", !nextHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
 };

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v72.1`
+- Current visible version: `v72.2`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -29,6 +29,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `home-data.js`: tiny homepage manifest with collection counts and representative preview candidates
 - `photos-data.js`: full shared collection, photo, product option, and mock price data
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
+- `home-discovery.js`: homepage-wide search, origin, collection, and filter results
 - `photo-gallery.js`: shared gallery renderer
 - `photo-detail.js`: shared detail page, real-image preview support, and automatic basket sync
 - `basket.js`: basket rendering, item removal, resolution reselection, and sticky total updates
@@ -61,6 +62,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or blocked no longer reduce unrelated counts.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full `photos-data.js` catalog in the background for basket/liked context.
+- The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
+- The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
 - Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
 - Public previews currently resolve directly through the public R2 `r2.dev` media endpoint backed by `photosbyelie-public`; move `publicBaseUrl` to a custom media domain when that is attached.
 - `assets/expo` can stay empty or local-only once the public R2 bucket has the baked-watermark previews; use `node scripts/validate_publish.js --external-media` for that publishing mode.

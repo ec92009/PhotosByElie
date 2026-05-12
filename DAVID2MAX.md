@@ -27,7 +27,7 @@ David should append automation results here. Keep newest entries near the top, b
 - Proposal file: `assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json`
 - Review page: `title-keyword-review.html` (`http://localhost:8000/title-keyword-review.html`)
 - Skipped or needs_owner_context photos: 0 already reviewed; 0 `needs_owner_context`.
-- Commit pushed: pending; local commit to be created after this report.
+- Commit pushed: yes (`bdfec685`, pushed to `origin/main`).
 - Notes: `git pull --ff-only` and preview-pixel/vision inspection were blocked by DNS/network failure resolving `github.com`; local preview JPEGs were not present under `assets/expo`. Used catalog/source-path fallback only, did not apply proposals, and did not rewrite JPG/source/private render/public preview files. Tightened generator behavior so filename stems such as `IMG` are not treated as myth names and filename-style placeholders are not kept as improved proposals.
 
 ## 2026-05-12 Nightly Title/Keyword Review Queue Manual Run

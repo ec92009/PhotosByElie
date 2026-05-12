@@ -1,99 +1,69 @@
 # Conversation Summary
 
-Date: 2026-05-12
+Date: 2026-05-13
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v73.0`
-- Business direction has shifted from building infrastructure to making the site sell: payments, delivery trust, offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
-- Public Expo catalog currently has `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
-- Blocked catalog state currently has `4,384` blocked photos. Discarded tombstones are currently empty.
-- Public previews are watermarked and live in Cloudflare R2 under flat keys such as `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
-- Public browsing now loads previews directly from the public R2 `r2.dev` endpoint: `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev`.
-- The checkout Worker is no longer in the public preview hot path; it should stay focused on checkout, order state, payment webhooks, ZIP creation, and delivery.
+- Current visible build: `v73.8`
+- Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
+- Public previews are watermarked and served directly from the public R2 endpoint configured in `media-config.js`.
+- Public media objects, private masters, private render JPGs, and source/JPG embedded metadata are treated as immutable after upload. Owner metadata edits update generated catalog/manifest files only.
+- The checkout Worker handles checkout, order state, payment webhooks, and private delivery; it is not in the public preview hot path.
+- Business priority remains revenue readiness: trustworthy checkout, clear buyer offer, curated catalog, discovery/SEO, analytics, and launch outreach.
 
-## Media And Import Contract
+## Recent Conversation
 
-- Buyer deliverables are private and unwatermarked: developed masters under `masters/...`, JPG 1/3/6 MP renders under `renders/...`.
-- Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title, keyword, and country edits update manifests/catalogs only.
-- Normal exception: blocked/discarded cleanup may delete media while keeping tombstones.
-- RAW/DNG/NEF files are not public-site or cloud-storage inputs; developed JPG/TIFF sources are the working input.
-- Saturn is the upstream source for developed imports:
-  - Camera: `/Volumes/Saturn/Pictures/LR/Camera`
-  - Apple Photos album exports: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
-  - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
-- Apple Photos album imports use folder membership as the selection signal. Country can be inferred from album/folder names, but new countries should eventually flow through Unknown and Owner assignment.
-- `tmp/import-cache` is the disposable import/render workspace. Confirmed-upload preview JPGs can be removed from local tmp after R2 upload.
-- `assets/reserve` remains only as localhost compatibility data; it is not a product or long-term review state.
-- A local SQLite inspection database can be built at `tmp/photo-state.sqlite` with `python3 scripts/build_photo_state_db.py`.
+- We ran and refined the nightly Title/Keyword Owner review queue for the newest 100 unreviewed photos.
+- The queue writes tracked proposal JSON under `assets/owner-actions/title-keyword-review-queue/` and does not auto-apply proposals during generation.
+- The review page was kept compact: one photo per row with preview, current title/keywords, proposed title/keywords, and approval checkbox.
+- Preview URLs were verified against R2. Slow-loading thumbnails were not missing; the page now eagerly requests review thumbnails and warms the rest in the background.
+- Proposed keywords now exclude blacklisted tokens/phrases from `assets/owner-actions/keyword-blacklist.json`, including blacklisted terms already present in current metadata.
+- The generator attempts at least 10 proposed keywords per photo using source path, catalog, EXIF/orientation, and known prompt/title context when a vision pass is unavailable.
+- The page now has **Approve all** controls at top and bottom.
+- **Save approvals** now applies approved title/keyword changes to generated catalog metadata/state files through the helper endpoint `apply-title-keyword-review-approvals`.
+- Applied rows receive the `Title_Keywords_Reviewed` metadata flag so future nightly queues skip them.
+- Save also writes an approvals audit file under `assets/owner-actions/title-keyword-review-queue/`.
+- We verified that **Approve all** checked all 100 rows, but no metadata apply happened because **Save approvals** was not clicked.
+- Existing untracked file `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-12.json` is an older local approval artifact and remains uncommitted.
 
-## Checkout And Revenue Track
+## Important Safeguards
 
-- Checkout remains guest-first and USD-only.
-- Real Stripe Checkout is wired in code, but live payment is blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode verification are complete.
-- The next serious revenue milestone is proving Stripe in test mode end to end: success, 3D Secure/authentication-required, declined card, verified webhook, private R2 ZIP build, order page download, and failure states.
-- Delivery ZIPs are flat: files sit at the archive root beside `ORDER.txt`, with no per-photo subfolders.
-- Physical print/frame products are off by default for buyers. Owner still has a deliberate localhost toggle for local review, but digital checkout should be proven first.
-- Published default prices now distinguish camera-photo downloads from lower AI-origin downloads, and the Worker validates against first-class `sourceOrigin` rather than only the collection slug. A dedicated price-list data file is still a high-priority cleanup item.
-- The offer still needs buyer-facing packaging: licensing language, resolution explanations, Full resolution meaning, AI-origin clarity, delivery expectations, refund/contact copy, bundles, and launch pricing.
+- Do not edit `MAX2DAVID.md` from David unless explicitly asked; David reports go in `DAVID2MAX.md`.
+- Do not use the keyword blacklist to skip photos. It only blocks useless keyword strings from proposed/generated metadata.
+- Do not rewrite JPG/source embedded metadata, public previews, private masters, or private render files during title/keyword cleanup.
+- Use `npm test` and `npm run validate` before commits that affect behavior or generated metadata.
+- Use `node scripts/generate_title_keyword_review_queue.mjs --limit 100` to refresh the nightly queue.
+- Use `http://localhost:8000/title-keyword-review.html` with the helper server for approvals that mutate metadata.
 
-## Product/UX Decisions Made
+## Fresh Numbered Backlog
 
-- Owner password protection was removed for localhost use; the local helper server is the gate for mutation endpoints.
-- Owner tools remain English-only. Opening Owner forces English; pressing the Owner language button beeps instead of fake-switching languages.
-- Hidden terminology was replaced by Blocked in the Owner/product language, though some file names remain historical.
-- `X` and `H` are accepted as block shortcuts; `D` is the stronger discard action.
-- Public pages have English/French/Spanish translation support.
-- Gallery search exists by title/keyword.
-- Gallery filters and detail metadata now expose camera vs AI origin, and the Owner dashboard has a Camera / AI split card for active catalog counts.
-- Homepage first render uses tiny `home-data.js`, then downloads the full catalog in the background.
-- Gallery density shortcuts exist: `g` makes thumbnails larger/less dense, `G` makes the grid denser.
-- `Z` toggles fit/fill.
-- Gallery pages have the `L` like shortcut.
-- Blocked review has been moved onto the shared gallery card treatment: wrapper, caption, badges, selection styling, density preference, and fit/fill masonry behavior now match the public galleries.
-- We agreed that one HTML page per country is now legacy scaffolding. Country/collection should become a parameter on a single gallery route, with old country URLs retained only for compatibility.
-- Basket and Liked pages share a more consistent row layout, bulk resolution toggles, and digital-only default product behavior.
-- Owner title/keyword edits are manifest-only and should inform Worker deliverables through regenerated catalogs, not by rewriting JPEG metadata.
-- `assets/owner-actions/keyword-blacklist.json` is the durable metadata-only keyword blacklist. Import/export generation should strip those keyword strings from catalog metadata and keyword indexes, while never using that list to filter photos or rewrite JPG/source metadata.
-- The collection list now includes Italy from the Pisa import. Future country support should become open-ended rather than hard-coded.
-
-## Automation And Operations
-
-- Daily automation `photosbyelie-daily-cloud-media-sweep` runs the lock-guarded cloud media sweep through `zsh -lc` so shell credentials are available.
-- The sweep wrapper uses `.review-logs/cloud-media-sweep.lock` to avoid concurrent uploaders.
-- The R2 public bucket CORS policy is tracked in `docs/r2-public-cors.json`.
-- Public media should eventually move from temporary `r2.dev` to a custom media domain such as `media.photosbyelie.com`.
-- Local preview should use `python3 scripts/local_server.py 8000` for Owner/helper endpoints.
-
-## Fresh Backlog
-
-1. **Prove Stripe checkout in test mode.** Configure Stripe secrets/webhook, test success, 3D Secure, declined card, verified webhook, ZIP build, download, and failure states.
-2. **Make checkout and delivery production-durable.** Choose D1 vs KV, store durable order state, rate-limit downloads, and make order/delivery copy trustworthy.
-3. **Package the buyer offer clearly.** Clarify licensing, resolution labels, Full resolution, AI-origin handling, delivery expectations, refunds, and contact.
-4. **Publish a real price and offer strategy.** Move generated-code price defaults into a dedicated price-list data file shared by public basket and Worker; add launch pricing, bundles, collection packs, and future promo hooks.
-5. **Curate the first sellable storefront.** Pick strongest collections/images, block weak or unsuitable photos, and make the public catalog feel intentional.
-6. **Add conversion analytics.** Track privacy-conscious funnel events from view to ZIP download and report top viewed/liked/sold photos.
-7. **Improve public discovery and SEO.** Add page titles, descriptions, Open Graph, canonical URLs, sitemap, structured data, and search-friendly image metadata.
-8. **Create marketing landing pages.** Build focused buyer pages for travel/editorial licensing, wall art, AI imagery, country sets, and the Photos By Elie brand.
-9. **Prepare launch and sales outreach.** Draft launch email, buyer outreach note, social checklist, standout image set, and contact path.
-10. **Replace temporary `r2.dev` media URL with a custom media domain.** Attach the domain, update `media-config.js`, and retest public media.
-11. **Parameterize gallery routes and split gallery/catalog data by collection.** Use one gallery route with a collection slug parameter, preserve old country URLs as wrappers/redirects, and load only the current collection catalog so galleries start faster.
-12. **Improve gallery merchandising layout.** Use a deterministic Pinterest-style masonry layout for variable-height images.
-13. **Add buyer account or order recovery only if needed.** Prefer email order lookup before full accounts.
-14. **Decide when physical goods return.** Keep prints/frames off until digital checkout, fulfillment, shipping, support, and refunds are clear.
-15. **Replace keyword removal with Owner keyword cleanup modal.** Move keyword cleanup to Owner page with counts, checkboxes, Done, Delete checked, and confirmation.
-16. **Make country collections open-ended.** Let Unknown assignment create new country collections via `Other...` instead of relying on a fixed list.
-17. **Add gallery multi-select Owner metadata edits.** Support Shift/Cmd selection, batch title behavior, and keyword adds across selected photos.
-18. **Extend Owner operations dashboard.** Add Blocked sync/cleanup counters, refresh controls, latest sweep result, and guided ingest/classify/block/validate/publish flow.
-19. **Harden owner identity and publish validation.** Clarify helper/auth naming, decide production Owner identity, and strengthen validation gates.
-20. **Keep long-horizon media and repo cleanup on the backburner.** XMP sidecar save, videos, repo layout cleanup, and architecture artifacts wait until revenue path is steadier.
+1. **Apply the current title/keyword approvals deliberately.** In the helper-served review page, inspect the batch, use Approve all only if the full batch is acceptable, click Save approvals, then validate the generated metadata diff.
+2. **Regenerate the next title/keyword queue after apply.** Confirm the applied 100 photos are skipped via `Title_Keywords_Reviewed`, then inspect the next newest batch for quality.
+3. **Add a true vision-capable proposal pass.** Use preview pixels when credentials/tools are available, fall back to catalog/source metadata only when vision is unavailable, and mark uncertain rows instead of inventing facts.
+4. **Tighten approval UX safeguards.** Show a pre-save summary with approval count, changed titles, changed keyword counts, and flagged low-confidence rows before applying.
+5. **Prove Stripe checkout in test mode.** Configure test secrets/webhook and cover success, 3D Secure, declined card, verified webhook, delivery readiness, and retry/failure states.
+6. **Make checkout and delivery production-durable.** Choose D1 vs KV, store durable order state, rate-limit or expire download tokens sensibly, and make recovery/contact copy trustworthy.
+7. **Package the buyer offer clearly.** Clarify licenses, resolution labels, full-resolution meaning, AI-origin handling, delivery expectations, refunds, and contact.
+8. **Move prices into a dedicated published price list.** Share the price source between public basket and Worker validation, with clear publish/version behavior.
+9. **Curate the first sellable storefront.** Prioritize strong images/collections, block weak items, improve titles/keywords, and choose featured sets.
+10. **Add conversion analytics.** Track privacy-conscious funnel events from view through checkout/download, excluding local Owner activity.
+11. **Improve public discovery and SEO.** Add better titles/descriptions, Open Graph, canonical URLs, sitemap, structured data, and image metadata.
+12. **Build launch landing pages.** Create focused pages for travel/editorial licensing, wall art, AI imagery, country sets, and brand story.
+13. **Prepare launch outreach.** Draft launch email, direct buyer note, social checklist, and standout image set.
+14. **Move public media to a custom domain.** Replace temporary `r2.dev` media URLs with a domain such as `media.photosbyelie.com`.
+15. **Parameterize gallery routes.** Move from one HTML shell per country toward one data-driven gallery route while preserving old URLs.
+16. **Refine gallery merchandising layout.** Continue polishing masonry/density/fit-fill behavior for buyer browsing.
+17. **Replace keyword cleanup with a modal workflow.** Show keyword counts, checkbox deletes, confirmation, and before/after counts.
+18. **Make country collections open-ended.** Let Owner create new country collections from Unknown assignment instead of relying on a fixed list.
+19. **Extend Owner operations dashboard.** Surface sweep status, R2 coverage, blocked/discarded cleanup, and guided ingest/validate/publish flow.
+20. **Keep long-horizon cleanup on the backburner.** XMP sidecar writes, videos, physical goods, semantic renames, and repo layout cleanup wait until the revenue path is steadier.
 
 ## Verification Snapshot
 
-- Latest pushed commit before this docs refresh: `0c36738b photosbyelie: serve previews directly from R2`.
-- Direct R2 preview loading was verified with CORS from localhost/GitHub Pages origins.
-- `npm test` and `npm run validate` passed after the direct-R2 media switch.
-- In this conversation, Blocked review got the standard gallery-card treatment through a shared `gallery-card.js` helper, regular country galleries were updated to use that helper, the visible build moved to `v73.0`, and the docs/backlog were refreshed around the next parameterized-gallery architecture cleanup.
+- Latest behavior commit before this docs refresh: `31281478 photosbyelie: apply title keyword approvals`.
+- Helper server was verified on `127.0.0.1:8000`.
+- `npm test` and `npm run validate` passed after the approval-apply flow was implemented.
+- The current browser page had all 100 rows checked by the Approve all test, but Save approvals was not clicked.

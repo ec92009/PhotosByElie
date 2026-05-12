@@ -198,7 +198,9 @@ Review on localhost:
 - Start the local helper server: `python3 scripts/local_server.py 8000`
 - Open `http://localhost:8000/title-keyword-review.html`
 
-Use the page to approve proposals and save a separate approvals JSON file under `assets/owner-actions/title-keyword-review-queue/`. Approved changes are not auto-applied; applying them is a separate follow-up step.
+Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, or use Approve all when the whole batch is acceptable. Save approvals requires the helper server; it applies approved title/keyword values to generated catalog metadata/state files, writes an approvals audit JSON under `assets/owner-actions/title-keyword-review-queue/`, and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos.
+
+The approval apply path is manifest-only. It rewrites generated catalog/state files such as `photos-data.js`, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite JPG/source embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 
 ## R2 Media Sync
 

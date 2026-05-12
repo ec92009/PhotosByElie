@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v73.3`
+- Current visible version: `v73.8`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -18,6 +18,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
 - `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Blocked review, metadata sync, and R2 maintenance
+- `title-keyword-review.html`: localhost-only Owner queue for reviewing and applying title/keyword proposal batches
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
 - `hidden.html`: localhost-only review surface for blocked photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
@@ -74,6 +75,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, treat Apple Photos album exports under `/Volumes/Saturn/Pictures/LR/Apple Photo Albums` as selected by folder membership, infer country/AI/Unknown buckets, and write watermarked `*_900.jpg` and `*_1800.jpg` pairs into `tmp/import-cache` before upload. RAW/DNG/NEF files are not public-site or cloud-storage inputs.
 - On localhost, `H` or `X` blocks a live-gallery photo by adding it to the blocked blacklist while leaving preview files in place, `U` undoes that block, and `P` on the Blocked page re-promotes a blocked photo by removing it from the blacklist. `D` is the stronger discard action: it removes the photo from active catalog state, writes `assets/discarded/discarded-photo-ids.json`, and queues R2 deletion for matching public previews, private masters, and private render JPGs.
 - On localhost gallery/detail pages, Owner can edit Title and Keywords; saves update the catalog metadata and generated Worker catalog used by checkout deliverables. JPEG/source embedded metadata is left alone because catalog manifests are the authoritative title/keyword source.
+- On the localhost Title/Keywords review page, Owner can review the newest unreviewed proposal batch, approve rows individually or with Approve all, and Save approvals through the helper server. Saving applies approved title/keyword values to generated catalog metadata/state files, writes an approvals audit JSON, and marks applied photos with `Title_Keywords_Reviewed` so future nightly batches skip them. JPEG/source embedded metadata, public previews, private masters, and private render files are left untouched.
 - `assets/owner-actions/keyword-blacklist.json` is the owner-maintained list of useless keyword strings. Import and export scripts omit those strings from generated keyword metadata and keyword indexes only; the list must not block photos, discard photos, or rewrite JPG/source metadata.
 - Blocked photos do not re-upload public preview objects while they are blacklisted.
 - On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` or `X` blocks it, `U` undoes the last block, and double clicking a thumbnail opens a full-screen preview that dismisses on click.

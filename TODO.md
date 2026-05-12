@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 
 ## Current Facts
 
@@ -21,6 +21,7 @@ Last updated: 2026-05-12
 - Blocked and discarded are separate tombstone concepts. Blocked hides a photo from galleries while leaving media in place until preview cleanup; discarded removes it from active catalog state and feeds R2 media cleanup while keeping a permanent do-not-resurrect record.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
+- The Title/Keywords Owner review queue is helper-server backed: Approve all checks the current batch, Save approvals applies approved title/keyword values to generated catalog metadata/state files, writes an approvals audit JSON, and marks applied photos with `Title_Keywords_Reviewed`.
 - Owner Current state now reads roughly `10,228` analyzed, `4,384` blocked, and `5,844` Expo photos after the recent Italy import; counts should be refreshed from generated state before launch decisions.
 - Current R2 coverage targets active Expo photos and excludes blocked photos from the repair target. The generated discarded-media manifest should be updated by the sweep/cleanup tooling rather than hand-edited.
 - Checkout now validates selected private R2 masters/renders before opening Stripe, so buyers cannot pay for files that are not ready. Daily automation `Photos By Elie R2 master-chain repair` restores missing masters from Saturn/local sources first, repairs private render triplets, then prunes derivative ghosts from R2/manifests.
@@ -72,6 +73,7 @@ Last updated: 2026-05-12
 
 5. **Curate the first sellable storefront.**
    - Review visible catalog entries before paid traffic or launch outreach.
+   - Apply and inspect the current 100-photo Title/Keywords approval batch, then regenerate the next queue to confirm `Title_Keywords_Reviewed` skipping works.
    - Block photos that should not be sold or shown.
    - Pick featured collections and hero images that make the site feel intentional, not merely complete.
    - Create buyer-friendly collection ordering: strongest commercial/travel/editorial sets first.
@@ -225,3 +227,4 @@ Last updated: 2026-05-12
 - Moved public preview delivery off the checkout Worker bridge by enabling the public R2 `r2.dev` endpoint and pointing `media-config.js` at it.
 - Added pre-Stripe private delivery availability checks, repeatable per-file downloads, and daily master-chain repair/prune automation.
 - Factored gallery card rendering into `gallery-card.js` and moved Blocked review onto the same card/masonry treatment as public galleries.
+- Added the Title/Keywords Owner approval queue with compact rows, eager thumbnail loading, Approve all, and manifest-only Save approvals that applies approved metadata and sets `Title_Keywords_Reviewed`.

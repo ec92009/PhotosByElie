@@ -16,6 +16,18 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-12 Nightly Automation Behavior Check
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `df4f978d`
+- Result: Reviewed the live `pbe-nightly-title-keyword-review-queue` automation behavior and tightened its local automation prompt.
+- Changes made:
+  - Updated `/Users/ecohen/.codex/automations/pbe-nightly-title-keyword-review-queue/automation.toml` so David reads `MAX2DAVID.md` as inbound-only and writes reports/recommendations to `DAVID2MAX.md`.
+  - Added explicit behavior to keep the compact four-column approval page, prefer vision-capable image inspection when available, avoid filename-style “improvements,” mark uncertain items `needs_owner_context`, and never rewrite image/source files.
+- Commit pushed: yes, this commit
+- Notes: The automation config lives outside the repo in `$CODEX_HOME`; this report is the tracked repo-side record.
+
 ## 2026-05-12 David Handoff Direction Fix
 
 - Machine: David (`David-5.local`)

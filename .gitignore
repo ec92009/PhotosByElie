@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 node_modules/
 tmp/
+.env.stripe-test.local
 
 # Local/generated photo workspaces.
 # assets/expo is publishable and tracked. Hidden is local vault state.

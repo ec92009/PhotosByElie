@@ -46,7 +46,7 @@ const worker = createPhotosByElieWorker({
   delivery,
   stripe,
   ordersUrl: `http://localhost:${port}/orders`,
-  successUrl: `http://localhost:8000/order.html?id={ORDER_ID}&checkout=success`,
+  successUrl: `http://localhost:8000/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,
   cancelUrl: "http://localhost:8000/basket.html?checkout=cancelled",
   mockStripeEnabled: !stripe,
 });

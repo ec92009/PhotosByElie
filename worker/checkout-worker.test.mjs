@@ -305,6 +305,12 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   assert.equal(lookupResponse.status, 200);
   const lookup = await lookupResponse.json();
   assert.equal(lookup.order.status, "ready");
+
+  const sessionLookupResponse = await worker.fetch(new Request(`https://worker.test/orders/by-session/${checkout.checkout.sessionId}`));
+  assert.equal(sessionLookupResponse.status, 200);
+  const sessionLookup = await sessionLookupResponse.json();
+  assert.equal(sessionLookup.order.id, paid.order.id);
+  assert.equal(sessionLookup.order.status, "ready");
 });
 
 test("webhook rejects paid sessions whose amount does not match the order", async () => {

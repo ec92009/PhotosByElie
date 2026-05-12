@@ -68,6 +68,7 @@ const workerBaseUrl = () => {
 
 const orderId = () => params.get("id") || checkoutState().orderId || "";
 const buyerEmail = () => params.get("email") || checkoutState().email || "";
+const checkoutSessionId = () => params.get("session_id") || checkoutState().checkoutSessionId || "";
 const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
@@ -221,6 +222,28 @@ const renderOrder = (order) => {
 const loadOrder = async () => {
   const id = orderId();
   const email = buyerEmail();
+  const sessionId = checkoutSessionId();
+  if (sessionId) {
+    status.textContent = t("order.refreshing");
+    try {
+      const response = await fetch(`${workerBaseUrl()}/orders/by-session/${encodeURIComponent(sessionId)}`);
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
+      renderOrder(body.order);
+      status.textContent = t("order.refreshed");
+      return;
+    } catch (error) {
+      heading.textContent = t("order.unavailable");
+      message.textContent = error.message;
+      setProgress("");
+      currentZipPath = "";
+      currentDownloadHref = "";
+      downloadZip.hidden = true;
+      syncZipLocationField();
+      status.textContent = t("order.could_not_load");
+      return;
+    }
+  }
   if (!id || !email) {
     heading.textContent = t("order.details_needed");
     message.textContent = t("order.details_message");

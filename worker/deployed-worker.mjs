@@ -79,7 +79,7 @@ export default {
         deliveryBucket: env.DELIVERY_MEDIA || env.PRIVATE_MEDIA,
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
-      successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&checkout=success`,
+      successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,
       cancelUrl: `${publicSiteUrl}/basket.html?checkout=cancelled`,
       mockStripeEnabled: !realStripeEnabled && env.MOCK_STRIPE_ENABLED !== "false",
     });

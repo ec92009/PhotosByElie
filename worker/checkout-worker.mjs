@@ -497,6 +497,13 @@ export const createPhotosByElieWorker = ({
     return json({ order: publicOrder(order) });
   };
 
+  const getOrderByCheckoutSession = async (_request, sessionId) => {
+    if (!sessionId) return errorJson(400, "missing_session_id", "Checkout session id is required.");
+    const order = await store.getOrderByCheckoutSessionId?.(sessionId);
+    if (!order) return errorJson(404, "unknown_order", "Order was not found for this checkout session.");
+    return json({ order: publicOrder(order) });
+  };
+
   const download = async (_request, token) => {
     const downloadRecord = await store.getDownload(token);
     if (!downloadRecord) return errorJson(404, "unknown_download", "Download link was not found.");
@@ -532,6 +539,8 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/checkout/account") return createCheckout(request, "account");
       if (request.method === "POST" && path === "/stripe-webhook") return stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return mockPay(request);
+      const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
+      if (request.method === "GET" && orderSessionMatch) return getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);
       if (request.method === "GET" && orderMatch) return getOrder(request, decodeURIComponent(orderMatch[1]));
       const downloadMatch = path.match(/^\/download\/([^/]+)$/);

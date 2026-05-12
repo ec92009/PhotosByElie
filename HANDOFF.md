@@ -7,7 +7,7 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v72.2`
+- Current visible build: `v72.3`
 - Latest pushed commit: `a04000ce photosbyelie: refresh business backlog docs`
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.

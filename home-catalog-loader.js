@@ -33,6 +33,7 @@
           detail: { collections: Object.keys(window.photosByElieData || {}).length },
         }));
         await loadScript("./basket-store.js");
+        await loadScript("./liked-store.js");
         await loadScript("./basket-rail.js");
         resolve(window.photosByElieData || {});
       } catch (error) {

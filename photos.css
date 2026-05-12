@@ -141,6 +141,10 @@
   border:0;
   background:transparent;
 }
+.home-discovery-keyboard-hint{
+  margin-top:12px;
+  padding:0;
+}
 .home-result-meta{
   margin:0;
   color:var(--muted);
@@ -1353,6 +1357,7 @@ html[data-theme="light"] .mock-photo.has-image::after{
   outline:3px solid rgba(255,255,255,.72);
   outline-offset:3px;
 }
+.home-result-card.is-selected .mock-photo,
 html.is-local-owner .mock-photo-card.is-selected .mock-photo,
 html.is-local-owner .mock-photo.is-selected{
   outline:3px solid color-mix(in srgb,var(--text) 82%,transparent);

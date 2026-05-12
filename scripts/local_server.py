@@ -852,6 +852,18 @@ def _set_photo_keywords(photo: dict, keywords: list[str]) -> bool:
     return changed
 
 
+def _ensure_photo_flag(photo: dict, flag: str) -> bool:
+    flag = str(flag or "").strip()
+    if not flag:
+        return False
+    item = _metadata_item(photo, "Flags")
+    current = _unique_keywords(_split_keyword_text(item.get("value") if item else ""))
+    if any(value == flag for value in current):
+        return False
+    current.append(flag)
+    return _set_metadata_value(photo, "Flags", ", ".join(current))
+
+
 def _remove_photo_keyword(photo: dict, keyword: str) -> bool:
     target = str(keyword or "").strip().casefold()
     if not target:
@@ -1541,6 +1553,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "sync-country-keywords",
         "remove-collection-keyword",
         "update-photo-metadata",
+        "apply-title-keyword-review-approvals",
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
@@ -1553,6 +1566,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
+        "apply-title-keyword-review-approvals",
     } and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
     if action == "assign-country":
@@ -1717,6 +1731,88 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "title": title,
                 "keywords": keywords,
             },
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
+
+    if action == "apply-title-keyword-review-approvals":
+        batch_id = str(payload.get("batch_id") or "").strip()
+        if not batch_id:
+            raise ValueError("batch_id must be a non-empty string")
+        approvals = payload.get("approvals")
+        if not isinstance(approvals, list):
+            raise ValueError("approvals must be a JSON list")
+        normalized = []
+        for item in approvals:
+            if not isinstance(item, dict):
+                continue
+            current_photo_id = str(item.get("photo_id") or "").strip()
+            if not current_photo_id or item.get("approved") is not True:
+                continue
+            title = str(item.get("title") or "").strip()
+            if not title:
+                continue
+            keywords = _unique_keywords(_split_keyword_text(item.get("keywords")))
+            normalized.append(
+                {
+                    "photo_id": current_photo_id,
+                    "approved": True,
+                    "title": title,
+                    "keywords": keywords,
+                }
+            )
+        if not normalized:
+            raise ValueError("approvals must include at least one approved photo with a title")
+
+        updated = []
+        not_found = []
+        metadata_changed = 0
+        review_flag = "Title_Keywords_Reviewed"
+        for approval in normalized:
+            approval_photo_id = approval["photo_id"]
+            matches = (
+                [("expo", *item) for item in _matching_photos(expo_groups, approval_photo_id)]
+                + [("reserve", *item) for item in _matching_photos(reserve_groups, approval_photo_id)]
+                + [("hidden", *item) for item in _matching_photos(hidden_groups, approval_photo_id)]
+            )
+            if not matches:
+                not_found.append(approval_photo_id)
+                continue
+            photo_changed = False
+            for state, slug, photo in matches:
+                title_changed = _set_photo_title(photo, approval["title"])
+                keywords_changed = _set_photo_keywords(photo, approval["keywords"])
+                flag_changed = _ensure_photo_flag(photo, review_flag)
+                photo_changed = title_changed or keywords_changed or flag_changed or photo_changed
+                updated.append({"state": state, "slug": slug, "id": approval_photo_id})
+            if photo_changed:
+                metadata_changed += 1
+
+        payload_out = {
+            "format": "photosbyelie-title-keyword-review-approvals",
+            "schema_version": 1,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "batch_id": batch_id,
+            "applied_at": datetime.now(timezone.utc).isoformat(),
+            "review_flag": review_flag,
+            "approvals": normalized,
+            "not_found": not_found,
+        }
+        approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
+        approvals_path.parent.mkdir(parents=True, exist_ok=True)
+        _write_json_file(approvals_path, payload_out)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        return {
+            "ok": True,
+            "action": action,
+            "batch_id": batch_id,
+            "path": approvals_path.relative_to(repo_root).as_posix(),
+            "approved_count": len(normalized),
+            "applied_count": len({item["id"] for item in updated}),
+            "metadata_changed": metadata_changed,
+            "not_found": not_found,
+            "updated": updated,
+            "review_flag": review_flag,
             "worker_catalog": worker_catalog,
             "site": site_state,
         }

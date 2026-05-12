@@ -83,6 +83,32 @@
       || String(item?.thumbs?.gallery || item?.thumbs?.gallery_src || item?.thumb?.gallery || item?.gallerySrc || "");
   };
 
+  const warmReviewThumbnails = (items) => {
+    const urls = uniqueKeywords(items.map(reviewThumbUrl).filter(Boolean));
+    let nextIndex = 0;
+    const loadNext = () => {
+      if (nextIndex >= urls.length) return;
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = loadNext;
+      image.onerror = loadNext;
+      image.src = urls[nextIndex];
+      nextIndex += 1;
+    };
+    for (let worker = 0; worker < Math.min(6, urls.length); worker += 1) {
+      loadNext();
+    }
+  };
+
+  const scheduleThumbnailWarmup = (items) => {
+    const run = () => warmReviewThumbnails(items);
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(run, { timeout: 750 });
+      return;
+    }
+    window.setTimeout(run, 150);
+  };
+
   const render = async () => {
     if (!enabled) {
       lockedPanel.hidden = false;
@@ -121,6 +147,7 @@
       <h2>Batch ${escapeHtml(batchId)}</h2>
       <p class="gallery-status">Newest: ${escapeHtml(newest || "—")} • Oldest: ${escapeHtml(oldest || "—")}</p>
       <div class="cta">
+        <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve all</button>
         <button class="btn secondary" type="button" data-title-keyword-review-save>Save approvals</button>
         <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
         <a class="btn secondary" href="${escapeHtml(queueUrl)}" target="_blank" rel="noreferrer">Open proposal file</a>
@@ -135,12 +162,13 @@
 
     const cardById = new Map();
 
-    list.innerHTML = photos.map((item) => {
+    list.innerHTML = photos.map((item, index) => {
       const photoId = String(item?.photo_id || item?.photoId || "");
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
       const galleryLabel = String(item?.gallery?.label || item?.gallery_label || item?.gallery_key || "");
       const thumb = reviewThumbUrl(item);
+      const fetchPriority = index < 12 ? "high" : "low";
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
       const proposedTitle = String(item?.proposed?.title || title || "");
       const proposedKeywords = Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords;
@@ -148,7 +176,7 @@
       return `
         <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}">
           <a class="title-keyword-review-preview ${thumb ? "has-image" : "is-missing-preview"}" href="${escapeHtml(href)}" aria-label="Open photo ${escapeHtml(photoId)}">
-            ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="lazy"/>` : `<span class="unknown-missing-preview">No preview</span>`}
+            ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
           </a>
           <div class="title-keyword-review-current">
             <p class="eyebrow">${escapeHtml(galleryLabel || "Photo")}${capture ? ` / ${escapeHtml(capture)}` : ""}</p>
@@ -173,6 +201,8 @@
       `;
     }).join("");
 
+    scheduleThumbnailWarmup(photos);
+
     list.querySelectorAll("[data-review-photo-id]").forEach((card) => {
       const photoId = card.getAttribute("data-review-photo-id") || "";
       if (!photoId) return;
@@ -181,6 +211,7 @@
     const bottomActions = document.createElement("div");
     bottomActions.className = "title-keyword-review-bottom-actions";
     bottomActions.innerHTML = `
+      <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve all</button>
       <button class="btn secondary" type="button" data-title-keyword-review-save>Save approvals</button>
       <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
     `;
@@ -197,10 +228,18 @@
         approvals.push({ photo_id: photoId, approved: true, title, keywords });
       }
       return {
-        action: "save-title-keyword-review-approvals",
+        action: "apply-title-keyword-review-approvals",
         batch_id: batchId,
         approvals,
       };
+    };
+
+    const approveAll = () => {
+      cardById.forEach((card) => {
+        const checkbox = card.querySelector("[data-review-approve]");
+        if (checkbox) checkbox.checked = true;
+      });
+      if (status) status.textContent = `${photos.length} photos selected for approval.`;
     };
 
     const saveApprovals = async () => {
@@ -209,6 +248,11 @@
         window.alert?.("Select at least one photo to approve.");
         return;
       }
+      const confirmed = window.confirm?.(
+        `Apply ${payload.approvals.length} approved title/keyword changes to catalog metadata files?\n\n` +
+        "JPG/source files, public previews, private masters, and render files will not be changed.",
+      ) ?? true;
+      if (!confirmed) return;
       const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
       if (!ok) return;
       const response = await fetch(approvalsEndpoint, {
@@ -221,7 +265,11 @@
       if (!response.ok || !result?.ok) {
         throw new Error(result?.error || "Could not save approvals.");
       }
-      window.alert?.(`Saved approvals to ${result.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\nCommit the approvals file when ready.`);
+      window.alert?.(
+        `Applied ${result.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
+        `Saved approval record to ${result.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +
+        "Run validation and commit the metadata changes when ready.",
+      );
     };
 
     const downloadApprovals = () => {
@@ -233,6 +281,9 @@
       downloadJson(`title-keyword-review-approvals-${batchId}.json`, payload);
     };
 
+    document.querySelectorAll("[data-title-keyword-review-approve-all]").forEach((button) => {
+      button.addEventListener("click", approveAll);
+    });
     document.querySelectorAll("[data-title-keyword-review-save]").forEach((button) => {
       button.addEventListener("click", () => {
         saveApprovals().catch((error) => {

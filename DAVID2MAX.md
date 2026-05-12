@@ -34,7 +34,7 @@ David should append automation results here. Keep newest entries near the top, b
 - Proposal file: `assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json`
 - Review page: `title-keyword-review.html` (open via `http://localhost:8000/title-keyword-review.html` when running `python3 scripts/local_server.py 8000`)
 - Photos skipped: none (0 already-reviewed, 0 insufficient-metadata skips)
-- Commit pushed: pending (GitHub remote was unreachable from this environment); local commit: `cfcf4ee3`
+- Commit pushed: no (push failed: could not resolve `github.com`); local commits: `cfcf4ee3`, `5c8e6fc9`
 - Notes: `git pull --ff-only origin main` failed (DNS to GitHub); proceeded with local `main`.
 
 ## Open Results

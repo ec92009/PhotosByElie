@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-title-keyword-review-queue",
   "schema_version": 1,
-  "generated_at": "2026-05-12T17:00:48.161Z",
+  "generated_at": "2026-05-12T17:22:23.645Z",
   "batch_id": "2026-05-12",
   "limit": 100,
   "review_flag": "Title_Keywords_Reviewed",
@@ -55,7 +55,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -63,7 +76,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:05:17",
@@ -114,7 +129,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -122,7 +150,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:05:17",
@@ -173,7 +203,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -181,7 +224,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:43",
@@ -232,7 +277,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -240,7 +298,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:43",
@@ -291,7 +351,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -299,7 +372,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:42",
@@ -350,7 +425,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -358,7 +446,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:32",
@@ -409,7 +499,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -417,7 +520,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:32",
@@ -468,7 +573,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -476,7 +594,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:27",
@@ -527,7 +647,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -535,7 +668,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:27",
@@ -586,7 +721,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -594,7 +742,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:04:25",
@@ -645,7 +795,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -653,7 +816,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:02:48",
@@ -704,7 +869,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -712,7 +890,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 17:02:48",
@@ -763,7 +943,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -771,7 +964,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:54:42",
@@ -822,7 +1017,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -830,7 +1038,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:54:42",
@@ -881,7 +1091,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -889,7 +1112,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:54:24",
@@ -940,7 +1165,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -948,7 +1186,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:54:23",
@@ -999,7 +1239,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1007,7 +1260,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:54:17",
@@ -1058,7 +1313,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1066,7 +1334,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:54:17",
@@ -1117,7 +1387,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1125,7 +1408,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:47:25",
@@ -1176,7 +1461,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1184,7 +1482,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:47:24",
@@ -1235,7 +1535,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1243,7 +1556,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:46:52",
@@ -1294,7 +1609,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1302,7 +1630,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:46:52",
@@ -1353,7 +1683,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1361,7 +1704,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:47",
@@ -1412,7 +1757,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1420,7 +1778,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:47",
@@ -1471,7 +1831,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1479,7 +1852,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:32",
@@ -1530,7 +1905,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1538,7 +1926,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:32",
@@ -1589,7 +1979,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1597,7 +2000,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:25",
@@ -1648,7 +2053,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1656,7 +2074,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:21",
@@ -1707,7 +2127,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1715,7 +2148,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:17",
@@ -1766,7 +2201,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1774,7 +2222,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:17",
@@ -1825,7 +2275,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1833,7 +2296,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:06",
@@ -1884,7 +2349,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1892,7 +2370,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:45:06",
@@ -1943,7 +2423,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -1951,7 +2444,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:42:26",
@@ -2002,7 +2497,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2010,7 +2518,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:42:25",
@@ -2061,7 +2571,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2069,7 +2592,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:41:56",
@@ -2120,7 +2645,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2128,7 +2666,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:41:54",
@@ -2179,7 +2719,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2187,7 +2740,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:41:52",
@@ -2238,7 +2793,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2246,7 +2814,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:39:15",
@@ -2297,7 +2867,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2305,7 +2888,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:39:15",
@@ -2356,7 +2941,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2364,7 +2962,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:38:37",
@@ -2415,7 +3015,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2423,7 +3036,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:38:37",
@@ -2474,7 +3089,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2482,7 +3110,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:38:37",
@@ -2533,7 +3163,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2541,7 +3184,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:38:37",
@@ -2592,7 +3237,20 @@
           "Malaga",
           "Museo Ruso",
           "Museum",
-          "Art"
+          "Art",
+          "Andalusia",
+          "Colleccion Del Museo Ruso",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Art museum",
+          "Museum collection",
+          "Exhibition",
+          "Gallery",
+          "Cultural venue",
+          "Museo Ruso Malaga",
+          "Russian Museum Collection",
+          "Malaga museum"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2600,7 +3258,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2026:04:26 16:38:37",
@@ -2650,7 +3310,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2658,7 +3327,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:55:25",
@@ -2708,7 +3379,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2716,7 +3396,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:55:18",
@@ -2766,7 +3448,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2774,7 +3465,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:55:14",
@@ -2824,7 +3517,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2832,7 +3534,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:54:15",
@@ -2882,7 +3586,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2890,7 +3603,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:54:10",
@@ -2940,7 +3655,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -2948,7 +3672,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:54:03",
@@ -2998,7 +3724,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3006,7 +3741,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:53:59",
@@ -3056,7 +3793,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3064,7 +3810,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:53:50",
@@ -3114,7 +3862,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3122,7 +3879,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:53:50",
@@ -3172,7 +3931,16 @@
           "Spain",
           "Valencia",
           "Aquarium",
-          "Marine life"
+          "Marine life",
+          "Valencian Community",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Valencia aquarium",
+          "Sea life",
+          "Aquatic life",
+          "Ocean life",
+          "Aquarium photography"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3180,7 +3948,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:06:10 09:53:46",
@@ -3230,7 +4000,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3238,7 +4017,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:37:28",
@@ -3288,7 +4069,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3296,7 +4086,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:34",
@@ -3346,7 +4138,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3354,7 +4155,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:31",
@@ -3404,7 +4207,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3412,7 +4224,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:14",
@@ -3462,7 +4276,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3470,7 +4293,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:12",
@@ -3520,7 +4345,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3528,7 +4362,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:08",
@@ -3578,7 +4414,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3586,7 +4431,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:07",
@@ -3636,7 +4483,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3644,7 +4500,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:36:03",
@@ -3694,7 +4552,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3702,7 +4569,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:34:33",
@@ -3752,7 +4621,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3760,7 +4638,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:34:26",
@@ -3810,7 +4690,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3818,7 +4707,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:34:23",
@@ -3868,7 +4759,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3876,7 +4776,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:32:24",
@@ -3926,7 +4828,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3934,7 +4845,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:32:14",
@@ -3984,7 +4897,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -3992,7 +4914,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:32:07",
@@ -4042,7 +4966,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4050,7 +4983,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:32:06",
@@ -4100,7 +5035,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4108,7 +5052,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:31:41",
@@ -4158,7 +5104,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4166,7 +5121,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:31:36",
@@ -4216,7 +5173,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4224,7 +5190,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:30:21",
@@ -4274,7 +5242,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4282,7 +5259,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:30:16",
@@ -4332,7 +5311,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4340,7 +5328,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:29:18",
@@ -4390,7 +5380,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "landscape orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4398,7 +5397,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:29:15",
@@ -4448,7 +5449,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4456,7 +5466,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:29:01",
@@ -4506,7 +5518,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4514,7 +5535,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:27:29",
@@ -4564,7 +5587,16 @@
         "title": "Pisa",
         "keywords": [
           "Italy",
-          "Pisa"
+          "Pisa",
+          "Tuscany",
+          "portrait orientation",
+          "Photograph",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
         ],
         "status": "source_context",
         "confidence": "medium",
@@ -4572,7 +5604,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2025:05:12 18:27:21",
@@ -4622,21 +5656,32 @@
         ]
       },
       "proposed": {
-        "title": "bronze statue of a horse, Remington style",
+        "title": "Bronze Horse Statue",
         "keywords": [
           "Horse",
           "Remington",
           "bronze",
           "statue",
-          "AI"
+          "AI",
+          "landscape orientation",
+          "Generated image",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Horse statue",
+          "Bronze sculpture",
+          "Equestrian sculpture",
+          "Western art"
         ],
         "status": "metadata_context",
         "confidence": "high",
-        "reason": "Keeps useful existing catalog metadata and removes blacklisted keyword noise."
+        "reason": "Compacts a long prompt-like title into a cleaner owner-review title and keeps relevant metadata keywords."
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2024:04:18 17:43:41",
@@ -4687,22 +5732,34 @@
         ]
       },
       "proposed": {
-        "title": "a Japanese fishing village at sunset, cut paper style",
+        "title": "Japanese Fishing Village at Sunset",
         "keywords": [
           "Japanese",
           "Paper",
           "Sunset",
           "fishing",
           "village",
-          "AI"
+          "AI",
+          "landscape orientation",
+          "Generated image",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Japan",
+          "Fishing village",
+          "Sunset scene",
+          "Coastal village",
+          "Paper illustration"
         ],
         "status": "metadata_context",
         "confidence": "high",
-        "reason": "Keeps useful existing catalog metadata and removes blacklisted keyword noise."
+        "reason": "Compacts a long prompt-like title into a cleaner owner-review title and keeps relevant metadata keywords."
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:22:32",
@@ -4753,22 +5810,34 @@
         ]
       },
       "proposed": {
-        "title": "a Japanese fishing village at sunset, cut paper style",
+        "title": "Japanese Fishing Village at Sunset",
         "keywords": [
           "Japanese",
           "Paper",
           "Sunset",
           "fishing",
           "village",
-          "AI"
+          "AI",
+          "landscape orientation",
+          "Generated image",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Japan",
+          "Fishing village",
+          "Sunset scene",
+          "Coastal village",
+          "Paper illustration"
         ],
         "status": "metadata_context",
         "confidence": "high",
-        "reason": "Keeps useful existing catalog metadata and removes blacklisted keyword noise."
+        "reason": "Compacts a long prompt-like title into a cleaner owner-review title and keeps relevant metadata keywords."
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:22:29",
@@ -4860,7 +5929,14 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "square format",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -4870,7 +5946,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:59",
@@ -4962,7 +6040,14 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "square format",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -4972,7 +6057,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:58",
@@ -5064,7 +6151,14 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "square format",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5074,7 +6168,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:57",
@@ -5161,8 +6257,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5170,7 +6274,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:57",
@@ -5257,8 +6363,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5266,7 +6380,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:56",
@@ -5353,8 +6469,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5362,7 +6486,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:55",
@@ -5449,8 +6575,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5458,7 +6592,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:55",
@@ -5550,7 +6686,15 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5560,7 +6704,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:54",
@@ -5647,8 +6793,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5656,7 +6810,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:54",
@@ -5743,8 +6899,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5752,7 +6916,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:53",
@@ -5839,8 +7005,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5848,7 +7022,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:53",
@@ -5940,7 +7116,15 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -5950,7 +7134,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:52",
@@ -6042,7 +7228,15 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6052,7 +7246,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:51",
@@ -6144,7 +7340,15 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6154,7 +7358,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:51",
@@ -6241,8 +7447,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6250,7 +7464,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:50",
@@ -6342,7 +7558,15 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6352,7 +7576,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:49",
@@ -6439,8 +7665,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6448,7 +7682,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:49",
@@ -6540,7 +7776,15 @@
           "woman",
           "world",
           "AI",
-          "Greek mythology"
+          "Greek mythology",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6550,7 +7794,9 @@
         "removed_blacklisted": [
           "containing"
         ],
-        "blacklisted_keyword_count": 1
+        "blacklisted_keyword_count": 1,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:48",
@@ -6637,8 +7883,16 @@
           "AI",
           "Art",
           "Greek mythology",
-          "Mucha style",
-          "Art Nouveau"
+          "Mucha inspired",
+          "Art Nouveau",
+          "Generated image",
+          "vertical composition",
+          "portrait orientation",
+          "Generative image",
+          "Illustration",
+          "Prompt-based image",
+          "Mythology portrait",
+          "Classical mythology"
         ],
         "status": "metadata_cleanup",
         "confidence": "medium",
@@ -6646,7 +7900,9 @@
       },
       "changes": {
         "removed_blacklisted": [],
-        "blacklisted_keyword_count": 0
+        "blacklisted_keyword_count": 0,
+        "keyword_target": 10,
+        "keyword_target_met": true
       },
       "meta": {
         "captured": "2023:07:31 10:20:48",

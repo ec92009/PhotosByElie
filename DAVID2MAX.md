@@ -20,6 +20,20 @@ David should append automation results here. Keep newest entries near the top, b
 
 - Machine: David (`David-5.local`)
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `1be22c5d`
+- Batch size: 100
+- Newest photo/date: 2026-04-26T17:05:17
+- Oldest photo/date: 2023-07-31T10:20:48
+- Proposal file: `assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json`
+- Review page: `title-keyword-review.html` (`http://localhost:8000/title-keyword-review.html`)
+- Skipped or needs_owner_context photos: 0 already reviewed; 0 `needs_owner_context`.
+- Commit pushed: no; DNS/network is currently blocking GitHub (`Could not resolve host: github.com`), and push was attempted after this report.
+- Notes: `git pull --ff-only origin main` failed before the run with the same DNS error. Local preview JPEGs were absent under `assets/expo`, and public preview fetches were blocked by DNS, so no preview-pixel/vision pass was available; proposals used catalog/source-path/EXIF fallback only. Tightened the generator so proposed keywords reject blacklisted terms by token/phrase, existing blacklisted keywords are excluded from proposals, and every photo in this batch now has at least 10 proposed keywords. Audit: 100/100 proposals met the 10-keyword target, 0 proposed keyword blacklist hits, and 9 current `containing` keywords were removed from proposed metadata. Existing compact four-column Owner review page was preserved. No proposals were auto-applied, and no JPG/source/private render/public preview files were rewritten.
+
+## 2026-05-12 Nightly Title/Keyword Review Queue
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Commit checked: `27b185d1`
 - Batch size: 100
 - Newest photo/date: 2026-04-26T17:05:17

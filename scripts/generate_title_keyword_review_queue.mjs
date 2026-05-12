@@ -7,6 +7,7 @@ import vm from "node:vm";
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 100;
 const REVIEW_FLAG = "Title_Keywords_Reviewed";
+const MIN_PROPOSED_KEYWORDS = 10;
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
 
@@ -75,6 +76,42 @@ const cleanText = (value) => String(value || "")
   .replace(/\s+/g, " ")
   .trim();
 
+const keywordTokens = (value) => cleanText(value)
+  .toLowerCase()
+  .split(/[^a-z0-9]+/)
+  .filter(Boolean);
+
+const blacklistRules = (items) => (items || [])
+  .map((value) => {
+    const raw = String(value || "").trim();
+    return { raw, tokens: keywordTokens(raw) };
+  })
+  .filter((rule) => rule.raw && rule.tokens.length);
+
+const hasTokenSequence = (tokens, blockedTokens) => {
+  if (!blockedTokens.length || blockedTokens.length > tokens.length) return false;
+  for (let index = 0; index <= tokens.length - blockedTokens.length; index += 1) {
+    let matches = true;
+    for (let offset = 0; offset < blockedTokens.length; offset += 1) {
+      if (tokens[index + offset] !== blockedTokens[offset]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+  return false;
+};
+
+const hasBlacklistedTerm = (keyword, rules) => {
+  const tokens = keywordTokens(keyword);
+  if (!tokens.length) return false;
+  return (rules || []).some((rule) => hasTokenSequence(tokens, rule.tokens));
+};
+
+const allowedKeywords = (items, rules) => uniqueKeywords(items)
+  .filter((keyword) => !hasBlacklistedTerm(keyword, rules));
+
 const titleCase = (value) => cleanText(value)
   .split(" ")
   .map((word) => {
@@ -124,10 +161,23 @@ const compactPromptKeywords = (title) => {
     name,
     /artemis/i.test(name) ? "Goddess" : "",
     "Greek mythology",
-    /mucha|art nouveau/i.test(value) ? "Mucha style" : "",
+    /mucha|art nouveau/i.test(value) ? "Mucha inspired" : "",
     /mucha|art nouveau/i.test(value) ? "Art Nouveau" : "",
-    "AI art",
+    "AI",
+    "Generated image",
   ].filter(Boolean));
+};
+
+const compactDescriptiveTitle = (title) => {
+  const value = cleanText(title);
+  if (!value) return "";
+  const withoutStyle = value
+    .replace(/,\s*[^,]*\bstyle\b.*$/i, "")
+    .replace(/\b(cut\s+paper)\b/i, "paper")
+    .trim();
+  if (/^bronze statue of a horse\b/i.test(withoutStyle)) return "Bronze Horse Statue";
+  if (/^a japanese fishing village at sunset\b/i.test(withoutStyle)) return "Japanese Fishing Village at Sunset";
+  return withoutStyle !== value && withoutStyle ? titleCase(withoutStyle) : "";
 };
 
 const splitPathSegments = (sourcePath) => String(sourcePath || "")
@@ -147,7 +197,12 @@ const usefulPathParts = (sourcePath) => {
       .filter(Boolean)
       .forEach((part) => parts.push(part));
   }
-  return uniqueKeywords(parts).filter((part) => !/^\d{4}$/.test(part));
+  return uniqueKeywords(parts).filter((part) => {
+    if (/^\d{1,4}$/.test(part)) return false;
+    if (/^(upscale|scaled|edit|jpg|jpeg|tif|tiff|raw|exports?)$/i.test(part)) return false;
+    if (/^\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}$/i.test(part)) return false;
+    return true;
+  });
 };
 
 const compactVenue = (value) => titleCase(value)
@@ -156,6 +211,110 @@ const compactVenue = (value) => titleCase(value)
   .replace(/^Coleccion Del\s+/i, "")
   .replace(/^Museo\s+Ruso$/i, "Museo Ruso")
   .trim();
+
+const cityRegionKeyword = (city) => {
+  const key = cleanText(city).toLowerCase();
+  return {
+    malaga: "Andalusia",
+    valencia: "Valencian Community",
+    paris: "Ile-de-France",
+    madrid: "Community of Madrid",
+    barcelona: "Catalonia",
+    lisbon: "Lisbon",
+    porto: "Northern Portugal",
+    rome: "Lazio",
+    venice: "Veneto",
+    pisa: "Tuscany",
+    bratislava: "Bratislava",
+    "new york": "New York",
+    miami: "Florida",
+    mexico: "Mexico",
+  }[key] || "";
+};
+
+const imageShapeKeywords = (photo) => {
+  const rawSize = metadataValue(photo, "Original size") || metadataValue(photo, "Preview file");
+  const match = String(rawSize || "").match(/(\d{3,5})\s*x\s*(\d{3,5})/);
+  if (!match) return [];
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return [];
+  const ratio = width / height;
+  if (ratio >= 1.8) return ["wide composition", "landscape orientation"];
+  if (ratio > 1.08) return ["landscape orientation"];
+  if (ratio <= 0.56) return ["vertical composition", "portrait orientation"];
+  if (ratio < 0.92) return ["portrait orientation"];
+  return ["square format"];
+};
+
+const titleKeywordHints = (title, sourceOrigin) => {
+  const value = cleanText(title);
+  const lower = value.toLowerCase();
+  const hints = [];
+  if (/bronze.*horse|horse.*bronze/.test(lower)) {
+    hints.push("Horse", "Bronze", "Statue", "Horse statue", "Bronze sculpture", "Equestrian sculpture");
+  }
+  if (/remington/.test(lower)) {
+    hints.push("Remington", "Western art");
+  }
+  if (/japanese.*fishing.*village/.test(lower)) {
+    hints.push("Japanese", "Japan", "Fishing village", "Sunset", "Sunset scene", "Coastal village", "Paper illustration");
+  }
+  if (/pandora/.test(lower)) {
+    hints.push("Pandora", "Greek mythology", "Mythology portrait", "Classical mythology");
+  }
+  if (/artemis/.test(lower)) {
+    hints.push("Artemis", "Goddess", "Greek mythology", "Mythology portrait", "Classical mythology");
+  }
+  if (String(sourceOrigin || "").toLowerCase() === "ai") {
+    hints.push("AI", "Generated image", "Generative image", "Illustration", "Prompt-based image");
+  }
+  return uniqueKeywords(hints);
+};
+
+const metadataExpansionKeywords = ({ photo, galleryLabel, context, currentTitle, sourceFile }) => {
+  const sourceText = `${sourceFile?.path || ""} ${currentTitle || ""} ${(context.parts || []).join(" ")}`.toLowerCase();
+  const origin = String(photo?.sourceOrigin || "").toLowerCase();
+  const keywords = [
+    galleryLabel,
+    context.city,
+    cityRegionKeyword(context.city),
+    context.venue,
+    ...context.parts,
+    ...imageShapeKeywords(photo),
+  ];
+
+  if (origin === "camera") {
+    keywords.push("Photograph", "Travel photography");
+  }
+  if (origin === "ai") {
+    keywords.push("AI", "Generated image", "Generative image", "Illustration", "Prompt-based image");
+  }
+  if (/museo|museum|gallery|collection|colleccion|coleccion/.test(sourceText)) {
+    keywords.push("Museum", "Art", "Art museum", "Museum collection", "Exhibition", "Gallery", "Cultural venue");
+  }
+  if (/museo ruso|russian museum|colleccion del museo ruso|coleccion del museo ruso/.test(sourceText)) {
+    keywords.push("Museo Ruso", "Museo Ruso Malaga", "Russian Museum Collection", "Malaga museum");
+  }
+  if (/aquarium/.test(sourceText)) {
+    keywords.push("Aquarium", "Valencia aquarium", "Marine life", "Sea life", "Aquatic life", "Ocean life", "Aquarium photography");
+  }
+  if (/\bpisa\b/.test(sourceText)) {
+    keywords.push("Pisa", "Italy", "Tuscany", "Italian travel", "Historic city", "Architecture", "Cityscape", "Landmark");
+  }
+  if (/church|cathedral/.test(sourceText)) {
+    keywords.push("Church", "Sacred architecture", "Interior architecture");
+  }
+  if (/beach|coast|sea|ocean/.test(sourceText)) {
+    keywords.push("Coast", "Seascape", "Waterfront");
+  }
+  if (/street|market|city/.test(sourceText)) {
+    keywords.push("City", "Urban photography", "Street scene");
+  }
+
+  keywords.push(...titleKeywordHints(currentTitle, photo?.sourceOrigin));
+  return uniqueKeywords(keywords);
+};
 
 const contextFromSource = (sourcePath, galleryLabel) => {
   const parts = usefulPathParts(sourcePath).map(titleCase).filter(Boolean);
@@ -186,16 +345,20 @@ const contextFromSource = (sourcePath, galleryLabel) => {
   };
 };
 
-const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklisted, sourceFile }) => {
+const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklist, sourceFile }) => {
   const context = contextFromSource(sourceFile?.path || "", galleryLabel);
-  const withoutBlacklisted = currentKeywords.filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
-  const removedBlacklisted = currentKeywords.filter((keyword) => blacklisted.has(keyword.toLowerCase()));
+  const withoutBlacklisted = currentKeywords.filter((keyword) => !hasBlacklistedTerm(keyword, blacklist));
+  const removedBlacklisted = currentKeywords.filter((keyword) => hasBlacklistedTerm(keyword, blacklist));
   const placeholder = isPlaceholderTitle(currentTitle, sourceFile?.path || metadataValue(photo, "Original file"));
   const promptTitle = compactPromptTitle(currentTitle, currentKeywords);
+  const descriptiveTitle = compactDescriptiveTitle(currentTitle);
   const promptKeywords = compactPromptKeywords(currentTitle);
-  const proposedTitle = placeholder && context.title ? context.title : promptTitle || currentTitle;
-  const proposedKeywords = uniqueKeywords([...withoutBlacklisted, ...context.keywords, ...promptKeywords])
-    .filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
+  const expansionKeywords = metadataExpansionKeywords({ photo, galleryLabel, context, currentTitle, sourceFile });
+  const proposedTitle = placeholder && context.title ? context.title : promptTitle || descriptiveTitle || currentTitle;
+  const proposedKeywords = allowedKeywords(
+    [...withoutBlacklisted, ...context.keywords, ...promptKeywords, ...expansionKeywords],
+    blacklist,
+  );
   const hasUsefulKeywords = proposedKeywords.filter((keyword) => keyword.toLowerCase() !== galleryLabel.toLowerCase()).length > 0;
   const needsContext = (placeholder && !context.title) || !hasUsefulKeywords;
 
@@ -206,12 +369,13 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
     confidence: needsContext ? "low" : (placeholder || promptTitle ? "medium" : "high"),
     reason: needsContext
       ? "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
-      : (promptTitle
+      : (promptTitle || descriptiveTitle
         ? "Compacts a long prompt-like title into a cleaner owner-review title and keeps relevant metadata keywords."
         : (placeholder
         ? "Derived from source folder/path context; owner should verify the specific image subject."
         : "Keeps useful existing catalog metadata and removes blacklisted keyword noise.")),
     removedBlacklisted,
+    keywordTargetMet: proposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
   };
 };
 
@@ -267,11 +431,7 @@ const main = () => {
   }
 
   const blacklistPayload = JSON.parse(readText("assets/owner-actions/keyword-blacklist.json"));
-  const blacklisted = new Set(
-    Array.isArray(blacklistPayload?.keywords)
-      ? blacklistPayload.keywords.map((value) => String(value || "").trim().toLowerCase()).filter(Boolean)
-      : [],
-  );
+  const blacklist = blacklistRules(Array.isArray(blacklistPayload?.keywords) ? blacklistPayload.keywords : []);
 
   const flattened = [];
   for (const [galleryKey, collection] of Object.entries(photosData)) {
@@ -333,7 +493,7 @@ const main = () => {
       currentTitle,
       currentKeywords,
       currentKeywordsRaw,
-      blacklisted,
+      blacklist,
       sourceFile,
     });
 
@@ -378,6 +538,8 @@ const main = () => {
       changes: {
         removed_blacklisted: proposal.removedBlacklisted,
         blacklisted_keyword_count: proposal.removedBlacklisted.length,
+        keyword_target: MIN_PROPOSED_KEYWORDS,
+        keyword_target_met: proposal.keywordTargetMet,
       },
       meta,
     };

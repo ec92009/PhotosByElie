@@ -4,7 +4,7 @@ Last updated: 2026-05-12
 
 ## Current Facts
 
-- Local visible build: `v72.5`.
+- Local visible build: `v73.0`.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -32,6 +32,8 @@ Last updated: 2026-05-12
 - Public previews are served directly from the `photosbyelie-public` `r2.dev` media endpoint; the checkout Worker is no longer on the browse-time preview path.
 - Business priority is now revenue: make checkout trustworthy, package the offer clearly, drive qualified visitors, and keep Owner tooling focused on sales-enabling operations.
 - Camera photos and AI-origin images are now split by first-class catalog origin. Public galleries can filter by origin, detail pages show it, Owner shows Camera / AI counts, and checkout pricing validates against origin.
+- Blocked review now shares the same gallery-card treatment as public galleries, including wrapper/caption structure, RAW/origin badges, selection outline, density preference, and fit/fill masonry behavior.
+- Country gallery pages are still separate HTML shells for compatibility, but the intended architecture is a single parameterized gallery route with country/collection as data.
 
 ## Numbered Backlog
 
@@ -108,7 +110,10 @@ Last updated: 2026-05-12
    - Retest GitHub Pages gallery/detail/basket media loading and public hidden-blacklist fetches.
    - Keep the checkout Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-11. **Split gallery/catalog data by collection.**
+11. **Parameterize gallery routes and split gallery/catalog data by collection.**
+   - Replace the country-per-HTML architecture with one real gallery page that reads a collection slug from the URL, such as `gallery.html?gallery=france`.
+   - Keep `france.html`, `usa.html`, `spain.html`, and other existing country URLs as tiny compatibility redirects or wrappers until old links and GitHub Pages caches age out safely.
+   - Move country-specific title/nav/body state into data rather than duplicated markup.
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.
@@ -216,3 +221,4 @@ Last updated: 2026-05-12
 - Added first-class Camera / AI origin handling across gallery filters, detail metadata, Owner counts, and Worker checkout pricing.
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.
 - Moved public preview delivery off the checkout Worker bridge by enabling the public R2 `r2.dev` endpoint and pointing `media-config.js` at it.
+- Factored gallery card rendering into `gallery-card.js` and moved Blocked review onto the same card/masonry treatment as public galleries.

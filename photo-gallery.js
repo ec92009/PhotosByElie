@@ -10,6 +10,7 @@ const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
+const pageSize = 24;
 const densityKey = "photosbyelie-gallery-columns";
 const fitModeKey = "photosbyelie-gallery-fit-mode";
 let densityInput = null;
@@ -18,6 +19,8 @@ let fitModeButtons = [];
 let viewControls = null;
 let renderedGalleryPhotos = [];
 let pendingGalleryPreviewLayout = 0;
+let visibleLimit = pageSize;
+let moreButton = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
@@ -25,11 +28,12 @@ const diversityBucketMinutes = 10;
 const defaultFilterState = {
   query: "",
   orientation: "all",
+  minSize: "all",
   mood: "all",
   subject: "all",
   sort: "newest"
 };
-const persistedFilterKeys = ["orientation", "mood", "subject"];
+const persistedFilterKeys = ["orientation", "minSize", "mood", "subject"];
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
@@ -40,6 +44,7 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "\"": "&quot;",
   "'": "&#39;"
 }[char]));
+const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const localizedCollectionTitle = () => {
   const key = `collection.${galleryKey}`;
@@ -208,12 +213,7 @@ const previewDimensions = (photo) => {
 };
 
 const photoOrientation = (photo) => {
-  const dimensions = previewDimensions(photo);
-  if (!dimensions?.width || !dimensions?.height) return "unknown";
-  const ratio = dimensions.width / dimensions.height;
-  if (ratio > 1.12) return "landscape";
-  if (ratio < .9) return "portrait";
-  return "square";
+  return window.photosByEliePhotoOrientation?.(photo) || "unknown";
 };
 
 const photoOrigin = (photo) => window.photosByEliePhotoOrigin?.(photo, galleryKey) || "camera";
@@ -270,9 +270,14 @@ const searchTerms = () => String(filterState.query || "")
   .filter(Boolean);
 
 const activeFilterCount = () => (
-  ["orientation", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
+  ["orientation", "minSize", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
   + (searchTerms().length ? 1 : 0)
 );
+
+const minSizeThreshold = () => {
+  const threshold = Number(filterState.minSize || 0);
+  return Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
+};
 
 const matchesFilterState = (photo) => {
   const terms = searchTerms();
@@ -281,6 +286,7 @@ const matchesFilterState = (photo) => {
     if (!terms.every((term) => text.includes(term))) return false;
   }
   if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
+  if (minSizeThreshold() && verifiedMegapixels(photo) < minSizeThreshold()) return false;
   if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
   if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
   return true;
@@ -320,9 +326,18 @@ const ensureGalleryFilterControls = () => {
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
     <label><span data-i18n="gallery.orientation">Orientation</span><select data-gallery-filter="orientation">
       <option value="all" data-i18n="gallery.all">All</option>
+      <option value="pano" data-i18n="gallery.pano">Pano</option>
       <option value="landscape" data-i18n="gallery.landscape">Landscape</option>
       <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
       <option value="square" data-i18n="gallery.square">Square</option>
+    </select></label>
+    <label><span data-i18n="gallery.min_size">Min size</span><select data-gallery-filter="minSize">
+      <option value="all" data-i18n="gallery.any_size">Any size</option>
+      <option value="1" data-i18n="gallery.size_1mp">1 MP+</option>
+      <option value="3" data-i18n="gallery.size_3mp">3 MP+</option>
+      <option value="6" data-i18n="gallery.size_6mp">6 MP+</option>
+      <option value="10" data-i18n="gallery.size_10mp">10 MP+</option>
+      <option value="20" data-i18n="gallery.size_20mp">20 MP+</option>
     </select></label>
     <label><span data-i18n="gallery.color_mood">Color mood</span><select data-gallery-filter="mood">
       <option value="all" data-i18n="gallery.all">All</option>
@@ -363,11 +378,13 @@ const ensureGalleryFilterControls = () => {
     if (!(control instanceof HTMLSelectElement) || !control.dataset.galleryFilter) return;
     filterState = { ...filterState, [control.dataset.galleryFilter]: control.value };
     writeFilterState();
+    visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };
+    visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
   });
@@ -375,9 +392,31 @@ const ensureGalleryFilterControls = () => {
     filterState = { ...defaultFilterState };
     writeFilterState();
     syncFilterControls();
+    visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();
   });
+};
+
+const ensureGalleryMoreButton = () => {
+  if (moreButton || !galleryRoot) return;
+  moreButton = document.createElement("button");
+  moreButton.className = "btn secondary gallery-more-button";
+  moreButton.type = "button";
+  moreButton.dataset.galleryMore = "";
+  moreButton.dataset.i18n = "home.show_more";
+  moreButton.textContent = t("home.show_more");
+  moreButton.hidden = true;
+  galleryRoot.after(moreButton);
+  moreButton.addEventListener("click", () => {
+    visibleLimit += pageSize;
+    renderGallery();
+  });
+};
+
+const expandGalleryToIncludeIndex = (index) => {
+  if (index < 0) return;
+  visibleLimit = Math.max(visibleLimit, Math.ceil((index + 1) / pageSize) * pageSize);
 };
 
 const randomInteger = (max) => {
@@ -567,6 +606,21 @@ const stepGalleryDensity = (direction) => {
   return setGalleryDensityColumns(currentColumns + direction);
 };
 
+const stepGallerySelection = (delta, columnJump = false) => {
+  const photos = filteredVisiblePhotos();
+  if (!photos.length) return;
+  const step = columnJump ? visibleColumnCount() * delta : delta;
+  const nextIndex = Math.max(0, Math.min(selectedIndex + step, photos.length - 1));
+  if (nextIndex >= visibleLimit && visibleLimit < photos.length) {
+    selectedIndex = nextIndex;
+    expandGalleryToIncludeIndex(nextIndex);
+    renderGallery();
+    return;
+  }
+  selectedIndex = nextIndex;
+  updateSelection();
+};
+
 const preferredFitMode = () => (
   localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit"
 );
@@ -590,25 +644,22 @@ const galleryPreviewLayoutMetrics = () => {
   const columnWidth = (contentWidth - columnGap * Math.max(0, columns - 1)) / columns;
   const spanUnit = rowHeight + rowGap;
   if (spanUnit <= 0 || columnWidth <= 0) return null;
-  return { columnWidth, rowGap, spanUnit };
+  return { columnGap, columnWidth, columns, rowGap, spanUnit };
 };
 
-const estimatedCaptionHeight = (photo, columnWidth) => {
-  const title = String(photo?.title || "");
-  const averageCharacterWidth = 7.2;
-  const lineHeight = 17;
-  const estimatedLines = Math.ceil((title.length * averageCharacterWidth) / Math.max(1, columnWidth));
-  return Math.ceil(Math.min(4, Math.max(1, estimatedLines)) * lineHeight + 6);
-};
+const galleryColumnSpan = (photo, metrics) => (
+  window.photosByEliePhotoIsPanorama?.(photo) && metrics.columns > 1 ? metrics.columns : 1
+);
 
-const galleryPreviewSpan = (photo, metrics) => {
+const galleryPreviewSpan = (photo, metrics, captionHeight = 0, columnSpan = 1) => {
   const dimensions = previewDimensions(photo);
   const aspectRatio = dimensions?.width && dimensions?.height
     ? dimensions.width / dimensions.height
     : 1;
-  const imageHeight = metrics.columnWidth / Math.max(.2, aspectRatio);
+  const cardWidth = (metrics.columnWidth * columnSpan) + (metrics.columnGap * Math.max(0, columnSpan - 1));
+  const imageHeight = cardWidth / Math.max(.2, aspectRatio);
   const cardGap = 4;
-  const cardHeight = imageHeight + cardGap + estimatedCaptionHeight(photo, metrics.columnWidth);
+  const cardHeight = imageHeight + cardGap + captionHeight + 2;
   return Math.max(1, Math.ceil((cardHeight + metrics.rowGap) / metrics.spanUnit));
 };
 
@@ -617,7 +668,10 @@ const applyGalleryPreviewLayout = (photos = renderedGalleryPhotos) => {
   cancelGalleryPreviewLayout();
   const cards = galleryRoot.querySelectorAll("[data-photo-index]");
   if (fitMode !== "fit") {
-    cards.forEach((card) => card.style.removeProperty("--gallery-masonry-span"));
+    cards.forEach((card) => {
+      card.style.removeProperty("--gallery-column-span");
+      card.style.removeProperty("--gallery-masonry-span");
+    });
     return;
   }
   const metrics = galleryPreviewLayoutMetrics();
@@ -629,7 +683,11 @@ const applyGalleryPreviewLayout = (photos = renderedGalleryPhotos) => {
     return;
   }
   cards.forEach((card, index) => {
-    const span = galleryPreviewSpan(photos[index], metrics);
+    const photo = photos[index];
+    const columnSpan = galleryColumnSpan(photo, metrics);
+    const captionHeight = card.querySelector("[data-photo-caption]")?.getBoundingClientRect().height || 0;
+    const span = galleryPreviewSpan(photo, metrics, captionHeight, columnSpan);
+    card.style.setProperty("--gallery-column-span", String(columnSpan));
     card.style.setProperty("--gallery-masonry-span", String(span));
   });
 };
@@ -787,11 +845,13 @@ const openOwnerMetadataModal = (photo, field) => {
 const renderGallery = () => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
-  renderedGalleryPhotos = photos;
   const likedIds = likedPhotoIds();
   writeDetailSequenceContext(photos);
   const returnPhotoId = pendingGalleryReturnState?.photoId || "";
   const returnIndex = returnPhotoId ? photos.findIndex((photo) => photo.id === returnPhotoId) : -1;
+  if (returnIndex >= 0) expandGalleryToIncludeIndex(returnIndex);
+  const visibleSubset = photos.slice(0, visibleLimit);
+  renderedGalleryPhotos = visibleSubset;
   if (returnIndex >= 0) selectedIndex = returnIndex;
   if (returnPhotoId && returnIndex < 0) clearPendingGalleryReturn();
   if (!photos.length) {
@@ -806,44 +866,21 @@ const renderGallery = () => {
       filterState = { ...defaultFilterState };
       writeFilterState();
       syncFilterControls();
+      visibleLimit = pageSize;
       selectedIndex = 0;
       renderGallery();
     });
+    if (moreButton) moreButton.hidden = true;
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
       : "");
     return;
   }
-  galleryRoot.innerHTML = photos.map((photo, index) => {
-    const rawLabel = rawSourceLabel(photo);
-    const origin = photoOrigin(photo);
-    const originLabel = photoOriginLabel(photo);
-    const originShortLabel = photoOriginShortLabel(photo);
-    const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
+  selectedIndex = Math.max(0, Math.min(selectedIndex, visibleSubset.length - 1));
+  galleryRoot.innerHTML = visibleSubset.map((photo, index) => {
     const href = versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
-    const hrefAttr = escapeHtml(href);
-    const title = escapeHtml(photo.title);
     const isLiked = likedIds.has(photo.id);
-    return `
-    <article
-      class="mock-photo-card"
-      aria-label="Open ${title}, ${escapeHtml(originLabel)}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
-      data-photo-index="${index}"
-      data-photo-id="${escapeHtml(photo.id)}"
-      data-photo-href="${hrefAttr}"
-    >
-      <a
-        class="mock-photo ${photo.className} ${image ? "has-image" : ""} ${rawLabel ? "has-raw-source" : ""}"
-        href="${hrefAttr}"
-        data-photo-link
-        aria-label="Open ${title}"
-        ${photoAspectRatioStyle(photo)}
-      >
-        ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : ""}
-        ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
-        <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
-      </a>
-      ${likedStore ? `
+    const actionHtml = likedStore ? `
         <div class="gallery-card-actions">
           <button
             class="gallery-action-toggle gallery-like-toggle${isLiked ? " is-liked" : ""}"
@@ -856,21 +893,21 @@ const renderGallery = () => {
             ${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}
           </button>
         </div>
-      ` : ""}
-      <a
-        class="mock-photo-caption${localModerationEnabled ? " is-owner-editable" : ""}"
-        href="${hrefAttr}"
-        data-photo-caption
-        ${localModerationEnabled ? `data-owner-title-edit aria-label="Edit title for ${title}" title="Edit title"` : ""}
-      >${title}</a>
-    </article>
-  `;
+      ` : "";
+    return renderSharedPhotoCard({
+      photo,
+      index,
+      href,
+      collectionKey: galleryKey,
+      actionHtml,
+      ownerEditable: localModerationEnabled,
+    });
   }).join("");
   galleryRoot.querySelectorAll("[data-gallery-like]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      const photo = photos.find((candidate) => candidate.id === button.dataset.photoId);
+      const photo = visibleSubset.find((candidate) => candidate.id === button.dataset.photoId);
       toggleGalleryLike(photo);
     });
   });
@@ -882,7 +919,7 @@ const renderGallery = () => {
         const card = caption.closest("[data-photo-index]");
         selectedIndex = Number(card?.dataset.photoIndex || 0);
         updateSelection({ scroll: false });
-        const selected = photos[selectedIndex];
+        const selected = visibleSubset[selectedIndex];
         if (selected) openOwnerMetadataModal(selected, "title");
       });
     });
@@ -904,9 +941,14 @@ const renderGallery = () => {
   applyGalleryPreviewLayout();
   updateSelection({ scroll: returnIndex < 0 });
   if (returnIndex >= 0) restorePendingGalleryReturn();
-  const filterStatus = activeFilterCount()
-    ? t("gallery.showing_filtered", { count: photos.length, total: allPhotos.length })
-    : t("gallery.showing_count", { count: photos.length });
+  if (moreButton) {
+    moreButton.hidden = photos.length <= visibleSubset.length;
+    moreButton.textContent = t("home.show_more");
+  }
+  const paginated = photos.length > visibleSubset.length;
+  const filterStatus = activeFilterCount() || paginated
+    ? t("gallery.showing_filtered", { count: visibleSubset.length, total: photos.length })
+    : t("gallery.showing_count", { count: visibleSubset.length });
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
     setGalleryStatus(reserveCount
@@ -935,6 +977,7 @@ if (galleryRoot && gallery) {
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${localizedCollectionTitle()} ${t("nav.photos").toLowerCase()}`);
   ensureGalleryFilterControls();
+  ensureGalleryMoreButton();
   ensureGalleryKeyboardHint();
   renderGallery();
 
@@ -1046,26 +1089,22 @@ if (galleryRoot && gallery) {
       const photos = filteredVisiblePhotos();
       if (!photos.length) return;
       if (event.key === "ArrowRight") {
-        selectedIndex = Math.min(selectedIndex + 1, photos.length - 1);
-        updateSelection();
+        stepGallerySelection(1);
         event.preventDefault();
         return;
       }
       if (event.key === "ArrowLeft") {
-        selectedIndex = Math.max(selectedIndex - 1, 0);
-        updateSelection();
+        stepGallerySelection(-1);
         event.preventDefault();
         return;
       }
       if (event.key === "ArrowDown") {
-        selectedIndex = Math.min(selectedIndex + visibleColumnCount(), photos.length - 1);
-        updateSelection();
+        stepGallerySelection(1, true);
         event.preventDefault();
         return;
       }
       if (event.key === "ArrowUp") {
-        selectedIndex = Math.max(selectedIndex - visibleColumnCount(), 0);
-        updateSelection();
+        stepGallerySelection(-1, true);
         event.preventDefault();
         return;
       }
@@ -1132,7 +1171,10 @@ if (galleryRoot && gallery) {
       }
       const nextPhotos = filteredVisiblePhotos();
       const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
-      if (restoredIndex >= 0) selectedIndex = restoredIndex;
+      if (restoredIndex >= 0) {
+        selectedIndex = restoredIndex;
+        expandGalleryToIncludeIndex(restoredIndex);
+      }
       updateSelection();
       setGalleryStatus("Last local blocked mark undone.");
       event.preventDefault();

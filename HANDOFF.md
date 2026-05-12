@@ -7,7 +7,7 @@ Use this when moving work between Max, David, or the laptop.
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v72.5`
+- Current visible build: `v73.0`
 - Latest pushed commit: `a04000ce photosbyelie: refresh business backlog docs`
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
@@ -24,6 +24,8 @@ Use this when moving work between Max, David, or the laptop.
 - Owner has local price editing. Published defaults now distinguish camera-photo digital downloads from lower AI-origin downloads, with print/frame launch prices also refreshed; moving those defaults into a dedicated shared price-list file remains high priority.
 - Camera vs AI is now a first-class catalog origin (`sourceOrigin`) used by public gallery filters, detail metadata, Owner active-catalog counts, and Worker checkout pricing. Do not rely only on the `ai` collection slug for AI-origin behavior.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
+- Blocked review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
+- Country gallery HTML files are compatibility shells. The next architecture cleanup should make collection/country a URL parameter on one gallery route, while preserving old country URLs as redirects or wrappers.
 
 ## First Commands On A Machine
 
@@ -208,7 +210,7 @@ npm run validate
 8. Create marketing landing pages.
 9. Prepare launch and sales outreach.
 10. Replace temporary `r2.dev` media URL with a custom media domain.
-11. Split gallery/catalog data by collection.
+11. Parameterize gallery routes and split gallery/catalog data by collection.
 12. Improve gallery merchandising layout.
 13. Add buyer account or order recovery only if needed.
 14. Decide when physical goods return.

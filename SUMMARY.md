@@ -1,13 +1,13 @@
 # Conversation Summary
 
-Date: 2026-05-11
+Date: 2026-05-12
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v72.5`
+- Current visible build: `v73.0`
 - Business direction has shifted from building infrastructure to making the site sell: payments, delivery trust, offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog currently has `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - Blocked catalog state currently has `4,384` blocked photos. Discarded tombstones are currently empty.
@@ -53,6 +53,8 @@ Date: 2026-05-11
 - Gallery density shortcuts exist: `g` makes thumbnails larger/less dense, `G` makes the grid denser.
 - `Z` toggles fit/fill.
 - Gallery pages have the `L` like shortcut.
+- Blocked review has been moved onto the shared gallery card treatment: wrapper, caption, badges, selection styling, density preference, and fit/fill masonry behavior now match the public galleries.
+- We agreed that one HTML page per country is now legacy scaffolding. Country/collection should become a parameter on a single gallery route, with old country URLs retained only for compatibility.
 - Basket and Liked pages share a more consistent row layout, bulk resolution toggles, and digital-only default product behavior.
 - Owner title/keyword edits are manifest-only and should inform Worker deliverables through regenerated catalogs, not by rewriting JPEG metadata.
 - `assets/owner-actions/keyword-blacklist.json` is the durable metadata-only keyword blacklist. Import/export generation should strip those keyword strings from catalog metadata and keyword indexes, while never using that list to filter photos or rewrite JPG/source metadata.
@@ -78,7 +80,7 @@ Date: 2026-05-11
 8. **Create marketing landing pages.** Build focused buyer pages for travel/editorial licensing, wall art, AI imagery, country sets, and the Photos By Elie brand.
 9. **Prepare launch and sales outreach.** Draft launch email, buyer outreach note, social checklist, standout image set, and contact path.
 10. **Replace temporary `r2.dev` media URL with a custom media domain.** Attach the domain, update `media-config.js`, and retest public media.
-11. **Split gallery/catalog data by collection.** Load only the current collection catalog so galleries start faster.
+11. **Parameterize gallery routes and split gallery/catalog data by collection.** Use one gallery route with a collection slug parameter, preserve old country URLs as wrappers/redirects, and load only the current collection catalog so galleries start faster.
 12. **Improve gallery merchandising layout.** Use a deterministic Pinterest-style masonry layout for variable-height images.
 13. **Add buyer account or order recovery only if needed.** Prefer email order lookup before full accounts.
 14. **Decide when physical goods return.** Keep prints/frames off until digital checkout, fulfillment, shipping, support, and refunds are clear.
@@ -94,4 +96,4 @@ Date: 2026-05-11
 - Latest pushed commit before this docs refresh: `0c36738b photosbyelie: serve previews directly from R2`.
 - Direct R2 preview loading was verified with CORS from localhost/GitHub Pages origins.
 - `npm test` and `npm run validate` passed after the direct-R2 media switch.
-- This summary refresh is documentation-only; no visible build bump is required.
+- In this conversation, Blocked review got the standard gallery-card treatment through a shared `gallery-card.js` helper, regular country galleries were updated to use that helper, the visible build moved to `v73.0`, and the docs/backlog were refreshed around the next parameterized-gallery architecture cleanup.

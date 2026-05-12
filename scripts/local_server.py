@@ -38,6 +38,7 @@ OWNER_SESSION_COOKIE = "pbe_owner_session"
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
+TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
 ACTION_PROGRESS: dict[str, dict] = {}
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
@@ -1530,9 +1531,29 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
 def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     action = payload.get("action")
     photo_id = payload.get("photo_id")
-    if action not in {"hide", "undo-hide", "promote-hidden", "return-to-reserve", "discard", "assign-country", "sync-country-keywords", "remove-collection-keyword", "update-photo-metadata", "publish-hidden-blacklist", "wipe-hidden-r2"}:
+    if action not in {
+        "hide",
+        "undo-hide",
+        "promote-hidden",
+        "return-to-reserve",
+        "discard",
+        "assign-country",
+        "sync-country-keywords",
+        "remove-collection-keyword",
+        "update-photo-metadata",
+        "publish-hidden-blacklist",
+        "wipe-hidden-r2",
+        "save-title-keyword-review-approvals",
+    }:
         raise ValueError("unsupported photo action")
-    if action not in {"assign-country", "sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2"} and (not isinstance(photo_id, str) or not photo_id):
+    if action not in {
+        "assign-country",
+        "sync-country-keywords",
+        "remove-collection-keyword",
+        "publish-hidden-blacklist",
+        "wipe-hidden-r2",
+        "save-title-keyword-review-approvals",
+    } and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
     if action == "assign-country":
         target_slug = payload.get("gallery_key") or payload.get("country")
@@ -1541,6 +1562,54 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         photo_ids = _normalized_photo_ids(payload.get("photo_ids") or photo_id)
         if not photo_ids:
             raise ValueError("photo_ids must include at least one photo id")
+
+    if action == "save-title-keyword-review-approvals":
+        batch_id = str(payload.get("batch_id") or "").strip()
+        if not batch_id:
+            raise ValueError("batch_id must be a non-empty string")
+        approvals = payload.get("approvals")
+        if not isinstance(approvals, list):
+            raise ValueError("approvals must be a JSON list")
+        normalized = []
+        for item in approvals:
+            if not isinstance(item, dict):
+                continue
+            current_photo_id = str(item.get("photo_id") or "").strip()
+            if not current_photo_id:
+                continue
+            if item.get("approved") is not True:
+                continue
+            title = str(item.get("title") or "").strip()
+            raw_keywords = item.get("keywords")
+            if isinstance(raw_keywords, list):
+                keywords = _unique_keywords([str(value).strip() for value in raw_keywords if str(value).strip()])
+            else:
+                keywords = _unique_keywords(_split_keyword_text(raw_keywords))
+            normalized.append(
+                {
+                    "photo_id": current_photo_id,
+                    "approved": True,
+                    "title": title,
+                    "keywords": keywords,
+                }
+            )
+        payload_out = {
+            "format": "photosbyelie-title-keyword-review-approvals",
+            "schema_version": 1,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "batch_id": batch_id,
+            "approvals": normalized,
+        }
+        approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
+        approvals_path.parent.mkdir(parents=True, exist_ok=True)
+        _write_json_file(approvals_path, payload_out)
+        return {
+            "ok": True,
+            "action": action,
+            "batch_id": batch_id,
+            "path": approvals_path.relative_to(repo_root).as_posix(),
+            "approved_count": len(normalized),
+        }
 
     ensure_state_folders(repo_root / "assets/expo")
     ensure_state_folders(repo_root / "assets/reserve")

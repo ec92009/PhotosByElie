@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Unknown Classification</title>
-  <meta name="description" content="Local owner queue for assigning unknown Photos By Elie images to real countries."/>
+  <title>Photos By Elie | Title / Keywords Review</title>
+  <meta name="description" content="Local owner queue for reviewing photo title + keyword metadata proposals."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
-  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
+  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
   <link rel="stylesheet" href="./shared.css?v=73.1"/>
   <link rel="stylesheet" href="./styles.css?v=73.1"/>
   <link rel="stylesheet" href="./photos.css?v=73.1"/>
@@ -14,14 +14,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="unknown">
+<body data-gallery="owner-title-keyword-review">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <nav class="version-switch" aria-label="Site navigation">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./">Photos</a> <span>|</span>
       <a href="./owner.html">Owner</a> <span>|</span>
-      <a class="is-active" href="./unknown.html">Unknown</a>
+      <a class="is-active" href="./title-keyword-review.html">Title/Keywords</a>
     </nav>
     <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v73.1</div>
     <div class="header-controls">
@@ -32,24 +32,20 @@
   <main id="main-content" class="shell">
     <section class="panel gallery-hero owner-hero">
       <p class="eyebrow">Owner queue</p>
-      <h1>Unknown</h1>
-      <p class="gallery-status" data-unknown-status aria-live="polite"></p>
+      <h1>Title / keywords review</h1>
+      <p class="gallery-status" data-title-keyword-review-status aria-live="polite"></p>
       <div class="cta">
         <a class="btn secondary" href="./owner.html">Owner</a>
         <a class="btn secondary" href="./">Back to collections</a>
       </div>
     </section>
-    <p class="keyboard-hint unknown-keyboard-hint" data-unknown-shortcut-hint hidden>
-      Owner shortcuts:
-      <kbd>X</kbd> block
-      <span aria-hidden="true">|</span>
-      <kbd>U</kbd> undo
-      <span aria-hidden="true">|</span>
-      <kbd>Arrows</kbd> select
-      <span aria-hidden="true">|</span>
-      <kbd>Double-click</kbd> preview
-    </p>
-    <section class="panel unknown-classifier" data-unknown-root></section>
+
+    <section class="panel" data-title-keyword-review-locked hidden>
+      <p class="empty-basket">This review queue is only available on localhost.</p>
+    </section>
+
+    <section class="panel" data-title-keyword-review-summary hidden></section>
+    <section class="panel" data-title-keyword-review-root></section>
   </main>
 
   <footer class="site-footer">
@@ -69,10 +65,8 @@
   <script src="./photos.js?v=73.1"></script>
   <script src="./owner-auth.js?v=73.1"></script>
   <script src="./site-version.js?v=73.1"></script>
-  <script src="./photos-data.js?v=73.1"></script>
-  <script src="./hidden-actions.js?v=73.1"></script>
-  <script src="./reserve-store.js?v=73.1"></script>
   <script src="./owner-tools.js?v=73.1"></script>
-  <script src="./unknown-classifier.js?v=73.1"></script>
+  <script src="./title-keyword-review.js?v=73.1"></script>
 </body>
 </html>
+

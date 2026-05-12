@@ -183,6 +183,23 @@ Use `--summary` when preparing a push. The summary prints collection counts, loc
 node scripts/validate_publish.js --summary
 ```
 
+## Owner Title / Keyword Review Queue
+
+`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` for manual Owner review. It writes proposals to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify JPG/source embedded metadata.
+
+Generate (nightly batch):
+
+```bash
+node scripts/generate_title_keyword_review_queue.mjs --limit 100
+```
+
+Review on localhost:
+
+- Start the local helper server: `python3 scripts/local_server.py 8000`
+- Open `http://localhost:8000/title-keyword-review.html`
+
+Use the page to approve proposals and save a separate approvals JSON file under `assets/owner-actions/title-keyword-review-queue/`. Approved changes are not auto-applied; applying them is a separate follow-up step.
+
 ## R2 Media Sync
 
 `sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:

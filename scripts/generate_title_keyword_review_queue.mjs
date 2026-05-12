@@ -127,8 +127,8 @@ const compactVenue = (value) => titleCase(value)
 
 const contextFromSource = (sourcePath, galleryLabel) => {
   const parts = usefulPathParts(sourcePath).map(titleCase).filter(Boolean);
-  const city = parts.find((part) => /malaga|paris|madrid|barcelona|lisbon|porto|rome|venice|bratislava|new york|miami|mexico/i.test(part)) || "";
-  const venue = parts.find((part) => part !== city && /museum|museo|cathedral|church|castle|palace|beach|coast|garden|park|bridge|tower|street|market|gallery|collection|colleccion|coleccion/i.test(part)) || "";
+  const city = parts.find((part) => /malaga|valencia|paris|madrid|barcelona|lisbon|porto|rome|venice|bratislava|new york|miami|mexico/i.test(part)) || "";
+  const venue = parts.find((part) => part !== city && /aquarium|museum|museo|cathedral|church|castle|palace|beach|coast|garden|park|bridge|tower|street|market|gallery|collection|colleccion|coleccion/i.test(part)) || "";
   const cleanedVenue = venue ? compactVenue(venue) : "";
   const titleContext = cleanedVenue && city
     ? `${cleanedVenue}, ${city}`
@@ -139,6 +139,8 @@ const contextFromSource = (sourcePath, galleryLabel) => {
     cleanedVenue,
     /museo|museum|collection|colleccion|coleccion/i.test(`${cleanedVenue} ${sourcePath}`) ? "Museum" : "",
     /museo|museum|gallery|art|collection|colleccion|coleccion/i.test(`${cleanedVenue} ${sourcePath}`) ? "Art" : "",
+    /aquarium/i.test(`${cleanedVenue} ${sourcePath}`) ? "Aquarium" : "",
+    /aquarium/i.test(`${cleanedVenue} ${sourcePath}`) ? "Marine life" : "",
     /church|cathedral/i.test(`${cleanedVenue} ${sourcePath}`) ? "Church" : "",
     /beach|coast|sea|ocean/i.test(`${cleanedVenue} ${sourcePath}`) ? "Coast" : "",
     /street|market|city/i.test(`${cleanedVenue} ${sourcePath}`) ? "City" : "",

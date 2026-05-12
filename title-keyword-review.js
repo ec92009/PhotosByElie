@@ -178,6 +178,13 @@
       if (!photoId) return;
       cardById.set(photoId, card);
     });
+    const bottomActions = document.createElement("div");
+    bottomActions.className = "title-keyword-review-bottom-actions";
+    bottomActions.innerHTML = `
+      <button class="btn secondary" type="button" data-title-keyword-review-save>Save approvals</button>
+      <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
+    `;
+    root.append(bottomActions);
 
     const buildApprovalsPayload = () => {
       const approvals = [];
@@ -226,12 +233,16 @@
       downloadJson(`title-keyword-review-approvals-${batchId}.json`, payload);
     };
 
-    summaryRoot.querySelector("[data-title-keyword-review-save]")?.addEventListener("click", () => {
-      saveApprovals().catch((error) => {
-        window.alert?.(error?.message || "Could not save approvals.");
+    document.querySelectorAll("[data-title-keyword-review-save]").forEach((button) => {
+      button.addEventListener("click", () => {
+        saveApprovals().catch((error) => {
+          window.alert?.(error?.message || "Could not save approvals.");
+        });
       });
     });
-    summaryRoot.querySelector("[data-title-keyword-review-download]")?.addEventListener("click", downloadApprovals);
+    document.querySelectorAll("[data-title-keyword-review-download]").forEach((button) => {
+      button.addEventListener("click", downloadApprovals);
+    });
   };
 
   if (document.readyState === "loading") {

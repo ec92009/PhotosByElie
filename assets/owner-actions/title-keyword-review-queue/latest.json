@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-title-keyword-review-queue",
   "schema_version": 1,
-  "generated_at": "2026-05-12T10:25:43.536Z",
+  "generated_at": "2026-05-12T10:57:50.105Z",
   "batch_id": "2026-05-12",
   "limit": 100,
   "review_flag": "Title_Keywords_Reviewed",
@@ -2645,13 +2645,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1567",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -2700,13 +2703,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1566",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -2755,13 +2761,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1565",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -2810,13 +2819,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1564",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -2865,13 +2877,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1563",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -2920,13 +2935,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1562",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -2975,13 +2993,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1561",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -3030,13 +3051,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1560",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -3085,13 +3109,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1559",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],
@@ -3140,13 +3167,16 @@
         "keywords": []
       },
       "proposed": {
-        "title": "IMG 1558",
+        "title": "Aquarium, Valencia",
         "keywords": [
-          "Spain"
+          "Spain",
+          "Valencia",
+          "Aquarium",
+          "Marine life"
         ],
-        "status": "needs_owner_context",
-        "confidence": "low",
-        "reason": "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+        "status": "source_context",
+        "confidence": "medium",
+        "reason": "Derived from source folder/path context; owner should verify the specific image subject."
       },
       "changes": {
         "removed_blacklisted": [],

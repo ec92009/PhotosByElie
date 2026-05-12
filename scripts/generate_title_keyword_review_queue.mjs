@@ -101,7 +101,9 @@ const isPlaceholderTitle = (title, originalFile = "") => {
 const mythTitleName = (title) => {
   const raw = String(title || "").trim();
   const match = raw.match(/^([A-Z][A-Za-z]+)\s+-\s+/) || cleanText(raw).match(/^([A-Z][A-Za-z]+)\s+/);
-  return match?.[1] || "";
+  const name = match?.[1] || "";
+  if (/^(dsc|dscf|d5h|img|pxl|dj?i|_mg|sam)$/i.test(name)) return "";
+  return name;
 };
 
 const compactPromptTitle = (title, keywords = []) => {
@@ -157,7 +159,7 @@ const compactVenue = (value) => titleCase(value)
 
 const contextFromSource = (sourcePath, galleryLabel) => {
   const parts = usefulPathParts(sourcePath).map(titleCase).filter(Boolean);
-  const city = parts.find((part) => /malaga|valencia|paris|madrid|barcelona|lisbon|porto|rome|venice|bratislava|new york|miami|mexico/i.test(part)) || "";
+  const city = parts.find((part) => /malaga|valencia|paris|madrid|barcelona|lisbon|porto|rome|venice|pisa|bratislava|new york|miami|mexico/i.test(part)) || "";
   const venue = parts.find((part) => part !== city && /aquarium|museum|museo|cathedral|church|castle|palace|beach|coast|garden|park|bridge|tower|street|market|gallery|collection|colleccion|coleccion/i.test(part)) || "";
   const cleanedVenue = venue ? compactVenue(venue) : "";
   const titleContext = cleanedVenue && city
@@ -198,7 +200,7 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   const needsContext = (placeholder && !context.title) || !hasUsefulKeywords;
 
   return {
-    title: needsContext ? currentTitle : proposedTitle,
+    title: needsContext && placeholder ? "" : (needsContext ? currentTitle : proposedTitle),
     keywords: needsContext && !proposedKeywords.length ? withoutBlacklisted : proposedKeywords,
     status: needsContext ? "needs_owner_context" : (placeholder ? "source_context" : (promptTitle ? "metadata_cleanup" : "metadata_context")),
     confidence: needsContext ? "low" : (placeholder || promptTitle ? "medium" : "high"),

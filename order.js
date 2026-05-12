@@ -266,7 +266,7 @@ const renderOrder = (order) => {
               <strong>${escapeText(file.name)}</strong>
               <small>${escapeText(file.collection || "")}${file.collection ? " · " : ""}${escapeText(file.title || file.photoId || "")}</small>
               <small>${escapeText(file.productLabel || file.productId || "")}${file.bytes ? ` · ${escapeText(bytesLabel(file.bytes))}` : ""}</small>
-              <progress ${file.ready ? "value=\"100\"" : ""} max="100" data-file-progress="${index}"></progress>
+              <progress value="0" max="100" data-file-progress="${index}"></progress>
             </div>
             <output data-file-status="${index}">${escapeText(file.ready ? t("order.file_ready") : (order.status === "delivery_failed" ? t("order.file_needs_attention") : t("order.file_preparing")))}</output>
             <button class="btn secondary" type="button" data-download-file="${index}"${file.ready ? "" : " disabled"}>${escapeText(t("order.download_file"))}</button>

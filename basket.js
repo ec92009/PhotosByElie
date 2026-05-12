@@ -262,6 +262,15 @@ const setCheckoutState = (state) => {
   localStorage.setItem(checkoutStateKey, JSON.stringify(state || {}));
 };
 
+const clearCheckoutState = () => {
+  localStorage.removeItem(checkoutStateKey);
+  if (checkoutResult) {
+    checkoutResult.hidden = true;
+    checkoutResult.innerHTML = "";
+  }
+  if (mockPay) mockPay.hidden = true;
+};
+
 const digitalCheckoutItems = () => basketStore.read()
   .map((item) => ({
     photoId: item.photoId,
@@ -270,17 +279,29 @@ const digitalCheckoutItems = () => basketStore.read()
   .filter((item) => item.options.length);
 
 const checkoutFetch = async (path, options = {}) => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 25000);
   const response = await fetch(`${workerBaseUrl()}${path}`, {
     ...options,
+    signal: controller.signal,
     headers: {
       "content-type": "application/json",
       ...(options.headers || {}),
     },
+  }).catch((error) => {
+    if (error?.name === "AbortError") {
+      throw new Error("Checkout is taking too long. Please try again; no payment has started yet.");
+    }
+    throw error;
+  }).finally(() => {
+    window.clearTimeout(timeout);
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = body?.error?.message || `Worker request failed with HTTP ${response.status}.`;
-    throw new Error(message);
+    const missing = body?.error?.details?.missing || [];
+    const suffix = missing.length ? ` ${missing.length} selected file${missing.length === 1 ? "" : "s"} are not ready for delivery.` : "";
+    throw new Error(`${message}${suffix}`);
   }
   return body;
 };
@@ -540,6 +561,7 @@ const renderBasket = () => {
   document.querySelectorAll("[data-remove-item]").forEach((button) => {
     button.addEventListener("click", () => {
       basketStore.remove(Number(button.dataset.removeItem));
+      clearCheckoutState();
       status.textContent = t("basket.item_removed");
       renderBasket();
     });
@@ -563,6 +585,7 @@ const renderBasket = () => {
     if (!item) return;
     const selectedOptions = selectedOptionsFor(itemIndex);
     basketStore.updateOptions(itemIndex, selectedOptions);
+    clearCheckoutState();
     status.textContent = selectedOptions.length
         ? t("basket.choices_updated", { title: item.title })
         : t("basket.no_assets_selected", { title: item.title });

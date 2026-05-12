@@ -34,6 +34,12 @@ const objectBytes = (object, fallback = null) => {
   return Number.isFinite(fallbackLength) && fallbackLength >= 0 ? fallbackLength : 0;
 };
 
+const objectMetadata = async (bucket, key) => {
+  if (!key) return null;
+  if (typeof bucket.head === "function") return bucket.head(key);
+  return bucket.get(key);
+};
+
 const contentTypeFor = (path) => {
   const extension = extensionFor(path);
   if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
@@ -62,14 +68,13 @@ export const createR2ZipDelivery = ({
   );
 
   const validateOrder = async (order) => {
-    const missing = [];
-
-    for (const item of order.items) {
-      for (const product of item.products) {
+    const missingGroups = await Promise.all((order.items || []).map(async (item) => {
+      const itemMissing = [];
+      await Promise.all((item.products || []).map(async (product) => {
         if (product.id === "full") {
-          const object = await privateBucket.get(item.source.privateMasterKey);
+          const object = await objectMetadata(privateBucket, item.source.privateMasterKey);
           if (!object) {
-            missing.push({
+            itemMissing.push({
               photoId: item.photoId,
               productId: product.id,
               productLabel: product.label,
@@ -77,22 +82,22 @@ export const createR2ZipDelivery = ({
               objectKey: item.source.privateMasterKey,
             });
           }
-          continue;
+          return;
         }
 
         const renderKeys = renderedJpgKeys(item, product);
         let cachedRender = null;
         for (const candidateRenderKey of renderKeys) {
-          cachedRender = await deliveryBucket.get(candidateRenderKey);
+          cachedRender = await objectMetadata(deliveryBucket, candidateRenderKey);
           if (cachedRender) break;
         }
-        if (cachedRender) continue;
+        if (cachedRender) return;
 
         const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id);
         if (canRender) {
-          const sourceObject = await privateBucket.get(item.source.privateMasterKey);
+          const sourceObject = await objectMetadata(privateBucket, item.source.privateMasterKey);
           if (!sourceObject) {
-            missing.push({
+            itemMissing.push({
               photoId: item.photoId,
               productId: product.id,
               productLabel: product.label,
@@ -100,19 +105,21 @@ export const createR2ZipDelivery = ({
               objectKey: item.source.privateMasterKey,
             });
           }
-          continue;
+          return;
         }
 
-        missing.push({
+        itemMissing.push({
           photoId: item.photoId,
           productId: product.id,
           productLabel: product.label,
           code: "missing_private_render",
           objectKey: renderKeys[0],
         });
-      }
-    }
+      }));
+      return itemMissing;
+    }));
 
+    const missing = missingGroups.flat();
     if (missing.length) throw deliveryUnavailableError(missing);
     return { ok: true };
   };

@@ -87,6 +87,15 @@ const createFakeR2 = (initial = {}) => {
     customMetadata: value.customMetadata || {},
   }]));
   return {
+    head: async (key) => {
+      const value = values.get(key);
+      if (!value) return null;
+      return {
+        httpMetadata: value.httpMetadata,
+        customMetadata: value.customMetadata,
+        size: value.body.byteLength,
+      };
+    },
     get: async (key) => {
       const value = values.get(key);
       if (!value) return null;

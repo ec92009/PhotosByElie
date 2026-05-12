@@ -1047,6 +1047,7 @@ html.is-owner-action-busy *{
 .mock-gallery{
   --gallery-default-columns:2;
   --gallery-columns:var(--gallery-zoom-columns,var(--gallery-default-columns));
+  --gallery-masonry-row-height:8px;
   display:grid;
   grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));
   gap:12px 8px;
@@ -1191,6 +1192,22 @@ body[data-gallery] .gallery-hero{
 .mock-photo.has-image{
   aspect-ratio:auto;
   background:transparent;
+}
+.mock-gallery[data-image-fit="fit"]{
+  grid-auto-flow:row;
+  grid-auto-rows:var(--gallery-masonry-row-height);
+}
+.mock-gallery[data-image-fit="fit"] .mock-photo-card{
+  grid-row-end:span var(--gallery-masonry-span,1);
+}
+.mock-gallery[data-image-fit="fit"] .mock-photo.has-image{
+  aspect-ratio:var(--photo-aspect-ratio,1);
+}
+.mock-gallery[data-image-fit="fit"] .mock-photo.has-image img{
+  position:absolute;
+  inset:0;
+  height:100%;
+  object-fit:contain;
 }
 .empty-gallery-card{
   display:grid;

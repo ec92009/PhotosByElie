@@ -7,7 +7,7 @@ Date: 2026-05-11
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v72.3`
+- Current visible build: `v72.5`
 - Business direction has shifted from building infrastructure to making the site sell: payments, delivery trust, offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog currently has `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - Blocked catalog state currently has `4,384` blocked photos. Discarded tombstones are currently empty.

@@ -4,7 +4,7 @@ Last updated: 2026-05-12
 
 ## Current Facts
 
-- Local visible build: `v72.3`.
+- Local visible build: `v72.5`.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -114,10 +114,9 @@ Last updated: 2026-05-12
    - Keep shared public metadata separate from private delivery/Owner manifests.
    - Treat this as a sales performance item: faster first gallery load means fewer buyers bounce.
 
-12. **Improve gallery merchandising layout.**
-   - Use a Pinterest-style masonry column layout for mixed panorama, landscape, square, and portrait photos.
-   - Preserve the current density controls and fit/fill behavior while avoiding large visual holes between rows.
-   - Prefer a deterministic client-side layout based on known preview dimensions so it does not reshuffle after images load.
+12. **Refine gallery merchandising layout.**
+   - FIT mode now uses a deterministic masonry-style grid span layout for mixed panorama, landscape, square, and portrait photos.
+   - Continue testing density controls and fit/fill behavior across very mixed collections.
    - Keep keyboard selection, Owner block/discard shortcuts, likes, and detail navigation stable when layout positions change.
    - Keep a future justified-row gallery as a separate buyer-polish idea, not the current target.
 

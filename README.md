@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v72.3`
+- Current visible version: `v72.5`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -86,7 +86,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Gallery filters cover orientation, camera/AI origin, color mood, and subject, with Sort defaulting to Newest first on first display.
 - When a photo detail page is opened from a gallery, Previous/Next follows that gallery's current filtered and sorted grid order.
 - Subtle keyboard reminders appear above localhost review grids and detail previews, with public detail pages showing the `L` like shortcut.
-- Gallery thumbnails render at their real aspect ratio inside stable square cells; strong selection outlines are reserved for localhost review.
+- Gallery FIT mode uses a deterministic masonry-style grid span layout from known preview dimensions, preserving density controls, keyboard selection, Owner actions, likes, and detail navigation while reducing row holes. Fill mode remains the square cropped view.
 - Gallery and Owner review cards can show a small `RAW` overlay when legacy/local metadata identifies a DNG/NEF/other raw original, but RAW-origin previews are not eligible for Expo or public media upload.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.

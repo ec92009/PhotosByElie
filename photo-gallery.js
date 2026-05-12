@@ -16,6 +16,8 @@ let densityInput = null;
 let densityValue = null;
 let fitModeButtons = [];
 let viewControls = null;
+let renderedGalleryPhotos = [];
+let pendingGalleryPreviewLayout = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
@@ -555,6 +557,7 @@ const setGalleryDensityColumns = (columns) => {
   const nextColumns = clampDensityColumns(columns);
   localStorage.setItem(densityKey, String(nextColumns));
   applyGalleryDensity();
+  applyGalleryPreviewLayout();
   updateSelection({ scroll: false });
   return nextColumns;
 };
@@ -570,6 +573,67 @@ const preferredFitMode = () => (
 
 let fitMode = preferredFitMode();
 
+const cancelGalleryPreviewLayout = () => {
+  if (!pendingGalleryPreviewLayout) return;
+  window.cancelAnimationFrame(pendingGalleryPreviewLayout);
+  pendingGalleryPreviewLayout = 0;
+};
+
+const galleryPreviewLayoutMetrics = () => {
+  if (!galleryRoot) return null;
+  const styles = window.getComputedStyle(galleryRoot);
+  const rowHeight = Number.parseFloat(styles.getPropertyValue("--gallery-masonry-row-height")) || 8;
+  const rowGap = Number.parseFloat(styles.rowGap) || 0;
+  const columnGap = Number.parseFloat(styles.columnGap) || 0;
+  const columns = preferredDensityColumns();
+  const contentWidth = galleryRoot.clientWidth;
+  const columnWidth = (contentWidth - columnGap * Math.max(0, columns - 1)) / columns;
+  const spanUnit = rowHeight + rowGap;
+  if (spanUnit <= 0 || columnWidth <= 0) return null;
+  return { columnWidth, rowGap, spanUnit };
+};
+
+const estimatedCaptionHeight = (photo, columnWidth) => {
+  const title = String(photo?.title || "");
+  const averageCharacterWidth = 7.2;
+  const lineHeight = 17;
+  const estimatedLines = Math.ceil((title.length * averageCharacterWidth) / Math.max(1, columnWidth));
+  return Math.ceil(Math.min(4, Math.max(1, estimatedLines)) * lineHeight + 6);
+};
+
+const galleryPreviewSpan = (photo, metrics) => {
+  const dimensions = previewDimensions(photo);
+  const aspectRatio = dimensions?.width && dimensions?.height
+    ? dimensions.width / dimensions.height
+    : 1;
+  const imageHeight = metrics.columnWidth / Math.max(.2, aspectRatio);
+  const cardGap = 4;
+  const cardHeight = imageHeight + cardGap + estimatedCaptionHeight(photo, metrics.columnWidth);
+  return Math.max(1, Math.ceil((cardHeight + metrics.rowGap) / metrics.spanUnit));
+};
+
+const applyGalleryPreviewLayout = (photos = renderedGalleryPhotos) => {
+  if (!galleryRoot) return;
+  cancelGalleryPreviewLayout();
+  const cards = galleryRoot.querySelectorAll("[data-photo-index]");
+  if (fitMode !== "fit") {
+    cards.forEach((card) => card.style.removeProperty("--gallery-masonry-span"));
+    return;
+  }
+  const metrics = galleryPreviewLayoutMetrics();
+  if (!metrics) {
+    pendingGalleryPreviewLayout = window.requestAnimationFrame(() => {
+      pendingGalleryPreviewLayout = 0;
+      applyGalleryPreviewLayout(photos);
+    });
+    return;
+  }
+  cards.forEach((card, index) => {
+    const span = galleryPreviewSpan(photos[index], metrics);
+    card.style.setProperty("--gallery-masonry-span", String(span));
+  });
+};
+
 const applyGalleryFitMode = () => {
   if (!galleryRoot) return;
   galleryRoot.dataset.imageFit = fitMode;
@@ -582,6 +646,7 @@ const setGalleryFitMode = (mode) => {
   fitMode = mode === "fill" ? "fill" : "fit";
   localStorage.setItem(fitModeKey, fitMode);
   applyGalleryFitMode();
+  applyGalleryPreviewLayout();
   updateSelection({ scroll: false });
   return fitMode;
 };
@@ -722,6 +787,7 @@ const openOwnerMetadataModal = (photo, field) => {
 const renderGallery = () => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
+  renderedGalleryPhotos = photos;
   const likedIds = likedPhotoIds();
   writeDetailSequenceContext(photos);
   const returnPhotoId = pendingGalleryReturnState?.photoId || "";
@@ -835,6 +901,7 @@ const renderGallery = () => {
   window.photosByElieVersionInternalLinks?.(galleryRoot);
   applyGalleryDensity();
   applyGalleryFitMode();
+  applyGalleryPreviewLayout();
   updateSelection({ scroll: returnIndex < 0 });
   if (returnIndex >= 0) restorePendingGalleryReturn();
   const filterStatus = activeFilterCount()
@@ -915,10 +982,21 @@ if (galleryRoot && gallery) {
     });
     window.addEventListener("resize", () => {
       applyGalleryDensity();
+      applyGalleryPreviewLayout();
       positionGalleryViewControls();
       updateSelection({ scroll: false });
     });
     window.addEventListener("scroll", positionGalleryViewControls, { passive: true });
+    window.addEventListener("load", () => {
+      applyGalleryPreviewLayout();
+      updateSelection({ scroll: false });
+    }, { once: true });
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        applyGalleryPreviewLayout();
+        updateSelection({ scroll: false });
+      }).catch(() => {});
+    }
     applyGalleryDensity();
     applyGalleryFitMode();
     positionGalleryViewControls();

@@ -69,6 +69,114 @@ const uniqueKeywords = (items) => {
   return next;
 };
 
+const cleanText = (value) => String(value || "")
+  .replace(/\.[a-z0-9]{2,5}$/i, "")
+  .replace(/[_-]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
+
+const titleCase = (value) => cleanText(value)
+  .split(" ")
+  .map((word) => {
+    if (!word) return "";
+    if (/^[A-Z0-9]{2,}$/.test(word)) return word;
+    return `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`;
+  })
+  .join(" ")
+  .trim();
+
+const normalizedComparable = (value) => cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+const isPlaceholderTitle = (title, originalFile = "") => {
+  const value = cleanText(title);
+  if (!value) return true;
+  if (/^\d{4}[\s:-]?\d{2}[\s:-]?\d{2}/.test(value)) return true;
+  if (/^(dsc|dscf|d5h|img|pxl|dj?i|_mg|sam)[\s-]*\d+[a-z]?$/i.test(value)) return true;
+  if (/^[a-z]{1,5}[\s-]*\d{3,}[a-z]?$/i.test(value)) return true;
+  if (/^\d{3,}$/.test(value)) return true;
+  const originalStem = cleanText(path.basename(String(originalFile || ""), path.extname(String(originalFile || ""))));
+  return Boolean(originalStem && normalizedComparable(value) === normalizedComparable(originalStem));
+};
+
+const splitPathSegments = (sourcePath) => String(sourcePath || "")
+  .split(/[\\/]+/)
+  .map((part) => cleanText(part))
+  .filter(Boolean);
+
+const usefulPathParts = (sourcePath) => {
+  const segments = splitPathSegments(sourcePath);
+  const folders = segments.slice(0, -1);
+  const parts = [];
+  for (const folder of folders) {
+    const withoutYear = folder.replace(/^\d{4}\s+/, "").trim();
+    withoutYear
+      .split(/\s*,\s*|\s+-\s+|\s+\/\s+/)
+      .map((part) => cleanText(part))
+      .filter(Boolean)
+      .forEach((part) => parts.push(part));
+  }
+  return uniqueKeywords(parts).filter((part) => !/^\d{4}$/.test(part));
+};
+
+const compactVenue = (value) => titleCase(value)
+  .replace(/^Collection Of The\s+/i, "")
+  .replace(/^Colleccion Del\s+/i, "")
+  .replace(/^Coleccion Del\s+/i, "")
+  .replace(/^Museo\s+Ruso$/i, "Museo Ruso")
+  .trim();
+
+const contextFromSource = (sourcePath, galleryLabel) => {
+  const parts = usefulPathParts(sourcePath).map(titleCase).filter(Boolean);
+  const city = parts.find((part) => /malaga|paris|madrid|barcelona|lisbon|porto|rome|venice|bratislava|new york|miami|mexico/i.test(part)) || "";
+  const venue = parts.find((part) => part !== city && /museum|museo|cathedral|church|castle|palace|beach|coast|garden|park|bridge|tower|street|market|gallery|collection|colleccion|coleccion/i.test(part)) || "";
+  const cleanedVenue = venue ? compactVenue(venue) : "";
+  const titleContext = cleanedVenue && city
+    ? `${cleanedVenue}, ${city}`
+    : cleanedVenue || city || "";
+  const inferredKeywords = [
+    galleryLabel,
+    city,
+    cleanedVenue,
+    /museo|museum|collection|colleccion|coleccion/i.test(`${cleanedVenue} ${sourcePath}`) ? "Museum" : "",
+    /museo|museum|gallery|art|collection|colleccion|coleccion/i.test(`${cleanedVenue} ${sourcePath}`) ? "Art" : "",
+    /church|cathedral/i.test(`${cleanedVenue} ${sourcePath}`) ? "Church" : "",
+    /beach|coast|sea|ocean/i.test(`${cleanedVenue} ${sourcePath}`) ? "Coast" : "",
+    /street|market|city/i.test(`${cleanedVenue} ${sourcePath}`) ? "City" : "",
+  ];
+  return {
+    parts,
+    city,
+    venue: cleanedVenue,
+    title: titleContext,
+    keywords: uniqueKeywords(inferredKeywords.filter(Boolean)),
+  };
+};
+
+const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklisted, sourceFile }) => {
+  const context = contextFromSource(sourceFile?.path || "", galleryLabel);
+  const withoutBlacklisted = currentKeywords.filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
+  const removedBlacklisted = currentKeywords.filter((keyword) => blacklisted.has(keyword.toLowerCase()));
+  const placeholder = isPlaceholderTitle(currentTitle, sourceFile?.path || metadataValue(photo, "Original file"));
+  const proposedTitle = placeholder && context.title ? context.title : currentTitle;
+  const proposedKeywords = uniqueKeywords([...withoutBlacklisted, ...context.keywords])
+    .filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
+  const hasUsefulKeywords = proposedKeywords.filter((keyword) => keyword.toLowerCase() !== galleryLabel.toLowerCase()).length > 0;
+  const needsContext = (placeholder && !context.title) || !hasUsefulKeywords;
+
+  return {
+    title: needsContext ? currentTitle : proposedTitle,
+    keywords: needsContext && !proposedKeywords.length ? withoutBlacklisted : proposedKeywords,
+    status: needsContext ? "needs_owner_context" : (placeholder ? "source_context" : "metadata_context"),
+    confidence: needsContext ? "low" : (placeholder ? "medium" : "high"),
+    reason: needsContext
+      ? "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
+      : (placeholder
+        ? "Derived from source folder/path context; owner should verify the specific image subject."
+        : "Keeps useful existing catalog metadata and removes blacklisted keyword noise."),
+    removedBlacklisted,
+  };
+};
+
 const isReviewed = (photo) => {
   const rawFlags = metadataValue(photo, "Flags");
   if (rawFlags && rawFlags.split(",").some((part) => part.trim() === REVIEW_FLAG)) return true;
@@ -164,14 +272,8 @@ const main = () => {
     const photo = row.photo || {};
     const currentKeywordsRaw = metadataValue(photo, "Keywords");
     const currentKeywords = uniqueKeywords(splitKeywordText(currentKeywordsRaw));
-    const removedBlacklisted = currentKeywords.filter((keyword) => blacklisted.has(keyword.toLowerCase()));
-    const proposedKeywords = currentKeywords.filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
-    if (!proposedKeywords.length && row.galleryLabel && !blacklisted.has(row.galleryLabel.toLowerCase())) {
-      proposedKeywords.push(row.galleryLabel);
-    }
 
     const currentTitle = String(photo?.title || metadataValue(photo, "Metadata title") || photo?.id || "").trim();
-    const proposedTitle = currentTitle;
 
     const meta = {
       captured: row.capture.raw || "",
@@ -187,6 +289,15 @@ const main = () => {
     const sourceFile = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length && typeof photo.sourceFiles[0] === "object"
       ? photo.sourceFiles[0]
       : {};
+    const proposal = proposalForPhoto({
+      photo,
+      galleryLabel: row.galleryLabel,
+      currentTitle,
+      currentKeywords,
+      currentKeywordsRaw,
+      blacklisted,
+      sourceFile,
+    });
 
     return {
       photo_id: String(photo?.id || ""),
@@ -202,6 +313,8 @@ const main = () => {
       thumbs: {
         gallery: String(photo?.gallerySrc || ""),
         detail: String(photo?.imageSrc || ""),
+        gallery_key: String(photo?.media?.publicPreview?.galleryKey || ""),
+        detail_key: String(photo?.media?.publicPreview?.detailKey || ""),
       },
       source: {
         origin: String(photo?.sourceOrigin || ""),
@@ -218,12 +331,15 @@ const main = () => {
         keywords: currentKeywords,
       },
       proposed: {
-        title: proposedTitle,
-        keywords: proposedKeywords,
+        title: proposal.title,
+        keywords: proposal.keywords,
+        status: proposal.status,
+        confidence: proposal.confidence,
+        reason: proposal.reason,
       },
       changes: {
-        removed_blacklisted: removedBlacklisted,
-        blacklisted_keyword_count: removedBlacklisted.length,
+        removed_blacklisted: proposal.removedBlacklisted,
+        blacklisted_keyword_count: proposal.removedBlacklisted.length,
       },
       meta,
     };
@@ -268,4 +384,3 @@ try {
   process.stderr.write(`${error?.stack || error?.message || error}\n`);
   process.exit(1);
 }
-

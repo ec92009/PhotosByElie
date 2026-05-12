@@ -71,6 +71,18 @@
   const normalizeKeywords = (raw, blacklist) => uniqueKeywords(splitKeywordText(raw))
     .filter((keyword) => !blacklist.has(keyword.toLowerCase()));
 
+  const publicMediaUrl = (key) => {
+    const base = String(window.photosByEliePublicMediaBase || "").replace(/\/+$/, "");
+    const cleanKey = String(key || "").replace(/^\/+/, "");
+    return base && cleanKey ? `${base}/${cleanKey}` : "";
+  };
+
+  const reviewThumbUrl = (item) => {
+    const key = item?.thumbs?.gallery_key || item?.thumbs?.galleryKey || item?.thumbs?.detail_key || item?.thumbs?.detailKey;
+    return publicMediaUrl(key)
+      || String(item?.thumbs?.gallery || item?.thumbs?.gallery_src || item?.thumb?.gallery || item?.gallerySrc || "");
+  };
+
   const render = async () => {
     if (!enabled) {
       lockedPanel.hidden = false;
@@ -128,10 +140,13 @@
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
       const galleryLabel = String(item?.gallery?.label || item?.gallery_label || item?.gallery_key || "");
-      const thumb = String(item?.thumbs?.gallery || item?.thumbs?.gallery_src || item?.thumb?.gallery || item?.gallerySrc || "");
+      const thumb = reviewThumbUrl(item);
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
       const proposedTitle = String(item?.proposed?.title || title || "");
       const proposedKeywords = Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords;
+      const proposalStatus = String(item?.proposed?.status || "");
+      const proposalConfidence = String(item?.proposed?.confidence || "");
+      const proposalReason = String(item?.proposed?.reason || "");
       const meta = item?.meta || item?.metadata || {};
       const camera = String(meta?.camera || item?.source?.camera || "");
       const lens = String(meta?.lens || item?.source?.lens || "");
@@ -189,6 +204,14 @@
               <div>
                 <dt>Source path</dt>
                 <dd>${escapeHtml(sourcePath || "—")}</dd>
+              </div>
+              <div>
+                <dt>Proposal status</dt>
+                <dd>${escapeHtml([proposalStatus, proposalConfidence].filter(Boolean).join(" / ") || "—")}</dd>
+              </div>
+              <div>
+                <dt>Proposal reason</dt>
+                <dd>${escapeHtml(proposalReason || "—")}</dd>
               </div>
             </dl>
             <form class="owner-metadata-editor" data-review-editor>
@@ -277,4 +300,3 @@
     });
   }
 })();
-

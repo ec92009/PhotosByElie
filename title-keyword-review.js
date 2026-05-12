@@ -125,17 +125,17 @@
         <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
         <a class="btn secondary" href="${escapeHtml(queueUrl)}" target="_blank" rel="noreferrer">Open proposal file</a>
       </div>
-      <p class="gallery-status">Proposals are stored in <code>${escapeHtml(queueUrl)}</code>. Saving approvals writes a separate tracked file under <code>assets/owner-actions/title-keyword-review-queue/</code>.</p>
+      <p class="gallery-status">Review each photo, edit the proposed title or keywords if needed, then approve the row.</p>
     `;
 
     root.replaceChildren();
-    const grid = document.createElement("div");
-    grid.className = "unknown-classifier";
-    root.append(grid);
+    const list = document.createElement("div");
+    list.className = "title-keyword-review-list";
+    root.append(list);
 
     const cardById = new Map();
 
-    grid.innerHTML = photos.map((item) => {
+    list.innerHTML = photos.map((item) => {
       const photoId = String(item?.photo_id || item?.photoId || "");
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
@@ -144,77 +144,18 @@
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
       const proposedTitle = String(item?.proposed?.title || title || "");
       const proposedKeywords = Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords;
-      const proposalStatus = String(item?.proposed?.status || "");
-      const proposalConfidence = String(item?.proposed?.confidence || "");
-      const proposalReason = String(item?.proposed?.reason || "");
-      const meta = item?.meta || item?.metadata || {};
-      const camera = String(meta?.camera || item?.source?.camera || "");
-      const lens = String(meta?.lens || item?.source?.lens || "");
-      const exposure = String(meta?.exposure || item?.source?.exposure || "");
-      const focal = String(meta?.focal_length || meta?.focalLength || "");
-      const original = String(meta?.original_file || meta?.originalFile || item?.source?.original_file || "");
-      const sourcePath = String(item?.source?.file?.path || item?.source?.path || "");
       const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
       return `
-        <article class="unknown-card" data-review-photo-id="${escapeHtml(photoId)}">
-          <a class="unknown-thumb ${thumb ? "has-image" : "is-missing-preview"}" href="${escapeHtml(href)}" aria-label="Open photo ${escapeHtml(photoId)}">
+        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}">
+          <a class="title-keyword-review-preview ${thumb ? "has-image" : "is-missing-preview"}" href="${escapeHtml(href)}" aria-label="Open photo ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="lazy"/>` : `<span class="unknown-missing-preview">No preview</span>`}
           </a>
-          <div class="unknown-card-body">
-            <p class="eyebrow">${escapeHtml(galleryLabel || "Photo")}</p>
+          <div class="title-keyword-review-current">
+            <p class="eyebrow">${escapeHtml(galleryLabel || "Photo")}${capture ? ` / ${escapeHtml(capture)}` : ""}</p>
             <h2>${escapeHtml(title || photoId)}</h2>
-            <p>${escapeHtml(capture || photoId)}</p>
-            <label class="owner-toggle-control">
-              <input type="checkbox" data-review-approve/>
-              <span>Approve this proposal</span>
-            </label>
-            <dl class="unknown-metadata">
-              <div>
-                <dt>Current title</dt>
-                <dd>${escapeHtml(title || "—")}</dd>
-              </div>
-              <div>
-                <dt>Current keywords</dt>
-                <dd>${escapeHtml(currentKeywords || "—")}</dd>
-              </div>
-              <div>
-                <dt>Captured</dt>
-                <dd>${escapeHtml(capture || "—")}</dd>
-              </div>
-              <div>
-                <dt>Camera</dt>
-                <dd>${escapeHtml(camera || "—")}</dd>
-              </div>
-              <div>
-                <dt>Lens</dt>
-                <dd>${escapeHtml(lens || "—")}</dd>
-              </div>
-              <div>
-                <dt>Exposure</dt>
-                <dd>${escapeHtml(exposure || "—")}</dd>
-              </div>
-              <div>
-                <dt>Focal length</dt>
-                <dd>${escapeHtml(focal || "—")}</dd>
-              </div>
-              <div>
-                <dt>Original file</dt>
-                <dd>${escapeHtml(original || "—")}</dd>
-              </div>
-              <div>
-                <dt>Source path</dt>
-                <dd>${escapeHtml(sourcePath || "—")}</dd>
-              </div>
-              <div>
-                <dt>Proposal status</dt>
-                <dd>${escapeHtml([proposalStatus, proposalConfidence].filter(Boolean).join(" / ") || "—")}</dd>
-              </div>
-              <div>
-                <dt>Proposal reason</dt>
-                <dd>${escapeHtml(proposalReason || "—")}</dd>
-              </div>
-            </dl>
-            <form class="owner-metadata-editor" data-review-editor>
+            <p>${escapeHtml(currentKeywords || "No current keywords")}</p>
+          </div>
+          <form class="title-keyword-review-proposed" data-review-editor>
               <label>
                 <span>Proposed title</span>
                 <input type="text" value="${escapeHtml(proposedTitle)}" data-review-title/>
@@ -223,13 +164,16 @@
                 <span>Proposed keywords</span>
                 <textarea rows="3" data-review-keywords>${escapeHtml(proposedKeywords)}</textarea>
               </label>
-            </form>
-          </div>
+          </form>
+          <label class="title-keyword-review-approve">
+            <input type="checkbox" data-review-approve/>
+            <span>Approve</span>
+          </label>
         </article>
       `;
     }).join("");
 
-    grid.querySelectorAll("[data-review-photo-id]").forEach((card) => {
+    list.querySelectorAll("[data-review-photo-id]").forEach((card) => {
       const photoId = card.getAttribute("data-review-photo-id") || "";
       if (!photoId) return;
       cardById.set(photoId, card);

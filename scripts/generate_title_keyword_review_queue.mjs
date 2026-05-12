@@ -98,6 +98,36 @@ const isPlaceholderTitle = (title, originalFile = "") => {
   return Boolean(originalStem && normalizedComparable(value) === normalizedComparable(originalStem));
 };
 
+const mythTitleName = (title) => {
+  const raw = String(title || "").trim();
+  const match = raw.match(/^([A-Z][A-Za-z]+)\s+-\s+/) || cleanText(raw).match(/^([A-Z][A-Za-z]+)\s+/);
+  return match?.[1] || "";
+};
+
+const compactPromptTitle = (title, keywords = []) => {
+  const value = cleanText(title);
+  const name = mythTitleName(value);
+  if (!name) return "";
+  if (!/(prominent|foreground|background|mucha|abstract|created by|goddess|gods|given a box)/i.test(value)) return "";
+  const keywordText = (keywords || []).join(" ");
+  if (/mucha|art nouveau/i.test(`${value} ${keywordText}`)) return `${name} in Mucha Style`;
+  return `${name} Mythology Portrait`;
+};
+
+const compactPromptKeywords = (title) => {
+  const value = cleanText(title);
+  const name = mythTitleName(value);
+  if (!name) return [];
+  return uniqueKeywords([
+    name,
+    /artemis/i.test(name) ? "Goddess" : "",
+    "Greek mythology",
+    /mucha|art nouveau/i.test(value) ? "Mucha style" : "",
+    /mucha|art nouveau/i.test(value) ? "Art Nouveau" : "",
+    "AI art",
+  ].filter(Boolean));
+};
+
 const splitPathSegments = (sourcePath) => String(sourcePath || "")
   .split(/[\\/]+/)
   .map((part) => cleanText(part))
@@ -159,8 +189,10 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   const withoutBlacklisted = currentKeywords.filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
   const removedBlacklisted = currentKeywords.filter((keyword) => blacklisted.has(keyword.toLowerCase()));
   const placeholder = isPlaceholderTitle(currentTitle, sourceFile?.path || metadataValue(photo, "Original file"));
-  const proposedTitle = placeholder && context.title ? context.title : currentTitle;
-  const proposedKeywords = uniqueKeywords([...withoutBlacklisted, ...context.keywords])
+  const promptTitle = compactPromptTitle(currentTitle, currentKeywords);
+  const promptKeywords = compactPromptKeywords(currentTitle);
+  const proposedTitle = placeholder && context.title ? context.title : promptTitle || currentTitle;
+  const proposedKeywords = uniqueKeywords([...withoutBlacklisted, ...context.keywords, ...promptKeywords])
     .filter((keyword) => !blacklisted.has(keyword.toLowerCase()));
   const hasUsefulKeywords = proposedKeywords.filter((keyword) => keyword.toLowerCase() !== galleryLabel.toLowerCase()).length > 0;
   const needsContext = (placeholder && !context.title) || !hasUsefulKeywords;
@@ -168,13 +200,15 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   return {
     title: needsContext ? currentTitle : proposedTitle,
     keywords: needsContext && !proposedKeywords.length ? withoutBlacklisted : proposedKeywords,
-    status: needsContext ? "needs_owner_context" : (placeholder ? "source_context" : "metadata_context"),
-    confidence: needsContext ? "low" : (placeholder ? "medium" : "high"),
+    status: needsContext ? "needs_owner_context" : (placeholder ? "source_context" : (promptTitle ? "metadata_cleanup" : "metadata_context")),
+    confidence: needsContext ? "low" : (placeholder || promptTitle ? "medium" : "high"),
     reason: needsContext
       ? "Catalog metadata does not provide enough image-specific context for a reliable title/keyword proposal."
-      : (placeholder
+      : (promptTitle
+        ? "Compacts a long prompt-like title into a cleaner owner-review title and keeps relevant metadata keywords."
+        : (placeholder
         ? "Derived from source folder/path context; owner should verify the specific image subject."
-        : "Keeps useful existing catalog metadata and removes blacklisted keyword noise."),
+        : "Keeps useful existing catalog metadata and removes blacklisted keyword noise.")),
     removedBlacklisted,
   };
 };

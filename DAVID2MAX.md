@@ -16,6 +16,23 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-12 Nightly Title/Keyword Review Queue Manual Run
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `ff738e25`
+- Result: Manually ran the nightly title/keyword review queue and visually inspected the approval page in the browser.
+- Batch size: 100
+- Newest photo/date: 2026-04-26T17:05:17
+- Oldest photo/date: 2023-07-31T10:20:48
+- Proposal file: `assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json`
+- Review page: `title-keyword-review.html` (`http://localhost:8000/title-keyword-review.html?v=73.4&run=manual-2026-05-12`)
+- Photos skipped: 0 already reviewed; 24 marked `needs_owner_context`
+- Visual inspection: first-screen previews render, lower AI previews render after lazy loading, header back-to-top and bottom Save approvals controls are present.
+- Changes made: tightened the generator so long prompt-like AI titles propose compact titles such as `Pandora in Mucha Style` and `Artemis in Mucha Style` instead of repeating old prompt text.
+- Commit pushed: yes, this commit
+- Notes: Preserved pre-existing local dirty work in a temporary stash before the run and did not rewrite JPG/source metadata or apply any proposals.
+
 ## 2026-05-12 Nightly Automation Behavior Check
 
 - Machine: David (`David-5.local`)

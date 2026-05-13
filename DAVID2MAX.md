@@ -388,3 +388,14 @@ _No David automation results recorded yet._
 - Files updated: , , .
 - Commit pushed: .
 - Notes: Existing dirty local Owner/generated files and state TSV docs remain unstaged and were not included in this docs commit.
+
+## 2026-05-13 - Correction: Blocked preview retention docs refresh
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Corrects the immediately preceding handoff entry, which lost inline code text during shell writing.
+- Policy captured: Blocked/Discarded previews are temporary undo-window media only, default 24 hours. After that, public/private preview derivatives should be deleted and durable tombstone state should retain photo id plus blacklisted master/source path to prevent resurrection.
+- Files updated in the docs commit: `SUMMARY.md`, `docs/architecture/static-first-media-hosting.md`, `docs/sops/IMAGE_INGESTION_SOP.md`.
+- Docs commit pushed: `42dd0d92 photosbyelie: document blocked preview retention`.
+- Report correction commit pushed after that: `18ad6c36 photosbyelie: report retention docs refresh` contains the garbled prior entry; this correction supersedes it.
+- Notes: Existing dirty local Owner/generated files and state TSV docs remain unstaged and were not included in the docs commit.

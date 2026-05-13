@@ -453,3 +453,14 @@ _No David automation results recorded yet._
 - Validation: `node --check photo-gallery.js`, `npm test`, and `npm run validate` passed.
 - Commit pushed: `2ab3d6a8 photosbyelie: avoid gallery control rail overlap`.
 - Notes: Existing dirty local Owner/generated files remain unstaged.
+
+## 2026-05-13 - Waste Basket cleanup model (David)
+
+- Renamed the Owner Blocked review surface to Waste Basket and merged the old separate blocked-sync panel into the Waste Basket card.
+- Waste Basket now presents three owner actions in one place: Review, Protect basket, and Empty basket.
+- Kept the blacklist/tombstone idea as the durable "do not make that mistake again" record, while Empty basket now purges cloud media for basketed photos: public previews, private masters, and private render triplets, then clears the basket and leaves discard tombstones.
+- Unified Blocked/Waste Basket gallery paging with the normal gallery controls: 24-at-a-time, external Show more/Show all controls, shared floating Grid/Fit/Fill placement.
+- Visible version bumped to v74.24.
+- Pushed commit: 979de98c photosbyelie: unify waste basket cleanup.
+- Checks passed: node --check for touched JS, python3 -m py_compile scripts/local_server.py, git diff --check, and browser smoke checks for Owner/Waste Basket wording.
+- Known unrelated validation issues remain: npm test fails checkout pricing assertions; npm run validate fails existing catalog/media-origin validation across generated catalog files. These were not caused by this Waste Basket patch and were left unstaged.

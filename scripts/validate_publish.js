@@ -134,9 +134,13 @@ const validate = () => {
     }
   });
 
+  if (!fs.existsSync(path.join(repoRoot, "gallery.html"))) {
+    errors.push("Shared gallery.html page is missing.");
+  }
+
   Object.entries(collections).forEach(([collectionKey, collection]) => {
     if (!fs.existsSync(path.join(repoRoot, `${collectionKey}.html`))) {
-      warnings.push(`Collection ${collectionKey} has no matching ${collectionKey}.html page.`);
+      warnings.push(`Collection ${collectionKey} has no matching ${collectionKey}.html compatibility redirect.`);
     }
     if (!collection?.title) errors.push(`Collection ${collectionKey} is missing a title.`);
     if (!Array.isArray(collection?.photos)) {

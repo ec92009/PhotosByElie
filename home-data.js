@@ -5,7 +5,7 @@ window.photosByElieHomeData = {
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
     "count": 296,
-    "href": "./france.html",
+    "href": "./gallery.html?gallery=france",
     "photos": [
       {
         "id": "20220506-160631-03403-51426edaac",
@@ -71,7 +71,7 @@ window.photosByElieHomeData = {
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
     "count": 161,
-    "href": "./usa.html",
+    "href": "./gallery.html?gallery=usa",
     "photos": [
       {
         "id": "20190723-1419-16523-3d4da421c4",
@@ -137,7 +137,7 @@ window.photosByElieHomeData = {
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
     "count": 223,
-    "href": "./spain.html",
+    "href": "./gallery.html?gallery=spain",
     "photos": [
       {
         "id": "d5h-2946-c744a8409c",
@@ -203,7 +203,7 @@ window.photosByElieHomeData = {
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
     "count": 2,
-    "href": "./mexico.html",
+    "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
         "id": "20191207-1718-19516-5bc74a12ce",
@@ -241,7 +241,7 @@ window.photosByElieHomeData = {
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
     "count": 4920,
-    "href": "./ai.html",
+    "href": "./gallery.html?gallery=ai",
     "photos": [
       {
         "id": "bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11",
@@ -307,7 +307,7 @@ window.photosByElieHomeData = {
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
     "count": 24,
-    "href": "./italy.html",
+    "href": "./gallery.html?gallery=italy",
     "photos": [
       {
         "id": "img-1219-570b09bebb",
@@ -373,7 +373,7 @@ window.photosByElieHomeData = {
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
     "count": 216,
-    "href": "./portugal.html",
+    "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
         "id": "20220802-130003-00136-pano-052608ca90",
@@ -439,7 +439,7 @@ window.photosByElieHomeData = {
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "slovakia-gallery",
     "count": 2,
-    "href": "./slovakia.html",
+    "href": "./gallery.html?gallery=slovakia",
     "photos": [
       {
         "id": "20190624-1827-16232-feef5b78f4",

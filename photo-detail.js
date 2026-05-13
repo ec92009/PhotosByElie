@@ -51,6 +51,7 @@ const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const localizedCollectionTitle = () => {
   const key = `collection.${collectionKey}`;
@@ -98,7 +99,7 @@ const photoOriginLabel = photo ? (() => {
   return translated && translated !== key ? translated : window.photosByEliePhotoOriginLabel?.(photo, collectionKey);
 })() : "";
 if (window.photosByElieIsPublicHidden?.(photo)) {
-  window.location.replace(versionedHref(`./${collectionKey}.html`));
+  window.location.replace(versionedHref(galleryHrefForKey(collectionKey)));
   return;
 }
 const detailSequenceKey = "photosbyelie-detail-sequence";
@@ -117,7 +118,7 @@ const setCollectionNav = () => {
   if (!currentNav) return;
   currentNav.dataset.i18n = `collection.${collectionKey}`;
   currentNav.textContent = localizedCollectionTitle();
-  currentNav.setAttribute("href", versionedHref(`./${collectionKey}.html`));
+  currentNav.setAttribute("href", versionedHref(galleryHrefForKey(collectionKey)));
 };
 const splitKeywordText = (value) => String(value || "")
   .split(/[;,]/)
@@ -245,7 +246,7 @@ const navigateAfterHide = () => {
   const remainingPhotos = visibleCollectionPhotos();
   if (!remainingPhotos.length) {
     const remainingSequence = activeDetailSequence().filter((item) => item.photo.id !== photo.id);
-    window.location.replace(versionedHref(remainingSequence.length ? `./photo.html?id=${remainingSequence[0].photo.id}` : `./${collectionKey}.html`));
+    window.location.replace(versionedHref(remainingSequence.length ? `./photo.html?id=${remainingSequence[0].photo.id}` : galleryHrefForKey(collectionKey)));
     return true;
   }
 
@@ -299,7 +300,7 @@ if (!photo) {
   setCollectionNav();
   document.querySelector("[data-photo-title]").textContent = t("detail.archive_reset_title");
   setPhotoMetaText(t("detail.no_published_meta", { collection: collection.title }));
-  document.querySelector("[data-back-link]").setAttribute("href", versionedHref(`./${collectionKey}.html`));
+  document.querySelector("[data-back-link]").setAttribute("href", versionedHref(galleryHrefForKey(collectionKey)));
   document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
   document.querySelector("[data-resolution-list]").innerHTML = "";
   document.querySelector("[data-selection-total]").textContent = "$0";
@@ -334,7 +335,7 @@ const isHomeDetailSequence = () => {
   const payload = readGallerySequencePayload();
   return Boolean(payload?.source === "home" && payload.photoIds.includes(photo?.id));
 };
-const detailBackHref = () => (isHomeDetailSequence() ? "./#discover" : `./${galleryReturnCollectionKey()}.html`);
+const detailBackHref = () => (isHomeDetailSequence() ? "./#discover" : galleryHrefForKey(galleryReturnCollectionKey()));
 const detailBackLabelKey = () => (isHomeDetailSequence() ? "common.back_to_search" : "common.back_to_gallery");
 const writeGalleryReturnState = () => {
   const payload = readGallerySequencePayload();
@@ -374,7 +375,7 @@ const ensureDetailBottomActions = () => {
   bottomActions.innerHTML = `
     <a class="btn secondary" data-bottom-prev-photo href="./photo.html" data-i18n="common.previous">Previous</a>
     <a class="btn secondary" data-bottom-next-photo href="./photo.html" data-i18n="common.next">Next</a>
-    <a class="btn secondary" data-bottom-back-link href="./${collectionKey}.html" data-i18n="common.back_to_gallery">Back to gallery</a>
+    <a class="btn secondary" data-bottom-back-link href="${galleryHrefForKey(collectionKey)}" data-i18n="common.back_to_gallery">Back to gallery</a>
   `;
   detailMain.append(bottomActions);
   window.photosByElieVersionInternalLinks?.(bottomActions);
@@ -391,7 +392,7 @@ const syncDetailBottomActions = () => {
   const topBack = document.querySelector("[data-back-link]");
   const prevHref = prevPhotoLink?.getAttribute("href");
   const nextHref = nextPhotoLink?.getAttribute("href");
-  const backHref = topBack?.getAttribute("href") || `./${collectionKey}.html`;
+  const backHref = topBack?.getAttribute("href") || galleryHrefForKey(collectionKey);
   if (prevHref) bottomPrev?.setAttribute("href", versionedHref(prevHref));
   if (nextHref) bottomNext?.setAttribute("href", versionedHref(nextHref));
   if (bottomBack) {

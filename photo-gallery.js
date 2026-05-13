@@ -1,4 +1,15 @@
-const galleryKey = document.body.dataset.gallery;
+const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
+const galleryKeyFromPage = () => {
+  const params = new URLSearchParams(window.location.search);
+  const requested = params.get("gallery") || document.body.dataset.gallery || "";
+  const normalized = requested.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  if (normalized && window.photosByElieData?.[normalized]) return normalized;
+  const pageSlug = (window.location.pathname.split("/").pop() || "").replace(/\.html$/i, "");
+  if (pageSlug && window.photosByElieData?.[pageSlug]) return pageSlug;
+  return "france";
+};
+const galleryKey = galleryKeyFromPage();
+document.body.dataset.gallery = galleryKey;
 let gallery = window.photosByElieData?.[galleryKey];
 const galleryRoot = document.querySelector("[data-gallery-root]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
@@ -965,7 +976,7 @@ if (galleryRoot && gallery) {
   if (currentNav) {
     currentNav.dataset.i18n = `collection.${galleryKey}`;
     currentNav.textContent = localizedCollectionTitle();
-    currentNav.setAttribute("href", versionedHref(`./${galleryKey}.html`));
+    currentNav.setAttribute("href", versionedHref(galleryHrefForKey(galleryKey)));
   }
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
   const titleRoot = document.querySelector("[data-gallery-title]");

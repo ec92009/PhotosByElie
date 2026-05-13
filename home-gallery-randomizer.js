@@ -18,7 +18,7 @@ const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "'": "&#39;",
 }[char]));
 
-const galleryHrefForKey = (key) => window.photosByElieVersionedHref?.(`./${key}.html`) || `./${key}.html`;
+const galleryHrefForKey = (key) => window.photosByElieVersionedHref?.(`./gallery.html?gallery=${encodeURIComponent(key)}`) || `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const collectionTitleForKey = (key, collection) => (
   window.photosByElieI18n?.t?.(`collection.${key}`)
   || collection?.title

@@ -6,13 +6,14 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v74.5`
+- Current visible version: `v74.6`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
 - `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia collections
-- `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`, `italy.html`, `portugal.html`, `slovakia.html`: legacy thin gallery shells rendered from shared photo data; the long-term target is one parameterized gallery route
+- `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
+- `france.html`, `usa.html`, `spain.html`, `mexico.html`, `ai.html`, `italy.html`, `portugal.html`, `slovakia.html`: compatibility redirects for old collection URLs
 - `unknown.html`: localhost-only Owner queue for classifying unknown photos into real country galleries
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
@@ -91,7 +92,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Subtle keyboard reminders appear above localhost review grids and detail previews, with public detail pages showing the `L` like shortcut.
 - Gallery FIT mode uses a deterministic masonry-style grid span layout from known preview dimensions, preserving density controls, keyboard selection, Owner actions, likes, and detail navigation while reducing row holes. Fill mode remains the square cropped view.
 - Blocked review now uses the same shared gallery card treatment as public galleries: card wrapper, image/caption structure, RAW/origin badges, selection styling, density preference, and fit/fill masonry behavior.
-- Country gallery pages are currently one HTML file per public collection for GitHub Pages compatibility and clean static URLs. New gallery behavior should be implemented in shared JS, and the next architecture cleanup should move countries to a `gallery.html?gallery=<slug>` style parameter while keeping old country URLs as compatibility redirects or wrappers.
+- Public collection cards now open the shared `gallery.html?gallery=<slug>` route. Old country URLs remain as tiny compatibility redirects for GitHub Pages links and cached pages.
 - Gallery and Owner review cards can show a small `RAW` overlay when legacy/local metadata identifies a DNG/NEF/other raw original, but RAW-origin previews are not eligible for Expo or public media upload.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.

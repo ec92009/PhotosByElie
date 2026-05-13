@@ -4,7 +4,7 @@ Last updated: 2026-05-13
 
 ## Current Facts
 
-- Local visible build: `v74.5`.
+- Local visible build: `v74.6`.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
@@ -36,7 +36,7 @@ Last updated: 2026-05-13
 - Business priority is now revenue: make checkout trustworthy, package the offer clearly, drive qualified visitors, and keep Owner tooling focused on sales-enabling operations.
 - Camera photos and AI-origin images are now split by first-class catalog origin. Public galleries can filter by origin, detail pages show it, Owner shows Camera / AI counts, and checkout pricing validates against origin.
 - Blocked review now shares the same gallery-card treatment as public galleries, including wrapper/caption structure, RAW/origin badges, selection outline, density preference, and fit/fill masonry behavior.
-- Country gallery pages are still separate HTML shells for compatibility, but the intended architecture is a single parameterized gallery route with country/collection as data.
+- Public collection pages now use the shared `gallery.html?gallery=<slug>` route; old country URLs remain as compatibility redirects.
 
 ## Numbered Backlog
 
@@ -121,10 +121,10 @@ Last updated: 2026-05-13
    - Retest GitHub Pages gallery/detail/basket media loading and public hidden-blacklist fetches.
    - Keep the checkout Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-12. **Parameterize gallery routes and split gallery/catalog data by collection.**
-   - Replace the country-per-HTML architecture with one real gallery page that reads a collection slug from the URL, such as `gallery.html?gallery=france`.
-   - Keep `france.html`, `usa.html`, `spain.html`, and other existing country URLs as tiny compatibility redirects or wrappers until old links and GitHub Pages caches age out safely.
-   - Move country-specific title/nav/body state into data rather than duplicated markup.
+12. **Split gallery/catalog data by collection.**
+   - Gallery pages now use one real page, `gallery.html?gallery=<slug>`, with old country URLs kept as tiny compatibility redirects.
+   - Keep the compatibility redirects until old links and GitHub Pages caches age out safely.
+   - Keep country-specific title/nav/body state in data rather than duplicated markup.
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.
    - Keep shared public metadata separate from private delivery/Owner manifests.

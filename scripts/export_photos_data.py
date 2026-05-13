@@ -339,7 +339,7 @@ def write_home_data_from_collections(repo_root: Path, collections: dict[str, dic
             "description": collection.get("description") or description,
             "accent": collection.get("accent") or accent,
             "count": len(photos),
-            "href": f"./{slug}.html",
+            "href": f"./gallery.html?gallery={slug}",
             "photos": [home_photo_object(photo) for photo in photos[:HOME_SAMPLE_COUNT]],
         }
     output = repo_root / "home-data.js"

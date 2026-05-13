@@ -83,6 +83,7 @@ from sync_r2_media import (  # noqa: E402
     wrangler_delete,
     wrangler_put,
 )
+from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -534,56 +535,7 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
 
 
 def _record_country_assignments(repo_root: Path, target_slug: str, moved: list[dict], skipped: list[dict]) -> dict:
-    if not moved and not skipped:
-        return {}
-
-    created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    batch_id = f"{created_at}-{uuid.uuid4().hex[:8]}"
-    event = {
-        "batch_id": batch_id,
-        "created_at": created_at,
-        "action": "assign-country",
-        "target_slug": target_slug,
-        "moved": moved,
-        "skipped": skipped,
-    }
-
-    log_path = repo_root / COUNTRY_ASSIGNMENT_LOG
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    with log_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
-
-    index_path = repo_root / COUNTRY_ASSIGNMENT_INDEX
-    index = _read_json_file(index_path, {"format": "photosbyelie-country-assignments", "photos": {}})
-    if not isinstance(index, dict):
-        index = {"format": "photosbyelie-country-assignments", "photos": {}}
-    photos = index.get("photos")
-    if not isinstance(photos, dict):
-        photos = {}
-        index["photos"] = photos
-    index["format"] = "photosbyelie-country-assignments"
-    index["updated_at"] = created_at
-    index["latest_batch_id"] = batch_id
-    for item in moved:
-        photo_id = item.get("id")
-        if not photo_id:
-            continue
-        photos[photo_id] = {
-            "gallery_key": target_slug,
-            "state": item.get("to"),
-            "from_state": item.get("from"),
-            "from_slug": item.get("from_slug"),
-            "assigned_at": created_at,
-            "batch_id": batch_id,
-            "assets": item.get("assets") or {},
-        }
-    _write_json_file(index_path, index)
-
-    return {
-        "log": COUNTRY_ASSIGNMENT_LOG.as_posix(),
-        "index": COUNTRY_ASSIGNMENT_INDEX.as_posix(),
-        "batch_id": batch_id,
-    }
+    return record_country_assignments_db(repo_root, target_slug, moved, skipped)
 
 
 def _set_action_progress(operation_id: object, total: int, completed: int) -> None:

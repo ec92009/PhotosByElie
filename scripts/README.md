@@ -108,7 +108,7 @@ After changing the generated catalog, refresh the media sidecar so each flat pub
 node scripts/write_media_sidecar.mjs
 ```
 
-For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X blocks by adding the photo to the blocked blacklist, U removes the most recent block, and P on the Blocked page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, and record the handoff in `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
+For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X blocks by adding the photo to the blocked blacklist, U removes the most recent block, and P on the Blocked page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write the local SQLite owner-state tables, and export the handoff to `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
 
 If an older review snapshot needs to be replayed, use `scripts/asset_state.py` directly:
 
@@ -136,14 +136,16 @@ The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/i
 
 ## State SQLite
 
-`build_photo_state_db.py` creates an ignored local SQLite database at `tmp/photo-state.sqlite` so the current photo universe can be inspected without opening every JSON/JS manifest by hand. It combines the public catalog, homepage manifest, import cache, Expo manifest, private delivery manifest, media sidecar, blocked/discarded tombstones, compatibility Reserve data, and R2 upload/delete logs.
+`build_photo_state_db.py` creates an ignored local SQLite database at `tmp/photo-state.sqlite` so the current photo universe can be inspected without opening every JSON/JS manifest by hand. It combines the public catalog, homepage manifest, import cache, Expo manifest, private delivery manifest, media sidecar, blocked/discarded tombstones, Unknown country assignments, compatibility Reserve data, and R2 upload/delete logs.
 
 ```bash
 python3 scripts/build_photo_state_db.py
 open -a "DB Browser for SQLite" tmp/photo-state.sqlite
 ```
 
-Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
+Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `owner_country_assignment_events`, `owner_country_assignments`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
+
+The public site still loads generated static JavaScript catalogs such as `photos-data.js`; SQLite is the local working database for inspection and owner-state mutation, not a runtime dependency for GitHub Pages.
 
 The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
 

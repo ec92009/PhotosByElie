@@ -8,6 +8,7 @@ import json
 import re
 import sqlite3
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -25,12 +26,21 @@ MANIFEST_PATHS = [
     ("reserve-data", Path("assets/reserve/reserve-data.json")),
     ("discarded-tombstone", Path("assets/discarded/discarded-photo-ids.json")),
     ("discarded-media", Path("assets/discarded-media-manifest.json")),
+    ("country-assignments-log", Path("assets/owner-actions/country-assignments.jsonl")),
+    ("country-assignments-index", Path("assets/owner-actions/country-assignments.json")),
     ("storage-estimate", Path("assets/storage-estimate.json")),
     ("home-data", Path("home-data.js")),
     ("photos-data", Path("photos-data.js")),
     ("r2-upload-log", Path(".review-logs/r2-upload-state.jsonl")),
     ("r2-delete-log", Path(".review-logs/r2-delete-state.jsonl")),
 ]
+
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from owner_state_db import ensure_schema as ensure_owner_schema  # noqa: E402
+from owner_state_db import import_country_assignments  # noqa: E402
 
 
 def load_json(path: Path, default: Any = None) -> Any:
@@ -616,6 +626,7 @@ def write_db(repo_root: Path, output: Path) -> None:
     try:
         conn = sqlite3.connect(temp_path)
         create_schema(conn)
+        ensure_owner_schema(conn)
 
         for kind, rel_path in MANIFEST_PATHS:
             path = repo_root / rel_path
@@ -696,9 +707,14 @@ def write_db(repo_root: Path, output: Path) -> None:
             "INSERT OR IGNORE INTO keywords VALUES (?, ?, ?)",
             sorted(builder.keywords),
         )
+        import_country_assignments(repo_root, conn, force=True)
         conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.execute("PRAGMA journal_mode = DELETE")
         conn.execute("VACUUM")
         conn.close()
+        for suffix in ("-wal", "-shm"):
+            temp_path.with_name(f"{temp_path.name}{suffix}").unlink(missing_ok=True)
         temp_path.replace(output)
     except Exception:
         temp_path.unlink(missing_ok=True)

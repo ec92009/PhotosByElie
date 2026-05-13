@@ -26,7 +26,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `hidden-page.js`: localhost-only Blocked review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `home-data.js`: tiny homepage manifest with collection counts and representative preview candidates
-- `photos-data.js`: full shared collection, photo, product option, and mock price data
+- `photos-data.js`: generated full static catalog export with shared collection, photo, product option, and mock price data
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
 - `home-discovery.js`: homepage-wide search, origin, collection, filter results, likes, keyboard selection, detail navigation, and localhost Owner shortcuts
 - `gallery-card.js`: shared gallery/review card renderer used by public galleries and Blocked review
@@ -42,7 +42,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photos.js`: shared theme, translation dictionary, and language toggle behavior for public pages
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
 - `scripts/validate_publish.js`: pre-push generated-data, asset-pair, resolution metadata, and publish-summary check
-- `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, sidecars, and R2 logs
+- `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
 - `scripts/watch_photo_state_db.zsh`: optional local background refresher for the SQLite state database
 - `AGENTS.md`: repo-level working preferences and versioning SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
@@ -62,6 +62,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or blocked no longer reduce unrelated counts.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full `photos-data.js` catalog in the background for basket/liked context.
+- `photos-data.js` remains the browser-friendly static export for GitHub Pages, but local owner workflows should increasingly treat SQLite and tracked owner manifests as source state, then regenerate the static JS catalogs.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
 - Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
@@ -78,6 +79,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Blocked photos do not re-upload public preview objects while they are blacklisted.
 - On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` or `X` blocks it, `U` undoes the last block, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
 - Assigning an Unknown photo to a country updates every loaded same-day unknown into that country in the local catalog/preview cache, adds the country keyword to catalog metadata, refreshes the Unknown hints, and removes assigned cards from the queue. Owner metadata actions do not rewrite uploaded masters, private render triplets, or public previews; those media objects are treated as immutable after upload except when blocked previews or discarded media are explicitly deleted.
+- Unknown country assignments are written to the local SQLite owner-state tables first, then exported back to the tracked JSONL trail and compact JSON index used by static/browser compatibility paths.
 - We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
 - The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, blocked blacklist updates, Unknown assignment, metadata edits, and R2 maintenance.
 - Local owner mutation endpoints are unlocked on localhost by the helper server without a password. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.

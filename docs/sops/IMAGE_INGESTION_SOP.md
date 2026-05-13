@@ -84,7 +84,7 @@ The builder is designed to be interrupted and resumed.
 ## Privacy Rules
 
 - Keep `tmp/import-cache`, `assets/reserve`, and `assets/hidden` untracked except for tracked blocked-list/tombstone files already in Git. `tmp/import-cache` is disposable after media is uploaded and manifests are regenerated.
-- Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are the handoff trail for localhost Unknown-to-country moves. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
+- Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are exported handoff artifacts for localhost Unknown-to-country moves, while the ignored local SQLite owner-state tables are the write path. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Keep `assets/owner-actions/keyword-blacklist.json` tracked. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite photos/JPGs.
 - Do not paste exact GPS coordinates into public site data.
 - Review public keywords before promoting them into `photos-data.js`.

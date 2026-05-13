@@ -7,7 +7,7 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v73.8`
+- Current visible build: `v73.9`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Public previews are watermarked and served directly from the public R2 endpoint configured in `media-config.js`.
 - Public media objects, private masters, private render JPGs, and source/JPG embedded metadata are treated as immutable after upload. Owner metadata edits update generated catalog/manifest files only.

@@ -1150,7 +1150,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 }
 .title-keyword-review-approve{
   display:grid;
-  place-items:center;
+  place-items:stretch;
   align-content:center;
   gap:8px;
   border-left:1px solid var(--line);
@@ -1159,12 +1159,46 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   font-weight:800;
   letter-spacing:.08em;
   text-transform:uppercase;
+}
+.title-keyword-review-decision label{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:7px;
   cursor:pointer;
 }
 .title-keyword-review-approve input{
-  width:28px;
-  height:28px;
+  width:22px;
+  height:22px;
   accent-color:var(--text);
+}
+.title-keyword-review-reject-comment{
+  grid-template-columns:1fr;
+  gap:5px;
+  margin-top:2px;
+}
+.title-keyword-review-reject-comment span{
+  color:var(--muted);
+  font-size:.66rem;
+}
+.title-keyword-review-reject-comment textarea{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  color:var(--text);
+  font:inherit;
+  font-size:.78rem;
+  line-height:1.3;
+  padding:7px 8px;
+  resize:vertical;
+  min-height:58px;
+}
+.title-keyword-review-reject-comment.is-disabled{
+  opacity:.48;
+}
+.title-keyword-review-reject-comment textarea[readonly]{
+  cursor:pointer;
 }
 .title-keyword-review-bottom-actions{
   display:flex;

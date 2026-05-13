@@ -16,6 +16,18 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-13 Title/Keyword Proposal State + Reject Rework
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `06c5f9c3`
+- Result: Added durable proposal/rejection state for the Owner title/keyword queue and refreshed the live nightly automation prompt.
+- Changes made: added `Title_Keywords_Proposed` state tracking in `assets/owner-actions/title-keyword-review-queue/proposed-state.json`; added reject checkboxes and optional reject comments to the compact Owner review page; reject comments auto-select Reject, Approve greys but preserves comments, and interacting with the comment reactivates Reject; rejected rows are prioritized for future rework batches.
+- SOP/prompt: added `docs/sops/TITLE_KEYWORD_REVIEW_SOP.md` and updated `/Users/ecohen/.codex/automations/pbe-nightly-title-keyword-review-queue/automation.toml`.
+- Validation: browser interaction verified locally at `http://localhost:8000/title-keyword-review.html?v=73.9&run=reject-ui`; `npm test` passed (14/14); `npm run validate` passed.
+- Commit pushed: yes, this commit.
+- Notes: The state and rejection workflow updates tracked owner-action JSON and generated catalog/state files only. No JPG/source metadata, public previews, private masters, or private render files are rewritten.
+
 ## 2026-05-13 Nightly Title/Keyword Review Queue
 
 - Machine: David (`David-5.local`)

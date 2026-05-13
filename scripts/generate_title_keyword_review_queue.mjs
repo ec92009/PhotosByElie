@@ -7,6 +7,9 @@ import vm from "node:vm";
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 100;
 const REVIEW_FLAG = "Title_Keywords_Reviewed";
+const PROPOSED_FLAG = "Title_Keywords_Proposed";
+const REJECTED_FLAG = "Title_Keywords_Rejected";
+const PROPOSED_STATE_FILENAME = "proposed-state.json";
 const MIN_PROPOSED_KEYWORDS = 10;
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
@@ -56,6 +59,20 @@ const splitKeywordText = (raw) => String(raw || "")
   .map((part) => part.trim())
   .filter(Boolean);
 
+const uniqueValues = (items) => {
+  const seen = new Set();
+  const next = [];
+  for (const item of items || []) {
+    const value = String(item || "").trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    next.push(value);
+  }
+  return next;
+};
+
 const uniqueKeywords = (items) => {
   const seen = new Set();
   const next = [];
@@ -69,6 +86,13 @@ const uniqueKeywords = (items) => {
   }
   return next;
 };
+
+const readJsonFile = (filePath) => {
+  if (!fs.existsSync(filePath)) return null;
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+};
+
+const normalizedPhotoId = (value) => String(value || "").trim();
 
 const cleanText = (value) => String(value || "")
   .replace(/\.[a-z0-9]{2,5}$/i, "")
@@ -379,15 +403,195 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   };
 };
 
-const isReviewed = (photo) => {
+const hasMetadataFlag = (photo, flag) => {
+  const target = String(flag || "").trim();
+  if (!target) return false;
   const rawFlags = metadataValue(photo, "Flags");
-  if (rawFlags && rawFlags.split(",").some((part) => part.trim() === REVIEW_FLAG)) return true;
+  if (rawFlags && splitKeywordText(rawFlags).some((part) => part === target)) return true;
   const keywords = splitKeywordText(metadataValue(photo, "Keywords"));
-  return keywords.some((keyword) => keyword.trim() === REVIEW_FLAG);
+  return keywords.some((keyword) => keyword === target);
+};
+
+const isReviewed = (photo) => hasMetadataFlag(photo, REVIEW_FLAG);
+
+const isAlreadyProposed = (photo, proposedState) => {
+  const photoId = normalizedPhotoId(photo?.id);
+  return hasMetadataFlag(photo, PROPOSED_FLAG) || Boolean(photoId && proposedState.photosById.has(photoId));
+};
+
+const proposalStateEntry = (photo, proposedState) => {
+  const photoId = normalizedPhotoId(photo?.id);
+  return photoId ? proposedState.photosById.get(photoId) || null : null;
+};
+
+const isRejectedForRework = (photo, proposedState) => {
+  const entry = proposalStateEntry(photo, proposedState);
+  const tags = Array.isArray(entry?.state_tags) ? entry.state_tags : [];
+  return hasMetadataFlag(photo, REJECTED_FLAG)
+    || tags.includes(REJECTED_FLAG)
+    || entry?.review_state === "rejected"
+    || entry?.rework_priority === true;
+};
+
+const mergeBatchRecord = (state, payload, relativePath) => {
+  const batchId = String(payload?.batch_id || "").trim();
+  if (!batchId) return;
+  const existing = state.batchesById.get(batchId) || {
+    batch_id: batchId,
+    generated_at: "",
+    proposal_files: [],
+    photo_count: 0,
+  };
+  const generatedAt = String(payload?.generated_at || "").trim();
+  if (generatedAt) existing.generated_at = generatedAt;
+  existing.proposal_files = uniqueValues([
+    ...(existing.proposal_files || []),
+    relativePath,
+    payload?.proposal_files?.batch,
+  ]);
+  existing.photo_count = Array.isArray(payload?.photos) ? payload.photos.length : existing.photo_count;
+  state.batchesById.set(batchId, existing);
+};
+
+const mergeProposedPhoto = (state, photoId, detail = {}) => {
+  const normalizedId = normalizedPhotoId(photoId);
+  if (!normalizedId) return;
+  const existing = state.photosById.get(normalizedId) || {
+    photo_id: normalizedId,
+    state_tags: [PROPOSED_FLAG],
+    review_state: "proposed",
+    rework_priority: false,
+    rejection_comment: "",
+    rejected_count: 0,
+    first_proposed_batch_id: "",
+    latest_proposed_batch_id: "",
+    first_proposed_at: "",
+    latest_proposed_at: "",
+    proposal_files: [],
+  };
+  existing.state_tags = uniqueValues([
+    ...(existing.state_tags || []),
+    ...(Array.isArray(detail.state_tags) ? detail.state_tags : []),
+    PROPOSED_FLAG,
+  ]);
+  const batchId = String(detail.batch_id || "").trim();
+  const firstBatchId = String(detail.first_proposed_batch_id || "").trim();
+  const latestBatchId = String(detail.latest_proposed_batch_id || "").trim();
+  const generatedAt = String(detail.generated_at || "").trim();
+  const firstProposedAt = String(detail.first_proposed_at || "").trim();
+  const latestProposedAt = String(detail.latest_proposed_at || "").trim();
+  const rejectionComment = String(detail.rejection_comment || detail.latest_rejection_comment || "").trim();
+  if (!existing.first_proposed_batch_id) existing.first_proposed_batch_id = firstBatchId || batchId;
+  if (latestBatchId || batchId) existing.latest_proposed_batch_id = latestBatchId || batchId;
+  if (!existing.first_proposed_at) existing.first_proposed_at = firstProposedAt || generatedAt;
+  if (latestProposedAt || generatedAt) existing.latest_proposed_at = latestProposedAt || generatedAt;
+  if (detail.review_state) existing.review_state = String(detail.review_state);
+  if (detail.rework_priority != null) existing.rework_priority = Boolean(detail.rework_priority);
+  if (existing.state_tags.includes(REJECTED_FLAG)) {
+    existing.review_state = "rejected";
+    existing.rework_priority = true;
+  }
+  if (Number.isFinite(Number(detail.rejected_count))) existing.rejected_count = Number(detail.rejected_count);
+  if (rejectionComment) existing.rejection_comment = rejectionComment;
+  if (detail.clear_rejection) {
+    existing.review_state = "proposed";
+    existing.rework_priority = false;
+    existing.rejection_comment = "";
+    existing.state_tags = uniqueValues(existing.state_tags || []).filter((tag) => tag !== REJECTED_FLAG);
+  }
+  existing.proposal_files = uniqueValues([
+    ...(existing.proposal_files || []),
+    ...(Array.isArray(detail.proposal_files) ? detail.proposal_files : []),
+    detail.proposal_file,
+  ]);
+  state.photosById.set(normalizedId, existing);
+};
+
+const mergeBatchPayload = (state, payload, relativePath, options = {}) => {
+  if (!payload || typeof payload !== "object") return;
+  mergeBatchRecord(state, payload, relativePath);
+  const batchId = String(payload?.batch_id || "").trim();
+  const generatedAt = String(payload?.generated_at || "").trim();
+  const proposalFile = String(payload?.proposal_files?.batch || relativePath || "").trim();
+  for (const item of payload.photos || []) {
+    mergeProposedPhoto(state, item?.photo_id || item?.photoId, {
+      batch_id: batchId,
+      generated_at: generatedAt,
+      proposal_file: proposalFile,
+      clear_rejection: options.clearRejection === true,
+    });
+  }
+};
+
+const createProposalState = () => ({
+  photosById: new Map(),
+  batchesById: new Map(),
+});
+
+const loadProposalState = (queueDir, proposedStatePath) => {
+  const state = createProposalState();
+  const absoluteStatePath = path.join(REPO_ROOT, proposedStatePath);
+  const payload = readJsonFile(absoluteStatePath);
+  if (payload && typeof payload === "object") {
+    for (const photoId of payload.photo_ids || []) {
+      mergeProposedPhoto(state, photoId);
+    }
+    for (const item of payload.photos || []) {
+      mergeProposedPhoto(state, item?.photo_id || item?.photoId, item || {});
+    }
+    for (const batch of payload.batches || []) {
+      mergeBatchRecord(state, { ...batch, photos: new Array(Number(batch?.photo_count || 0)) }, batch?.proposal_files?.[0] || "");
+    }
+  }
+
+  const absoluteQueueDir = path.join(REPO_ROOT, queueDir);
+  if (!fs.existsSync(absoluteQueueDir)) return state;
+  const batchFiles = fs.readdirSync(absoluteQueueDir)
+    .filter((name) => /^batch-\d{4}-\d{2}-\d{2}.*\.json$/i.test(name))
+    .sort();
+  for (const name of batchFiles) {
+    const relativePath = path.join(queueDir, name);
+    const batchPayload = readJsonFile(path.join(REPO_ROOT, relativePath));
+    mergeBatchPayload(state, batchPayload, relativePath);
+  }
+  return state;
+};
+
+const proposalStatePayload = (state) => {
+  const photos = [...state.photosById.values()]
+    .map((item) => ({
+      ...item,
+      state_tags: uniqueValues(item.state_tags || [PROPOSED_FLAG]),
+      proposal_files: uniqueValues(item.proposal_files || []),
+    }))
+    .sort((a, b) => a.photo_id.localeCompare(b.photo_id));
+  const batches = [...state.batchesById.values()]
+    .map((item) => ({
+      ...item,
+      proposal_files: uniqueValues(item.proposal_files || []),
+    }))
+    .sort((a, b) => String(a.batch_id).localeCompare(String(b.batch_id)));
+  return {
+    format: "photosbyelie-title-keyword-proposal-state",
+    schema_version: 1,
+    updated_at: new Date().toISOString(),
+    state_flag: PROPOSED_FLAG,
+    review_flag: REVIEW_FLAG,
+    photo_count: photos.length,
+    photo_ids: photos.map((item) => item.photo_id),
+    photos,
+    batches,
+  };
+};
+
+const writeProposalState = (proposedStatePath, state) => {
+  const outputPath = path.join(REPO_ROOT, proposedStatePath);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, JSON.stringify(proposalStatePayload(state), null, 2) + "\n");
 };
 
 const parseArgs = (argv) => {
-  const args = { limit: DEFAULT_LIMIT };
+  const args = { limit: DEFAULT_LIMIT, includeAlreadyProposed: false, syncProposedStateOnly: false };
   for (let index = 2; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--limit") {
@@ -395,6 +599,14 @@ const parseArgs = (argv) => {
       index += 1;
       const parsed = Number(raw);
       if (Number.isFinite(parsed) && parsed > 0) args.limit = Math.floor(parsed);
+      continue;
+    }
+    if (value === "--include-already-proposed") {
+      args.includeAlreadyProposed = true;
+      continue;
+    }
+    if (value === "--sync-proposed-state-only") {
+      args.syncProposedStateOnly = true;
       continue;
     }
     if (value === "--help" || value === "-h") {
@@ -415,7 +627,9 @@ const localDateString = () => {
 const main = () => {
   const args = parseArgs(process.argv);
   if (args.help) {
-    process.stdout.write("Usage: node scripts/generate_title_keyword_review_queue.mjs [--limit 100]\n");
+    process.stdout.write(
+      "Usage: node scripts/generate_title_keyword_review_queue.mjs [--limit 100] [--include-already-proposed] [--sync-proposed-state-only]\n",
+    );
     process.exit(0);
   }
 
@@ -424,6 +638,17 @@ const main = () => {
   const batchFilename = `batch-${batchId}.json`;
   const batchPath = path.join(queueDir, batchFilename);
   const latestPath = path.join(queueDir, "latest.json");
+  const proposedStatePath = path.join(queueDir, PROPOSED_STATE_FILENAME);
+  const proposedState = loadProposalState(queueDir, proposedStatePath);
+
+  if (args.syncProposedStateOnly) {
+    writeProposalState(proposedStatePath, proposedState);
+    process.stdout.write(
+      `Synced ${proposedState.photosById.size} proposed photo IDs -> ${proposedStatePath}\n` +
+      `Proposal state flag: ${PROPOSED_FLAG}\n`,
+    );
+    process.exit(0);
+  }
 
   const photosData = loadWindowData("photos-data.js", "photosByElieData");
   if (!photosData || typeof photosData !== "object") {
@@ -443,6 +668,7 @@ const main = () => {
   }
 
   const skippedReviewed = [];
+  const skippedProposed = [];
   const candidates = [];
 
   for (const row of flattened) {
@@ -451,12 +677,27 @@ const main = () => {
       skippedReviewed.push(String(photo?.id || ""));
       continue;
     }
+    const stateEntry = proposalStateEntry(photo, proposedState);
+    const reworkPriority = isRejectedForRework(photo, proposedState);
+    if (!args.includeAlreadyProposed && isAlreadyProposed(photo, proposedState) && !reworkPriority) {
+      skippedProposed.push(String(photo?.id || ""));
+      continue;
+    }
     const capture = captureForPhoto(photo);
     const sort = capture.sort || "";
-    candidates.push({ ...row, capture, captureSort: sort || `0000-00-00T00:00:00`, id: String(photo?.id || "") });
+    candidates.push({
+      ...row,
+      capture,
+      captureSort: sort || `0000-00-00T00:00:00`,
+      id: String(photo?.id || ""),
+      reworkPriority,
+      reworkComment: String(stateEntry?.rejection_comment || stateEntry?.latest_rejection_comment || "").trim(),
+      proposalAttempt: Number(stateEntry?.proposal_attempt_count || stateEntry?.rejected_count || 0) + 1,
+    });
   }
 
   candidates.sort((a, b) => {
+    if (a.reworkPriority !== b.reworkPriority) return a.reworkPriority ? -1 : 1;
     const sortCompare = String(b.captureSort).localeCompare(String(a.captureSort));
     if (sortCompare) return sortCompare;
     return String(b.id).localeCompare(String(a.id));
@@ -496,6 +737,12 @@ const main = () => {
       blacklist,
       sourceFile,
     });
+    if (row.reworkPriority) {
+      const comment = row.reworkComment ? ` Owner note: ${row.reworkComment.slice(0, 240)}` : "";
+      proposal.status = proposal.status === "needs_owner_context" ? proposal.status : "rework_requested";
+      proposal.confidence = proposal.confidence === "low" ? "low" : "medium";
+      proposal.reason = `Owner rejected a previous proposal; this photo was prioritized for a new title/keyword attempt.${comment}`;
+    }
 
     return {
       photo_id: String(photo?.id || ""),
@@ -522,6 +769,12 @@ const main = () => {
           type: String(sourceFile?.type || ""),
           bytes: Number(sourceFile?.bytes || 0),
         },
+      },
+      state: {
+        tags: [PROPOSED_FLAG],
+        rework_requested: row.reworkPriority,
+        rework_comment: row.reworkComment,
+        proposal_attempt: row.proposalAttempt,
       },
       current: {
         title: currentTitle,
@@ -552,9 +805,15 @@ const main = () => {
     batch_id: batchId,
     limit: args.limit,
     review_flag: REVIEW_FLAG,
+    proposal_state: {
+      flag: PROPOSED_FLAG,
+      path: proposedStatePath,
+      include_already_proposed: args.includeAlreadyProposed,
+    },
     proposal_files: {
       batch: batchPath,
       latest: latestPath,
+      proposed_state: proposedStatePath,
     },
     range: {
       newest: rangeNewest,
@@ -562,6 +821,7 @@ const main = () => {
     },
     skipped: {
       reviewed: skippedReviewed.filter(Boolean),
+      proposed: skippedProposed.filter(Boolean),
     },
     photos,
   };
@@ -569,12 +829,17 @@ const main = () => {
   fs.mkdirSync(path.join(REPO_ROOT, queueDir), { recursive: true });
   fs.writeFileSync(path.join(REPO_ROOT, batchPath), JSON.stringify(payload, null, 2) + "\n");
   fs.writeFileSync(path.join(REPO_ROOT, latestPath), JSON.stringify(payload, null, 2) + "\n");
+  mergeBatchPayload(proposedState, payload, batchPath, { clearRejection: true });
+  writeProposalState(proposedStatePath, proposedState);
 
   process.stdout.write(
     `Wrote ${photos.length} proposals -> ${batchPath}\n` +
     `Updated latest -> ${latestPath}\n` +
+    `Updated proposed state -> ${proposedStatePath}\n` +
     `Range: ${rangeNewest || "—"} .. ${rangeOldest || "—"}\n` +
-    `Skipped reviewed: ${skippedReviewed.length}\n`,
+    `Skipped reviewed: ${skippedReviewed.length}\n` +
+    `Skipped proposed: ${skippedProposed.length}\n` +
+    `Rework priority: ${batch.filter((row) => row.reworkPriority).length}\n`,
   );
 };
 

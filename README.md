@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v73.8`
+- Current visible version: `v73.9`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -75,7 +75,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, treat Apple Photos album exports under `/Volumes/Saturn/Pictures/LR/Apple Photo Albums` as selected by folder membership, infer country/AI/Unknown buckets, and write watermarked `*_900.jpg` and `*_1800.jpg` pairs into `tmp/import-cache` before upload. RAW/DNG/NEF files are not public-site or cloud-storage inputs.
 - On localhost, `H` or `X` blocks a live-gallery photo by adding it to the blocked blacklist while leaving preview files in place, `U` undoes that block, and `P` on the Blocked page re-promotes a blocked photo by removing it from the blacklist. `D` is the stronger discard action: it removes the photo from active catalog state, writes `assets/discarded/discarded-photo-ids.json`, and queues R2 deletion for matching public previews, private masters, and private render JPGs.
 - On localhost gallery/detail pages, Owner can edit Title and Keywords; saves update the catalog metadata and generated Worker catalog used by checkout deliverables. JPEG/source embedded metadata is left alone because catalog manifests are the authoritative title/keyword source.
-- On the localhost Title/Keywords review page, Owner can review the newest unreviewed proposal batch, approve rows individually or with Approve all, and Save approvals through the helper server. Saving applies approved title/keyword values to generated catalog metadata/state files, writes an approvals audit JSON, and marks applied photos with `Title_Keywords_Reviewed` so future nightly batches skip them. JPEG/source embedded metadata, public previews, private masters, and private render files are left untouched.
+- On the localhost Title/Keywords review page, Owner can review the newest unreviewed proposal batch, approve rows individually or with Approve all, reject rows with an optional rework note, and Save approvals through the helper server. Saving applies approved title/keyword values to generated catalog metadata/state files, writes an approvals/rejections audit JSON, marks applied photos with `Title_Keywords_Reviewed`, and records rejected photos in `proposed-state.json` so a later nightly batch prioritizes them for rework. JPEG/source embedded metadata, public previews, private masters, and private render files are left untouched.
 - `assets/owner-actions/keyword-blacklist.json` is the owner-maintained list of useless keyword strings. Import and export scripts omit those strings from generated keyword metadata and keyword indexes only; the list must not block photos, discard photos, or rewrite JPG/source metadata.
 - Blocked photos do not re-upload public preview objects while they are blacklisted.
 - On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` or `X` blocks it, `U` undoes the last block, and double clicking a thumbnail opens a full-screen preview that dismisses on click.

@@ -185,7 +185,7 @@ node scripts/validate_publish.js --summary
 
 ## Owner Title / Keyword Review Queue
 
-`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` for manual Owner review. It writes proposals to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify JPG/source embedded metadata.
+`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` and the proposal state flag `Title_Keywords_Proposed` for manual Owner review. It writes proposals and proposal-state tracking to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify JPG/source embedded metadata.
 
 Generate (nightly batch):
 
@@ -193,12 +193,14 @@ Generate (nightly batch):
 node scripts/generate_title_keyword_review_queue.mjs --limit 100
 ```
 
+The generator updates `assets/owner-actions/title-keyword-review-queue/proposed-state.json` with `Title_Keywords_Proposed` for every photo that already has a proposal, including IDs found in historical `batch-*.json` files. Use `--sync-proposed-state-only` to backfill that state without replacing the active review batch. Use `--include-already-proposed` only when intentionally regenerating proposals for photos that already have proposal state.
+
 Review on localhost:
 
 - Start the local helper server: `python3 scripts/local_server.py 8000`
 - Open `http://localhost:8000/title-keyword-review.html`
 
-Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, or use Approve all when the whole batch is acceptable. Save approvals requires the helper server; it applies approved title/keyword values to generated catalog metadata/state files, writes an approvals audit JSON under `assets/owner-actions/title-keyword-review-queue/`, and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos.
+Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, or use Approve all when the whole batch is acceptable. Save approvals requires the helper server; it applies approved title/keyword values to generated catalog metadata/state files, writes an approvals/rejections audit JSON under `assets/owner-actions/title-keyword-review-queue/`, records rejected rows in `proposed-state.json` for priority rework, and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos.
 
 The approval apply path is manifest-only. It rewrites generated catalog/state files such as `photos-data.js`, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite JPG/source embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 

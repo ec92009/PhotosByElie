@@ -4,4 +4,5 @@ Process docs that guide local development and handoff work.
 
 - [VERSIONING_SOP.md](VERSIONING_SOP.md): visible version bump rules, adapted from the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`.
 - [IMAGE_INGESTION_SOP.md](IMAGE_INGESTION_SOP.md): repeatable Lightroom import, derivative build, privacy, promotion, and verification workflow.
+- [TITLE_KEYWORD_REVIEW_SOP.md](TITLE_KEYWORD_REVIEW_SOP.md): Owner proposal queue, approve/reject state flags, and nightly rework behavior.
 - [SHOW_ME_SOP.md](../../SHOW_ME_SOP.md): local and public preview reporting workflow.

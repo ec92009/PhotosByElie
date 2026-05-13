@@ -193,10 +193,20 @@
                 <textarea rows="3" data-review-keywords>${escapeHtml(proposedKeywords)}</textarea>
               </label>
           </form>
-          <label class="title-keyword-review-approve">
-            <input type="checkbox" data-review-approve/>
-            <span>Approve</span>
-          </label>
+          <div class="title-keyword-review-approve title-keyword-review-decision">
+            <label>
+              <input type="checkbox" data-review-approve/>
+              <span>Approve</span>
+            </label>
+            <label>
+              <input type="checkbox" data-review-reject/>
+              <span>Reject</span>
+            </label>
+            <label class="title-keyword-review-reject-comment">
+              <span>Reject note</span>
+              <textarea rows="2" data-review-reject-comment placeholder="What should change?"></textarea>
+            </label>
+          </div>
         </article>
       `;
     }).join("");
@@ -219,18 +229,22 @@
 
     const buildApprovalsPayload = () => {
       const approvals = [];
+      const rejections = [];
       for (const [photoId, card] of cardById.entries()) {
-        const approved = Boolean(card.querySelector("[data-review-approve]")?.checked);
-        if (!approved) continue;
         const title = String(card.querySelector("[data-review-title]")?.value || "").trim();
         const keywordsRaw = String(card.querySelector("[data-review-keywords]")?.value || "");
         const keywords = normalizeKeywords(keywordsRaw, blacklist);
-        approvals.push({ photo_id: photoId, approved: true, title, keywords });
+        const comment = String(card.querySelector("[data-review-reject-comment]")?.value || "").trim();
+        const rejected = Boolean(card.querySelector("[data-review-reject]")?.checked);
+        const approved = Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
+        if (approved) approvals.push({ photo_id: photoId, approved: true, title, keywords });
+        if (rejected) rejections.push({ photo_id: photoId, rejected: true, title, keywords, comment });
       }
       return {
         action: "apply-title-keyword-review-approvals",
         batch_id: batchId,
         approvals,
+        rejections,
       };
     };
 
@@ -238,19 +252,21 @@
       cardById.forEach((card) => {
         const checkbox = card.querySelector("[data-review-approve]");
         if (checkbox) checkbox.checked = true;
+        const reject = card.querySelector("[data-review-reject]");
+        if (reject) reject.checked = false;
       });
       if (status) status.textContent = `${photos.length} photos selected for approval.`;
     };
 
     const saveApprovals = async () => {
       const payload = buildApprovalsPayload();
-      if (!payload.approvals.length) {
-        window.alert?.("Select at least one photo to approve.");
+      if (!payload.approvals.length && !payload.rejections.length) {
+        window.alert?.("Select at least one photo to approve or reject.");
         return;
       }
       const confirmed = window.confirm?.(
-        `Apply ${payload.approvals.length} approved title/keyword changes to catalog metadata files?\n\n` +
-        "JPG/source files, public previews, private masters, and render files will not be changed.",
+        `Apply ${payload.approvals.length} approvals and save ${payload.rejections.length} rejections?\n\n` +
+        "Approved rows update catalog metadata. Rejected rows are prioritized for a new proposal. JPG/source files, public previews, private masters, and render files will not be changed.",
       ) ?? true;
       if (!confirmed) return;
       const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
@@ -267,6 +283,7 @@
       }
       window.alert?.(
         `Applied ${result.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
+        `Saved ${result.rejected_count || payload.rejections.length} rejections for proposal rework.\n` +
         `Saved approval record to ${result.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +
         "Run validation and commit the metadata changes when ready.",
       );
@@ -274,12 +291,46 @@
 
     const downloadApprovals = () => {
       const payload = buildApprovalsPayload();
-      if (!payload.approvals.length) {
-        window.alert?.("Select at least one photo to approve.");
+      if (!payload.approvals.length && !payload.rejections.length) {
+        window.alert?.("Select at least one photo to approve or reject.");
         return;
       }
       downloadJson(`title-keyword-review-approvals-${batchId}.json`, payload);
     };
+
+    cardById.forEach((card) => {
+      const approve = card.querySelector("[data-review-approve]");
+      const reject = card.querySelector("[data-review-reject]");
+      const comment = card.querySelector("[data-review-reject-comment]");
+      const syncDecisionState = () => {
+        if (!comment) return;
+        const approved = Boolean(approve?.checked);
+        comment.readOnly = approved;
+        comment.closest("label")?.classList.toggle("is-disabled", approved);
+      };
+      const activateRejectFromComment = () => {
+        if (approve?.checked) approve.checked = false;
+        if (reject) reject.checked = true;
+        syncDecisionState();
+      };
+      approve?.addEventListener("change", () => {
+        if (approve.checked && reject) reject.checked = false;
+        syncDecisionState();
+      });
+      reject?.addEventListener("change", () => {
+        if (reject.checked && approve) approve.checked = false;
+        syncDecisionState();
+      });
+      comment?.addEventListener("input", () => {
+        if (String(comment.value || "").trim()) {
+          activateRejectFromComment();
+        }
+        syncDecisionState();
+      });
+      comment?.addEventListener("focus", activateRejectFromComment);
+      comment?.addEventListener("pointerdown", activateRejectFromComment);
+      syncDecisionState();
+    });
 
     document.querySelectorAll("[data-title-keyword-review-approve-all]").forEach((button) => {
       button.addEventListener("click", approveAll);

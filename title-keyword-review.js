@@ -39,6 +39,17 @@
     .map((part) => part.trim())
     .filter(Boolean);
 
+  const parseCaptureTime = (raw) => {
+    const value = String(raw || "").trim();
+    if (!value) return NaN;
+    const normalized = value.replace(
+      /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/,
+      "$1-$2-$3T$4:$5:$6",
+    );
+    const parsed = Date.parse(normalized);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  };
+
   const downloadJson = (filename, payload) => {
     const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -130,6 +141,7 @@
     const batchId = String(queue?.batch_id || queue?.batchId || "").trim();
     const photos = Array.isArray(queue?.photos) ? queue.photos : [];
     const blacklist = keywordBlacklistSet(blacklistPayload);
+    const shootWindowMs = 2 * 60 * 60 * 1000;
 
     if (!batchId || !photos.length) {
       status.textContent = "Queue is empty.";
@@ -167,6 +179,8 @@
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
       const galleryLabel = String(item?.gallery?.label || item?.gallery_label || item?.gallery_key || "");
+      const galleryKey = String(item?.gallery?.key || item?.gallery_key || item?.gallery?.label || galleryLabel || "");
+      const captureTime = parseCaptureTime(capture);
       const thumb = reviewThumbUrl(item);
       const fetchPriority = index < 12 ? "high" : "low";
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
@@ -174,7 +188,7 @@
       const proposedKeywords = Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords;
       const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
       return `
-        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}">
+        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" tabindex="0">
           <a class="title-keyword-review-preview ${thumb ? "has-image" : "is-missing-preview"}" href="${escapeHtml(href)}" aria-label="Open photo ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
           </a>
@@ -207,6 +221,9 @@
               <textarea rows="2" data-review-reject-comment placeholder="What should change?"></textarea>
             </label>
             <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
+            <div class="title-keyword-review-row-tools">
+              <button type="button" data-review-propagate title="Apply this row's approve/reject choice to the same two-hour shoot window">Propagate</button>
+            </div>
           </div>
         </article>
       `;
@@ -266,6 +283,19 @@
       rowStatus.dataset.state = state;
     };
 
+    let activeCard = null;
+    const editableSelector = "input, textarea, select, button, [contenteditable='true']";
+    const isEditableEventTarget = (event) => {
+      const target = event?.target;
+      return target instanceof HTMLElement && Boolean(target.closest(editableSelector));
+    };
+    const setActiveCard = (card) => {
+      if (!card || activeCard === card) return;
+      activeCard?.classList.remove("is-selected");
+      activeCard = card;
+      activeCard.classList.add("is-selected");
+    };
+
     const postApprovalsPayload = async (payload) => {
       const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
       if (!ok) return null;
@@ -278,6 +308,22 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.ok) {
         throw new Error(result?.error || "Could not save approvals.");
+      }
+      return result;
+    };
+
+    const postPhotoAction = async (action, photoId) => {
+      const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
+      if (!ok) return null;
+      const response = await fetch(approvalsEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action, photo_id: photoId }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || `Could not ${action} photo.`);
       }
       return result;
     };
@@ -316,6 +362,64 @@
           if (status) status.textContent = error?.message || "Could not save row.";
         });
       }, delay));
+    };
+
+    const cardsInShootWindow = (sourceCard) => {
+      const sourceTime = Number(sourceCard.dataset.reviewCaptureTime || "");
+      const sourceGallery = String(sourceCard.dataset.reviewGalleryKey || "");
+      if (!Number.isFinite(sourceTime)) return [sourceCard];
+      return [...cardById.values()].filter((card) => {
+        const cardTime = Number(card.dataset.reviewCaptureTime || "");
+        if (!Number.isFinite(cardTime)) return false;
+        const cardGallery = String(card.dataset.reviewGalleryKey || "");
+        if (sourceGallery && cardGallery && sourceGallery !== cardGallery) return false;
+        return Math.abs(cardTime - sourceTime) <= shootWindowMs;
+      });
+    };
+
+    const propagateDecision = (photoId, card) => {
+      const sourceDecision = buildRowDecision(photoId, card);
+      if (!sourceDecision.approved && !sourceDecision.rejected) {
+        window.alert?.("Choose Approve or Reject before propagating.");
+        return;
+      }
+      const sourceComment = String(card.querySelector("[data-review-reject-comment]")?.value || "");
+      const targets = cardsInShootWindow(card);
+      targets.forEach((targetCard) => {
+        const targetPhotoId = targetCard.getAttribute("data-review-photo-id") || "";
+        const targetApprove = targetCard.querySelector("[data-review-approve]");
+        const targetReject = targetCard.querySelector("[data-review-reject]");
+        const targetComment = targetCard.querySelector("[data-review-reject-comment]");
+        if (sourceDecision.approved) {
+          if (targetApprove) targetApprove.checked = true;
+          if (targetReject) targetReject.checked = false;
+        } else {
+          if (targetApprove) targetApprove.checked = false;
+          if (targetReject) targetReject.checked = true;
+          if (targetComment && sourceComment && !String(targetComment.value || "").trim()) {
+            targetComment.value = sourceComment;
+          }
+        }
+        targetComment?.closest("label")?.classList.toggle("is-disabled", sourceDecision.approved);
+        if (targetComment) targetComment.readOnly = sourceDecision.approved;
+        if (targetPhotoId) scheduleRowSave(targetPhotoId, targetCard, 150);
+      });
+      if (status) status.textContent = `Propagated ${sourceDecision.rejected ? "reject" : "approve"} to ${targets.length} same-shoot rows.`;
+    };
+
+    const blockPhoto = (photoId, card) => {
+      setRowStatus(card, "Blocking...", "saving");
+      postPhotoAction("hide", photoId).then((result) => {
+        if (!result) {
+          setRowStatus(card, "Auth required", "error");
+          return;
+        }
+        card.classList.add("is-owner-actioned");
+        setRowStatus(card, "Blocked", "saved");
+        if (status) status.textContent = `${photoId} moved to Blocked.`;
+      }).catch((error) => {
+        setRowStatus(card, error?.message || "Block failed", "error");
+      });
     };
 
     const approveAll = () => {
@@ -364,6 +468,18 @@
       const comment = card.querySelector("[data-review-reject-comment]");
       const titleInput = card.querySelector("[data-review-title]");
       const keywordInput = card.querySelector("[data-review-keywords]");
+      const propagate = card.querySelector("[data-review-propagate]");
+      card.addEventListener("click", (event) => {
+        const previewLink = event.target instanceof HTMLElement ? event.target.closest(".title-keyword-review-preview") : null;
+        if (previewLink) event.preventDefault();
+        setActiveCard(card);
+      });
+      card.addEventListener("focusin", () => setActiveCard(card));
+      card.addEventListener("dblclick", (event) => {
+        if (isEditableEventTarget(event)) return;
+        const href = card.getAttribute("data-review-detail-href");
+        if (href) window.location.assign(href);
+      });
       const syncDecisionState = () => {
         if (!comment) return;
         const approved = Boolean(approve?.checked);
@@ -402,7 +518,52 @@
       comment?.addEventListener("pointerdown", activateRejectFromComment);
       titleInput?.addEventListener("input", activateApproveFromEdit);
       keywordInput?.addEventListener("input", activateApproveFromEdit);
+      propagate?.addEventListener("click", () => propagateDecision(photoId, card));
       syncDecisionState();
+    });
+
+    const firstCard = cardById.values().next().value;
+    if (firstCard) setActiveCard(firstCard);
+
+    window.addEventListener("keydown", (event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isEditableEventTarget(event) || !activeCard) return;
+      const photoId = activeCard.getAttribute("data-review-photo-id") || "";
+      const key = event.key.toLowerCase();
+      const approve = activeCard.querySelector("[data-review-approve]");
+      const reject = activeCard.querySelector("[data-review-reject]");
+      const comment = activeCard.querySelector("[data-review-reject-comment]");
+      if (key === "a") {
+        if (approve) approve.checked = true;
+        if (reject) reject.checked = false;
+        if (comment) {
+          comment.readOnly = true;
+          comment.closest("label")?.classList.add("is-disabled");
+        }
+        scheduleRowSave(photoId, activeCard, 150);
+        event.preventDefault();
+        return;
+      }
+      if (key === "r") {
+        if (approve) approve.checked = false;
+        if (reject) reject.checked = true;
+        if (comment) {
+          comment.readOnly = false;
+          comment.closest("label")?.classList.remove("is-disabled");
+        }
+        scheduleRowSave(photoId, activeCard, 150);
+        event.preventDefault();
+        return;
+      }
+      if (key === "p") {
+        propagateDecision(photoId, activeCard);
+        event.preventDefault();
+        return;
+      }
+      if (key === "h" || key === "x") {
+        blockPhoto(photoId, activeCard);
+        event.preventDefault();
+      }
     });
 
     document.querySelectorAll("[data-title-keyword-review-approve-all]").forEach((button) => {

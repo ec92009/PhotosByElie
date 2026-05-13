@@ -6,19 +6,20 @@
   const controls = document.querySelector("[data-owner-controls]");
   const locked = document.querySelector("[data-owner-locked]");
   const status = document.querySelector("[data-owner-status]");
-  const countsRoot = document.querySelector("[data-owner-counts]");
   const unknownCountRoot = document.querySelector("[data-owner-unknown-count]");
   const hiddenCountRoot = document.querySelector("[data-owner-hidden-count]");
   const discardedCountRoot = document.querySelector("[data-owner-discarded-count]");
   const originCameraCountRoot = document.querySelector("[data-owner-origin-camera-count]");
   const originAiCountRoot = document.querySelector("[data-owner-origin-ai-count]");
   const originAiShareRoot = document.querySelector("[data-owner-origin-ai-share]");
+  const overviewAnalyzedCountRoot = document.querySelector("[data-owner-overview-analyzed-count]");
+  const overviewBasketCountRoot = document.querySelector("[data-owner-overview-basket-count]");
+  const overviewExpoCountRoot = document.querySelector("[data-owner-overview-expo-count]");
+  const catalogPieRoot = document.querySelector("[data-owner-catalog-pie]");
   const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
-  const blockedPublishedCountRoot = document.querySelector("[data-owner-blocked-published-count]");
   const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
   const blockedPreviewNoteRoot = document.querySelector("[data-owner-blocked-preview-note]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
-  const publishHiddenBlacklistButton = document.querySelector("[data-owner-publish-hidden-blacklist]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
   const physicalProductsToggle = document.querySelector("[data-owner-physical-products]");
   const r2CoverageCard = document.querySelector("[data-owner-r2-coverage-card]");
@@ -136,6 +137,21 @@
     if (originCameraCountRoot) originCameraCountRoot.textContent = formatCount(counts.camera);
     if (originAiCountRoot) originAiCountRoot.textContent = formatCount(counts.ai);
     if (originAiShareRoot) originAiShareRoot.textContent = total ? `${Math.round((counts.ai / total) * 100)}%` : "0%";
+    return { ...counts, total };
+  };
+
+  const renderCatalogPie = ({ camera = 0, ai = 0, basket = 0, analyzed = 0 } = {}) => {
+    if (!catalogPieRoot) return;
+    const total = Math.max(0, camera + ai + basket);
+    const cameraDeg = total ? (camera / total) * 360 : 0;
+    const aiDeg = total ? ((camera + ai) / total) * 360 : cameraDeg;
+    catalogPieRoot.style.setProperty("--owner-camera-end", `${cameraDeg}deg`);
+    catalogPieRoot.style.setProperty("--owner-ai-end", `${aiDeg}deg`);
+    catalogPieRoot.toggleAttribute("data-empty", !total);
+    catalogPieRoot.setAttribute(
+      "aria-label",
+      `Catalog split: ${formatCount(camera)} camera, ${formatCount(ai)} AI, ${formatCount(basket)} in basket, ${formatCount(analyzed)} analyzed.`
+    );
   };
 
   window.addEventListener("photosbyelie:ownerbusychange", (event) => {
@@ -380,7 +396,7 @@
   };
 
   const renderCounts = () => {
-    if (!countsRoot || !hiddenActions?.enabled) return;
+    if (!hiddenActions?.enabled) return;
     const hiddenIds = hiddenActions.read();
     const hiddenCount = hiddenIds.length;
     const expoTotal = countPhotos(collections);
@@ -389,20 +405,18 @@
     const expoActive = Math.max(0, expoTotal - blockedInExpo);
     const analyzedTotal = expoActive + hiddenCount;
     const queue = unknownQueueState();
-    renderOriginSplit(hiddenIds);
+    const originCounts = renderOriginSplit(hiddenIds);
+    renderCatalogPie({
+      camera: originCounts.camera,
+      ai: originCounts.ai,
+      basket: hiddenCount,
+      analyzed: analyzedTotal,
+    });
     if (unknownCountRoot) unknownCountRoot.textContent = String(queue.visible.length);
     if (hiddenCountRoot) hiddenCountRoot.textContent = String(hiddenCount);
-    const counts = [
-      { label: "Analyzed", value: formatCount(analyzedTotal) },
-      { label: "Blacklisted", value: formatCount(hiddenCount) },
-      { label: "Expo", value: formatCount(expoActive), className: "is-expo" },
-    ];
-    countsRoot.innerHTML = counts.map(({ label, value, className }) => `
-      <div${className ? ` class="${className}"` : ""}>
-        <dt>${label}</dt>
-        <dd>${value}</dd>
-      </div>
-    `).join("");
+    if (overviewAnalyzedCountRoot) overviewAnalyzedCountRoot.textContent = formatCount(analyzedTotal);
+    if (overviewBasketCountRoot) overviewBasketCountRoot.textContent = formatCount(hiddenCount);
+    if (overviewExpoCountRoot) overviewExpoCountRoot.textContent = formatCount(expoActive);
     if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount(hiddenCount);
   };
 
@@ -417,17 +431,6 @@
       blockedPreviewNoteRoot.textContent = blockedCloudMedia
         ? `${formatCount(blockedCloudMedia)} cloud media copies for basketed photos are still present. Empty the basket to purge them and keep tombstones.`
         : "Basketed photos no longer have cloud media copies in R2.";
-    }
-    if (!blockedPublishedCountRoot) return;
-    try {
-      const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
-      const response = await fetch(href, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Master blacklist ${response.status}`);
-      const payload = await response.json();
-      const ids = new Set((Array.isArray(payload.photo_ids) ? payload.photo_ids : []).filter(Boolean));
-      blockedPublishedCountRoot.textContent = formatCount(ids.size);
-    } catch {
-      blockedPublishedCountRoot.textContent = "0";
     }
   };
 
@@ -797,18 +800,18 @@
       return;
     }
     const activeCatalogPhotos = Number(coverage.activeCatalogPhotos || coverage.catalogPhotos || 0);
-    const blockedCatalogPhotos = Number(coverage.blockedCatalogPhotos || 0);
+    const basketCatalogPhotos = Number(coverage.blockedCatalogPhotos || 0);
     r2CoverageSummary.textContent = coverage.ok
-      ? blockedCatalogPhotos
-        ? `Current catalog policy is satisfied for ${formatCount(activeCatalogPhotos)} active photos; ${formatCount(blockedCatalogPhotos)} blocked photos are excluded.`
-        : `Current catalog policy is satisfied for ${formatCount(activeCatalogPhotos)} photos.`
+      ? basketCatalogPhotos
+        ? `Coverage is satisfied for ${formatCount(activeCatalogPhotos)} active photos; ${formatCount(basketCatalogPhotos)} Waste Basket photos are excluded.`
+        : `Coverage is satisfied for ${formatCount(activeCatalogPhotos)} active photos.`
       : `Coverage needs repair for ${formatCount(activeCatalogPhotos)} active catalog photos.`;
     window.photosByElieR2Coverage = coverage;
     r2CoverageCounts.innerHTML = (coverage.rows || []).map((row) => {
       const detail = [
         row.missing ? `${formatCount(row.missing)} active missing` : "active complete",
-        row.blockedExcluded ? `${formatCount(row.blockedExcluded)} blocked excluded` : "",
-        row.blockedPresent ? `${formatCount(row.blockedPresent)} blocked still present` : "",
+        row.blockedExcluded ? `${formatCount(row.blockedExcluded)} Waste Basket excluded` : "",
+        row.blockedPresent ? `${formatCount(row.blockedPresent)} Waste Basket copies still present` : "",
         row.extra ? `${formatCount(row.extra)} extra` : "",
       ].filter(Boolean).join(", ");
       return `
@@ -820,8 +823,8 @@
       `;
     }).join("");
     r2CoverageNote.textContent = coverage.ok
-      ? blockedCatalogPhotos
-        ? "Policy is satisfied for active catalog photos; blocked media is intentionally absent from R2 coverage."
+      ? basketCatalogPhotos
+        ? "Active catalog coverage is satisfied; Waste Basket media is excluded from repair targets."
         : "Policy is satisfied for the current catalog."
       : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
@@ -865,11 +868,11 @@
     try {
       if (kind === "counts") {
         await refreshCountsFromSource();
-        setStatus("Current state refreshed.");
+        setStatus("Catalog mix refreshed.");
       } else if (kind === "blocked-sync") {
         await loadR2Coverage();
         await refreshBlockedSyncPanel();
-      setStatus("Waste Basket cleanup refreshed.");
+        setStatus("Waste Basket cleanup refreshed.");
       } else if (kind === "coverage") {
         await loadR2Coverage();
         setStatus("R2 catalog coverage refreshed.");
@@ -956,22 +959,6 @@
     }
   });
 
-  publishHiddenBlacklistButton?.addEventListener("click", async () => {
-    publishHiddenBlacklistButton.disabled = true;
-    setStatus("Protecting the Waste Basket...");
-    try {
-      await hiddenActions.publishHiddenBlacklist?.();
-      renderCounts();
-      await refreshBlockedSyncPanel();
-      loadR2Progress();
-      setStatus("Waste Basket protection queued for R2.");
-    } catch (error) {
-      setStatus(error?.message || "Could not protect the Waste Basket.");
-    } finally {
-      publishHiddenBlacklistButton.disabled = false;
-    }
-  });
-
   keywordBlacklistForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const terms = normalizeKeywordTerms([keywordBlacklistInput?.value || ""]);
@@ -992,12 +979,13 @@
     wipeHiddenR2Button.disabled = true;
     setStatus("Queueing Waste Basket cloud media purge...");
     try {
-      await hiddenActions.wipeHiddenR2?.();
+      const result = await hiddenActions.wipeHiddenR2?.();
       renderCounts();
+      await refreshDiscardedCount();
       await loadR2Coverage();
       await refreshBlockedSyncPanel();
       loadR2Progress();
-      setStatus("Waste Basket cloud media purge queued.");
+      setStatus(`Waste Basket emptied: ${formatCount(result?.hidden_count || 0)} in basket, ${formatCount(result?.discarded_count || 0)} tombstones.`);
     } catch (error) {
       setStatus(error?.message || "Could not queue Waste Basket cloud media purge.");
     } finally {

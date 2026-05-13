@@ -464,3 +464,22 @@ _No David automation results recorded yet._
 - Pushed commit: 979de98c photosbyelie: unify waste basket cleanup.
 - Checks passed: node --check for touched JS, python3 -m py_compile scripts/local_server.py, git diff --check, and browser smoke checks for Owner/Waste Basket wording.
 - Known unrelated validation issues remain: npm test fails checkout pricing assertions; npm run validate fails existing catalog/media-origin validation across generated catalog files. These were not caused by this Waste Basket patch and were left unstaged.
+
+## 2026-05-13 - Waste Basket docs refresh
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Refreshed `SUMMARY.md` and `TODO.md` around the current Waste Basket model and latest visible build `v74.25`.
+- Captured decisions:
+  - Owner-facing model is Waste Basket, not generic blocked/discarded state.
+  - The extra Owner-facing `Protect basket` action is removed from the main model; basket/put-back is the live blacklist boundary.
+  - `Empty basket` deletes public previews, private masters, and private render triplets, then leaves tombstones/blacklist state so the same undesirable masters do not return.
+  - The 24-hour automatic undo-window idea was dropped; the Owner decides when to empty the basket.
+  - The user’s spec/design framing is now preserved in `SUMMARY.md`.
+- Owner UI refresh:
+  - Combined `Camera / AI split` and `Current state` into a single `Catalog mix` card with a pie chart.
+  - Removed `Protect basket` from the primary Waste Basket controls.
+  - Rephrased Owner-facing R2 coverage copy from `blocked` to `Waste Basket`.
+  - Empty basket now explicitly refreshes the basket count, tombstone count, and cloud-media count after the helper returns.
+- Backlog refreshed with validation/catalog reconciliation first, Title/Keywords state second, and safe Waste Basket emptying verification third.
+- Notes: Dirty local Owner/generated state and unrelated State TSV docs/scripts remain unstaged.

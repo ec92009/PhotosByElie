@@ -7,56 +7,47 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.23`
+- Current visible build: `v74.25`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
-- Handoff direction is hostname-based: Max reads `DAVID2MAX.md` and writes `MAX2DAVID.md`; David reads `MAX2DAVID.md` and writes `DAVID2MAX.md`.
-- Public previews now resolve from R2/CDN keys only; do not restore local `assets/expo` or `assets/reserve` preview folders.
-- Public previews, private masters, private render JPGs, and source/JPG embedded metadata remain immutable after upload. Owner title/keyword work updates generated catalog/manifest files and owner-action JSON only.
-- There is dirty local Owner-generated state from live review interactions. Do not revert or stage it casually:
-  - `assets/owner-actions/title-keyword-review-queue/proposed-state.json`
-  - `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`
-- Repo-wide `npm test` and `npm run validate` are currently passing after the R2 cleanup/backfill pass.
+- Handoff direction on David: read `MAX2DAVID.md` as inbound context and write David reports to `DAVID2MAX.md`.
+- Public previews resolve from R2/CDN keys. Do not restore local `assets/expo` or `assets/reserve` preview folders.
+- Uploaded public previews, private masters, private render JPGs, and source/JPG embedded metadata are treated as immutable media except for explicit Waste Basket/discard cleanup.
+- Title/keyword work updates generated catalog/manifest files and tracked owner-action JSON; it must not rewrite image metadata.
+- There is dirty local Owner/generated state from live review and catalog work. Do not revert or stage it casually.
+- Current known unrelated failures:
+  - `npm test` fails checkout pricing assertions.
+  - `npm run validate` reports existing generated catalog/media-origin/public-preview key issues.
 
 ## Recent Conversation
 
-- Built out the Title/Keywords Owner approval queue from a static proposal page into a working localhost review workflow.
-- The nightly proposal generator writes tracked JSON under `assets/owner-actions/title-keyword-review-queue/`, skips `Title_Keywords_Reviewed`, avoids using the keyword blacklist to skip photos, and only uses the blacklist to remove useless proposed keywords.
-- The review page remains compact: one photo per row with four conceptual columns: preview, current title/keywords, proposed title/keywords, and decision controls.
-- Decision controls now include side-by-side Approve/Reject checkboxes, a vertical reject note, per-row status, and an explicit Propagate button under the status.
-- Editing proposed title/keywords automatically checks Approve and queues a row save.
-- Typing or interacting with the reject note checks Reject and unchecks Approve. Clicking Approve does not erase an existing comment; it greys/read-onlys the comment until the Owner interacts with it again.
-- Rows autosave individually. The top/bottom Save approvals buttons remain as retries/manual batch saves.
-- Row autosaves write/merge `approvals-<batch>.json` by `photo_id`; the helper now uses unique temp filenames to avoid concurrent autosave races.
-- Approved rows apply title/keyword values to generated catalog/state files and add `Title_Keywords_Reviewed`.
-- Rejected rows update `proposed-state.json` with rejection/rework priority and keep the Owner comment for the next proposal attempt.
-- Saved approvals/rejections stay visible during the current page session. When the Owner leaves or reloads the approval page, the page reads `approvals-<batch>.json` and hides already-saved approved/rejected rows.
-- H/X on the review page are keyboard shortcuts for Block/Blocked, not discard. Blocked rows disappear immediately after the helper confirms success, and the helper now writes blocked rows into the batch approval record so reloads keep them filtered out.
-- Proposed review keywords are normalized case-insensitively, deduplicated, and filtered against `assets/owner-actions/keyword-blacklist.json` both when rendered on the page and when saved/applied by the helper.
-- Single-click selects a review row without navigation. Double-click opens the photo detail page.
-- Keyboard shortcuts on the review page:
-  - `A`: approve selected row
-  - `R`: reject selected row
-  - `P`: propagate selected row's approve/reject state to same-gallery rows within a two-hour capture window
-  - `H` / `X`: block selected row
-  - arrow keys: select previous/next row
-  - double-click: detail
-- Title/Keywords batch toolbar now uses explicit labels: `Approve visible` selects and autosaves visible rows, `Apply selected` performs the catalog metadata apply for checked approvals/rejections, `Export selected JSON` downloads the selected rows, and `Open proposal JSON` opens the raw proposal file.
-- Blocked Owner review now restores the shared Grid/Fit controls and renders blocked photos in 160-card pages with `Load more`, avoiding the blank/stalled full-catalog render.
-- Shared gallery cards now replace broken public preview URLs with a compact `Preview unavailable` tile so old hidden/reserve rows with missing R2 previews do not spill long alt text into the grid.
-- Gallery Fit mode has the panorama span hook restored: panorama cards set `--gallery-column-span` from the layout controller and CSS now applies it with `grid-column: span ...`, so panos can use the full grid width again.
-- Gallery Grid/Fit/Fill controls now sit in the sticky header band on desktop, while the basket rail starts lower to avoid overlap.
-- Owner policy decision: Blocked/Discarded preview media exists only to support a short undo window. The default retention target is 24 hours; afterward, cleanup should delete preview derivatives and retain only the durable blocked/discarded id plus the blacklisted master/source path.
-- Owner page comments were addressed:
-  - Classification eyebrow now says `Country Classification`.
-  - Title/Keywords card no longer implies the queue is always exactly 100 rows.
-  - Owner busy/status text is clearer for long-running actions.
-  - Blocked sync explains why `0` previews still public is good.
-  - Price list copy explicitly says dollars / USD.
-- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.23`.
-- Max's latest GitHub handoff was completed on David: R2-only preview cleanup plus R2 public-preview audit/backfill.
-- R2 audit/backfill result: `5,844` public photos, `11,688` expected preview keys, `24` true initial missing keys, `24` uploaded from `tmp/import-cache`, `0` final missing after repaired-key HEAD verification.
-- Cleanup result: `assets/expo` and `assets/reserve` are absent; `assets/hidden` keeps only `hidden-blacklist.json` and `hidden-data.json`.
-- `scripts/export_photos_data.py` no longer regenerates per-country `.gitkeep` placeholder folders.
+- Restored and then unified Blocked/Waste Basket review behavior.
+- Owner-facing name is now `Waste Basket`.
+- The separate blocked-sync/public-cleanup panel was merged into the Waste Basket card.
+- Waste Basket now exposes one owner workflow:
+  - `Review`: inspect unwanted photos.
+  - `Empty basket`: purge public previews, private masters, and private render triplets for basketed photos, then leave blacklist/discard tombstones so those masters do not return.
+- The extra Owner-facing `Protect basket` action was removed from the main model. Basket/put-back is the live blacklist boundary; emptying is the permanent tombstone/media deletion boundary.
+- The blacklist/tombstone meaning is now explicit: “do not make that mistake again.”
+- `P` on the Waste Basket page means `Put back`.
+- `D` discards a selected basket item and leaves a tombstone.
+- The earlier idea of a 24-hour automatic undo window was dropped. The owner decides when to take out the trash.
+- Waste Basket page now shares the normal gallery paging shape:
+  - 24 items initially.
+  - external `Show more` and `Show all` controls.
+  - shared Grid/Fit/Fill floating-control positioning.
+  - shared card rendering with broken preview fallback.
+- Owner dashboard combines Camera/AI and current catalog state into one `Catalog mix` card with a pie chart and raw counts.
+- Owner-facing R2 coverage copy now says `Waste Basket` instead of `blocked`.
+- Empty basket refreshes `In basket`, `Cloud media left`, and `Tombstones` immediately after the helper returns.
+- Gallery Fit mode has the panorama span hook restored, so pano cards can span the full grid width in Fit mode.
+- Gallery Grid/Fit/Fill controls now sit in the sticky header band when there is room and avoid the basket rail.
+- Owner page language was simplified around the Waste Basket mental model instead of implementation terms like blocked sync.
+- Title/Keywords review queue remains helper-server backed with autosave approve/reject/comment/edit, H/X block shortcuts, `A`/`R`/`P` shortcuts, row selection, and saved-row filtering after reload.
+- Proposed title/keyword keywords are still normalized, deduped, and filtered through `assets/owner-actions/keyword-blacklist.json`.
+- User articulated a useful working distinction:
+  - Spec: imagine the new behavior and describe what it should do.
+  - Design: make it happen with existing parts and as few new components as possible.
+- Waste Basket was treated as a design exercise over existing hidden/blocked catalog, blacklist JSON, discard tombstones, and R2 delete tasks rather than a new subsystem.
 
 ## Important Safeguards
 
@@ -64,44 +55,54 @@ Date: 2026-05-13
 - Do not use `assets/owner-actions/keyword-blacklist.json` to filter photos. Use it only to prevent proposed/generated keywords from containing blacklisted terms.
 - Do not auto-apply generated proposals. Only Owner review actions should apply catalog metadata.
 - Keep approval/rejection/proposal records in tracked owner-action JSON, not image files.
-- Treat `hide` as the internal helper action name for owner-facing Blocked/Block. Treat `discard` as the separate stronger removal/tombstone/media-cleanup path.
-- Blocked/Discarded preview media should be retained only for a short undo window, defaulting to 24 hours. After that, public/private preview derivatives can be purged; durable state should keep the blocked/discarded photo id and the blacklisted master/source path needed to prevent resurrection.
-- Run `npm test` and `npm run validate` before committing generated metadata or behavior changes once the local dirty catalog state is reconciled.
-- R2 cleanup/backfill verification passed `npm test` and `npm run validate` on 2026-05-13.
-
-## Fresh Numbered Backlog
-
-1. Implement the 24-hour Blocked/Discarded preview cleanup queue while keeping id + master/source-path tombstones.
-2. Reconcile the dirty Owner-generated title/keyword review state.
-3. Regenerate and validate the next Title/Keywords queue after reconciled approvals/rejections.
-4. Add a true vision-capable proposal pass for title/keyword generation.
-5. Add an Owner review batch summary panel.
-6. Add a slow, resumable full R2 HEAD audit script so future audits avoid `429` noise.
-7. Move public media from `r2.dev` to a custom media domain.
-8. Prove Stripe checkout in test mode.
-9. Make checkout and delivery production-durable.
-10. Package the buyer offer clearly.
-11. Move prices into a dedicated published price list.
-12. Curate the first sellable storefront.
-13. Add conversion analytics.
-14. Improve public discovery and SEO.
-15. Build marketing landing pages.
-16. Split gallery/catalog data by collection.
-17. Refine gallery merchandising layout.
-18. Replace keyword cleanup with a modal workflow.
-19. Make country collections open-ended.
-20. Extend Owner operations dashboard.
-21. Harden Owner identity and publish validation.
+- Treat `hide` / blocked internals as the implementation behind owner-facing Waste Basket behavior.
+- Treat `discard` and `Empty basket` as stronger cleanup/tombstone paths.
+- Empty basket must preserve enough blacklist/tombstone state to prevent future imports/renders from resurrecting the same undesirable masters.
+- Run targeted syntax checks before committing JS/Python behavior changes.
+- Run `npm test` and `npm run validate` before committing generated metadata once the current catalog/pricing validation issues are reconciled.
 
 ## Verification Snapshot
 
-- Latest completed handoff commit: `f70c4d18 photosbyelie: report blocked review fix`.
-- Browser check for `v74.4` showed the review page loading successfully and filtering saved rows from the current local approval record.
-- Browser check for `v74.21` showed `owner-review.html?view=blocked` loading with the blocked heading, grid controls, visible photo cards, missing-preview fallbacks, and a `Load more` control.
-- `node --check title-keyword-review.js` passed for the saved-row policy change.
-- `node --check hidden-page.js`, `npm test`, and `npm run validate` passed for the blocked-page pagination/control restoration.
-- R2 cleanup/backfill checks:
-  - Required grep: only hidden JSON-state references and prompt text remain.
-  - Final repaired-key HEAD check: `24/24` HTTP `200`.
-  - `npm test`: OK.
-  - `npm run validate`: OK.
+- Base Waste Basket cleanup commit: `979de98c photosbyelie: unify waste basket cleanup`.
+- Latest report commit: `e3199bb6 photosbyelie: report waste basket cleanup`.
+- Browser smoke checks on localhost `v74.25` verified Owner/Waste Basket wording.
+- Passed:
+  - `node --check hidden-actions.js`
+  - `node --check hidden-page.js`
+  - `node --check owner.js`
+  - `node --check photo-gallery.js`
+  - `node --check photos.js`
+  - `node --check title-keyword-review.js`
+  - `python3 -m py_compile scripts/local_server.py`
+  - `git diff --check`
+- Known unrelated failures:
+  - `npm test`: checkout pricing assertions.
+  - `npm run validate`: generated catalog/source-origin/public-preview key validation issues.
+
+## Fresh Numbered Backlog
+
+1. Reconcile current generated catalog and checkout-pricing test failures.
+2. Decide whether to keep and commit the dirty Owner approval/generated state.
+3. Verify Waste Basket basket/put-back/empty behavior end to end on a small safe test set before using it broadly.
+4. Regenerate and validate the next Title/Keywords queue after state reconciliation.
+5. Add a true vision-capable proposal pass for title/keyword generation.
+6. Prove Stripe checkout in test mode.
+7. Make checkout and delivery production-durable.
+8. Package the buyer offer clearly.
+9. Publish a real price and offer strategy.
+10. Curate the first sellable storefront.
+11. Add conversion analytics.
+12. Improve public discovery and SEO.
+13. Create marketing landing pages.
+14. Prepare launch and sales outreach.
+15. Replace temporary `r2.dev` media URL with a custom media domain.
+16. Split gallery/catalog data by collection.
+17. Refine gallery merchandising layout.
+18. Add buyer account or order recovery only if needed.
+19. Decide when physical goods return.
+20. Replace keyword removal with Owner keyword cleanup modal.
+21. Make country collections open-ended.
+22. Add gallery multi-select Owner metadata edits.
+23. Extend Owner operations dashboard.
+24. Harden owner identity and publish validation.
+25. Add an Owner state-table browser.

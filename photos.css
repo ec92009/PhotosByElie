@@ -703,6 +703,82 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-compact-counts dd{
   font-size:1.05rem;
 }
+.owner-card-overview{
+  grid-column:span 2;
+}
+.owner-overview-layout{
+  display:grid;
+  grid-template-columns:minmax(128px,160px) minmax(0,1fr);
+  gap:16px;
+  align-items:center;
+}
+.owner-catalog-pie{
+  --owner-camera-end:0deg;
+  --owner-ai-end:0deg;
+  position:relative;
+  display:grid;
+  width:min(160px,100%);
+  aspect-ratio:1;
+  place-items:center;
+  border-radius:50%;
+  background:
+    conic-gradient(
+      color-mix(in srgb,var(--text) 86%,#4d89c8) 0deg var(--owner-camera-end),
+      #2f8f5b var(--owner-camera-end) var(--owner-ai-end),
+      #b23b3b var(--owner-ai-end) 360deg
+    );
+  box-shadow:inset 0 0 0 1px var(--line);
+}
+.owner-catalog-pie[data-empty]{
+  background:var(--surface-2);
+}
+.owner-catalog-pie::after{
+  content:"";
+  position:absolute;
+  inset:22%;
+  border-radius:50%;
+  background:var(--bg);
+  box-shadow:0 0 0 1px var(--line);
+}
+.owner-catalog-pie > div{
+  position:relative;
+  z-index:1;
+  display:grid;
+  gap:2px;
+  place-items:center;
+  text-align:center;
+}
+.owner-catalog-pie strong{
+  font-size:clamp(1.1rem,2.2vw,1.55rem);
+  line-height:1;
+}
+.owner-catalog-pie span{
+  color:var(--muted);
+  font-size:.7rem;
+  font-weight:800;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+.owner-overview-counts{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.owner-overview-counts .is-camera{
+  border-top-color:color-mix(in srgb,var(--text) 55%,var(--line));
+}
+.owner-overview-counts .is-ai,
+.owner-overview-counts .is-expo{
+  border-top-color:color-mix(in srgb,#2f8f5b 68%,var(--line));
+}
+.owner-overview-counts .is-basket{
+  border-top-color:color-mix(in srgb,#b23b3b 68%,var(--line));
+}
+.owner-overview-counts .is-ai dd,
+.owner-overview-counts .is-expo dd{
+  color:color-mix(in srgb,#2f8f5b 84%,var(--text));
+}
+.owner-overview-counts .is-basket dd{
+  color:color-mix(in srgb,#b23b3b 84%,var(--text));
+}
 .owner-origin-actions{
   display:flex;
   flex-wrap:wrap;
@@ -2820,6 +2896,16 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   .owner-grid{
     grid-template-columns:1fr;
+  }
+  .owner-card-overview{
+    grid-column:span 1;
+  }
+  .owner-overview-layout{
+    grid-template-columns:1fr;
+  }
+  .owner-catalog-pie{
+    width:min(180px,70vw);
+    justify-self:center;
   }
   .owner-counts{
     grid-template-columns:1fr;

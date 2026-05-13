@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=74.24"/>
-  <link rel="stylesheet" href="./styles.css?v=74.24"/>
-  <link rel="stylesheet" href="./photos.css?v=74.24"/>
+  <link rel="stylesheet" href="./shared.css?v=74.25"/>
+  <link rel="stylesheet" href="./styles.css?v=74.25"/>
+  <link rel="stylesheet" href="./photos.css?v=74.25"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v74.24</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v74.25</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -72,27 +72,48 @@
         <article class="owner-card">
           <p class="eyebrow">Provenance</p>
           <h2>Country metadata</h2>
-          <p>Stamp each gallery photo with its country in the catalog, local image metadata, and queued cloud copies.</p>
+          <p>Write country assignments into the catalog, local metadata, and queued cloud updates.</p>
           <button class="btn secondary" type="button" data-owner-sync-country-keywords>Sync country metadata</button>
         </article>
-        <article class="owner-card">
-          <p class="eyebrow">Provenance</p>
-          <h2>Camera / AI split</h2>
-          <p>Origin is resolved for each photo so gallery filters, pricing, and checkout stay separated.</p>
-          <dl class="owner-counts owner-compact-counts">
+        <article class="owner-card owner-card-wide owner-card-overview">
+          <div class="owner-card-titlebar">
             <div>
-              <dt>Camera</dt>
-              <dd data-owner-origin-camera-count>0</dd>
+              <p class="eyebrow">Counts</p>
+              <h2>Catalog mix</h2>
             </div>
-            <div>
-              <dt>AI</dt>
-              <dd data-owner-origin-ai-count>0</dd>
+            <button class="owner-refresh-button" type="button" data-owner-refresh="counts" aria-label="Refresh catalog mix" title="Refresh catalog mix"><span aria-hidden="true">↻</span></button>
+          </div>
+          <p>Active Camera and AI photos share the catalog with the Waste Basket.</p>
+          <div class="owner-overview-layout">
+            <div class="owner-catalog-pie" data-owner-catalog-pie aria-label="Catalog split pie chart">
+              <div>
+                <strong data-owner-overview-analyzed-count>0</strong>
+                <span>analyzed</span>
+              </div>
             </div>
-            <div>
-              <dt>AI share</dt>
-              <dd data-owner-origin-ai-share>0%</dd>
-            </div>
-          </dl>
+            <dl class="owner-counts owner-overview-counts">
+              <div class="is-camera">
+                <dt>Camera</dt>
+                <dd data-owner-origin-camera-count>0</dd>
+              </div>
+              <div class="is-ai">
+                <dt>AI</dt>
+                <dd data-owner-origin-ai-count>0</dd>
+              </div>
+              <div class="is-basket">
+                <dt>In basket</dt>
+                <dd data-owner-overview-basket-count>0</dd>
+              </div>
+              <div class="is-expo">
+                <dt>Expo</dt>
+                <dd data-owner-overview-expo-count>0</dd>
+              </div>
+              <div>
+                <dt>AI share</dt>
+                <dd data-owner-origin-ai-share>0%</dd>
+              </div>
+            </dl>
+          </div>
           <div class="owner-origin-actions">
             <a class="btn secondary" href="./gallery.html?gallery=france">Camera galleries</a>
             <a class="btn secondary" href="./gallery.html?gallery=ai">AI images</a>
@@ -115,15 +136,11 @@
             </div>
             <button class="owner-refresh-button" type="button" data-owner-refresh="blocked-sync" aria-label="Refresh Waste Basket" title="Refresh Waste Basket"><span aria-hidden="true">↻</span></button>
           </div>
-          <p>Unwanted photos stay here until you put them back or empty them. Emptying purges their cloud previews, private master, and render triplets, then leaves blacklist tombstones so the same masters do not return.</p>
+          <p>Unwanted photos stay here until you put them back or empty them. Basketed photos are live-blacklisted for undo; emptying deletes cloud copies and leaves permanent tombstones.</p>
           <dl class="owner-counts owner-compact-counts">
             <div>
               <dt>In basket</dt>
               <dd data-owner-hidden-count data-owner-blocked-local-count>0</dd>
-            </div>
-            <div>
-              <dt>Protected</dt>
-              <dd data-owner-blocked-published-count>0</dd>
             </div>
             <div>
               <dt>Cloud media left</dt>
@@ -137,19 +154,8 @@
           <p class="owner-card-note" data-owner-blocked-preview-note>0 means basketed photos no longer have cloud media copies in R2.</p>
           <div class="owner-card-actions">
             <a class="btn secondary" href="./owner-review.html?view=blocked">Review</a>
-            <button class="btn secondary" type="button" data-owner-publish-hidden-blacklist>Protect basket</button>
             <button class="btn secondary danger" type="button" data-owner-wipe-hidden-r2>Empty basket</button>
           </div>
-        </article>
-        <article class="owner-card owner-card-wide">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Counts</p>
-              <h2>Current state</h2>
-            </div>
-            <button class="owner-refresh-button" type="button" data-owner-refresh="counts" aria-label="Refresh current state" title="Refresh current state"><span aria-hidden="true">↻</span></button>
-          </div>
-          <dl class="owner-counts" data-owner-counts></dl>
         </article>
         <article class="owner-card owner-card-wide owner-card-cloud-coverage" data-owner-r2-coverage-card>
           <div class="owner-card-titlebar">
@@ -199,14 +205,14 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=74.24"></script>
-  <script src="./photos.js?v=74.24"></script>
-  <script src="./owner-auth.js?v=74.24"></script>
-  <script src="./owner-tools.js?v=74.24"></script>
-  <script src="./site-version.js?v=74.24"></script>
-  <script src="./photos-data.js?v=74.24"></script>
-  <script src="./hidden-actions.js?v=74.24"></script>
-  <script src="./reserve-store.js?v=74.24"></script>
-  <script src="./owner.js?v=74.24"></script>
+  <script src="./media-config.js?v=74.25"></script>
+  <script src="./photos.js?v=74.25"></script>
+  <script src="./owner-auth.js?v=74.25"></script>
+  <script src="./owner-tools.js?v=74.25"></script>
+  <script src="./site-version.js?v=74.25"></script>
+  <script src="./photos-data.js?v=74.25"></script>
+  <script src="./hidden-actions.js?v=74.25"></script>
+  <script src="./reserve-store.js?v=74.25"></script>
+  <script src="./owner.js?v=74.25"></script>
 </body>
 </html>

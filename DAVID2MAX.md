@@ -518,3 +518,17 @@ _No David automation results recorded yet._
 - Browser verification: `http://localhost:8000/owner.html?v=74.28&run=waste-progress-readable-2` showed `Public previews: 2,439 / 4,415 basket photos checked` and `Cloud media left: 186`.
 - Visible version bumped to v74.28.
 - Notes: Dirty generated catalog/state files remain unstaged.
+
+## 2026-05-14 - Waste Basket count semantics
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Folded Waste Basket cleanup progress into the primary count area instead of showing a separate progress panel.
+- Finding: The active jobs are `hidden-public-wipe` preview-only cleanup jobs. They check/delete old public preview objects but do not clear the live Waste Basket queue, so `In basket` should not decrease from those jobs.
+- Change: `In basket` now reads as the undo queue, `Cloud media left` shows inline cleanup progress, and `Tombstones` is labeled permanent.
+- Change: Preview-only cleanup no longer disables or relabels `Empty basket`; the button is disabled only while a true `waste-basket-media-wipe` task is active.
+- Browser verification: `http://localhost:8000/owner.html?v=74.29&run=waste-inline-progress` showed no separate progress panel, `Empty basket` enabled, and `Cleanup: 2,683 / 4,415 preview checks` under `Cloud media left`.
+- Visible version bumped to v74.29.
+- Checks passed: `node --check owner.js`, `git diff --check`.
+- Commit pushed: `photosbyelie: fold waste progress into counts`.
+- Notes: Dirty generated catalog/state files remain unstaged.

@@ -7,7 +7,7 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.28`
+- Current visible build: `v74.29`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction on David: read `MAX2DAVID.md` as inbound context and write David reports to `DAVID2MAX.md`.
 - Public previews resolve from R2/CDN keys. Do not restore local `assets/expo` or `assets/reserve` preview folders.
@@ -42,9 +42,9 @@ Date: 2026-05-13
 - Gallery Fit mode has the panorama span hook restored, so pano cards can span the full grid width in Fit mode.
 - Gallery Grid/Fit/Fill controls now sit in the sticky header band when there is room and avoid the basket rail.
 - Owner page language was simplified around the Waste Basket mental model instead of implementation terms like blocked sync.
-- Waste Basket now reports active R2 cleanup progress on the Owner card and disables `Empty basket` while delete jobs are already running.
+- Waste Basket now reports preview-cleanup progress inline under `Cloud media left`; `Empty basket` only disables for a true basket-empty task, not for older preview-only cleanup jobs.
 - Owner price list now defensively restores the canonical `Camera photo` and `AI image` digital pricing columns when local generated catalog state is stale.
-- Waste Basket progress now shows basket-photo progress and the current `Cloud media left` count, and refresh requests time out cleanly instead of leaving the refresh icon spinning.
+- Waste Basket progress now keeps state counts in one place: `In basket` is the undo queue, `Cloud media left` is remaining media state, and preview-only cleanup progress is a subline rather than a separate panel.
 - Title/Keywords review queue remains helper-server backed with autosave approve/reject/comment/edit, H/X block shortcuts, `A`/`R`/`P` shortcuts, row selection, and saved-row filtering after reload.
 - Proposed title/keyword keywords are still normalized, deduped, and filtered through `assets/owner-actions/keyword-blacklist.json`.
 - User articulated a useful working distinction:

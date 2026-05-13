@@ -1,10 +1,10 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Current Facts
 
-- Local visible build: `v74.28`.
+- Local visible build: `v74.29`.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless basketed/discarded or explicitly ineligible.
@@ -20,9 +20,9 @@ Last updated: 2026-05-13
 - Video import and presentation are not part of the current photo pipeline. Apple Photos mixed-album tests can export MOV files, but videos are backlog until we design 4K source handling, thumbnails, playback, storage, and checkout rules.
 - `tmp/import-cache` is the ignored disposable import/render workspace. Reserve is manifest-only owner state, not a local preview folder.
 - Waste Basket is the Owner-facing review surface for undesirable masters. Putting a basketed item back removes it from the blacklist. Emptying the basket purges public previews, private masters, and private render triplets, then leaves blacklist/discard tombstones so those masters do not return.
-- Waste Basket cleanup progress is visible on the Owner card while R2 delete work is running; `Empty basket` is disabled during active delete jobs to avoid stacking duplicate purges.
+- Waste Basket cleanup progress is visible inline under `Cloud media left`. Older preview-only cleanup does not reduce `In basket` and no longer blocks the true `Empty basket` action; only a true basket-empty task disables the button.
 - Owner price list should show both `Camera photo` and `AI image` digital price columns even if local generated catalog state temporarily loses pricing-tier metadata.
-- Waste Basket cleanup progress should be read as owner-state progress: basket photos checked, `Cloud media left`, and bounded refresh feedback rather than raw duplicate job counts.
+- Waste Basket cleanup should be read as owner-state progress: `In basket` is the undo queue, `Cloud media left` is remaining media state, and preview-only cleanup is just a checked-count subline.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
 - The Title/Keywords Owner review queue is helper-server backed. Rows autosave on approve/reject/comment/edit, Save approvals retries selected decisions, approvals apply generated catalog metadata and mark `Title_Keywords_Reviewed`, rejections update rework state, and saved rows are filtered out after leaving/reloading the page.

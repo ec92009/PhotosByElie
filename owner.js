@@ -18,8 +18,9 @@
   const catalogPieRoot = document.querySelector("[data-owner-catalog-pie]");
   const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
   const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
+  const basketStateNoteRoot = document.querySelector("[data-owner-basket-state-note]");
+  const blockedPreviewProgressRoot = document.querySelector("[data-owner-blocked-preview-progress]");
   const blockedPreviewNoteRoot = document.querySelector("[data-owner-blocked-preview-note]");
-  const wasteProgressRoot = document.querySelector("[data-owner-waste-progress]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
   const physicalProductsToggle = document.querySelector("[data-owner-physical-products]");
@@ -45,6 +46,7 @@
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
   let wasteDeleteActive = false;
+  let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
   let latestR2ProgressTasks = [];
   let keywordBlacklistTerms = [];
@@ -474,7 +476,7 @@
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMedia);
     if (blockedPreviewNoteRoot) {
       blockedPreviewNoteRoot.textContent = blockedCloudMedia
-        ? `${formatCount(blockedCloudMedia)} cloud media copies for basketed photos are still present. Empty the basket to purge them and keep tombstones.`
+        ? `${formatCount(blockedCloudMedia)} cloud media copies are still present. Preview cleanup checks old public objects; In basket drops only when Empty basket clears the live queue.`
         : "Basketed photos no longer have cloud media copies in R2.";
     }
   };
@@ -791,6 +793,12 @@
       || photoId.includes("hidden-public");
   };
 
+  const isWasteBasketEmptyTask = (task) => {
+    const kind = String(task?.kind || "").toLowerCase();
+    const photoId = String(task?.photo_id || "").toLowerCase();
+    return kind.includes("waste-basket") || photoId.includes("waste-basket");
+  };
+
   const taskTimestamp = (task) => Date.parse(task?.updated_at || task?.started_at || task?.queued_at || "") || 0;
 
   const compareWasteProgress = (a, b) => {
@@ -807,60 +815,41 @@
     if (publicPreviewOnly && total) {
       const photoTotal = Math.ceil(total / 2);
       const photoCompleted = Math.min(photoTotal, Math.ceil(completed / 2));
-      return `Public previews: ${formatCount(photoCompleted)} / ${formatCount(photoTotal)} basket photos checked`;
+      return `${formatCount(photoCompleted)} / ${formatCount(photoTotal)} preview checks`;
     }
     return total
-      ? `Cloud media: ${formatCount(completed)} / ${formatCount(total)} files`
-      : `Cloud media: ${formatCount(completed)} files`;
+      ? `${formatCount(completed)} / ${formatCount(total)} cloud objects`
+      : `${formatCount(completed)} cloud objects`;
   };
 
   const renderWasteBasketProgress = (tasks = []) => {
     const wasteTasks = tasks.filter(isWasteDeleteTask);
     const activeTasks = wasteTasks.filter((task) => task.state === "queued" || task.state === "running");
-    const [latestWasteTask] = [...(activeTasks.length ? activeTasks : wasteTasks)]
+    const activeEmptyTasks = activeTasks.filter(isWasteBasketEmptyTask);
+    const taskPool = activeEmptyTasks.length ? activeEmptyTasks : activeTasks.length ? activeTasks : wasteTasks;
+    const [latestWasteTask] = [...taskPool]
       .sort(activeTasks.length ? compareWasteProgress : (a, b) => taskTimestamp(b) - taskTimestamp(a));
-    wasteDeleteActive = activeTasks.length > 0;
+    wasteCleanupActive = activeTasks.length > 0;
+    wasteDeleteActive = activeEmptyTasks.length > 0;
     if (wipeHiddenR2Button) {
       wipeHiddenR2Button.disabled = wasteDeleteActive;
       wipeHiddenR2Button.textContent = wasteDeleteActive ? "Emptying..." : "Empty basket";
     }
-    if (!wasteProgressRoot) return;
+    if (basketStateNoteRoot) {
+      basketStateNoteRoot.textContent = wasteDeleteActive ? "Clearing now" : "Undo queue";
+    }
+    if (!blockedPreviewProgressRoot) return;
     if (!latestWasteTask) {
-      wasteProgressRoot.hidden = true;
-      setHtml(wasteProgressRoot, "");
+      blockedPreviewProgressRoot.hidden = true;
+      blockedPreviewProgressRoot.textContent = "";
       return;
     }
-    const total = Number(latestWasteTask.total || 0);
-    const completed = Number(latestWasteTask.completed || 0);
     const failed = Number(latestWasteTask.failed || 0);
-    const percent = total ? Math.min(100, Math.max(0, Math.round((completed / total) * 100))) : 0;
     const state = latestWasteTask.state || "queued";
-    const activeLabel = state === "done"
-      ? "Last cleanup finished"
-      : failed
-        ? "Waste Basket cleanup needs attention"
-        : "Waste Basket cleanup running";
-    const progressSummary = wasteProgressSummary(latestWasteTask);
-    const failureSummary = failed ? `, ${formatCount(failed)} failed` : "";
-    const activeSummary = activeTasks.length > 1
-      ? `Tracking furthest of ${formatCount(activeTasks.length)} active cleanup jobs.`
-      : "";
-    const cloudSummary = `Cloud media left: ${formatCount(blockedCloudMediaCountFromCoverage())}`;
-    const updated = latestWasteTask.updated_at
-      ? `Updated ${new Date(latestWasteTask.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-      : "";
-    wasteProgressRoot.hidden = false;
-    setHtml(wasteProgressRoot, `
-      <div class="owner-waste-progress-head">
-        <strong>${escapeHtml(activeLabel)}</strong>
-        <span>${escapeHtml(updated || state)}</span>
-      </div>
-      <div class="owner-waste-bar" aria-label="Waste Basket cleanup progress">
-        <span style="width:${percent}%"></span>
-      </div>
-      <small>${escapeHtml(`${progressSummary}${failureSummary}`)}</small>
-      <small>${escapeHtml([cloudSummary, activeSummary].filter(Boolean).join(" · "))}</small>
-    `);
+    const prefix = state === "done" ? "Last cleanup" : failed ? "Needs attention" : "Cleanup";
+    const suffix = failed ? `, ${formatCount(failed)} failed` : "";
+    blockedPreviewProgressRoot.hidden = false;
+    blockedPreviewProgressRoot.textContent = `${prefix}: ${wasteProgressSummary(latestWasteTask)}${suffix}`;
   };
 
   const renderR2Progress = (tasks = []) => {
@@ -983,7 +972,7 @@
       const payload = await response.json();
       const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
       renderR2Progress(tasks);
-      if (wasteDeleteActive && Date.now() - lastWasteCoverageRefreshAt > 15000) {
+      if (wasteCleanupActive && Date.now() - lastWasteCoverageRefreshAt > 15000) {
         lastWasteCoverageRefreshAt = Date.now();
         loadR2Coverage().then(refreshBlockedSyncPanel).then(() => renderWasteBasketProgress(tasks)).catch(() => {});
       }
@@ -1107,7 +1096,7 @@
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
     if (wasteDeleteActive) {
-      setStatus("Waste Basket cleanup is already running. Watch the progress report on the card.");
+      setStatus("Waste Basket emptying is already running. Watch Cloud media left on the card.");
       return;
     }
     const ok = window.confirm("Empty the Waste Basket? This purges public previews, private masters, and private render triplets for basketed photos, then leaves blacklist tombstones so those masters do not return.");

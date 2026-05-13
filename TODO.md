@@ -4,7 +4,7 @@ Last updated: 2026-05-13
 
 ## Current Facts
 
-- Local visible build: `v74.6`.
+- Local visible build: `v74.7`.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
@@ -36,7 +36,7 @@ Last updated: 2026-05-13
 - Business priority is now revenue: make checkout trustworthy, package the offer clearly, drive qualified visitors, and keep Owner tooling focused on sales-enabling operations.
 - Camera photos and AI-origin images are now split by first-class catalog origin. Public galleries can filter by origin, detail pages show it, Owner shows Camera / AI counts, and checkout pricing validates against origin.
 - Blocked review now shares the same gallery-card treatment as public galleries, including wrapper/caption structure, RAW/origin badges, selection outline, density preference, and fit/fill masonry behavior.
-- Public collection pages now use the shared `gallery.html?gallery=<slug>` route; old country URLs remain as compatibility redirects.
+- Public collection pages now use the shared `gallery.html?gallery=<slug>` route; old country-specific gallery HTML files have been removed.
 
 ## Numbered Backlog
 
@@ -122,8 +122,8 @@ Last updated: 2026-05-13
    - Keep the checkout Worker focused on checkout/order/delivery, not public thumbnail serving.
 
 12. **Split gallery/catalog data by collection.**
-   - Gallery pages now use one real page, `gallery.html?gallery=<slug>`, with old country URLs kept as tiny compatibility redirects.
-   - Keep the compatibility redirects until old links and GitHub Pages caches age out safely.
+   - Gallery pages now use one real page, `gallery.html?gallery=<slug>`.
+   - Old country-specific gallery HTML files have been removed.
    - Keep country-specific title/nav/body state in data rather than duplicated markup.
    - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
    - Load only the current collection catalog when opening a gallery page.

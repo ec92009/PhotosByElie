@@ -40,9 +40,18 @@ Columns:
 3. Proposed title/keywords.
 4. Decision controls.
 
-Decision controls include Approve and Reject checkboxes plus an optional reject comment. Approve and Reject are mutually exclusive. Typing in the reject comment checks Reject and unchecks Approve. Clicking Approve does not erase the comment; it greys/read-onlys the comment until the Owner interacts with the comment again, which reactivates Reject.
+Decision controls include side-by-side Approve and Reject checkboxes plus an optional vertical reject comment. Approve and Reject are mutually exclusive. Typing in the reject comment checks Reject and unchecks Approve. Clicking Approve does not erase the comment; it greys/read-onlys the comment until the Owner interacts with the comment again, which reactivates Reject.
 
-Repeat Save approvals at the bottom and keep the header back-to-top control.
+Rows autosave as soon as the Owner approves, rejects, comments, or manually edits a proposed title/keyword. Editing proposed title/keywords automatically checks Approve. Save approvals at the top/bottom remains as a retry/manual batch-save control. Keep the header back-to-top control.
+
+The page supports row selection. Single-click selects a row without opening detail. Double-click opens detail. Keyboard shortcuts apply to the selected row:
+
+- `A`: approve.
+- `R`: reject.
+- `P`: propagate the selected approve/reject state to rows from the same gallery within a two-hour capture window.
+- `H` / `X`: block the photo using the helper's `hide` action.
+
+The Propagate button must remain explicit and sit below the row status. Blocked rows disappear immediately after the helper confirms success. Approved/rejected rows remain visible in the current browser session, but when the Owner leaves or reloads the page, rows already saved in `approvals-<batch>.json` should no longer be shown.
 
 ## Save Behavior
 
@@ -52,5 +61,6 @@ Saving approvals may contain approvals, rejections, or both.
 - Rejected rows do not apply metadata. They update `proposed-state.json` with rejected/rework state, the rejected title/keywords, and the Owner comment.
 - Reject comments should be available to the next generation attempt so the rework can avoid repeating the same weak proposal.
 - Save an audit JSON under `assets/owner-actions/title-keyword-review-queue/`.
+- Merge row autosaves into the audit JSON by `photo_id`; do not overwrite previous saved decisions for the same batch.
 
 Run `npm test` and `npm run validate` before committing and pushing changed workflow, proposal, page, state, or report files.

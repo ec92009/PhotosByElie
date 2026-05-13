@@ -6,21 +6,19 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v74.7`
+- Current visible version: `v74.8`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
 - `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia collections
 - `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
-- `unknown.html`: localhost-only Owner queue for classifying unknown photos into real country galleries
+- `owner-review.html`: shared localhost-only Owner review shell for Unknown classification, Blocked review, and Title/Keywords review
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with a sticky total band
 - `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
 - `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Blocked review, metadata sync, and R2 maintenance
-- `title-keyword-review.html`: localhost-only Owner queue for reviewing and applying title/keyword proposal batches
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
-- `hidden.html`: localhost-only review surface for blocked photos
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
 - `hidden-actions.js`: localhost-only live review action store for blocked blacklist changes, undo, and owner assignment state

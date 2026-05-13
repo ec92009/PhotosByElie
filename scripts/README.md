@@ -198,7 +198,7 @@ The generator updates `assets/owner-actions/title-keyword-review-queue/proposed-
 Review on localhost:
 
 - Start the local helper server: `python3 scripts/local_server.py 8000`
-- Open `http://localhost:8000/title-keyword-review.html`
+- Open `http://localhost:8000/owner-review.html?view=title-keywords`
 
 Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, or use Approve all when the whole batch is acceptable. Save approvals requires the helper server; it applies approved title/keyword values to generated catalog metadata/state files, writes an approvals/rejections audit JSON under `assets/owner-actions/title-keyword-review-queue/`, records rejected rows in `proposed-state.json` for priority rework, and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos.
 

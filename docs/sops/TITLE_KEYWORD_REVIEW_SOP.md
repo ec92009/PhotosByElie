@@ -31,7 +31,7 @@ Use `node scripts/generate_title_keyword_review_queue.mjs --sync-proposed-state-
 
 ## Owner Page
 
-Keep `title-keyword-review.html` compact: one photo per row and four columns only.
+Keep `owner-review.html?view=title-keywords` compact: one photo per row and four columns only.
 
 Columns:
 

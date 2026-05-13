@@ -1005,7 +1005,7 @@ const localPathname = (() => {
     return 'index.html';
   }
 })();
-const localOwnerMediaPages = new Set(['owner.html', 'hidden.html', 'unknown.html']);
+const localOwnerMediaPages = new Set(['owner.html', 'owner-review.html']);
 const mediaBaseFromQuery = (() => {
   try {
     return normalizePublicMediaBase(new URLSearchParams(window.location.search).get('mediaBase') || '');

@@ -292,6 +292,7 @@ _No David automation results recorded yet._
 - Validation:
   - `npm test`: OK (`14` tests passed).
   - `npm run validate`: OK (`Validation OK`).
+- Commit pushed: `84b0ba74` (`photosbyelie: complete r2 preview handoff`).
 - Notes:
   - Did not restore local preview folders.
   - Did not commit JPGs.

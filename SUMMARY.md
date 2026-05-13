@@ -85,7 +85,7 @@ Date: 2026-05-13
 
 ## Verification Snapshot
 
-- Latest upstream commit before this handoff run: `0d133503 photosbyelie: fix gallery controls hit area`.
+- Latest completed handoff commit: `84b0ba74 photosbyelie: complete r2 preview handoff`.
 - Browser check for `v74.4` showed the review page loading successfully and filtering saved rows from the current local approval record.
 - `node --check title-keyword-review.js` passed for the saved-row policy change.
 - R2 cleanup/backfill checks:

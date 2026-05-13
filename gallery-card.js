@@ -60,7 +60,7 @@
     const photoAspectStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const photoOpenLabel = `Open ${title}`;
     const mediaHtml = `
-      ${image ? `<img src="${escapeHtml(image)}" alt="${title}"/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
+      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
       ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
     `;
@@ -89,6 +89,27 @@
       </article>
     `;
   };
+
+  const markPreviewMissing = (image) => {
+    if (!image || image.dataset.previewMissing === "true") return;
+    image.dataset.previewMissing = "true";
+    const media = image.closest?.("[data-photo-link]");
+    if (!media) return;
+    media.classList.remove("has-image");
+    media.classList.add("is-preview-missing");
+    const label = document.createElement("span");
+    label.className = "missing-preview-label";
+    label.textContent = "Preview unavailable";
+    label.title = image.alt || "";
+    image.replaceWith(label);
+  };
+
+  document.addEventListener("error", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    if (!target.matches("[data-photo-card-image]")) return;
+    markPreviewMissing(target);
+  }, true);
 
   window.photosByElieGalleryCard = {
     escapeHtml,

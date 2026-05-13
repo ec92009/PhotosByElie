@@ -7,7 +7,7 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.20`
+- Current visible build: `v74.21`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction is hostname-based: Max reads `DAVID2MAX.md` and writes `MAX2DAVID.md`; David reads `MAX2DAVID.md` and writes `DAVID2MAX.md`.
 - Public previews now resolve from R2/CDN keys only; do not restore local `assets/expo` or `assets/reserve` preview folders.
@@ -42,13 +42,14 @@ Date: 2026-05-13
   - double-click: detail
 - Title/Keywords batch toolbar now uses explicit labels: `Approve visible` selects and autosaves visible rows, `Apply selected` performs the catalog metadata apply for checked approvals/rejections, `Export selected JSON` downloads the selected rows, and `Open proposal JSON` opens the raw proposal file.
 - Blocked Owner review now restores the shared Grid/Fit controls and renders blocked photos in 160-card pages with `Load more`, avoiding the blank/stalled full-catalog render.
+- Shared gallery cards now replace broken public preview URLs with a compact `Preview unavailable` tile so old hidden/reserve rows with missing R2 previews do not spill long alt text into the grid.
 - Owner page comments were addressed:
   - Classification eyebrow now says `Country Classification`.
   - Title/Keywords card no longer implies the queue is always exactly 100 rows.
   - Owner busy/status text is clearer for long-running actions.
   - Blocked sync explains why `0` previews still public is good.
   - Price list copy explicitly says dollars / USD.
-- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.20`.
+- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.21`.
 - Max's latest GitHub handoff was completed on David: R2-only preview cleanup plus R2 public-preview audit/backfill.
 - R2 audit/backfill result: `5,844` public photos, `11,688` expected preview keys, `24` true initial missing keys, `24` uploaded from `tmp/import-cache`, `0` final missing after repaired-key HEAD verification.
 - Cleanup result: `assets/expo` and `assets/reserve` are absent; `assets/hidden` keeps only `hidden-blacklist.json` and `hidden-data.json`.
@@ -61,6 +62,7 @@ Date: 2026-05-13
 - Do not auto-apply generated proposals. Only Owner review actions should apply catalog metadata.
 - Keep approval/rejection/proposal records in tracked owner-action JSON, not image files.
 - Treat `hide` as the internal helper action name for owner-facing Blocked/Block. Treat `discard` as the separate stronger removal/tombstone/media-cleanup path.
+- Blocked/Discarded preview media should be retained only for a short undo window, defaulting to 24 hours. After that, public/private preview derivatives can be purged; durable state should keep the blocked/discarded photo id and the blacklisted master/source path needed to prevent resurrection.
 - Run `npm test` and `npm run validate` before committing generated metadata or behavior changes once the local dirty catalog state is reconciled.
 - R2 cleanup/backfill verification passed `npm test` and `npm run validate` on 2026-05-13.
 
@@ -91,7 +93,7 @@ Date: 2026-05-13
 
 - Latest completed handoff commit: `84b0ba74 photosbyelie: complete r2 preview handoff`.
 - Browser check for `v74.4` showed the review page loading successfully and filtering saved rows from the current local approval record.
-- Browser check for `v74.20` showed `owner-review.html?view=blocked` loading with the blocked heading, grid controls, visible photo cards, and a `Load more` control.
+- Browser check for `v74.21` showed `owner-review.html?view=blocked` loading with the blocked heading, grid controls, visible photo cards, missing-preview fallbacks, and a `Load more` control.
 - `node --check title-keyword-review.js` passed for the saved-row policy change.
 - `node --check hidden-page.js`, `npm test`, and `npm run validate` passed for the blocked-page pagination/control restoration.
 - R2 cleanup/backfill checks:

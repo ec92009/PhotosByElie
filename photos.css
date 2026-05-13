@@ -1578,6 +1578,13 @@ body[data-gallery] .gallery-hero{
   aspect-ratio:auto;
   background:transparent;
 }
+.mock-photo.is-preview-missing{
+  display:grid;
+  place-items:center;
+  min-height:160px;
+  padding:18px;
+  background:var(--mock-scene,color-mix(in srgb,var(--surface-2) 72%,var(--bg)));
+}
 .mock-gallery[data-image-fit="fit"]{
   grid-auto-flow:row;
   grid-auto-rows:var(--gallery-masonry-row-height);
@@ -1606,6 +1613,17 @@ body[data-gallery] .gallery-hero{
   letter-spacing:.12em;
   font-size:.78rem;
   color:var(--muted);
+}
+.missing-preview-label{
+  max-width:16ch;
+  text-align:center;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  font-size:.75rem;
+  font-weight:800;
+  line-height:1.2;
+  color:var(--text);
+  text-shadow:0 1px 12px rgba(255,255,255,.28);
 }
 .hidden-load-more-card{
   gap:10px;

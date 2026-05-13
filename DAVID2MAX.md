@@ -322,3 +322,13 @@ _No David automation results recorded yet._
   - Did not commit JPGs.
   - Did not rewrite source/JPG embedded metadata, private masters, private renders, or generated public preview bytes beyond uploading the already-generated missing preview objects.
   - Local Owner review state remains dirty and intentionally unstaged: `assets/owner-actions/title-keyword-review-queue/proposed-state.json` and `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`.
+
+## 2026-05-13 - Title/Keyword review blocked-row persistence
+
+- Fixed Owner title/keyword review so H/X Block persists to the batch review record as `blocked` in `assets/owner-actions/title-keyword-review-queue/approvals-<batch>.json`.
+- The review page now filters saved `approvals`, `rejections`, and `blocked` rows on load, so blocked rows stay gone after leaving and returning.
+- Proposed review keywords are now normalized/deduplicated and filtered through `assets/owner-actions/keyword-blacklist.json` when rendered and again when saved/applied by the helper.
+- Browser verification on v74.17: blocked `d5h-2944-68e4f5655f`; it disappeared immediately and remained absent after reload. Rendered proposal keywords had no exact blacklist hits and no duplicate keyword rows in the page snapshot.
+- Validation: `npm test` passed; `npm run validate` passed.
+- Commit pushed: `c973943e photosbyelie: persist blocked review rows`.
+- Note: H/X clicks made before this fix were not durably recorded unless they also have entries in the current approvals JSON. Those rows may need to be H/Xed once more.

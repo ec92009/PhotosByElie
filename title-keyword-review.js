@@ -94,6 +94,17 @@
       || String(item?.thumbs?.gallery || item?.thumbs?.gallery_src || item?.thumb?.gallery || item?.gallerySrc || "");
   };
 
+  const savedReviewIds = (payload) => {
+    const ids = new Set();
+    for (const key of ["approvals", "rejections"]) {
+      for (const item of payload?.[key] || []) {
+        const photoId = String(item?.photo_id || item?.photoId || "").trim();
+        if (photoId) ids.add(photoId);
+      }
+    }
+    return ids;
+  };
+
   const warmReviewThumbnails = (items) => {
     const urls = uniqueKeywords(items.map(reviewThumbUrl).filter(Boolean));
     let nextIndex = 0;
@@ -150,9 +161,18 @@
       return;
     }
 
+    const approvalRecord = await loadJson(`./assets/owner-actions/title-keyword-review-queue/approvals-${encodeURIComponent(batchId)}.json`)
+      .catch(() => ({}));
+    const savedIds = savedReviewIds(approvalRecord);
+    const visiblePhotos = photos.filter((item) => {
+      const photoId = String(item?.photo_id || item?.photoId || "");
+      return photoId && !savedIds.has(photoId);
+    });
     const newest = queue?.range?.newest || "";
     const oldest = queue?.range?.oldest || "";
-    status.textContent = `${photos.length} photos ready for review.`;
+    status.textContent = visiblePhotos.length
+      ? `${visiblePhotos.length} photos ready for review.`
+      : "All rows in this batch are already saved.";
 
     summaryRoot.hidden = false;
     summaryRoot.innerHTML = `
@@ -174,7 +194,7 @@
 
     const cardById = new Map();
 
-    list.innerHTML = photos.map((item, index) => {
+    list.innerHTML = visiblePhotos.map((item, index) => {
       const photoId = String(item?.photo_id || item?.photoId || "");
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
@@ -229,7 +249,7 @@
       `;
     }).join("");
 
-    scheduleThumbnailWarmup(photos);
+    scheduleThumbnailWarmup(visiblePhotos);
 
     list.querySelectorAll("[data-review-photo-id]").forEach((card) => {
       const photoId = card.getAttribute("data-review-photo-id") || "";
@@ -328,6 +348,17 @@
       return result;
     };
 
+    const removeReviewCard = (photoId, card) => {
+      cardById.delete(photoId);
+      const nextCard = card.nextElementSibling || card.previousElementSibling;
+      card.remove();
+      if (activeCard === card) {
+        activeCard = null;
+        if (nextCard?.matches?.("[data-review-photo-id]")) setActiveCard(nextCard);
+      }
+      if (!cardById.size && status) status.textContent = "Queue is empty.";
+    };
+
     const rowSaveTimers = new Map();
     const saveRowDecision = async (photoId, card) => {
       const decision = buildRowDecision(photoId, card);
@@ -416,6 +447,7 @@
         }
         card.classList.add("is-owner-actioned");
         setRowStatus(card, "Blocked", "saved");
+        removeReviewCard(photoId, card);
         if (status) status.textContent = `${photoId} moved to Blocked.`;
       }).catch((error) => {
         setRowStatus(card, "Block failed", "error");
@@ -430,7 +462,7 @@
         const reject = card.querySelector("[data-review-reject]");
         if (reject) reject.checked = false;
       });
-      if (status) status.textContent = `${photos.length} photos selected for approval.`;
+      if (status) status.textContent = `${cardById.size} photos selected for approval.`;
     };
 
     const saveApprovals = async () => {

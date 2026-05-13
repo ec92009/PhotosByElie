@@ -16,6 +16,22 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-13 Nightly Title/Keyword Review Queue
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `55ff85ef` (`git pull --ff-only origin main` was attempted first but DNS could not resolve `github.com`)
+- Result: Generated the next nightly Owner title/keyword review batch from the newest 100 photos without `Title_Keywords_Reviewed`.
+- Batch size: 100
+- Newest photo/date: 2026-04-26T17:05:17
+- Oldest photo/date: 2023-07-31T10:20:48
+- Proposal file: `assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json`
+- Review page: `title-keyword-review.html` (`http://localhost:8000/title-keyword-review.html` when served from the repo root)
+- Skipped or needs_owner_context photos: 0 already reviewed; 0 `needs_owner_context`.
+- Commit pushed: yes (`83270383`, pushed to `origin/main`).
+- Validation: `npm test` passed (14/14); `npm run validate` passed.
+- Notes: Local preview images are absent under `assets/expo`, and public R2 preview fetches failed DNS resolution, so no preview-pixel/vision pass was available in this run. Proposals used catalog/source-path/EXIF fallback only. Audit: every proposal has at least 10 keywords (minimum 11), proposed keywords have 0 blacklist hits, and 9 existing blacklisted `containing` keywords were excluded from proposals. The existing compact four-column Owner review page with bottom Save approvals and header back-to-top controls was preserved. No proposals were auto-applied, and no JPG/source metadata, public previews, private masters, or private render files were rewritten.
+
 ## 2026-05-12 Nightly Title/Keyword Review Queue
 
 - Machine: David (`David-5.local`)

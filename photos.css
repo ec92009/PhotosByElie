@@ -1152,8 +1152,16 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-summa
   line-height:1.05;
 }
 body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-summary] .cta{
-  justify-content:end;
+  grid-column:1 / -1;
+  justify-content:flex-start;
   margin:0;
+}
+body[data-gallery="owner-title-keyword-review"] .title-keyword-review-actions{
+  gap:8px;
+}
+body[data-gallery="owner-title-keyword-review"] .title-keyword-review-actions .btn{
+  min-height:38px;
+  padding-inline:14px;
 }
 body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-summary] p:last-child{
   grid-column:1 / -1;

@@ -177,13 +177,13 @@
     summaryRoot.innerHTML = `
       <h2>Batch ${escapeHtml(batchId)}</h2>
       <p class="gallery-status">Newest: ${escapeHtml(newest || "—")} • Oldest: ${escapeHtml(oldest || "—")}</p>
-      <div class="cta">
-        <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve all</button>
-        <button class="btn secondary" type="button" data-title-keyword-review-save>Save approvals</button>
-        <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
-        <a class="btn secondary" href="${escapeHtml(queueUrl)}" target="_blank" rel="noreferrer">Open proposal file</a>
+      <div class="cta title-keyword-review-actions">
+        <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
+        <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
+        <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
+        <a class="btn secondary" href="${escapeHtml(queueUrl)}" target="_blank" rel="noreferrer">Open proposal JSON</a>
       </div>
-      <p class="gallery-status">Rows save as soon as you approve, reject, or edit a proposal. Save approvals retries selected rows.</p>
+      <p class="gallery-status">Rows autosave as soon as you approve, reject, block, or edit. Apply selected updates catalog metadata for checked approvals and queues checked rejections for rework.</p>
     `;
 
     root.replaceChildren();
@@ -261,9 +261,9 @@
     const bottomActions = document.createElement("div");
     bottomActions.className = "title-keyword-review-bottom-actions";
     bottomActions.innerHTML = `
-      <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve all</button>
-      <button class="btn secondary" type="button" data-title-keyword-review-save>Save approvals</button>
-      <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
+      <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
+      <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
+      <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
     `;
     root.append(bottomActions);
 
@@ -468,13 +468,14 @@
     };
 
     const approveAll = () => {
-      cardById.forEach((card) => {
+      cardById.forEach((card, photoId) => {
         const checkbox = card.querySelector("[data-review-approve]");
         if (checkbox) checkbox.checked = true;
         const reject = card.querySelector("[data-review-reject]");
         if (reject) reject.checked = false;
+        if (photoId) scheduleRowSave(photoId, card, 150);
       });
-      if (status) status.textContent = `${cardById.size} photos selected for approval.`;
+      if (status) status.textContent = `${cardById.size} visible photos selected for approval and queued for autosave.`;
     };
 
     const saveApprovals = async () => {

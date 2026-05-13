@@ -191,3 +191,27 @@ _No David automation results recorded yet._
   - Photo id: `20180510-1519-00298-793ef096f2` | Collection: `france` | Title: `Le Moulin De La Galette, Montmartre, Paris, France` | Suggested format: `Portrait (4:5)` | Why: moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.
   - Photo id: `20180217-182800-00091-490eb3867d` | Collection: `usa` | Title: `Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island` | Suggested format: `Carousel (panorama slices)` | Why: very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.
   - Photo id: `20220505-0400-00135-pano-f4e52ebf11` | Collection: `france` | Title: `Chateau de Versailles, Galeries des Glaces` | Suggested format: `Carousel (panorama slices)` | Why: wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.
+
+## 2026-05-13 Owner Review UI Fixes
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Addressed Owner-page and Title/Keywords review-page browser comments.
+- Changes made:
+  - Changed the Owner classification eyebrow to `Country Classification`.
+  - Reworded the Title/Keywords card so it does not imply the queue is always exactly 100 items.
+  - Made reject notes vertical and gave the decision column enough room.
+  - Manual edits to proposed titles/keywords now auto-select Approve and queue a row save.
+  - Reject checkbox/comment interactions now queue row saves without waiting for the top Save approvals button.
+  - The local helper now merges row-level approval records by photo id instead of overwriting the batch approval JSON.
+  - Added Owner status text for long-running actions, clearer blocked-preview zero copy, and `Price list ($)` / USD copy.
+- Visible version: `v74.0`
+- Review page: `title-keyword-review.html` (`http://localhost:8000/title-keyword-review.html?v=74.0`)
+- Owner page: `owner.html` (`http://localhost:8000/owner.html?v=74.0`)
+- Validation:
+  - `node --check title-keyword-review.js && node --check owner.js && node --check hidden-actions.js`: OK
+  - `python3 -m py_compile scripts/local_server.py`: OK
+  - `npm test`: failed on existing dirty generated catalog pricing/source-origin state (`5500 !== 8100`, `5000 !== 2900`, `4500 !== 6500`)
+  - `npm run validate`: failed on existing dirty generated catalog `sourceOrigin` errors
+- Commit pushed: `8e1a91af` (`photosbyelie: improve owner review interactions`)
+- Notes: Left dirty generated catalog files unstaged: `photos-data.js` and `worker/photos-catalog.generated.mjs`.

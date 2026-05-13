@@ -33,7 +33,6 @@
   const priceListRoot = document.querySelector("[data-owner-price-list]");
   const keywordBlacklistForm = document.querySelector("[data-owner-keyword-blacklist-form]");
   const keywordBlacklistInput = document.querySelector("[data-owner-keyword-blacklist-input]");
-  const keywordBlacklistList = document.querySelector("[data-owner-keyword-blacklist-list]");
   const keywordBlacklistStatus = document.querySelector("[data-owner-keyword-blacklist-status]");
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
@@ -317,19 +316,9 @@
   };
 
   const renderKeywordBlacklist = (terms = keywordBlacklistTerms) => {
-    if (!keywordBlacklistList) return;
+    if (!keywordBlacklistInput) return;
     keywordBlacklistTerms = normalizeKeywordTerms(terms);
-    if (!keywordBlacklistTerms.length) {
-      keywordBlacklistList.innerHTML = '<p class="owner-card-note">No terms are blacklisted.</p>';
-      setKeywordBlacklistStatus("0 terms.");
-      return;
-    }
-    keywordBlacklistList.innerHTML = keywordBlacklistTerms.map((term) => `
-      <span class="owner-keyword-blacklist-term">
-        <span>${escapeHtml(term)}</span>
-        <button type="button" data-owner-keyword-blacklist-remove="${escapeHtml(term)}" aria-label="Remove ${escapeHtml(term)}">×</button>
-      </span>
-    `).join("");
+    keywordBlacklistInput.value = keywordBlacklistTerms.join(", ");
     setKeywordBlacklistStatus(`${formatCount(keywordBlacklistTerms.length)} terms.`);
   };
 
@@ -357,7 +346,7 @@
   };
 
   const loadKeywordBlacklist = async () => {
-    if (!keywordBlacklistList) return;
+    if (!keywordBlacklistInput) return;
     setKeywordBlacklistStatus("Loading blacklist...");
     try {
       const href = window.photosByElieVersionedHref?.("./assets/owner-actions/keyword-blacklist.json") || "./assets/owner-actions/keyword-blacklist.json";
@@ -987,25 +976,13 @@
 
   keywordBlacklistForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const additions = normalizeKeywordTerms([keywordBlacklistInput?.value || ""]);
-    if (!additions.length) {
+    const terms = normalizeKeywordTerms([keywordBlacklistInput?.value || ""]);
+    if (!terms.length) {
       setKeywordBlacklistStatus("Enter a term to add.");
       return;
     }
     try {
-      await saveKeywordBlacklist([...keywordBlacklistTerms, ...additions]);
-      if (keywordBlacklistInput) keywordBlacklistInput.value = "";
-    } catch (error) {
-      setKeywordBlacklistStatus(error?.message || "Could not save keyword blacklist.");
-    }
-  });
-
-  keywordBlacklistList?.addEventListener("click", async (event) => {
-    const button = event.target?.closest?.("[data-owner-keyword-blacklist-remove]");
-    if (!button) return;
-    const term = button.dataset.ownerKeywordBlacklistRemove || "";
-    try {
-      await saveKeywordBlacklist(keywordBlacklistTerms.filter((value) => value !== term));
+      await saveKeywordBlacklist(terms);
     } catch (error) {
       setKeywordBlacklistStatus(error?.message || "Could not save keyword blacklist.");
     }

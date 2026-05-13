@@ -89,6 +89,40 @@
       `,
       scripts: ["title-keyword-review.js"],
     },
+    "keyword-blacklist": {
+      title: "Keyword blacklist",
+      eyebrow: "Metadata",
+      nav: "Keyword Blacklist",
+      bodyGallery: "",
+      statusAttr: "data-owner-keyword-blacklist-page-status",
+      hintClass: "title-keyword-review-keyboard-hint",
+      hintAttr: "",
+      hint: `
+        Edit blocked proposal terms. Use comma-separated entry for bulk additions.
+      `,
+      root: `
+        <section class="panel owner-keyword-blacklist-page" data-owner-keyword-blacklist-page>
+          <div class="owner-card-titlebar">
+            <div>
+              <p class="eyebrow">Metadata</p>
+              <h2>Keyword blacklist</h2>
+            </div>
+            <button class="owner-refresh-button" type="button" data-owner-keyword-blacklist-refresh aria-label="Refresh keyword blacklist" title="Refresh keyword blacklist"><span aria-hidden="true">↻</span></button>
+          </div>
+          <p>Terms blocked from future title and keyword proposals.</p>
+          <form class="owner-keyword-blacklist-form" data-owner-keyword-blacklist-page-form>
+            <label class="owner-keyword-blacklist-add">
+              <span>Add terms</span>
+              <input type="text" data-owner-keyword-blacklist-page-input placeholder="Comma-separated terms"/>
+            </label>
+            <button class="btn secondary" type="submit">Add</button>
+          </form>
+          <div class="owner-keyword-blacklist-list" data-owner-keyword-blacklist-page-list></div>
+          <p class="owner-card-note" data-owner-keyword-blacklist-page-count>Loading blacklist...</p>
+        </section>
+      `,
+      scripts: ["owner-keyword-blacklist.js"],
+    },
   };
 
   const config = views[view] || views.blocked;

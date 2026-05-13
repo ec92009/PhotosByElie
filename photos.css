@@ -475,6 +475,15 @@ html[data-theme="light"] .photo-art.has-photo::after{
   gap:10px;
   align-items:end;
 }
+.owner-keyword-blacklist-compact-form{
+  display:grid;
+  gap:10px;
+}
+.owner-keyword-blacklist-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
 .owner-keyword-blacklist-add{
   display:grid;
   gap:7px;
@@ -484,7 +493,8 @@ html[data-theme="light"] .photo-art.has-photo::after{
   letter-spacing:.08em;
   text-transform:uppercase;
 }
-.owner-keyword-blacklist-add input{
+.owner-keyword-blacklist-add input,
+.owner-keyword-blacklist-add textarea{
   width:100%;
   min-height:44px;
   border:1px solid var(--line);
@@ -497,6 +507,15 @@ html[data-theme="light"] .photo-art.has-photo::after{
   letter-spacing:0;
   padding:9px 11px;
   text-transform:none;
+}
+.owner-keyword-blacklist-add textarea{
+  min-height:86px;
+  resize:vertical;
+  line-height:1.4;
+}
+.owner-keyword-blacklist-page{
+  display:grid;
+  gap:14px;
 }
 .owner-keyword-blacklist-list{
   display:flex;

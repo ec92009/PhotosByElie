@@ -318,6 +318,16 @@
       activeCard = card;
       activeCard.classList.add("is-selected");
     };
+    const moveActiveCard = (delta) => {
+      const cards = [...cardById.values()];
+      if (!cards.length) return;
+      const currentIndex = Math.max(0, cards.indexOf(activeCard));
+      const nextIndex = Math.max(0, Math.min(cards.length - 1, currentIndex + delta));
+      const nextCard = cards[nextIndex];
+      setActiveCard(nextCard);
+      nextCard?.focus?.({ preventScroll: true });
+      nextCard?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    };
 
     const postApprovalsPayload = async (payload) => {
       const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
@@ -579,6 +589,16 @@
       const approve = activeCard.querySelector("[data-review-approve]");
       const reject = activeCard.querySelector("[data-review-reject]");
       const comment = activeCard.querySelector("[data-review-reject-comment]");
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+        moveActiveCard(1);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        moveActiveCard(-1);
+        event.preventDefault();
+        return;
+      }
       if (key === "a") {
         if (approve) approve.checked = true;
         if (reject) reject.checked = false;

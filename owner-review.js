@@ -78,6 +78,8 @@
         <span aria-hidden="true">|</span>
         <kbd>H</kbd>/<kbd>X</kbd> block
         <span aria-hidden="true">|</span>
+        <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> select
+        <span aria-hidden="true">|</span>
         <kbd>Double-click</kbd> detail
       `,
       root: `

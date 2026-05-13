@@ -378,3 +378,13 @@ _No David automation results recorded yet._
   - `0068090c photosbyelie: restore blocked review grid`
   - `6010eab3 photosbyelie: tidy missing preview cards`
 - Notes: Local Owner/generated state remains dirty and intentionally unstaged, including keyword blacklist/proposal state, discarded media manifest, package/script experimentation, and current approval JSON.
+
+## 2026-05-13 - Blocked preview retention docs refresh
+
+- Machine: David (David-5.local)
+- Repo: 
+- Result: Refreshed docs and  after Owner decision on Blocked/Discarded preview retention.
+- Policy captured: Blocked/Discarded previews are temporary undo-window media only, default 24 hours. After that, public/private preview derivatives should be deleted and durable tombstone state should retain photo id plus blacklisted master/source path to prevent resurrection.
+- Files updated: , , .
+- Commit pushed: .
+- Notes: Existing dirty local Owner/generated files and state TSV docs remain unstaged and were not included in this docs commit.

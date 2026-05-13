@@ -399,3 +399,16 @@ _No David automation results recorded yet._
 - Docs commit pushed: `42dd0d92 photosbyelie: document blocked preview retention`.
 - Report correction commit pushed after that: `18ad6c36 photosbyelie: report retention docs refresh` contains the garbled prior entry; this correction supersedes it.
 - Notes: Existing dirty local Owner/generated files and state TSV docs remain unstaged and were not included in the docs commit.
+
+## 2026-05-13 - Gallery pano fit span restoration
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Restored the missing CSS hook for the existing Fit-mode panorama layout algorithm.
+- Finding: `gallery-layout.js` still calculated `--gallery-column-span` correctly; panoramas return all grid columns in Fit mode. The CSS no longer applied that variable to `.mock-photo-card`.
+- Change: Added `grid-column: span var(--gallery-column-span,1)` for `.mock-gallery[data-image-fit="fit"] .mock-photo-card`.
+- Visible version: `v74.22`.
+- Browser check: `http://127.0.0.1:8000/gallery.html?gallery=france&orientation=pano&v=74.22&run=pano-fit` loaded France pano results with Fit selected.
+- Validation: `npm test` passed; `npm run validate` passed.
+- Commit pushed: `ea6737ee photosbyelie: restore pano fit spans`.
+- Notes: Existing dirty local Owner/generated files remain unstaged.

@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-keyword-blacklist",
   "schema_version": 1,
-  "updated_at": "2026-05-12",
+  "updated_at": "2026-05-13",
   "keywords": [
     "Excire (en)",
     "scaled_up",
@@ -26,6 +26,12 @@
     "digital",
     "unique",
     "IMG",
-    "AI art"
+    "AI art",
+    "AI",
+    "landscape orientation",
+    "Generated image",
+    "Generative image",
+    "Illustration",
+    "Prompt"
   ]
 }

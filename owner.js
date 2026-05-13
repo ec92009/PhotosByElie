@@ -31,6 +31,10 @@
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
   const priceListRoot = document.querySelector("[data-owner-price-list]");
+  const keywordBlacklistForm = document.querySelector("[data-owner-keyword-blacklist-form]");
+  const keywordBlacklistInput = document.querySelector("[data-owner-keyword-blacklist-input]");
+  const keywordBlacklistList = document.querySelector("[data-owner-keyword-blacklist-list]");
+  const keywordBlacklistStatus = document.querySelector("[data-owner-keyword-blacklist-status]");
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -39,6 +43,7 @@
   let r2CoverageOk = false;
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
+  let keywordBlacklistTerms = [];
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -88,6 +93,7 @@
       refreshCountsFromSource();
       refreshBlockedSyncPanel();
       loadR2Coverage();
+      loadKeywordBlacklist();
       startR2Polling();
       if (options.scrollToControls && controls) {
         window.requestAnimationFrame(() => {
@@ -291,6 +297,78 @@
         setStatus("Price list saved locally.");
       });
     });
+  };
+
+  const normalizeKeywordTerms = (values = []) => {
+    const seen = new Set();
+    return values
+      .flatMap((value) => String(value || "").split(/[\n,]/))
+      .map((value) => value.trim())
+      .filter((value) => {
+        const key = value.casefold?.() || value.toLowerCase();
+        if (!value || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  };
+
+  const setKeywordBlacklistStatus = (message) => {
+    if (keywordBlacklistStatus) keywordBlacklistStatus.textContent = message;
+  };
+
+  const renderKeywordBlacklist = (terms = keywordBlacklistTerms) => {
+    if (!keywordBlacklistList) return;
+    keywordBlacklistTerms = normalizeKeywordTerms(terms);
+    if (!keywordBlacklistTerms.length) {
+      keywordBlacklistList.innerHTML = '<p class="owner-card-note">No terms are blacklisted.</p>';
+      setKeywordBlacklistStatus("0 terms.");
+      return;
+    }
+    keywordBlacklistList.innerHTML = keywordBlacklistTerms.map((term) => `
+      <span class="owner-keyword-blacklist-term">
+        <span>${escapeHtml(term)}</span>
+        <button type="button" data-owner-keyword-blacklist-remove="${escapeHtml(term)}" aria-label="Remove ${escapeHtml(term)}">×</button>
+      </span>
+    `).join("");
+    setKeywordBlacklistStatus(`${formatCount(keywordBlacklistTerms.length)} terms.`);
+  };
+
+  const saveKeywordBlacklist = async (terms) => {
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to save the keyword blacklist.");
+    if (ownerAuth?.enabled && !authorized) throw new Error("Owner helper server required.");
+    setKeywordBlacklistStatus("Saving blacklist...");
+    const response = await fetch("/__photosbyelie/photo-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save-keyword-blacklist",
+        keywords: normalizeKeywordTerms(terms),
+        mode: "replace",
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) {
+      if (response.status === 401) ownerAuth?.markSignedOut?.();
+      throw new Error(payload?.error || "Could not save keyword blacklist.");
+    }
+    renderKeywordBlacklist(payload.keywords || []);
+    setStatus(`Keyword blacklist saved: ${formatCount(payload.keyword_count || 0)} terms.`);
+    return payload;
+  };
+
+  const loadKeywordBlacklist = async () => {
+    if (!keywordBlacklistList) return;
+    setKeywordBlacklistStatus("Loading blacklist...");
+    try {
+      const href = window.photosByElieVersionedHref?.("./assets/owner-actions/keyword-blacklist.json") || "./assets/owner-actions/keyword-blacklist.json";
+      const response = await fetch(href, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Keyword blacklist ${response.status}`);
+      const payload = await response.json();
+      renderKeywordBlacklist(payload.keywords || []);
+    } catch (error) {
+      renderKeywordBlacklist([]);
+      setKeywordBlacklistStatus(error?.message || "Could not load blacklist.");
+    }
   };
 
   const allUnknownPhotos = () => {
@@ -811,6 +889,9 @@
       } else if (kind === "progress") {
         await loadR2Progress();
         setStatus("R2 background work refreshed.");
+      } else if (kind === "keyword-blacklist") {
+        await loadKeywordBlacklist();
+        setStatus("Keyword blacklist refreshed.");
       }
     } catch (error) {
       setStatus(error?.message || "Could not refresh this Owner panel.");
@@ -904,6 +985,32 @@
     }
   });
 
+  keywordBlacklistForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const additions = normalizeKeywordTerms([keywordBlacklistInput?.value || ""]);
+    if (!additions.length) {
+      setKeywordBlacklistStatus("Enter a term to add.");
+      return;
+    }
+    try {
+      await saveKeywordBlacklist([...keywordBlacklistTerms, ...additions]);
+      if (keywordBlacklistInput) keywordBlacklistInput.value = "";
+    } catch (error) {
+      setKeywordBlacklistStatus(error?.message || "Could not save keyword blacklist.");
+    }
+  });
+
+  keywordBlacklistList?.addEventListener("click", async (event) => {
+    const button = event.target?.closest?.("[data-owner-keyword-blacklist-remove]");
+    if (!button) return;
+    const term = button.dataset.ownerKeywordBlacklistRemove || "";
+    try {
+      await saveKeywordBlacklist(keywordBlacklistTerms.filter((value) => value !== term));
+    } catch (error) {
+      setKeywordBlacklistStatus(error?.message || "Could not save keyword blacklist.");
+    }
+  });
+
   wipeHiddenR2Button?.addEventListener("click", async () => {
     const ok = window.confirm("Delete public preview objects for blocked photos? Publish the blocked list first so galleries know these photos are rejected.");
     if (!ok) return;
@@ -970,6 +1077,7 @@
     refreshCountsFromSource();
     refreshBlockedSyncPanel();
     loadR2Coverage();
+    loadKeywordBlacklist();
     startR2Polling();
   }
 })();

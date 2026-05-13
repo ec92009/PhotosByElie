@@ -324,6 +324,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:12px;
+  align-items:start;
 }
 .owner-card{
   display:grid;
@@ -467,6 +468,77 @@ html[data-theme="light"] .photo-art.has-photo::after{
   color:var(--text);
   font-size:.95rem;
   font-weight:750;
+}
+.owner-keyword-blacklist-form{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:end;
+}
+.owner-keyword-blacklist-add{
+  display:grid;
+  gap:7px;
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-keyword-blacklist-add input{
+  width:100%;
+  min-height:44px;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:1rem;
+  font-weight:650;
+  letter-spacing:0;
+  padding:9px 11px;
+  text-transform:none;
+}
+.owner-keyword-blacklist-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  max-height:220px;
+  min-height:40px;
+  overflow:auto;
+  border:1px solid var(--line);
+  background:var(--surface);
+  padding:8px;
+}
+.owner-keyword-blacklist-term{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:34px;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  color:var(--text);
+  padding:5px 7px 5px 10px;
+  font-size:.88rem;
+  font-weight:750;
+  line-height:1.15;
+}
+.owner-keyword-blacklist-term button{
+  display:inline-grid;
+  width:24px;
+  height:24px;
+  place-items:center;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--bg);
+  color:var(--text);
+  cursor:pointer;
+  font:inherit;
+  font-size:1rem;
+  font-weight:900;
+  line-height:1;
+}
+.owner-keyword-blacklist-term button:hover{
+  background:var(--surface);
 }
 .owner-toggle-control input{
   width:20px;

@@ -36,6 +36,7 @@ DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 OWNER_SESSION_COOKIE = "pbe_owner_session"
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
+KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
@@ -468,6 +469,46 @@ def _write_json_file(path: Path, payload: object) -> None:
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
+
+
+def _normalized_keyword_blacklist(value: object) -> list[str]:
+    source = value if isinstance(value, list) else _split_keyword_text(value)
+    keywords: list[str] = []
+    seen: set[str] = set()
+    for item in source:
+        keyword = str(item or "").strip()
+        key = keyword.casefold()
+        if not keyword or key in seen:
+            continue
+        seen.add(key)
+        keywords.append(keyword)
+    return keywords
+
+
+def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
+    path = repo_root / KEYWORD_BLACKLIST_PATH
+    existing = _read_json_file(path, {})
+    if not isinstance(existing, dict):
+        existing = {}
+    current = _normalized_keyword_blacklist(existing.get("keywords") or [])
+    incoming = _normalized_keyword_blacklist(payload.get("keywords") or [])
+    mode = str(payload.get("mode") or "replace").strip().casefold()
+    keywords = _normalized_keyword_blacklist(current + incoming) if mode == "append" else incoming
+    next_payload = {
+        **existing,
+        "format": "photosbyelie-keyword-blacklist",
+        "schema_version": 1,
+        "updated_at": datetime.now(timezone.utc).date().isoformat(),
+        "keywords": keywords,
+    }
+    _write_json_file(path, next_payload)
+    return {
+        "ok": True,
+        "action": "save-keyword-blacklist",
+        "path": path.relative_to(repo_root).as_posix(),
+        "keyword_count": len(keywords),
+        "keywords": keywords,
+    }
 
 
 def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_out: dict) -> tuple[Path, dict]:
@@ -1663,6 +1704,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
+        "save-keyword-blacklist",
     }:
         raise ValueError("unsupported photo action")
     if action not in {
@@ -1673,6 +1715,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
         "apply-title-keyword-review-approvals",
+        "save-keyword-blacklist",
     } and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
     if action == "assign-country":
@@ -1752,6 +1795,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "rejected_count": len(merged_record.get("rejections", [])),
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
         }
+
+    if action == "save-keyword-blacklist":
+        return _save_keyword_blacklist(repo_root, payload)
 
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)

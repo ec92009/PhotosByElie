@@ -1,24 +1,148 @@
 {
   "format": "photosbyelie-title-keyword-proposal-state",
   "schema_version": 1,
-  "updated_at": "2026-05-13T08:20:34.303Z",
+  "updated_at": "2026-05-13T19:08:18.320Z",
   "state_flag": "Title_Keywords_Proposed",
   "review_flag": "Title_Keywords_Reviewed",
-  "photo_count": 100,
+  "photo_count": 262,
   "photo_ids": [
+    "20200719-0707-19625-99d9aec9ff",
+    "20200830-0930-19440-736cbfc9a1",
+    "20200830-0932-19541-17dd4fb5d4",
+    "20201122-0516-00056-pano-665f19e925",
+    "20201122-0521-00083-pano-8ac03d9803",
+    "20201122-0522-00115-pano-402eec9058",
+    "20220103-1558-00011-1bdfd05be7",
+    "20220103-1633-00042-0f2ff159e9",
+    "20220103-163309-00200-4107edee53",
+    "20220106-1726-00340-5d09a4fa8b",
+    "20220504-141310-00203-231d78d849",
+    "20220505-0400-00135-pano-f4e52ebf11",
+    "20220505-135009-02982-38775df02a",
+    "20220505-135205-02993-c098de9740",
+    "20220505-135231-03007-a5d4711305",
+    "20220505-135707-03028-e58f913a2d",
+    "20220505-153639-03083-3ded4343e5",
+    "20220506-041124-03096-fad0dd9f78",
+    "20220506-044147-03105-2f7a1843b4",
+    "20220506-044820-03115-d18397db96",
+    "20220506-045037-03123-3dd017d077",
+    "20220506-045149-03144-fd662a4a41",
+    "20220506-045942-03172-b368612e02",
+    "20220506-051024-03188-26c219176a",
+    "20220506-054409-03193-8303575241",
+    "20220506-054411-03196-49e0fc3c0e",
+    "20220506-060627-03223-2c5e854c02",
+    "20220506-060627-03224-86e5202fb1",
+    "20220506-141127-03238-6a809a3d2d",
+    "20220506-144147-03314-497e126421",
+    "20220506-144820-03318-ab367598c9",
+    "20220506-145037-03329-9100ee8314",
+    "20220506-145149-03333-e92838da6f",
+    "20220506-145248-03337-8deb7b57a5",
+    "20220506-145942-03357-6183b42671",
+    "20220506-151024-03375-3e4d581417",
+    "20220506-154558-03388-a887904b4b",
+    "20220506-160631-03403-51426edaac",
+    "20220509-205254-03573-fd98e07ecc",
+    "20220509-205521-03579-aeeda6b4a4",
+    "20220509-210128-03604-d9c7d7c228",
+    "20220510-113828-00196-ce33a9710c",
+    "20220510-122144-00336-60a76e48f0",
+    "20220510-193610-00741-246e0e684e",
+    "20220511-001210-04287-13f472f9a5",
+    "20220511-100959-04337-e5e7737c00",
+    "20220511-101037-04339-de0f00382f",
+    "20220511-101210-04342-d9757c336f",
+    "20220511-101524-04347-16cfbebb6e",
+    "20220519-144628-04390-10c96e02d3",
+    "20220519-144849-04394-d3e2b2fff3",
+    "20220519-144910-04396-092ac31b87",
+    "20220519-145011-04398-926891f8aa",
+    "20220519-145241-04418-3f31ab4dce",
+    "20220519-145733-04458-46544e9a62",
+    "20220519-150002-04473-673b0d617b",
+    "20220519-150528-04477-0e4b4e9c19",
+    "20220519-150855-04494-23ca28ef26",
+    "20220521-144247-04519-1ce1498825",
+    "20220521-144639-04546-3394e60cbe",
+    "20220521-145324-04568-1c242c532c",
+    "20220521-145332-04573-0742e2b77c",
+    "20220618-235625-00229-pano-8b1f8f8e76",
+    "20220619-000102-00258-pano-8f64733ada",
+    "20220620-144527-00117-pano-6e6b630180",
+    "20220620-144601-00127-pano-1a18b2ed13",
+    "20220620-144822-00251-57d2611649",
+    "20220620-165150-00302-pano-1d95a4f7fc",
+    "20220620-165439-00307-pano-37a3caf3f3",
+    "20220705-163053-00041-pano-ffda1926ab",
+    "20220705-163201-00058-pano-fcbc893e0f",
+    "20220705-163205-00060-pano-8068d8fe3f",
+    "20220705-163214-00065-pano-bcd3b6cb72",
+    "20220705-163419-00083-pano-3f4486b119",
+    "20220705-164226-00105-pano-467f6f472c",
+    "20220705-164241-00109-pano-c1234d4711",
+    "20220705-164252-00114-pano-77e6201324",
+    "20220705-164358-00121-pano-28e2885b71",
+    "20220705-164409-00126-pano-75c4163f8e",
+    "20220705-164412-00127-pano-13a8791aa3",
+    "20220705-164431-00139-pano-92425313d3",
+    "20220802-130003-00136-pano-052608ca90",
     "a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e",
     "a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1",
+    "adventure-sports-rafting-kayaking-hiking-biking-skiing-0-upscale-32427e8a-ec99-4a59-aa18-8ccb5346a175-jpgx2-377f43e3c9",
+    "adventure-sports-rafting-kayaking-hiking-biking-skiing-1-upscale-3a18c123-8dd0-458e-b1fb-515c4558cbf4-jpgx2-99c1f4e5d6",
+    "adventure-sports-rafting-kayaking-hiking-biking-skiing-2-upscale-14930469-f85d-48d5-ada6-caf625087086-jpgx2-04c0eda070",
+    "adventure-sports-rafting-kayaking-hiking-biking-skiing-3-upscale-cf8be5d6-3afe-4382-81de-34776083f822-jpgx2-4d165ca923",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-0-upscale-1a25f19d-43e9-445e-8d9a-699c0ee3e7d8-jpgx2-bad6a58d8c",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-0-upscale-ca47133c-cc49-4399-b4f2-5c8a4e159401-jpgx2-b3f399486a",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-0-upscale-f4edf735-4697-4f45-8189-5c5113e1fb47-jpgx2-faa162dd7f",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-9b47f97e-99d7-4629-9323-f0d38d7e047f-jpgx2-39da94ecb9",
+    "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-9f715c87-ca85-4c66-bf58-55ca8601371f-jpgx2-007bd44a93",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-a6229fc5-541f-4b34-9e51-d1d77c631a5e-jpgx2-21a02388d9",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-2-upscale-45226e1a-063b-41bb-9d3a-081b3622ea77-jpgx2-0dc3834f4e",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-2-upscale-71338091-62c9-401d-b0c8-8e8d657f7969-jpgx2-189f49e0f1",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-2-upscale-7d8d8abe-605c-48aa-8fec-ddd041ec33c6-jpgx2-8e26b400eb",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-502f002a-8e84-4c28-a000-a89a2db8e54b-jpgx2-c2c80793d6",
     "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-86273066-892d-43ce-9a57-2d723d1cbc53-jpgx2-f02e611e8d",
+    "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-c9fabf68-fba2-45c6-ae59-7c269b308adf-jpgx2-3ac8a7c159",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-0-upscale-2f033ced-35f7-439b-8fd4-42c1dba4f999-jpgx2-6969d8595f",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-1-upscale-fa09e624-e195-4d8b-aff7-eddc7d7da118-jpgx2-ba3e24243f",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-2-upscale-25227055-e953-4797-a2d4-888ba8ea9bfb-jpgx2-afbe619fda",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-3-upscale-c42b1496-4f36-4f4d-8bcc-c05d215f8cc2-jpgx2-39d7733af7",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-4-upscale-b2d57c0a-21a0-4f2f-924e-0bb01484e6c7-jpgx2-e15c54b70a",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-5-upscale-dfb54d48-e1ad-4ce1-9fc8-20d0b4ad9e91-jpgx2-f65d5f45f1",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-6-upscale-96ac701c-6a4f-451f-9c5f-2e92593e9593-jpgx2-423c992b41",
+    "backpacking-hostels-budget-travel-camping-backpacks-tr-7-upscale-9bd4aff2-ecc7-4632-8770-bc1c7fafa512-jpgx2-57cbc4aa63",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-4728dfa8-610a-4057-ae9a-0a0e29a5f9bf-jpgx2-a7eaf2ff2f",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-6a3f7092-e4b2-4454-a353-14b5e8087a7e-jpgx2-eec964786b",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-89158346-8d7b-4ecd-944c-78782dea7e93-jpgx2-41bc7676ae",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-9d29ecdd-f370-45b3-9014-87d5288fe9ed-jpgx2-e009d81ad6",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-e1270939-e0c8-4e35-b439-c15d5d6daa92-jpgx2-5ec3a9ce0c",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-eb43b6d7-790f-4238-b9e9-875e0b9cd0ed-jpgx2-362aa78810",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-1-upscale-84c8fa22-39a3-480f-a154-5a8b307cdbc2-jpgx2-e9449454f7",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-1-upscale-ec7c1d2e-da93-4c5d-ad92-45a8acd47973-jpgx2-ed31a3a9f8",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-2-upscale-755cae13-c586-48b1-a47b-64ca76317c9e-jpgx2-c67c31f490",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-2-upscale-c9d8f361-e2dd-46eb-97d3-fa0a33fb05f7-jpgx2-d06546a1b6",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-3-upscale-18ce74c2-783b-4fe7-b5c0-1edd4cb4d731-jpgx2-62c43c42c0",
+    "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-3-upscale-28394211-93fb-436c-95cb-34f15af83e51-jpgx2-2914993c6c",
     "bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-afb06039-de05-4105-aa62-76e0431af453-jpgx2-0ca3aedf1d",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-1-upscale-82d63d1d-e007-4b10-80ac-9932109f0f4a-jpgx2-5f075b6bb8",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-1-upscale-fc018fc1-0fe1-42bc-9a9d-9028489c86d4-jpgx2-dddefb444e",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-11814d53-b2e8-4a05-835b-5248ab405616-jpgx2-39efbf1923",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-3-upscale-03715d31-859e-41aa-a8af-d0a5515c9cb7-jpgx2-d11f6d0058",
+    "city-breaks-skyscrapers-street-signs-public-transport-l-3-upscale-3e8f22ce-c187-46b2-a740-ac89d7be0853-jpgx2-a8ec1f95ed",
+    "cultural-heritage-museums-cathedrals-architecture-stree-0-upscale-96f6be01-3c75-47f5-bf46-2381b249fdc3-jpgx2-177968cab4",
+    "cultural-heritage-museums-cathedrals-architecture-stree-1-upscale-035d1ccc-953e-4fd9-acbf-42e5b0eb0cd1-jpgx2-d96d670b41",
+    "cultural-heritage-museums-cathedrals-architecture-stree-2-upscale-3c043fbd-27c2-43e9-828e-4e256a0a51f9-jpgx2-51a8d5b3fe",
+    "cultural-heritage-museums-cathedrals-architecture-stree-3-upscale-71b0fa7c-b8b6-4658-ae75-d897fe35b7cd-jpgx2-9abb048ea0",
+    "cultural-heritage-sagrada-familia-museums-cathedrals-ar-0-upscale-34a59092-f971-4b45-aa00-3e24c4cf61ca-jpgx2-55244e0a97",
+    "cultural-heritage-sagrada-familia-museums-cathedrals-ar-1-upscale-99b6c8bf-d5b7-45ed-ad30-26b0644d1c84-jpgx2-abe79fb760",
+    "cultural-heritage-sagrada-familia-museums-cathedrals-ar-2-upscale-13a4880c-4c61-4e2d-a661-471a146f9326-jpgx2-66f969a29c",
+    "cultural-heritage-sagrada-familia-museums-cathedrals-ar-3-upscale-c8829e56-c723-4b98-abf4-17d250aad4ea-jpgx2-8ed1b45452",
     "d5h-2903-cef12d19f3",
     "d5h-2904-03054a65de",
     "d5h-2905-315a15e934",
@@ -63,6 +187,22 @@
     "d5h-2944-68e4f5655f",
     "d5h-2945-864593e516",
     "d5h-2946-c744a8409c",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-0-upscale-10d4dc75-d74f-43c8-a374-8793fcf1a9df-jpgx2-0790a04799",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-0-upscale-7c05a108-183e-49ff-8785-fc2cafda09b1-jpgx2-7aca57d710",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-0-upscale-ae27cf7b-9006-4b15-8192-a16a0c874b2c-jpgx2-31ddf417ee",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-1-upscale-5a3a2305-0cfc-4b69-8929-de9dea4959d1-jpgx2-313b6623e3",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-1-upscale-af01d9df-ddbc-40ed-9f2f-b1e96a3075cc-jpgx2-af1537b082",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-1-upscale-f8b360ab-00ba-4f6c-b67d-5face569c0ed-jpgx2-276091f398",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-2-upscale-4c65c306-1da8-4521-bd16-a4eca68528e4-jpgx2-5d07dd4fa7",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-2-upscale-6cf1c4fc-8ecb-423e-b47d-6a6156a4560c-jpgx2-02cf64819a",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-2-upscale-c8d39b83-783f-47ff-9d86-bc1b42609414-jpgx2-3dc3d2234c",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-3-upscale-3fa4a89a-d8a7-442a-9a1f-6c39ebad7595-jpgx2-2344b44ddd",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-3-upscale-9ba6f196-481f-4879-9835-83fdee17a3e6-jpgx2-eb57d33dde",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-3-upscale-be4f21cf-a93b-4974-bae8-ae8bc4241d64-jpgx2-a76dcdbbb4",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-4-upscale-43306353-9093-4264-b3f8-d953f475f06a-jpgx2-927f55dfd4",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-5-upscale-fc171e64-c8eb-4293-b6ca-7ca7eb5e3e0b-jpgx2-48f344a3eb",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-6-upscale-63de1f4e-0418-430b-89f7-d8b732ab8b98-jpgx2-ad071ae72e",
+    "family-fun-amusement-parks-zoos-theme-parks-puppet-show-7-upscale-81dafca3-ac08-4694-a385-7aead2789b90-jpgx2-3cf60556a7",
     "img-1196-7c59c4b110",
     "img-1197-0132d88761",
     "img-1198-bb563d6235",
@@ -97,7 +237,17 @@
     "img-1565-9ff9ebf5a6",
     "img-1566-117503577f",
     "img-1567-8286aafbcb",
+    "luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-433e67a8-0fef-4819-8904-ea484a6915ce-jpgx2-7521042940",
+    "luxury-escapes-resorts-mansions-spas-golf-courses-priv-1-upscale-b39cf6d3-e851-4445-b416-f30b4d3aa926-jpgx2-c2d9d71b47",
+    "luxury-escapes-resorts-mansions-spas-golf-courses-priv-2-upscale-17d4d732-4ccb-409d-a83a-a49ac10c36d0-jpgx2-2c5139405c",
+    "luxury-escapes-resorts-mansions-spas-golf-courses-priv-3-upscale-befa1ace-af2b-4e72-b3c8-730f1bfcf828-jpgx2-9e64e94178",
+    "national-parks-mountains-rivers-and-lakes-wildlife-hiki-0-upscale-fc4cdb84-be07-4e70-a6d5-44d143930ab4-jpgx2-f1ece59948",
+    "national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-71c82eae-160f-48b9-8c9c-4cbb379efaa7-jpgx2-9b8ac83b4e",
+    "national-parks-mountains-rivers-and-lakes-wildlife-hiki-2-upscale-90a730c5-ff6d-4f8f-a287-a0ba05256077-jpgx2-9945b70f11",
+    "national-parks-mountains-rivers-and-lakes-wildlife-hiki-3-upscale-216390ea-c19d-45ca-b35e-1c6b33a552c8-jpgx2-318ed522c8",
     "pandora-the-first-woman-created-by-the-gods-who-was-given-0-upscale-1eda54c1-1ec4-4966-a53c-86c1b43019ba-jpgx2-597da29f87",
+    "pandora-the-first-woman-created-by-the-gods-who-was-given-0-upscale-4b45033a-dc19-4090-9c0b-b2427aac2b85-jpgx2-3136a2824e",
+    "pandora-the-first-woman-created-by-the-gods-who-was-given-1-upscale-82e1d75f-8966-493a-b9b6-a886e3d46044-jpgx2-16428f63cf",
     "pandora-the-first-woman-created-by-the-gods-who-was-given-1-upscale-cead4407-7863-4ca5-bcc0-2990d73aea7c-jpgx2-dac220982c",
     "pandora-the-first-woman-created-by-the-gods-who-was-given-2-upscale-16a32e99-e9ce-4ccf-976f-1e7632398367-jpgx2-8baaa26347",
     "pandora-the-first-woman-created-by-the-gods-who-was-given-2-upscale-83691768-9e17-478e-a7a2-6f6777cf1885-jpgx2-1aa2630b6b",
@@ -105,9 +255,1415 @@
     "pandora-the-first-woman-created-by-the-gods-who-was-given-3-upscale-e0783dd5-87c0-4cdb-a7a1-f85274c09976-jpgx2-70a24d45a2",
     "pandora-the-first-woman-created-by-the-gods-who-was-given-5-upscale-e5c47b36-e2c2-43fe-a571-e328e02de881-jpgx2-f1d8b9487a",
     "pandora-the-first-woman-created-by-the-gods-who-was-given-6-upscale-eb24a26b-6949-4866-93f1-73169426d9d6-jpgx2-66d673c52b",
-    "pandora-the-first-woman-created-by-the-gods-who-was-given-7-upscale-9bfda99c-8ea7-4937-a60f-eb11cb5bc95d-jpgx2-d1a1a13cea"
+    "pandora-the-first-woman-created-by-the-gods-who-was-given-7-upscale-9bfda99c-8ea7-4937-a60f-eb11cb5bc95d-jpgx2-d1a1a13cea",
+    "road-trips-adventure-car-rental-scenic-highways-landsca-0-upscale-71717adf-3843-443f-8b3e-3d5579437713-jpgx2-5884fdc1ec",
+    "road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717",
+    "road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-292eb87d-9105-4bb7-99c1-543f991e2675-jpgx2-181c904a23",
+    "road-trips-adventure-car-rental-scenic-highways-landsca-3-upscale-a53230ac-7f97-4cf2-a656-cae239ff990d-jpgx2-d157face86",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-0-upscale-13c3fe3d-c23e-415c-a5f6-1438c47d18a5-jpgx2-00364d9243",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-1-upscale-2c7f4153-0f4b-468f-af9e-8aa1e3280067-jpgx2-9b0dc9812f",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-d41586a1-c009-4cf8-b20c-e0ebc1bbadc8-jpgx2-d6cff1ea2b",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-d0cca351-27d2-4fab-9098-57bc9eb19fde-jpgx2-c165d4b222",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-4-upscale-96d311ec-d7ec-461d-8b78-880dd87abb0a-jpgx2-64c17fc8de",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-5-upscale-20635130-fc17-4644-94e1-59a52cb988eb-jpgx2-3da8ba6e25",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-6-upscale-e74a9093-de09-4b29-899d-ab4534e78ee6-jpgx2-9d352c06dc",
+    "wellness-retreats-yoga-meditation-holistic-treatments-h-7-upscale-531aa929-80ee-4410-a9a5-b9b7c0867199-jpgx2-8ff2009911"
   ],
   "photos": [
+    {
+      "photo_id": "20200719-0707-19625-99d9aec9ff",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20200830-0930-19440-736cbfc9a1",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20200830-0932-19541-17dd4fb5d4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20201122-0516-00056-pano-665f19e925",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20201122-0521-00083-pano-8ac03d9803",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20201122-0522-00115-pano-402eec9058",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220103-1558-00011-1bdfd05be7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220103-1633-00042-0f2ff159e9",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220103-163309-00200-4107edee53",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220106-1726-00340-5d09a4fa8b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220504-141310-00203-231d78d849",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220505-0400-00135-pano-f4e52ebf11",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220505-135009-02982-38775df02a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220505-135205-02993-c098de9740",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220505-135231-03007-a5d4711305",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220505-135707-03028-e58f913a2d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220505-153639-03083-3ded4343e5",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-041124-03096-fad0dd9f78",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-044147-03105-2f7a1843b4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-044820-03115-d18397db96",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-045037-03123-3dd017d077",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-045149-03144-fd662a4a41",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-045942-03172-b368612e02",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-051024-03188-26c219176a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-054409-03193-8303575241",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-054411-03196-49e0fc3c0e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-060627-03223-2c5e854c02",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-060627-03224-86e5202fb1",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-141127-03238-6a809a3d2d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-144147-03314-497e126421",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-144820-03318-ab367598c9",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-145037-03329-9100ee8314",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-145149-03333-e92838da6f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-145248-03337-8deb7b57a5",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-145942-03357-6183b42671",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-151024-03375-3e4d581417",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-154558-03388-a887904b4b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220506-160631-03403-51426edaac",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220509-205254-03573-fd98e07ecc",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220509-205521-03579-aeeda6b4a4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220509-210128-03604-d9c7d7c228",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220510-113828-00196-ce33a9710c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220510-122144-00336-60a76e48f0",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220510-193610-00741-246e0e684e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220511-001210-04287-13f472f9a5",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220511-100959-04337-e5e7737c00",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220511-101037-04339-de0f00382f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220511-101210-04342-d9757c336f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220511-101524-04347-16cfbebb6e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-144628-04390-10c96e02d3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-144849-04394-d3e2b2fff3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-144910-04396-092ac31b87",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-145011-04398-926891f8aa",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-145241-04418-3f31ab4dce",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-145733-04458-46544e9a62",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-150002-04473-673b0d617b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-150528-04477-0e4b4e9c19",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220519-150855-04494-23ca28ef26",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220521-144247-04519-1ce1498825",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220521-144639-04546-3394e60cbe",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220521-145324-04568-1c242c532c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220521-145332-04573-0742e2b77c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220618-235625-00229-pano-8b1f8f8e76",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220619-000102-00258-pano-8f64733ada",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220620-144527-00117-pano-6e6b630180",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220620-144601-00127-pano-1a18b2ed13",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220620-144822-00251-57d2611649",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220620-165150-00302-pano-1d95a4f7fc",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220620-165439-00307-pano-37a3caf3f3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-163053-00041-pano-ffda1926ab",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-163201-00058-pano-fcbc893e0f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-163205-00060-pano-8068d8fe3f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-163214-00065-pano-bcd3b6cb72",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-163419-00083-pano-3f4486b119",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164226-00105-pano-467f6f472c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164241-00109-pano-c1234d4711",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164252-00114-pano-77e6201324",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164358-00121-pano-28e2885b71",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164409-00126-pano-75c4163f8e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164412-00127-pano-13a8791aa3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220705-164431-00139-pano-92425313d3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "20220802-130003-00136-pano-052608ca90",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
     {
       "photo_id": "a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e",
       "state_tags": [
@@ -116,11 +1672,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -134,13 +1690,81 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "adventure-sports-rafting-kayaking-hiking-biking-skiing-0-upscale-32427e8a-ec99-4a59-aa18-8ccb5346a175-jpgx2-377f43e3c9",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "adventure-sports-rafting-kayaking-hiking-biking-skiing-1-upscale-3a18c123-8dd0-458e-b1fb-515c4558cbf4-jpgx2-99c1f4e5d6",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "adventure-sports-rafting-kayaking-hiking-biking-skiing-2-upscale-14930469-f85d-48d5-ada6-caf625087086-jpgx2-04c0eda070",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "adventure-sports-rafting-kayaking-hiking-biking-skiing-3-upscale-cf8be5d6-3afe-4382-81de-34776083f822-jpgx2-4d165ca923",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -154,9 +1778,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -170,11 +1794,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -188,11 +1812,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -206,13 +1830,30 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-9f715c87-ca85-4c66-bf58-55ca8601371f-jpgx2-007bd44a93",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -224,11 +1865,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -242,11 +1883,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -260,11 +1901,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -278,11 +1919,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -296,11 +1937,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -314,13 +1955,370 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-c9fabf68-fba2-45c6-ae59-7c269b308adf-jpgx2-3ac8a7c159",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-0-upscale-2f033ced-35f7-439b-8fd4-42c1dba4f999-jpgx2-6969d8595f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-1-upscale-fa09e624-e195-4d8b-aff7-eddc7d7da118-jpgx2-ba3e24243f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-2-upscale-25227055-e953-4797-a2d4-888ba8ea9bfb-jpgx2-afbe619fda",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-3-upscale-c42b1496-4f36-4f4d-8bcc-c05d215f8cc2-jpgx2-39d7733af7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-4-upscale-b2d57c0a-21a0-4f2f-924e-0bb01484e6c7-jpgx2-e15c54b70a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-5-upscale-dfb54d48-e1ad-4ce1-9fc8-20d0b4ad9e91-jpgx2-f65d5f45f1",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-6-upscale-96ac701c-6a4f-451f-9c5f-2e92593e9593-jpgx2-423c992b41",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "backpacking-hostels-budget-travel-camping-backpacks-tr-7-upscale-9bd4aff2-ecc7-4632-8770-bc1c7fafa512-jpgx2-57cbc4aa63",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-4728dfa8-610a-4057-ae9a-0a0e29a5f9bf-jpgx2-a7eaf2ff2f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-6a3f7092-e4b2-4454-a353-14b5e8087a7e-jpgx2-eec964786b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-89158346-8d7b-4ecd-944c-78782dea7e93-jpgx2-41bc7676ae",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-9d29ecdd-f370-45b3-9014-87d5288fe9ed-jpgx2-e009d81ad6",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-e1270939-e0c8-4e35-b439-c15d5d6daa92-jpgx2-5ec3a9ce0c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-0-upscale-eb43b6d7-790f-4238-b9e9-875e0b9cd0ed-jpgx2-362aa78810",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-1-upscale-84c8fa22-39a3-480f-a154-5a8b307cdbc2-jpgx2-e9449454f7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-1-upscale-ec7c1d2e-da93-4c5d-ad92-45a8acd47973-jpgx2-ed31a3a9f8",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-2-upscale-755cae13-c586-48b1-a47b-64ca76317c9e-jpgx2-c67c31f490",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-2-upscale-c9d8f361-e2dd-46eb-97d3-fa0a33fb05f7-jpgx2-d06546a1b6",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-3-upscale-18ce74c2-783b-4fe7-b5c0-1edd4cb4d731-jpgx2-62c43c42c0",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "beach-scenes-sun-sand-ocean-waves-palm-trees-swimming-3-upscale-28394211-93fb-436c-95cb-34f15af83e51-jpgx2-2914993c6c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -332,13 +2330,285 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 9,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-afb06039-de05-4105-aa62-76e0431af453-jpgx2-0ca3aedf1d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-1-upscale-82d63d1d-e007-4b10-80ac-9932109f0f4a-jpgx2-5f075b6bb8",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-1-upscale-fc018fc1-0fe1-42bc-9a9d-9028489c86d4-jpgx2-dddefb444e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-11814d53-b2e8-4a05-835b-5248ab405616-jpgx2-39efbf1923",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-3-upscale-03715d31-859e-41aa-a8af-d0a5515c9cb7-jpgx2-d11f6d0058",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-3-upscale-3e8f22ce-c187-46b2-a740-ac89d7be0853-jpgx2-a8ec1f95ed",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-museums-cathedrals-architecture-stree-0-upscale-96f6be01-3c75-47f5-bf46-2381b249fdc3-jpgx2-177968cab4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-museums-cathedrals-architecture-stree-1-upscale-035d1ccc-953e-4fd9-acbf-42e5b0eb0cd1-jpgx2-d96d670b41",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-museums-cathedrals-architecture-stree-2-upscale-3c043fbd-27c2-43e9-828e-4e256a0a51f9-jpgx2-51a8d5b3fe",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-museums-cathedrals-architecture-stree-3-upscale-71b0fa7c-b8b6-4658-ae75-d897fe35b7cd-jpgx2-9abb048ea0",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-sagrada-familia-museums-cathedrals-ar-0-upscale-34a59092-f971-4b45-aa00-3e24c4cf61ca-jpgx2-55244e0a97",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-sagrada-familia-museums-cathedrals-ar-1-upscale-99b6c8bf-d5b7-45ed-ad30-26b0644d1c84-jpgx2-abe79fb760",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-sagrada-familia-museums-cathedrals-ar-2-upscale-13a4880c-4c61-4e2d-a661-471a146f9326-jpgx2-66f969a29c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "cultural-heritage-sagrada-familia-museums-cathedrals-ar-3-upscale-c8829e56-c723-4b98-abf4-17d250aad4ea-jpgx2-8ed1b45452",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -352,9 +2622,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -370,9 +2640,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -388,9 +2658,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -406,9 +2676,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -424,9 +2694,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -442,9 +2712,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -460,9 +2730,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -478,9 +2748,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -496,9 +2766,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -514,9 +2784,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -532,9 +2802,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -550,9 +2820,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -568,9 +2838,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -586,9 +2856,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -604,9 +2874,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -622,9 +2892,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -640,9 +2910,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -658,9 +2928,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -676,9 +2946,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -694,9 +2964,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -712,9 +2982,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -730,9 +3000,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -748,9 +3018,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -766,9 +3036,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -784,9 +3054,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -802,9 +3072,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -820,9 +3090,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -838,9 +3108,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -856,9 +3126,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -874,9 +3144,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -892,9 +3162,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -910,9 +3180,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -928,9 +3198,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -946,9 +3216,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -964,9 +3234,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -982,9 +3252,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1000,9 +3270,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1018,9 +3288,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1036,9 +3306,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1054,9 +3324,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1072,9 +3342,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1090,9 +3360,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1108,9 +3378,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1126,11 +3396,283 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-0-upscale-10d4dc75-d74f-43c8-a374-8793fcf1a9df-jpgx2-0790a04799",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-0-upscale-7c05a108-183e-49ff-8785-fc2cafda09b1-jpgx2-7aca57d710",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-0-upscale-ae27cf7b-9006-4b15-8192-a16a0c874b2c-jpgx2-31ddf417ee",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-1-upscale-5a3a2305-0cfc-4b69-8929-de9dea4959d1-jpgx2-313b6623e3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-1-upscale-af01d9df-ddbc-40ed-9f2f-b1e96a3075cc-jpgx2-af1537b082",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-1-upscale-f8b360ab-00ba-4f6c-b67d-5face569c0ed-jpgx2-276091f398",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-2-upscale-4c65c306-1da8-4521-bd16-a4eca68528e4-jpgx2-5d07dd4fa7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-2-upscale-6cf1c4fc-8ecb-423e-b47d-6a6156a4560c-jpgx2-02cf64819a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-2-upscale-c8d39b83-783f-47ff-9d86-bc1b42609414-jpgx2-3dc3d2234c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-3-upscale-3fa4a89a-d8a7-442a-9a1f-6c39ebad7595-jpgx2-2344b44ddd",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-3-upscale-9ba6f196-481f-4879-9835-83fdee17a3e6-jpgx2-eb57d33dde",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-3-upscale-be4f21cf-a93b-4974-bae8-ae8bc4241d64-jpgx2-a76dcdbbb4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-4-upscale-43306353-9093-4264-b3f8-d953f475f06a-jpgx2-927f55dfd4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-5-upscale-fc171e64-c8eb-4293-b6ca-7ca7eb5e3e0b-jpgx2-48f344a3eb",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-6-upscale-63de1f4e-0418-430b-89f7-d8b732ab8b98-jpgx2-ad071ae72e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "family-fun-amusement-parks-zoos-theme-parks-puppet-show-7-upscale-81dafca3-ac08-4694-a385-7aead2789b90-jpgx2-3cf60556a7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -1142,11 +3684,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1160,11 +3702,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1178,11 +3720,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1198,9 +3740,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1214,11 +3756,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1234,9 +3776,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1250,11 +3792,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1268,11 +3810,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1286,11 +3828,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1306,9 +3848,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1322,11 +3864,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1340,11 +3882,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1358,11 +3900,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1376,11 +3918,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1394,11 +3936,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1414,9 +3956,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1430,11 +3972,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1448,11 +3990,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1466,11 +4008,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1484,11 +4026,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 14,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1504,9 +4046,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1520,11 +4062,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1540,9 +4082,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1556,11 +4098,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1576,9 +4118,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1594,9 +4136,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1612,9 +4154,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1630,9 +4172,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1648,9 +4190,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1666,9 +4208,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1684,9 +4226,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1702,9 +4244,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1720,9 +4262,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1738,11 +4280,147 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "luxury-escapes-resorts-mansions-spas-golf-courses-priv-0-upscale-433e67a8-0fef-4819-8904-ea484a6915ce-jpgx2-7521042940",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "luxury-escapes-resorts-mansions-spas-golf-courses-priv-1-upscale-b39cf6d3-e851-4445-b416-f30b4d3aa926-jpgx2-c2d9d71b47",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "luxury-escapes-resorts-mansions-spas-golf-courses-priv-2-upscale-17d4d732-4ccb-409d-a83a-a49ac10c36d0-jpgx2-2c5139405c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "luxury-escapes-resorts-mansions-spas-golf-courses-priv-3-upscale-befa1ace-af2b-4e72-b3c8-730f1bfcf828-jpgx2-9e64e94178",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "national-parks-mountains-rivers-and-lakes-wildlife-hiki-0-upscale-fc4cdb84-be07-4e70-a6d5-44d143930ab4-jpgx2-f1ece59948",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "national-parks-mountains-rivers-and-lakes-wildlife-hiki-1-upscale-71c82eae-160f-48b9-8c9c-4cbb379efaa7-jpgx2-9b8ac83b4e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "national-parks-mountains-rivers-and-lakes-wildlife-hiki-2-upscale-90a730c5-ff6d-4f8f-a287-a0ba05256077-jpgx2-9945b70f11",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "national-parks-mountains-rivers-and-lakes-wildlife-hiki-3-upscale-216390ea-c19d-45ca-b35e-1c6b33a552c8-jpgx2-318ed522c8",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -1754,13 +4432,47 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-0-upscale-4b45033a-dc19-4090-9c0b-b2427aac2b85-jpgx2-3136a2824e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-1-upscale-82e1d75f-8966-493a-b9b6-a886e3d46044-jpgx2-16428f63cf",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     },
@@ -1772,11 +4484,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1792,9 +4504,9 @@
       "rejection_comment": "",
       "rejected_count": 0,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1808,11 +4520,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 10,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1826,11 +4538,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1844,11 +4556,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1862,11 +4574,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1880,11 +4592,11 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1898,13 +4610,217 @@
       "review_state": "proposed",
       "rework_priority": false,
       "rejection_comment": "",
-      "rejected_count": 0,
+      "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
       "latest_proposed_batch_id": "2026-05-13",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T00:03:28.426Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "road-trips-adventure-car-rental-scenic-highways-landsca-0-upscale-71717adf-3843-443f-8b3e-3d5579437713-jpgx2-5884fdc1ec",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "road-trips-adventure-car-rental-scenic-highways-landsca-2-upscale-292eb87d-9105-4bb7-99c1-543f991e2675-jpgx2-181c904a23",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T19:08:18.318Z",
+      "latest_proposed_at": "2026-05-13T19:08:18.318Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "road-trips-adventure-car-rental-scenic-highways-landsca-3-upscale-a53230ac-7f97-4cf2-a656-cae239ff990d-jpgx2-d157face86",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-0-upscale-13c3fe3d-c23e-415c-a5f6-1438c47d18a5-jpgx2-00364d9243",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-1-upscale-2c7f4153-0f4b-468f-af9e-8aa1e3280067-jpgx2-9b0dc9812f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-d41586a1-c009-4cf8-b20c-e0ebc1bbadc8-jpgx2-d6cff1ea2b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-d0cca351-27d2-4fab-9098-57bc9eb19fde-jpgx2-c165d4b222",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-4-upscale-96d311ec-d7ec-461d-8b78-880dd87abb0a-jpgx2-64c17fc8de",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-5-upscale-20635130-fc17-4644-94e1-59a52cb988eb-jpgx2-3da8ba6e25",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-6-upscale-e74a9093-de09-4b29-899d-ab4534e78ee6-jpgx2-9d352c06dc",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ]
+    },
+    {
+      "photo_id": "wellness-retreats-yoga-meditation-holistic-treatments-h-7-upscale-531aa929-80ee-4410-a9a5-b9b7c0867199-jpgx2-8ff2009911",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-13",
+      "first_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ]
     }
@@ -1920,7 +4836,7 @@
     },
     {
       "batch_id": "2026-05-13",
-      "generated_at": "2026-05-13T00:03:28.426Z",
+      "generated_at": "2026-05-13T19:08:18.318Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
       ],

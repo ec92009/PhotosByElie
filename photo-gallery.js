@@ -226,7 +226,10 @@ const photoOrientation = (photo) => {
   return window.photosByEliePhotoOrientation?.(photo) || "unknown";
 };
 
-const photoOrigin = (photo) => window.photosByEliePhotoOrigin?.(photo, galleryKey) || "camera";
+const photoOrigin = (photo) => (
+  window.photosByEliePhotoOrigin?.(photo, galleryKey)
+  || (galleryKey === "ai" ? "ai" : "camera")
+);
 const photoOriginLabel = (photo) => t(photoOrigin(photo) === "ai" ? "origin.ai" : "origin.camera");
 const photoOriginShortLabel = (photo) => (
   window.photosByEliePhotoOriginShortLabel?.(photo, galleryKey)

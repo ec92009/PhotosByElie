@@ -92,7 +92,9 @@ const frameLabel = (frame) => ({
   white: t("product.white_frame"),
   black: t("product.black_frame"),
 }[frame?.id] || frame?.label || "");
-const photoOrigin = photo ? (window.photosByEliePhotoOrigin?.(photo, collectionKey) || "camera") : "camera";
+const photoOrigin = photo
+  ? (window.photosByEliePhotoOrigin?.(photo, collectionKey) || (collectionKey === "ai" ? "ai" : "camera"))
+  : "camera";
 const photoOriginLabel = photo ? (() => {
   const key = photoOrigin === "ai" ? "origin.ai" : "origin.camera";
   const translated = t(key);

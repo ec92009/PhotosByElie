@@ -117,7 +117,8 @@
     Object.entries(data || {}).reduce((counts, [collectionKey, collection]) => {
       (collection.photos || []).forEach((photo) => {
         if (!photo?.id || excludedIds.has(photo.id)) return;
-        const origin = window.photosByEliePhotoOrigin?.(photo, collectionKey) || "camera";
+        const origin = window.photosByEliePhotoOrigin?.(photo, collectionKey)
+          || (collectionKey === "ai" ? "ai" : "camera");
         counts[origin === "ai" ? "ai" : "camera"] += 1;
       });
       return counts;

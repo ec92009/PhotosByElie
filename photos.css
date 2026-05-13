@@ -1345,7 +1345,7 @@ body[data-gallery] .gallery-hero{
   justify-content:flex-end;
   gap:8px;
   max-width:min(520px,calc(100dvw - (var(--page-gutter) * 2)));
-  pointer-events:auto;
+  pointer-events:none;
 }
 .gallery-density-control,
 .gallery-fit-control,
@@ -1362,6 +1362,7 @@ body[data-gallery] .gallery-hero{
   font-weight:800;
   box-shadow:0 12px 26px rgba(0,0,0,.16);
   backdrop-filter:blur(12px);
+  pointer-events:auto;
 }
 .gallery-top-button{
   justify-content:center;

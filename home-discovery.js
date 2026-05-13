@@ -16,6 +16,7 @@
     collection: "all",
     origin: "all",
     orientation: "all",
+    minSize: "all",
     mood: "all",
     subject: "all",
     sort: "newest",
@@ -110,15 +111,7 @@
     .toLowerCase()
     .split(/\s+/)
     .filter(Boolean);
-  const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
-  const photoOrientation = (photo) => {
-    const dimensions = previewDimensions(photo);
-    if (!dimensions?.width || !dimensions?.height) return "unknown";
-    const ratio = dimensions.width / dimensions.height;
-    if (ratio > 1.12) return "landscape";
-    if (ratio < .9) return "portrait";
-    return "square";
-  };
+  const photoOrientation = (photo) => window.photosByEliePhotoOrientation?.(photo) || "unknown";
   const photoOrigin = (photo, collectionKey) => window.photosByEliePhotoOrigin?.(photo, collectionKey) || (collectionKey === "ai" ? "ai" : "camera");
   const photoOriginLabel = (photo, collectionKey) => (
     t(photoOrigin(photo, collectionKey) === "ai" ? "origin.ai" : "origin.camera")
@@ -164,14 +157,19 @@
   };
   const hasActiveFilters = () => (
     searchTerms().length > 0
-    || ["collection", "origin", "orientation", "mood", "subject"].some((key) => filterState[key] && filterState[key] !== "all")
+    || ["collection", "origin", "orientation", "minSize", "mood", "subject"].some((key) => filterState[key] && filterState[key] !== "all")
   );
+  const minSizeThreshold = () => {
+    const threshold = Number(filterState.minSize || 0);
+    return Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
+  };
   const matchesFilterState = (item) => {
     const terms = searchTerms();
     if (terms.length && !terms.every((term) => photoSearchText(item).includes(term))) return false;
     if (filterState.collection !== "all" && item.collectionKey !== filterState.collection) return false;
     if (filterState.origin !== "all" && photoOrigin(item.photo, item.collectionKey) !== filterState.origin) return false;
     if (filterState.orientation !== "all" && photoOrientation(item.photo) !== filterState.orientation) return false;
+    if (minSizeThreshold() && verifiedMegapixels(item.photo) < minSizeThreshold()) return false;
     if (filterState.mood !== "all" && !photoMoodTags(item).has(filterState.mood)) return false;
     if (filterState.subject !== "all" && !photoSubjectTags(item).has(filterState.subject)) return false;
     return true;

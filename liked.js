@@ -30,6 +30,9 @@ const emptyState = document.querySelector("[data-empty-liked]");
 const likedTotal = document.querySelector("[data-liked-total]");
 const status = document.querySelector("[data-liked-status]");
 const bulkResolutionButtons = document.querySelectorAll("[data-liked-select-resolution]");
+const pageSize = 24;
+let visibleLimit = pageSize;
+let moreButton = null;
 const productLabel = (option) => {
   if (option?.type === "print") return window.photosByElieProductLabel?.(option) || option?.label || t("product.print");
   const keyById = {
@@ -78,6 +81,22 @@ const bulkResolutionState = (likedItems, basketByPhoto, resolutionId) => likedIt
   if (selectedIds.has(resolutionId)) state.selected += 1;
   return state;
 }, { eligible: 0, selected: 0 });
+
+const ensureMoreButton = () => {
+  if (moreButton || !likedRoot) return;
+  moreButton = document.createElement("button");
+  moreButton.className = "btn secondary gallery-more-button";
+  moreButton.type = "button";
+  moreButton.dataset.likedMore = "";
+  moreButton.dataset.i18n = "home.show_more";
+  moreButton.textContent = t("home.show_more");
+  moreButton.hidden = true;
+  likedRoot.after(moreButton);
+  moreButton.addEventListener("click", () => {
+    visibleLimit += pageSize;
+    renderLiked();
+  });
+};
 
 const syncBulkResolutionButtons = (likedItems, basketByPhoto) => {
   bulkResolutionButtons.forEach((button) => {
@@ -160,6 +179,7 @@ const toggleResolutionForAllLiked = (resolutionId) => {
 
 const renderLiked = () => {
   const likedItems = likedStore.write(likedStore.read());
+  const visibleLikedItems = likedItems.slice(0, visibleLimit);
   const basketItems = basketStore.read();
   const basketByPhoto = new Map(basketItems.map((item) => [item.photoId, item]));
   const rowSelections = likedItems.map((item) => basketByPhoto.get(item.photoId)?.options || []);
@@ -173,8 +193,9 @@ const renderLiked = () => {
   });
   emptyState.hidden = likedItems.length !== 0;
   syncBulkResolutionButtons(likedItems, basketByPhoto);
+  ensureMoreButton();
 
-  likedRoot.innerHTML = likedItems.map((item, index) => {
+  likedRoot.innerHTML = visibleLikedItems.map((item, index) => {
     const { collection, photo } = photoForLikedItem(item);
     const basketItem = basketByPhoto.get(item.photoId);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
@@ -242,6 +263,10 @@ const renderLiked = () => {
       </div>
     </article>
   `}).join("");
+  if (moreButton) {
+    moreButton.hidden = likedItems.length <= visibleLikedItems.length;
+    moreButton.textContent = t("home.show_more");
+  }
 
   document.querySelectorAll("[data-remove-liked]").forEach((button) => {
     button.addEventListener("click", () => {

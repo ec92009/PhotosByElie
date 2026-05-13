@@ -30,6 +30,9 @@ const workerBaseKey = "photosbyelie-worker-base";
 const siteVersion = document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "71.13";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 let checkoutHashScrollDone = false;
+const pageSize = 24;
+let visibleLimit = pageSize;
+let moreButton = null;
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
 const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -72,6 +75,22 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
   "\"": "&quot;",
   "'": "&#39;"
 }[char]));
+
+const ensureMoreButton = () => {
+  if (moreButton || !basketRoot) return;
+  moreButton = document.createElement("button");
+  moreButton.className = "btn secondary gallery-more-button";
+  moreButton.type = "button";
+  moreButton.dataset.basketMore = "";
+  moreButton.dataset.i18n = "home.show_more";
+  moreButton.textContent = t("home.show_more");
+  moreButton.hidden = true;
+  basketRoot.after(moreButton);
+  moreButton.addEventListener("click", () => {
+    visibleLimit += pageSize;
+    renderBasket();
+  });
+};
 
 const productTypeLabel = (option) => ({
   digital: t("product.digital"),
@@ -470,6 +489,7 @@ orderEmail?.addEventListener("click", async (event) => {
 
 const renderBasket = () => {
   const items = basketStore.write(basketStore.read());
+  const visibleItems = items.slice(0, visibleLimit);
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
   const assetCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
   const shippingHandlingTotal = items.reduce((sum, item) => sum + (item.options || []).reduce((shipping, option) => shipping + optionShippingHandlingTotal(option), 0), 0);
@@ -481,8 +501,9 @@ const renderBasket = () => {
   });
   emptyState.hidden = items.length !== 0;
   syncOrderIntent(items, assetCount, total, shippingHandlingTotal);
+  ensureMoreButton();
 
-  basketRoot.innerHTML = items.map((item, index) => {
+  basketRoot.innerHTML = visibleItems.map((item, index) => {
     const { collection, photo } = photoForItem(item);
     const thumbClasses = collection && photo ? `${collection.accent} ${photo.className}` : "";
     const panoClass = window.photosByEliePhotoIsPanorama?.(photo) ? "is-pano" : "";
@@ -551,6 +572,10 @@ const renderBasket = () => {
       </div>
     </article>
   `}).join("");
+  if (moreButton) {
+    moreButton.hidden = items.length <= visibleItems.length;
+    moreButton.textContent = t("home.show_more");
+  }
 
   window.requestAnimationFrame(syncBasketPreviewHeights);
   if (!checkoutHashScrollDone && window.location.hash === "#checkout" && !orderIntent.hidden) {

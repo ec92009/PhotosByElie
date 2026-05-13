@@ -11,6 +11,9 @@
   let fullscreenPreview = null;
   let pendingScrollAnchor = null;
   let assignmentIndexPhotoIds = new Set();
+  const pageSize = 24;
+  let visibleLimit = pageSize;
+  let moreButton = null;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -230,6 +233,14 @@
   const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
   const photoOriginLabel = (photo) => window.photosByEliePhotoOriginLabel?.(photo, "unknown") || "Camera photo";
   const photoOriginShortLabel = (photo) => window.photosByEliePhotoOriginShortLabel?.(photo, "unknown") || "Camera";
+  const photoOrientation = (photo) => window.photosByEliePhotoOrientation?.(photo) || "unknown";
+  const photoOrientationLabel = (photo) => ({
+    landscape: "Landscape",
+    portrait: "Portrait",
+    square: "Square",
+    pano: "Pano",
+    unknown: "Unknown orientation",
+  }[photoOrientation(photo)] || "Unknown orientation");
 
   const closeFullscreenPreview = () => {
     fullscreenPreview?.remove();
@@ -280,9 +291,39 @@
     const cards = [...root.querySelectorAll("[data-photo-id]")];
     if (!cards.length) return;
     const currentIndex = Math.max(0, cards.findIndex((card) => card.dataset.photoId === selectedPhotoId));
-    const nextIndex = (currentIndex + delta + cards.length) % cards.length;
+    const totalPhotos = unknownPhotos().length;
+    const hiddenPhotosRemain = visibleLimit < totalPhotos;
+    const unclampedIndex = currentIndex + delta;
+    if (delta > 0 && unclampedIndex >= cards.length && hiddenPhotosRemain) {
+      visibleLimit = Math.min(totalPhotos, visibleLimit + pageSize);
+      renderPreservingScroll();
+      window.requestAnimationFrame(() => {
+        const nextCards = [...root.querySelectorAll("[data-photo-id]")];
+        const nextCard = nextCards[Math.min(unclampedIndex, nextCards.length - 1)];
+        selectedPhotoId = nextCard?.dataset.photoId || selectedPhotoId;
+        updateSelection();
+      });
+      return;
+    }
+    const nextIndex = (unclampedIndex + cards.length) % cards.length;
     selectedPhotoId = cards[nextIndex].dataset.photoId || "";
     updateSelection();
+  };
+
+  const ensureMoreButton = () => {
+    if (moreButton || !root) return;
+    moreButton = document.createElement("button");
+    moreButton.className = "btn secondary gallery-more-button";
+    moreButton.type = "button";
+    moreButton.dataset.unknownMore = "";
+    moreButton.dataset.i18n = "home.show_more";
+    moreButton.textContent = "Show more";
+    moreButton.hidden = true;
+    root.after(moreButton);
+    moreButton.addEventListener("click", () => {
+      visibleLimit += pageSize;
+      renderPreservingScroll();
+    });
   };
 
   const shouldIgnoreShortcut = (event) => {
@@ -315,6 +356,7 @@
     }
 
     const photos = unknownPhotos();
+    const visiblePhotos = photos.slice(0, visibleLimit);
     const dayCounts = photos.reduce((counts, photo) => {
       const day = captureDay(photo);
       if (day) counts.set(day, (counts.get(day) || 0) + 1);
@@ -328,15 +370,18 @@
           <h2>No unassigned unknown photos are currently loaded.</h2>
         </article>
       `;
+      if (moreButton) moreButton.hidden = true;
       setStatus("Unknown queue is empty.");
       return;
     }
 
-    root.innerHTML = photos.map((photo) => {
+    ensureMoreButton();
+    root.innerHTML = visiblePhotos.map((photo) => {
       const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
       const rawLabel = rawSourceLabel(photo);
       const origin = window.photosByEliePhotoOrigin?.(photo, "unknown") || "camera";
       const originLabel = photoOriginLabel(photo);
+      const orientationLabel = photoOrientationLabel(photo);
       const capture = (photo.metadata || []).find((item) => item.label === "Captured")?.value || "";
       const dayCount = dayCounts.get(captureDay(photo)) || 1;
       const dayHints = adjacentDayHints(photo, countryDayIndex);
@@ -350,7 +395,7 @@
             <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(photoOriginShortLabel(photo))}</span>
           </div>
           <div class="unknown-card-body">
-            <p class="eyebrow">${escapeHtml(photo.source)} / ${escapeHtml(originLabel)}</p>
+            <p class="eyebrow">${escapeHtml(photo.source)} / ${escapeHtml(originLabel)} / ${escapeHtml(orientationLabel)}</p>
             <h2>${escapeHtml(photo.title)}</h2>
             <p>${escapeHtml(capture || photo.caption || photo.id)}</p>
             <dl class="unknown-metadata">
@@ -381,6 +426,10 @@
         </article>
       `;
     }).join("");
+    if (moreButton) {
+      moreButton.hidden = photos.length <= visiblePhotos.length;
+      moreButton.textContent = "Show more";
+    }
 
     root.querySelectorAll("[data-photo-id]").forEach((card) => {
       card.addEventListener("click", () => {
@@ -463,7 +512,11 @@
     });
 
     updateSelection();
-    setStatus(`${photos.length} unknown photo${photos.length === 1 ? "" : "s"} visible.`);
+    setStatus(
+      photos.length > visiblePhotos.length
+        ? `${visiblePhotos.length} of ${photos.length} unknown photos visible.`
+        : `${photos.length} unknown photo${photos.length === 1 ? "" : "s"} visible.`
+    );
   };
 
   const captureScrollAnchor = (excludeIds = []) => {

@@ -1443,6 +1443,10 @@ body[data-gallery] .gallery-hero{
   min-height:42px;
   align-self:end;
 }
+.gallery-more-button{
+  display:block;
+  margin:18px auto 0;
+}
 .mock-photo-card{
   position:relative;
   display:grid;

@@ -93,9 +93,17 @@ const translations = {
     'gallery.subject': 'Subject',
     'gallery.sort': 'Sort',
     'gallery.all': 'All',
+    'gallery.pano': 'Pano',
     'gallery.landscape': 'Landscape',
     'gallery.portrait': 'Portrait',
     'gallery.square': 'Square',
+    'gallery.min_size': 'Min size',
+    'gallery.any_size': 'Any size',
+    'gallery.size_1mp': '1 MP+',
+    'gallery.size_3mp': '3 MP+',
+    'gallery.size_6mp': '6 MP+',
+    'gallery.size_10mp': '10 MP+',
+    'gallery.size_20mp': '20 MP+',
     'origin.camera': 'Camera photo',
     'origin.ai': 'AI image',
     'gallery.warm': 'Warm',
@@ -122,7 +130,7 @@ const translations = {
     'gallery.clear_filters': 'Clear filters',
     'gallery.adjust_filters': 'Adjust or clear filters to show this collection again.',
     'gallery.showing_count': 'Showing {count} photos.',
-    'gallery.showing_filtered': 'Showing {count} of {total} after filters.',
+    'gallery.showing_filtered': 'Showing {count} of {total} photos.',
     'gallery.reserve_available': '{status} Reserve refill is available.',
     'detail.pick_resolution': 'Pick a resolution',
     'detail.total_selected': 'Total selected:',
@@ -351,9 +359,17 @@ const translations = {
     'gallery.subject': 'Sujet',
     'gallery.sort': 'Tri',
     'gallery.all': 'Tout',
+    'gallery.pano': 'Pano',
     'gallery.landscape': 'Paysage',
     'gallery.portrait': 'Portrait',
     'gallery.square': 'Carré',
+    'gallery.min_size': 'Taille min',
+    'gallery.any_size': 'Toute taille',
+    'gallery.size_1mp': '1 MP+',
+    'gallery.size_3mp': '3 MP+',
+    'gallery.size_6mp': '6 MP+',
+    'gallery.size_10mp': '10 MP+',
+    'gallery.size_20mp': '20 MP+',
     'origin.camera': 'Photo camera',
     'origin.ai': 'Image IA',
     'gallery.warm': 'Chaud',
@@ -380,7 +396,7 @@ const translations = {
     'gallery.clear_filters': 'Effacer les filtres',
     'gallery.adjust_filters': 'Ajustez ou effacez les filtres pour revoir cette collection.',
     'gallery.showing_count': '{count} photos affichees.',
-    'gallery.showing_filtered': '{count} sur {total} apres filtres.',
+    'gallery.showing_filtered': '{count} sur {total} photos.',
     'gallery.reserve_available': '{status} Le remplissage de reserve est disponible.',
     'detail.pick_resolution': 'Choisir une resolution',
     'detail.total_selected': 'Total choisi :',
@@ -609,9 +625,17 @@ const translations = {
     'gallery.subject': 'Tema',
     'gallery.sort': 'Orden',
     'gallery.all': 'Todo',
+    'gallery.pano': 'Pano',
     'gallery.landscape': 'Horizontal',
     'gallery.portrait': 'Vertical',
     'gallery.square': 'Cuadrada',
+    'gallery.min_size': 'Tamano min',
+    'gallery.any_size': 'Cualquier tamano',
+    'gallery.size_1mp': '1 MP+',
+    'gallery.size_3mp': '3 MP+',
+    'gallery.size_6mp': '6 MP+',
+    'gallery.size_10mp': '10 MP+',
+    'gallery.size_20mp': '20 MP+',
     'origin.camera': 'Foto de camara',
     'origin.ai': 'Imagen IA',
     'gallery.warm': 'Calido',
@@ -638,7 +662,7 @@ const translations = {
     'gallery.clear_filters': 'Limpiar filtros',
     'gallery.adjust_filters': 'Ajusta o limpia los filtros para volver a mostrar esta coleccion.',
     'gallery.showing_count': 'Mostrando {count} fotos.',
-    'gallery.showing_filtered': 'Mostrando {count} de {total} tras filtros.',
+    'gallery.showing_filtered': 'Mostrando {count} de {total} fotos.',
     'gallery.reserve_available': '{status} El relleno de reserva esta disponible.',
     'detail.pick_resolution': 'Elige una resolucion',
     'detail.total_selected': 'Total seleccionado:',
@@ -1123,6 +1147,16 @@ window.photosByEliePhotoAspectStyle = (photo) => {
 window.photosByEliePhotoIsPanorama = (photo) => {
   const dimensions = window.photosByEliePreviewDimensions(photo);
   return Boolean(dimensions?.width && dimensions?.height && dimensions.width / dimensions.height >= 2.1);
+};
+
+window.photosByEliePhotoOrientation = (photo) => {
+  const dimensions = window.photosByEliePreviewDimensions(photo);
+  if (!dimensions?.width || !dimensions?.height) return 'unknown';
+  if (window.photosByEliePhotoIsPanorama(photo)) return 'pano';
+  const ratio = dimensions.width / dimensions.height;
+  if (ratio > 1.12) return 'landscape';
+  if (ratio < .9) return 'portrait';
+  return 'square';
 };
 
 window.photosByElieCssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;

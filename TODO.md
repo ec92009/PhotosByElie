@@ -4,7 +4,8 @@ Last updated: 2026-05-13
 
 ## Current Facts
 
-- Local visible build: `v74.4`.
+- Local visible build: `v74.5`.
+- Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless blocked/discarded or explicitly ineligible.
 - Public previews are watermarked and public under flat R2 keys: `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`.
@@ -134,7 +135,6 @@ Last updated: 2026-05-13
    - Continue testing density controls and fit/fill behavior across very mixed collections.
    - Keep keyboard selection, Owner block/discard shortcuts, likes, and detail navigation stable when layout positions change.
    - Keep a future justified-row gallery as a separate buyer-polish idea, not the current target.
-   - Replace leaked translation keys in gallery filter controls, such as `gallery.min_size` and `gallery.any_size`, with clear buyer/Owner-facing labels.
 
 14. **Add buyer account or order recovery only if needed.**
    - Decide whether buyer accounts are optional convenience after guest checkout.

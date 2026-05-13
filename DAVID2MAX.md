@@ -495,3 +495,13 @@ _No David automation results recorded yet._
 - Checks passed: `node --check owner.js`, `git diff --check`.
 - Known unrelated failures remain: `npm test` still fails 3 checkout pricing assertions; `npm run validate` still reports generated catalog/source-origin/public-preview key issues.
 - Notes: I did not start another empty-basket purge while existing delete jobs were active. Dirty local Owner/generated state remains unstaged.
+
+## 2026-05-13 - Owner price list AI tier guard
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Restored the Owner price list's Camera/AI digital pricing split when local generated catalog state is stale.
+- Finding: The committed generator still emits `window.photosByEliePriceTiers` and per-option `prices`, but David's dirty local `photos-data.js` had lost that block, so the Owner price list fell back to a single Camera column.
+- Change: `owner.js` now backfills the canonical digital price tiers before applying local Owner price overrides.
+- Visible version bumped to v74.27.
+- Notes: Dirty generated catalog/state files remain unstaged.

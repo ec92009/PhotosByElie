@@ -213,16 +213,44 @@
     return Number.isFinite(amount) ? `$${amount.toFixed(amount % 1 ? 2 : 0)}` : "$0";
   };
 
+  const defaultPriceTiers = {
+    original: { label: "Camera photo" },
+    ai: { label: "AI image" },
+  };
+  const defaultDigitalTierPrices = {
+    full: { original: 65, ai: 25 },
+    "jpg-6mp": { original: 28, ai: 14 },
+    "jpg-3mp": { original: 16, ai: 8 },
+    "jpg-1mp": { original: 8, ai: 4 },
+  };
+
+  const ensureOwnerPriceTiers = () => {
+    window.photosByEliePriceTiers = {
+      ...defaultPriceTiers,
+      ...(window.photosByEliePriceTiers || {}),
+    };
+    (window.photosByElieResolutions || []).forEach((option) => {
+      const defaultPrices = defaultDigitalTierPrices[option.id];
+      if (!defaultPrices || option.type === "print") return;
+      option.prices = {
+        ...defaultPrices,
+        ...(option.prices || {}),
+      };
+      option.price = Number(option.prices.original ?? option.price ?? 0);
+    });
+  };
+
   const productLabel = (option) => window.photosByElieProductLabel?.(option) || option?.label || option?.id || "";
   const productDetail = (option) => option?.detail || "";
   const renderPriceList = () => {
     if (!priceListRoot) return;
+    ensureOwnerPriceTiers();
     productSettings?.applyPriceOverrides?.();
     const options = window.photosByElieResolutions || [];
     const frames = window.photosByElieFrameOptions || [];
     const digitalOptions = options.filter((option) => option.type !== "print");
     const printOptions = options.filter((option) => option.type === "print");
-    const priceTiers = window.photosByEliePriceTiers || { original: { label: "Camera photo" } };
+    const priceTiers = window.photosByEliePriceTiers || defaultPriceTiers;
     const digitalTierIds = Object.keys(priceTiers);
     const frameColumns = frames.filter((frame) => frame.id !== "none");
     const frameGroupIds = frameColumns.map((frame) => frame.id).join(",");

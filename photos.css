@@ -1590,6 +1590,7 @@ body[data-gallery] .gallery-hero{
   grid-auto-rows:var(--gallery-masonry-row-height);
 }
 .mock-gallery[data-image-fit="fit"] .mock-photo-card{
+  grid-column:span var(--gallery-column-span,1);
   grid-row-end:span var(--gallery-masonry-span,1);
 }
 .mock-gallery[data-image-fit="fit"] .mock-photo.has-image{

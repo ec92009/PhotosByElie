@@ -126,6 +126,18 @@ David should append automation results here. Keep newest entries near the top, b
 
 _No David automation results recorded yet._
 
+## 2026-05-13 R2 master-chain maintenance (daily)
+
+- Repo sync: `git pull --ff-only` failed (DNS/network: could not resolve `github.com`).
+- R2 maintenance: failed before audit (DNS/network: could not resolve `*.r2.cloudflarestorage.com`).
+- Tests: `npm test` OK (14/14); `npm run validate` OK.
+- Counts (unavailable due to R2 connectivity):
+  - Repaired masters: n/a
+  - Repaired renders: n/a
+  - Pruned private render ghosts: n/a
+  - Pruned public preview ghosts: n/a
+  - Remaining missing public previews / failures: n/a
+
 ## 2026-05-12 MAX2DAVID Automation Setup
 
 - Machine: David
@@ -139,3 +151,12 @@ _No David automation results recorded yet._
   - Created nightly 02:00 title/keyword Owner review queue automation.
 - Commit pushed: yes, this setup note is part of the setup commit.
 - Notes: Automations append results back to `DAVID2MAX.md`, run from `/Users/ecohen/Dev/PhotosByElie`, pull `main` first, avoid rewriting image/JPG/source metadata, validate before committing tracked changes, and push successful report/code commits to `main`.
+
+## 2026-05-13 PBE Daily Health Check
+
+- Repo sync: `git pull --ff-only` failed (DNS/network: could not resolve `github.com`).
+- Commit checked: `499a522aef0cd17bd3c73337abac83adea04a472` (local `main`).
+- Tests: `npm test` OK (14/14).
+- Validate: `npm run validate` OK.
+- Working tree: not clean (many modified tracked files and some untracked; likely from prior local work).
+- Notes: Next action is to restore GitHub connectivity (or run from a networked environment) so the check can validate against latest `origin/main`, and to decide whether to commit/stash/discard the existing local changes before the next pull.

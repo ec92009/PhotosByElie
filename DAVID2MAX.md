@@ -16,6 +16,29 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-13 Social Post Package Follow-up
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Added the follow-on package generator for the weekly social asset queue and created the recurring automation.
+- Changes made:
+  - Added `scripts/generate_social_post_packages.mjs`.
+  - Added `npm run social:packages`.
+  - Generated 10 ready-to-review packages from the 2026-05-13 Social Asset Queue under `assets/owner-actions/social-post-packages/2026-05-13/`.
+  - Created active automation `pbe-weekly-social-post-packages` for Wednesdays at 10:15 Madrid time.
+- Package files:
+  - `assets/owner-actions/social-post-packages/2026-05-13/post-packages.md`
+  - `assets/owner-actions/social-post-packages/2026-05-13/post-packages.json`
+  - `assets/owner-actions/social-post-packages/latest.json`
+- Automation scope: prepares Instagram, Facebook, and Reddit posting kits only. It does not post, comment, upload, crop, or edit images.
+- Posting automation note: Instagram/Facebook/Reddit posting appears technically possible, but it needs platform credentials, app permissions, token storage, and Reddit subreddit rule handling before enabling live publish.
+- Validation:
+  - `npm run social:packages`: OK, 10/10 ready.
+  - `node --check scripts/generate_social_post_packages.mjs`: OK.
+  - `npm test`: blocked by unrelated dirty generated catalog pricing state (`5500 !== 8100`, `5000 !== 2900`, `4500 !== 6500`).
+  - `npm run validate`: blocked by unrelated dirty generated catalog media/sourceOrigin state.
+- Notes: Left existing Owner/title-keyword review state and generated catalog drift unstaged.
+
 ## 2026-05-13 Title/Keyword Proposal State + Reject Rework
 
 - Machine: David (`David-5.local`)

@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "test": "node --test worker/checkout-worker.test.mjs",
-    "validate": "node scripts/validate_publish.js --external-media"
+    "validate": "node scripts/validate_publish.js --external-media",
+    "social:packages": "node scripts/generate_social_post_packages.mjs"
   },
   "dependencies": {
     "jpeg-js": "^0.4.4"

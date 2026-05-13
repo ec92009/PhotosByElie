@@ -185,6 +185,21 @@ Use `--summary` when preparing a push. The summary prints collection counts, loc
 node scripts/validate_publish.js --summary
 ```
 
+## Social Post Packages
+
+`generate_social_post_packages.mjs` turns the latest weekly Social Asset Queue in `DAVID2MAX.md` into ready-to-review posting kits for Instagram, Facebook, and Reddit. It writes JSON plus a readable Markdown brief under `assets/owner-actions/social-post-packages/<date>/` and leaves actual posting disabled until platform credentials, account permissions, and subreddit rules are configured.
+
+```bash
+npm run social:packages
+```
+
+Useful options:
+
+```bash
+node scripts/generate_social_post_packages.mjs --date 2026-05-13 --limit 3
+node scripts/generate_social_post_packages.mjs --dry-run
+```
+
 ## Owner Title / Keyword Review Queue
 
 `generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` and the proposal state flag `Title_Keywords_Proposed` for manual Owner review. It writes proposals and proposal-state tracking to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify JPG/source embedded metadata.

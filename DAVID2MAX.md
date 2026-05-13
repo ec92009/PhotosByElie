@@ -235,3 +235,19 @@ _No David automation results recorded yet._
   - Browser check: single-click selection stayed on the review page; double-click opened `photo.html?id=d5h-2945-864593e516&v=74.2`.
 - Commit pushed: `4552134a` (`photosbyelie: add review row shortcuts`)
 - Notes: Dirty generated catalog files remain unstaged: `photos-data.js` and `worker/photos-catalog.generated.mjs`.
+
+## 2026-05-13 Title/Keyword Review Autosave Fix
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Fixed row autosave failures seen in the Title/Keywords review page.
+- Cause: Concurrent row saves were writing through the same approval JSON temp filename, so one save could remove another save's temp file before rename.
+- Changes made:
+  - `_write_json_file` now uses a unique UUID temp filename for each write.
+  - Row-level save/block errors now show short row status text and keep the detailed error in the page status line.
+- Visible version: `v74.3`
+- Validation:
+  - `node --check title-keyword-review.js`: OK
+  - `python3 -m py_compile scripts/local_server.py`: OK
+- Commit pushed: `519b45ca` (`photosbyelie: harden review autosaves`)
+- Notes: Dirty generated/output files remain unstaged: `home-data.js`, `photos-data.js`, `worker/photos-catalog.generated.mjs`, and `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`.

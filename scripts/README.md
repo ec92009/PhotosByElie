@@ -94,7 +94,7 @@ The Expo cap is retired. For standalone exports, omit `--expo-cap` so the export
 python3 scripts/export_photos_data.py
 ```
 
-For the GitHub-code/R2-media publishing model, write the same public catalog and Expo manifest without copying preview JPGs into tracked `assets/expo`:
+For the GitHub-code/R2-media publishing model, write the same public catalog and Expo manifest without copying preview JPGs into the repo:
 
 ```bash
 python3 scripts/export_photos_data.py --external-media
@@ -132,7 +132,7 @@ Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroo
 
 For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of the default ordering. Use `--seed N` only with legacy capped/randomized export experiments.
 
-The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/import-cache` is the ignored disposable import/render workspace; `assets/reserve` remains only as localhost compatibility data; Blocked is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
+The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/import-cache` is the ignored disposable import/render workspace; `assets/owner-actions/reserve-data.json` remains only as localhost compatibility data; Blocked is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
 
 ## State SQLite
 
@@ -179,7 +179,7 @@ When GitHub Pages is serving code and metadata while public previews live in R2/
 node scripts/validate_publish.js --external-media
 ```
 
-Use `--summary` when preparing a push. The summary prints collection counts, local import-cache/Reserve/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/expo`, and `assets/expo-manifest.json`:
+Use `--summary` when preparing a push. The summary prints collection counts, local import-cache/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js` and `assets/expo-manifest.json`:
 
 ```bash
 node scripts/validate_publish.js --summary
@@ -349,7 +349,7 @@ Run it only after confirming no public/private R2 upload lane is active. The scr
 
 ## Local Asset Sync
 
-`sync_local_assets.py` moves the ignored local vault state between the David and Max checkouts without asking Git to track compatibility Reserve or blocked data. It syncs `assets/reserve`, `assets/hidden`, and `.review-logs` by default. The disposable import cache under `tmp/import-cache` should be rebuilt or uploaded, not handed off through Git. The tracked public metadata should normally move through Git; add `--include-expo` only for a deliberate direct media handoff.
+`sync_local_assets.py` moves ignored local review state between the David and Max checkouts. It syncs Hidden JSON state and `.review-logs` by default. The disposable import cache under `tmp/import-cache` should be rebuilt or uploaded, not handed off through Git. The tracked public metadata should normally move through Git.
 
 The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
 

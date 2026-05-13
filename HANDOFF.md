@@ -120,7 +120,7 @@ The sweep:
 - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
 - RAW/DNG/NEF files are not public-site or cloud-storage inputs. Use developed JPG/TIFF sources.
 - `tmp/import-cache` is the ignored disposable import/render workspace. Confirmed-upload preview JPGs can be removed after R2 upload.
-- `assets/reserve` remains only as localhost compatibility data; it is not a product or long-term review state.
+- Reserve is manifest-only owner state; local preview asset folders are retired.
 
 ## Tracked Media Metadata
 

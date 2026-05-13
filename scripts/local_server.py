@@ -62,8 +62,6 @@ from asset_state import (  # noqa: E402
     hidden_asset_rel,
     load_site_data,
     move_asset,
-    regular_asset_rel,
-    reserve_return_rel,
     write_hidden_data_from_site,
     write_photos_data_from_site,
     write_regular_manifest_from_site,
@@ -113,14 +111,6 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path: str) -> str:
         translated = Path(super().translate_path(path))
-        request_path = urlparse(path).path
-        if request_path.startswith("/assets/expo/") and not translated.exists():
-            reserve_path = Path.cwd() / "assets/reserve" / request_path.removeprefix("/assets/expo/")
-            if reserve_path.exists():
-                return str(reserve_path)
-            import_cache_path = Path.cwd() / "tmp/import-cache" / request_path.removeprefix("/assets/expo/")
-            if import_cache_path.exists():
-                return str(import_cache_path)
         return str(translated)
 
     def do_GET(self) -> None:
@@ -376,10 +366,6 @@ def _normalized_photo_ids(value: object) -> list[str]:
 
 
 def _destination_rel(photo: dict, derivative: str, state: str, slug: str) -> str:
-    if state == "expo":
-        return regular_asset_rel(photo, derivative, slug)
-    if state == "reserve":
-        return reserve_return_rel(photo, derivative, slug)
     if state == "hidden":
         return hidden_asset_rel(photo, derivative, slug)
     raise ValueError(f"unsupported destination state: {state}")
@@ -387,6 +373,10 @@ def _destination_rel(photo: dict, derivative: str, state: str, slug: str) -> str
 
 def _move_photo(repo_root: Path, source_photo: dict, state: str, slug: str) -> dict:
     photo = copy_photo(source_photo)
+    if state in {"expo", "reserve", "hidden"}:
+        for _, key in DERIVATIVES:
+            photo[key] = ""
+        return photo
     missing = []
     for derivative, key in DERIVATIVES:
         destination_rel = _destination_rel(photo, derivative, state, slug)
@@ -1124,27 +1114,13 @@ def _append_unique_path(paths: list[Path], path: Path) -> None:
 
 
 def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:
-    """Resolve a site asset reference, including localhost-only Expo-to-Reserve fallback."""
+    """Resolve local working asset references used by owner-state mutations."""
     paths: list[Path] = []
     if not rel:
         return paths
     direct = repo_root / rel
     if direct.exists():
         _append_unique_path(paths, direct)
-    if rel.startswith("assets/expo/"):
-        reserve_rel = "assets/reserve/" + rel.removeprefix("assets/expo/")
-        reserve_path = repo_root / reserve_rel
-        if reserve_path.exists():
-            _append_unique_path(paths, reserve_path)
-        import_cache_rel = "tmp/import-cache/" + rel.removeprefix("assets/expo/")
-        import_cache_path = repo_root / import_cache_rel
-        if import_cache_path.exists():
-            _append_unique_path(paths, import_cache_path)
-    elif rel.startswith("assets/reserve/"):
-        expo_rel = "assets/expo/" + rel.removeprefix("assets/reserve/")
-        expo_path = repo_root / expo_rel
-        if expo_path.exists():
-            _append_unique_path(paths, expo_path)
     return paths
 
 
@@ -1777,8 +1753,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
         }
 
-    ensure_state_folders(repo_root / "assets/expo")
-    ensure_state_folders(repo_root / "assets/reserve")
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)
 

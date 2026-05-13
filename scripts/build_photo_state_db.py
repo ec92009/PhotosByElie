@@ -23,7 +23,7 @@ MANIFEST_PATHS = [
     ("media-sidecar", Path("assets/media-sidecar.json")),
     ("hidden-blacklist", Path("assets/hidden/hidden-blacklist.json")),
     ("hidden-data", Path("assets/hidden/hidden-data.json")),
-    ("reserve-data", Path("assets/reserve/reserve-data.json")),
+    ("reserve-data", Path("assets/owner-actions/reserve-data.json")),
     ("discarded-tombstone", Path("assets/discarded/discarded-photo-ids.json")),
     ("discarded-media", Path("assets/discarded-media-manifest.json")),
     ("country-assignments-log", Path("assets/owner-actions/country-assignments.jsonl")),
@@ -611,7 +611,7 @@ def write_db(repo_root: Path, output: Path) -> None:
     builder.absorb_import_cache(load_json(repo_root / IMPORT_CACHE_MANIFEST, {}))
     builder.absorb_expo_manifest(load_json(repo_root / "assets/expo-manifest.json", {}))
     builder.absorb_collections(load_json(repo_root / "assets/hidden/hidden-data.json", {}), "hidden_catalog", "assets/hidden/hidden-data.json")
-    builder.absorb_collections(load_json(repo_root / "assets/reserve/reserve-data.json", {}), "reserve_compat", "assets/reserve/reserve-data.json")
+    builder.absorb_collections(load_json(repo_root / "assets/owner-actions/reserve-data.json", {}), "reserve_compat", "assets/owner-actions/reserve-data.json")
     builder.absorb_tombstone_ids(load_json(repo_root / "assets/hidden/hidden-blacklist.json", {}), "blocked_tombstone", "assets/hidden/hidden-blacklist.json")
     builder.absorb_tombstone_ids(load_json(repo_root / "assets/discarded/discarded-photo-ids.json", {}), "discarded_tombstone", "assets/discarded/discarded-photo-ids.json")
     builder.absorb_discarded_media(load_json(repo_root / "assets/discarded-media-manifest.json", {}))

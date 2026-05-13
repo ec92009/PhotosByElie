@@ -26,7 +26,7 @@ from export_photos_data import (
     write_photos_data,
     write_home_data_from_collections,
 )
-from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
+from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed
 
 COUNTRY_ASSIGNMENT_LABELS = {
@@ -179,13 +179,12 @@ def photo_with_media(photo: dict) -> dict:
 
 
 def hidden_asset_rel(photo: dict, derivative: str, slug: str) -> str:
-    suffix = "900" if derivative == "gallery" else "1800"
-    return f"{HIDDEN_ASSET_ROOT.as_posix()}/{slug}/{photo['id']}_{suffix}.jpg"
+    return ""
 
 
 def move_derivative(repo_root: Path, relative_path: str, destination_rel: str | None = None) -> dict | None:
     source_rel = clean_site_src(relative_path)
-    if not source_rel:
+    if not source_rel or not destination_rel:
         return None
     source = repo_root / source_rel
     destination = repo_root / (destination_rel or (HIDDEN_ASSET_ROOT / source_rel).as_posix())
@@ -268,7 +267,7 @@ const root = process.argv[1];
 const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "photos-data.js"), "utf8"), context);
-const reservePath = path.join(root, "assets/reserve/reserve-data.json");
+const reservePath = path.join(root, "assets/owner-actions/reserve-data.json");
 if (fs.existsSync(reservePath)) {
   context.window.photosByElieReserveData = JSON.parse(fs.readFileSync(reservePath, "utf8"));
 }
@@ -397,21 +396,6 @@ def find_asset_path(relative_path: str, roots: list[Path]) -> Path | None:
     return None
 
 
-def regular_asset_rel(photo: dict, derivative: str, slug: str) -> str:
-    suffix = "900" if derivative == "gallery" else "1800"
-    return f"assets/expo/{slug}/{photo['id']}_{suffix}.jpg"
-
-
-def reserve_return_rel(photo: dict, derivative: str, slug: str) -> str:
-    suffix = "900" if derivative == "gallery" else "1800"
-    return f"assets/reserve/{slug}/{photo['id']}_{suffix}.jpg"
-
-
-def reserve_hidden_return_rel(photo: dict, derivative: str, slug: str) -> str:
-    suffix = "900" if derivative == "gallery" else "1800"
-    return f"assets/reserve/{slug}/{photo['id']}_{suffix}.jpg"
-
-
 def photo_has_assets(photo: dict, roots: list[Path]) -> bool:
     return all(
         find_asset_path(photo.get(key), roots)
@@ -425,8 +409,7 @@ def photo_has_regular_source_assets(repo_root: Path, photo: dict, slug: str, roo
         ("detail", "imageSrc", "_originalImageSrc"),
     ]:
         source_rel = clean_site_src(photo.get(original_key) or photo.get(key))
-        target_rel = regular_asset_rel(photo, derivative, slug)
-        if find_asset_path(source_rel, roots) or (repo_root / target_rel).exists():
+        if find_asset_path(source_rel, roots):
             continue
         return False
     return True
@@ -632,7 +615,7 @@ def write_reserve_data_from_site(repo_root: Path, reserve_groups: dict[str, list
             "accent": accent,
             "photos": [photo_with_media(photo) for photo in reserve_groups.get(slug, [])],
         }
-    output = repo_root / "assets/reserve/reserve-data.json"
+    output = repo_root / "assets/owner-actions/reserve-data.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -688,8 +671,8 @@ def write_regular_manifest_from_site(
                 },
                 "source_mode": source_mode_for(photo, slug),
                 "derivatives": {
-                    "gallery": regular_asset_rel(photo, "gallery", slug),
-                    "detail": regular_asset_rel(photo, "detail", slug),
+                    "gallery": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "gallery"),
+                    "detail": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "detail"),
                 },
             }
             for slug, photo in regular_rows
@@ -822,8 +805,8 @@ def apply_asset_review(
             if photo.get("id"):
                 unavailable_regular_ids.add(photo.get("id"))
             return False
-        photo["gallerySrc"] = f"./{regular_asset_rel(photo, 'gallery', slug)}"
-        photo["imageSrc"] = f"./{regular_asset_rel(photo, 'detail', slug)}"
+        photo["gallerySrc"] = ""
+        photo["imageSrc"] = ""
         regular_groups[slug].append(photo)
         return True
 
@@ -889,26 +872,15 @@ def apply_asset_review(
                 ("detail", "imageSrc", "_originalImageSrc"),
             ]:
                 source_rel = clean_site_src(photo.get(original_key) or photo.get(key))
-                target_rel = regular_asset_rel(photo, derivative, slug)
                 source_path = find_asset_path(source_rel, roots)
-                target_path = repo_root / target_rel
-                if not source_path and target_path.exists():
-                    source_path = target_path
                 if not source_path:
                     missing_assets.append(source_rel)
                     continue
-                copies.append((source_path, target_path))
+                copies.append((source_path, source_path))
 
     if missing_assets:
         sample = "\n".join(f"- {path}" for path in missing_assets[:25])
         raise FileNotFoundError(f"Missing derivative assets for review snapshot:\n{sample}")
-
-    for source_path, target_path in copies:
-        if source_path.resolve() == target_path.resolve():
-            continue
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, target_path)
-    ensure_state_folders(repo_root / "assets/expo")
 
     reserve_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
     hidden_groups: dict[str, list[dict]] = {slug: [] for slug in ORDER}
@@ -952,22 +924,12 @@ def apply_asset_review(
         if target_slug not in reserve_groups:
             target_slug = source_slug if source_slug in reserve_groups else "unknown"
         reserve_photo = copy_photo(source_photo)
-        moves: list[dict] = []
-        usable = False
         for derivative, key in [("gallery", "gallerySrc"), ("detail", "imageSrc")]:
-            target_rel = reserve_hidden_return_rel(source_photo, derivative, target_slug)
-            moved = move_asset(repo_root, source_photo.get(key), target_rel)
-            if moved:
-                reserve_photo[key] = f"./{target_rel}"
-                moves.append(moved)
-                usable = True
-            elif (repo_root / target_rel).exists():
-                reserve_photo[key] = f"./{target_rel}"
-                usable = True
-        if usable and photo_id not in reserve_added_ids:
+            reserve_photo[key] = ""
+        if photo_id not in reserve_added_ids:
             reserve_groups[target_slug].append(reserve_photo)
             reserve_added_ids.add(photo_id)
-        return moves
+        return []
 
     for slug, photos in hidden_groups_input.items():
         for source_photo in photos:
@@ -992,11 +954,11 @@ def apply_asset_review(
                 target_slug = slug if slug in reserve_groups else "unknown"
             if photo_id in reserve_added_ids:
                 continue
-            if photo_has_assets(source_photo, roots):
-                reserve_groups[target_slug].append(copy_photo(source_photo))
-                reserve_added_ids.add(photo_id)
-            else:
-                skipped_missing_reserve.add(photo_id)
+            reserve_photo = copy_photo(source_photo)
+            reserve_photo["gallerySrc"] = ""
+            reserve_photo["imageSrc"] = ""
+            reserve_groups[target_slug].append(reserve_photo)
+            reserve_added_ids.add(photo_id)
 
     moved_regular = []
     for slug, photos in current_groups.items():
@@ -1021,10 +983,8 @@ def apply_asset_review(
                     else:
                         missing_hidden_assets.add(source_rel)
                 else:
-                    target_rel = reserve_return_rel(source_photo, derivative, target_slug)
-                    moved = move_asset(repo_root, source_rel, target_rel)
-                    if moved:
-                        demoted[key] = f"./{target_rel}"
+                    moved = None
+                    demoted[key] = ""
                 if moved:
                     moved_regular.append({"id": photo_id, "asset": moved})
             if is_hidden:
@@ -1036,7 +996,6 @@ def apply_asset_review(
                     reserve_groups[target_slug].append(demoted)
                     reserve_added_ids.add(photo_id)
 
-    ensure_state_folders(repo_root / "assets/reserve")
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     write_photos_data_from_site(repo_root, regular_groups, reserve_groups)
     write_regular_manifest_from_site(
@@ -1085,7 +1044,7 @@ def apply_review_snapshot(
         rebuilt_manifests = rebuild_missing_manifests(repo_root, source_root, ai_source_root)
     manifest_specs = [(path, mode) for path, mode in source_manifest_specs(repo_root) if path.exists()]
     has_site_asset_catalog = (
-        (repo_root / "assets/reserve/reserve-data.json").exists()
+        (repo_root / "assets/owner-actions/reserve-data.json").exists()
         or (repo_root / "assets/hidden/hidden-data.json").exists()
     )
     if has_site_asset_catalog or not manifest_specs:
@@ -1117,8 +1076,7 @@ def apply_review_snapshot(
             if slug not in ORDER:
                 slug = "unknown"
             for derivative, derivative_rel in row.get("derivatives", {}).items():
-                asset_root = "assets/reserve/"
-                moved_row = move_derivative(repo_root, asset_root + derivative_rel, hidden_asset_rel(row, derivative, slug))
+                moved_row = move_derivative(repo_root, derivative_rel, hidden_asset_rel(row, derivative, slug))
                 if moved_row:
                     moved.append(moved_row)
             review_log["ingest"].append({

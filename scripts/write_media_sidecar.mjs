@@ -63,21 +63,9 @@ Object.entries(collections).forEach(([collectionKey, collection]) => {
         label: galleryCountry.label || collection.title || collectionKey,
         source: galleryCountry.source || "",
       },
-      localPreview: {
-        gallerySrc: photo.gallerySrc || "",
-        detailSrc: photo.imageSrc || "",
-      },
       publicPreview: {
         galleryKey: photo.media?.publicPreview?.galleryKey || keyFor(photo.id, "900"),
         detailKey: photo.media?.publicPreview?.detailKey || keyFor(photo.id, "1800"),
-      },
-      legacyPublicPreview: {
-        galleryKey: source.derivatives?.gallery
-          ? `expo/${String(source.derivatives.gallery).replace(/^assets\/expo\//, "")}`
-          : "",
-        detailKey: source.derivatives?.detail
-          ? `expo/${String(source.derivatives.detail).replace(/^assets\/expo\//, "")}`
-          : "",
       },
       privateDelivery: {
         masterKey: privateMasterKey(photo),

@@ -998,14 +998,6 @@ const normalizePublicMediaBase = (value) => String(value || '').trim().replace(/
 const mediaConfig = window.photosByElieMediaConfig || {};
 const mediaBaseStorageKey = 'photosbyelie-public-media-base';
 const isLocalhostMediaPage = window.photosByElieInputMode.isLocalhost();
-const localPathname = (() => {
-  try {
-    return (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
-  } catch {
-    return 'index.html';
-  }
-})();
-const localOwnerMediaPages = new Set(['owner.html', 'owner-review.html']);
 const mediaBaseFromQuery = (() => {
   try {
     return normalizePublicMediaBase(new URLSearchParams(window.location.search).get('mediaBase') || '');
@@ -1057,15 +1049,8 @@ const explicitMediaBase = mediaBaseFromQuery && mediaBaseFromQuery.toLowerCase()
   && isSafePublicMediaBase(mediaBaseFromQuery)
   ? mediaBaseFromQuery
   : '';
-const localMediaBaseDisabled = mediaBaseFromQuery.toLowerCase() === 'local';
-const shouldUsePublicMediaBase = !isLocalhostMediaPage || !localOwnerMediaPages.has(localPathname);
-const defaultMediaBase = shouldUsePublicMediaBase
-  ? configuredMediaBase
-  : '';
 window.photosByEliePublicMediaBase = normalizePublicMediaBase(
-  localMediaBaseDisabled
-    ? ''
-    : (explicitMediaBase || storedMediaBase || (isLocalhostMediaPage ? window.photosByEliePublicMediaBase : '') || defaultMediaBase)
+  explicitMediaBase || storedMediaBase || (isLocalhostMediaPage ? window.photosByEliePublicMediaBase : '') || configuredMediaBase
 );
 window.photosByEliePublicMediaHostnames = new Set(mediaConfig.publicMediaHostnames || ['ec92009.github.io']);
 window.photosByElieMediaStatus = () => ({
@@ -1109,21 +1094,11 @@ window.photosByElieMediaKey = (photo, size = 'gallery') => {
   return key || '';
 };
 
-window.photosByElieLocalMediaUrl = (photo, size = 'gallery') => {
-  if (!photo) return '';
-  if (size === 'detail') return photo.imageSrc || photo.gallerySrc || '';
-  return photo.gallerySrc || photo.imageSrc || '';
-};
-
 window.photosByElieMediaUrl = (photo, size = 'gallery') => {
   const key = window.photosByElieMediaKey(photo, size);
   const base = normalizePublicMediaBase(window.photosByEliePublicMediaBase);
   if (base && key) return `${base}/${key.replace(/^\/+/, '')}`;
-  if (base && photo?.media?.publicPreview?.allowed === false) {
-    return window.photosByElieInputMode.isLocalhost() ? window.photosByElieLocalMediaUrl(photo, size) : '';
-  }
-  if (!base && window.photosByElieMediaStatus().requiresPublicMedia && key) return '';
-  return window.photosByElieLocalMediaUrl(photo, size);
+  return '';
 };
 
 window.photosByElieMetadataValue = (photo, label) => (

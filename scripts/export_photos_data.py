@@ -5,11 +5,10 @@ import argparse
 import json
 import random
 import re
-import shutil
 from collections import defaultdict
 from pathlib import Path
 
-from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
+from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
 
 LABELS = {
@@ -34,9 +33,7 @@ DEFAULT_SELECTION_MODE = "random"
 DIVERSITY_BUCKET_MINUTES = 10
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
-REGULAR_ASSET_ROOT = Path("assets/expo")
 IMPORT_CACHE_ROOT = Path("tmp/import-cache")
-RESERVE_ASSET_ROOT = Path("assets/reserve")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
@@ -159,14 +156,18 @@ def public_media_key(row: dict, reference: str) -> str:
     return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, row["id"], reference)
 
 
+def public_media_key_for_derivative(row: dict, derivative: str) -> str:
+    return public_preview_key(DEFAULT_PUBLIC_PREFIX, row["id"], derivative)
+
+
 def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
     public_allowed = public_preview_allowed(row)
     return {
         "sourcePolicy": media_source_policy(row),
         "publicPreview": {
             "allowed": public_allowed,
-            "galleryKey": public_media_key(row, gallery_rel) if public_allowed else "",
-            "detailKey": public_media_key(row, detail_rel) if public_allowed else "",
+            "galleryKey": public_media_key_for_derivative(row, "gallery") if public_allowed else "",
+            "detailKey": public_media_key_for_derivative(row, "detail") if public_allowed else "",
         },
     }
 
@@ -186,12 +187,6 @@ def source_origin_from_row(row: dict, collection_slug: str | None = None) -> str
 
 def source_asset_root(repo_root: Path, mode: str) -> Path:
     return repo_root / IMPORT_CACHE_ROOT
-
-
-def regular_asset_rel(row: dict, derivative: str) -> str:
-    country = (row.get("gallery_country") or {}).get("slug") or "unknown"
-    suffix = "900" if derivative == "gallery" else "1800"
-    return (REGULAR_ASSET_ROOT / country / f"{row['id']}_{suffix}.jpg").as_posix()
 
 
 def source_derivative_rel(row: dict, mode: str, derivative: str) -> str:
@@ -298,23 +293,7 @@ def photo_object_lines(
 
 
 def copy_regular_assets(repo_root: Path, regular_rows: list[tuple[dict, str]]) -> dict[str, int]:
-    publish_root = repo_root / REGULAR_ASSET_ROOT
-    if publish_root.exists():
-        shutil.rmtree(publish_root)
-    ensure_state_folders(publish_root)
-
-    copied = {"gallery": 0, "detail": 0}
-    for row, mode in regular_rows:
-        for derivative in ("gallery", "detail"):
-            source_rel = row["derivatives"][derivative]
-            source = source_asset_root(repo_root, mode) / source_rel
-            target = repo_root / regular_asset_rel(row, derivative)
-            if not source.exists():
-                raise FileNotFoundError(f"Missing derivative for regular export: {source}")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
-            copied[derivative] += 1
-    return copied
+    raise RuntimeError("Local preview asset publishing has been retired; use --external-media.")
 
 
 def home_photo_object(photo: dict) -> dict:
@@ -361,9 +340,7 @@ def write_home_data(
         number, title, accent, description = LABELS[slug]
         photos = []
         for index, (row, mode) in enumerate(regular_groups.get(slug, [])):
-            gallery_rel = f"./{regular_asset_rel(row, 'gallery')}"
-            detail_rel = f"./{regular_asset_rel(row, 'detail')}"
-            photos.append(photo_object_data(row, mode, index, title, gallery_rel, detail_rel))
+            photos.append(photo_object_data(row, mode, index, title, "", ""))
         collections[slug] = {
             "number": number,
             "title": title,
@@ -400,8 +377,8 @@ def write_regular_manifest(
                 "gallery_country": row.get("gallery_country"),
                 "source_mode": mode,
                 "derivatives": {
-                    "gallery": regular_asset_rel(row, "gallery"),
-                    "detail": regular_asset_rel(row, "detail"),
+                    "gallery": public_media_key_for_derivative(row, "gallery"),
+                    "detail": public_media_key_for_derivative(row, "detail"),
                 },
             }
             for row, mode in regular_rows
@@ -434,10 +411,7 @@ def write_reserve_data(repo_root: Path, reserve_groups: dict[str, list[tuple[dic
                 for index, (row, mode) in enumerate(rows)
             ],
         }
-    output = repo_root / RESERVE_ASSET_ROOT / "reserve-data.json"
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return output
+    return repo_root / "assets/owner-actions/reserve-data.retired.json"
 
 
 def sort_rows(rows: list[tuple[dict, str]]) -> list[tuple[dict, str]]:
@@ -750,9 +724,7 @@ def write_photos_data(
             "    photos: [",
         ]
         for index, (row, mode) in enumerate(rows):
-            gallery_rel = f"./{regular_asset_rel(row, 'gallery')}"
-            detail_rel = f"./{regular_asset_rel(row, 'detail')}"
-            next_lines += photo_object_lines(row, mode, index, title, gallery_rel, detail_rel)
+            next_lines += photo_object_lines(row, mode, index, title, "", "")
         next_lines += ["    ]", "  },"]
         return next_lines
 
@@ -948,7 +920,7 @@ if __name__ == "__main__":
     parser.add_argument("--review-snapshot", "--blacklist", dest="review_snapshot", type=Path, default=None, help="Optional Review Snapshot file to apply hidden, reserve, and classification choices.")
     parser.add_argument("--keyword-blacklist", type=Path, default=DEFAULT_KEYWORD_BLACKLIST, help="Owner metadata keywords to omit from generated public/reserve catalogs.")
     parser.add_argument("--no-sync-assets", action="store_true")
-    parser.add_argument("--external-media", action="store_true", help="Write public metadata/R2 keys without copying JPG derivatives into tracked assets/expo.")
+    parser.add_argument("--external-media", action="store_true", help="Write public metadata/R2 keys without copying local JPG derivatives.")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     review_payload = load_blacklist_payload(args.review_snapshot)

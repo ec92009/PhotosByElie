@@ -18,7 +18,7 @@ Last updated: 2026-05-13
   - Leonardo/AI: `/Volumes/Saturn/Pictures/LR/_All Leonardo`
 - Apple Photos album stills should stay full pixel size when exported/imported. If we need explicit JPEG control, normalize to JPEG quality 90 without resizing after export; Photos AppleScript does not expose a reliable quality knob.
 - Video import and presentation are not part of the current photo pipeline. Apple Photos mixed-album tests can export MOV files, but videos are backlog until we design 4K source handling, thumbnails, playback, storage, and checkout rules.
-- `tmp/import-cache` is the ignored disposable import/render workspace. `assets/reserve` is retained only for localhost Reserve compatibility data; it is not a long-term review state.
+- `tmp/import-cache` is the ignored disposable import/render workspace. Reserve is manifest-only owner state, not a local preview folder.
 - Blocked and discarded are separate tombstone concepts. Blocked hides a photo from galleries while leaving media in place until preview cleanup; discarded removes it from active catalog state and feeds R2 media cleanup while keeping a permanent do-not-resurrect record.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.

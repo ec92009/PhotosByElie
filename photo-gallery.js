@@ -423,7 +423,7 @@ const ensureGalleryMoreButton = () => {
   galleryRoot.after(moreButton);
   moreButton.addEventListener("click", () => {
     visibleLimit += pageSize;
-    renderGallery();
+    renderGallery({ scrollSelection: false });
   });
 };
 
@@ -761,7 +761,7 @@ const openOwnerMetadataModal = (photo, field) => {
   input?.select?.();
 };
 
-const renderGallery = () => {
+const renderGallery = ({ scrollSelection = true } = {}) => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
   const likedIds = likedPhotoIds();
@@ -858,7 +858,7 @@ const renderGallery = () => {
   applyGalleryDensity();
   applyGalleryFitMode();
   applyGalleryPreviewLayout();
-  updateSelection({ scroll: returnIndex < 0 });
+  updateSelection({ scroll: scrollSelection && returnIndex < 0 });
   if (returnIndex >= 0) restorePendingGalleryReturn();
   if (moreButton) {
     moreButton.hidden = photos.length <= visibleSubset.length;

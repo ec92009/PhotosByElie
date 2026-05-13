@@ -45,10 +45,7 @@ const randomPhotoForCollection = (collection) => {
 };
 
 const representativeImageForPhoto = (photo) => {
-  const mediaImage = window.photosByElieMediaUrl?.(photo, "gallery") || "";
-  if (mediaImage) return mediaImage;
-  if (window.photosByElieMediaStatus?.().requiresPublicMedia) return "";
-  return photo?.gallerySrc || photo?.imageSrc || "";
+  return window.photosByElieMediaUrl?.(photo, "gallery") || "";
 };
 
 const applyRepresentativePhoto = (element, photo) => {

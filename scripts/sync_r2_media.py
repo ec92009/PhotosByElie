@@ -163,7 +163,7 @@ def expo_rows(repo_root: Path) -> list[dict[str, Any]]:
 
 
 def expo_derivative_path(repo_root: Path, expo_row: dict[str, Any], source_row: dict[str, Any], derivative: str) -> Path | None:
-    """Resolve the selected Expo derivative even when assets/expo is metadata-only."""
+    """Resolve the selected publish derivative from local import/cache metadata."""
     rel = clean_asset_ref((expo_row.get("derivatives") or {}).get(derivative))
     if rel:
         path = repo_root / rel

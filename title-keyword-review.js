@@ -90,8 +90,7 @@
 
   const reviewThumbUrl = (item) => {
     const key = item?.thumbs?.gallery_key || item?.thumbs?.galleryKey || item?.thumbs?.detail_key || item?.thumbs?.detailKey;
-    return publicMediaUrl(key)
-      || String(item?.thumbs?.gallery || item?.thumbs?.gallery_src || item?.thumb?.gallery || item?.gallerySrc || "");
+    return publicMediaUrl(key);
   };
 
   const savedReviewIds = (payload) => {

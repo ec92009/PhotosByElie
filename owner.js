@@ -621,7 +621,7 @@
       return;
     }
     const { collection, photo } = entry;
-    const src = photo.gallerySrc || photo.imageSrc || "";
+    const src = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     if (!src) {
       existing?.remove();
       return;

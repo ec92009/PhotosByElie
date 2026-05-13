@@ -366,12 +366,22 @@ test("download endpoint returns a mock signed R2 URL and allows repeat downloads
   assert.equal(repeatedResponse.status, 200);
 });
 
-test("local ZIP delivery creates a real ZIP from preview fallback", async () => {
+test("local ZIP delivery creates a real ZIP from a developed source", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();
   const now = () => new Date("2026-05-07T12:00:00.000Z");
   const stripe = createMockStripeClient({ randomUUID });
   const outputDir = fs.mkdtempSync("/tmp/photosbyelie-deliveries-");
+  const sourceRoot = fs.mkdtempSync("/tmp/photosbyelie-sources-");
+  const photoId = firstDeliverablePhotoId(catalog);
+  const sourcePath = sourcePathForPhoto(catalog, photoId);
+  const sourceFile = `${sourceRoot}/${sourcePath}`;
+  fs.mkdirSync(sourceFile.split("/").slice(0, -1).join("/"), { recursive: true });
+  fs.writeFileSync(sourceFile, jpeg.encode({
+    data: Buffer.alloc(24 * 24 * 4, 255),
+    width: 24,
+    height: 24,
+  }, 90).data);
   const worker = createPhotosByElieWorker({
     catalog,
     stripe,
@@ -379,11 +389,11 @@ test("local ZIP delivery creates a real ZIP from preview fallback", async () => 
     randomUUID,
     delivery: createLocalZipDelivery({
       repoRoot: new URL("..", import.meta.url).pathname,
+      sourceRoots: [sourceRoot],
       outputDir,
       now,
     }),
   });
-  const photoId = firstDeliverablePhotoId(catalog);
 
   const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
@@ -404,6 +414,7 @@ test("local ZIP delivery creates a real ZIP from preview fallback", async () => 
   assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-1mp.jpg`)));
 
   fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.rmSync(sourceRoot, { recursive: true, force: true });
 });
 
 test("deployed Worker mock checkout writes and downloads private R2 files", async () => {

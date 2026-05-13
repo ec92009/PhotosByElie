@@ -128,8 +128,6 @@ export const createLocalZipDelivery = ({
   now = () => new Date(),
 } = {}) => {
   const roots = sourceRoots.map((root) => path.resolve(root));
-  const reserveRoot = path.join(repoRoot, "assets", "reserve");
-  const importCacheRoot = path.join(repoRoot, "tmp", "import-cache");
 
   const resolveSource = async (item) => {
     const sourcePath = item.source?.path || "";
@@ -138,19 +136,7 @@ export const createLocalZipDelivery = ({
       const candidate = path.join(root, sourcePath);
       if (await exists(candidate)) return { filePath: candidate, kind: "master" };
     }
-    const previewKey = item.publicPreview?.detailKey || item.publicPreview?.galleryKey || "";
-    const previewPath = previewKey.replace(/^expo\//, "");
-    const previewName = path.basename(previewPath);
-    const candidates = [
-      path.join(reserveRoot, previewPath),
-      path.join(reserveRoot, item.collectionKey || "", previewName),
-      path.join(importCacheRoot, previewPath),
-      path.join(importCacheRoot, item.collectionKey || "", previewName),
-    ];
-    for (const candidate of candidates) {
-      if (previewPath && await exists(candidate)) return { filePath: candidate, kind: "preview-fallback" };
-    }
-    throw new Error(`No local source or preview fallback for ${item.photoId}`);
+    throw new Error(`No local developed source for ${item.photoId}`);
   };
 
   const renderProduct = async ({ item, product, source, stagingDir }) => {

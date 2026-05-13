@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Sync PhotosByElie local-only asset vaults between two checkouts.
-
-Git owns the public Expo subset. This script owns the ignored local vaults:
-Reserve, Hidden, and review logs.
-"""
+"""Sync PhotosByElie local-only review state between two checkouts."""
 
 from __future__ import annotations
 
@@ -18,12 +14,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_PATHS = (
-    Path("assets/reserve"),
-    Path("assets/hidden"),
+    Path("assets/hidden/hidden-blacklist.json"),
+    Path("assets/hidden/hidden-data.json"),
     Path(".review-logs"),
 )
-
-OPTIONAL_EXPO_PATH = Path("assets/expo")
 
 KNOWN_PEERS = {
     "max": (
@@ -67,15 +61,10 @@ def parse_args() -> argparse.Namespace:
         help="Mirror deletions to the destination. Leave off for additive safety.",
     )
     parser.add_argument(
-        "--include-expo",
-        action="store_true",
-        help="Also sync tracked assets/expo. Normally Git should handle Expo.",
-    )
-    parser.add_argument(
         "--path",
         action="append",
         dest="paths",
-        help="Relative path to sync. Repeat to override the default Reserve/Hidden/log set.",
+        help="Relative path to sync. Repeat to override the default Hidden/log set.",
     )
     parser.add_argument(
         "--progress",
@@ -120,8 +109,6 @@ def relative_paths(args: argparse.Namespace) -> list[Path]:
         paths = [Path(item) for item in args.paths]
     else:
         paths = list(DEFAULT_PATHS)
-    if args.include_expo and OPTIONAL_EXPO_PATH not in paths:
-        paths.append(OPTIONAL_EXPO_PATH)
     return paths
 
 

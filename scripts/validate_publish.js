@@ -71,7 +71,6 @@ const isPublishPath = (file) => {
   if (file === "VERSION" || file === "README.md" || file === "SUMMARY.md" || file === "TODO.md") return true;
   if (file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json") return true;
   if (file === "assets/private-delivery-manifest.json") return true;
-  if (file.startsWith("assets/expo/")) return true;
   if (file.startsWith("scripts/")) return true;
   return /\.(html|css|js)$/i.test(file);
 };
@@ -160,8 +159,8 @@ const validate = () => {
         seenPhotoIds.set(photo.id, collectionKey);
       }
       if (!photo.title) errors.push(`${photo.id} is missing a title.`);
-      if (!photo.gallerySrc) errors.push(`${photo.id} is missing gallerySrc.`);
-      if (!photo.imageSrc) errors.push(`${photo.id} is missing imageSrc.`);
+      if (!externalMedia && !photo.gallerySrc) errors.push(`${photo.id} is missing gallerySrc.`);
+      if (!externalMedia && !photo.imageSrc) errors.push(`${photo.id} is missing imageSrc.`);
       const sourceTypes = (photo.sourceFiles || []).map((source) => String(source?.type || "").trim().toUpperCase());
       if (sourceTypes.some((sourceType) => rawSourceTypes.has(sourceType))) {
         errors.push(`${photo.id} has RAW/DNG source metadata and cannot be published.`);
@@ -304,9 +303,6 @@ const validate = () => {
         if (sidecarPhoto.publicPreview?.detailKey !== preview.detailKey) {
           errors.push(`${photoId} sidecar detailKey does not match catalog.`);
         }
-        if (!sidecarPhoto.legacyPublicPreview?.galleryKey || !sidecarPhoto.legacyPublicPreview?.detailKey) {
-          warnings.push(`${photoId} sidecar has no legacy public preview key.`);
-        }
         if (!sidecarPhoto.privateDelivery?.masterKey) {
           warnings.push(`${photoId} sidecar has no private master key.`);
         }
@@ -324,9 +320,7 @@ const printSummary = (collections) => {
     .map(([key, collection]) => ({ key, title: collection.title || key, count: collection.photos?.length || 0 }))
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
   const totalPhotos = collectionRows.reduce((sum, row) => sum + row.count, 0);
-  const expoStats = folderStats(path.join(repoRoot, "assets", "expo"));
   const importCacheStats = folderStats(path.join(repoRoot, "tmp", "import-cache"));
-  const reserveStats = folderStats(path.join(repoRoot, "assets", "reserve"));
   const hiddenStats = folderStats(path.join(repoRoot, "assets", "hidden"));
   const statusOutput = runGit("git status --short -- .");
   const changed = statusOutput
@@ -338,7 +332,7 @@ const printSummary = (collections) => {
   }, 0);
   const assetCatalogChanged = changed.filter((line) => {
     const file = pathFromStatusLine(line);
-    return file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json" || file.startsWith("assets/expo/");
+    return file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json";
   });
   const diffStat = runGit("git diff --stat -- .");
 
@@ -346,11 +340,9 @@ const printSummary = (collections) => {
   console.log("---------------");
   console.log(`Photos: ${totalPhotos}`);
   collectionRows.forEach((row) => console.log(`- ${row.title}: ${row.count}`));
-  console.log(`Expo assets: ${expoStats.files} files, ${formatBytes(expoStats.bytes)}`);
   console.log(`Import cache: ${importCacheStats.files} files, ${formatBytes(importCacheStats.bytes)} (ignored/tmp)`);
-  console.log(`Reserve compatibility data: ${reserveStats.files} files, ${formatBytes(reserveStats.bytes)} (ignored/local)`);
   console.log(`Hidden assets: ${hiddenStats.files} files, ${formatBytes(hiddenStats.bytes)} (ignored/local)`);
-  console.log(`Media validation: ${externalMedia ? "external R2/CDN keys" : "local Expo asset files"}`);
+  console.log(`Media validation: ${externalMedia ? "external R2/CDN keys" : "local asset files"}`);
   console.log(`Changed Expo/catalog files: ${assetCatalogChanged.length}`);
   console.log(`Changed publish files: ${changed.length}, current working-tree volume ${formatBytes(changedBytes)}`);
   if (changed.length) {

@@ -9,9 +9,17 @@
   const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
   const densityKey = "photosbyelie-gallery-columns";
   const fitModeKey = "photosbyelie-gallery-fit-mode";
+  const pageSize = 160;
   let renderedPhotos = [];
+  let allHiddenPhotos = [];
   let selectedIndex = 0;
   let catalogsLoaded = false;
+  let visibleLimit = pageSize;
+  let photoIndexCache = null;
+  let viewControls = null;
+  let densityInput = null;
+  let densityValue = null;
+  let fitModeButtons = [];
   const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
     root: galleryRoot,
     getPhotos: () => renderedPhotos,
@@ -32,6 +40,7 @@
   const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 
   const allPhotoIndex = () => {
+    if (photoIndexCache) return photoIndexCache;
     const byId = new Map();
     const addCollection = (collections, source) => {
       Object.entries(collections || {}).forEach(([galleryKey, collection]) => {
@@ -50,6 +59,7 @@
     addCollection(window.photosByElieData, "expo");
     addCollection(window.photosByElieReserveData, "reserve");
     addCollection(window.photosByElieHiddenData, "hidden");
+    photoIndexCache = byId;
     return byId;
   };
 
@@ -63,6 +73,49 @@
       className: "p1",
       source: "missing",
     });
+  };
+
+  const ensureViewControls = () => {
+    if (!galleryRoot || viewControls) return;
+    viewControls = document.createElement("div");
+    viewControls.className = "gallery-view-controls";
+    viewControls.setAttribute("aria-label", "Blocked gallery view controls");
+    viewControls.innerHTML = `
+      <label class="gallery-density-control">
+        <span>Grid</span>
+        <input type="range" min="1" max="${galleryLayout.maxDensityColumns()}" step="1" value="${galleryLayout.preferredDensityColumns()}" data-hidden-density/>
+        <b data-hidden-density-value>${galleryLayout.preferredDensityColumns()}</b>
+      </label>
+      <div class="gallery-fit-control" role="group" aria-label="Image fit">
+        <button type="button" data-hidden-fit-mode="fit" aria-pressed="true">Fit</button>
+        <button type="button" data-hidden-fit-mode="fill" aria-pressed="false">Fill</button>
+      </div>
+      <button class="gallery-top-button" type="button" data-hidden-top>Top</button>
+    `;
+    document.body.append(viewControls);
+    densityInput = viewControls.querySelector("[data-hidden-density]");
+    densityValue = viewControls.querySelector("[data-hidden-density-value]");
+    fitModeButtons = [...viewControls.querySelectorAll("[data-hidden-fit-mode]")];
+    densityInput?.addEventListener("input", () => {
+      galleryLayout.setDensityColumns(Number(densityInput.value));
+      galleryLayout.applyDensityControls({ input: densityInput, value: densityValue });
+      applyPreviewLayout();
+      updateSelection();
+    });
+    viewControls.querySelector("[data-hidden-top]")?.addEventListener("click", () => {
+      selectedIndex = 0;
+      updateSelection();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    viewControls.addEventListener("click", (event) => {
+      const button = event.target?.closest?.("[data-hidden-fit-mode]");
+      if (!button) return;
+      galleryLayout.setFitMode(button.dataset.hiddenFitMode);
+      galleryLayout.applyFitMode(fitModeButtons);
+      applyPreviewLayout();
+    });
+    galleryLayout.applyDensityControls({ input: densityInput, value: densityValue });
+    galleryLayout.applyFitMode(fitModeButtons);
   };
 
   const updateSelection = () => {
@@ -83,7 +136,11 @@
     return columns > 0 ? columns : cards.length;
   };
 
-  const applyPreviewLayout = () => galleryLayout.applyPreviewLayout(renderedPhotos);
+  const applyPreviewLayout = () => {
+    galleryLayout.applyDensityControls({ input: densityInput, value: densityValue });
+    galleryLayout.applyFitMode(fitModeButtons);
+    galleryLayout.applyPreviewLayout(renderedPhotos);
+  };
 
   const render = () => {
     if (!galleryRoot) return;
@@ -98,8 +155,8 @@
       return;
     }
 
-    const photos = hiddenPhotos();
-    renderedPhotos = photos;
+    ensureViewControls();
+    allHiddenPhotos = hiddenPhotos();
     if (!catalogsLoaded) {
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="Loading blocked photos">
@@ -109,7 +166,7 @@
       setStatus("Loading blocked photo catalogs.");
       return;
     }
-    if (!photos.length) {
+    if (!allHiddenPhotos.length) {
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="No blocked photos">
           <span>No blocked photos</span>
@@ -118,6 +175,11 @@
       setStatus("The blocked gallery is empty.");
       return;
     }
+
+    visibleLimit = Math.min(Math.max(visibleLimit, pageSize), allHiddenPhotos.length);
+    const photos = allHiddenPhotos.slice(0, visibleLimit);
+    renderedPhotos = photos;
+    const moreCount = Math.max(0, allHiddenPhotos.length - photos.length);
 
     galleryRoot.innerHTML = photos.map((photo, index) => {
       const href = photo.source === "missing" ? "" : versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`);
@@ -129,7 +191,14 @@
         collectionAccent: photo.collectionAccent,
         missingLabel: photo.title,
       });
-    }).join("");
+    }).join("") + (moreCount ? `
+      <article class="mock-photo empty-gallery-card hidden-load-more-card">
+        <button class="btn secondary" type="button" data-hidden-load-more>
+          Load ${Math.min(pageSize, moreCount)} more
+        </button>
+        <span>${photos.length} of ${allHiddenPhotos.length} blocked photos shown</span>
+      </article>
+    ` : "");
 
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", () => {
@@ -140,11 +209,17 @@
         if (card.dataset.photoHref) window.location.assign(versionedHref(card.dataset.photoHref));
       });
     });
+    galleryRoot.querySelector("[data-hidden-load-more]")?.addEventListener("click", () => {
+      visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
+      render();
+    });
     window.photosByElieVersionInternalLinks?.(galleryRoot);
 
     applyPreviewLayout();
     updateSelection();
-    setStatus(`${photos.length} blocked photo${photos.length === 1 ? "" : "s"}.`);
+    setStatus(moreCount
+      ? `Showing ${photos.length} of ${allHiddenPhotos.length} blocked photos.`
+      : `${photos.length} blocked photo${photos.length === 1 ? "" : "s"}.`);
   };
 
   window.addEventListener("resize", () => {
@@ -165,7 +240,7 @@
       if (target.isContentEditable) return;
       if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
     }
-    const photos = hiddenPhotos();
+    const photos = renderedPhotos.length ? renderedPhotos : hiddenPhotos();
     if (!photos.length) return;
     if (event.key === "ArrowRight") {
       selectedIndex = Math.min(selectedIndex + 1, photos.length - 1);
@@ -180,7 +255,12 @@
       return;
     }
     if (event.key === "ArrowDown") {
-      selectedIndex = Math.min(selectedIndex + visibleColumnCount(), photos.length - 1);
+      const nextIndex = selectedIndex + visibleColumnCount();
+      if (nextIndex >= photos.length - 1 && visibleLimit < allHiddenPhotos.length) {
+        visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
+        render();
+      }
+      selectedIndex = Math.min(nextIndex, renderedPhotos.length - 1);
       updateSelection();
       event.preventDefault();
       return;
@@ -238,6 +318,7 @@
     hiddenStore?.load?.() || Promise.resolve({}),
   ]).then(() => {
     catalogsLoaded = true;
+    photoIndexCache = null;
     render();
   });
   render();

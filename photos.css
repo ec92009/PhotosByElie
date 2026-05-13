@@ -1607,6 +1607,13 @@ body[data-gallery] .gallery-hero{
   font-size:.78rem;
   color:var(--muted);
 }
+.hidden-load-more-card{
+  gap:10px;
+  min-height:150px;
+}
+.hidden-load-more-card .btn{
+  justify-self:center;
+}
 .mock-photo img{
   display:block;
   position:relative;

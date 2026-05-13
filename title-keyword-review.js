@@ -279,7 +279,7 @@
       };
     };
 
-    const buildApprovalsPayload = () => {
+    const buildApprovalsPayload = (action = "apply-title-keyword-review-approvals") => {
       const approvals = [];
       const rejections = [];
       for (const [photoId, card] of cardById.entries()) {
@@ -288,18 +288,19 @@
         if (decision.rejection) rejections.push(decision.rejection);
       }
       return {
-        action: "apply-title-keyword-review-approvals",
+        action,
         batch_id: batchId,
         approvals,
         rejections,
       };
     };
 
-    const setRowStatus = (card, message, state = "") => {
+    const setRowStatus = (card, message, state = "", detail = "") => {
       const rowStatus = card.querySelector("[data-review-row-status]");
       if (!rowStatus) return;
       rowStatus.textContent = message;
       rowStatus.dataset.state = state;
+      rowStatus.title = detail || "";
     };
 
     let activeCard = null;
@@ -367,7 +368,7 @@
       }
       setRowStatus(card, "Saving...", "saving");
       const result = await postApprovalsPayload({
-        action: "apply-title-keyword-review-approvals",
+        action: "save-title-keyword-review-approvals",
         batch_id: batchId,
         approvals: decision.approval ? [decision.approval] : [],
         rejections: decision.rejection ? [decision.rejection] : [],
@@ -379,7 +380,7 @@
       const label = decision.rejection ? "Rejected and saved" : "Approved and saved";
       setRowStatus(card, label, "saved");
       if (status) {
-        status.textContent = `${photoId} ${decision.rejection ? "rejection" : "approval"} saved.`;
+        status.textContent = `${photoId} ${decision.rejection ? "rejection" : "approval"} saved to the review record.`;
       }
     };
 
@@ -388,7 +389,8 @@
       setRowStatus(card, "Save pending...", "pending");
       rowSaveTimers.set(photoId, window.setTimeout(() => {
         saveRowDecision(photoId, card).catch((error) => {
-          setRowStatus(card, "Save failed", "error");
+          const message = error?.message || "Could not save row.";
+          setRowStatus(card, "Save failed", "error", message);
           if (status) status.textContent = error?.message || "Could not save row.";
         });
       }, delay));

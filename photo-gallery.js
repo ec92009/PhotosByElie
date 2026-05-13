@@ -648,8 +648,28 @@ const toggleGalleryFitMode = () => setGalleryFitMode(galleryLayout.fitMode() ===
 const positionGalleryViewControls = () => {
   if (!viewControls) return;
   const topbar = document.querySelector(".topbar");
-  const topOffset = topbar ? Math.max(12, Math.ceil(topbar.getBoundingClientRect().bottom + 8)) : 72;
+  const headerControls = document.querySelector(".header-controls");
+  const brand = document.querySelector(".brand");
+  const topbarRect = topbar?.getBoundingClientRect();
+  const headerRect = headerControls?.getBoundingClientRect();
+  const brandRect = brand?.getBoundingClientRect();
+  const controlsWidth = viewControls.getBoundingClientRect().width || 0;
+  const gutter = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--page-gutter")) || 18;
+  let topOffset = topbarRect ? Math.max(12, Math.ceil(topbarRect.top + 10)) : 12;
+  let rightOffset = Math.max(gutter, (window.innerWidth - 1480) / 2 + 92);
+  if (topbarRect && headerRect && controlsWidth) {
+    const headerBandRight = Math.max(gutter, window.innerWidth - headerRect.left + 8);
+    const headerBandLeft = window.innerWidth - headerBandRight - controlsWidth;
+    const clearLeft = Math.max(topbarRect.left, brandRect?.right || topbarRect.left) + 12;
+    if (headerBandLeft > clearLeft) {
+      rightOffset = headerBandRight;
+    } else {
+      topOffset = Math.ceil(topbarRect.bottom + 8);
+      rightOffset = gutter;
+    }
+  }
   viewControls.style.setProperty("--gallery-view-controls-top", `${topOffset}px`);
+  viewControls.style.setProperty("--gallery-view-controls-right", `${rightOffset}px`);
 };
 
 const photoAspectRatioStyle = (photo) => {

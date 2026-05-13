@@ -7,7 +7,7 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.22`
+- Current visible build: `v74.23`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction is hostname-based: Max reads `DAVID2MAX.md` and writes `MAX2DAVID.md`; David reads `MAX2DAVID.md` and writes `DAVID2MAX.md`.
 - Public previews now resolve from R2/CDN keys only; do not restore local `assets/expo` or `assets/reserve` preview folders.
@@ -44,6 +44,7 @@ Date: 2026-05-13
 - Blocked Owner review now restores the shared Grid/Fit controls and renders blocked photos in 160-card pages with `Load more`, avoiding the blank/stalled full-catalog render.
 - Shared gallery cards now replace broken public preview URLs with a compact `Preview unavailable` tile so old hidden/reserve rows with missing R2 previews do not spill long alt text into the grid.
 - Gallery Fit mode has the panorama span hook restored: panorama cards set `--gallery-column-span` from the layout controller and CSS now applies it with `grid-column: span ...`, so panos can use the full grid width again.
+- Gallery Grid/Fit/Fill controls now sit in the sticky header band on desktop, while the basket rail starts lower to avoid overlap.
 - Owner policy decision: Blocked/Discarded preview media exists only to support a short undo window. The default retention target is 24 hours; afterward, cleanup should delete preview derivatives and retain only the durable blocked/discarded id plus the blacklisted master/source path.
 - Owner page comments were addressed:
   - Classification eyebrow now says `Country Classification`.
@@ -51,7 +52,7 @@ Date: 2026-05-13
   - Owner busy/status text is clearer for long-running actions.
   - Blocked sync explains why `0` previews still public is good.
   - Price list copy explicitly says dollars / USD.
-- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.22`.
+- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.23`.
 - Max's latest GitHub handoff was completed on David: R2-only preview cleanup plus R2 public-preview audit/backfill.
 - R2 audit/backfill result: `5,844` public photos, `11,688` expected preview keys, `24` true initial missing keys, `24` uploaded from `tmp/import-cache`, `0` final missing after repaired-key HEAD verification.
 - Cleanup result: `assets/expo` and `assets/reserve` are absent; `assets/hidden` keeps only `hidden-blacklist.json` and `hidden-data.json`.

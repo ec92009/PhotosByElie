@@ -16,6 +16,32 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-13 Nightly Title/Keyword Prompt Scope Fix
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Updated the live `pbe-nightly-title-keyword-review-queue` automation prompt to be metadata-only.
+- Changes made:
+  - Removed the instruction to implement the workflow if missing.
+  - Added an explicit rule forbidding code, scripts, styles, HTML pages, tests, package files, docs/SOPs, or workflow implementation edits in this automation.
+  - Added blocker behavior: if the existing workflow is missing, broken, or insufficient, report the blocker and recommended prompt/spec changes here instead of repairing code.
+  - Tightened commit scope to proposal/state/audit/report metadata files only.
+- Commit pushed: no; automation config lives under `/Users/ecohen/.codex/automations/`, and GitHub DNS is currently unavailable from David.
+- Notes: Reverted the local code edit made during this run to `scripts/generate_title_keyword_review_queue.mjs`; remaining dirty code/docs files pre-existed or are from other local work and were not touched for this prompt fix.
+
+## 2026-05-13 Nightly Title/Keyword Batch Quota Prompt Fix
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Updated the live `pbe-nightly-title-keyword-review-queue` automation prompt so rejected/rework rows do not consume the nightly 100-photo quota.
+- Changes made:
+  - Reworked proposals are now specified as extra rows before the ordinary new-photo batch.
+  - The automation should select up to 100 ordinary new photos every run, newest backward, in addition to any rejected/rework rows.
+  - The report must include total batch size, ordinary new-photo count, and rejected/rework count.
+  - If the existing workflow still counts rework rows inside the 100-row limit, the automation must stop and report that blocker here rather than modifying code.
+- Commit pushed: no; automation config lives under `/Users/ecohen/.codex/automations/`.
+- Notes: Prompt-only change; no code changes made.
+
 ## 2026-05-13 Social Post Package Follow-up
 
 - Machine: David (`David-5.local`)
@@ -411,4 +437,19 @@ _No David automation results recorded yet._
 - Browser check: `http://127.0.0.1:8000/gallery.html?gallery=france&orientation=pano&v=74.22&run=pano-fit` loaded France pano results with Fit selected.
 - Validation: `npm test` passed; `npm run validate` passed.
 - Commit pushed: `ea6737ee photosbyelie: restore pano fit spans`.
+- Notes: Existing dirty local Owner/generated files remain unstaged.
+
+## 2026-05-13 - Gallery control and basket rail placement
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Adjusted Gallery Grid/Fit/Fill floating controls to avoid collision with the basket rail and header controls.
+- Change: `photo-gallery.js` now positions the controls adaptively. On wide screens it uses the sticky header band only when there is room between the brand and header buttons; otherwise it drops below the header.
+- Change: `photos.css` now uses `--gallery-view-controls-right` for dynamic right placement and moves the desktop basket rail down to `top:132px` with a matching max-height adjustment.
+- Visible version: `v74.23`.
+- Browser verification:
+  - `http://127.0.0.1:8000/gallery.html?gallery=france&v=74.23&run=controls-placement-2`: narrow/no-rail view drops controls below the header, clear of header buttons.
+  - `http://127.0.0.1:8000/gallery.html?gallery=france&v=74.23&run=controls-placement-wide`: wide/rail view keeps controls in the header band and the rail starts below them.
+- Validation: `node --check photo-gallery.js`, `npm test`, and `npm run validate` passed.
+- Commit pushed: `2ab3d6a8 photosbyelie: avoid gallery control rail overlap`.
 - Notes: Existing dirty local Owner/generated files remain unstaged.

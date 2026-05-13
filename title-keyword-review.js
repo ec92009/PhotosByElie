@@ -95,7 +95,7 @@
 
   const savedReviewIds = (payload) => {
     const ids = new Set();
-    for (const key of ["approvals", "rejections"]) {
+    for (const key of ["approvals", "rejections", "blocked"]) {
       for (const item of payload?.[key] || []) {
         const photoId = String(item?.photo_id || item?.photoId || "").trim();
         if (photoId) ids.add(photoId);
@@ -204,7 +204,10 @@
       const fetchPriority = index < 12 ? "high" : "low";
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
       const proposedTitle = String(item?.proposed?.title || title || "");
-      const proposedKeywords = Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords;
+      const proposedKeywords = normalizeKeywords(
+        Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords,
+        blacklist,
+      ).join(", ");
       const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
       return `
         <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" tabindex="0">
@@ -446,10 +449,18 @@
           setRowStatus(card, "Auth required", "error");
           return;
         }
-        card.classList.add("is-owner-actioned");
-        setRowStatus(card, "Blocked", "saved");
-        removeReviewCard(photoId, card);
-        if (status) status.textContent = `${photoId} moved to Blocked.`;
+        return postApprovalsPayload({
+          action: "save-title-keyword-review-approvals",
+          batch_id: batchId,
+          approvals: [],
+          rejections: [],
+          blocked: [{ photo_id: photoId, blocked: true }],
+        }).then(() => {
+          card.classList.add("is-owner-actioned");
+          setRowStatus(card, "Blocked", "saved");
+          removeReviewCard(photoId, card);
+          if (status) status.textContent = `${photoId} moved to Blocked and saved to this review record.`;
+        });
       }).catch((error) => {
         setRowStatus(card, "Block failed", "error");
         if (status) status.textContent = error?.message || "Could not block photo.";

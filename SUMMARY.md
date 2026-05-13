@@ -7,7 +7,7 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.16`
+- Current visible build: `v74.17`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction is hostname-based: Max reads `DAVID2MAX.md` and writes `MAX2DAVID.md`; David reads `MAX2DAVID.md` and writes `DAVID2MAX.md`.
 - Public previews now resolve from R2/CDN keys only; do not restore local `assets/expo` or `assets/reserve` preview folders.
@@ -30,7 +30,8 @@ Date: 2026-05-13
 - Approved rows apply title/keyword values to generated catalog/state files and add `Title_Keywords_Reviewed`.
 - Rejected rows update `proposed-state.json` with rejection/rework priority and keep the Owner comment for the next proposal attempt.
 - Saved approvals/rejections stay visible during the current page session. When the Owner leaves or reloads the approval page, the page reads `approvals-<batch>.json` and hides already-saved approved/rejected rows.
-- H/X on the review page are keyboard shortcuts for Block/Blocked, not discard. Blocked rows disappear immediately after the helper confirms success.
+- H/X on the review page are keyboard shortcuts for Block/Blocked, not discard. Blocked rows disappear immediately after the helper confirms success, and the helper now writes blocked rows into the batch approval record so reloads keep them filtered out.
+- Proposed review keywords are normalized case-insensitively, deduplicated, and filtered against `assets/owner-actions/keyword-blacklist.json` both when rendered on the page and when saved/applied by the helper.
 - Single-click selects a review row without navigation. Double-click opens the photo detail page.
 - Keyboard shortcuts on the review page:
   - `A`: approve selected row
@@ -44,7 +45,7 @@ Date: 2026-05-13
   - Owner busy/status text is clearer for long-running actions.
   - Blocked sync explains why `0` previews still public is good.
   - Price list copy explicitly says dollars / USD.
-- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.16`.
+- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.17`.
 - Max's latest GitHub handoff was completed on David: R2-only preview cleanup plus R2 public-preview audit/backfill.
 - R2 audit/backfill result: `5,844` public photos, `11,688` expected preview keys, `24` true initial missing keys, `24` uploaded from `tmp/import-cache`, `0` final missing after repaired-key HEAD verification.
 - Cleanup result: `assets/expo` and `assets/reserve` are absent; `assets/hidden` keeps only `hidden-blacklist.json` and `hidden-data.json`.

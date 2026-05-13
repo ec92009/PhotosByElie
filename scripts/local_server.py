@@ -511,6 +511,23 @@ def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
     }
 
 
+def _keyword_blacklist_set(repo_root: Path) -> set[str]:
+    path = repo_root / KEYWORD_BLACKLIST_PATH
+    payload = _read_json_file(path, {})
+    if not isinstance(payload, dict):
+        return set()
+    return {keyword.casefold() for keyword in _normalized_keyword_blacklist(payload.get("keywords") or [])}
+
+
+def _review_keywords(repo_root: Path, value: object) -> list[str]:
+    blacklist = _keyword_blacklist_set(repo_root)
+    return [
+        keyword
+        for keyword in _unique_keywords(_split_keyword_text(value))
+        if keyword.casefold() not in blacklist
+    ]
+
+
 def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_out: dict) -> tuple[Path, dict]:
     approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
     existing = _read_json_file(approvals_path, {})
@@ -527,18 +544,32 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
         for item in existing.get("rejections", [])
         if isinstance(item, dict) and str(item.get("photo_id") or "").strip()
     }
+    blocked_by_id = {
+        str(item.get("photo_id") or "").strip(): item
+        for item in existing.get("blocked", [])
+        if isinstance(item, dict) and str(item.get("photo_id") or "").strip()
+    }
     for item in payload_out.get("approvals", []):
         photo_id = str(item.get("photo_id") or "").strip()
         if not photo_id:
             continue
         approvals_by_id[photo_id] = item
         rejections_by_id.pop(photo_id, None)
+        blocked_by_id.pop(photo_id, None)
     for item in payload_out.get("rejections", []):
         photo_id = str(item.get("photo_id") or "").strip()
         if not photo_id:
             continue
         rejections_by_id[photo_id] = item
         approvals_by_id.pop(photo_id, None)
+        blocked_by_id.pop(photo_id, None)
+    for item in payload_out.get("blocked", []):
+        photo_id = str(item.get("photo_id") or "").strip()
+        if not photo_id:
+            continue
+        blocked_by_id[photo_id] = item
+        approvals_by_id.pop(photo_id, None)
+        rejections_by_id.pop(photo_id, None)
 
     existing_not_found = existing.get("not_found", [])
     payload_not_found = payload_out.get("not_found", [])
@@ -558,6 +589,7 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
         **payload_out,
         "approvals": list(approvals_by_id.values()),
         "rejections": list(rejections_by_id.values()),
+        "blocked": list(blocked_by_id.values()),
         "not_found": not_found,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -1736,6 +1768,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         rejections = payload.get("rejections") or []
         if not isinstance(rejections, list):
             raise ValueError("rejections must be a JSON list")
+        blocked = payload.get("blocked") or []
+        if not isinstance(blocked, list):
+            raise ValueError("blocked must be a JSON list")
         normalized = []
         for item in approvals:
             if not isinstance(item, dict):
@@ -1746,17 +1781,12 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             if item.get("approved") is not True:
                 continue
             title = str(item.get("title") or "").strip()
-            raw_keywords = item.get("keywords")
-            if isinstance(raw_keywords, list):
-                keywords = _unique_keywords([str(value).strip() for value in raw_keywords if str(value).strip()])
-            else:
-                keywords = _unique_keywords(_split_keyword_text(raw_keywords))
             normalized.append(
                 {
                     "photo_id": current_photo_id,
                     "approved": True,
                     "title": title,
-                    "keywords": keywords,
+                    "keywords": _review_keywords(repo_root, item.get("keywords")),
                 }
             )
         normalized_rejections = []
@@ -1771,18 +1801,34 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "photo_id": current_photo_id,
                     "rejected": True,
                     "title": str(item.get("title") or "").strip(),
-                    "keywords": _unique_keywords(_split_keyword_text(item.get("keywords"))),
+                    "keywords": _review_keywords(repo_root, item.get("keywords")),
                     "comment": str(item.get("comment") or "").strip(),
+                }
+            )
+        now = datetime.now(timezone.utc).isoformat()
+        normalized_blocked = []
+        for item in blocked:
+            if not isinstance(item, dict):
+                continue
+            current_photo_id = str(item.get("photo_id") or "").strip()
+            if not current_photo_id or item.get("blocked") is not True:
+                continue
+            normalized_blocked.append(
+                {
+                    "photo_id": current_photo_id,
+                    "blocked": True,
+                    "blocked_at": now,
                 }
             )
         rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
         payload_out = {
             "format": "photosbyelie-title-keyword-review-approvals",
             "schema_version": 1,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": now,
             "batch_id": batch_id,
             "approvals": normalized,
             "rejections": normalized_rejections,
+            "blocked": normalized_blocked,
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
         }
         approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
@@ -1793,6 +1839,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "path": approvals_path.relative_to(repo_root).as_posix(),
             "approved_count": len(merged_record.get("approvals", [])),
             "rejected_count": len(merged_record.get("rejections", [])),
+            "blocked_count": len(merged_record.get("blocked", [])),
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
         }
 
@@ -1927,7 +1974,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             title = str(item.get("title") or "").strip()
             if not title:
                 continue
-            keywords = _unique_keywords(_split_keyword_text(item.get("keywords")))
+            keywords = _review_keywords(repo_root, item.get("keywords"))
             normalized.append(
                 {
                     "photo_id": current_photo_id,
@@ -1948,7 +1995,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "photo_id": current_photo_id,
                     "rejected": True,
                     "title": str(item.get("title") or "").strip(),
-                    "keywords": _unique_keywords(_split_keyword_text(item.get("keywords"))),
+                    "keywords": _review_keywords(repo_root, item.get("keywords")),
                     "comment": str(item.get("comment") or "").strip(),
                 }
             )
@@ -2008,6 +2055,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "path": approvals_path.relative_to(repo_root).as_posix(),
             "approved_count": len(merged_record.get("approvals", [])),
             "rejected_count": len(merged_record.get("rejections", [])),
+            "blocked_count": len(merged_record.get("blocked", [])),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),

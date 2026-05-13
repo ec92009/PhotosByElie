@@ -394,7 +394,7 @@
     if (hiddenCountRoot) hiddenCountRoot.textContent = String(hiddenCount);
     const counts = [
       { label: "Analyzed", value: formatCount(analyzedTotal) },
-      { label: "Blocked", value: formatCount(hiddenCount) },
+      { label: "Blacklisted", value: formatCount(hiddenCount) },
       { label: "Expo", value: formatCount(expoActive), className: "is-expo" },
     ];
     countsRoot.innerHTML = counts.map(({ label, value, className }) => `
@@ -406,25 +406,23 @@
     if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount(hiddenCount);
   };
 
-  const blockedPreviewCountFromCoverage = () => Math.max(
-    0,
-    ...(window.photosByElieR2Coverage?.rows || []).map((row) => Number(row.blockedPresent || 0)),
-  );
+  const blockedCloudMediaCountFromCoverage = () => (window.photosByElieR2Coverage?.rows || [])
+    .reduce((total, row) => total + Number(row.blockedPresent || 0), 0);
 
   const refreshBlockedSyncPanel = async () => {
     if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount((hiddenActions.read?.() || []).length);
-    const blockedPreviews = blockedPreviewCountFromCoverage();
-    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedPreviews);
+    const blockedCloudMedia = blockedCloudMediaCountFromCoverage();
+    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMedia);
     if (blockedPreviewNoteRoot) {
-      blockedPreviewNoteRoot.textContent = blockedPreviews
-        ? `${formatCount(blockedPreviews)} blocked public previews still exist in R2 and can be deleted after the blocked list is synced.`
-        : "0 means all blocked public previews are already absent from R2.";
+      blockedPreviewNoteRoot.textContent = blockedCloudMedia
+        ? `${formatCount(blockedCloudMedia)} cloud media copies for basketed photos are still present. Empty the basket to purge them and keep tombstones.`
+        : "Basketed photos no longer have cloud media copies in R2.";
     }
     if (!blockedPublishedCountRoot) return;
     try {
       const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
       const response = await fetch(href, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Blocked list ${response.status}`);
+      if (!response.ok) throw new Error(`Master blacklist ${response.status}`);
       const payload = await response.json();
       const ids = new Set((Array.isArray(payload.photo_ids) ? payload.photo_ids : []).filter(Boolean));
       blockedPublishedCountRoot.textContent = formatCount(ids.size);
@@ -827,7 +825,7 @@
         : "Policy is satisfied for the current catalog."
       : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
-    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedPreviewCountFromCoverage());
+    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
     if (r2FixButton) {
       r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
       syncR2FixButton();
@@ -871,7 +869,7 @@
       } else if (kind === "blocked-sync") {
         await loadR2Coverage();
         await refreshBlockedSyncPanel();
-        setStatus("Blocked sync refreshed.");
+      setStatus("Waste Basket cleanup refreshed.");
       } else if (kind === "coverage") {
         await loadR2Coverage();
         setStatus("R2 catalog coverage refreshed.");
@@ -960,15 +958,15 @@
 
   publishHiddenBlacklistButton?.addEventListener("click", async () => {
     publishHiddenBlacklistButton.disabled = true;
-    setStatus("Syncing the blocked-photo list to R2...");
+    setStatus("Protecting the Waste Basket...");
     try {
       await hiddenActions.publishHiddenBlacklist?.();
       renderCounts();
       await refreshBlockedSyncPanel();
       loadR2Progress();
-      setStatus("Blocked list sync queued for R2.");
+      setStatus("Waste Basket protection queued for R2.");
     } catch (error) {
-      setStatus(error?.message || "Could not publish blocked list.");
+      setStatus(error?.message || "Could not protect the Waste Basket.");
     } finally {
       publishHiddenBlacklistButton.disabled = false;
     }
@@ -989,19 +987,19 @@
   });
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
-    const ok = window.confirm("Delete public preview objects for blocked photos? Publish the blocked list first so galleries know these photos are rejected.");
+    const ok = window.confirm("Empty the Waste Basket? This purges public previews, private masters, and private render triplets for basketed photos, then leaves blacklist tombstones so those masters do not return.");
     if (!ok) return;
     wipeHiddenR2Button.disabled = true;
-    setStatus("Queueing blocked public preview deletes in R2...");
+    setStatus("Queueing Waste Basket cloud media purge...");
     try {
       await hiddenActions.wipeHiddenR2?.();
       renderCounts();
       await loadR2Coverage();
       await refreshBlockedSyncPanel();
       loadR2Progress();
-      setStatus("Blocked public preview wipe queued.");
+      setStatus("Waste Basket cloud media purge queued.");
     } catch (error) {
-      setStatus(error?.message || "Could not queue blocked public preview wipe.");
+      setStatus(error?.message || "Could not queue Waste Basket cloud media purge.");
     } finally {
       wipeHiddenR2Button.disabled = false;
     }

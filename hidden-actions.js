@@ -14,9 +14,9 @@
   const pendingHiddenIds = new Set();
 
   const ownerActionBusyMessages = {
-    hide: "Moving photo to Blocked...",
-    "undo-hide": "Restoring blocked photo...",
-    "promote-hidden": "Promoting blocked photo...",
+    hide: "Moving master to Waste Basket...",
+    "undo-hide": "Putting master back...",
+    "promote-hidden": "Putting master back...",
     "return-to-reserve": "Returning photo to Reserve...",
     discard: "Discarding photo and updating manifests...",
     "assign-country": "Assigning country and refreshing catalog state...",
@@ -24,8 +24,8 @@
     "remove-collection-keyword": "Removing collection keyword from catalog metadata...",
     "update-photo-metadata": "Saving title and keyword metadata...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
-    "publish-hidden-blacklist": "Syncing blocked-photo list...",
-    "wipe-hidden-r2": "Queueing blocked preview cleanup...",
+    "publish-hidden-blacklist": "Publishing master blacklist...",
+    "wipe-hidden-r2": "Emptying Waste Basket cloud media...",
     "save-title-keyword-review-approvals": "Saving title/keyword review decisions...",
   };
 

@@ -9,7 +9,7 @@
   const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
   const densityKey = "photosbyelie-gallery-columns";
   const fitModeKey = "photosbyelie-gallery-fit-mode";
-  const pageSize = 160;
+  const pageSize = 24;
   let renderedPhotos = [];
   let allHiddenPhotos = [];
   let selectedIndex = 0;
@@ -20,6 +20,8 @@
   let densityInput = null;
   let densityValue = null;
   let fitModeButtons = [];
+  let moreButton = null;
+  let showAllButton = null;
   const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
     root: galleryRoot,
     getPhotos: () => renderedPhotos,
@@ -38,6 +40,12 @@
     .replace(/"/g, "&quot;");
 
   const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
+
+  const photoActionHtml = () => `
+    <div class="waste-basket-card-actions">
+      <span class="waste-basket-state">Blacklisted master</span>
+    </div>
+  `;
 
   const allPhotoIndex = () => {
     if (photoIndexCache) return photoIndexCache;
@@ -79,7 +87,7 @@
     if (!galleryRoot || viewControls) return;
     viewControls = document.createElement("div");
     viewControls.className = "gallery-view-controls";
-    viewControls.setAttribute("aria-label", "Blocked gallery view controls");
+    viewControls.setAttribute("aria-label", "Waste Basket view controls");
     viewControls.innerHTML = `
       <label class="gallery-density-control">
         <span>Grid</span>
@@ -116,16 +124,58 @@
     });
     galleryLayout.applyDensityControls({ input: densityInput, value: densityValue });
     galleryLayout.applyFitMode(fitModeButtons);
+    positionViewControls();
   };
 
-  const updateSelection = () => {
+  const ensurePagingControls = () => {
+    if (moreButton || !galleryRoot) return;
+    const controls = document.createElement("div");
+    controls.className = "gallery-pagination-controls";
+    moreButton = document.createElement("button");
+    moreButton.className = "btn secondary gallery-more-button";
+    moreButton.type = "button";
+    moreButton.textContent = "Show more";
+    moreButton.hidden = true;
+    showAllButton = document.createElement("button");
+    showAllButton.className = "btn secondary gallery-more-button";
+    showAllButton.type = "button";
+    showAllButton.textContent = "Show all";
+    showAllButton.hidden = true;
+    controls.append(moreButton, showAllButton);
+    galleryRoot.after(controls);
+    moreButton.addEventListener("click", () => {
+      visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
+      render({ scrollSelection: false });
+    });
+    showAllButton.addEventListener("click", () => {
+      visibleLimit = allHiddenPhotos.length;
+      render({ scrollSelection: false });
+    });
+  };
+
+  const syncPagingControls = (photos) => {
+    ensurePagingControls();
+    if (!moreButton || !showAllButton) return;
+    const hasMore = photos.length > renderedPhotos.length;
+    moreButton.hidden = !hasMore;
+    showAllButton.hidden = !hasMore;
+    const moreCount = Math.min(pageSize, Math.max(0, photos.length - renderedPhotos.length));
+    moreButton.textContent = `Show ${moreCount} more`;
+    showAllButton.textContent = "Show all";
+  };
+
+  const positionViewControls = () => {
+    window.photosByEliePositionGalleryViewControls?.(viewControls);
+  };
+
+  const updateSelection = ({ scroll = true } = {}) => {
     const cards = [...galleryRoot.querySelectorAll("[data-photo-index]")];
     if (!cards.length) return;
     selectedIndex = Math.max(0, Math.min(selectedIndex, cards.length - 1));
     cards.forEach((card, index) => {
       card.classList.toggle("is-selected", index === selectedIndex);
     });
-    cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (scroll) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
   };
 
   const visibleColumnCount = () => {
@@ -142,7 +192,7 @@
     galleryLayout.applyPreviewLayout(renderedPhotos);
   };
 
-  const render = () => {
+  const render = ({ scrollSelection = true } = {}) => {
     if (!galleryRoot) return;
     if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled || !shouldShowKeyboardHints();
     if (!hiddenActions?.enabled) {
@@ -151,11 +201,12 @@
           <span>Owner controls are only available on localhost</span>
         </article>
       `;
-      setStatus("Blocked review is locked on the public site.");
+      setStatus("Waste Basket review is locked on the public site.");
       return;
     }
 
     ensureViewControls();
+    ensurePagingControls();
     allHiddenPhotos = hiddenPhotos();
     if (!catalogsLoaded) {
       galleryRoot.innerHTML = `
@@ -173,6 +224,7 @@
         </article>
       `;
       setStatus("The blocked gallery is empty.");
+      syncPagingControls(allHiddenPhotos);
       return;
     }
 
@@ -189,16 +241,10 @@
         href,
         collectionKey: photo.galleryKey,
         collectionAccent: photo.collectionAccent,
+        actionHtml: photoActionHtml(),
         missingLabel: photo.title,
       });
-    }).join("") + (moreCount ? `
-      <article class="mock-photo empty-gallery-card hidden-load-more-card">
-        <button class="btn secondary" type="button" data-hidden-load-more>
-          Load ${Math.min(pageSize, moreCount)} more
-        </button>
-        <span>${photos.length} of ${allHiddenPhotos.length} blocked photos shown</span>
-      </article>
-    ` : "");
+    }).join("");
 
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", () => {
@@ -209,14 +255,11 @@
         if (card.dataset.photoHref) window.location.assign(versionedHref(card.dataset.photoHref));
       });
     });
-    galleryRoot.querySelector("[data-hidden-load-more]")?.addEventListener("click", () => {
-      visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
-      render();
-    });
     window.photosByElieVersionInternalLinks?.(galleryRoot);
 
     applyPreviewLayout();
-    updateSelection();
+    syncPagingControls(allHiddenPhotos);
+    updateSelection({ scroll: scrollSelection });
     setStatus(moreCount
       ? `Showing ${photos.length} of ${allHiddenPhotos.length} blocked photos.`
       : `${photos.length} blocked photo${photos.length === 1 ? "" : "s"}.`);
@@ -224,9 +267,21 @@
 
   window.addEventListener("resize", () => {
     applyPreviewLayout();
+    positionViewControls();
     updateSelection({ scroll: false });
   });
-  window.addEventListener("load", applyPreviewLayout, { once: true });
+  window.addEventListener("scroll", positionViewControls, { passive: true });
+  window.addEventListener("load", () => {
+    applyPreviewLayout();
+    positionViewControls();
+  }, { once: true });
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      applyPreviewLayout();
+      positionViewControls();
+      updateSelection({ scroll: false });
+    }).catch(() => {});
+  }
   window.addEventListener("storage", (event) => {
     if (event.key !== densityKey && event.key !== fitModeKey) return;
     galleryLayout.syncFromStorage();
@@ -258,7 +313,7 @@
       const nextIndex = selectedIndex + visibleColumnCount();
       if (nextIndex >= photos.length - 1 && visibleLimit < allHiddenPhotos.length) {
         visibleLimit = Math.min(allHiddenPhotos.length, visibleLimit + pageSize);
-        render();
+        render({ scrollSelection: false });
       }
       selectedIndex = Math.min(nextIndex, renderedPhotos.length - 1);
       updateSelection();
@@ -282,7 +337,7 @@
     const selected = photos[selectedIndex];
     if (!selected) return;
     if (event.key.toLowerCase() === "d") {
-      const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis removes it from Blocked and keeps a tombstone so imports do not bring it back.`);
+      const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis keeps the master blacklisted, removes remaining review/catalog copies, and leaves only the tombstone so imports do not bring it back.`);
       if (!confirmed) {
         event.preventDefault();
         return;
@@ -303,9 +358,9 @@
       await hiddenActions.promoteHidden(selected.id);
       selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
       render();
-      setStatus(`${selected.title} re-promoted.`);
+      setStatus(`${selected.title} put back.`);
     } catch (error) {
-      setStatus(error?.message || "Could not re-promote photo.");
+      setStatus(error?.message || "Could not put photo back.");
     }
     event.preventDefault();
   });

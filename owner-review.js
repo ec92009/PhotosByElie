@@ -17,16 +17,16 @@
 
   const views = {
     blocked: {
-      title: "Blocked",
+      title: "Waste Basket",
       eyebrow: "Localhost",
-      nav: "Blocked",
+      nav: "Waste Basket",
       bodyGallery: "",
       statusAttr: "data-hidden-status",
       hintClass: "hidden-keyboard-hint",
       hintAttr: "data-hidden-shortcut-hint",
       hint: `
         Owner shortcuts:
-        <kbd>P</kbd> promote
+        <kbd>P</kbd> put back
         <span aria-hidden="true">|</span>
         <kbd>D</kbd> discard
         <span aria-hidden="true">|</span>

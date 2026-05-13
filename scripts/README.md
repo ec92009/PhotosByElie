@@ -108,7 +108,7 @@ After changing the generated catalog, refresh the media sidecar so each flat pub
 node scripts/write_media_sidecar.mjs
 ```
 
-For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X blocks by adding the photo to the blocked blacklist, U removes the most recent block, and P on the Blocked page re-promotes by removing the photo from the blacklist. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write the local SQLite owner-state tables, and export the handoff to `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
+For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X sends a photo to the Waste Basket by adding its undesirable master to the blocked/master blacklist, U removes the most recent block, and P on the Waste Basket page puts a basketed master back by removing it from the blacklist. The blacklist means "do not make that mistake again": future imports/renders skip those masters. Emptying the Waste Basket purges public previews, private masters, and private render triplets for basketed photos, then leaves discard tombstones so the same masters do not return. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write the local SQLite owner-state tables, and export the handoff to `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
 
 If an older review snapshot needs to be replayed, use `scripts/asset_state.py` directly:
 
@@ -132,7 +132,7 @@ Use `--rebuild-missing-manifests` when you want to regenerate the local Lightroo
 
 For a dry review preview without moving files, `export_photos_data.py` can take `--review-snapshot` or the older `--blacklist` alias. Use `--selection newest` only when you explicitly want the newest eligible rows instead of the default ordering. Use `--seed N` only with legacy capped/randomized export experiments.
 
-The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/import-cache` is the ignored disposable import/render workspace; `assets/owner-actions/reserve-data.json` remains only as localhost compatibility data; Blocked is primarily a blacklist/review catalog; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
+The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/import-cache` is the ignored disposable import/render workspace; `assets/owner-actions/reserve-data.json` remains only as localhost compatibility data; Waste Basket is the owner review surface for undesirable masters backed by blacklist/tombstone records; public preview media belongs on R2/CDN. The old raw-first staging folders are retired.
 
 ## State SQLite
 

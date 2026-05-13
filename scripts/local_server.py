@@ -409,10 +409,12 @@ def _existing_preview_rel(repo_root: Path, photo_id: str, derivative: str, prefe
     return None
 
 
-def _hidden_review_photo(source_photo: dict, source_slug: str, source_state: str = "expo") -> dict:
+def _hidden_review_photo(source_photo: dict, source_slug: str, source_state: str = "expo", hidden_at: str | None = None) -> dict:
     photo = copy_photo(source_photo)
     photo["hiddenFromState"] = source_state if source_state in {"expo", "reserve"} else "expo"
     photo["hiddenFromSlug"] = source_slug if source_slug in ORDER else "unknown"
+    if hidden_at:
+        photo["hiddenAt"] = hidden_at
     return photo
 
 
@@ -698,6 +700,45 @@ def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[d
                         content_type="image/jpeg",
                     )
                 )
+    return items
+
+
+def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[dict]:
+    entries: list[dict] = []
+    for slug, photos in hidden_groups.items():
+        for photo in photos:
+            photo_id = str(photo.get("id") or "")
+            if not photo_id:
+                continue
+            _source_state, original_slug = _hidden_provenance(photo, "expo", slug)
+            entries.append(
+                {
+                    "id": photo_id,
+                    "title": photo.get("title") or photo_id,
+                    "discarded_at": datetime.now(timezone.utc).isoformat(),
+                    "from_state": "hidden",
+                    "from_slug": slug,
+                    "source_slug": original_slug,
+                    "asset_paths": _photo_asset_paths(photo),
+                    "public_preview_keys": _hidden_public_preview_keys(photo, original_slug),
+                    "private_keys": _discarded_private_keys(photo),
+                }
+            )
+    return entries
+
+
+def _waste_basket_delete_items(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> list[UploadItem]:
+    items: list[UploadItem] = []
+    seen: set[str] = set()
+    for slug, photos in hidden_groups.items():
+        for photo in photos:
+            _source_state, original_slug = _hidden_provenance(photo, "expo", slug)
+            for item in _discarded_delete_items(repo_root, photo, original_slug):
+                identifier = f"{item.bucket}/{item.key}"
+                if identifier in seen:
+                    continue
+                seen.add(identifier)
+                items.append(item)
     return items
 
 
@@ -1900,12 +1941,21 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         }
 
     if action == "wipe-hidden-r2":
+        for entry in _waste_basket_discard_entries(hidden_groups):
+            _write_discarded_tombstone(repo_root, entry)
+        r2_task = _start_r2_delete_task(
+            "waste-basket-cloud-media",
+            _waste_basket_delete_items(repo_root, hidden_groups),
+            "waste-basket-media-wipe",
+        )
+        hidden_groups = {slug: [] for slug in ORDER}
         site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        r2_task = _start_r2_delete_task("hidden-public-previews", _hidden_public_delete_items(repo_root, hidden_groups))
+        tombstone = _write_discarded_tombstone(repo_root)
         return {
             "ok": True,
             "action": action,
-            "hidden_count": sum(len(photos) for photos in hidden_groups.values()),
+            "hidden_count": 0,
+            "discarded_count": len(tombstone.get("photo_ids") or []),
             "r2_delete_task": r2_task,
             "site": site_state,
         }
@@ -2207,7 +2257,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 }
             raise ValueError(f"photo not found in Expo or Reserve: {photo_id}")
         source_slug, source_photo = found
-        hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state)
+        hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, datetime.now(timezone.utc).isoformat())
         _remove_existing(hidden_groups, photo_id)
         hidden_groups[source_slug].append(hidden_photo)
         moved = {"from": source_state, "from_slug": source_slug, "to": "hidden", "to_slug": source_slug, "mode": "blacklist"}

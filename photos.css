@@ -1632,12 +1632,23 @@ body[data-gallery] .gallery-hero{
   color:var(--text);
   text-shadow:0 1px 12px rgba(255,255,255,.28);
 }
-.hidden-load-more-card{
-  gap:10px;
-  min-height:150px;
+.waste-basket-card-actions{
+  display:flex;
+  align-items:center;
+  min-height:24px;
 }
-.hidden-load-more-card .btn{
-  justify-self:center;
+.waste-basket-state{
+  display:inline-flex;
+  align-items:center;
+  width:100%;
+  border:1px solid var(--line);
+  padding:4px 7px;
+  color:var(--muted);
+  font-size:.63rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1.15;
+  text-transform:uppercase;
 }
 .mock-photo img{
   display:block;

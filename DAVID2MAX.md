@@ -215,3 +215,23 @@ _No David automation results recorded yet._
   - `npm run validate`: failed on existing dirty generated catalog `sourceOrigin` errors
 - Commit pushed: `8e1a91af` (`photosbyelie: improve owner review interactions`)
 - Notes: Left dirty generated catalog files unstaged: `photos-data.js` and `worker/photos-catalog.generated.mjs`.
+
+## 2026-05-13 Title/Keyword Review Shortcut Pass
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Added row selection and keyboard shortcuts to the Title/Keywords review page.
+- Changes made:
+  - Approve and Reject checkboxes sit side by side.
+  - Added shortcut strip: `A` approve, `R` reject, `P` propagate, `H`/`X` block, double-click detail.
+  - Single-click now selects a review row and does not navigate away.
+  - Double-click opens the selected photo detail page.
+  - Propagate button sits under the row status and applies the selected approve/reject state to rows in the same gallery within a two-hour capture window.
+  - H/X are keyboard shortcuts only and call the existing Blocked action.
+- Visible version: `v74.2`
+- Review page: `title-keyword-review.html` (`http://localhost:8000/title-keyword-review.html?v=74.2`)
+- Validation:
+  - `node --check title-keyword-review.js`: OK
+  - Browser check: single-click selection stayed on the review page; double-click opened `photo.html?id=d5h-2945-864593e516&v=74.2`.
+- Commit pushed: `4552134a` (`photosbyelie: add review row shortcuts`)
+- Notes: Dirty generated catalog files remain unstaged: `photos-data.js` and `worker/photos-catalog.generated.mjs`.

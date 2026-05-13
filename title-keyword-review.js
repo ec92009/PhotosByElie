@@ -152,7 +152,7 @@
         <button class="btn secondary" type="button" data-title-keyword-review-download>Download approvals JSON</button>
         <a class="btn secondary" href="${escapeHtml(queueUrl)}" target="_blank" rel="noreferrer">Open proposal file</a>
       </div>
-      <p class="gallery-status">Review each photo, edit the proposed title or keywords if needed, then approve the row.</p>
+      <p class="gallery-status">Rows save as soon as you approve, reject, or edit a proposal. Save approvals retries selected rows.</p>
     `;
 
     root.replaceChildren();
@@ -206,6 +206,7 @@
               <span>Reject note</span>
               <textarea rows="2" data-review-reject-comment placeholder="What should change?"></textarea>
             </label>
+            <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
           </div>
         </article>
       `;
@@ -227,18 +228,28 @@
     `;
     root.append(bottomActions);
 
+    const buildRowDecision = (photoId, card) => {
+      const title = String(card.querySelector("[data-review-title]")?.value || "").trim();
+      const keywordsRaw = String(card.querySelector("[data-review-keywords]")?.value || "");
+      const keywords = normalizeKeywords(keywordsRaw, blacklist);
+      const comment = String(card.querySelector("[data-review-reject-comment]")?.value || "").trim();
+      const rejected = Boolean(card.querySelector("[data-review-reject]")?.checked);
+      const approved = Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
+      return {
+        approval: approved ? { photo_id: photoId, approved: true, title, keywords } : null,
+        rejection: rejected ? { photo_id: photoId, rejected: true, title, keywords, comment } : null,
+        approved,
+        rejected,
+      };
+    };
+
     const buildApprovalsPayload = () => {
       const approvals = [];
       const rejections = [];
       for (const [photoId, card] of cardById.entries()) {
-        const title = String(card.querySelector("[data-review-title]")?.value || "").trim();
-        const keywordsRaw = String(card.querySelector("[data-review-keywords]")?.value || "");
-        const keywords = normalizeKeywords(keywordsRaw, blacklist);
-        const comment = String(card.querySelector("[data-review-reject-comment]")?.value || "").trim();
-        const rejected = Boolean(card.querySelector("[data-review-reject]")?.checked);
-        const approved = Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
-        if (approved) approvals.push({ photo_id: photoId, approved: true, title, keywords });
-        if (rejected) rejections.push({ photo_id: photoId, rejected: true, title, keywords, comment });
+        const decision = buildRowDecision(photoId, card);
+        if (decision.approval) approvals.push(decision.approval);
+        if (decision.rejection) rejections.push(decision.rejection);
       }
       return {
         action: "apply-title-keyword-review-approvals",
@@ -246,6 +257,65 @@
         approvals,
         rejections,
       };
+    };
+
+    const setRowStatus = (card, message, state = "") => {
+      const rowStatus = card.querySelector("[data-review-row-status]");
+      if (!rowStatus) return;
+      rowStatus.textContent = message;
+      rowStatus.dataset.state = state;
+    };
+
+    const postApprovalsPayload = async (payload) => {
+      const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
+      if (!ok) return null;
+      const response = await fetch(approvalsEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Could not save approvals.");
+      }
+      return result;
+    };
+
+    const rowSaveTimers = new Map();
+    const saveRowDecision = async (photoId, card) => {
+      const decision = buildRowDecision(photoId, card);
+      if (!decision.approval && !decision.rejection) {
+        setRowStatus(card, "Not saved");
+        return;
+      }
+      setRowStatus(card, "Saving...", "saving");
+      const result = await postApprovalsPayload({
+        action: "apply-title-keyword-review-approvals",
+        batch_id: batchId,
+        approvals: decision.approval ? [decision.approval] : [],
+        rejections: decision.rejection ? [decision.rejection] : [],
+      });
+      if (!result) {
+        setRowStatus(card, "Auth required", "error");
+        return;
+      }
+      const label = decision.rejection ? "Rejected and saved" : "Approved and saved";
+      setRowStatus(card, label, "saved");
+      if (status) {
+        status.textContent = `${photoId} ${decision.rejection ? "rejection" : "approval"} saved.`;
+      }
+    };
+
+    const scheduleRowSave = (photoId, card, delay = 500) => {
+      window.clearTimeout(rowSaveTimers.get(photoId));
+      setRowStatus(card, "Save pending...", "pending");
+      rowSaveTimers.set(photoId, window.setTimeout(() => {
+        saveRowDecision(photoId, card).catch((error) => {
+          setRowStatus(card, error?.message || "Save failed", "error");
+          if (status) status.textContent = error?.message || "Could not save row.";
+        });
+      }, delay));
     };
 
     const approveAll = () => {
@@ -269,18 +339,8 @@
         "Approved rows update catalog metadata. Rejected rows are prioritized for a new proposal. JPG/source files, public previews, private masters, and render files will not be changed.",
       ) ?? true;
       if (!confirmed) return;
-      const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
-      if (!ok) return;
-      const response = await fetch(approvalsEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Could not save approvals.");
-      }
+      const result = await postApprovalsPayload(payload);
+      if (!result) return;
       window.alert?.(
         `Applied ${result.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
         `Saved ${result.rejected_count || payload.rejections.length} rejections for proposal rework.\n` +
@@ -298,15 +358,23 @@
       downloadJson(`title-keyword-review-approvals-${batchId}.json`, payload);
     };
 
-    cardById.forEach((card) => {
+    cardById.forEach((card, photoId) => {
       const approve = card.querySelector("[data-review-approve]");
       const reject = card.querySelector("[data-review-reject]");
       const comment = card.querySelector("[data-review-reject-comment]");
+      const titleInput = card.querySelector("[data-review-title]");
+      const keywordInput = card.querySelector("[data-review-keywords]");
       const syncDecisionState = () => {
         if (!comment) return;
         const approved = Boolean(approve?.checked);
         comment.readOnly = approved;
         comment.closest("label")?.classList.toggle("is-disabled", approved);
+      };
+      const activateApproveFromEdit = () => {
+        if (reject?.checked) reject.checked = false;
+        if (approve) approve.checked = true;
+        syncDecisionState();
+        scheduleRowSave(photoId, card);
       };
       const activateRejectFromComment = () => {
         if (approve?.checked) approve.checked = false;
@@ -316,19 +384,24 @@
       approve?.addEventListener("change", () => {
         if (approve.checked && reject) reject.checked = false;
         syncDecisionState();
+        if (approve.checked) scheduleRowSave(photoId, card, 150);
+        else setRowStatus(card, "Not saved");
       });
       reject?.addEventListener("change", () => {
         if (reject.checked && approve) approve.checked = false;
         syncDecisionState();
+        if (reject.checked) scheduleRowSave(photoId, card, 150);
+        else setRowStatus(card, "Not saved");
       });
       comment?.addEventListener("input", () => {
-        if (String(comment.value || "").trim()) {
-          activateRejectFromComment();
-        }
+        activateRejectFromComment();
+        scheduleRowSave(photoId, card);
         syncDecisionState();
       });
       comment?.addEventListener("focus", activateRejectFromComment);
       comment?.addEventListener("pointerdown", activateRejectFromComment);
+      titleInput?.addEventListener("input", activateApproveFromEdit);
+      keywordInput?.addEventListener("input", activateApproveFromEdit);
       syncDecisionState();
     });
 

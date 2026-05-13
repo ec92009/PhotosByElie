@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=73.9"/>
-  <link rel="stylesheet" href="./styles.css?v=73.9"/>
-  <link rel="stylesheet" href="./photos.css?v=73.9"/>
+  <link rel="stylesheet" href="./shared.css?v=74.0"/>
+  <link rel="stylesheet" href="./styles.css?v=74.0"/>
+  <link rel="stylesheet" href="./photos.css?v=74.0"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v73.9</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v74.0</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -31,12 +31,13 @@
   <main id="main-content" class="shell">
     <section class="panel gallery-hero owner-hero">
       <h1>Owner</h1>
+      <p class="gallery-status" data-owner-status aria-live="polite"></p>
     </section>
     <section class="panel owner-panel" data-owner-root>
       <p class="empty-basket" data-owner-locked hidden>Owner controls are only available on localhost.</p>
       <div class="owner-grid" data-owner-controls>
         <article class="owner-card">
-          <p class="eyebrow">Classification</p>
+          <p class="eyebrow">Country Classification</p>
           <h2>Unknown queue</h2>
           <p><span data-owner-unknown-count>0</span> photos need a country assignment.</p>
           <a class="btn secondary" href="./unknown.html">Classify</a>
@@ -44,7 +45,7 @@
         <article class="owner-card">
           <p class="eyebrow">Metadata</p>
           <h2>Title / keywords review</h2>
-          <p>Review the newest 100 photos missing the <code>Title_Keywords_Reviewed</code> flag and approve metadata proposals.</p>
+          <p>Review pending title and keyword proposals, including nightly batches and rejected rows that need rework.</p>
           <a class="btn secondary" href="./title-keyword-review.html">Review</a>
         </article>
         <article class="owner-card">
@@ -104,10 +105,11 @@
               <dd data-owner-blocked-published-count>0</dd>
             </div>
             <div>
-              <dt>Previews still present</dt>
+              <dt>Blocked previews still public</dt>
               <dd data-owner-blocked-preview-count>0</dd>
             </div>
           </dl>
+          <p class="owner-card-note" data-owner-blocked-preview-note>0 means all blocked public previews are already absent from R2.</p>
           <button class="btn secondary" type="button" data-owner-publish-hidden-blacklist>Sync blocked list</button>
           <div class="owner-danger-zone">
             <p class="eyebrow">Cleanup</p>
@@ -159,8 +161,8 @@
         </article>
         <article class="owner-card owner-card-wide owner-card-price-list">
           <p class="eyebrow">Products</p>
-          <h2>Price list</h2>
-          <p>Current local digital, print, frame, and shipping mock prices.</p>
+          <h2>Price list ($)</h2>
+          <p>Current local digital, print, frame, and shipping mock prices in USD.</p>
           <div class="owner-price-list" data-owner-price-list></div>
         </article>
       </div>
@@ -180,14 +182,14 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=73.9"></script>
-  <script src="./photos.js?v=73.9"></script>
-  <script src="./owner-auth.js?v=73.9"></script>
-  <script src="./owner-tools.js?v=73.9"></script>
-  <script src="./site-version.js?v=73.9"></script>
-  <script src="./photos-data.js?v=73.9"></script>
-  <script src="./hidden-actions.js?v=73.9"></script>
-  <script src="./reserve-store.js?v=73.9"></script>
-  <script src="./owner.js?v=73.9"></script>
+  <script src="./media-config.js?v=74.0"></script>
+  <script src="./photos.js?v=74.0"></script>
+  <script src="./owner-auth.js?v=74.0"></script>
+  <script src="./owner-tools.js?v=74.0"></script>
+  <script src="./site-version.js?v=74.0"></script>
+  <script src="./photos-data.js?v=74.0"></script>
+  <script src="./hidden-actions.js?v=74.0"></script>
+  <script src="./reserve-store.js?v=74.0"></script>
+  <script src="./owner.js?v=74.0"></script>
 </body>
 </html>

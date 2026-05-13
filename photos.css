@@ -342,6 +342,9 @@ html[data-theme="light"] .photo-art.has-photo::after{
   color:var(--muted);
   line-height:1.45;
 }
+.owner-card-note{
+  font-size:.82rem;
+}
 .owner-card-titlebar{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
@@ -1069,7 +1072,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 }
 .title-keyword-review-row{
   display:grid;
-  grid-template-columns:minmax(170px,220px) minmax(190px,.85fr) minmax(280px,1.3fr) minmax(112px,132px);
+  grid-template-columns:minmax(170px,220px) minmax(190px,.8fr) minmax(280px,1.25fr) minmax(170px,210px);
   gap:14px;
   align-items:stretch;
   border:1px solid var(--line);
@@ -1172,8 +1175,10 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   height:22px;
   accent-color:var(--text);
 }
-.title-keyword-review-reject-comment{
+.title-keyword-review-decision .title-keyword-review-reject-comment{
+  display:grid;
   grid-template-columns:1fr;
+  align-items:stretch;
   gap:5px;
   margin-top:2px;
 }
@@ -1183,6 +1188,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 }
 .title-keyword-review-reject-comment textarea{
   width:100%;
+  min-width:0;
   box-sizing:border-box;
   border:1px solid var(--line);
   background:var(--surface-2);
@@ -1193,6 +1199,24 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   padding:7px 8px;
   resize:vertical;
   min-height:58px;
+}
+.title-keyword-review-row-status{
+  margin:0;
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.title-keyword-review-row-status[data-state="pending"],
+.title-keyword-review-row-status[data-state="saving"]{
+  color:var(--accent);
+}
+.title-keyword-review-row-status[data-state="saved"]{
+  color:color-mix(in srgb,#177245 78%,var(--text));
+}
+.title-keyword-review-row-status[data-state="error"]{
+  color:#a33a3a;
 }
 .title-keyword-review-reject-comment.is-disabled{
   opacity:.48;
@@ -2641,6 +2665,10 @@ html[data-theme="light"] .detail-preview.has-image::after{
     border-left:0;
     border-top:1px solid var(--line);
     padding-top:10px;
+  }
+  .title-keyword-review-reject-comment,
+  .title-keyword-review-row-status{
+    grid-column:1 / -1;
   }
   .mobile-bottom-actions{
     display:grid;

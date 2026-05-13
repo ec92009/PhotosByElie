@@ -479,6 +479,60 @@ def _write_json_file(path: Path, payload: object) -> None:
     temporary.replace(path)
 
 
+def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_out: dict) -> tuple[Path, dict]:
+    approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
+    existing = _read_json_file(approvals_path, {})
+    if not isinstance(existing, dict):
+        existing = {}
+
+    approvals_by_id = {
+        str(item.get("photo_id") or "").strip(): item
+        for item in existing.get("approvals", [])
+        if isinstance(item, dict) and str(item.get("photo_id") or "").strip()
+    }
+    rejections_by_id = {
+        str(item.get("photo_id") or "").strip(): item
+        for item in existing.get("rejections", [])
+        if isinstance(item, dict) and str(item.get("photo_id") or "").strip()
+    }
+    for item in payload_out.get("approvals", []):
+        photo_id = str(item.get("photo_id") or "").strip()
+        if not photo_id:
+            continue
+        approvals_by_id[photo_id] = item
+        rejections_by_id.pop(photo_id, None)
+    for item in payload_out.get("rejections", []):
+        photo_id = str(item.get("photo_id") or "").strip()
+        if not photo_id:
+            continue
+        rejections_by_id[photo_id] = item
+        approvals_by_id.pop(photo_id, None)
+
+    existing_not_found = existing.get("not_found", [])
+    payload_not_found = payload_out.get("not_found", [])
+    if not isinstance(existing_not_found, list):
+        existing_not_found = []
+    if not isinstance(payload_not_found, list):
+        payload_not_found = []
+    not_found = list(dict.fromkeys(
+        [
+            str(item).strip()
+            for item in (existing_not_found + payload_not_found)
+            if str(item).strip()
+        ]
+    ))
+    merged = {
+        **existing,
+        **payload_out,
+        "approvals": list(approvals_by_id.values()),
+        "rejections": list(rejections_by_id.values()),
+        "not_found": not_found,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _write_json_file(approvals_path, merged)
+    return approvals_path, merged
+
+
 def _record_country_assignments(repo_root: Path, target_slug: str, moved: list[dict], skipped: list[dict]) -> dict:
     if not moved and not skipped:
         return {}
@@ -1760,16 +1814,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "rejections": normalized_rejections,
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
         }
-        approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
-        approvals_path.parent.mkdir(parents=True, exist_ok=True)
-        _write_json_file(approvals_path, payload_out)
+        approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
         return {
             "ok": True,
             "action": action,
             "batch_id": batch_id,
             "path": approvals_path.relative_to(repo_root).as_posix(),
-            "approved_count": len(normalized),
-            "rejected_count": len(normalized_rejections),
+            "approved_count": len(merged_record.get("approvals", [])),
+            "rejected_count": len(merged_record.get("rejections", [])),
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
         }
 
@@ -1972,9 +2024,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
         }
-        approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
-        approvals_path.parent.mkdir(parents=True, exist_ok=True)
-        _write_json_file(approvals_path, payload_out)
+        approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
         site_state = {}
         worker_catalog = {}
         if normalized:
@@ -1984,8 +2034,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "action": action,
             "batch_id": batch_id,
             "path": approvals_path.relative_to(repo_root).as_posix(),
-            "approved_count": len(normalized),
-            "rejected_count": len(normalized_rejections),
+            "approved_count": len(merged_record.get("approvals", [])),
+            "rejected_count": len(merged_record.get("rejections", [])),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),

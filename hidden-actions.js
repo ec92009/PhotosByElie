@@ -13,6 +13,22 @@
   let queuedPhotoAction = Promise.resolve();
   const pendingHiddenIds = new Set();
 
+  const ownerActionBusyMessages = {
+    hide: "Moving photo to Blocked...",
+    "undo-hide": "Restoring blocked photo...",
+    "promote-hidden": "Promoting blocked photo...",
+    "return-to-reserve": "Returning photo to Reserve...",
+    discard: "Discarding photo and updating manifests...",
+    "assign-country": "Assigning country and refreshing catalog state...",
+    "sync-country-keywords": "Syncing country metadata into generated catalog files...",
+    "remove-collection-keyword": "Removing collection keyword from catalog metadata...",
+    "update-photo-metadata": "Saving title and keyword metadata...",
+    "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
+    "publish-hidden-blacklist": "Syncing blocked-photo list...",
+    "wipe-hidden-r2": "Queueing blocked preview cleanup...",
+    "save-title-keyword-review-approvals": "Saving title/keyword review decisions...",
+  };
+
   const normalize = (items) => {
     if (!Array.isArray(items)) return [];
     return [...new Set(items.filter((item) => typeof item === "string" && item))];
@@ -215,7 +231,7 @@
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
-    setOwnerBusy(true);
+    setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
       const response = await fetch(photoActionEndpoint, {
         method: "POST",

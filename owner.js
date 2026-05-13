@@ -16,6 +16,7 @@
   const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
   const blockedPublishedCountRoot = document.querySelector("[data-owner-blocked-published-count]");
   const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
+  const blockedPreviewNoteRoot = document.querySelector("[data-owner-blocked-preview-note]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
   const publishHiddenBlacklistButton = document.querySelector("[data-owner-publish-hidden-blacklist]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
@@ -130,6 +131,11 @@
     if (originAiCountRoot) originAiCountRoot.textContent = formatCount(counts.ai);
     if (originAiShareRoot) originAiShareRoot.textContent = total ? `${Math.round((counts.ai / total) * 100)}%` : "0%";
   };
+
+  window.addEventListener("photosbyelie:ownerbusychange", (event) => {
+    const detail = event.detail || {};
+    if (detail.busy) setStatus(detail.message || "Owner action is running...");
+  });
 
   const collectionLabelForPhoto = (photoId) => {
     const id = String(photoId || "");
@@ -339,7 +345,13 @@
 
   const refreshBlockedSyncPanel = async () => {
     if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount((hiddenActions.read?.() || []).length);
-    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedPreviewCountFromCoverage());
+    const blockedPreviews = blockedPreviewCountFromCoverage();
+    if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedPreviews);
+    if (blockedPreviewNoteRoot) {
+      blockedPreviewNoteRoot.textContent = blockedPreviews
+        ? `${formatCount(blockedPreviews)} blocked public previews still exist in R2 and can be deleted after the blocked list is synced.`
+        : "0 means all blocked public previews are already absent from R2.";
+    }
     if (!blockedPublishedCountRoot) return;
     try {
       const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
@@ -859,7 +871,7 @@
 
   syncCountryKeywordsButton?.addEventListener("click", async () => {
     syncCountryKeywordsButton.disabled = true;
-    setStatus("Syncing country metadata into the catalog...");
+    setStatus("Syncing country metadata into generated catalog files. This can take a moment...");
     try {
       const result = await hiddenActions.syncCountryKeywords?.();
       const updates = result?.keyword_updates || {};

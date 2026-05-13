@@ -332,3 +332,13 @@ _No David automation results recorded yet._
 - Validation: `npm test` passed; `npm run validate` passed.
 - Commit pushed: `c973943e photosbyelie: persist blocked review rows`.
 - Note: H/X clicks made before this fix were not durably recorded unless they also have entries in the current approvals JSON. Those rows may need to be H/Xed once more.
+
+## 2026-05-13 - Title/Keyword review toolbar labels
+
+- Reworked the Title/Keywords batch toolbar labels after Owner review feedback.
+- Top toolbar now shows: `Approve visible`, `Apply selected`, `Export selected JSON`, and `Open proposal JSON`.
+- `Approve visible` now selects all visible rows and queues their row autosaves, matching the current per-row autosave model.
+- `Apply selected` is now explicit that it is the catalog metadata apply action for checked rows, replacing the misleading `Save approvals` label.
+- Toolbar layout is full-width and left-aligned to avoid the previous odd wrapped/centered button row.
+- Validation: `npm test` passed; `npm run validate` passed.
+- Commit pushed: `ff211d99 photosbyelie: clarify review batch actions`.

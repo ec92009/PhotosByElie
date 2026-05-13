@@ -35,9 +35,10 @@ David should append automation results here. Keep newest entries near the top, b
 - Validation:
   - `npm run social:packages`: OK, 10/10 ready.
   - `node --check scripts/generate_social_post_packages.mjs`: OK.
-  - `npm test`: blocked by unrelated dirty generated catalog pricing state (`5500 !== 8100`, `5000 !== 2900`, `4500 !== 6500`).
-  - `npm run validate`: blocked by unrelated dirty generated catalog media/sourceOrigin state.
-- Notes: Left existing Owner/title-keyword review state and generated catalog drift unstaged.
+  - `npm run social:packages -- --dry-run`: OK, 10/10 ready.
+  - `npm test`: OK (14/14).
+  - `npm run validate`: OK.
+- Notes: Left existing Owner/title-keyword review state unstaged.
 
 ## 2026-05-13 Title/Keyword Proposal State + Reject Rework
 

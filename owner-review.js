@@ -1,5 +1,5 @@
 (() => {
-  const version = new URL(document.currentScript?.src || window.location.href, window.location.href).searchParams.get("v") || "74.8";
+  const version = new URL(document.currentScript?.src || window.location.href, window.location.href).searchParams.get("v") || "74.9";
   const params = new URLSearchParams(window.location.search);
   const view = (params.get("view") || "blocked").toLowerCase();
   const main = document.querySelector("[data-owner-review-main]");
@@ -106,16 +106,21 @@
   if (topLink) topLink.hidden = view !== "title-keywords";
   if (main) {
     main.innerHTML = `
-      <section class="panel gallery-hero owner-hero">
-        <p class="eyebrow">${config.eyebrow}</p>
-        <h1>${config.title}</h1>
-        <p class="gallery-status" ${config.statusAttr} aria-live="polite"></p>
-        <div class="cta">
-          <a class="btn secondary" href="./owner.html">Owner</a>
-          <a class="btn secondary" href="./">Back to collections</a>
-        </div>
-      </section>
-      <p class="keyboard-hint ${config.hintClass}" ${config.hintAttr} ${config.hintAttr ? "hidden" : ""}>${config.hint}</p>
+      ${window.photosByEliePageShell.hero({
+        eyebrow: config.eyebrow,
+        title: config.title,
+        statusAttr: config.statusAttr,
+        actions: [
+          { href: "./owner.html", label: "Owner" },
+          { href: "./", label: "Back to collections" },
+        ],
+      })}
+      ${window.photosByEliePageShell.keyboardHint({
+        className: config.hintClass,
+        attrName: config.hintAttr,
+        hidden: Boolean(config.hintAttr),
+        html: config.hint,
+      })}
       ${config.root}
     `;
     window.photosByElieVersionInternalLinks?.(main);

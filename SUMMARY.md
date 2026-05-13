@@ -7,7 +7,7 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.8`
+- Current visible build: `v74.9`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction is hostname-based: Max reads `DAVID2MAX.md` and writes `MAX2DAVID.md`; David reads `MAX2DAVID.md` and writes `DAVID2MAX.md`.
 - Public previews, private masters, private render JPGs, and source/JPG embedded metadata remain immutable after upload. Owner title/keyword work updates generated catalog/manifest files and owner-action JSON only.
@@ -46,7 +46,7 @@ Date: 2026-05-13
   - Owner busy/status text is clearer for long-running actions.
   - Blocked sync explains why `0` previews still public is good.
   - Price list copy explicitly says dollars / USD.
-- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.8`.
+- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.9`.
 
 ## Important Safeguards
 

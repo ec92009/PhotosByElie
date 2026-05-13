@@ -29,7 +29,6 @@ let densityValue = null;
 let fitModeButtons = [];
 let viewControls = null;
 let renderedGalleryPhotos = [];
-let pendingGalleryPreviewLayout = 0;
 let visibleLimit = pageSize;
 let moreButton = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
@@ -566,46 +565,22 @@ const selectedShortcutPhoto = () => {
   return photos[selectedIndex];
 };
 
-const maxDensityColumns = () => {
-  if (window.matchMedia("(max-width:760px)").matches) return 3;
-  return 10;
-};
+const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
+  root: galleryRoot,
+  getPhotos: () => renderedGalleryPhotos,
+  densityKey,
+  fitModeKey,
+});
 
-const defaultDensityColumns = () => {
-  if (window.matchMedia("(min-width:1520px)").matches) return 8;
-  if (window.matchMedia("(min-width:1120px)").matches) return 6;
-  if (window.matchMedia("(min-width:860px)").matches) return 4;
-  if (window.matchMedia("(min-width:640px)").matches) return 3;
-  return 2;
-};
-
-const clampDensityColumns = (columns) => {
-  const numericColumns = Number(columns);
-  return Math.min(
-    Math.max(Number.isFinite(numericColumns) ? numericColumns : defaultDensityColumns(), 1),
-    maxDensityColumns()
-  );
-};
-
-const preferredDensityColumns = () => {
-  const savedValue = Number(localStorage.getItem(densityKey));
-  return clampDensityColumns(Number.isInteger(savedValue) ? savedValue : defaultDensityColumns());
-};
+const maxDensityColumns = () => galleryLayout.maxDensityColumns();
+const preferredDensityColumns = () => galleryLayout.preferredDensityColumns();
 
 const applyGalleryDensity = () => {
-  if (!galleryRoot) return;
-  const columns = preferredDensityColumns();
-  galleryRoot.style.setProperty("--gallery-zoom-columns", String(columns));
-  if (densityInput) {
-    densityInput.max = String(maxDensityColumns());
-    densityInput.value = String(columns);
-  }
-  if (densityValue) densityValue.textContent = `${columns}`;
+  galleryLayout.applyDensityControls({ input: densityInput, value: densityValue });
 };
 
 const setGalleryDensityColumns = (columns) => {
-  const nextColumns = clampDensityColumns(columns);
-  localStorage.setItem(densityKey, String(nextColumns));
+  const nextColumns = galleryLayout.setDensityColumns(columns);
   applyGalleryDensity();
   applyGalleryPreviewLayout();
   updateSelection({ scroll: false });
@@ -632,95 +607,25 @@ const stepGallerySelection = (delta, columnJump = false) => {
   updateSelection();
 };
 
-const preferredFitMode = () => (
-  localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit"
-);
-
-let fitMode = preferredFitMode();
-
-const cancelGalleryPreviewLayout = () => {
-  if (!pendingGalleryPreviewLayout) return;
-  window.cancelAnimationFrame(pendingGalleryPreviewLayout);
-  pendingGalleryPreviewLayout = 0;
-};
-
-const galleryPreviewLayoutMetrics = () => {
-  if (!galleryRoot) return null;
-  const styles = window.getComputedStyle(galleryRoot);
-  const rowHeight = Number.parseFloat(styles.getPropertyValue("--gallery-masonry-row-height")) || 8;
-  const rowGap = Number.parseFloat(styles.rowGap) || 0;
-  const columnGap = Number.parseFloat(styles.columnGap) || 0;
-  const columns = preferredDensityColumns();
-  const contentWidth = galleryRoot.clientWidth;
-  const columnWidth = (contentWidth - columnGap * Math.max(0, columns - 1)) / columns;
-  const spanUnit = rowHeight + rowGap;
-  if (spanUnit <= 0 || columnWidth <= 0) return null;
-  return { columnGap, columnWidth, columns, rowGap, spanUnit };
-};
-
-const galleryColumnSpan = (photo, metrics) => (
-  window.photosByEliePhotoIsPanorama?.(photo) && metrics.columns > 1 ? metrics.columns : 1
-);
-
-const galleryPreviewSpan = (photo, metrics, captionHeight = 0, columnSpan = 1) => {
-  const dimensions = previewDimensions(photo);
-  const aspectRatio = dimensions?.width && dimensions?.height
-    ? dimensions.width / dimensions.height
-    : 1;
-  const cardWidth = (metrics.columnWidth * columnSpan) + (metrics.columnGap * Math.max(0, columnSpan - 1));
-  const imageHeight = cardWidth / Math.max(.2, aspectRatio);
-  const cardGap = 4;
-  const cardHeight = imageHeight + cardGap + captionHeight + 2;
-  return Math.max(1, Math.ceil((cardHeight + metrics.rowGap) / metrics.spanUnit));
-};
+const preferredFitMode = () => galleryLayout.fitMode();
 
 const applyGalleryPreviewLayout = (photos = renderedGalleryPhotos) => {
-  if (!galleryRoot) return;
-  cancelGalleryPreviewLayout();
-  const cards = galleryRoot.querySelectorAll("[data-photo-index]");
-  if (fitMode !== "fit") {
-    cards.forEach((card) => {
-      card.style.removeProperty("--gallery-column-span");
-      card.style.removeProperty("--gallery-masonry-span");
-    });
-    return;
-  }
-  const metrics = galleryPreviewLayoutMetrics();
-  if (!metrics) {
-    pendingGalleryPreviewLayout = window.requestAnimationFrame(() => {
-      pendingGalleryPreviewLayout = 0;
-      applyGalleryPreviewLayout(photos);
-    });
-    return;
-  }
-  cards.forEach((card, index) => {
-    const photo = photos[index];
-    const columnSpan = galleryColumnSpan(photo, metrics);
-    const captionHeight = card.querySelector("[data-photo-caption]")?.getBoundingClientRect().height || 0;
-    const span = galleryPreviewSpan(photo, metrics, captionHeight, columnSpan);
-    card.style.setProperty("--gallery-column-span", String(columnSpan));
-    card.style.setProperty("--gallery-masonry-span", String(span));
-  });
+  galleryLayout.applyPreviewLayout(photos);
 };
 
 const applyGalleryFitMode = () => {
-  if (!galleryRoot) return;
-  galleryRoot.dataset.imageFit = fitMode;
-  fitModeButtons.forEach((button) => {
-    button.setAttribute("aria-pressed", button.dataset.galleryFitMode === fitMode ? "true" : "false");
-  });
+  galleryLayout.applyFitMode(fitModeButtons);
 };
 
 const setGalleryFitMode = (mode) => {
-  fitMode = mode === "fill" ? "fill" : "fit";
-  localStorage.setItem(fitModeKey, fitMode);
+  const fitMode = galleryLayout.setFitMode(mode);
   applyGalleryFitMode();
   applyGalleryPreviewLayout();
   updateSelection({ scroll: false });
   return fitMode;
 };
 
-const toggleGalleryFitMode = () => setGalleryFitMode(fitMode === "fill" ? "fit" : "fill");
+const toggleGalleryFitMode = () => setGalleryFitMode(galleryLayout.fitMode() === "fill" ? "fit" : "fill");
 
 const positionGalleryViewControls = () => {
   if (!viewControls) return;

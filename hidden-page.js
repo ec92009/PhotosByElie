@@ -10,10 +10,14 @@
   const densityKey = "photosbyelie-gallery-columns";
   const fitModeKey = "photosbyelie-gallery-fit-mode";
   let renderedPhotos = [];
-  let pendingPreviewLayout = 0;
-  let fitMode = localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit";
   let selectedIndex = 0;
   let catalogsLoaded = false;
+  const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
+    root: galleryRoot,
+    getPhotos: () => renderedPhotos,
+    densityKey,
+    fitModeKey,
+  });
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -79,90 +83,7 @@
     return columns > 0 ? columns : cards.length;
   };
 
-  const maxDensityColumns = () => {
-    if (window.matchMedia("(max-width:760px)").matches) return 3;
-    return 10;
-  };
-
-  const defaultDensityColumns = () => {
-    if (window.matchMedia("(min-width:1520px)").matches) return 8;
-    if (window.matchMedia("(min-width:1120px)").matches) return 6;
-    if (window.matchMedia("(min-width:860px)").matches) return 4;
-    if (window.matchMedia("(min-width:640px)").matches) return 3;
-    return 2;
-  };
-
-  const preferredDensityColumns = () => {
-    const savedValue = Number(localStorage.getItem(densityKey));
-    const numericColumns = Number.isInteger(savedValue) ? savedValue : defaultDensityColumns();
-    return Math.min(Math.max(numericColumns, 1), maxDensityColumns());
-  };
-
-  const cancelPreviewLayout = () => {
-    if (!pendingPreviewLayout) return;
-    window.cancelAnimationFrame(pendingPreviewLayout);
-    pendingPreviewLayout = 0;
-  };
-
-  const previewLayoutMetrics = () => {
-    if (!galleryRoot) return null;
-    const styles = window.getComputedStyle(galleryRoot);
-    const rowHeight = Number.parseFloat(styles.getPropertyValue("--gallery-masonry-row-height")) || 8;
-    const rowGap = Number.parseFloat(styles.rowGap) || 0;
-    const columnGap = Number.parseFloat(styles.columnGap) || 0;
-    const columns = preferredDensityColumns();
-    const contentWidth = galleryRoot.clientWidth;
-    const columnWidth = (contentWidth - columnGap * Math.max(0, columns - 1)) / columns;
-    const spanUnit = rowHeight + rowGap;
-    if (spanUnit <= 0 || columnWidth <= 0) return null;
-    return { columnGap, columnWidth, columns, rowGap, spanUnit };
-  };
-
-  const columnSpan = (photo, metrics) => (
-    window.photosByEliePhotoIsPanorama?.(photo) && metrics.columns > 1 ? metrics.columns : 1
-  );
-
-  const previewSpan = (photo, metrics, captionHeight = 0, spanColumns = 1) => {
-    const dimensions = window.photosByEliePreviewDimensions?.(photo);
-    const aspectRatio = dimensions?.width && dimensions?.height
-      ? dimensions.width / dimensions.height
-      : 1;
-    const cardWidth = (metrics.columnWidth * spanColumns) + (metrics.columnGap * Math.max(0, spanColumns - 1));
-    const imageHeight = cardWidth / Math.max(.2, aspectRatio);
-    const cardGap = 4;
-    const cardHeight = imageHeight + cardGap + captionHeight + 2;
-    return Math.max(1, Math.ceil((cardHeight + metrics.rowGap) / metrics.spanUnit));
-  };
-
-  const applyPreviewLayout = () => {
-    if (!galleryRoot) return;
-    cancelPreviewLayout();
-    galleryRoot.style.setProperty("--gallery-zoom-columns", String(preferredDensityColumns()));
-    galleryRoot.dataset.imageFit = fitMode;
-    const cards = galleryRoot.querySelectorAll("[data-photo-index]");
-    if (fitMode !== "fit") {
-      cards.forEach((card) => {
-        card.style.removeProperty("--gallery-column-span");
-        card.style.removeProperty("--gallery-masonry-span");
-      });
-      return;
-    }
-    const metrics = previewLayoutMetrics();
-    if (!metrics) {
-      pendingPreviewLayout = window.requestAnimationFrame(() => {
-        pendingPreviewLayout = 0;
-        applyPreviewLayout();
-      });
-      return;
-    }
-    cards.forEach((card, index) => {
-      const photo = renderedPhotos[index];
-      const spanColumns = columnSpan(photo, metrics);
-      const captionHeight = card.querySelector("[data-photo-caption]")?.getBoundingClientRect().height || 0;
-      card.style.setProperty("--gallery-column-span", String(spanColumns));
-      card.style.setProperty("--gallery-masonry-span", String(previewSpan(photo, metrics, captionHeight, spanColumns)));
-    });
-  };
+  const applyPreviewLayout = () => galleryLayout.applyPreviewLayout(renderedPhotos);
 
   const render = () => {
     if (!galleryRoot) return;
@@ -233,7 +154,7 @@
   window.addEventListener("load", applyPreviewLayout, { once: true });
   window.addEventListener("storage", (event) => {
     if (event.key !== densityKey && event.key !== fitModeKey) return;
-    fitMode = localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit";
+    galleryLayout.syncFromStorage();
     applyPreviewLayout();
   });
 

@@ -20,6 +20,55 @@ git pull --ff-only origin main
 - Push successful commits to `main`.
 - Record what happened in `DAVID2MAX.md`.
 
+## 2026-05-13 R2-Only Preview Cleanup
+
+Prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, pull main and mirror Max's R2-only preview cleanup. Public and localhost gallery previews must resolve from R2/CDN keys only, never from local preview folders.
+
+Specific cleanup target:
+- Remove any `assets/expo` and `assets/reserve` directories from the David checkout if present. These folders are retired and should not be recreated.
+- Remove Hidden preview image payload too: delete `assets/hidden/**/*.jpg`, `.DS_Store`, and per-country `.gitkeep` placeholders. Keep `assets/hidden/hidden-blacklist.json` and `assets/hidden/hidden-data.json` as JSON state only.
+- Keep R2 object keys such as `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; those are bucket keys, not local paths.
+- Remove or flag any code that serves, fetches, syncs, or validates browser previews from `assets/expo` or `assets/reserve`.
+- `photos-data.js`, `home-data.js`, `worker/photos-catalog.generated.mjs`, Hidden data, review queues, and sidecar files should not contain local `./assets/expo/...`, `./assets/reserve/...`, or `./assets/hidden/...` preview URLs.
+- Do not rewrite JPG/source embedded metadata.
+- After cleanup, run `rg -n "\\./assets/(expo|reserve|hidden)|assets/(expo|reserve|hidden)/.*\\.jpg|localPreview|legacyPublicPreview" . --glob '!node_modules/**' --glob '!.git/**' --glob '!tmp/**'` and explain any remaining hits. Hits for `assets/expo-manifest.json`, `assets/hidden/hidden-blacklist.json`, `assets/hidden/hidden-data.json`, or R2 keys like `expo/<id>_900.jpg` are okay; local preview folder paths are not.
+- Run `npm test` and `npm run validate`, then append results to `DAVID2MAX.md`.
+```
+
+## 2026-05-13 Complete R2 Preview Audit And Backfill
+
+Prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, pull main and run a complete public-preview R2 audit/backfill across the current public catalog. Max has no `tmp/import-cache`, so do this on David only.
+
+Do not restore local preview folders. Do not commit JPGs. Upload missing baked-watermark previews to R2 under the existing public keys.
+
+Known missing USA gallery previews from Max's v74.11 smoke check, but do not stop at these:
+- expo/20180731-1238-42139-523fc863bd_900.jpg
+- expo/20180731-1227-42017-4a4d4f3d8a_900.jpg
+- expo/20180731-1226-42081-faf34323e9_900.jpg
+- expo/20180731-1156-42014-420ac2b2d2_900.jpg
+- expo/20161018-1611-15583-ebcf17ac43_900.jpg
+- expo/20161005-0851-16297-832c828571_900.jpg
+- expo/20160927-1606-16583-39cfdc87d1_900.jpg
+- expo/20160927-0851-20718-57ee626a89_900.jpg
+- expo/20160926-0800-20396-30b40cffa4_900.jpg
+- expo/20160916-1609-06444-6a9e325351_900.jpg
+
+Complete sweep requirements:
+1. Build the expected public preview key list from `photos-data.js` or `assets/media-sidecar.json`: every public catalog photo with `media.publicPreview.allowed !== false` should have both `galleryKey` (`_900.jpg`) and `detailKey` (`_1800.jpg`).
+2. HEAD each expected key at `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/<key>` and produce a missing list.
+3. Confirm David has `tmp/import-cache/manifest.json` and derivative files for the missing IDs. If derivative files are missing but source files exist, regenerate the baked-watermark previews into `tmp/import-cache`; do not write them to `assets/expo`, `assets/reserve`, or `assets/hidden`.
+4. Use `scripts/sync_r2_media.py` or the existing R2 upload path to upload all missing public previews to `photosbyelie-public`.
+5. Re-run the HEAD audit after upload and confirm all expected public preview URLs return HTTP 200. If any remain missing, report exact keys and why.
+6. Run `npm run validate`.
+7. Append a dated note to `DAVID2MAX.md` with: expected key count, initial missing count, uploaded count, final missing count, any source/cache gaps, and validation result.
+```
+
 ## Automation 1: Daily Repository Health Check
 
 Schedule: daily, morning Madrid time.

@@ -43,6 +43,7 @@ Date: 2026-05-13
 - Title/Keywords batch toolbar now uses explicit labels: `Approve visible` selects and autosaves visible rows, `Apply selected` performs the catalog metadata apply for checked approvals/rejections, `Export selected JSON` downloads the selected rows, and `Open proposal JSON` opens the raw proposal file.
 - Blocked Owner review now restores the shared Grid/Fit controls and renders blocked photos in 160-card pages with `Load more`, avoiding the blank/stalled full-catalog render.
 - Shared gallery cards now replace broken public preview URLs with a compact `Preview unavailable` tile so old hidden/reserve rows with missing R2 previews do not spill long alt text into the grid.
+- Owner policy decision: Blocked/Discarded preview media exists only to support a short undo window. The default retention target is 24 hours; afterward, cleanup should delete preview derivatives and retain only the durable blocked/discarded id plus the blacklisted master/source path.
 - Owner page comments were addressed:
   - Classification eyebrow now says `Country Classification`.
   - Title/Keywords card no longer implies the queue is always exactly 100 rows.
@@ -68,30 +69,31 @@ Date: 2026-05-13
 
 ## Fresh Numbered Backlog
 
-1. Reconcile the dirty Owner-generated title/keyword review state.
-2. Regenerate and validate the next Title/Keywords queue after reconciled approvals/rejections.
-3. Add a true vision-capable proposal pass for title/keyword generation.
-4. Add an Owner review batch summary panel.
-5. Add a slow, resumable full R2 HEAD audit script so future audits avoid `429` noise.
-6. Move public media from `r2.dev` to a custom media domain.
-7. Prove Stripe checkout in test mode.
-8. Make checkout and delivery production-durable.
-9. Package the buyer offer clearly.
-10. Move prices into a dedicated published price list.
-11. Curate the first sellable storefront.
-12. Add conversion analytics.
-13. Improve public discovery and SEO.
-14. Build marketing landing pages.
-15. Split gallery/catalog data by collection.
-16. Refine gallery merchandising layout.
-17. Replace keyword cleanup with a modal workflow.
-18. Make country collections open-ended.
-19. Extend Owner operations dashboard.
-20. Harden Owner identity and publish validation.
+1. Implement the 24-hour Blocked/Discarded preview cleanup queue while keeping id + master/source-path tombstones.
+2. Reconcile the dirty Owner-generated title/keyword review state.
+3. Regenerate and validate the next Title/Keywords queue after reconciled approvals/rejections.
+4. Add a true vision-capable proposal pass for title/keyword generation.
+5. Add an Owner review batch summary panel.
+6. Add a slow, resumable full R2 HEAD audit script so future audits avoid `429` noise.
+7. Move public media from `r2.dev` to a custom media domain.
+8. Prove Stripe checkout in test mode.
+9. Make checkout and delivery production-durable.
+10. Package the buyer offer clearly.
+11. Move prices into a dedicated published price list.
+12. Curate the first sellable storefront.
+13. Add conversion analytics.
+14. Improve public discovery and SEO.
+15. Build marketing landing pages.
+16. Split gallery/catalog data by collection.
+17. Refine gallery merchandising layout.
+18. Replace keyword cleanup with a modal workflow.
+19. Make country collections open-ended.
+20. Extend Owner operations dashboard.
+21. Harden Owner identity and publish validation.
 
 ## Verification Snapshot
 
-- Latest completed handoff commit: `84b0ba74 photosbyelie: complete r2 preview handoff`.
+- Latest completed handoff commit: `f70c4d18 photosbyelie: report blocked review fix`.
 - Browser check for `v74.4` showed the review page loading successfully and filtering saved rows from the current local approval record.
 - Browser check for `v74.21` showed `owner-review.html?view=blocked` loading with the blocked heading, grid controls, visible photo cards, missing-preview fallbacks, and a `Load more` control.
 - `node --check title-keyword-review.js` passed for the saved-row policy change.

@@ -30,8 +30,8 @@ David should append automation results here. Keep newest entries near the top, b
   - `assets/owner-actions/social-post-packages/2026-05-13/post-packages.md`
   - `assets/owner-actions/social-post-packages/2026-05-13/post-packages.json`
   - `assets/owner-actions/social-post-packages/latest.json`
-- Automation scope: prepares Instagram, Facebook, and Reddit posting kits only. It does not post, comment, upload, crop, or edit images.
-- Posting automation note: Instagram/Facebook/Reddit posting appears technically possible, but it needs platform credentials, app permissions, token storage, and Reddit subreddit rule handling before enabling live publish.
+- Automation scope: prepares Instagram, Facebook, and Pinterest posting kits only. It does not post, upload, crop, or edit images.
+- Posting automation note: Instagram/Facebook/Pinterest posting appears technically possible, but it needs platform credentials, app permissions, token storage, and Pinterest board mapping before enabling live publish.
 - Validation:
   - `npm run social:packages`: OK, 10/10 ready.
   - `node --check scripts/generate_social_post_packages.mjs`: OK.

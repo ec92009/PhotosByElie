@@ -187,7 +187,7 @@ node scripts/validate_publish.js --summary
 
 ## Social Post Packages
 
-`generate_social_post_packages.mjs` turns the latest weekly Social Asset Queue in `DAVID2MAX.md` into ready-to-review posting kits for Instagram, Facebook, and Reddit. It writes JSON plus a readable Markdown brief under `assets/owner-actions/social-post-packages/<date>/` and leaves actual posting disabled until platform credentials, account permissions, and subreddit rules are configured.
+`generate_social_post_packages.mjs` turns the latest weekly Social Asset Queue in `DAVID2MAX.md` into ready-to-review posting kits for Instagram, Facebook, and Pinterest. It writes JSON plus a readable Markdown brief under `assets/owner-actions/social-post-packages/<date>/` and leaves actual posting disabled until platform credentials, account permissions, board mapping, and token storage are configured.
 
 ```bash
 npm run social:packages

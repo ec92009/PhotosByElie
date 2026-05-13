@@ -2,7 +2,7 @@
 
 Generated from the 2026-05-13 Social Asset Queue in DAVID2MAX.md.
 
-These are ready-to-review packages, not proof that posting credentials are configured. Keep Reddit posts non-salesy unless the target subreddit explicitly allows portfolio/store links.
+These are ready-to-review packages, not proof that posting credentials are configured. The active targets are Instagram, Facebook, and Pinterest.
 
 ## Eglise des Invalides, Paris
 
@@ -29,15 +29,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20220506-154
 
 Crop note: Story/Reel (9:16): strong vertical architectural subject; minimal side-crop to 9:16 should preserve the main dome/lines.
 
-### Reddit
+### Pinterest
 
 Title: Eglise des Invalides, Paris
 
-Eglise des Invalides, Paris - France, 2022.
+Eglise des Invalides, Paris - France, 2022. strong vertical architectural subject; minimal side-crop to 9:16 should preserve the main dome/lines.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Paris and France photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Eglise des Invalides, Paris, France.
 
 ## Coupole des Galeries Lafayette
 
@@ -64,15 +64,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-153
 
 Crop note: Story/Reel (9:16): symmetrical dome/ceiling compositions typically tolerate top/bottom emphasis; 9:16 framing can keep the center while trimming edges.
 
-### Reddit
+### Pinterest
 
 Title: Coupole des Galeries Lafayette
 
-Coupole des Galeries Lafayette - France, 2022.
+Coupole des Galeries Lafayette - France, 2022. symmetrical dome/ceiling compositions typically tolerate top/bottom emphasis; 9:16 framing can keep the center while trimming edges.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Paris and France photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Coupole des Galeries Lafayette, France.
 
 ## Oceanside Harbor Village
 
@@ -99,15 +99,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20180224-144
 
 Crop note: Portrait (4:5): already close to portrait; 4:5 crop should keep the main subject while removing extra side space.
 
-### Reddit
+### Pinterest
 
 Title: Oceanside Harbor Village
 
-Oceanside Harbor Village - USA, 2018.
+Oceanside Harbor Village - USA, 2018. already close to portrait; 4:5 crop should keep the main subject while removing extra side space.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: California and USA photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Oceanside Harbor Village, USA.
 
 ## Notre Dame de Paris, Quai de Seine
 
@@ -134,15 +134,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20180511-112
 
 Crop note: Portrait (4:5): architecture/riverbank scenes usually have a clear vertical focal area; 4:5 keeps feed-friendly framing without needing aggressive cropping.
 
-### Reddit
+### Pinterest
 
 Title: Notre Dame de Paris, Quai de Seine
 
-Notre Dame de Paris, Quai de Seine - France, 2018.
+Notre Dame de Paris, Quai de Seine - France, 2018. architecture/riverbank scenes usually have a clear vertical focal area; 4:5 keeps feed-friendly framing without needing aggressive cropping.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Paris and France photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Notre Dame de Paris, Quai de Seine, France.
 
 ## Art, Institut du Monde Arabe, Paris, France
 
@@ -169,15 +169,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20180511-120
 
 Crop note: Square (1:1): near-square original; square crop should be minimal and preserve the graphic/architectural read.
 
-### Reddit
+### Pinterest
 
 Title: Art, Institut du Monde Arabe, Paris, France
 
-Art, Institut du Monde Arabe, Paris, France - France, 2018.
+Art, Institut du Monde Arabe, Paris, France - France, 2018. near-square original; square crop should be minimal and preserve the graphic/architectural read.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Paris and France photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Art, Institut du Monde Arabe, Paris, France, France.
 
 ## Solana Beach Sunset
 
@@ -204,15 +204,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-173
 
 Crop note: Square (1:1): horizon/sunset compositions tend to work well in square with a centered subject; minimal crop needed from near-square ratio.
 
-### Reddit
+### Pinterest
 
 Title: Solana Beach Sunset
 
-Solana Beach Sunset - USA, 2018.
+Solana Beach Sunset - USA, 2018. horizon/sunset compositions tend to work well in square with a centered subject; minimal crop needed from near-square ratio.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: California and USA photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Solana Beach Sunset, USA.
 
 ## Figueras Dali Museum
 
@@ -239,15 +239,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20160710-144
 
 Crop note: Carousel (square): slightly wide; can be split into 1–3 square slides (detail + context) without losing the overall scene.
 
-### Reddit
+### Pinterest
 
 Title: Figueras Dali Museum
 
-Figueras Dali Museum - Spain, 2016.
+Figueras Dali Museum - Spain, 2016. slightly wide; can be split into 1–3 square slides (detail + context) without losing the overall scene.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Spain travel photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Figueras Dali Museum, Spain.
 
 ## Le Moulin De La Galette, Montmartre, Paris, France
 
@@ -274,15 +274,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20180510-151
 
 Crop note: Portrait (4:5): moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.
 
-### Reddit
+### Pinterest
 
 Title: Le Moulin De La Galette, Montmartre, Paris, France
 
-Le Moulin De La Galette, Montmartre, Paris, France - France, 2018.
+Le Moulin De La Galette, Montmartre, Paris, France - France, 2018. moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Paris and France photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Le Moulin De La Galette, Montmartre, Paris, France, France.
 
 ## Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island
 
@@ -309,15 +309,15 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20180217-182
 
 Crop note: Carousel (panorama slices): very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.
 
-### Reddit
+### Pinterest
 
 Title: Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island
 
-Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island - USA, 2018.
+Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island - USA, 2018. very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: California and USA photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island, USA.
 
 ## Chateau de Versailles, Galeries des Glaces
 
@@ -344,13 +344,13 @@ View/download: https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-040
 
 Crop note: Carousel (panorama slices): wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.
 
-### Reddit
+### Pinterest
 
 Title: Chateau de Versailles, Galeries des Glaces
 
-Chateau de Versailles, Galeries des Glaces - France, 2022.
+Chateau de Versailles, Galeries des Glaces - France, 2022. wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.
 
-I am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.
+Board: Paris and France photography
 
-Rule note: Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.
+Alt text: Chateau de Versailles, Galeries des Glaces, France.
 

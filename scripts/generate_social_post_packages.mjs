@@ -194,18 +194,32 @@ function platformPackages(photo, item, collectionKey, collectionTitle, mediaConf
       crop_note: cropNote,
       automation: "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured.",
     },
-    reddit: {
+    pinterest: {
       asset_format: item.suggestedFormat,
-      post_type: "link_or_image_post_after_subreddit_rule_check",
+      post_type: isCarousel ? "standard_pin_or_multi_pin_sequence" : "standard_pin",
       title: title.length > 280 ? `${title.slice(0, 277)}...` : title,
-      body: `${stem}\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.`,
+      description: `${stem} ${item.why}`,
       media_url: previewUrl,
       photo_url: url,
-      rule_note: "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+      board_suggestion: boardSuggestion(collectionKey, title),
+      alt_text: `${title}, ${collectionTitle || item.collection}.`,
       crop_note: cropNote,
-      automation: "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits.",
+      automation: "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured.",
     },
   };
+}
+
+function boardSuggestion(collectionKey, title) {
+  const lowerTitle = String(title || "").toLowerCase();
+  if (collectionKey === "france" || lowerTitle.includes("paris") || lowerTitle.includes("versailles")) {
+    return "Paris and France photography";
+  }
+  if (collectionKey === "spain" || lowerTitle.includes("dali")) return "Spain travel photography";
+  if (collectionKey === "portugal") return "Portugal travel photography";
+  if (collectionKey === "italy") return "Italy travel photography";
+  if (collectionKey === "usa" || lowerTitle.includes("california")) return "California and USA photography";
+  if (collectionKey === "ai") return "AI archive studies";
+  return "Travel photography";
 }
 
 function packageForItem(item, catalog, mediaConfig) {
@@ -245,7 +259,7 @@ function renderMarkdown(payload) {
     "",
     `Generated from the ${payload.queue_date} Social Asset Queue in ${path.basename(handoffPath)}.`,
     "",
-    "These are ready-to-review packages, not proof that posting credentials are configured. Keep Reddit posts non-salesy unless the target subreddit explicitly allows portfolio/store links.",
+    "These are ready-to-review packages, not proof that posting credentials are configured. The active targets are Instagram, Facebook, and Pinterest.",
     "",
   ];
   for (const item of payload.packages) {
@@ -271,13 +285,15 @@ function renderMarkdown(payload) {
       lines.push("");
       lines.push(`Crop note: ${item.platforms.facebook.crop_note}`);
       lines.push("");
-      lines.push("### Reddit");
+      lines.push("### Pinterest");
       lines.push("");
-      lines.push(`Title: ${item.platforms.reddit.title}`);
+      lines.push(`Title: ${item.platforms.pinterest.title}`);
       lines.push("");
-      lines.push(item.platforms.reddit.body);
+      lines.push(item.platforms.pinterest.description);
       lines.push("");
-      lines.push(`Rule note: ${item.platforms.reddit.rule_note}`);
+      lines.push(`Board: ${item.platforms.pinterest.board_suggestion}`);
+      lines.push("");
+      lines.push(`Alt text: ${item.platforms.pinterest.alt_text}`);
     }
     lines.push("");
   }
@@ -298,7 +314,7 @@ const payload = {
   automation_readiness: {
     instagram: "requires Meta app, professional Instagram account, content publishing permission, and token storage",
     facebook: "requires Meta app, Facebook Page access token, publish permissions, and token storage",
-    reddit: "requires Reddit app/OAuth credentials, subreddit allowlist, and rule checks before submit",
+    pinterest: "requires Pinterest Business account, approved app, board mapping, and token storage",
   },
   packages: queue.items.map((item) => packageForItem(item, catalog, catalog.mediaConfig)),
 };

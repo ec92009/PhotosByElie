@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-social-post-packages",
   "schema_version": 1,
-  "generated_at": "2026-05-13T15:53:51.222Z",
+  "generated_at": "2026-05-13T15:59:25.127Z",
   "queue_date": "2026-05-13",
   "source_handoff": "DAVID2MAX.md",
   "site_base_url": "https://ec92009.github.io/PhotosByElie/",
@@ -9,7 +9,7 @@
   "automation_readiness": {
     "instagram": "requires Meta app, professional Instagram account, content publishing permission, and token storage",
     "facebook": "requires Meta app, Facebook Page access token, publish permissions, and token storage",
-    "reddit": "requires Reddit app/OAuth credentials, subreddit allowlist, and rule checks before submit"
+    "pinterest": "requires Pinterest Business account, approved app, board mapping, and token storage"
   },
   "packages": [
     {
@@ -58,16 +58,17 @@
           "crop_note": "Story/Reel (9:16): strong vertical architectural subject; minimal side-crop to 9:16 should preserve the main dome/lines.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Story/Reel (9:16)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Eglise des Invalides, Paris",
-          "body": "Eglise des Invalides, Paris - France, 2022.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Eglise des Invalides, Paris - France, 2022. strong vertical architectural subject; minimal side-crop to 9:16 should preserve the main dome/lines.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220506-154558-03388-a887904b4b_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220506-154558-03388-a887904b4b",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Paris and France photography",
+          "alt_text": "Eglise des Invalides, Paris, France.",
           "crop_note": "Story/Reel (9:16): strong vertical architectural subject; minimal side-crop to 9:16 should preserve the main dome/lines.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -115,16 +116,17 @@
           "crop_note": "Story/Reel (9:16): symmetrical dome/ceiling compositions typically tolerate top/bottom emphasis; 9:16 framing can keep the center while trimming edges.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Story/Reel (9:16)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Coupole des Galeries Lafayette",
-          "body": "Coupole des Galeries Lafayette - France, 2022.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Coupole des Galeries Lafayette - France, 2022. symmetrical dome/ceiling compositions typically tolerate top/bottom emphasis; 9:16 framing can keep the center while trimming edges.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-153639-03083-3ded4343e5_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-153639-03083-3ded4343e5",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Paris and France photography",
+          "alt_text": "Coupole des Galeries Lafayette, France.",
           "crop_note": "Story/Reel (9:16): symmetrical dome/ceiling compositions typically tolerate top/bottom emphasis; 9:16 framing can keep the center while trimming edges.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -179,16 +181,17 @@
           "crop_note": "Portrait (4:5): already close to portrait; 4:5 crop should keep the main subject while removing extra side space.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Portrait (4:5)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Oceanside Harbor Village",
-          "body": "Oceanside Harbor Village - USA, 2018.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Oceanside Harbor Village - USA, 2018. already close to portrait; 4:5 crop should keep the main subject while removing extra side space.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180224-1446-00097-f9e2a1929a_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180224-1446-00097-f9e2a1929a",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "California and USA photography",
+          "alt_text": "Oceanside Harbor Village, USA.",
           "crop_note": "Portrait (4:5): already close to portrait; 4:5 crop should keep the main subject while removing extra side space.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -235,16 +238,17 @@
           "crop_note": "Portrait (4:5): architecture/riverbank scenes usually have a clear vertical focal area; 4:5 keeps feed-friendly framing without needing aggressive cropping.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Portrait (4:5)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Notre Dame de Paris, Quai de Seine",
-          "body": "Notre Dame de Paris, Quai de Seine - France, 2018.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Notre Dame de Paris, Quai de Seine - France, 2018. architecture/riverbank scenes usually have a clear vertical focal area; 4:5 keeps feed-friendly framing without needing aggressive cropping.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1120-00362-26e0c5732b_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180511-1120-00362-26e0c5732b",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Paris and France photography",
+          "alt_text": "Notre Dame de Paris, Quai de Seine, France.",
           "crop_note": "Portrait (4:5): architecture/riverbank scenes usually have a clear vertical focal area; 4:5 keeps feed-friendly framing without needing aggressive cropping.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -293,16 +297,17 @@
           "crop_note": "Square (1:1): near-square original; square crop should be minimal and preserve the graphic/architectural read.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Square (1:1)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Art, Institut du Monde Arabe, Paris, France",
-          "body": "Art, Institut du Monde Arabe, Paris, France - France, 2018.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Art, Institut du Monde Arabe, Paris, France - France, 2018. near-square original; square crop should be minimal and preserve the graphic/architectural read.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1205-00368-3481c74f91_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180511-1205-00368-3481c74f91",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Paris and France photography",
+          "alt_text": "Art, Institut du Monde Arabe, Paris, France, France.",
           "crop_note": "Square (1:1): near-square original; square crop should be minimal and preserve the graphic/architectural read.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -360,16 +365,17 @@
           "crop_note": "Square (1:1): horizon/sunset compositions tend to work well in square with a centered subject; minimal crop needed from near-square ratio.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Square (1:1)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Solana Beach Sunset",
-          "body": "Solana Beach Sunset - USA, 2018.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Solana Beach Sunset - USA, 2018. horizon/sunset compositions tend to work well in square with a centered subject; minimal crop needed from near-square ratio.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00110-843be79aa4_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1733-00110-843be79aa4",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "California and USA photography",
+          "alt_text": "Solana Beach Sunset, USA.",
           "crop_note": "Square (1:1): horizon/sunset compositions tend to work well in square with a centered subject; minimal crop needed from near-square ratio.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -412,16 +418,17 @@
           "crop_note": "Carousel (square): slightly wide; can be split into 1–3 square slides (detail + context) without losing the overall scene.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Carousel (square)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin_or_multi_pin_sequence",
           "title": "Figueras Dali Museum",
-          "body": "Figueras Dali Museum - Spain, 2016.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Figueras Dali Museum - Spain, 2016. slightly wide; can be split into 1–3 square slides (detail + context) without losing the overall scene.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160710-1444-38838-pano-5f0de8bfbe_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20160710-1444-38838-pano-5f0de8bfbe",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Spain travel photography",
+          "alt_text": "Figueras Dali Museum, Spain.",
           "crop_note": "Carousel (square): slightly wide; can be split into 1–3 square slides (detail + context) without losing the overall scene.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -471,16 +478,17 @@
           "crop_note": "Portrait (4:5): moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Portrait (4:5)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin",
           "title": "Le Moulin De La Galette, Montmartre, Paris, France",
-          "body": "Le Moulin De La Galette, Montmartre, Paris, France - France, 2018.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Le Moulin De La Galette, Montmartre, Paris, France - France, 2018. moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180510-1519-00298-793ef096f2_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180510-1519-00298-793ef096f2",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Paris and France photography",
+          "alt_text": "Le Moulin De La Galette, Montmartre, Paris, France, France.",
           "crop_note": "Portrait (4:5): moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -535,16 +543,17 @@
           "crop_note": "Carousel (panorama slices): very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Carousel (panorama slices)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin_or_multi_pin_sequence",
           "title": "Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island",
-          "body": "Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island - USA, 2018.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island - USA, 2018. very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180217-182800-00091-490eb3867d_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180217-182800-00091-490eb3867d",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "California and USA photography",
+          "alt_text": "Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island, USA.",
           "crop_note": "Carousel (panorama slices): very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     },
@@ -590,16 +599,17 @@
           "crop_note": "Carousel (panorama slices): wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.",
           "automation": "Potentially automatable for a Facebook Page after Meta app, Page access token, and publish permissions are configured."
         },
-        "reddit": {
+        "pinterest": {
           "asset_format": "Carousel (panorama slices)",
-          "post_type": "link_or_image_post_after_subreddit_rule_check",
+          "post_type": "standard_pin_or_multi_pin_sequence",
           "title": "Chateau de Versailles, Galeries des Glaces",
-          "body": "Chateau de Versailles, Galeries des Glaces - France, 2022.\n\nI am sorting an old travel/photo archive and liked this one for its composition. Curious what details stand out to you.",
+          "description": "Chateau de Versailles, Galeries des Glaces - France, 2022. wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.",
           "media_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20220505-0400-00135-pano-f4e52ebf11_1800.jpg",
           "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220505-0400-00135-pano-f4e52ebf11",
-          "rule_note": "Check the target subreddit rules before posting. Avoid sales language and links where self-promotion or portfolio links are disallowed.",
+          "board_suggestion": "Paris and France photography",
+          "alt_text": "Chateau de Versailles, Galeries des Glaces, France.",
           "crop_note": "Carousel (panorama slices): wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.",
-          "automation": "Technically automatable through Reddit OAuth submit flows, but each subreddit still needs rule-aware handling and rate limits."
+          "automation": "Potentially automatable through the Pinterest API after a Pinterest Business account, approved app, board mapping, and token storage are configured."
         }
       }
     }

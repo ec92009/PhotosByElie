@@ -1153,6 +1153,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 }
 .title-keyword-review-approve{
   display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
   place-items:stretch;
   align-content:center;
   gap:8px;
@@ -1177,6 +1178,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 }
 .title-keyword-review-decision .title-keyword-review-reject-comment{
   display:grid;
+  grid-column:1 / -1;
   grid-template-columns:1fr;
   align-items:stretch;
   gap:5px;
@@ -1201,6 +1203,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   min-height:58px;
 }
 .title-keyword-review-row-status{
+  grid-column:1 / -1;
   margin:0;
   color:var(--muted);
   font-size:.66rem;

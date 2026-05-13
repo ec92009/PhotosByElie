@@ -505,3 +505,16 @@ _No David automation results recorded yet._
 - Change: `owner.js` now backfills the canonical digital price tiers before applying local Owner price overrides.
 - Visible version bumped to v74.27.
 - Notes: Dirty generated catalog/state files remain unstaged.
+
+## 2026-05-14 - Waste Basket progress readability
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Reworked the Waste Basket progress readout to show owner-meaningful numbers instead of just "3 cleanup jobs".
+- Finding: The helper was still making progress; the furthest cleanup job had moved past 4,678 / 8,830 public-preview files. The UI made that look dead because it emphasized duplicate jobs and the refresh icon could stay busy if a helper request lagged.
+- Change: The progress panel now reports public-preview progress as basket photos checked, keeps `Cloud media left` visible in the progress panel, and notes duplicate jobs only as secondary context.
+- Change: Waste Basket/R2 refresh actions now have a 12-second UI timeout so refresh buttons stop spinning and report slow helper responses.
+- Follow-up: WARP had been suspended, which likely slowed/stalled R2 delete progress. After WARP was restored, helper progress moved again.
+- Browser verification: `http://localhost:8000/owner.html?v=74.28&run=waste-progress-readable-2` showed `Public previews: 2,439 / 4,415 basket photos checked` and `Cloud media left: 186`.
+- Visible version bumped to v74.28.
+- Notes: Dirty generated catalog/state files remain unstaged.

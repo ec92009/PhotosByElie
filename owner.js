@@ -45,6 +45,8 @@
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
   let wasteDeleteActive = false;
+  let lastWasteCoverageRefreshAt = 0;
+  let latestR2ProgressTasks = [];
   let keywordBlacklistTerms = [];
 
   const setStatus = (message) => {
@@ -207,6 +209,17 @@
   };
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
+
+  const withTimeout = (promise, ms, label) => {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(`${label} is taking longer than expected.`)), ms);
+    });
+    return Promise.race([
+      Promise.resolve(promise).finally(() => window.clearTimeout(timer)),
+      timeout,
+    ]);
+  };
 
   const formatMoney = (value) => {
     const amount = Number(value || 0);
@@ -785,6 +798,22 @@
     return completedDelta || taskTimestamp(b) - taskTimestamp(a);
   };
 
+  const wasteProgressSummary = (task) => {
+    const total = Number(task?.total || 0);
+    const completed = Number(task?.completed || 0);
+    const kind = String(task?.kind || "").toLowerCase();
+    const photoId = String(task?.photo_id || "").toLowerCase();
+    const publicPreviewOnly = kind.includes("hidden-public") || photoId.includes("hidden-public");
+    if (publicPreviewOnly && total) {
+      const photoTotal = Math.ceil(total / 2);
+      const photoCompleted = Math.min(photoTotal, Math.ceil(completed / 2));
+      return `Public previews: ${formatCount(photoCompleted)} / ${formatCount(photoTotal)} basket photos checked`;
+    }
+    return total
+      ? `Cloud media: ${formatCount(completed)} / ${formatCount(total)} files`
+      : `Cloud media: ${formatCount(completed)} files`;
+  };
+
   const renderWasteBasketProgress = (tasks = []) => {
     const wasteTasks = tasks.filter(isWasteDeleteTask);
     const activeTasks = wasteTasks.filter((task) => task.state === "queued" || task.state === "running");
@@ -806,17 +835,17 @@
     const failed = Number(latestWasteTask.failed || 0);
     const percent = total ? Math.min(100, Math.max(0, Math.round((completed / total) * 100))) : 0;
     const state = latestWasteTask.state || "queued";
-    const activeLabel = activeTasks.length > 1
-      ? `${formatCount(activeTasks.length)} cleanup jobs active`
-      : state === "done"
-        ? "Last cleanup finished"
-        : failed
-          ? "Cleanup needs attention"
-          : "Cleanup active";
-    const fileSummary = total
-      ? `${formatCount(completed)} / ${formatCount(total)} files`
-      : `${formatCount(completed)} files`;
+    const activeLabel = state === "done"
+      ? "Last cleanup finished"
+      : failed
+        ? "Waste Basket cleanup needs attention"
+        : "Waste Basket cleanup running";
+    const progressSummary = wasteProgressSummary(latestWasteTask);
     const failureSummary = failed ? `, ${formatCount(failed)} failed` : "";
+    const activeSummary = activeTasks.length > 1
+      ? `Tracking furthest of ${formatCount(activeTasks.length)} active cleanup jobs.`
+      : "";
+    const cloudSummary = `Cloud media left: ${formatCount(blockedCloudMediaCountFromCoverage())}`;
     const updated = latestWasteTask.updated_at
       ? `Updated ${new Date(latestWasteTask.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
       : "";
@@ -829,11 +858,13 @@
       <div class="owner-waste-bar" aria-label="Waste Basket cleanup progress">
         <span style="width:${percent}%"></span>
       </div>
-      <small>${escapeHtml(`${fileSummary}${failureSummary}`)}</small>
+      <small>${escapeHtml(`${progressSummary}${failureSummary}`)}</small>
+      <small>${escapeHtml([cloudSummary, activeSummary].filter(Boolean).join(" · "))}</small>
     `);
   };
 
   const renderR2Progress = (tasks = []) => {
+    latestR2ProgressTasks = tasks;
     renderWasteBasketProgress(tasks);
     if (!r2Card || !r2Summary || !r2Counts) return;
     const latest = tasks[0];
@@ -925,6 +956,7 @@
       : "Missing coverage. Fix it runs the sweep below and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
+    if (latestR2ProgressTasks.length) renderWasteBasketProgress(latestR2ProgressTasks);
     if (r2FixButton) {
       r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
       syncR2FixButton();
@@ -951,6 +983,10 @@
       const payload = await response.json();
       const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
       renderR2Progress(tasks);
+      if (wasteDeleteActive && Date.now() - lastWasteCoverageRefreshAt > 15000) {
+        lastWasteCoverageRefreshAt = Date.now();
+        loadR2Coverage().then(refreshBlockedSyncPanel).then(() => renderWasteBasketProgress(tasks)).catch(() => {});
+      }
       if (tasks[0]?.operation === "repair") await loadR2RepairLog(tasks[0]);
       return tasks;
     } catch {
@@ -966,14 +1002,14 @@
         await refreshCountsFromSource();
         setStatus("Catalog mix refreshed.");
       } else if (kind === "blocked-sync") {
-        await loadR2Coverage();
+        await withTimeout(Promise.all([loadR2Coverage(), loadR2Progress()]), 12000, "Waste Basket refresh");
         await refreshBlockedSyncPanel();
         setStatus("Waste Basket cleanup refreshed.");
       } else if (kind === "coverage") {
-        await loadR2Coverage();
+        await withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh");
         setStatus("R2 catalog coverage refreshed.");
       } else if (kind === "progress") {
-        await loadR2Progress();
+        await withTimeout(loadR2Progress(), 12000, "R2 progress refresh");
         setStatus("R2 background work refreshed.");
       } else if (kind === "keyword-blacklist") {
         await loadKeywordBlacklist();

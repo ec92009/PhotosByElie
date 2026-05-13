@@ -41,12 +41,7 @@ HOME_SAMPLE_COUNT = 4
 
 
 def ensure_state_folders(root: Path) -> None:
-    for slug in ORDER:
-        folder = root / slug
-        folder.mkdir(parents=True, exist_ok=True)
-        keep = folder / ".gitkeep"
-        if not keep.exists():
-            keep.write_text("\n", encoding="utf-8")
+    root.mkdir(parents=True, exist_ok=True)
 
 
 def manifest_specs(repo_root: Path) -> list[tuple[Path, str]]:

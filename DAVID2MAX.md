@@ -267,3 +267,33 @@ _No David automation results recorded yet._
   - Browser check: `title-keyword-review.html?v=74.4` loaded and showed 67 remaining rows with the current local approval record.
 - Commit pushed: `7277e863` (`photosbyelie: filter saved review rows`)
 - Notes: Dirty generated/output files remain unstaged, including local approval/proposal state from review interactions.
+
+## 2026-05-13 R2-Only Preview Cleanup And Backfill
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Pulled latest main with fast-forward only: `b34e5cfd` -> `0d133503`.
+- Cleanup:
+  - Removed local `assets/expo` and `assets/reserve` preview placeholder trees from the working copy.
+  - Removed hidden country placeholder folders; kept only `assets/hidden/hidden-blacklist.json` and `assets/hidden/hidden-data.json`.
+  - Stopped `scripts/export_photos_data.py` from regenerating per-country `.gitkeep` placeholders during validation/export.
+- Required grep result:
+  - Remaining hits are expected JSON-state references in `owner.js`, `hidden-actions.js`, and `hidden-store.js`, plus Max's prompt text in `MAX2DAVID.md`.
+  - No local preview JPG paths or `./assets/expo`, `./assets/reserve`, or `./assets/hidden/*.jpg` preview URLs remain in publish data/code.
+- R2 audit/backfill:
+  - Public photo count: `5,844`.
+  - Expected public preview key count: `11,688` (`galleryKey` + `detailKey` for each public-preview-allowed photo).
+  - Sidecar key gaps: `0`.
+  - Initial aggressive audit hit R2 rate limits: `9,234` non-200, of which `9,220` were `429`.
+  - Slower recheck found true initial missing count: `24` (`404`).
+  - Source/cache gaps: `0`; all 24 missing derivatives existed in `tmp/import-cache`.
+  - Uploaded count: `24` objects to `photosbyelie-public` under the existing `expo/<id>_900.jpg` / `_1800.jpg` keys.
+  - Final repaired-key HEAD check: `24/24` returned HTTP `200`; final missing count: `0`.
+- Validation:
+  - `npm test`: OK (`14` tests passed).
+  - `npm run validate`: OK (`Validation OK`).
+- Notes:
+  - Did not restore local preview folders.
+  - Did not commit JPGs.
+  - Did not rewrite source/JPG embedded metadata, private masters, private renders, or generated public preview bytes beyond uploading the already-generated missing preview objects.
+  - Local Owner review state remains dirty and intentionally unstaged: `assets/owner-actions/title-keyword-review-queue/proposed-state.json` and `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`.

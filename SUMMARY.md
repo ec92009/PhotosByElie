@@ -7,17 +7,15 @@ Date: 2026-05-13
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.9`
+- Current visible build: `v74.13`
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction is hostname-based: Max reads `DAVID2MAX.md` and writes `MAX2DAVID.md`; David reads `MAX2DAVID.md` and writes `DAVID2MAX.md`.
+- Public previews now resolve from R2/CDN keys only; do not restore local `assets/expo` or `assets/reserve` preview folders.
 - Public previews, private masters, private render JPGs, and source/JPG embedded metadata remain immutable after upload. Owner title/keyword work updates generated catalog/manifest files and owner-action JSON only.
 - There is dirty local Owner-generated state from live review interactions. Do not revert or stage it casually:
   - `assets/owner-actions/title-keyword-review-queue/proposed-state.json`
   - `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`
-  - `home-data.js`
-  - `photos-data.js`
-  - `worker/photos-catalog.generated.mjs`
-- Repo-wide `npm test` / `npm run validate` are currently expected to fail until the dirty generated catalog state is reconciled, because it has `sourceOrigin`/pricing inconsistencies.
+- Repo-wide `npm test` and `npm run validate` are currently passing after the R2 cleanup/backfill pass.
 
 ## Recent Conversation
 
@@ -46,7 +44,11 @@ Date: 2026-05-13
   - Owner busy/status text is clearer for long-running actions.
   - Blocked sync explains why `0` previews still public is good.
   - Price list copy explicitly says dollars / USD.
-- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.9`.
+- The current review page URL is `http://localhost:8000/owner-review.html?view=title-keywords&v=74.13`.
+- Max's latest GitHub handoff was completed on David: R2-only preview cleanup plus R2 public-preview audit/backfill.
+- R2 audit/backfill result: `5,844` public photos, `11,688` expected preview keys, `24` true initial missing keys, `24` uploaded from `tmp/import-cache`, `0` final missing after repaired-key HEAD verification.
+- Cleanup result: `assets/expo` and `assets/reserve` are absent; `assets/hidden` keeps only `hidden-blacklist.json` and `hidden-data.json`.
+- `scripts/export_photos_data.py` no longer regenerates per-country `.gitkeep` placeholder folders.
 
 ## Important Safeguards
 
@@ -56,23 +58,24 @@ Date: 2026-05-13
 - Keep approval/rejection/proposal records in tracked owner-action JSON, not image files.
 - Treat `hide` as the internal helper action name for owner-facing Blocked/Block. Treat `discard` as the separate stronger removal/tombstone/media-cleanup path.
 - Run `npm test` and `npm run validate` before committing generated metadata or behavior changes once the local dirty catalog state is reconciled.
+- R2 cleanup/backfill verification passed `npm test` and `npm run validate` on 2026-05-13.
 
 ## Fresh Numbered Backlog
 
-1. Reconcile the dirty Owner-generated review state.
-2. Regenerate and validate the next Title/Keywords queue after reconciled approvals.
+1. Reconcile the dirty Owner-generated title/keyword review state.
+2. Regenerate and validate the next Title/Keywords queue after reconciled approvals/rejections.
 3. Add a true vision-capable proposal pass for title/keyword generation.
 4. Add an Owner review batch summary panel.
-5. Prove Stripe checkout in test mode.
-6. Make checkout and delivery production-durable.
-7. Package the buyer offer clearly.
-8. Move prices into a dedicated published price list.
-9. Curate the first sellable storefront.
-10. Add conversion analytics.
-11. Improve public discovery and SEO.
-12. Build marketing landing pages.
-13. Prepare launch and sales outreach.
-14. Move public media from `r2.dev` to a custom media domain.
+5. Add a slow, resumable full R2 HEAD audit script so future audits avoid `429` noise.
+6. Move public media from `r2.dev` to a custom media domain.
+7. Prove Stripe checkout in test mode.
+8. Make checkout and delivery production-durable.
+9. Package the buyer offer clearly.
+10. Move prices into a dedicated published price list.
+11. Curate the first sellable storefront.
+12. Add conversion analytics.
+13. Improve public discovery and SEO.
+14. Build marketing landing pages.
 15. Split gallery/catalog data by collection.
 16. Refine gallery merchandising layout.
 17. Replace keyword cleanup with a modal workflow.
@@ -82,7 +85,11 @@ Date: 2026-05-13
 
 ## Verification Snapshot
 
-- Latest behavior commit before this docs refresh: `7277e863 photosbyelie: filter saved review rows`.
-- Latest report commit before this docs refresh: `64a6b7f0 photosbyelie: report saved review row policy`.
+- Latest upstream commit before this handoff run: `0d133503 photosbyelie: fix gallery controls hit area`.
 - Browser check for `v74.4` showed the review page loading successfully and filtering saved rows from the current local approval record.
 - `node --check title-keyword-review.js` passed for the saved-row policy change.
+- R2 cleanup/backfill checks:
+  - Required grep: only hidden JSON-state references and prompt text remain.
+  - Final repaired-key HEAD check: `24/24` HTTP `200`.
+  - `npm test`: OK.
+  - `npm run validate`: OK.

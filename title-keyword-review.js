@@ -358,7 +358,7 @@
       setRowStatus(card, "Save pending...", "pending");
       rowSaveTimers.set(photoId, window.setTimeout(() => {
         saveRowDecision(photoId, card).catch((error) => {
-          setRowStatus(card, error?.message || "Save failed", "error");
+          setRowStatus(card, "Save failed", "error");
           if (status) status.textContent = error?.message || "Could not save row.";
         });
       }, delay));
@@ -418,7 +418,8 @@
         setRowStatus(card, "Blocked", "saved");
         if (status) status.textContent = `${photoId} moved to Blocked.`;
       }).catch((error) => {
-        setRowStatus(card, error?.message || "Block failed", "error");
+        setRowStatus(card, "Block failed", "error");
+        if (status) status.textContent = error?.message || "Could not block photo.";
       });
     };
 

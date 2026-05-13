@@ -346,6 +346,51 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-card-note{
   font-size:.82rem;
 }
+.owner-waste-progress{
+  display:grid;
+  gap:7px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  padding:10px;
+}
+.owner-waste-progress[hidden]{
+  display:none;
+}
+.owner-waste-progress-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:baseline;
+}
+.owner-waste-progress-head strong{
+  overflow:hidden;
+  color:var(--text);
+  font-size:.86rem;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.owner-waste-progress-head span,
+.owner-waste-progress small{
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.owner-waste-bar{
+  height:10px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+}
+.owner-waste-bar span{
+  display:block;
+  width:0;
+  height:100%;
+  background:color-mix(in srgb,#b23b3b 78%,var(--text));
+  transition:width .28s ease;
+}
 .owner-card-titlebar{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;

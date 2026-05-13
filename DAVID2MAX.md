@@ -483,3 +483,15 @@ _No David automation results recorded yet._
   - Empty basket now explicitly refreshes the basket count, tombstone count, and cloud-media count after the helper returns.
 - Backlog refreshed with validation/catalog reconciliation first, Title/Keywords state second, and safe Waste Basket emptying verification third.
 - Notes: Dirty local Owner/generated state and unrelated State TSV docs/scripts remain unstaged.
+
+## 2026-05-13 - Waste Basket cleanup progress
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Added Owner-card feedback for active Waste Basket/R2 delete work so the purge is no longer silent.
+- Visible version bumped to v74.26.
+- Owner UI behavior: Waste Basket now shows the latest active cleanup progress, reports when multiple cleanup jobs are active, and disables `Empty basket` as `Emptying...` while delete work is running.
+- Browser verification: `http://localhost:8000/owner.html?v=74.26&run=waste-progress` showed 3 cleanup jobs active, 3,878 / 8,830 files on the furthest-along active job, and the disabled `Emptying...` button.
+- Checks passed: `node --check owner.js`, `git diff --check`.
+- Known unrelated failures remain: `npm test` still fails 3 checkout pricing assertions; `npm run validate` still reports generated catalog/source-origin/public-preview key issues.
+- Notes: I did not start another empty-basket purge while existing delete jobs were active. Dirty local Owner/generated state remains unstaged.

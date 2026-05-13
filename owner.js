@@ -19,6 +19,7 @@
   const blockedLocalCountRoot = document.querySelector("[data-owner-blocked-local-count]");
   const blockedPreviewCountRoot = document.querySelector("[data-owner-blocked-preview-count]");
   const blockedPreviewNoteRoot = document.querySelector("[data-owner-blocked-preview-note]");
+  const wasteProgressRoot = document.querySelector("[data-owner-waste-progress]");
   const syncCountryKeywordsButton = document.querySelector("[data-owner-sync-country-keywords]");
   const wipeHiddenR2Button = document.querySelector("[data-owner-wipe-hidden-r2]");
   const physicalProductsToggle = document.querySelector("[data-owner-physical-products]");
@@ -43,6 +44,7 @@
   let r2CoverageOk = false;
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
+  let wasteDeleteActive = false;
   let keywordBlacklistTerms = [];
 
   const setStatus = (message) => {
@@ -203,6 +205,8 @@
     }
     return `${size >= 10 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
   };
+
+  const formatCount = (value) => Number(value || 0).toLocaleString();
 
   const formatMoney = (value) => {
     const amount = Number(value || 0);
@@ -736,7 +740,73 @@
     }
   };
 
+  const isWasteDeleteTask = (task) => {
+    if (!task || task.operation !== "delete") return false;
+    const kind = String(task.kind || "").toLowerCase();
+    const photoId = String(task.photo_id || "").toLowerCase();
+    return kind.includes("hidden-public")
+      || kind.includes("waste")
+      || kind.includes("basket")
+      || photoId.includes("hidden-public");
+  };
+
+  const taskTimestamp = (task) => Date.parse(task?.updated_at || task?.started_at || task?.queued_at || "") || 0;
+
+  const compareWasteProgress = (a, b) => {
+    const completedDelta = Number(b?.completed || 0) - Number(a?.completed || 0);
+    return completedDelta || taskTimestamp(b) - taskTimestamp(a);
+  };
+
+  const renderWasteBasketProgress = (tasks = []) => {
+    const wasteTasks = tasks.filter(isWasteDeleteTask);
+    const activeTasks = wasteTasks.filter((task) => task.state === "queued" || task.state === "running");
+    const [latestWasteTask] = [...(activeTasks.length ? activeTasks : wasteTasks)]
+      .sort(activeTasks.length ? compareWasteProgress : (a, b) => taskTimestamp(b) - taskTimestamp(a));
+    wasteDeleteActive = activeTasks.length > 0;
+    if (wipeHiddenR2Button) {
+      wipeHiddenR2Button.disabled = wasteDeleteActive;
+      wipeHiddenR2Button.textContent = wasteDeleteActive ? "Emptying..." : "Empty basket";
+    }
+    if (!wasteProgressRoot) return;
+    if (!latestWasteTask) {
+      wasteProgressRoot.hidden = true;
+      setHtml(wasteProgressRoot, "");
+      return;
+    }
+    const total = Number(latestWasteTask.total || 0);
+    const completed = Number(latestWasteTask.completed || 0);
+    const failed = Number(latestWasteTask.failed || 0);
+    const percent = total ? Math.min(100, Math.max(0, Math.round((completed / total) * 100))) : 0;
+    const state = latestWasteTask.state || "queued";
+    const activeLabel = activeTasks.length > 1
+      ? `${formatCount(activeTasks.length)} cleanup jobs active`
+      : state === "done"
+        ? "Last cleanup finished"
+        : failed
+          ? "Cleanup needs attention"
+          : "Cleanup active";
+    const fileSummary = total
+      ? `${formatCount(completed)} / ${formatCount(total)} files`
+      : `${formatCount(completed)} files`;
+    const failureSummary = failed ? `, ${formatCount(failed)} failed` : "";
+    const updated = latestWasteTask.updated_at
+      ? `Updated ${new Date(latestWasteTask.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+      : "";
+    wasteProgressRoot.hidden = false;
+    setHtml(wasteProgressRoot, `
+      <div class="owner-waste-progress-head">
+        <strong>${escapeHtml(activeLabel)}</strong>
+        <span>${escapeHtml(updated || state)}</span>
+      </div>
+      <div class="owner-waste-bar" aria-label="Waste Basket cleanup progress">
+        <span style="width:${percent}%"></span>
+      </div>
+      <small>${escapeHtml(`${fileSummary}${failureSummary}`)}</small>
+    `);
+  };
+
   const renderR2Progress = (tasks = []) => {
+    renderWasteBasketProgress(tasks);
     if (!r2Card || !r2Summary || !r2Counts) return;
     const latest = tasks[0];
     if (!latest) {
@@ -786,8 +856,6 @@
       </div>
     `).join(""));
   };
-
-  const formatCount = (value) => Number(value || 0).toLocaleString();
 
   const renderR2Coverage = (coverage = null) => {
     if (!r2CoverageCard || !r2CoverageSummary || !r2CoverageCounts || !r2CoverageNote) return;
@@ -974,6 +1042,10 @@
   });
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
+    if (wasteDeleteActive) {
+      setStatus("Waste Basket cleanup is already running. Watch the progress report on the card.");
+      return;
+    }
     const ok = window.confirm("Empty the Waste Basket? This purges public previews, private masters, and private render triplets for basketed photos, then leaves blacklist tombstones so those masters do not return.");
     if (!ok) return;
     wipeHiddenR2Button.disabled = true;
@@ -984,12 +1056,13 @@
       await refreshDiscardedCount();
       await loadR2Coverage();
       await refreshBlockedSyncPanel();
+      if (result?.r2_delete_task) renderR2Progress([result.r2_delete_task]);
       loadR2Progress();
       setStatus(`Waste Basket emptied: ${formatCount(result?.hidden_count || 0)} in basket, ${formatCount(result?.discarded_count || 0)} tombstones.`);
     } catch (error) {
       setStatus(error?.message || "Could not queue Waste Basket cloud media purge.");
     } finally {
-      wipeHiddenR2Button.disabled = false;
+      if (!wasteDeleteActive) wipeHiddenR2Button.disabled = false;
     }
   });
 

@@ -31,6 +31,7 @@ let viewControls = null;
 let renderedGalleryPhotos = [];
 let visibleLimit = pageSize;
 let moreButton = null;
+let showAllButton = null;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
@@ -413,6 +414,8 @@ const ensureGalleryFilterControls = () => {
 
 const ensureGalleryMoreButton = () => {
   if (moreButton || !galleryRoot) return;
+  const controls = document.createElement("div");
+  controls.className = "gallery-pagination-controls";
   moreButton = document.createElement("button");
   moreButton.className = "btn secondary gallery-more-button";
   moreButton.type = "button";
@@ -420,9 +423,21 @@ const ensureGalleryMoreButton = () => {
   moreButton.dataset.i18n = "home.show_more";
   moreButton.textContent = t("home.show_more");
   moreButton.hidden = true;
-  galleryRoot.after(moreButton);
+  showAllButton = document.createElement("button");
+  showAllButton.className = "btn secondary gallery-more-button";
+  showAllButton.type = "button";
+  showAllButton.dataset.galleryShowAll = "";
+  showAllButton.dataset.i18n = "home.show_all";
+  showAllButton.textContent = t("home.show_all");
+  showAllButton.hidden = true;
+  controls.append(moreButton, showAllButton);
+  galleryRoot.after(controls);
   moreButton.addEventListener("click", () => {
     visibleLimit += pageSize;
+    renderGallery({ scrollSelection: false });
+  });
+  showAllButton.addEventListener("click", () => {
+    visibleLimit = filteredVisiblePhotos().length;
     renderGallery({ scrollSelection: false });
   });
 };
@@ -790,6 +805,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       renderGallery();
     });
     if (moreButton) moreButton.hidden = true;
+    if (showAllButton) showAllButton.hidden = true;
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
       : "");
@@ -861,8 +877,13 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   updateSelection({ scroll: scrollSelection && returnIndex < 0 });
   if (returnIndex >= 0) restorePendingGalleryReturn();
   if (moreButton) {
-    moreButton.hidden = photos.length <= visibleSubset.length;
+    const hasMore = photos.length > visibleSubset.length;
+    moreButton.hidden = !hasMore;
     moreButton.textContent = t("home.show_more");
+  }
+  if (showAllButton) {
+    showAllButton.hidden = photos.length <= visibleSubset.length;
+    showAllButton.textContent = t("home.show_all");
   }
   const paginated = photos.length > visibleSubset.length;
   const filterStatus = activeFilterCount() || paginated

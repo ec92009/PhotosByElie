@@ -33,6 +33,7 @@ const bulkResolutionButtons = document.querySelectorAll("[data-liked-select-reso
 const pageSize = 24;
 let visibleLimit = pageSize;
 let moreButton = null;
+let showAllButton = null;
 const productLabel = (option) => {
   if (option?.type === "print") return window.photosByElieProductLabel?.(option) || option?.label || t("product.print");
   const keyById = {
@@ -84,6 +85,8 @@ const bulkResolutionState = (likedItems, basketByPhoto, resolutionId) => likedIt
 
 const ensureMoreButton = () => {
   if (moreButton || !likedRoot) return;
+  const controls = document.createElement("div");
+  controls.className = "gallery-pagination-controls";
   moreButton = document.createElement("button");
   moreButton.className = "btn secondary gallery-more-button";
   moreButton.type = "button";
@@ -91,9 +94,21 @@ const ensureMoreButton = () => {
   moreButton.dataset.i18n = "home.show_more";
   moreButton.textContent = t("home.show_more");
   moreButton.hidden = true;
-  likedRoot.after(moreButton);
+  showAllButton = document.createElement("button");
+  showAllButton.className = "btn secondary gallery-more-button";
+  showAllButton.type = "button";
+  showAllButton.dataset.likedShowAll = "";
+  showAllButton.dataset.i18n = "home.show_all";
+  showAllButton.textContent = t("home.show_all");
+  showAllButton.hidden = true;
+  controls.append(moreButton, showAllButton);
+  likedRoot.after(controls);
   moreButton.addEventListener("click", () => {
     visibleLimit += pageSize;
+    renderLiked();
+  });
+  showAllButton.addEventListener("click", () => {
+    visibleLimit = likedStore.read().length;
     renderLiked();
   });
 };
@@ -264,8 +279,13 @@ const renderLiked = () => {
     </article>
   `}).join("");
   if (moreButton) {
-    moreButton.hidden = likedItems.length <= visibleLikedItems.length;
+    const hasMore = likedItems.length > visibleLikedItems.length;
+    moreButton.hidden = !hasMore;
     moreButton.textContent = t("home.show_more");
+  }
+  if (showAllButton) {
+    showAllButton.hidden = likedItems.length <= visibleLikedItems.length;
+    showAllButton.textContent = t("home.show_all");
   }
 
   document.querySelectorAll("[data-remove-liked]").forEach((button) => {

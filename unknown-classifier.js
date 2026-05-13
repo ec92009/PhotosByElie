@@ -14,6 +14,8 @@
   const pageSize = 24;
   let visibleLimit = pageSize;
   let moreButton = null;
+  let showAllButton = null;
+  const t = (key) => window.photosByElieI18n?.t?.(key) || key;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -312,16 +314,30 @@
 
   const ensureMoreButton = () => {
     if (moreButton || !root) return;
+    const controls = document.createElement("div");
+    controls.className = "gallery-pagination-controls";
     moreButton = document.createElement("button");
     moreButton.className = "btn secondary gallery-more-button";
     moreButton.type = "button";
     moreButton.dataset.unknownMore = "";
     moreButton.dataset.i18n = "home.show_more";
-    moreButton.textContent = "Show more";
+    moreButton.textContent = t("home.show_more");
     moreButton.hidden = true;
-    root.after(moreButton);
+    showAllButton = document.createElement("button");
+    showAllButton.className = "btn secondary gallery-more-button";
+    showAllButton.type = "button";
+    showAllButton.dataset.unknownShowAll = "";
+    showAllButton.dataset.i18n = "home.show_all";
+    showAllButton.textContent = t("home.show_all");
+    showAllButton.hidden = true;
+    controls.append(moreButton, showAllButton);
+    root.after(controls);
     moreButton.addEventListener("click", () => {
       visibleLimit += pageSize;
+      renderPreservingScroll();
+    });
+    showAllButton.addEventListener("click", () => {
+      visibleLimit = unknownPhotos().length;
       renderPreservingScroll();
     });
   };
@@ -371,6 +387,7 @@
         </article>
       `;
       if (moreButton) moreButton.hidden = true;
+      if (showAllButton) showAllButton.hidden = true;
       setStatus("Unknown queue is empty.");
       return;
     }
@@ -427,8 +444,13 @@
       `;
     }).join("");
     if (moreButton) {
-      moreButton.hidden = photos.length <= visiblePhotos.length;
-      moreButton.textContent = "Show more";
+      const hasMore = photos.length > visiblePhotos.length;
+      moreButton.hidden = !hasMore;
+      moreButton.textContent = t("home.show_more");
+    }
+    if (showAllButton) {
+      showAllButton.hidden = photos.length <= visiblePhotos.length;
+      showAllButton.textContent = t("home.show_all");
     }
 
     root.querySelectorAll("[data-photo-id]").forEach((card) => {

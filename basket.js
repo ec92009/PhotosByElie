@@ -33,6 +33,7 @@ let checkoutHashScrollDone = false;
 const pageSize = 24;
 let visibleLimit = pageSize;
 let moreButton = null;
+let showAllButton = null;
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
 const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -78,6 +79,8 @@ const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => 
 
 const ensureMoreButton = () => {
   if (moreButton || !basketRoot) return;
+  const controls = document.createElement("div");
+  controls.className = "gallery-pagination-controls";
   moreButton = document.createElement("button");
   moreButton.className = "btn secondary gallery-more-button";
   moreButton.type = "button";
@@ -85,9 +88,21 @@ const ensureMoreButton = () => {
   moreButton.dataset.i18n = "home.show_more";
   moreButton.textContent = t("home.show_more");
   moreButton.hidden = true;
-  basketRoot.after(moreButton);
+  showAllButton = document.createElement("button");
+  showAllButton.className = "btn secondary gallery-more-button";
+  showAllButton.type = "button";
+  showAllButton.dataset.basketShowAll = "";
+  showAllButton.dataset.i18n = "home.show_all";
+  showAllButton.textContent = t("home.show_all");
+  showAllButton.hidden = true;
+  controls.append(moreButton, showAllButton);
+  basketRoot.after(controls);
   moreButton.addEventListener("click", () => {
     visibleLimit += pageSize;
+    renderBasket();
+  });
+  showAllButton.addEventListener("click", () => {
+    visibleLimit = basketStore.read().length;
     renderBasket();
   });
 };
@@ -573,8 +588,13 @@ const renderBasket = () => {
     </article>
   `}).join("");
   if (moreButton) {
-    moreButton.hidden = items.length <= visibleItems.length;
+    const hasMore = items.length > visibleItems.length;
+    moreButton.hidden = !hasMore;
     moreButton.textContent = t("home.show_more");
+  }
+  if (showAllButton) {
+    showAllButton.hidden = items.length <= visibleItems.length;
+    showAllButton.textContent = t("home.show_all");
   }
 
   window.requestAnimationFrame(syncBasketPreviewHeights);

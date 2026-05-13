@@ -1443,9 +1443,16 @@ body[data-gallery] .gallery-hero{
   min-height:42px;
   align-self:end;
 }
-.gallery-more-button{
-  display:block;
+.gallery-pagination-controls{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:10px;
   margin:18px auto 0;
+}
+.gallery-more-button{
+  display:inline-flex;
+  margin:0;
 }
 .mock-photo-card{
   position:relative;

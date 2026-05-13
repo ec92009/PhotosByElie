@@ -6,6 +6,7 @@
   const status = root.querySelector("[data-home-discovery-status]");
   const resultsRoot = root.querySelector("[data-home-discovery-results]");
   const moreButton = root.querySelector("[data-home-discovery-more]");
+  const showAllButton = root.querySelector("[data-home-discovery-show-all]");
   const searchInput = root.querySelector("[data-home-search]");
   const filterControls = [...root.querySelectorAll("[data-home-filter]")];
   const collectionSelect = root.querySelector('[data-home-filter="collection"]');
@@ -381,6 +382,7 @@
     if (!hasActiveFilters()) {
       resultsRoot.hidden = true;
       moreButton.hidden = true;
+      if (showAllButton) showAllButton.hidden = true;
       writeDetailSequenceContext([]);
       setStatus("home.catalog_ready", { count: catalogItems.length });
       return;
@@ -401,6 +403,7 @@
         </article>
       `;
       moreButton.hidden = true;
+      if (showAllButton) showAllButton.hidden = true;
       setStatus("home.no_matches");
       return;
     }
@@ -486,7 +489,12 @@
     });
     window.photosByElieVersionInternalLinks?.(resultsRoot);
     updateSelection({ scroll: false });
-    moreButton.hidden = latestMatches.length <= visibleLimit;
+    const hasMore = latestMatches.length > visibleLimit;
+    moreButton.hidden = !hasMore;
+    if (showAllButton) {
+      showAllButton.hidden = !hasMore;
+      showAllButton.textContent = t("home.show_all");
+    }
     setStatus(hasActiveFilters() ? "home.showing_matches" : "home.showing_results", {
       count: visibleItems.length,
       total: latestMatches.length,
@@ -651,6 +659,10 @@
   });
   moreButton?.addEventListener("click", () => {
     visibleLimit += pageSize;
+    renderResults();
+  });
+  showAllButton?.addEventListener("click", () => {
+    visibleLimit = latestMatches.length;
     renderResults();
   });
   window.addEventListener("photosbyelie:languagechange", () => {

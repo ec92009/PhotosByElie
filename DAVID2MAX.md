@@ -342,3 +342,13 @@ _No David automation results recorded yet._
 - Toolbar layout is full-width and left-aligned to avoid the previous odd wrapped/centered button row.
 - Validation: `npm test` passed; `npm run validate` passed.
 - Commit pushed: `ff211d99 photosbyelie: clarify review batch actions`.
+
+## 2026-05-13 - Title/Keyword review arrow navigation
+
+- Enabled arrow-key selection on the Title/Keywords Owner review page.
+- `ArrowDown` and `ArrowRight` move to the next visible review row; `ArrowUp` and `ArrowLeft` move to the previous visible review row.
+- Updated the Title/Keywords shortcut strip to show the four arrow keys for selection.
+- Also let the homepage collection carousel accept `ArrowUp`/`ArrowDown` as previous/next, matching existing left/right behavior.
+- Browser verification on v74.19: ArrowDown moved selected row 1 to row 2, ArrowUp moved row 2 back to row 1, and the hint displayed the arrow keys.
+- Validation: `npm test` passed; `npm run validate` passed after restoring generated catalog side effects from local Owner testing.
+- Commit pushed: `cf88adf6 photosbyelie: enable review arrow navigation`.

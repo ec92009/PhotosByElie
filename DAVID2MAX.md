@@ -352,3 +352,29 @@ _No David automation results recorded yet._
 - Browser verification on v74.19: ArrowDown moved selected row 1 to row 2, ArrowUp moved row 2 back to row 1, and the hint displayed the arrow keys.
 - Validation: `npm test` passed; `npm run validate` passed after restoring generated catalog side effects from local Owner testing.
 - Commit pushed: `cf88adf6 photosbyelie: enable review arrow navigation`.
+
+## 2026-05-13 - Blocked Owner review grid and preview cleanup policy
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Restored the Blocked Owner review grid after it blanked/stalled on the full hidden catalog.
+- Changes made:
+  - Blocked review now renders in 160-card pages with `Load more` instead of trying to lay out every blocked photo at once.
+  - Restored the shared floating Grid/Fit/Top controls on the Blocked page.
+  - Added a shared gallery-card error fallback so missing public preview URLs become compact `Preview unavailable` tiles instead of long broken-image alt text.
+  - Documented the intended media-retention policy: Blocked/Discarded previews are only needed for a short undo window, default 24 hours. After that, preview derivatives can be purged; durable state should keep the blocked/discarded id and blacklisted master/source path to prevent resurrection.
+- Visible versions:
+  - `v74.20`: blocked grid pagination/control restoration.
+  - `v74.21`: missing-preview fallback and 24-hour preview-retention policy note.
+- Browser verification:
+  - `http://127.0.0.1:8000/owner-review.html?view=blocked&v=74.20&run=blocked-page-final` loaded with heading/status, Grid/Fit controls, visible cards, and `Load 160 more`.
+  - `http://127.0.0.1:8000/owner-review.html?view=blocked&v=74.21&run=missing-preview-fallback` loaded after the missing-preview fallback change.
+- Validation:
+  - `node --check hidden-page.js`: OK.
+  - `node --check gallery-card.js`: OK.
+  - `npm test`: OK (`14` tests passed).
+  - `npm run validate`: OK (`Validation OK`).
+- Commits pushed:
+  - `0068090c photosbyelie: restore blocked review grid`
+  - `6010eab3 photosbyelie: tidy missing preview cards`
+- Notes: Local Owner/generated state remains dirty and intentionally unstaged, including keyword blacklist/proposal state, discarded media manifest, package/script experimentation, and current approval JSON.

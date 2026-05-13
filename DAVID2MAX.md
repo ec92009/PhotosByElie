@@ -251,3 +251,19 @@ _No David automation results recorded yet._
   - `python3 -m py_compile scripts/local_server.py`: OK
 - Commit pushed: `519b45ca` (`photosbyelie: harden review autosaves`)
 - Notes: Dirty generated/output files remain unstaged: `home-data.js`, `photos-data.js`, `worker/photos-catalog.generated.mjs`, and `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`.
+
+## 2026-05-13 Title/Keyword Review Saved Row Policy
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Adjusted review queue behavior so saved approvals/rejections disappear only after leaving/reloading the page, while blocked rows disappear immediately.
+- Changes made:
+  - The review page now reads `approvals-<batch>.json` on load and filters out rows already saved as approved or rejected.
+  - Approval/rejection autosaves keep rows visible during the current page session.
+  - H/X block action removes the row immediately after the helper confirms success.
+- Visible version: `v74.4`
+- Validation:
+  - `node --check title-keyword-review.js`: OK
+  - Browser check: `title-keyword-review.html?v=74.4` loaded and showed 67 remaining rows with the current local approval record.
+- Commit pushed: `7277e863` (`photosbyelie: filter saved review rows`)
+- Notes: Dirty generated/output files remain unstaged, including local approval/proposal state from review interactions.

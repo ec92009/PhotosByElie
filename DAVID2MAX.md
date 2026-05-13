@@ -160,3 +160,22 @@ _No David automation results recorded yet._
 - Validate: `npm run validate` OK.
 - Working tree: not clean (many modified tracked files and some untracked; likely from prior local work).
 - Notes: Next action is to restore GitHub connectivity (or run from a networked environment) so the check can validate against latest `origin/main`, and to decide whether to commit/stash/discard the existing local changes before the next pull.
+
+## 2026-05-13 PBE Weekly Social Asset Queue
+
+- Machine: David
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Repo sync: `git pull --ff-only` failed (DNS/network: could not resolve `github.com`).
+- Commit checked: `1a5de5cd9caf39051020590f5e6b77a7725d72ab` (local `main`).
+- Notes: Stashed pre-existing local changes before generating this queue to keep the report isolated.
+- Queue (10 public-catalog photos):
+  - Photo id: `20220506-154558-03388-a887904b4b` | Collection: `france` | Title: `Eglise des Invalides, Paris` | Suggested format: `Story/Reel (9:16)` | Why: strong vertical architectural subject; minimal side-crop to 9:16 should preserve the main dome/lines.
+  - Photo id: `20220505-153639-03083-3ded4343e5` | Collection: `france` | Title: `Coupole des Galeries Lafayette` | Suggested format: `Story/Reel (9:16)` | Why: symmetrical dome/ceiling compositions typically tolerate top/bottom emphasis; 9:16 framing can keep the center while trimming edges.
+  - Photo id: `20180224-1446-00097-f9e2a1929a` | Collection: `usa` | Title: `Oceanside Harbor Village` | Suggested format: `Portrait (4:5)` | Why: already close to portrait; 4:5 crop should keep the main subject while removing extra side space.
+  - Photo id: `20180511-1120-00362-26e0c5732b` | Collection: `france` | Title: `Notre Dame de Paris, Quai de Seine` | Suggested format: `Portrait (4:5)` | Why: architecture/riverbank scenes usually have a clear vertical focal area; 4:5 keeps feed-friendly framing without needing aggressive cropping.
+  - Photo id: `20180511-1205-00368-3481c74f91` | Collection: `france` | Title: `Art, Institut du Monde Arabe, Paris, France` | Suggested format: `Square (1:1)` | Why: near-square original; square crop should be minimal and preserve the graphic/architectural read.
+  - Photo id: `20180304-1733-00110-843be79aa4` | Collection: `usa` | Title: `Solana Beach Sunset` | Suggested format: `Square (1:1)` | Why: horizon/sunset compositions tend to work well in square with a centered subject; minimal crop needed from near-square ratio.
+  - Photo id: `20160710-1444-38838-pano-5f0de8bfbe` | Collection: `spain` | Title: `Figueras Dali Museum` | Suggested format: `Carousel (square)` | Why: slightly wide; can be split into 1–3 square slides (detail + context) without losing the overall scene.
+  - Photo id: `20180510-1519-00298-793ef096f2` | Collection: `france` | Title: `Le Moulin De La Galette, Montmartre, Paris, France` | Suggested format: `Portrait (4:5)` | Why: moderately tall framing should adapt well to 4:5; crop can emphasize the primary landmark/signage while trimming peripheral street context.
+  - Photo id: `20180217-182800-00091-490eb3867d` | Collection: `usa` | Title: `Sunset from Double Peak. San Marcos, Carlsbad, and Catalina Island` | Suggested format: `Carousel (panorama slices)` | Why: very wide pano; ideal for multi-slide swipe reveal (left→right) to preserve the full panorama.
+  - Photo id: `20220505-0400-00135-pano-f4e52ebf11` | Collection: `france` | Title: `Chateau de Versailles, Galeries des Glaces` | Suggested format: `Carousel (panorama slices)` | Why: wide interior pano; works well as 2–4 vertical slices to highlight repeating patterns and depth.

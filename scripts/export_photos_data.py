@@ -5,6 +5,7 @@ import argparse
 import json
 import random
 import re
+import subprocess
 from collections import defaultdict
 from pathlib import Path
 
@@ -37,6 +38,15 @@ IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
+
+
+def compact_catalog_tsv(repo_root: Path) -> None:
+    subprocess.run(
+        ["node", "scripts/write_catalog_tsv.cjs"],
+        cwd=repo_root,
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
 HOME_SAMPLE_COUNT = 4
 
 
@@ -898,6 +908,7 @@ def write_photos_data(
 
     output = repo_root / "photos-data.js"
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    compact_catalog_tsv(repo_root)
     return output
 
 

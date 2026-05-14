@@ -572,3 +572,15 @@ _No David automation results recorded yet._
 - Notes:
   - Working tree was already dirty at start (untracked generated/owner-action files present); health check did not modify them.
   - Suggested next action: Investigate recent pricing/tier logic changes vs test expectations in `worker/checkout-worker.test.mjs` (do not update prod pricing based on tests alone); once clarified, update tests or code and rerun `npm test`.
+
+## 2026-05-14 - Public catalog TSV migration
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Replaced the giant browser catalog payload in `photos-data.js` with generated TSV shards under `assets/catalog/` plus a small compatibility bootstrap.
+- Data shape: `photos-data.js` is now about 10 KB; `assets/catalog/photos.tsv` is about 8.9 MB and `assets/catalog/photos.tsv.gz` is about 577 KB. `assets/catalog/collections.tsv` and `.gz` hold collection metadata.
+- Tooling updated: publish validation, title/keyword queue generation, social package generation, Worker catalog generation, Worker tests/local server, export, and owner-state compatibility paths now load the TSV catalog through `scripts/catalog_tsv.cjs`.
+- Visible version bumped to v74.34.
+- Browser verification: Owner page and France gallery loaded at v74.34 and fetched `assets/catalog/collections.tsv` plus `assets/catalog/photos.tsv`.
+- Checks passed: `npm test`, `npm run validate`, `node --check` on changed JS/CJS/MJS, Python compile for touched Python scripts, and `git diff --check`.
+- Notes: Waste Basket purge was not resumed. Existing unrelated dirty/untracked owner/generated files remain outside this change.

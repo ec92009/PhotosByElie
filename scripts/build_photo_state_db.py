@@ -57,13 +57,19 @@ const fs = require("fs");
 const vm = require("vm");
 const path = process.argv[1];
 const variableName = process.argv[2];
+const repoRoot = process.argv[3];
+if (path.endsWith("photos-data.js")) {
+  const { loadCatalogWindow } = require(require("path").join(repoRoot, "scripts/catalog_tsv.cjs"));
+  process.stdout.write(JSON.stringify(loadCatalogWindow(repoRoot)[variableName] || null));
+  process.exit(0);
+}
 const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path, "utf8"), context, { filename: path });
 process.stdout.write(JSON.stringify(context.window[variableName] || null));
 """
     output = subprocess.check_output(
-        ["node", "-e", script, str(repo_root / path), variable_name],
+        ["node", "-e", script, str(repo_root / path), variable_name, str(repo_root)],
         text=True,
     )
     return json.loads(output)

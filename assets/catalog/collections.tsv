@@ -1,0 +1,10 @@
+collection_key	scope	number_json	title	description	accent	extra_json
+"france"	"public"	"\"01\""	"France"	"Saturn Lightroom archive selections prepared from the Camera source."	"france-gallery"	"{}"
+"usa"	"public"	"\"02\""	"USA"	"Saturn Lightroom archive selections prepared from the Camera source."	"usa-gallery"	"{}"
+"spain"	"public"	"\"03\""	"Spain"	"Saturn Lightroom archive selections prepared from the Camera source."	"spain-gallery"	"{}"
+"mexico"	"public"	"\"04\""	"Mexico"	"Saturn Lightroom archive selections prepared from the Camera source."	"mexico-gallery"	"{}"
+"ai"	"public"	"\"05\""	"AI"	"Leonardo archive selections prepared from the Saturn Lightroom AI source."	"ai-gallery"	"{}"
+"italy"	"public"	"\"06\""	"Italy"	"Saturn and Apple Photos archive selections prepared from Italian sources."	"italy-gallery"	"{}"
+"portugal"	"public"	"\"07\""	"Portugal"	"Saturn Lightroom archive selections prepared from the Camera source."	"portugal-gallery"	"{}"
+"slovakia"	"public"	"\"08\""	"Slovakia"	"Saturn Lightroom archive selections prepared from the Camera source."	"slovakia-gallery"	"{}"
+"unknown"	"owner"	"\"09\""	"Unknown"	"Saturn Lightroom selections that still need a final gallery assignment."	"unknown-gallery"	"{}"

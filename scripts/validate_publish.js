@@ -4,6 +4,7 @@ const childProcess = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const { loadCatalogWindow } = require("./catalog_tsv.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
 const args = new Set(process.argv.slice(2));
@@ -70,17 +71,14 @@ const isPublishPath = (file) => {
   if (!file) return false;
   if (file === "VERSION" || file === "README.md" || file === "SUMMARY.md" || file === "TODO.md") return true;
   if (file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json") return true;
+  if (file.startsWith("assets/catalog/")) return true;
   if (file === "assets/private-delivery-manifest.json") return true;
   if (file.startsWith("scripts/")) return true;
   return /\.(html|css|js)$/i.test(file);
 };
 
 const loadPhotoData = () => {
-  const dataPath = path.join(repoRoot, "photos-data.js");
-  const sandbox = { window: {}, console };
-  vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
-  return sandbox.window;
+  return loadCatalogWindow(repoRoot);
 };
 
 const loadHomeData = () => {
@@ -332,7 +330,7 @@ const printSummary = (collections) => {
   }, 0);
   const assetCatalogChanged = changed.filter((line) => {
     const file = pathFromStatusLine(line);
-    return file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json";
+    return file === "home-data.js" || file === "photos-data.js" || file === "assets/expo-manifest.json" || file === "assets/media-sidecar.json" || file.startsWith("assets/catalog/");
   });
   const diffStat = runGit("git diff --stat -- .");
 

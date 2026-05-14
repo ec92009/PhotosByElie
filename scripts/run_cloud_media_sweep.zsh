@@ -134,6 +134,7 @@ done_phase validate
 
 phase commit "Commit and push"
 git add \
+  assets/catalog \
   assets/discarded-media-manifest.json \
   assets/expo-manifest.json \
   assets/media-sidecar.json \

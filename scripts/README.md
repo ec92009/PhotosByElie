@@ -68,7 +68,7 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `photos-data.js` and writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys are flat by photo ID under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys are flat by photo ID under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -145,7 +145,7 @@ open -a "DB Browser for SQLite" tmp/photo-state.sqlite
 
 Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `owner_country_assignment_events`, `owner_country_assignments`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
 
-The public site still loads generated static JavaScript catalogs such as `photos-data.js`; SQLite is the local working database for inspection and owner-state mutation, not a runtime dependency for GitHub Pages.
+The public site still exposes the same `window.photosByElieData` browser contract, but the heavy catalog payload is TSV under `assets/catalog/`; SQLite is the local working database for inspection and owner-state mutation, not a runtime dependency for GitHub Pages.
 
 The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
 
@@ -163,9 +163,9 @@ Stop it with `Ctrl-C`. The database lives under `tmp/`, so it is disposable and 
 
 ## Publish Validation
 
-`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` and `photos-data.js`, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
+`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the catalog TSV/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
 
-The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` infers the browser-locale measurement system to decide which unit appears first. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated `photos-data.js` keeps the public checkout model intact.
+The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` still carries the lightweight helper functions that infer the browser-locale measurement system and expose pricing helpers. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated catalog TSV/bootstrap files keep the public checkout model intact.
 
 Run the validator before pushing public site changes:
 
@@ -179,7 +179,7 @@ When GitHub Pages is serving code and metadata while public previews live in R2/
 node scripts/validate_publish.js --external-media
 ```
 
-Use `--summary` when preparing a push. The summary prints collection counts, local import-cache/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js` and `assets/expo-manifest.json`:
+Use `--summary` when preparing a push. The summary prints collection counts, local import-cache/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/catalog/`, and `assets/expo-manifest.json`:
 
 ```bash
 node scripts/validate_publish.js --summary
@@ -219,7 +219,7 @@ Review on localhost:
 
 Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write/merge approvals, rejections, and blocked rows into an audit JSON under `assets/owner-actions/title-keyword-review-queue/`; saved rows are filtered out when the page is opened again. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through `assets/owner-actions/keyword-blacklist.json` before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections are also recorded in `proposed-state.json` for priority rework.
 
-The approval apply path is manifest-only. It rewrites generated catalog/state files such as `photos-data.js`, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite JPG/source embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
+The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/*.tsv`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite JPG/source embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 
 ## R2 Media Sync
 

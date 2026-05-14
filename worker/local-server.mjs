@@ -1,8 +1,8 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
@@ -12,13 +12,11 @@ const repoRoot = path.resolve(__dirname, "..");
 const port = Number(process.env.PBE_WORKER_PORT || 8787);
 
 const loadCatalog = () => {
-  const sandbox = { window: {}, console, Intl };
-  vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(path.join(repoRoot, "photos-data.js"), "utf8"), sandbox);
+  const catalogWindow = catalogTsv.loadCatalogWindow(repoRoot);
   return createCatalogIndex({
-    collections: sandbox.window.photosByElieData,
-    resolutions: sandbox.window.photosByElieResolutions,
-    frameOptions: sandbox.window.photosByElieFrameOptions,
+    collections: catalogWindow.photosByElieData,
+    resolutions: catalogWindow.photosByElieResolutions,
+    frameOptions: catalogWindow.photosByElieFrameOptions,
   });
 };
 

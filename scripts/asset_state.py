@@ -266,7 +266,7 @@ const vm = require("vm");
 const root = process.argv[1];
 const context = { window: {} };
 vm.createContext(context);
-vm.runInContext(fs.readFileSync(path.join(root, "photos-data.js"), "utf8"), context);
+Object.assign(context.window, require(path.join(root, "scripts/catalog_tsv.cjs")).loadCatalogWindow(root));
 const reservePath = path.join(root, "assets/owner-actions/reserve-data.json");
 if (fs.existsSync(reservePath)) {
   context.window.photosByElieReserveData = JSON.parse(fs.readFileSync(reservePath, "utf8"));
@@ -577,6 +577,15 @@ def helper_lines() -> list[str]:
     ]
 
 
+def compact_catalog_tsv(repo_root: Path) -> None:
+    subprocess.run(
+        ["node", "scripts/write_catalog_tsv.cjs"],
+        cwd=repo_root,
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+
+
 def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]]) -> None:
     home_collections = {}
     lines = ["window.photosByElieData = {"]
@@ -601,6 +610,7 @@ def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[
     ]
     lines += helper_lines()
     (repo_root / "photos-data.js").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    compact_catalog_tsv(repo_root)
     write_home_data_from_collections(repo_root, home_collections)
 
 

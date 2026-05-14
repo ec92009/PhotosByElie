@@ -26,7 +26,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `hidden-page.js`: localhost-only Blocked review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `home-data.js`: tiny homepage manifest with collection counts and representative preview candidates
-- `photos-data.js`: generated full static catalog export with shared collection, photo, product option, and mock price data
+- `photos-data.js`: small generated browser bootstrap that loads the public catalog TSV shards and exposes shared collection, photo, product option, and mock price data
+- `assets/catalog/photos.tsv`: generated public catalog rows, with a compressed `.gz` copy for archival/deploy optimization work
+- `assets/catalog/collections.tsv`: generated collection metadata rows, with a compressed `.gz` copy
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
 - `home-discovery.js`: homepage-wide search, origin, collection, filter results, likes, keyboard selection, detail navigation, and localhost Owner shortcuts
 - `gallery-card.js`: shared gallery/review card renderer used by public galleries and Blocked review
@@ -61,11 +63,11 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown photos are no longer presented as a public country-style collection; localhost Owner gets a dedicated classification queue.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or blocked no longer reduce unrelated counts.
-- The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full `photos-data.js` catalog in the background for basket/liked context.
-- `photos-data.js` remains the browser-friendly static export for GitHub Pages, but local owner workflows should increasingly treat SQLite and tracked owner manifests as source state, then regenerate the static JS catalogs.
+- The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
+- The full public catalog now lives in TSV shards under `assets/catalog/`. `photos-data.js` is intentionally only a small compatibility bootstrap that reconstructs `window.photosByElieData` for existing static pages.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
-- Gallery pages load the publishable Expo subset from `photos-data.js`; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
+- Gallery pages load the publishable Expo subset from `assets/catalog/*.tsv` through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
 - Public previews currently resolve directly through the public R2 `r2.dev` media endpoint backed by `photosbyelie-public`; move `publicBaseUrl` to a custom media domain when that is attached.
 - Local preview asset folders are retired. Public previews should resolve from R2/CDN keys; use `node scripts/validate_publish.js --external-media` for that publishing mode.
 - R2 media uploads should run through the lock-guarded sweep wrapper, `scripts/run_cloud_media_sweep.zsh`, or otherwise one lane at a time. The wrapper uses `.review-logs/cloud-media-sweep.lock` so the daily automation and manual runs do not race each other.
@@ -96,7 +98,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - The Expo cap is retired. The exporter now publishes all eligible cloud-backed previews unless they are blocked/discarded or otherwise ineligible.
-- `scripts/export_photos_data.py --external-media` regenerates `home-data.js` and `photos-data.js` from the local import manifest and tracked owner state without committing preview JPGs.
+- `scripts/export_photos_data.py --external-media` regenerates `home-data.js`, the catalog TSV shards, and the small `photos-data.js` compatibility bootstrap from the local import manifest and tracked owner state without committing preview JPGs.
 - The basket is the source of truth for selected product options.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.

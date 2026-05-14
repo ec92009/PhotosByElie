@@ -4,11 +4,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import vm from "node:vm";
+import catalogTsv from "./catalog_tsv.cjs";
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const DEFAULT_HANDOFF = path.join(REPO_ROOT, "DAVID2MAX.md");
 const DEFAULT_OUTPUT_ROOT = path.join(REPO_ROOT, "assets", "owner-actions", "social-post-packages");
 const SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/";
+const { loadCatalogWindow } = catalogTsv;
 
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
@@ -38,8 +40,7 @@ function loadCatalog() {
   const context = { window: {} };
   vm.createContext(context);
   vm.runInContext(readText(path.join(REPO_ROOT, "media-config.js")), context, { filename: "media-config.js" });
-  vm.runInContext(readText(path.join(REPO_ROOT, "photos-data.js")), context, { filename: "photos-data.js" });
-  const collections = context.window.photosByElieData || {};
+  const collections = loadCatalogWindow(REPO_ROOT).photosByElieData || {};
   const mediaConfig = context.window.photosByElieMediaConfig || {};
   const byId = new Map();
   for (const [collectionKey, collection] of Object.entries(collections)) {

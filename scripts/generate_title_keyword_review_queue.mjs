@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import catalogTsv from "./catalog_tsv.cjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 100;
@@ -13,6 +14,7 @@ const PROPOSED_STATE_FILENAME = "proposed-state.json";
 const MIN_PROPOSED_KEYWORDS = 10;
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
+const { loadCatalogWindow } = catalogTsv;
 
 const loadWindowData = (relativePath, variableName) => {
   const context = { window: {} };
@@ -650,7 +652,7 @@ const main = () => {
     process.exit(0);
   }
 
-  const photosData = loadWindowData("photos-data.js", "photosByElieData");
+  const photosData = loadCatalogWindow(REPO_ROOT).photosByElieData;
   if (!photosData || typeof photosData !== "object") {
     throw new Error("Could not load photos-data.js (window.photosByElieData).");
   }

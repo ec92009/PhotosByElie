@@ -382,7 +382,7 @@ const buildManifest = async (inventory, publicIdsPayload) => {
 
 const maybeCommit = async (processedCount, final = false) => {
   if (!commitEvery || (!final && processedCount % commitEvery !== 0)) return;
-  await run("git", ["add", "assets/private-delivery-manifest.json", "assets/media-sidecar.json", "assets/expo-manifest.json", "home-data.js", "photos-data.js", "worker/photos-catalog.generated.mjs", "scripts"]);
+  await run("git", ["add", "assets/catalog", "assets/private-delivery-manifest.json", "assets/media-sidecar.json", "assets/expo-manifest.json", "home-data.js", "photos-data.js", "worker/photos-catalog.generated.mjs", "scripts"]);
   const status = await run("git", ["diff", "--cached", "--quiet"]).then(() => "", () => "dirty");
   if (!status) return;
   const message = final

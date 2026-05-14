@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import vm from "node:vm";
+import catalogTsv from "./catalog_tsv.cjs";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
-const sandbox = { window: {}, console, Intl };
-vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(repoRoot, "photos-data.js"), "utf8"), sandbox);
+const catalogWindow = catalogTsv.loadCatalogWindow(repoRoot);
 
 const workerCollections = Object.fromEntries(
-  Object.entries(sandbox.window.photosByElieData || {}).map(([key, collection]) => [key, {
+  Object.entries(catalogWindow.photosByElieData || {}).map(([key, collection]) => [key, {
     ...collection,
     photos: (collection.photos || []).map(({ pricingTier: _pricingTier, ...photo }) => photo),
   }])
@@ -17,8 +15,8 @@ const workerCollections = Object.fromEntries(
 
 const lines = [
   `export const collections = ${JSON.stringify(workerCollections, null, 2)};`,
-  `export const resolutions = ${JSON.stringify(sandbox.window.photosByElieResolutions || [], null, 2)};`,
-  `export const frameOptions = ${JSON.stringify(sandbox.window.photosByElieFrameOptions || [], null, 2)};`,
+  `export const resolutions = ${JSON.stringify(catalogWindow.photosByElieResolutions || [], null, 2)};`,
+  `export const frameOptions = ${JSON.stringify(catalogWindow.photosByElieFrameOptions || [], null, 2)};`,
   "",
 ];
 

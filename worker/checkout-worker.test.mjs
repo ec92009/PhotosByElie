@@ -147,7 +147,7 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.order.id, /^PBE-20260507-/);
   assert.equal(body.order.status, "pending_payment");
   assert.equal(body.order.currency, "usd");
-  assert.equal(body.order.amountExpected, 8100);
+  assert.equal(body.order.amountExpected, 5500);
   assert.equal(body.order.items[0].products.length, 2);
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
 });
@@ -165,9 +165,9 @@ test("AI collection digital products use the AI price tier", async () => {
 
   const body = await response.json();
   assert.equal(body.order.items[0].collection, "AI");
-  assert.equal(body.order.amountExpected, 2900);
-  assert.equal(body.order.items[0].products.find((item) => item.id === "full").amount, 2500);
-  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 400);
+  assert.equal(body.order.amountExpected, 5000);
+  assert.equal(body.order.items[0].products.find((item) => item.id === "full").amount, 4500);
+  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 500);
 });
 
 test("sourceOrigin controls digital pricing independently of collection", async () => {
@@ -306,7 +306,7 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   assert.equal(payResponse.status, 200);
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
-  assert.equal(paid.order.amountPaid, 6500);
+  assert.equal(paid.order.amountPaid, 4500);
   assert.match(paid.order.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-20260507-/);
   assert.match(paid.order.delivery.downloadUrl, /^\/download\/dl_/);
 

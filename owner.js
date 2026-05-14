@@ -34,6 +34,18 @@
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
   const priceListRoot = document.querySelector("[data-owner-price-list]");
+  const costCard = document.querySelector("[data-owner-cost-card]");
+  const costSummaryRoot = document.querySelector("[data-owner-cost-summary]");
+  const costMtdRoot = document.querySelector("[data-owner-cost-mtd]");
+  const costMonthRoot = document.querySelector("[data-owner-cost-month]");
+  const costNextRoot = document.querySelector("[data-owner-cost-next]");
+  const costStorageRoot = document.querySelector("[data-owner-cost-storage]");
+  const costMtdNoteRoot = document.querySelector("[data-owner-cost-mtd-note]");
+  const costMonthNoteRoot = document.querySelector("[data-owner-cost-month-note]");
+  const costNextNoteRoot = document.querySelector("[data-owner-cost-next-note]");
+  const costStorageNoteRoot = document.querySelector("[data-owner-cost-storage-note]");
+  const costBreakdownRoot = document.querySelector("[data-owner-cost-breakdown]");
+  const costNoteRoot = document.querySelector("[data-owner-cost-note]");
   const keywordBlacklistForm = document.querySelector("[data-owner-keyword-blacklist-form]");
   const keywordBlacklistInput = document.querySelector("[data-owner-keyword-blacklist-input]");
   const keywordBlacklistStatus = document.querySelector("[data-owner-keyword-blacklist-status]");
@@ -99,6 +111,7 @@
       refreshCountsFromSource();
       refreshBlockedSyncPanel();
       loadR2Coverage();
+      loadCostEstimate();
       loadKeywordBlacklist();
       startR2Polling();
       if (options.scrollToControls && controls) {
@@ -226,6 +239,61 @@
   const formatMoney = (value) => {
     const amount = Number(value || 0);
     return Number.isFinite(amount) ? `$${amount.toFixed(amount % 1 ? 2 : 0)}` : "$0";
+  };
+
+  const formatMoneyDetailed = (value) => {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount) || amount <= 0) return "$0.00";
+    if (amount < 0.01) return "<$0.01";
+    return `$${amount.toFixed(2)}`;
+  };
+
+  const cloudCostModel = {
+    r2: {
+      storageUsdPerGbMonth: 0.015,
+      freeTierGbMonth: 10,
+      classAFreeTier: 1_000_000,
+      classBFreeTier: 10_000_000,
+      classAUsdPerMillion: 4.5,
+      classBUsdPerMillion: 0.36,
+      pricingUrl: "https://developers.cloudflare.com/r2/pricing/",
+    },
+    workers: {
+      paidBaseUsdPerMonth: 5,
+      includedRequests: 10_000_000,
+      includedCpuMs: 30_000_000,
+      requestUsdPerMillion: 0.30,
+      cpuUsdPerMillionMs: 0.02,
+      pricingUrl: "https://developers.cloudflare.com/workers/platform/pricing/",
+    },
+  };
+
+  const monthWindow = (now = new Date()) => {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const elapsedMs = Math.min(Math.max(now - start, 0), end - start);
+    const elapsedRatio = (end - start) ? elapsedMs / (end - start) : 0;
+    const monthLabel = now.toLocaleString([], { month: "short", year: "numeric" });
+    const nextMonthLabel = end.toLocaleString([], { month: "short", year: "numeric" });
+    return { start, end, elapsedRatio, monthLabel, nextMonthLabel };
+  };
+
+  const usdForStorageBytes = (bytes, pricing = cloudCostModel.r2, includeFreeTier = true) => {
+    const gbMonth = Number(bytes || 0) / 1_000_000_000;
+    const billableGbMonth = includeFreeTier
+      ? Math.max(0, gbMonth - Number(pricing.freeTierGbMonth || 0))
+      : gbMonth;
+    return billableGbMonth * Number(pricing.storageUsdPerGbMonth || 0);
+  };
+
+  const estimateStorageMonthlyUsd = (estimate = {}) => {
+    const fromEstimate = Number(estimate?.cost?.currentMonthlyUsdAfterFreeTier);
+    if (Number.isFinite(fromEstimate)) return fromEstimate;
+    const pricing = {
+      ...cloudCostModel.r2,
+      ...(estimate?.pricing || {}),
+    };
+    return usdForStorageBytes(estimate?.current?.totalBytes, pricing, true);
   };
 
   const defaultPriceTiers = {
@@ -359,6 +427,112 @@
         setStatus("Price list saved locally.");
       });
     });
+  };
+
+  const renderCostEstimate = (estimate = null) => {
+    if (!costCard || !costSummaryRoot || !costBreakdownRoot) return;
+    if (!estimate) {
+      setText(costSummaryRoot, "Cloud cost estimate is unavailable.");
+      if (costMtdRoot) costMtdRoot.textContent = "$0.00";
+      if (costMonthRoot) costMonthRoot.textContent = "$0.00";
+      if (costNextRoot) costNextRoot.textContent = "$0.00";
+      if (costStorageRoot) costStorageRoot.textContent = "0 B";
+      setHtml(costBreakdownRoot, "");
+      if (costNoteRoot) costNoteRoot.textContent = "Run the storage estimate after the helper can reach R2.";
+      return;
+    }
+    const windowState = monthWindow();
+    const storageMonthlyUsd = estimateStorageMonthlyUsd(estimate);
+    const storageMtdUsd = storageMonthlyUsd * windowState.elapsedRatio;
+    const workerBaseUsd = Number(cloudCostModel.workers.paidBaseUsdPerMonth || 0);
+    const storageBytes = Number(estimate?.current?.totalBytes || 0);
+    const updatedAt = estimate?.updatedAt ? new Date(estimate.updatedAt) : null;
+    const updatedLabel = updatedAt && Number.isFinite(updatedAt.getTime())
+      ? updatedAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      : "unknown time";
+    const paidWorkerTotal = storageMonthlyUsd + workerBaseUsd;
+    if (costMtdRoot) costMtdRoot.textContent = formatMoneyDetailed(storageMtdUsd);
+    if (costMonthRoot) costMonthRoot.textContent = formatMoneyDetailed(storageMonthlyUsd);
+    if (costNextRoot) costNextRoot.textContent = formatMoneyDetailed(storageMonthlyUsd);
+    if (costStorageRoot) costStorageRoot.textContent = formatBytes(storageBytes);
+    if (costMtdNoteRoot) costMtdNoteRoot.textContent = `${Math.round(windowState.elapsedRatio * 100)}% of ${windowState.monthLabel}`;
+    if (costMonthNoteRoot) costMonthNoteRoot.textContent = `Storage; ${formatMoneyDetailed(paidWorkerTotal)} with Workers Paid`;
+    if (costNextNoteRoot) costNextNoteRoot.textContent = windowState.nextMonthLabel;
+    if (costStorageNoteRoot) costStorageNoteRoot.textContent = `Updated ${updatedLabel}`;
+    setText(
+      costSummaryRoot,
+      `Measured R2 storage is ${formatMoneyDetailed(storageMonthlyUsd)}/month after the ${formatCount(cloudCostModel.r2.freeTierGbMonth)} GB-month free tier. Add ${formatMoneyDetailed(workerBaseUsd)}/month if the Cloudflare account is on Workers Paid; request and CPU overages need analytics.`
+    );
+    const rows = [
+      {
+        item: "R2 storage",
+        rate: `${formatMoneyDetailed(storageMonthlyUsd)}/mo at ${formatBytes(storageBytes)} stored`,
+        mtd: formatMoneyDetailed(storageMtdUsd),
+        month: formatMoneyDetailed(storageMonthlyUsd),
+        next: formatMoneyDetailed(storageMonthlyUsd),
+      },
+      {
+        item: "R2 operations",
+        rate: `Class A ${formatCount(cloudCostModel.r2.classAFreeTier)} free/mo, Class B ${formatCount(cloudCostModel.r2.classBFreeTier)} free/mo`,
+        mtd: "Needs Cloudflare usage telemetry",
+        month: "Not counted locally",
+        next: "Not counted locally",
+      },
+      {
+        item: "Workers plan",
+        rate: `${formatMoneyDetailed(workerBaseUsd)}/mo if Workers Paid is enabled`,
+        mtd: `Up to ${formatMoneyDetailed(workerBaseUsd)} if active`,
+        month: `+${formatMoneyDetailed(workerBaseUsd)} if active`,
+        next: `+${formatMoneyDetailed(workerBaseUsd)} if active`,
+      },
+      {
+        item: "Workers requests and CPU",
+        rate: `${formatCount(cloudCostModel.workers.includedRequests)} requests and ${formatCount(cloudCostModel.workers.includedCpuMs)} CPU-ms included on Paid`,
+        mtd: "Needs Worker analytics",
+        month: "Overage unknown",
+        next: "Overage unknown",
+      },
+    ];
+    setHtml(costBreakdownRoot, `
+      <table class="owner-cost-table">
+        <thead>
+          <tr>
+            <th scope="col">Line item</th>
+            <th scope="col">Current rate</th>
+            <th scope="col">Consumed MTD</th>
+            <th scope="col">Expected bill</th>
+            <th scope="col">Next month</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <th scope="row">${escapeHtml(row.item)}</th>
+              <td>${escapeHtml(row.rate)}</td>
+              <td><strong>${escapeHtml(row.mtd)}</strong></td>
+              <td><strong>${escapeHtml(row.month)}</strong></td>
+              <td><strong>${escapeHtml(row.next)}</strong></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `);
+    if (costNoteRoot) {
+      const avoided = Number(estimate?.cost?.avoidedMonthlyUsdEstimate || 0);
+      costNoteRoot.textContent = `Storage scan: ${updatedLabel}. Waste Basket cleanup avoided about ${formatMoneyDetailed(avoided)}/month. R2 egress is zero-rated; operation and Worker CPU/request usage need Cloudflare analytics before the estimate is a full invoice.`;
+    }
+  };
+
+  const loadCostEstimate = async () => {
+    if (!costCard) return;
+    try {
+      const href = window.photosByElieVersionedHref?.("./assets/storage-estimate.json") || "./assets/storage-estimate.json";
+      const response = await fetch(href, { cache: "no-store" });
+      if (!response.ok) throw new Error(`storage estimate ${response.status}`);
+      renderCostEstimate(await response.json());
+    } catch {
+      renderCostEstimate(null);
+    }
   };
 
   const normalizeKeywordTerms = (values = []) => {
@@ -1000,6 +1174,9 @@
       } else if (kind === "progress") {
         await withTimeout(loadR2Progress(), 12000, "R2 progress refresh");
         setStatus("R2 background work refreshed.");
+      } else if (kind === "cost") {
+        await withTimeout(loadCostEstimate(), 12000, "Cloud cost refresh");
+        setStatus("Cloud bill forecast refreshed.");
       } else if (kind === "keyword-blacklist") {
         await loadKeywordBlacklist();
         setStatus("Keyword blacklist refreshed.");
@@ -1027,6 +1204,7 @@
 
   if (controls) controls.hidden = true;
   renderPriceList();
+  renderCostEstimate();
 
   window.addEventListener("photosbyelie:ownerauthchange", (event) => {
     renderOwnerAvailability(event.detail || ownerAuth?.state);
@@ -1166,6 +1344,7 @@
     refreshCountsFromSource();
     refreshBlockedSyncPanel();
     loadR2Coverage();
+    loadCostEstimate();
     loadKeywordBlacklist();
     startR2Polling();
   }

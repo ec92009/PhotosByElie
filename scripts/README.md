@@ -256,7 +256,7 @@ Refresh the Owner storage/cost estimate after a large import, backfill, or block
 zsh -lc 'node scripts/write_storage_estimate.mjs'
 ```
 
-The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted blocked previews/renders are estimated from current average object sizes, while blocked master bytes come from the blocked catalog source metadata.
+The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted blocked previews/renders are estimated from current average object sizes, while blocked master bytes come from the blocked catalog source metadata. The Owner bill card uses the same file to show consumed month-to-date storage cost, expected current-month storage bill, and next-month storage at the current rate. R2 operation usage and Worker request/CPU overages still require Cloudflare analytics before the estimate is invoice-complete.
 
 Dry-run the currently publishable Expo previews:
 

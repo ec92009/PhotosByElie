@@ -160,8 +160,21 @@ const pricing = {
   sourceUrl: "https://developers.cloudflare.com/r2/pricing/",
   storageUsdPerGbMonth: 0.015,
   freeTierGbMonth: 10,
+  classAFreeTier: 1_000_000,
+  classBFreeTier: 10_000_000,
+  classAUsdPerMillion: 4.5,
+  classBUsdPerMillion: 0.36,
+  workers: {
+    provider: "Cloudflare Workers Standard",
+    sourceUrl: "https://developers.cloudflare.com/workers/platform/pricing/",
+    paidBaseUsdPerMonth: 5,
+    includedRequests: 10_000_000,
+    includedCpuMs: 30_000_000,
+    requestUsdPerMillion: 0.30,
+    cpuUsdPerMillionMs: 0.02,
+  },
   notes: [
-    "Storage only; excludes Class A/Class B request operations.",
+    "Storage bytes are measured; R2 Class A/Class B operations and Workers request/CPU usage need Cloudflare analytics to become invoice-complete.",
     "R2 billing uses GB-month, not GiB-month. Displayed byte totals use binary units.",
     "Current R2 object bytes are read from live bucket listings. Blocked/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted.",
   ],
@@ -179,6 +192,31 @@ const cost = {
   avoidedMonthlyUsdEstimate: usdForBytes(blocked.totalBytesEstimate),
 };
 
+const now = new Date();
+const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+const elapsedRatio = (now - monthStart) / (nextMonthStart - monthStart);
+const billing = {
+  generatedAt: now.toISOString(),
+  month: now.toLocaleString("en-US", { month: "short", year: "numeric" }),
+  nextMonth: nextMonthStart.toLocaleString("en-US", { month: "short", year: "numeric" }),
+  elapsedMonthRatio: Number(elapsedRatio.toFixed(6)),
+  measuredStorageOnly: {
+    consumedMonthToDateUsd: Number((cost.currentMonthlyUsdAfterFreeTier * elapsedRatio).toFixed(4)),
+    expectedThisMonthUsd: cost.currentMonthlyUsdAfterFreeTier,
+    expectedNextMonthUsdAtCurrentRate: cost.currentMonthlyUsdAfterFreeTier,
+  },
+  withWorkersPaidBaseIfEnabled: {
+    expectedThisMonthUsd: Number((cost.currentMonthlyUsdAfterFreeTier + pricing.workers.paidBaseUsdPerMonth).toFixed(4)),
+    expectedNextMonthUsdAtCurrentRate: Number((cost.currentMonthlyUsdAfterFreeTier + pricing.workers.paidBaseUsdPerMonth).toFixed(4)),
+  },
+  unmeasuredLineItems: [
+    "R2 Class A/Class B operations",
+    "Workers requests and CPU overages",
+    "Workers Paid subscription state",
+  ],
+};
+
 const payload = {
   schema: "photosbyelie.storage-estimate.v1",
   updatedAt: new Date().toISOString(),
@@ -192,6 +230,7 @@ const payload = {
   noCleanup,
   pricing,
   cost,
+  billing,
 };
 
 await fs.mkdir(path.dirname(fullPath(outputPath)), { recursive: true });

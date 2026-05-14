@@ -1,6 +1,6 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-11T18:52:07.776Z",
+  "updatedAt": "2026-05-14T06:53:27.466Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
@@ -10,43 +10,76 @@
     "sourceBytes": 96249678040
   },
   "current": {
-    "publicPreviewObjects": 23300,
-    "publicPreviewBytes": 7039578931,
+    "publicPreviewObjects": 23278,
+    "publicPreviewBytes": 7032360368,
     "privateMasterObjects": 5914,
     "privateMasterBytes": 96839643092,
     "privateRenderObjects": 17658,
     "privateRenderBytes": 14919485889,
-    "totalBytes": 118798707912
+    "totalBytes": 118791489349
   },
   "blocked": {
     "photoIds": 4359,
     "publicPreviewObjects": 17438,
-    "publicPreviewBytesEstimate": 5268505468,
+    "publicPreviewBytesEstimate": 5268077159,
     "privateMasterObjects": 28,
-    "privateMasterBytes": 6268944356,
+    "privateMasterBytes": 6818243399,
     "privateRenderObjects": 0,
     "privateRenderBytesEstimate": 0,
-    "totalBytesEstimate": 11537449824
+    "totalBytesEstimate": 12086320558
   },
   "noCleanup": {
-    "totalBytesEstimate": 130336157736
+    "totalBytesEstimate": 130877809907
   },
   "pricing": {
     "provider": "Cloudflare R2 Standard storage",
     "sourceUrl": "https://developers.cloudflare.com/r2/pricing/",
     "storageUsdPerGbMonth": 0.015,
     "freeTierGbMonth": 10,
+    "classAFreeTier": 1000000,
+    "classBFreeTier": 10000000,
+    "classAUsdPerMillion": 4.5,
+    "classBUsdPerMillion": 0.36,
+    "workers": {
+      "provider": "Cloudflare Workers Standard",
+      "sourceUrl": "https://developers.cloudflare.com/workers/platform/pricing/",
+      "paidBaseUsdPerMonth": 5,
+      "includedRequests": 10000000,
+      "includedCpuMs": 30000000,
+      "requestUsdPerMillion": 0.3,
+      "cpuUsdPerMillionMs": 0.02
+    },
     "notes": [
-      "Storage only; excludes Class A/Class B request operations.",
+      "Storage bytes are measured; R2 Class A/Class B operations and Workers request/CPU usage need Cloudflare analytics to become invoice-complete.",
       "R2 billing uses GB-month, not GiB-month. Displayed byte totals use binary units.",
       "Current R2 object bytes are read from live bucket listings. Blocked/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted."
     ]
   },
   "cost": {
-    "currentMonthlyUsd": 1.782,
-    "currentMonthlyUsdAfterFreeTier": 1.632,
-    "noCleanupMonthlyUsdEstimate": 1.955,
-    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.805,
-    "avoidedMonthlyUsdEstimate": 0.1731
+    "currentMonthlyUsd": 1.7819,
+    "currentMonthlyUsdAfterFreeTier": 1.6319,
+    "noCleanupMonthlyUsdEstimate": 1.9632,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.8132,
+    "avoidedMonthlyUsdEstimate": 0.1813
+  },
+  "billing": {
+    "generatedAt": "2026-05-14T06:53:27.445Z",
+    "month": "May 2026",
+    "nextMonth": "Jun 2026",
+    "elapsedMonthRatio": 0.431305,
+    "measuredStorageOnly": {
+      "consumedMonthToDateUsd": 0.7038,
+      "expectedThisMonthUsd": 1.6319,
+      "expectedNextMonthUsdAtCurrentRate": 1.6319
+    },
+    "withWorkersPaidBaseIfEnabled": {
+      "expectedThisMonthUsd": 6.6319,
+      "expectedNextMonthUsdAtCurrentRate": 6.6319
+    },
+    "unmeasuredLineItems": [
+      "R2 Class A/Class B operations",
+      "Workers requests and CPU overages",
+      "Workers Paid subscription state"
+    ]
   }
 }

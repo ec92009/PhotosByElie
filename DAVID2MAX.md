@@ -543,3 +543,17 @@ _No David automation results recorded yet._
 - Remaining: missing public previews / prune candidates unknown (script could not reach R2).
 - Local checks: `npm test` passed after updating pricing expectations in `worker/checkout-worker.test.mjs`; `npm run validate` still reports many `--external-media` validation errors (not addressed in this pass).
 - Commit (local only): `photosbyelie: update checkout pricing test expectations` (push blocked by sandbox DNS).
+
+## 2026-05-14 - Owner cloud bill forecast
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Restored a dollar-impact view on the Owner page as `Cloud bill forecast ($)`.
+- Change: Owner now loads `assets/storage-estimate.json` and shows consumed month-to-date storage cost, expected current-month storage bill, next-month storage at the current rate, current stored bytes, and line-item rows for R2 storage, R2 operations, Workers plan, and Workers requests/CPU.
+- Live storage estimate refreshed from R2: `118,791,489,349` current bytes (`111 GB` displayed), storage MTD `$0.70`, expected current storage bill `$1.63`, next month `$1.63`, and `$6.63` if Workers Paid base applies.
+- Caveat: R2 operation counts and Worker request/CPU usage are not yet connected to Cloudflare analytics, so those rows are explicit telemetry gaps instead of guessed dollars.
+- Visible version bumped to v74.30.
+- Browser verification: `http://localhost:8000/owner.html?v=74.30&run=cloud-cost-forecast` showed the new card and values above.
+- Checks passed: `node --check owner.js`, `node --check scripts/write_storage_estimate.mjs`, `git diff --check`.
+- Commit pushed: `photosbyelie: restore owner cloud cost forecast`.
+- Notes: Existing untracked Owner approval/reserve/TSV files remain unstaged.

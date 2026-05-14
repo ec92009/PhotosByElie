@@ -4,7 +4,7 @@ Last updated: 2026-05-14
 
 ## Current Facts
 
-- Local visible build: `v74.29`.
+- Local visible build: `v74.30`.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless basketed/discarded or explicitly ineligible.
@@ -23,6 +23,7 @@ Last updated: 2026-05-14
 - Waste Basket cleanup progress is visible inline under `Cloud media left`. Older preview-only cleanup does not reduce `In basket` and no longer blocks the true `Empty basket` action; only a true basket-empty task disables the button.
 - Owner price list should show both `Camera photo` and `AI image` digital price columns even if local generated catalog state temporarily loses pricing-tier metadata.
 - Waste Basket cleanup should be read as owner-state progress: `In basket` is the undo queue, `Cloud media left` is remaining media state, and preview-only cleanup is just a checked-count subline.
+- Owner Cloud bill forecast now shows storage month-to-date, expected current bill, and next-month storage at the current rate. It includes Workers Paid-plan and R2/Worker operation lines, but actual operation/request/CPU usage still needs Cloudflare analytics before the number is invoice-complete.
 - Daily automation `photosbyelie-daily-cloud-media-sweep` runs through `zsh -lc` to source `~/.zshrc` credentials and uses `.review-logs/cloud-media-sweep.lock` to prevent concurrent sweeps.
 - Local Owner mutation endpoints are unlocked by `scripts/local_server.py` on localhost without a password.
 - The Title/Keywords Owner review queue is helper-server backed. Rows autosave on approve/reject/comment/edit, Save approvals retries selected decisions, approvals apply generated catalog metadata and mark `Title_Keywords_Reviewed`, rejections update rework state, and saved rows are filtered out after leaving/reloading the page.

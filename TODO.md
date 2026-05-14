@@ -4,7 +4,7 @@ Last updated: 2026-05-14
 
 ## Current Facts
 
-- Local visible build: `v74.30`.
+- Local visible build: `v74.34`.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless basketed/discarded or explicitly ineligible.
@@ -35,7 +35,8 @@ Last updated: 2026-05-14
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
 - Physical print/frame products are off by default for buyers; Owner has a deliberate localhost toggle for local review while product pricing/publishing is still backlog work.
 - Print-on-demand sampling is required before physical products return publicly. Shortlist samples should cover US and Europe fulfillment quality, packaging, landed cost, API/integration fit, and support responsiveness.
-- Homepage first render uses the tiny `home-data.js` manifest; the full `photos-data.js` catalog now downloads in the background for basket/liked context.
+- Homepage first render uses the tiny `home-data.js` manifest; the full public catalog now loads through the small `photos-data.js` bootstrap backed by TSV shards in `assets/catalog/`.
+- Public catalog data now lives in `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, with compressed `.gz` copies. `photos-data.js` remains a compatibility bootstrap for the existing `window.photosByElieData` contract.
 - Public previews are served directly from the `photosbyelie-public` `r2.dev` media endpoint; the checkout Worker is no longer on the browse-time preview path.
 - Business priority is now revenue: make checkout trustworthy, package the offer clearly, drive qualified visitors, and keep Owner tooling focused on sales-enabling operations.
 - Camera photos and AI-origin images are now split by first-class catalog origin. Public galleries can filter by origin, detail pages show it, Owner shows Camera / AI counts, and checkout pricing validates against origin.
@@ -44,27 +45,58 @@ Last updated: 2026-05-14
 
 ## Numbered Backlog
 
-1. **Reconcile generated catalog and validation failures.**
-   - `npm test` currently fails checkout pricing assertions.
-   - `npm run validate` currently reports generated catalog/source-origin/public-preview key issues.
-   - Inspect whether the failures are from uncommitted generated files, stale tests, or a real pricing/catalog regression.
-   - Restore a passing baseline before committing any more generated catalog changes.
+1. **Resume or deliberately defer the suspended Waste Basket purge.**
+   - The true basket queue was cleared, but R2 object cleanup had been paused for the TSV migration.
+   - Restart helper-driven cleanup only when ready to watch/confirm progress.
+   - Keep progress tied to `Cloud media left` and cost impact so the Owner page shows the value of the cleanup.
 
-2. **Reconcile current Title/Keywords approval state.**
+2. **Reconcile remaining dirty Owner/generated state.**
    - Review the dirty local owner-action state from live approval/rejection testing.
    - Decide whether to keep and commit `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`.
-   - Resolve generated catalog/source-origin issues in `home-data.js`, `photos-data.js`, and `worker/photos-catalog.generated.mjs`.
+   - Decide whether the current `assets/discarded/discarded-photo-ids.json`, `assets/expo-manifest.json`, `assets/owner-actions/reserve-data.json`, and `.tmp-social/` changes are durable or disposable.
+   - Keep unrelated local `AGENTS.md` and SOP edits out of feature commits unless intentionally refreshed.
    - Run `npm test` and `npm run validate`.
    - Commit only the intended owner-action/generated metadata files.
 
-3. **Verify Waste Basket emptying on a safe test set.**
+3. **Finish the broader TSV/state export story.**
+   - Decide whether the untracked `scripts/build_photo_state_tsv.py` becomes the canonical Owner state-table export.
+   - Document how public catalog TSV, state TSV, SQLite, and owner-action JSON relate.
+   - Add validation for TSV schema, row counts, duplicate IDs, and gzip freshness.
+   - Keep the browser public catalog path separate from local diagnostic/state tables.
+
+4. **Split public catalog TSV by collection.**
+   - Current v74.34 still loads one full `assets/catalog/photos.tsv`.
+   - Generate per-collection TSV shards such as `france.tsv`, `usa.tsv`, `spain.tsv`, and `ai.tsv`.
+   - Load only the requested gallery collection where possible.
+   - Keep a small index/collection TSV for homepage and navigation.
+   - Preserve `window.photosByElieData` compatibility until dependent code is migrated.
+
+5. **Replace the synchronous TSV bootstrap when pages are ready.**
+   - Current `photos-data.js` uses synchronous TSV reads to preserve the old script-order contract.
+   - Move gallery/detail/basket/Owner modules toward an explicit catalog-ready promise.
+   - Once ready, fetch TSV asynchronously and prefer compressed delivery where the server supports it.
+   - Keep GitHub Pages compatibility front and center.
+
+6. **Verify Waste Basket emptying on a safe test set.**
    - Use a tiny controlled basket set before running broad cleanup.
    - Confirm basket and put-back update the live blacklist immediately.
    - Confirm `Empty basket` queues deletion for public previews, private masters, and private render triplets.
    - Confirm emptied items leave durable tombstones and do not reappear after catalog regeneration/import.
    - Confirm `Put back` remains available before emptying and is not available after tombstone-only cleanup.
 
-4. **Prove Stripe checkout in test mode.**
+7. **Regenerate and review the next Title/Keywords queue.**
+   - Confirm approved/rejected rows from the previous queue no longer appear after reload.
+   - Confirm rejected rows receive rework priority.
+   - Confirm proposed keywords are deduped and keyword-blacklist aware.
+   - Generate the next batch only after deciding what to do with current local approval state.
+
+8. **Add a true vision-capable title/keyword proposal pass.**
+   - Prefer inspecting available preview pixels for proposal generation.
+   - Use catalog/source-path metadata only as fallback.
+   - Mark uncertain rows `needs_owner_context` rather than inventing facts.
+   - Keep the 10-keyword target but do not pad with blacklisted, duplicate, or generic keywords.
+
+9. **Prove Stripe checkout in test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
@@ -76,19 +108,19 @@ Last updated: 2026-05-14
    - Confirm the Worker validates private R2 files before Stripe opens and the order page exposes paid per-file downloads.
    - Cover paid-but-delivery-pending, expired download link, missing private asset, and retryable Worker error states.
 
-5. **Make checkout and delivery production-durable.**
+10. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
    - Keep private R2 as private delivery storage.
    - Add receipts/order lookup language that tells buyers exactly where downloads will appear and how long links remain available.
 
-6. **Package the buyer offer clearly.**
+11. **Package the buyer offer clearly.**
    - Decide the first public offer: digital-only single assets, bundles, or collection packs.
    - Make product labels buyer-facing: usage rights, resolution, what “Full resolution” means, and when AI-origin images are included or separated.
    - Rephrase basket/order language around “draft,” availability, manual review, and delivery so it builds trust rather than sounding provisional.
    - Add simple FAQ/help copy for licensing, personal/commercial use, delivery time, refunds, and contact.
 
-7. **Publish a real price and offer strategy.**
+12. **Publish a real price and offer strategy.**
    - Current state: Published defaults now distinguish camera-photo digital prices from lower AI-origin digital prices, and Owner shows editable local table inputs for active digital tiers, print sizes, frame add-ons, and mock S&H prices.
    - Move the published defaults out of generated-code constants into a dedicated price-list data file shared by public basket and Worker validation.
    - Support adding, editing, disabling, and reordering price entries as the catalog of sellable products grows.
@@ -96,7 +128,7 @@ Last updated: 2026-05-14
    - Add business levers: launch pricing, bundle discounts, collection packs, “buy all liked,” and optional promo codes later.
    - Show a clear publish/version step for price changes before they affect buyers.
 
-8. **Curate the first sellable storefront.**
+13. **Curate the first sellable storefront.**
    - Review visible catalog entries before paid traffic or launch outreach.
    - Apply and inspect the current 100-photo Title/Keywords approval batch, then regenerate the next queue to confirm `Title_Keywords_Reviewed` skipping works.
    - Block photos that should not be sold or shown.
@@ -104,7 +136,7 @@ Last updated: 2026-05-14
    - Create buyer-friendly collection ordering: strongest commercial/travel/editorial sets first.
    - Keep block/discard decisions in tracked manifests so cloud cleanup and future Saturn imports respect them.
 
-9. **Add conversion analytics.**
+14. **Add conversion analytics.**
    - Track privacy-conscious funnel events: homepage view, collection view, search/filter use, like, add to basket, basket view, checkout started, payment completed, file downloaded.
    - Track collection and product type so we learn what actually sells.
    - Store raw paid-order facts durably enough to synthesize marketing reports on demand: order items, photo IDs, collection/country, source origin, product/format ID, unit count, line revenue, paid timestamp, and download events.
@@ -114,52 +146,43 @@ Last updated: 2026-05-14
    - Add lightweight dashboards or reports for revenue, conversion rate, abandoned baskets, and top viewed/liked photos.
    - Keep local Owner activity out of buyer analytics.
 
-10. **Improve public discovery and SEO.**
+15. **Improve public discovery and SEO.**
    - Add per-page titles, descriptions, Open Graph/Twitter images, canonical URLs, and image/collection metadata.
    - Generate a sitemap for homepage, collection pages, detail pages, and future high-value landing pages.
    - Add structured data where useful for image galleries/products.
    - Ensure titles and keywords support search-engine snippets without exposing Owner-only metadata.
 
-11. **Create marketing landing pages.**
+16. **Create marketing landing pages.**
    - Build a few focused pages for likely buyers: travel/editorial licensing, wall art, AI imagery, country-specific photo sets, and “Photos By Elie” brand story.
    - Each page should lead directly to a relevant collection, liked flow, or basket action.
    - Use real images and concise copy rather than generic portfolio filler.
    - Add shareable URLs for launch emails, social posts, and direct buyer outreach.
 
-12. **Prepare launch and sales outreach.**
+17. **Prepare launch and sales outreach.**
    - Draft a short launch email and a buyer outreach note for travel/editorial/design contacts.
    - Create a social posting checklist for Instagram, Pinterest, LinkedIn, and direct shares.
    - Pick 10-20 standout images/collections for launch posts.
    - Add simple contact path for custom licensing, prints, or questions.
 
-13. **Replace temporary `r2.dev` media URL with a custom media domain.**
+18. **Replace temporary `r2.dev` media URL with a custom media domain.**
    - Attach an R2 custom domain such as `media.photosbyelie.com`.
    - Update `media-config.js` from the temporary `r2.dev` URL to the custom domain.
    - Retest GitHub Pages gallery/detail/basket media loading and public hidden-blacklist fetches.
    - Keep the checkout Worker focused on checkout/order/delivery, not public thumbnail serving.
 
-14. **Split gallery/catalog data by collection.**
-   - Gallery pages now use one real page, `gallery.html?gallery=<slug>`.
-   - Old country-specific gallery HTML files have been removed.
-   - Keep country-specific title/nav/body state in data rather than duplicated markup.
-   - Generate per-collection public catalog files such as France, USA, Spain, AI, Portugal, Slovakia, and Mexico.
-   - Load only the current collection catalog when opening a gallery page.
-   - Keep shared public metadata separate from private delivery/Owner manifests.
-   - Treat this as a sales performance item: faster first gallery load means fewer buyers bounce.
-
-15. **Refine gallery merchandising layout.**
+19. **Refine gallery merchandising layout.**
    - FIT mode now uses a deterministic masonry-style grid span layout for mixed panorama, landscape, square, and portrait photos.
    - Continue testing density controls and fit/fill behavior across very mixed collections.
    - Keep keyboard selection, Owner block/discard shortcuts, likes, and detail navigation stable when layout positions change.
    - Keep a future justified-row gallery as a separate buyer-polish idea, not the current target.
 
-16. **Add buyer account or order recovery only if needed.**
+20. **Add buyer account or order recovery only if needed.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
    - Prefer email-based order lookup before full accounts if that is enough for re-downloads.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
 
-17. **Decide when physical goods return.**
+21. **Decide when physical goods return.**
    - Keep physical print/frame products off by default while digital checkout is being proven.
    - Order POD samples before re-enabling buyer-facing prints or framed prints.
    - Sample the same stress-test set across shortlisted shops: one dark photo, one detailed architecture/travel photo, one saturated AI-origin image, and one black-and-white or neutral image.
@@ -168,7 +191,7 @@ Last updated: 2026-05-14
    - Re-enable only when pricing, fulfillment, shipping, refunds, and customer support are clear.
    - Treat print/frame work as a higher-touch sales channel, not a blocker for digital launch.
 
-18. **Replace keyword removal with Owner keyword cleanup modal.**
+22. **Replace keyword removal with Owner keyword cleanup modal.**
    - Replace the current narrow collection-keyword removal control with one Owner-page button for keyword cleanup across all countries plus AI.
    - Open a modal listing every current keyword with its photo count and a checkbox.
    - Include Done to close without changes.
@@ -176,7 +199,7 @@ Last updated: 2026-05-14
    - Apply deletes across all countries plus AI; do not rewrite already uploaded masters, private renders, public previews, or XMP sidecars.
    - Show before/after counts and refresh Owner counts/status after completion.
 
-19. **Make country collections open-ended.**
+23. **Make country collections open-ended.**
    - Stop treating countries as a finite fixed code list in Owner workflows.
    - Let imports send photos with unknown/new geography into Unknown when they cannot confidently map to an existing collection.
    - In Owner Unknown assignment, show the current known countries plus `Other...` in the country selector.
@@ -184,7 +207,7 @@ Last updated: 2026-05-14
    - Create the new collection metadata, slug, Owner assignment target, public gallery route/data, homepage collection entry, translations, and styling from that Owner-provided country name.
    - Keep existing fixed-country behavior as the compatibility path until dynamic collection generation is designed safely.
 
-20. **Add gallery multi-select Owner metadata edits.**
+24. **Add gallery multi-select Owner metadata edits.**
    - Allow Owner to select multiple gallery cards with Shift-click ranges and Command-click toggles.
    - Keep keyboard selection and single-card detail navigation understandable when multi-select is active.
    - Pressing `T` with multiple photos selected should open a batch title modal with clear behavior, likely either a shared replacement title or a structured title pattern before implementation.
@@ -192,14 +215,14 @@ Last updated: 2026-05-14
    - Show selected count, before/after keyword effects, and confirmation for potentially broad edits.
    - Persist through the existing manifest-only Owner metadata path; do not rewrite uploaded masters, private renders, public previews, or XMP sidecars.
 
-21. **Extend Owner operations dashboard.**
+25. **Extend Owner operations dashboard.**
    - Keep dense counts for catalog, private delivery coverage, discarded tombstones, Waste Basket queue, unknown queue, and active sweep status.
    - Keep Waste Basket status, cleanup progress, and tombstone counts legible on the Owner page.
    - Surface the latest automation/sweep result.
    - Add a guided curation command or Owner flow for ingest, classify, block/discard, assign, validate, and publish.
    - Make destructive actions legible before they run.
 
-22. **Harden owner identity and publish validation.**
+26. **Harden owner identity and publish validation.**
    - Keep the localhost helper boundary as the current protection for local catalog/R2 actions.
    - Decide whether production Owner should use Cloudflare Access, a Worker-backed login, or another identity layer.
    - Rename `owner-auth.js` to reflect current reality, such as `owner-helper-session.js`, because it now checks helper availability rather than passwords.
@@ -208,7 +231,15 @@ Last updated: 2026-05-14
    - Validate blocked/discarded exclusions, public-preview/private-delivery parity, sidecar/private-delivery/discarded-media manifests, catalog consistency, and payload size budgets.
    - Keep `npm run validate` mandatory before publish.
 
-23. **Keep long-horizon media and repo cleanup on the backburner.**
+27. **Add an Owner state-table browser.**
+   - Build an Owner-only view for the generated state artifacts, starting with `tmp/photo-state-tsv.tgz` / `tmp/photo-state-tsv/` and keeping SQLite as an optional local inspection backend.
+   - Show available tables such as `photos`, `photo_states`, `keywords`, `r2_objects`, `photo_metadata`, camera/lens lookups, manifest files, collections, and Owner country-assignment audit tables.
+   - Support table switching, column visibility, sorting, filters, quick search, row count summaries, and copy/export for selected rows.
+   - Keep searches and filters in browser memory for the loaded TSV data; do not rely on SQLite indexes for the primary UI path.
+   - Add photo-aware affordances where useful: open the public/Owner detail page, jump to collection, show R2 keys, and surface attention-style flags.
+   - Keep this localhost/Owner-only and out of the public buyer bundle.
+
+28. **Keep long-horizon media and repo cleanup on the backburner.**
    - Add a deliberate Owner button to write Lightroom-style XMP sidecars beside masters from manifest metadata when sidecar publishing becomes useful.
    - Decide whether videos are public gallery items, Owner-only review items, buyer deliverables, or a separate collection type.
    - Preserve 4K where available; determine whether that requires original video export rather than Photos' normal rendered export.
@@ -221,14 +252,6 @@ Last updated: 2026-05-14
    - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
    - Keep compatibility redirects or careful cache-bust updates for any renamed public HTML/JS entrypoints.
    - Repair and refresh architecture artifacts after account/auth/payment decisions settle.
-
-24. **Add an Owner state-table browser.**
-   - Build an Owner-only view for the generated state artifacts, starting with `tmp/photo-state-tsv.tgz` / `tmp/photo-state-tsv/` and keeping SQLite as an optional local inspection backend.
-   - Show available tables such as `photos`, `photo_states`, `keywords`, `r2_objects`, `photo_metadata`, camera/lens lookups, manifest files, collections, and Owner country-assignment audit tables.
-   - Support table switching, column visibility, sorting, filters, quick search, row count summaries, and copy/export for selected rows.
-   - Keep searches and filters in browser memory for the loaded TSV data; do not rely on SQLite indexes for the primary UI path.
-   - Add photo-aware affordances where useful: open the public/Owner detail page, jump to collection, show R2 keys, and surface attention-style flags.
-   - Keep this localhost/Owner-only and out of the public buyer bundle.
 
 ## Completed Recently
 
@@ -258,5 +281,8 @@ Last updated: 2026-05-14
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.
 - Moved public preview delivery off the checkout Worker bridge by enabling the public R2 `r2.dev` endpoint and pointing `media-config.js` at it.
 - Added pre-Stripe private delivery availability checks, repeatable per-file downloads, and daily master-chain repair/prune automation.
+- Moved the giant public browser catalog out of `photos-data.js` into TSV shards under `assets/catalog/`, with gzip copies and a small compatibility bootstrap.
+- Updated validation, export, title/keyword queue generation, social package generation, Worker catalog generation, Worker tests, and local Worker server to read the TSV-backed catalog.
+- Restored passing `npm test` and `npm run validate` after the TSV migration and Camera/AI price-tier test refresh.
 - Factored gallery card rendering into `gallery-card.js` and moved Blocked review onto the same card/masonry treatment as public galleries.
 - Added the Title/Keywords Owner approval queue with compact rows, eager thumbnail loading, row autosave, side-by-side approve/reject, reject comments, explicit propagation, keyboard row selection, H/X block shortcuts, and saved-row filtering after page reload.

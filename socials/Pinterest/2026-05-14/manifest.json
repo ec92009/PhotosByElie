@@ -1,0 +1,49 @@
+{
+  "date": "2026-05-14",
+  "platform": "Pinterest",
+  "account": "@photosbyelie",
+  "board": "Paris and France Photography",
+  "status": "drafted_not_published",
+  "title": "Eglise des Invalides, Paris",
+  "description": "Eglise des Invalides, Paris - France, 2022. Travel, architecture, and archive photography by Elie.",
+  "alt_text": "Eglise des Invalides, Paris, France.",
+  "destination": "https://ec92009.github.io/PhotosByElie/photo.html?id=20220506-154558-03388-a887904b4b",
+  "staged_single_pin": {
+    "photo_id": "20220506-154558-03388-a887904b4b",
+    "image": "images/staged-single-pin-2x3.jpg",
+    "published_asset": "https://ec92009.github.io/PhotosByElie/assets/social-pins/pinterest/2026-05-14/eglise-des-invalides-paris-2x3.jpg",
+    "landing_page": "https://ec92009.github.io/PhotosByElie/assets/social-pins/pinterest/2026-05-14/eglise-des-invalides-paris-pin.html"
+  },
+  "carousel_candidates": [
+    {
+      "label": "Nave",
+      "photo_id": "20220506-154558-03388-a887904b4b",
+      "image": "images/01-nave.jpg",
+      "source": "source-previews/01-nave-source.jpg"
+    },
+    {
+      "label": "Dome monument",
+      "photo_id": "20220506-145248-03337-8deb7b57a5",
+      "image": "images/02-dome-monument.jpg",
+      "source": "source-previews/02-dome-monument-source.jpg"
+    },
+    {
+      "label": "Dome ceiling",
+      "photo_id": "20220506-145149-03333-e92838da6f",
+      "image": "images/03-dome-ceiling.jpg",
+      "source": "source-previews/03-dome-ceiling-source.jpg"
+    },
+    {
+      "label": "Napoleon tomb",
+      "photo_id": "20220506-045942-03172-b368612e02",
+      "image": "images/04-napoleon-tomb.jpg",
+      "source": "source-previews/04-napoleon-tomb-source.jpg"
+    },
+    {
+      "label": "Dome wide",
+      "photo_id": "20220506-044820-03115-d18397db96",
+      "image": "images/05-dome-wide.jpg",
+      "source": "source-previews/05-dome-wide-source.jpg"
+    }
+  ]
+}

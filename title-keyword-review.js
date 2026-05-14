@@ -467,9 +467,9 @@
           blocked: [{ photo_id: photoId, blocked: true }],
         }).then(() => {
           card.classList.add("is-owner-actioned");
-          setRowStatus(card, "Blocked", "saved");
+          setRowStatus(card, "Basketed", "saved");
           removeReviewCard(photoId, card);
-          if (status) status.textContent = `${photoId} moved to Blocked and saved to this review record.`;
+          if (status) status.textContent = `${photoId} moved to Waste Basket and saved to this review record.`;
         });
       }).catch((error) => {
         setRowStatus(card, "Block failed", "error");

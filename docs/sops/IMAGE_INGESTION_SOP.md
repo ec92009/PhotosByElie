@@ -86,9 +86,9 @@ The builder is designed to be interrupted and resumed.
 - Keep `tmp/import-cache` untracked. Hidden uses JSON state only (`assets/hidden/hidden-blacklist.json` and local `assets/hidden/hidden-data.json`); do not keep local preview JPGs under Hidden.
 - Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are exported handoff artifacts for localhost Unknown-to-country moves, while the ignored local SQLite owner-state tables are the write path. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
 - Keep `assets/owner-actions/keyword-blacklist.json` tracked. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite photos/JPGs.
-- Treat Blocked/Discarded preview media as temporary undo-window assets. The current default retention target is 24 hours after the Owner action. After that, delete public/private preview derivatives and keep only durable tombstone state: photo id plus blacklisted master/source path so future Saturn/import sweeps do not resurrect the file.
+- Treat Waste Basket media as owner-controlled undo assets, not clock-controlled assets. Basketed photos can be put back until the owner empties the basket; emptying deletes public previews, private masters, and private render triplets, then keeps only durable tombstone state: photo id plus blacklisted master/source path so future Saturn/import sweeps do not resurrect the file.
 - Do not paste exact GPS coordinates into public site data.
-- Review public keywords before promoting them into `photos-data.js`.
+- Review public keywords before promoting them into the generated catalog TSV/bootstrap files.
 - Use `--redact-private-keywords` if generating a sanitized manifest for publishing or review.
 - Use `--redact-gps` for a run that should not write the private GPS file at all.
 
@@ -109,7 +109,7 @@ We are walking away from the old Curation Pass workflow. Review snapshots are re
 Before committing a gallery import:
 
 ```bash
-node --check photos-data.js photo-gallery.js photo-detail.js basket.js liked.js photos.js
+node --check photos-data.js scripts/catalog_tsv.cjs scripts/write_catalog_tsv.cjs photo-gallery.js photo-detail.js basket.js liked.js photos.js
 python3 - <<'PY'
 from html.parser import HTMLParser
 from pathlib import Path

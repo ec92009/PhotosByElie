@@ -780,14 +780,14 @@ if (localModerationEnabled) {
     }
     if (key === "x" || key === "b" || key === "h") {
       if (hiddenActions.has(photo.id)) {
-        status.textContent = `${photo.title} is already Blocked.`;
+        status.textContent = `${photo.title} is already in the Waste Basket.`;
         return;
       }
       try {
         await hiddenActions.mark(photo.id);
         navigateAfterHide();
       } catch (error) {
-        status.textContent = error?.message || "Could not move photo to Blocked.";
+        status.textContent = error?.message || "Could not move photo to Waste Basket.";
       }
       return;
     }
@@ -796,12 +796,12 @@ if (localModerationEnabled) {
     try {
       undoneId = await hiddenActions.undo(photo.id);
     } catch (error) {
-      status.textContent = error?.message || "Could not undo the block.";
+      status.textContent = error?.message || "Could not undo the basket move.";
       return;
     }
     status.textContent = undoneId
-      ? `${photo.title} moved back from Blocked.`
-      : "No blocked photo to undo.";
+      ? `${photo.title} moved back from Waste Basket.`
+      : "No basketed photo to undo.";
   });
 
   window.addEventListener("photosbyelie:hiddenchange", () => {

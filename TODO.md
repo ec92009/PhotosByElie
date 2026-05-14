@@ -4,7 +4,7 @@ Last updated: 2026-05-14
 
 ## Current Facts
 
-- Local visible build: `v74.34`.
+- Local visible build: `v74.35`.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - The Expo cap is retired. Publish all eligible cloud-backed previews unless basketed/discarded or explicitly ineligible.
@@ -65,7 +65,7 @@ Last updated: 2026-05-14
    - Keep the browser public catalog path separate from local diagnostic/state tables.
 
 4. **Split public catalog TSV by collection.**
-   - Current v74.34 still loads one full `assets/catalog/photos.tsv`.
+   - Current v74.35 still loads one full `assets/catalog/photos.tsv`.
    - Generate per-collection TSV shards such as `france.tsv`, `usa.tsv`, `spain.tsv`, and `ai.tsv`.
    - Load only the requested gallery collection where possible.
    - Keep a small index/collection TSV for homepage and navigation.
@@ -249,7 +249,7 @@ Last updated: 2026-05-14
    - Keep file-download throttling intentionally minimal. Repeat downloads are currently allowed; do not add restrictions unless abuse or sales volume proves they are needed.
    - Keep root HTML files while GitHub Pages serves from repo root.
    - Revisit `site/`, `public/`, `js/`, or `css/` structure after media/payment paths stabilize.
-   - Do a semantic filename pass after the product language settles: `hidden-*` files now power Blocked UI, and `owner-auth.js` now powers helper availability.
+   - Do a semantic filename pass after the product language settles: `hidden-*` files now power Waste Basket UI, and `owner-auth.js` now powers helper availability.
    - Keep compatibility redirects or careful cache-bust updates for any renamed public HTML/JS entrypoints.
    - Repair and refresh architecture artifacts after account/auth/payment decisions settle.
 
@@ -257,12 +257,12 @@ Last updated: 2026-05-14
 
 - Added gallery search on public/Owner gallery surfaces with title and keyword matching.
 - Added an initial collection-wide keyword removal path for Owner; this should be replaced by the planned checkbox modal workflow.
-- Split the homepage first render from the full catalog: `index.html` now uses `home-data.js` immediately and downloads `photos-data.js` in the background.
+- Split the homepage first render from the full catalog: `index.html` now uses `home-data.js` immediately and loads the TSV-backed catalog bootstrap in the background.
 - Accepted the private R2 deliverable coverage / flat ZIP input check as done for now and retired it from the active backlog.
 - Widened basket thumbnails to about half the row on desktop, with panoramas aligned to the top of the basket card.
 - Made the local mock-checkout result action simulate payment instead of opening a fake mock Stripe URL.
 - Added `g`/`G` gallery density keyboard shortcuts.
-- Refreshed docs around media immutability, manifest-only Owner edits, Blocked terminology, and XMP sidecar maintenance as an explicit future Owner action.
+- Refreshed docs around media immutability, manifest-only Owner edits, Waste Basket terminology, and XMP sidecar maintenance as an explicit future Owner action.
 - Fixed Back to gallery from detail so it restores the originating gallery, filters/sort context, selected photo, and scroll position.
 - Retired the Expo cap and promoted the full cloud-backed catalog.
 - Marked the manual cloud media sweep follow-up as finished and removed it from active backlog.
@@ -272,10 +272,10 @@ Last updated: 2026-05-14
 - Added `assets/discarded-media-manifest.json`.
 - Added private delivery backfill tooling.
 - Added discarded-media R2 cleanup tooling.
-- Made discard first-class: Owner galleries and the Blocked review page accept `D`, discarded photos get their own durable tombstone file, and cleanup/import tools no longer treat the blocked list as the discard list.
+- Made discard first-class: Owner galleries and the Waste Basket review page accept `D`, discarded photos get their own durable tombstone file, and cleanup/import tools no longer treat the basket/blacklist as the discard list.
 - Added daily cloud media sweep automation with lock-guarded wrapper.
 - Started a manual cloud media sweep with the same wrapper used by automation.
-- Added localhost-only Owner helper endpoints for catalog, metadata, Blocked, Unknown, R2 progress, and R2 action endpoints.
+- Added localhost-only Owner helper endpoints for catalog, metadata, Waste Basket, Unknown, R2 progress, and R2 action endpoints.
 - Added Owner R2 coverage counts with a repair button that starts the lock-guarded cloud media sweep.
 - Added first-class Camera / AI origin handling across gallery filters, detail metadata, Owner counts, and Worker checkout pricing.
 - Wired real Stripe Checkout and webhook verification behind Worker configuration.
@@ -284,5 +284,5 @@ Last updated: 2026-05-14
 - Moved the giant public browser catalog out of `photos-data.js` into TSV shards under `assets/catalog/`, with gzip copies and a small compatibility bootstrap.
 - Updated validation, export, title/keyword queue generation, social package generation, Worker catalog generation, Worker tests, and local Worker server to read the TSV-backed catalog.
 - Restored passing `npm test` and `npm run validate` after the TSV migration and Camera/AI price-tier test refresh.
-- Factored gallery card rendering into `gallery-card.js` and moved Blocked review onto the same card/masonry treatment as public galleries.
+- Factored gallery card rendering into `gallery-card.js` and moved Waste Basket review onto the same card/masonry treatment as public galleries.
 - Added the Title/Keywords Owner approval queue with compact rows, eager thumbnail loading, row autosave, side-by-side approve/reject, reject comments, explicit propagation, keyboard row selection, H/X block shortcuts, and saved-row filtering after page reload.

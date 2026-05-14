@@ -1066,9 +1066,9 @@ if (galleryRoot && gallery) {
           await hiddenActions.mark(selected.id);
           selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
           renderGallery();
-          setGalleryStatus(`${selected.title} moved to Blocked.`);
+          setGalleryStatus(`${selected.title} moved to Waste Basket.`);
         } catch (error) {
-          setGalleryStatus(error?.message || "Could not move photo to Blocked.");
+          setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
         }
         event.preventDefault();
         return;
@@ -1097,13 +1097,13 @@ if (galleryRoot && gallery) {
       try {
         undoneId = await hiddenActions.undo();
       } catch (error) {
-        setGalleryStatus(error?.message || "Could not undo the last block.");
+        setGalleryStatus(error?.message || "Could not undo the last basket move.");
         event.preventDefault();
         return;
       }
       renderGallery();
       if (!undoneId) {
-        setGalleryStatus("No local blocked mark to undo.");
+        setGalleryStatus("No local basket move to undo.");
         return;
       }
       const nextPhotos = filteredVisiblePhotos();
@@ -1113,7 +1113,7 @@ if (galleryRoot && gallery) {
         expandGalleryToIncludeIndex(restoredIndex);
       }
       updateSelection();
-      setGalleryStatus("Last local blocked mark undone.");
+      setGalleryStatus("Last local basket move undone.");
       event.preventDefault();
     });
 

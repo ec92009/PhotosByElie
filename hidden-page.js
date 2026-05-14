@@ -210,20 +210,20 @@
     allHiddenPhotos = hiddenPhotos();
     if (!catalogsLoaded) {
       galleryRoot.innerHTML = `
-        <article class="mock-photo empty-gallery-card" aria-label="Loading blocked photos">
-          <span>Loading blocked photos</span>
+        <article class="mock-photo empty-gallery-card" aria-label="Loading Waste Basket photos">
+          <span>Loading Waste Basket photos</span>
         </article>
       `;
-      setStatus("Loading blocked photo catalogs.");
+      setStatus("Loading Waste Basket photo catalogs.");
       return;
     }
     if (!allHiddenPhotos.length) {
       galleryRoot.innerHTML = `
-        <article class="mock-photo empty-gallery-card" aria-label="No blocked photos">
-          <span>No blocked photos</span>
+        <article class="mock-photo empty-gallery-card" aria-label="No Waste Basket photos">
+          <span>No Waste Basket photos</span>
         </article>
       `;
-      setStatus("The blocked gallery is empty.");
+      setStatus("The Waste Basket is empty.");
       syncPagingControls(allHiddenPhotos);
       return;
     }
@@ -261,8 +261,8 @@
     syncPagingControls(allHiddenPhotos);
     updateSelection({ scroll: scrollSelection });
     setStatus(moreCount
-      ? `Showing ${photos.length} of ${allHiddenPhotos.length} blocked photos.`
-      : `${photos.length} blocked photo${photos.length === 1 ? "" : "s"}.`);
+      ? `Showing ${photos.length} of ${allHiddenPhotos.length} Waste Basket photos.`
+      : `${photos.length} Waste Basket photo${photos.length === 1 ? "" : "s"}.`);
   };
 
   window.addEventListener("resize", () => {

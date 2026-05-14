@@ -584,3 +584,17 @@ _No David automation results recorded yet._
 - Browser verification: Owner page and France gallery loaded at v74.34 and fetched `assets/catalog/collections.tsv` plus `assets/catalog/photos.tsv`.
 - Checks passed: `npm test`, `npm run validate`, `node --check` on changed JS/CJS/MJS, Python compile for touched Python scripts, and `git diff --check`.
 - Notes: Waste Basket purge was not resumed. Existing unrelated dirty/untracked owner/generated files remain outside this change.
+
+## 2026-05-14 - TSV/Waste Basket docs and page sweep
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Run time: 2026-05-14 15:51 CEST
+- Result: Swept docs, scripts, and visible page strings so the TSV-backed catalog and Owner-facing Waste Basket model are current after the large catalog-data change.
+- Docs updated: `README.md`, `HANDOFF.md`, `SUMMARY.md`, `TODO.md`, `scripts/README.md`, `docs/architecture/static-first-media-hosting.md`, `docs/sops/IMAGE_INGESTION_SOP.md`, and the title/keyword review SOP.
+- Script/page alignment: helper messages now refer to TSV-backed catalog loading and Owner-facing basket behavior while retaining existing internal `hidden`/`blocked` filenames and JSON fields.
+- Visible version bumped to v74.35.
+- Browser verification: Owner page loaded at `http://localhost:8000/owner.html?v=74.35&run=docs-sweep`; France gallery loaded at `http://localhost:8000/gallery.html?gallery=france&v=74.35&run=docs-sweep` with 48 rendered photo cards.
+- Checks passed: targeted stale-phrase sweep, `git diff --check`, JS parse checks, Python compile checks, `npm test`, and `npm run validate`.
+- Note: During browser smoke the helper received one stale `r2-fix` POST from the open Owner page, but the local server was stopped and no tracked file changes from that helper action were staged.
+- Notes: Existing unrelated dirty/generated files remain unstaged, including discard/expo manifests and local owner-action artifacts.

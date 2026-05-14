@@ -176,7 +176,7 @@ const pricing = {
   notes: [
     "Storage bytes are measured; R2 Class A/Class B operations and Workers request/CPU usage need Cloudflare analytics to become invoice-complete.",
     "R2 billing uses GB-month, not GiB-month. Displayed byte totals use binary units.",
-    "Current R2 object bytes are read from live bucket listings. Blocked/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted.",
+    "Current R2 object bytes are read from live bucket listings. Waste Basket/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted.",
   ],
 };
 const usdForBytes = (bytes, includeFreeTier = false) => {

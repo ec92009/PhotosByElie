@@ -13,7 +13,7 @@ The current project shape bends around GitHub limits because GitHub Pages is doi
 
 The first job is a good fit. The second job is the source of the acrobatics.
 
-GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog JSON, and public gallery pages. Photo binaries do not need to live in GitHub long term.
+GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog TSV/bootstrap files, and public gallery pages. Photo binaries do not need to live in GitHub long term.
 
 ## Future Media States
 
@@ -31,7 +31,7 @@ Each photo also has a curation state:
 
 - Expo.
 - Reserve.
-- Blocked.
+- Waste Basket.
 - Discarded.
 
 Those states should be metadata and/or storage location concerns. They should not force GitHub to carry the full media vault.
@@ -40,7 +40,7 @@ Those states should be metadata and/or storage location concerns. They should no
 
 The durable direction is static-first, not necessarily static-only:
 
-- GitHub Pages hosts the public storefront and catalog files.
+- GitHub Pages hosts the public storefront and TSV-backed catalog files.
 - A public media CDN or object store hosts public display derivatives.
 - Private/local storage keeps protected sales assets.
 - A tiny trusted service may eventually handle payment callbacks, delivery ZIPs, signed links, and print-on-demand order submission.
@@ -90,9 +90,9 @@ Expected private storage contents:
 - Lazily generated clean delivery sizes, such as 6MP, 3MP, and 1MP.
 - Delivery ZIP files stored under the purchase order ID.
 
-Smaller clean delivery derivatives are generated/uploaded by the media pipeline and then reused. After masters, private render triplets, and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; blocked/discarded cleanup is the exception.
+Smaller clean delivery derivatives are generated/uploaded by the media pipeline and then reused. After masters, private render triplets, and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; Waste Basket/discarded cleanup is the exception.
 
-Blocked and discarded media should use a short undo window rather than permanent preview retention. Once a photo is blocked or discarded, it should leave the public catalog immediately. Public preview derivatives may stay briefly so Owner undo/review remains humane; the current default target is 24 hours. After that window, public/private preview derivatives can be purged from R2. The durable record is the blocked/discarded photo id plus the blacklisted master/source path needed to keep future imports from resurrecting the same file.
+Waste Basket media retention is owner-controlled, not clock-controlled. Once a photo is basketed or discarded, it should leave the public catalog immediately. While it remains in the basket, the owner can put it back; emptying the basket purges public previews, private masters, and private render triplets from R2, then keeps only the durable blacklist/discard tombstone needed to prevent future imports from resurrecting the same master.
 
 Delivery ZIP files should remain available for future re-download under their purchase order ID. Access should be rate-limited, with a rough starting rule of no more than one delivery ZIP download per order per hour. The exact rule can change later, but the intent is to avoid accidental or hostile repeated downloads.
 

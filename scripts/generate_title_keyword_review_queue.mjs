@@ -654,7 +654,7 @@ const main = () => {
 
   const photosData = loadCatalogWindow(REPO_ROOT).photosByElieData;
   if (!photosData || typeof photosData !== "object") {
-    throw new Error("Could not load photos-data.js (window.photosByElieData).");
+    throw new Error("Could not load TSV-backed catalog data (window.photosByElieData).");
   }
 
   const blacklistPayload = JSON.parse(readText("assets/owner-actions/keyword-blacklist.json"));

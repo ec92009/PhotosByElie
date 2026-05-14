@@ -8,16 +8,18 @@ Use this when moving work between Max, David, or the laptop.
 - If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound reports and write outbound instructions for David in `MAX2DAVID.md`.
 - Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
 
-## Current Handoff: 2026-05-11 Revenue Track
+## Current Handoff: 2026-05-14 Revenue Track
 
-- Repo: `/Users/ecohen/Dev/photosByElie`
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v73.0`
-- Latest pushed commit: `a04000ce photosbyelie: refresh business backlog docs`
+- Current visible build: `v74.35`
+- Recent catalog/docs baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
-- Blocked catalog: `4,384` blocked photos. Discarded tombstones are currently empty.
+- Public catalog data is TSV-backed: `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv` hold the heavy catalog payload, while `photos-data.js` is only a small compatibility bootstrap for the existing `window.photosByElieData` browser contract.
+- Waste Basket is the Owner-facing model for unwanted photos. Basketed photos are live-blacklisted and can be put back; emptying the basket deletes public previews, private masters, and private render triplets, then leaves durable tombstones so those masters do not return.
+- Waste Basket purge was intentionally paused for the TSV migration. Resume only when ready to monitor the `Cloud media left` progress.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Public browsing now loads previews directly from the public R2 `r2.dev` endpoint: `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev`.
@@ -25,18 +27,18 @@ Use this when moving work between Max, David, or the laptop.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
 - Public buyer delivery uses per-file private R2 download tokens. Local mock delivery can still generate flat ZIPs for test convenience.
-- Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalogs only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
+- Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalog TSV/bootstrap files only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
 - Physical print/frame products are buyer-hidden by default. Owner can deliberately enable them on localhost for review, but digital checkout should be proven first.
 - Owner has local price editing. Published defaults now distinguish camera-photo digital downloads from lower AI-origin downloads, with print/frame launch prices also refreshed; moving those defaults into a dedicated shared price-list file remains high priority.
 - Camera vs AI is now a first-class catalog origin (`sourceOrigin`) used by public gallery filters, detail metadata, Owner active-catalog counts, and Worker checkout pricing. Do not rely only on the `ai` collection slug for AI-origin behavior.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
-- Blocked review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
-- Country gallery HTML files are compatibility shells. The next architecture cleanup should make collection/country a URL parameter on one gallery route, while preserving old country URLs as redirects or wrappers.
+- Waste Basket review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
+- Public collection pages use the shared `gallery.html?gallery=<slug>` route.
 
 ## First Commands On A Machine
 
 ```bash
-cd /Users/ecohen/Dev/photosByElie
+cd /Users/ecohen/Dev/PhotosByElie
 git pull --ff-only origin main
 npm install
 npm test
@@ -107,7 +109,7 @@ The sweep:
 2. Deletes discarded public/private R2 media while preserving tombstones.
 3. Scans Saturn Camera, Apple Photos album exports, and Leonardo developed-source folders.
 4. Imports/uploads only non-discarded candidates.
-5. Regenerates `photos-data.js`, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
+5. Regenerates `assets/catalog/*.tsv`, the small `photos-data.js` compatibility bootstrap, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
 6. Backfills missing private JPG 1/3/6 MP render triplets.
 7. Deletes discarded R2 media again.
 8. Runs tests and validation.

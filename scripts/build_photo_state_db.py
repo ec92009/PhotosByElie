@@ -30,7 +30,7 @@ MANIFEST_PATHS = [
     ("country-assignments-index", Path("assets/owner-actions/country-assignments.json")),
     ("storage-estimate", Path("assets/storage-estimate.json")),
     ("home-data", Path("home-data.js")),
-    ("photos-data", Path("photos-data.js")),
+    ("catalog-bootstrap", Path("photos-data.js")),
     ("r2-upload-log", Path(".review-logs/r2-upload-state.jsonl")),
     ("r2-delete-log", Path(".review-logs/r2-delete-state.jsonl")),
 ]
@@ -612,7 +612,7 @@ def write_db(repo_root: Path, output: Path) -> None:
 
     photos_data = load_window_data(repo_root, Path("photos-data.js"), "photosByElieData")
     home_data = load_window_data(repo_root, Path("home-data.js"), "photosByElieHomeData")
-    builder.absorb_collections(photos_data, "public_catalog", "photos-data.js")
+    builder.absorb_collections(photos_data, "public_catalog", "assets/catalog/*.tsv via photos-data.js")
     builder.absorb_collections(home_data, "home_data", "home-data.js")
     builder.absorb_import_cache(load_json(repo_root / IMPORT_CACHE_MANIFEST, {}))
     builder.absorb_expo_manifest(load_json(repo_root / "assets/expo-manifest.json", {}))

@@ -17,7 +17,9 @@ Proposal/rejection state lives in `assets/owner-actions/title-keyword-review-que
 3. The generator must:
    - Work newest backward.
    - Prioritize photos marked rejected/rework before ordinary new photos.
-   - Fill the batch to 100 total photos where available.
+   - Include all eligible rejected/rework photos first; these are a priority add-on and do not count against the ordinary-new-photo limit.
+   - Then add up to 100 ordinary new photos, newest first, where available.
+   - Do not sort all candidates with rework first and then take the first 100 total rows, because each rework row would incorrectly replace one ordinary new photo.
    - Skip photos with `Title_Keywords_Reviewed`.
    - Skip photos with `Title_Keywords_Proposed` unless they also have rejected/rework state.
    - Exclude blacklisted keywords from proposed keywords, without using the blacklist to filter photos.
@@ -51,7 +53,7 @@ The page supports row selection. Single-click selects a row without opening deta
 - `P`: propagate the selected approve/reject state to rows from the same gallery within a two-hour capture window.
 - `H` / `X`: block the photo using the helper's `hide` action.
 
-The Propagate button must remain explicit and sit below the row status. Blocked rows disappear immediately after the helper confirms success. Approved/rejected rows remain visible in the current browser session, but when the Owner leaves or reloads the page, rows already saved in `approvals-<batch>.json` should no longer be shown.
+The Propagate button must remain explicit and sit below the row status. Basketed rows disappear immediately after the helper confirms success. Approved/rejected rows remain visible in the current browser session, but when the Owner leaves or reloads the page, rows already saved in `approvals-<batch>.json` should no longer be shown.
 
 ## Save Behavior
 

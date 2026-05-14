@@ -377,7 +377,7 @@
       const latest = read();
       if (latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
       window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
-        detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Blocked." },
+        detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
       }));
     });
     return nextItems;

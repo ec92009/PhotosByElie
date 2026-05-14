@@ -620,9 +620,9 @@
           selectedPhotoId = "";
           renderPreservingScroll(scrollAnchor);
         });
-        setStatus(`${photo.title} moved from Unknown to Blocked.`);
+        setStatus(`${photo.title} moved from Unknown to Waste Basket.`);
       } catch (error) {
-        setStatus(error?.message || "Could not move unknown photo to Blocked.");
+        setStatus(error?.message || "Could not move unknown photo to Waste Basket.");
       }
       return;
     }
@@ -632,12 +632,12 @@
     try {
       restoredId = await hiddenActions.undo(lastHiddenPhotoId);
     } catch (error) {
-      setStatus(error?.message || "Could not undo the block.");
+      setStatus(error?.message || "Could not undo the basket move.");
       return;
     }
     if (restoredId) selectedPhotoId = restoredId;
     renderPreservingScroll();
-    setStatus(restoredId ? "Last blocked unknown photo moved back." : "No blocked unknown photo to undo.");
+    setStatus(restoredId ? "Last basketed unknown photo moved back." : "No basketed unknown photo to undo.");
   });
 
   window.addEventListener("photosbyelie:hiddenchange", () => {

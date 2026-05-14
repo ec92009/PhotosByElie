@@ -7,8 +7,8 @@ Date: 2026-05-14
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.34`
-- Latest pushed commit: `c6306eed photosbyelie: move public catalog to TSV`
+- Current visible build: `v74.35`
+- Recent pushed catalog/docs commits include `c6306eed photosbyelie: move public catalog to TSV` and `be5c6014 photosbyelie: refresh TSV migration notes`.
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction on David: read `MAX2DAVID.md` as inbound context and write David reports to `DAVID2MAX.md`.
 - Public previews resolve from R2/CDN keys. Do not restore local `assets/expo` or `assets/reserve` preview folders.
@@ -39,8 +39,8 @@ Date: 2026-05-14
   - Worker catalog generation
   - Worker tests and local Worker server
   - export/owner-state compatibility paths
-- The version was bumped to `v74.34`.
-- Browser smoke checks verified the Owner page and France gallery load through TSV at v74.34.
+- The version was bumped to `v74.35`.
+- Browser smoke checks verified the Owner page and France gallery load through TSV at v74.35.
 - Checkout pricing tests were updated to match restored Camera/AI tier pricing.
 - The user framed a useful product-design heuristic:
   - Spec: imagine new behavior and describe what it should do.
@@ -62,8 +62,8 @@ Date: 2026-05-14
 
 - Latest pushed TSV migration commit: `c6306eed photosbyelie: move public catalog to TSV`
 - Browser smoke checks:
-  - `http://127.0.0.1:8000/owner.html?v=74.34&run=tsv-catalog`
-  - `http://127.0.0.1:8000/gallery.html?gallery=france&v=74.34&run=tsv-catalog`
+  - `http://127.0.0.1:8000/owner.html?v=74.35&run=tsv-catalog`
+  - `http://127.0.0.1:8000/gallery.html?gallery=france&v=74.35&run=tsv-catalog`
 - Passed:
   - `npm test`
   - `npm run validate`

@@ -76,7 +76,7 @@ For normal localhost preview with Owner tools, run the small local server instea
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page update the blocked blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files, but adds localhost-only endpoints that let the Owner page update the Waste Basket blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
 
 Owner mutation endpoints are unlocked on localhost by the helper server without a password.
 
@@ -88,7 +88,7 @@ python3 scripts/local_server.py 8000 --bind 0.0.0.0 --allow-lan-owner
 
 We are walking away from the old Curation Pass workflow. Live localhost review is now the normal path; review snapshots are retained only as historical audit files.
 
-The Expo cap is retired. For standalone exports, omit `--expo-cap` so the exporter publishes every eligible cloud-backed preview that is not blocked, discarded, RAW-only, or otherwise ineligible:
+The Expo cap is retired. For standalone exports, omit `--expo-cap` so the exporter publishes every eligible cloud-backed preview that is not basketed, discarded, RAW-only, or otherwise ineligible:
 
 ```bash
 python3 scripts/export_photos_data.py
@@ -118,9 +118,9 @@ python3 scripts/asset_state.py \
   --rebuild-missing-manifests
 ```
 
-That compatibility path applies country assignments and blocked choices from the snapshot. It is not the normal Owner flow anymore.
+That compatibility path applies country assignments and Waste Basket choices from the snapshot. It is not the normal Owner flow anymore.
 
-Because the local import cache and blocked review data are ignored by Git, a fresh sync may have `photos-data.js` and `assets/expo-manifest.json` but no local import-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
+Because the local import cache and Waste Basket review data are ignored by Git, a fresh sync may have `assets/catalog/*.tsv`, the `photos-data.js` bootstrap, and `assets/expo-manifest.json` but no local import-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
 
 ```bash
 python3 scripts/asset_state.py \
@@ -250,13 +250,13 @@ zsh -lc 'node scripts/repair_r2_master_chain.mjs --repair --prune'
 
 Run without flags for a report-only audit. The daily automation `Photos By Elie R2 master-chain repair` runs the repair/prune pass, then tests and validates.
 
-Refresh the Owner storage/cost estimate after a large import, backfill, or blocked-media cleanup:
+Refresh the Owner storage/cost estimate after a large import, backfill, or Waste Basket media cleanup:
 
 ```bash
 zsh -lc 'node scripts/write_storage_estimate.mjs'
 ```
 
-The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted blocked previews/renders are estimated from current average object sizes, while blocked master bytes come from the blocked catalog source metadata. The Owner bill card uses the same file to show consumed month-to-date storage cost, expected current-month storage bill, and next-month storage at the current rate. R2 operation usage and Worker request/CPU overages still require Cloudflare analytics before the estimate is invoice-complete.
+The estimate writes `assets/storage-estimate.json`. Current public/private bytes come from live R2 listings; already-deleted basketed previews/renders are estimated from current average object sizes, while basketed master bytes come from the Waste Basket catalog source metadata. The Owner bill card uses the same file to show consumed month-to-date storage cost, expected current-month storage bill, and next-month storage at the current rate. R2 operation usage and Worker request/CPU overages still require Cloudflare analytics before the estimate is invoice-complete.
 
 Dry-run the currently publishable Expo previews:
 

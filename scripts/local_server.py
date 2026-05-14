@@ -2216,7 +2216,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "worker_catalog": worker_catalog,
                     "site": site_state,
                 }
-            raise ValueError(f"photo not found in Expo, Reserve, or Blocked: {photo_id}")
+            raise ValueError(f"photo not found in Expo, Reserve, or Waste Basket: {photo_id}")
         source_slug, source_photo = found
         _source_state, original_slug = _hidden_provenance(source_photo, "expo", source_slug)
         source_assets = _photo_asset_paths(source_photo)

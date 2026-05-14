@@ -557,3 +557,18 @@ _No David automation results recorded yet._
 - Checks passed: `node --check owner.js`, `node --check scripts/write_storage_estimate.mjs`, `git diff --check`.
 - Commit pushed: `photosbyelie: restore owner cloud cost forecast`.
 - Notes: Existing untracked Owner approval/reserve/TSV files remain unstaged.
+
+## 2026-05-14 - Daily Health Check
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `790d5c4f0f0f7d0af965c21feb244b0c53219c60`
+- `git pull --ff-only`: failed (sandbox DNS: cannot resolve `github.com`).
+- `npm test`: failed (11/14). Key errors:
+  - `worker/checkout-worker.test.mjs:150` expected `5500` got `8100`
+  - `worker/checkout-worker.test.mjs:168` expected `5000` got `2900`
+  - `worker/checkout-worker.test.mjs:309` expected `4500` got `6500`
+- `npm run validate`: passed (`Validation OK`).
+- Notes:
+  - Working tree was already dirty at start (untracked generated/owner-action files present); health check did not modify them.
+  - Suggested next action: Investigate recent pricing/tier logic changes vs test expectations in `worker/checkout-worker.test.mjs` (do not update prod pricing based on tests alone); once clarified, update tests or code and rerun `npm test`.

@@ -4,7 +4,7 @@ Last updated: 2026-05-14
 
 ## Current Facts
 
-- Local visible build: `v74.36`.
+- Local visible build: `v74.37`.
 - Current social landing pattern: Pinterest/social traffic should land on first-party `campaign.html?c=...` mini-collections with an embedded-browser escape path, not directly on a single photo detail page.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
@@ -66,7 +66,7 @@ Last updated: 2026-05-14
    - Keep the browser public catalog path separate from local diagnostic/state tables.
 
 4. **Split public catalog TSV by collection.**
-   - Current v74.36 still loads one full `assets/catalog/photos.tsv`.
+   - Current v74.37 still loads one full `assets/catalog/photos.tsv`.
    - Generate per-collection TSV shards such as `france.tsv`, `usa.tsv`, `spain.tsv`, and `ai.tsv`.
    - Load only the requested gallery collection where possible.
    - Keep a small index/collection TSV for homepage and navigation.
@@ -153,7 +153,7 @@ Last updated: 2026-05-14
    - Add structured data where useful for image galleries/products.
    - Ensure titles and keywords support search-engine snippets without exposing Owner-only metadata.
 
-16. **Add more social mini-collections and rotate them through the homepage Featured section.**
+16. **Add more social/Pinterest featured campaigns and rotate them through the homepage Featured on Pinterest section.**
    - Build a few focused pages for likely buyers: travel/editorial licensing, wall art, AI imagery, country-specific photo sets, and “Photos By Elie” brand story.
    - Each page should lead directly to a relevant collection, liked flow, or basket action.
    - Use real images and concise copy rather than generic portfolio filler.

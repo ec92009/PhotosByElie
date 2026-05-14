@@ -613,3 +613,12 @@ _No David automation results recorded yet._
 - Visible version: v74.36.
 - Checks passed: `node --check` on touched JS, `git diff --check`, `npm test`, `npm run validate`, and in-app browser smoke for campaign embedded-warning/card counts, campaign search, and homepage Featured presence.
 - Notes: Existing unrelated dirty/generated owner state remains unstaged.
+
+## 2026-05-14 - Campaign grids share collection controls
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Updated social campaign pages to reuse the regular gallery masonry controller.
+- Behavior: Campaign grids now respond to the same floating Grid density and Fit/Fill controls as country collections, including panorama full-width behavior in Fit mode.
+- Copy: Homepage campaign shelf now says `Featured on Pinterest` instead of `Mini collections`.
+- Visible version: v74.37.

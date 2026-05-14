@@ -20,6 +20,16 @@
     openBrowserLink: $("[data-open-browser-link]"),
     copyBrowserLink: $("[data-copy-browser-link]"),
   };
+  const densityKey = "photosbyelie-gallery-columns";
+  const fitModeKey = "photosbyelie-gallery-fit-mode";
+  let primaryEntries = [];
+  let relatedEntries = [];
+  let searchEntries = [];
+  let viewControls = null;
+  let densityInput = null;
+  let densityValue = null;
+  let fitModeButtons = [];
+  const layoutControllers = [];
 
   const allPhotos = () => Object.entries(collections).flatMap(([collectionKey, collection]) => (
     (collection.photos || []).map((photo) => ({
@@ -31,12 +41,15 @@
 
   const photoIndex = new Map(allPhotos().map((entry) => [entry.photo.id, entry]));
 
-  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=74.36`;
+  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=74.37`;
 
-  const renderCards = (container, ids) => {
+  const entriesForIds = (ids) => (ids || [])
+    .map((id) => photoIndex.get(id))
+    .filter(Boolean);
+
+  const renderEntries = (container, entries) => {
     if (!container) return;
-    const cards = (ids || []).map((id, index) => {
-      const entry = photoIndex.get(id);
+    const cards = (entries || []).map((entry, index) => {
       if (!entry) return "";
       return window.photosByElieGalleryCard.renderPhotoCard({
         photo: entry.photo,
@@ -47,6 +60,106 @@
       });
     }).filter(Boolean);
     container.innerHTML = cards.join("");
+  };
+
+  const renderCards = (container, ids) => {
+    renderEntries(container, entriesForIds(ids));
+  };
+
+  const createLayoutController = (root, getPhotos) => {
+    if (!root || !window.photosByElieGalleryLayout?.createMasonryController) return null;
+    const controller = window.photosByElieGalleryLayout.createMasonryController({
+      root,
+      getPhotos,
+      densityKey,
+      fitModeKey,
+    });
+    layoutControllers.push(controller);
+    return controller;
+  };
+
+  const primaryLayout = createLayoutController(els.primary, () => primaryEntries.map((entry) => entry.photo));
+  const relatedLayout = createLayoutController(els.related, () => relatedEntries.map((entry) => entry.photo));
+  const searchLayout = createLayoutController(els.searchResults, () => searchEntries.map((entry) => entry.photo));
+
+  const applyCampaignDensity = () => {
+    layoutControllers.forEach((controller, index) => {
+      controller.applyDensityControls(index === 0 ? { input: densityInput, value: densityValue } : {});
+    });
+  };
+
+  const applyCampaignFitMode = () => {
+    layoutControllers.forEach((controller, index) => {
+      controller.applyFitMode(index === 0 ? fitModeButtons : []);
+    });
+  };
+
+  const applyCampaignPreviewLayout = () => {
+    primaryLayout?.applyPreviewLayout(primaryEntries.map((entry) => entry.photo));
+    relatedLayout?.applyPreviewLayout(relatedEntries.map((entry) => entry.photo));
+    searchLayout?.applyPreviewLayout(searchEntries.map((entry) => entry.photo));
+  };
+
+  const applyCampaignLayout = () => {
+    applyCampaignDensity();
+    applyCampaignFitMode();
+    applyCampaignPreviewLayout();
+    window.photosByEliePositionGalleryViewControls?.(viewControls);
+  };
+
+  const setCampaignDensityColumns = (columns) => {
+    layoutControllers.forEach((controller) => controller.setDensityColumns(columns));
+    applyCampaignLayout();
+  };
+
+  const setCampaignFitMode = (mode) => {
+    layoutControllers.forEach((controller) => controller.setFitMode(mode));
+    applyCampaignLayout();
+  };
+
+  const ensureCampaignViewControls = () => {
+    if (viewControls || !primaryLayout) return;
+    viewControls = document.createElement("div");
+    viewControls.className = "gallery-view-controls";
+    viewControls.setAttribute("aria-label", "Gallery view controls");
+    const densityControl = document.createElement("label");
+    densityControl.className = "gallery-density-control";
+    densityControl.innerHTML = `
+      <span>Grid</span>
+      <input type="range" min="1" max="${primaryLayout.maxDensityColumns()}" step="1" value="${primaryLayout.preferredDensityColumns()}" data-gallery-density/>
+      <b data-gallery-density-value>${primaryLayout.preferredDensityColumns()}</b>
+    `;
+    const fitControl = document.createElement("div");
+    fitControl.className = "gallery-fit-control";
+    fitControl.setAttribute("role", "group");
+    fitControl.setAttribute("aria-label", "Image fit");
+    fitControl.innerHTML = `
+      <button type="button" data-gallery-fit-mode="fit" aria-pressed="true">Fit</button>
+      <button type="button" data-gallery-fit-mode="fill" aria-pressed="false">Fill</button>
+    `;
+    const topButton = document.createElement("button");
+    topButton.className = "gallery-top-button";
+    topButton.type = "button";
+    topButton.setAttribute("aria-label", "Back to top");
+    topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
+    viewControls.append(densityControl, topButton, fitControl);
+    document.body.append(viewControls);
+    densityInput = densityControl.querySelector("[data-gallery-density]");
+    densityValue = densityControl.querySelector("[data-gallery-density-value]");
+    fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
+    topButton.addEventListener("click", () => {
+      const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    });
+    densityInput.addEventListener("input", () => setCampaignDensityColumns(densityInput.value));
+    fitControl.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-gallery-fit-mode]");
+      if (button) setCampaignFitMode(button.dataset.galleryFitMode);
+    });
+    window.addEventListener("resize", applyCampaignLayout);
+    window.addEventListener("scroll", () => window.photosByEliePositionGalleryViewControls?.(viewControls), { passive: true });
+    window.addEventListener("load", applyCampaignLayout, { once: true });
+    document.fonts?.ready?.then(applyCampaignLayout).catch(() => {});
   };
 
   const renderHero = (entry) => {
@@ -76,17 +189,13 @@
     const matches = allPhotos()
       .filter((entry) => terms.every((term) => searchableText(entry).includes(term)))
       .slice(0, 24);
+    searchEntries = matches;
     els.searchResults.hidden = matches.length === 0;
     els.searchStatus.textContent = matches.length
       ? `${matches.length} result${matches.length === 1 ? "" : "s"} shown.`
       : "No matching photos found.";
-    els.searchResults.innerHTML = matches.map((entry, index) => window.photosByElieGalleryCard.renderPhotoCard({
-      photo: entry.photo,
-      index,
-      href: photoHref(entry.photo.id),
-      collectionKey: entry.collectionKey,
-      collectionAccent: entry.collectionAccent,
-    })).join("");
+    renderEntries(els.searchResults, matches);
+    applyCampaignLayout();
   };
 
   const syncEmbeddedBrowserWarning = () => {
@@ -98,7 +207,7 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=74.36`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=74.37`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;
@@ -106,9 +215,13 @@
     if (els.eyebrow) els.eyebrow.textContent = campaign.eyebrow || "Photos By Elie";
     if (els.description) els.description.textContent = campaign.description || "";
     if (els.searchInput && campaign.searchPlaceholder) els.searchInput.placeholder = campaign.searchPlaceholder;
+    primaryEntries = entriesForIds(campaign.primaryPhotoIds || []);
+    relatedEntries = entriesForIds(campaign.relatedPhotoIds || []);
     renderHero(photoIndex.get(campaign.heroPhotoId || campaign.primaryPhotoIds?.[0]));
-    renderCards(els.primary, campaign.primaryPhotoIds || []);
-    renderCards(els.related, campaign.relatedPhotoIds || []);
+    renderEntries(els.primary, primaryEntries);
+    renderEntries(els.related, relatedEntries);
+    ensureCampaignViewControls();
+    applyCampaignLayout();
   };
 
   els.searchForm?.addEventListener("submit", (event) => {

@@ -7,7 +7,7 @@ Date: 2026-05-14
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.36`
+- Current visible build: `v74.37`
 - Recent pushed catalog/docs commits include `c6306eed photosbyelie: move public catalog to TSV` and `be5c6014 photosbyelie: refresh TSV migration notes`.
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction on David: read `MAX2DAVID.md` as inbound context and write David reports to `DAVID2MAX.md`.
@@ -33,7 +33,8 @@ Date: 2026-05-14
   - `assets/catalog/photos.tsv.gz` is about 577 KB.
 - The browser contract remains `window.photosByElieData`, so current pages continue to work while the data is now TSV-backed.
 - Pinterest/social buyer flow now lands on our own mini-collection page instead of a lone photo detail page. `campaign.html?c=pinterest-invalides-2026-05-14` shows the pinned Invalides photo, nine related shoot photos, six nearby Paris suggestions, and a local archive search.
-- The homepage has a Featured mini-collections section so future social campaigns have a first-party discovery shelf instead of becoming orphan entry points.
+- The homepage has a Featured on Pinterest section so future social campaigns have a first-party discovery shelf instead of becoming orphan entry points.
+- Campaign grids now reuse the regular collection masonry controller, including Grid density and Fit/Fill view controls.
 - Campaign, basket, and order pages detect common embedded social browsers and show an Open in browser / Copy link escape path, because Pinterest's in-app browser can block checkout redirects and downloads.
 - The Pinterest owner kit remains internal; its manifest now points the Pin destination at the mini-collection campaign URL.
 - Tooling was updated to read the TSV catalog:
@@ -43,8 +44,8 @@ Date: 2026-05-14
   - Worker catalog generation
   - Worker tests and local Worker server
   - export/owner-state compatibility paths
-- The version was bumped to `v74.36`.
-- Browser smoke checks verified the Owner page and France gallery load through TSV at v74.36.
+- The version was bumped to `v74.37`.
+- Browser smoke checks verified the Owner page and France gallery load through TSV at v74.37.
 - Checkout pricing tests were updated to match restored Camera/AI tier pricing.
 - The user framed a useful product-design heuristic:
   - Spec: imagine new behavior and describe what it should do.
@@ -66,8 +67,8 @@ Date: 2026-05-14
 
 - Latest pushed TSV migration commit: `c6306eed photosbyelie: move public catalog to TSV`
 - Browser smoke checks:
-  - `http://127.0.0.1:8000/owner.html?v=74.36&run=tsv-catalog`
-  - `http://127.0.0.1:8000/gallery.html?gallery=france&v=74.36&run=tsv-catalog`
+  - `http://127.0.0.1:8000/owner.html?v=74.37&run=tsv-catalog`
+  - `http://127.0.0.1:8000/gallery.html?gallery=france&v=74.37&run=tsv-catalog`
 - Passed:
   - `npm test`
   - `npm run validate`
@@ -102,7 +103,7 @@ Date: 2026-05-14
 13. Curate the first sellable storefront.
 14. Add conversion analytics.
 15. Improve public discovery and SEO.
-16. Add more social mini-collections and rotate them through the homepage Featured section.
+16. Add more social/Pinterest featured campaigns and rotate them through the homepage Featured on Pinterest section.
 17. Prepare launch and sales outreach.
 18. Replace temporary `r2.dev` media URL with a custom media domain.
 19. Refine gallery merchandising layout.

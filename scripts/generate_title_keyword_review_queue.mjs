@@ -703,9 +703,13 @@ const main = () => {
     return String(b.id).localeCompare(String(a.id));
   });
 
-  const batch = candidates.slice(0, args.limit);
+  const reworkBatch = candidates.filter((row) => row.reworkPriority);
+  const ordinaryBatch = candidates.filter((row) => !row.reworkPriority).slice(0, args.limit);
+  const batch = [...reworkBatch, ...ordinaryBatch];
   const rangeNewest = batch[0]?.capture?.sort || "";
   const rangeOldest = batch[batch.length - 1]?.capture?.sort || "";
+  const ordinaryRangeNewest = ordinaryBatch[0]?.capture?.sort || "";
+  const ordinaryRangeOldest = ordinaryBatch[ordinaryBatch.length - 1]?.capture?.sort || "";
 
   const photos = batch.map((row) => {
     const photo = row.photo || {};
@@ -804,6 +808,7 @@ const main = () => {
     generated_at: new Date().toISOString(),
     batch_id: batchId,
     limit: args.limit,
+    ordinary_new_limit: args.limit,
     review_flag: REVIEW_FLAG,
     proposal_state: {
       flag: PROPOSED_FLAG,
@@ -818,6 +823,14 @@ const main = () => {
     range: {
       newest: rangeNewest,
       oldest: rangeOldest,
+      ordinary_newest: ordinaryRangeNewest,
+      ordinary_oldest: ordinaryRangeOldest,
+    },
+    selection: {
+      total_count: batch.length,
+      ordinary_new_count: ordinaryBatch.length,
+      rework_count: reworkBatch.length,
+      ordinary_new_limit: args.limit,
     },
     skipped: {
       reviewed: skippedReviewed.filter(Boolean),
@@ -839,7 +852,8 @@ const main = () => {
     `Range: ${rangeNewest || "—"} .. ${rangeOldest || "—"}\n` +
     `Skipped reviewed: ${skippedReviewed.length}\n` +
     `Skipped proposed: ${skippedProposed.length}\n` +
-    `Rework priority: ${batch.filter((row) => row.reworkPriority).length}\n`,
+    `Ordinary new: ${ordinaryBatch.length}/${args.limit}\n` +
+    `Rework priority: ${reworkBatch.length}\n`,
   );
 };
 

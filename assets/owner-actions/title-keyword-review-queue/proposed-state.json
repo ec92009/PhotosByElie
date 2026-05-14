@@ -1,11 +1,111 @@
 {
   "format": "photosbyelie-title-keyword-proposal-state",
   "schema_version": 1,
-  "updated_at": "2026-05-13T19:08:18.320Z",
+  "updated_at": "2026-05-14T07:25:33.743Z",
   "state_flag": "Title_Keywords_Proposed",
   "review_flag": "Title_Keywords_Reviewed",
-  "photo_count": 262,
+  "photo_count": 362,
   "photo_ids": [
+    "20180522-1151-00835-e83ea8125d",
+    "20180522-1151-00837-3b90404c2a",
+    "20180522-1152-00839-0fd2439a9a",
+    "20180522-1152-00841-1290b7ad30",
+    "20180522-1153-00844-55c8d57db1",
+    "20180522-1153-00845-dfbb904491",
+    "20180522-1156-00849-97eb65fcd7",
+    "20180522-1243-00857-9016a8fb74",
+    "20180522-1243-00860-d80ba96fe3",
+    "20180522-1244-00861-1c8323b22f",
+    "20180522-1244-00862-d10dd36348",
+    "20180522-1245-00864-8e51015779",
+    "20180522-1246-00865-f227761feb",
+    "20180522-1246-00866-e54508e73b",
+    "20180522-1247-00867-20da9720f2",
+    "20180522-1251-00868-7319a58ddf",
+    "20180522-1252-00872-edb2ed6f2c",
+    "20180522-1252-00873-1e21d9efaa",
+    "20180522-1257-00875-b88ee8a0bc",
+    "20180522-1257-00876-8e04a7ee3e",
+    "20180522-1259-00877-3bb003eb2d",
+    "20180522-1259-00878-8f7fdbf73b",
+    "20180522-1300-00879-eea199db6c",
+    "20180522-1304-00881-db5009c014",
+    "20180522-1309-00886-84c424a432",
+    "20180522-1322-00888-08ac194d19",
+    "20180522-1322-00889-84c3a77b96",
+    "20180522-1323-00891-7930502b12",
+    "20180522-1325-00892-5b9c7eef8a",
+    "20180522-1326-00893-75d36d95eb",
+    "20180522-1326-00894-70f247c8bf",
+    "20180522-1333-00896-18f955bb6f",
+    "20180522-1335-00897-e59231f9bd",
+    "20180523-1054-00904-0d99c36c72",
+    "20180523-1158-00905-cda4564627",
+    "20180523-1158-00906-0c7b4b1a4a",
+    "20180523-1158-00907-6ce2b12655",
+    "20180523-1158-00908-c83ee908b8",
+    "20180523-1158-00909-ae9141c3d6",
+    "20180523-1158-00910-5757c7b525",
+    "20180523-1201-00911-eafaa28f50",
+    "20180523-1202-00912-a00fe362d5",
+    "20180523-1202-00913-897a1ed221",
+    "20180523-1210-00914-2cdae156c4",
+    "20180523-1210-00915-fab64fb7c8",
+    "20180523-1210-00916-b8e0288d68",
+    "20180523-1210-00918-3e378ecfd5",
+    "20180523-1212-00919-6df8338b03",
+    "20180523-1227-00921-6e41710e47",
+    "20180523-1232-00922-a14269681d",
+    "20180523-1253-00923-9853f3d6a1",
+    "20180523-1430-00925-26fcc1b7fe",
+    "20180523-1430-00926-d172f5ecc6",
+    "20180523-1431-00927-5d8be4af92",
+    "20180523-1431-00928-2f28a3e130",
+    "20180523-1436-00930-629888625d",
+    "20180523-1436-00931-d244aba917",
+    "20180523-1505-00933-be91168496",
+    "20180523-1842-00934-ac0d4c2359",
+    "20180524-1746-00940-636b34659d",
+    "20180524-1746-00941-72deedae61",
+    "20180525-1419-00943-554228f741",
+    "20180525-1420-00944-6079776b41",
+    "20180525-1439-00945-c37d4fa644",
+    "20180525-1439-00946-d866163437",
+    "20180525-1440-00948-f9444792d1",
+    "20180525-1440-00949-4323df4391",
+    "20180525-1440-00951-9d8859c6b7",
+    "20180525-1441-00952-0be82ccc8d",
+    "20180525-1442-00953-93073461ca",
+    "20180525-1443-00954-efcc015c68",
+    "20180525-1443-00955-ec24232696",
+    "20180525-1443-00956-a9e61b8dde",
+    "20180529-1739-15441-c012616b8d",
+    "20180529-1757-15382-4fb563774f",
+    "20180530-1458-15730-b90327218e",
+    "20180530-1508-14876-8349c69c56",
+    "20180530-1523-15556-0aac5ec9cc",
+    "20180712-1827-16407-476b03451a",
+    "20180712-1827-16605-457c78af75",
+    "20180731-1156-42014-420ac2b2d2",
+    "20180731-1226-42081-faf34323e9",
+    "20180731-1227-42017-4a4d4f3d8a",
+    "20180731-1238-42139-523fc863bd",
+    "20180813-0936-18935-ff4ebcc12a",
+    "20181020-1143-19559-d29e8bb4b8",
+    "20181113-1729-19714-e408f3becb",
+    "20181113-1748-16886-f468becf95",
+    "20190624-1826-16542-1eb5098247",
+    "20190624-1827-16232-feef5b78f4",
+    "20190723-1419-16523-3d4da421c4",
+    "20191114-1254-15649-pano-05f6c65b28",
+    "20191120-1218-17526-6b255bf1cf",
+    "20191121-1230-19526-pano-08e814918c",
+    "20191121-1447-19571-e626fda37c",
+    "20191121-1456-19535-cde6330de2",
+    "20191122-1655-16797-9068a18da9",
+    "20191127-1414-17325-9af304efa0",
+    "20191206-0605-17192-85701a04f9",
+    "20191207-1718-19516-5bc74a12ce",
     "20200719-0707-19625-99d9aec9ff",
     "20200830-0930-19440-736cbfc9a1",
     "20200830-0932-19541-17dd4fb5d4",
@@ -270,6 +370,1706 @@
     "wellness-retreats-yoga-meditation-holistic-treatments-h-7-upscale-531aa929-80ee-4410-a9a5-b9b7c0867199-jpgx2-8ff2009911"
   ],
   "photos": [
+    {
+      "photo_id": "20180522-1151-00835-e83ea8125d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1151-00837-3b90404c2a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1152-00839-0fd2439a9a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1152-00841-1290b7ad30",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1153-00844-55c8d57db1",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1153-00845-dfbb904491",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1156-00849-97eb65fcd7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1243-00857-9016a8fb74",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1243-00860-d80ba96fe3",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1244-00861-1c8323b22f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1244-00862-d10dd36348",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1245-00864-8e51015779",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1246-00865-f227761feb",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1246-00866-e54508e73b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1247-00867-20da9720f2",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1251-00868-7319a58ddf",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1252-00872-edb2ed6f2c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1252-00873-1e21d9efaa",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1257-00875-b88ee8a0bc",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1257-00876-8e04a7ee3e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1259-00877-3bb003eb2d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1259-00878-8f7fdbf73b",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1300-00879-eea199db6c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1304-00881-db5009c014",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1309-00886-84c424a432",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1322-00888-08ac194d19",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1322-00889-84c3a77b96",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1323-00891-7930502b12",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1325-00892-5b9c7eef8a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1326-00893-75d36d95eb",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1326-00894-70f247c8bf",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1333-00896-18f955bb6f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180522-1335-00897-e59231f9bd",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1054-00904-0d99c36c72",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00905-cda4564627",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00906-0c7b4b1a4a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00907-6ce2b12655",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00908-c83ee908b8",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00909-ae9141c3d6",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00910-5757c7b525",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1201-00911-eafaa28f50",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1202-00912-a00fe362d5",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1202-00913-897a1ed221",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00914-2cdae156c4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00915-fab64fb7c8",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00916-b8e0288d68",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00918-3e378ecfd5",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1212-00919-6df8338b03",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1227-00921-6e41710e47",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1232-00922-a14269681d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1253-00923-9853f3d6a1",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1430-00925-26fcc1b7fe",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1430-00926-d172f5ecc6",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1431-00927-5d8be4af92",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1431-00928-2f28a3e130",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1436-00930-629888625d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1436-00931-d244aba917",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1505-00933-be91168496",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180523-1842-00934-ac0d4c2359",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180524-1746-00940-636b34659d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180524-1746-00941-72deedae61",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1419-00943-554228f741",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1420-00944-6079776b41",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1439-00945-c37d4fa644",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1439-00946-d866163437",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1440-00948-f9444792d1",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1440-00949-4323df4391",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1440-00951-9d8859c6b7",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1441-00952-0be82ccc8d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1442-00953-93073461ca",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1443-00954-efcc015c68",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1443-00955-ec24232696",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180525-1443-00956-a9e61b8dde",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180529-1739-15441-c012616b8d",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180529-1757-15382-4fb563774f",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180530-1458-15730-b90327218e",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180530-1508-14876-8349c69c56",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180530-1523-15556-0aac5ec9cc",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180712-1827-16407-476b03451a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180712-1827-16605-457c78af75",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180731-1156-42014-420ac2b2d2",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180731-1226-42081-faf34323e9",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180731-1227-42017-4a4d4f3d8a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180731-1238-42139-523fc863bd",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20180813-0936-18935-ff4ebcc12a",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20181020-1143-19559-d29e8bb4b8",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20181113-1729-19714-e408f3becb",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20181113-1748-16886-f468becf95",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20190624-1826-16542-1eb5098247",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20190624-1827-16232-feef5b78f4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20190723-1419-16523-3d4da421c4",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191114-1254-15649-pano-05f6c65b28",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191120-1218-17526-6b255bf1cf",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191121-1230-19526-pano-08e814918c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191121-1447-19571-e626fda37c",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191121-1456-19535-cde6330de2",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191122-1655-16797-9068a18da9",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191127-1414-17325-9af304efa0",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191206-0605-17192-85701a04f9",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
+    {
+      "photo_id": "20191207-1718-19516-5bc74a12ce",
+      "state_tags": [
+        "Title_Keywords_Proposed"
+      ],
+      "review_state": "proposed",
+      "rework_priority": false,
+      "rejection_comment": "",
+      "rejected_count": 0,
+      "first_proposed_batch_id": "2026-05-14",
+      "latest_proposed_batch_id": "2026-05-14",
+      "first_proposed_at": "2026-05-14T07:25:33.741Z",
+      "latest_proposed_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
+      ]
+    },
     {
       "photo_id": "20200719-0707-19625-99d9aec9ff",
       "state_tags": [
@@ -1674,9 +3474,9 @@
       "rejection_comment": "",
       "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1692,9 +3492,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1796,9 +3596,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1814,9 +3614,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1832,9 +3632,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1867,9 +3667,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1885,9 +3685,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1903,9 +3703,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1921,9 +3721,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1939,9 +3739,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -1957,9 +3757,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -2332,9 +4132,9 @@
       "rejection_comment": "",
       "rejected_count": 9,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3686,9 +5486,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3704,9 +5504,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3722,9 +5522,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3758,9 +5558,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3794,9 +5594,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3812,9 +5612,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3830,9 +5630,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3866,9 +5666,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3884,9 +5684,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3902,9 +5702,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3920,9 +5720,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3938,9 +5738,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3974,9 +5774,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -3992,9 +5792,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4010,9 +5810,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4028,9 +5828,9 @@
       "rejection_comment": "",
       "rejected_count": 14,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4064,9 +5864,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4100,9 +5900,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4434,9 +6234,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4486,9 +6286,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4522,9 +6322,9 @@
       "rejection_comment": "",
       "rejected_count": 10,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4540,9 +6340,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4558,9 +6358,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4576,9 +6376,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4594,9 +6394,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4612,9 +6412,9 @@
       "rejection_comment": "",
       "rejected_count": 1,
       "first_proposed_batch_id": "2026-05-12",
-      "latest_proposed_batch_id": "2026-05-13",
+      "latest_proposed_batch_id": "2026-05-12",
       "first_proposed_at": "2026-05-12T17:22:23.645Z",
-      "latest_proposed_at": "2026-05-13T18:55:25.564Z",
+      "latest_proposed_at": "2026-05-12T17:22:23.645Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
@@ -4839,6 +6639,14 @@
       "generated_at": "2026-05-13T19:08:18.318Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
+      ],
+      "photo_count": 100
+    },
+    {
+      "batch_id": "2026-05-14",
+      "generated_at": "2026-05-14T07:25:33.741Z",
+      "proposal_files": [
+        "assets/owner-actions/title-keyword-review-queue/batch-2026-05-14.json"
       ],
       "photo_count": 100
     }

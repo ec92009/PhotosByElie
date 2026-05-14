@@ -61,6 +61,7 @@
   let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
   let latestR2ProgressTasks = [];
+  let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
 
   const setStatus = (message) => {
@@ -431,6 +432,7 @@
 
   const renderCostEstimate = (estimate = null) => {
     if (!costCard || !costSummaryRoot || !costBreakdownRoot) return;
+    currentCostEstimate = estimate;
     if (!estimate) {
       setText(costSummaryRoot, "Cloud cost estimate is unavailable.");
       if (costMtdRoot) costMtdRoot.textContent = "$0.00";
@@ -519,7 +521,19 @@
     `);
     if (costNoteRoot) {
       const avoided = Number(estimate?.cost?.avoidedMonthlyUsdEstimate || 0);
-      costNoteRoot.textContent = `Storage scan: ${updatedLabel}. Waste Basket cleanup avoided about ${formatMoneyDetailed(avoided)}/month. R2 egress is zero-rated; operation and Worker CPU/request usage need Cloudflare analytics before the estimate is a full invoice.`;
+      const activeEmptyTask = (latestR2ProgressTasks || []).find((task) =>
+        isWasteBasketEmptyTask(task) && (task.state === "queued" || task.state === "running")
+      );
+      if (activeEmptyTask && avoided > 0) {
+        const total = Number(activeEmptyTask.total || 0);
+        const completed = Number(activeEmptyTask.completed || 0);
+        const removedRatio = total ? Math.max(0, Math.min(1, completed / total)) : 0;
+        const removedUsd = avoided * removedRatio;
+        const pendingUsd = Math.max(0, avoided - removedUsd);
+        costNoteRoot.textContent = `Storage scan: ${updatedLabel}. Waste Basket purge in progress: about ${formatMoneyDetailed(removedUsd)}/month removed so far, ${formatMoneyDetailed(pendingUsd)}/month still deleting, ${formatMoneyDetailed(avoided)}/month total expected savings. R2 operation and Worker CPU/request usage need Cloudflare analytics before the estimate is a full invoice.`;
+      } else {
+        costNoteRoot.textContent = `Storage scan: ${updatedLabel}. Waste Basket cleanup avoided about ${formatMoneyDetailed(avoided)}/month. R2 egress is zero-rated; operation and Worker CPU/request usage need Cloudflare analytics before the estimate is a full invoice.`;
+      }
     }
   };
 
@@ -646,6 +660,18 @@
 
   const refreshBlockedSyncPanel = async () => {
     if (blockedLocalCountRoot) blockedLocalCountRoot.textContent = formatCount((hiddenActions.read?.() || []).length);
+    const activeEmptyTask = (latestR2ProgressTasks || []).find((task) =>
+      isWasteBasketEmptyTask(task) && (task.state === "queued" || task.state === "running")
+    );
+    if (activeEmptyTask) {
+      const total = Number(activeEmptyTask.total || 0);
+      const completed = Number(activeEmptyTask.completed || 0);
+      if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(Math.max(0, total - completed));
+      if (blockedPreviewNoteRoot) {
+        blockedPreviewNoteRoot.textContent = "Emptying is in progress: the undo queue is already cleared, and R2 is now deleting the remaining public previews, private masters, and private render files.";
+      }
+      return;
+    }
     const blockedCloudMedia = blockedCloudMediaCountFromCoverage();
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMedia);
     if (blockedPreviewNoteRoot) {
@@ -996,6 +1022,22 @@
       : `${formatCount(completed)} cloud objects`;
   };
 
+  const wasteProgressRateSummary = (task) => {
+    const total = Number(task?.total || 0);
+    const completed = Number(task?.completed || 0);
+    const startedAt = Date.parse(task?.started_at || task?.queued_at || "");
+    if (!total || !completed || !startedAt) return "";
+    const elapsedSeconds = Math.max(1, (Date.now() - startedAt) / 1000);
+    const perMinute = completed / elapsedSeconds * 60;
+    if (!Number.isFinite(perMinute) || perMinute <= 0) return "";
+    const remaining = Math.max(0, total - completed);
+    const etaMinutes = remaining / perMinute;
+    const etaLabel = etaMinutes >= 120
+      ? `${Math.round(etaMinutes / 60)} hr`
+      : `${Math.max(1, Math.round(etaMinutes))} min`;
+    return `about ${Math.max(1, Math.round(perMinute))}/min, ETA ${etaLabel}`;
+  };
+
   const renderWasteBasketProgress = (tasks = []) => {
     const wasteTasks = tasks.filter(isWasteDeleteTask);
     const activeTasks = wasteTasks.filter((task) => task.state === "queued" || task.state === "running");
@@ -1022,13 +1064,23 @@
     const state = latestWasteTask.state || "queued";
     const prefix = state === "done" ? "Last cleanup" : failed ? "Needs attention" : "Cleanup";
     const suffix = failed ? `, ${formatCount(failed)} failed` : "";
+    const rate = wasteProgressRateSummary(latestWasteTask);
     blockedPreviewProgressRoot.hidden = false;
-    blockedPreviewProgressRoot.textContent = `${prefix}: ${wasteProgressSummary(latestWasteTask)}${suffix}`;
+    blockedPreviewProgressRoot.textContent = `${prefix}: ${wasteProgressSummary(latestWasteTask)}${rate ? `, ${rate}` : ""}${suffix}`;
+    if (blockedPreviewCountRoot && isWasteBasketEmptyTask(latestWasteTask)) {
+      const total = Number(latestWasteTask.total || 0);
+      const completed = Number(latestWasteTask.completed || 0);
+      blockedPreviewCountRoot.textContent = formatCount(Math.max(0, total - completed));
+      if (blockedPreviewNoteRoot) {
+        blockedPreviewNoteRoot.textContent = "Emptying is in progress: the undo queue is already cleared, and R2 is now deleting the remaining public previews, private masters, and private render files.";
+      }
+    }
   };
 
   const renderR2Progress = (tasks = []) => {
     latestR2ProgressTasks = tasks;
     renderWasteBasketProgress(tasks);
+    if (currentCostEstimate) renderCostEstimate(currentCostEstimate);
     if (!r2Card || !r2Summary || !r2Counts) return;
     const latest = tasks[0];
     if (!latest) {

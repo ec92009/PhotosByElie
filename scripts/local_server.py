@@ -830,20 +830,35 @@ def _discarded_delete_items(repo_root: Path, photo: dict, source_slug: str) -> l
     return items
 
 
-def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = None) -> dict:
+def _write_discarded_tombstones(repo_root: Path, discarded_photos: list[dict] | None = None) -> dict:
     payload = _read_discarded_tombstone(repo_root)
-    photos = list(payload.get("photos") or [])
-    if discarded_photo:
-        photo_id = discarded_photo.get("id")
-        photos = [photo for photo in photos if photo.get("id") != photo_id]
-        photos.append(discarded_photo)
-        payload["photo_ids"] = sorted(set(payload.get("photo_ids") or []) | {photo_id})
-        payload["public_preview_keys"] = sorted(set(payload.get("public_preview_keys") or []) | set(discarded_photo.get("public_preview_keys") or []))
-        payload["private_keys"] = sorted(set(payload.get("private_keys") or []) | set(discarded_photo.get("private_keys") or []))
+    photos_by_id = {
+        str(photo.get("id")): photo
+        for photo in payload.get("photos") or []
+        if isinstance(photo, dict) and photo.get("id")
+    }
+    photo_ids = set(payload.get("photo_ids") or [])
+    public_preview_keys = set(payload.get("public_preview_keys") or [])
+    private_keys = set(payload.get("private_keys") or [])
+    for discarded_photo in discarded_photos or []:
+        photo_id = str(discarded_photo.get("id") or "")
+        if not photo_id:
+            continue
+        photos_by_id[photo_id] = discarded_photo
+        photo_ids.add(photo_id)
+        public_preview_keys.update(discarded_photo.get("public_preview_keys") or [])
+        private_keys.update(discarded_photo.get("private_keys") or [])
+    payload["photo_ids"] = sorted(photo_id for photo_id in photo_ids if isinstance(photo_id, str) and photo_id)
+    payload["public_preview_keys"] = sorted(key for key in public_preview_keys if isinstance(key, str) and key)
+    payload["private_keys"] = sorted(key for key in private_keys if isinstance(key, str) and key)
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-    payload["photos"] = sorted(photos, key=lambda photo: str(photo.get("id") or ""))
+    payload["photos"] = sorted(photos_by_id.values(), key=lambda photo: str(photo.get("id") or ""))
     _write_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, payload)
     return payload
+
+
+def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = None) -> dict:
+    return _write_discarded_tombstones(repo_root, [discarded_photo] if discarded_photo else [])
 
 
 def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
@@ -1941,8 +1956,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         }
 
     if action == "wipe-hidden-r2":
-        for entry in _waste_basket_discard_entries(hidden_groups):
-            _write_discarded_tombstone(repo_root, entry)
+        tombstone = _write_discarded_tombstones(repo_root, _waste_basket_discard_entries(hidden_groups))
         r2_task = _start_r2_delete_task(
             "waste-basket-cloud-media",
             _waste_basket_delete_items(repo_root, hidden_groups),
@@ -1950,12 +1964,12 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         )
         hidden_groups = {slug: [] for slug in ORDER}
         site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        tombstone = _write_discarded_tombstone(repo_root)
         return {
             "ok": True,
             "action": action,
             "hidden_count": 0,
             "discarded_count": len(tombstone.get("photo_ids") or []),
+            "hidden_ids": [],
             "r2_delete_task": r2_task,
             "site": site_state,
         }

@@ -13,6 +13,9 @@ const copyZipPath = document.querySelector("[data-copy-zip-path]");
 const zipCopyField = document.querySelector("[data-zip-copy-field]");
 const zipLocation = document.querySelector("[data-zip-location]");
 const refreshButton = document.querySelector("[data-order-refresh]");
+const embeddedWarning = document.querySelector("[data-embedded-browser-warning]");
+const openBrowserLink = document.querySelector("[data-open-browser-link]");
+const copyBrowserLink = document.querySelector("[data-copy-browser-link]");
 let currentZipPath = "";
 let currentDownloadHref = "";
 let refreshTimer = null;
@@ -157,6 +160,15 @@ const copyText = async (value) => {
   }
 };
 
+const isEmbeddedBrowser = () => Boolean(window.photosByElieEmbeddedBrowser?.detected);
+
+const syncEmbeddedBrowserWarning = () => {
+  const embedded = window.photosByElieEmbeddedBrowser;
+  if (!embeddedWarning || !embedded?.detected) return;
+  embeddedWarning.hidden = false;
+  if (openBrowserLink) openBrowserLink.href = embedded.externalUrl;
+};
+
 const statusText = {
   pending_payment: t("order.waiting_payment"),
   preparing: t("order.building_zip"),
@@ -220,6 +232,7 @@ const scheduleOrderRefresh = (order) => {
 };
 
 const renderOrder = (order) => {
+  syncEmbeddedBrowserWarning();
   currentDeliveryFiles = deliveryRowsFor(order);
   const copy = phaseCopy(order);
   heading.textContent = copy.heading || statusText[order.status] || order.status;
@@ -257,8 +270,9 @@ const renderOrder = (order) => {
           <h3>${escapeText(order.status === "ready" ? t("order.files_ready") : t("order.files_preparing"))}</h3>
           <p>${escapeText(t("order.files_ready_count", { ready: readyFileCount, total: currentDeliveryFiles.length }))}</p>
         </div>
-        <button class="btn primary" type="button" data-download-all-files${readyFileCount ? "" : " disabled"}>${escapeText(t("order.download_all_files"))}</button>
+        <button class="btn primary" type="button" data-download-all-files${readyFileCount && !isEmbeddedBrowser() ? "" : " disabled"}>${escapeText(isEmbeddedBrowser() ? t("order.open_browser_to_download") : t("order.download_all_files"))}</button>
       </div>
+      ${isEmbeddedBrowser() ? `<p class="embedded-download-note">${escapeText(t("browser_warning.download"))}</p>` : ""}
       <ol>
         ${currentDeliveryFiles.map((file, index) => `
           <li class="${file.ready ? "is-ready" : "is-pending"}" data-file-row="${index}">
@@ -426,6 +440,11 @@ const loadOrder = async () => {
 };
 
 refreshButton?.addEventListener("click", loadOrder);
+copyBrowserLink?.addEventListener("click", async () => {
+  const embedded = window.photosByElieEmbeddedBrowser;
+  const copied = await embedded?.copyText?.(embedded.externalUrl);
+  status.textContent = copied ? t("browser_warning.copied") : t("browser_warning.copy_failed");
+});
 itemsRoot?.addEventListener("click", async (event) => {
   const fileButton = event.target.closest("[data-download-file]");
   if (fileButton) {
@@ -457,5 +476,6 @@ copyZipPath?.addEventListener("click", async () => {
     ? t("order.local_path_copied")
     : t("order.copy_failed_select");
 });
+syncEmbeddedBrowserWarning();
 loadOrder();
 window.addEventListener("photosbyelie:languagechange", loadOrder);

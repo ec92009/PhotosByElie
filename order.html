@@ -7,9 +7,9 @@
   <meta name="description" content="Order status and delivery for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=74.35"/>
-  <link rel="stylesheet" href="./styles.css?v=74.35"/>
-  <link rel="stylesheet" href="./photos.css?v=74.35"/>
+  <link rel="stylesheet" href="./shared.css?v=74.36"/>
+  <link rel="stylesheet" href="./styles.css?v=74.36"/>
+  <link rel="stylesheet" href="./photos.css?v=74.36"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
       <a href="./basket.html" data-i18n="nav.basket">Basket</a> <span>|</span>
       <a href="./liked.html" data-i18n="nav.liked">Liked</a>
     </nav>
-    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v74.35</div>
+    <div class="brand"><img class="site-logo" src="./assets/byelie-logo.png" alt="By Elie logo"/>PHOTOS BY ELIE - v74.36</div>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -43,6 +43,14 @@
         <h2 data-order-heading data-i18n="order.loading">Loading order</h2>
         <p class="order-phase-label" data-order-phase data-i18n="order.checking_phase">Checking order phase</p>
         <p data-order-message data-i18n="order.checking_worker">Checking the checkout Worker for order status.</p>
+        <div class="embedded-browser-warning" data-embedded-browser-warning hidden>
+          <strong data-i18n="browser_warning.title">Open in your browser</strong>
+          <p data-i18n="browser_warning.download">Pinterest and social-app browsers can block file downloads. Open this order in Safari or Chrome, then download your files.</p>
+          <div class="embedded-browser-actions">
+            <a class="btn primary" data-open-browser-link target="_blank" rel="noreferrer" data-i18n="browser_warning.open_order">Open order in browser</a>
+            <button class="btn secondary" type="button" data-copy-browser-link data-i18n="browser_warning.copy">Copy link</button>
+          </div>
+        </div>
         <div class="order-state-rail" aria-label="Order progress" data-i18n-aria-label="a11y.order_progress">
           <span data-state-step="pending_payment"><b>1</b><strong data-i18n="order.payment">Payment</strong><small data-i18n="order.stripe">Stripe</small></span>
           <span data-state-step="preparing"><b>2</b><strong data-i18n="order.build_zip">Prepare files</strong><small data-i18n="order.private_r2">Private R2</small></span>
@@ -71,11 +79,12 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=74.35"></script>
-  <script src="./photos.js?v=74.35"></script>
-  <script src="./owner-auth.js?v=74.35"></script>
-  <script src="./owner-tools.js?v=74.35"></script>
-  <script src="./site-version.js?v=74.35"></script>
-  <script src="./order.js?v=74.35"></script>
+  <script src="./media-config.js?v=74.36"></script>
+  <script src="./photos.js?v=74.36"></script>
+  <script src="./embedded-browser.js?v=74.36"></script>
+  <script src="./owner-auth.js?v=74.36"></script>
+  <script src="./owner-tools.js?v=74.36"></script>
+  <script src="./site-version.js?v=74.36"></script>
+  <script src="./order.js?v=74.36"></script>
 </body>
 </html>

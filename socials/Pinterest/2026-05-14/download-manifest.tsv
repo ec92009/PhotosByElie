@@ -1,0 +1,15 @@
+section	label	path	size	note
+Primary Pin	Single-image 2:3 Pin JPG	images/staged-single-pin-2x3.jpg	398 KB	Upload this directly to Pinterest instead of downloading it back from Pinterest.
+Review	Pin landing page	landing-page.html	2 KB	Open locally or publish for Pinterest scraping and owner review.
+Review	Carousel contact sheet	contact-sheet.jpg	312 KB	Review the candidate crops together.
+Review	Source family contact sheet	source-family-contact-sheet.jpg	315 KB	Review the larger source family.
+Carousel Candidates	Nave	images/01-nave.jpg	422 KB	Photo id: 20220506-154558-03388-a887904b4b
+Carousel Candidates	Dome monument	images/02-dome-monument.jpg	621 KB	Photo id: 20220506-145248-03337-8deb7b57a5
+Carousel Candidates	Dome ceiling	images/03-dome-ceiling.jpg	476 KB	Photo id: 20220506-145149-03333-e92838da6f
+Carousel Candidates	Napoleon tomb	images/04-napoleon-tomb.jpg	538 KB	Photo id: 20220506-045942-03172-b368612e02
+Carousel Candidates	Dome wide	images/05-dome-wide.jpg	668 KB	Photo id: 20220506-044820-03115-d18397db96
+Source Previews	Nave source preview	source-previews/01-nave-source.jpg	395 KB	Source for 20220506-154558-03388-a887904b4b
+Source Previews	Dome monument source preview	source-previews/02-dome-monument-source.jpg	560 KB	Source for 20220506-145248-03337-8deb7b57a5
+Source Previews	Dome ceiling source preview	source-previews/03-dome-ceiling-source.jpg	461 KB	Source for 20220506-145149-03333-e92838da6f
+Source Previews	Napoleon tomb source preview	source-previews/04-napoleon-tomb-source.jpg	534 KB	Source for 20220506-045942-03172-b368612e02
+Source Previews	Dome wide source preview	source-previews/05-dome-wide-source.jpg	817 KB	Source for 20220506-044820-03115-d18397db96

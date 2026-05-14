@@ -193,6 +193,14 @@ node scripts/validate_publish.js --summary
 npm run social:packages
 ```
 
+Pinterest should be treated as a publishing target, not the canonical asset store. When a Pinterest work folder exists under `socials/Pinterest/<date>/`, build the first-party download kit instead of trying to download assets back from Pinterest's embedded browser UI:
+
+```bash
+npm run social:pinterest-downloads -- --date 2026-05-14
+```
+
+That writes `downloads.html` and `download-manifest.tsv` beside the staged Pin images, carousel candidates, source previews, and copy blocks.
+
 Useful options:
 
 ```bash

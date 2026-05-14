@@ -6,12 +6,13 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v74.35`
+- Current visible version: `v74.36`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
-- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia collections
+- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, and Slovakia collections plus Featured mini-collections
+- `campaign.html`: first-party social/Pinterest mini-collection landing page that keeps visitors on Photos By Elie instead of a single-photo dead end
 - `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
 - `owner-review.html`: shared localhost-only Owner review shell for Unknown classification, Waste Basket review, and Title/Keywords review
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
@@ -32,6 +33,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
 - `home-discovery.js`: homepage-wide search, origin, collection, filter results, likes, keyboard selection, detail navigation, and localhost Owner shortcuts
 - `gallery-card.js`: shared gallery/review card renderer used by public galleries and Waste Basket review
+- `campaign.js`: social mini-collection renderer, embedded-browser escape warning, and campaign-local archive search
 - `photo-gallery.js`: shared gallery renderer
 - `photo-detail.js`: shared detail page, real-image preview support, and automatic basket sync
 - `basket.js`: basket rendering, item removal, resolution reselection, and sticky total updates
@@ -66,6 +68,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or basketed no longer reduce unrelated counts.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
+- The homepage includes a Featured mini-collections section. These campaigns are durable first-party landing pages for Pinterest/social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
 - The full public catalog now lives in TSV shards under `assets/catalog/`. `photos-data.js` is intentionally only a small compatibility bootstrap that reconstructs `window.photosByElieData` for existing static pages.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
@@ -110,6 +113,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The liked page includes bulk selectors for Full, JPG 6 MP, JPG 3 MP, and JPG 1 MP resolution choices.
 - Public-facing pages share a client-side English/French/Spanish translation layer. The header language button cycles languages, persists the selected state, and translates public navigation, homepage copy, gallery controls/statuses, detail actions, basket/liked flows, and order-status copy. Owner-only tools remain English; the Owner language button beeps instead of switching.
 - Detail pages start with no product checked unless that photo is already in the basket.
+- Social/Pinterest campaign, basket, and order pages detect common embedded social browsers and show an immediate Open in browser / Copy link escape path before checkout or download-sensitive actions.
 - Detail pages support previous/next buttons and left/right arrow keys that continue across collection boundaries on both public and localhost builds.
 - Detail pages support `L` to like/unlike and double click on the preview to open a full-screen overlay that dismisses on click or double click.
 - Detail pages preserve the original preview aspect ratio; landscape previews use a wide, space-maximizing layout while portrait and square-ish previews align to the top of the detail panel.

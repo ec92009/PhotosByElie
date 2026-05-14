@@ -598,3 +598,18 @@ _No David automation results recorded yet._
 - Checks passed: targeted stale-phrase sweep, `git diff --check`, JS parse checks, Python compile checks, `npm test`, and `npm run validate`.
 - Note: During browser smoke the helper received one stale `r2-fix` POST from the open Owner page, but the local server was stopped and no tracked file changes from that helper action were staged.
 - Notes: Existing unrelated dirty/generated files remain unstaged, including discard/expo manifests and local owner-action artifacts.
+
+## 2026-05-14 - Pinterest mini-collection landing path
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Replaced the social buyer path from a lone photo detail destination with a first-party mini-collection landing page.
+- New page: `campaign.html?c=pinterest-invalides-2026-05-14`
+- New campaign manifest: `assets/campaigns/pinterest-invalides-2026-05-14.json`
+- Behavior: The campaign page shows the pinned Invalides photo, 10 photos from the same shoot, 6 nearby Paris suggestions, and a local archive search.
+- Embedded browser handling: campaign, basket, and order pages now detect common social embedded browsers and show Open in browser / Copy link before checkout or downloads.
+- Home page: added a Featured mini-collections section pointing to the Invalides campaign so future social collections have a durable shelf.
+- Pinterest owner kit: added `npm run social:pinterest-downloads`, generated `downloads.html` and `download-manifest.tsv`, and updated the 2026-05-14 Pinterest manifest destination to the campaign URL.
+- Visible version: v74.36.
+- Checks passed: `node --check` on touched JS, `git diff --check`, `npm test`, `npm run validate`, and in-app browser smoke for campaign embedded-warning/card counts, campaign search, and homepage Featured presence.
+- Notes: Existing unrelated dirty/generated owner state remains unstaged.

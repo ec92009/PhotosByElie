@@ -24,6 +24,9 @@ const checkoutEmail = document.querySelector("[data-checkout-email]");
 const checkoutGuest = document.querySelector("[data-checkout-guest]");
 const mockPay = document.querySelector("[data-mock-pay]");
 const checkoutResult = document.querySelector("[data-checkout-result]");
+const embeddedWarning = document.querySelector("[data-embedded-browser-warning]");
+const openBrowserLink = document.querySelector("[data-open-browser-link]");
+const copyBrowserLink = document.querySelector("[data-copy-browser-link]");
 const orderIdKey = "photosbyelie-order-id";
 const checkoutStateKey = "photosbyelie-mock-checkout";
 const workerBaseKey = "photosbyelie-worker-base";
@@ -391,6 +394,19 @@ const setBasketStatus = (message, { checkout = false, title = t("order.checkout"
   `;
 };
 
+const syncEmbeddedBrowserWarning = () => {
+  const embedded = window.photosByElieEmbeddedBrowser;
+  if (!embeddedWarning || !embedded?.detected) return;
+  embeddedWarning.hidden = false;
+  if (openBrowserLink) openBrowserLink.href = embedded.externalUrl;
+};
+
+copyBrowserLink?.addEventListener("click", async () => {
+  const embedded = window.photosByElieEmbeddedBrowser;
+  const copied = await embedded?.copyText?.(embedded.externalUrl);
+  setBasketStatus(copied ? t("browser_warning.copied") : t("browser_warning.copy_failed"));
+});
+
 const syncCheckoutControls = () => {
   const state = checkoutState();
   const provider = state.provider || state.lastResponse?.checkout?.provider || "stripe";
@@ -517,6 +533,7 @@ const renderBasket = () => {
   emptyState.hidden = items.length !== 0;
   syncOrderIntent(items, assetCount, total, shippingHandlingTotal);
   ensureMoreButton();
+  syncEmbeddedBrowserWarning();
 
   basketRoot.innerHTML = visibleItems.map((item, index) => {
     const { collection, photo } = photoForItem(item);

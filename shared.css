@@ -63,15 +63,18 @@ a:hover{
 .shell{width:min(1480px,calc(100dvw - (var(--page-gutter) * 2)));margin:auto}
 .topbar{
   position:sticky;top:0;z-index:80;
-  display:flex;gap:10px;align-items:center;justify-content:space-between;
+  display:flex;gap:10px;align-items:center;justify-content:flex-start;
+  flex-wrap:wrap;
   padding:12px 0;
   backdrop-filter:blur(10px);
   background:color-mix(in srgb,var(--bg) 76%,transparent);
   border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent);
 }
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+.brand{order:1;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
-.header-controls{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;flex-wrap:wrap}
+.version-switch{order:2;flex:1 1 calc(100% - 220px);min-width:0}
+.site-version-badge{order:3}
+.header-controls{order:4;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:0;flex:1 1 auto;flex-wrap:wrap}
 .site-version-badge{
   color:var(--muted);
   font-size:.78rem;
@@ -416,11 +419,11 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .grid{grid-template-columns:1fr}
   .about-grid{grid-template-columns:1fr}
   .topbar{flex-wrap:wrap;gap:8px;padding:10px 0;align-items:flex-start}
-  .version-switch{flex:1 1 100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
-  .commerce-page .version-switch{display:none}
+  .brand{order:1;width:100%;max-width:100%;font-size:clamp(.82rem,4vw,.95rem);flex:1 1 100%;min-width:0;overflow:visible;text-overflow:clip;white-space:normal}
+  .site-version-badge{order:2;align-self:center;line-height:36px}
+  .version-switch{order:3;flex:1 1 0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
   .commerce-page .brand{font-size:clamp(1.05rem,5.2vw,1.35rem)}
-  .header-controls{width:100%;margin-left:0;justify-content:flex-end}
-  .brand{width:100%;max-width:100%;font-size:clamp(.82rem,4vw,.95rem);flex:1 1 100%;min-width:0;overflow:visible;text-overflow:clip;white-space:normal}
+  .header-controls{order:4;width:100%;flex:1 1 100%;margin-left:0;justify-content:flex-end}
   .panel,.card,.carousel-wrap,.carousel-item{min-width:0}
   .lead,.card p,h1{overflow-wrap:anywhere}
 }

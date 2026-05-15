@@ -141,6 +141,33 @@ window.photosByElieShippingHandlingPrices = {
 window.photosByEliePricingTier = (photo) => window.photosByEliePhotoOrigin(photo) === "ai" ? "ai" : "original";
 window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";
 window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);
+window.photosByElieVideoPriceTiers = {
+  video_short: { label: "Video under 10s", price: 20 },
+  video_medium: { label: "Video 10-30s", price: 20 },
+  video_long: { label: "Video 30-60s", price: 20 },
+  video_extended: { label: "Video 1-3 min", price: 20 },
+  video_premium: { label: "Video 3+ min", price: 20 },
+};
+window.photosByElieVideoTier = (photo) => {
+  const duration = Number(photo?.media?.video?.duration || photo?.duration || 0);
+  if (duration < 10) return "video_short";
+  if (duration < 30) return "video_medium";
+  if (duration < 60) return "video_long";
+  if (duration < 180) return "video_extended";
+  return "video_premium";
+};
+window.photosByElieVideoDownloadOption = (photo) => {
+  const tier = window.photosByElieVideoTier(photo);
+  const priceTier = window.photosByElieVideoPriceTiers?.[tier] || { price: 20 };
+  return {
+    id: "video-original",
+    type: "video",
+    label: "Original video download",
+    detail: "Private original video file after purchase",
+    price: Number(priceTier.price) || 0,
+    priceKey: tier,
+  };
+};
 
 window.photosByEliePreviewMegapixels = (photo) => {
   const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";
@@ -155,6 +182,7 @@ window.photosByElieVerifiedMegapixels = (photo) => {
 };
 
 window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {
+  if (window.photosByElieIsVideo?.(photo)) return [window.photosByElieVideoDownloadOption(photo)];
   const megapixels = window.photosByElieVerifiedMegapixels(photo);
   if (!megapixels) return [];
   const physicalProductsEnabled = window.photosByElieProductSettings?.physicalProductsEnabled?.() === true;

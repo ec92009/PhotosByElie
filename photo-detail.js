@@ -76,6 +76,7 @@ const productLabel = (option) => {
   return t(keyById[option?.id] || "", {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
 };
 const productDetail = (option) => {
+  if (option?.detail) return option.detail;
   const detailKeyById = {
     "jpg-6mp": "product.jpg_6_detail",
     "jpg-3mp": "product.jpg_3_detail",
@@ -96,6 +97,7 @@ const photoOrigin = photo
   ? (window.photosByEliePhotoOrigin?.(photo, collectionKey) || (collectionKey === "ai" ? "ai" : "camera"))
   : "camera";
 const photoOriginLabel = photo ? (() => {
+  if (window.photosByElieIsVideo?.(photo)) return "Video";
   const key = photoOrigin === "ai" ? "origin.ai" : "origin.camera";
   const translated = t(key);
   return translated && translated !== key ? translated : window.photosByEliePhotoOriginLabel?.(photo, collectionKey);
@@ -277,7 +279,15 @@ const selectedOptions = () => Array.from(document.querySelectorAll("[data-resolu
   .map((input) => {
     const option = availableResolutions.find((item) => item.id === input.value);
     if (!option) return null;
-    const selected = { id: option.id, type: option.type || "digital", label: option.label, detail: option.detail, dimensions: option.dimensions, price: option.price };
+    const selected = {
+      id: option.id,
+      type: option.type || "digital",
+      label: option.label,
+      detail: option.detail,
+      dimensions: option.dimensions,
+      price: option.price,
+      priceKey: option.priceKey,
+    };
     if (selected.type === "print") {
       selected.quantity = printQuantityFor(option.id);
       selected.frame = selectedFrameFor(option);
@@ -318,7 +328,9 @@ if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id 
 } else {
 document.title = `Photos By Elie | ${photo.title}`;
 setCollectionNav();
-document.querySelector("[data-photo-title]").textContent = photo.title;
+const titleTarget = document.querySelector("[data-photo-title]");
+titleTarget?.removeAttribute("data-i18n");
+if (titleTarget) titleTarget.textContent = photo.title;
 setPhotoMetaText([
   collection.title,
   photoOriginLabel,
@@ -451,8 +463,12 @@ const renderMetadataRows = () => {
 
 const syncTitleUi = () => {
   document.title = `Photos By Elie | ${photo.title}`;
-  document.querySelector("[data-photo-title]").textContent = photo.title;
-  document.querySelector("[data-photo-preview-title]").textContent = photo.title;
+  const titleTarget = document.querySelector("[data-photo-title]");
+  const previewTitleTarget = document.querySelector("[data-photo-preview-title]");
+  titleTarget?.removeAttribute("data-i18n");
+  previewTitleTarget?.removeAttribute("data-i18n");
+  if (titleTarget) titleTarget.textContent = photo.title;
+  if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
   document.querySelector("[data-photo-preview] img")?.setAttribute("alt", photo.title);
 };
 
@@ -618,6 +634,7 @@ ensureOwnerMetadataEditor();
 
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
+const isVideo = window.photosByElieIsVideo?.(photo) === true;
 let fullscreenPreview = null;
 const syncLandscapePreviewSize = () => {
   if (!detailLayout?.classList.contains("is-landscape")) return;
@@ -628,7 +645,24 @@ const syncLandscapePreviewSize = () => {
 };
 preview.classList.add(collection.accent, photo.className);
 const detailImageSrc = window.photosByElieMediaUrl?.(photo, "detail") || "";
-if (detailImageSrc) {
+if (detailImageSrc && isVideo) {
+  preview.classList.add("has-image", "has-video");
+  const video = document.createElement("video");
+  video.src = detailImageSrc;
+  video.poster = window.photosByElieVideoPosterUrl?.(photo) || "";
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  const dimensions = window.photosByEliePreviewDimensions?.(photo);
+  if (dimensions?.width && dimensions?.height) {
+    preview.style.setProperty("--detail-aspect", `${dimensions.width} / ${dimensions.height}`);
+    preview.style.setProperty("--detail-ratio", dimensions.width / dimensions.height);
+    detailLayout?.classList.toggle("is-landscape", dimensions.width >= dimensions.height);
+    detailLayout?.classList.toggle("is-portrait", dimensions.width < dimensions.height);
+    syncLandscapePreviewSize();
+  }
+  preview.prepend(video);
+} else if (detailImageSrc) {
   preview.classList.add("has-image");
   const img = document.createElement("img");
   const setPreviewAspectRatio = () => {
@@ -646,7 +680,9 @@ if (detailImageSrc) {
   preview.prepend(img);
 }
 window.addEventListener("resize", syncLandscapePreviewSize);
-preview.querySelector("[data-photo-preview-title]").textContent = photo.title;
+const previewTitleTarget = preview.querySelector("[data-photo-preview-title]");
+previewTitleTarget?.removeAttribute("data-i18n");
+if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
 
 const closeFullscreenPreview = () => {
   fullscreenPreview?.remove();
@@ -655,6 +691,7 @@ const closeFullscreenPreview = () => {
 };
 
 const openFullscreenPreview = () => {
+  if (isVideo) return;
   const image = window.photosByElieMediaUrl?.(photo, "detail") || "";
   if (!image || fullscreenPreview) return;
   fullscreenPreview = document.createElement("div");
@@ -811,6 +848,11 @@ if (localModerationEnabled) {
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
 const selectedOptionById = new Map((basketItemForPhoto()?.options || []).map((option) => [option.id, option]));
+const purchaseHeading = document.querySelector(".purchase-panel h2");
+if (isVideo && purchaseHeading) {
+  purchaseHeading.removeAttribute("data-i18n");
+  purchaseHeading.textContent = "Pick a video download";
+}
 const printConfigMarkup = (option) => {
   if (option.type !== "print") return "";
   const selected = selectedOptionById.get(option.id) || {};

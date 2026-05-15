@@ -75,6 +75,7 @@ const translations = {
     'collection.italy': 'Italy',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovakia',
+    'collection.video-trial': 'Cordoba Video Trial',
     'common.back_to_collections': 'Back to collections',
     'common.back_to_gallery': 'Back to gallery',
     'common.back_to_search': 'Back to search',
@@ -351,6 +352,7 @@ const translations = {
     'collection.italy': 'Italie',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Slovaquie',
+    'collection.video-trial': 'Essai video Cordoue',
     'common.back_to_collections': 'Retour aux collections',
     'common.back_to_gallery': 'Retour a la galerie',
     'common.back_to_search': 'Retour a la recherche',
@@ -627,6 +629,7 @@ const translations = {
     'collection.italy': 'Italia',
     'collection.portugal': 'Portugal',
     'collection.slovakia': 'Eslovaquia',
+    'collection.video-trial': 'Prueba de video Cordoba',
     'common.back_to_collections': 'Volver a colecciones',
     'common.back_to_gallery': 'Volver a la galeria',
     'common.back_to_search': 'Volver a la busqueda',
@@ -1125,11 +1128,23 @@ window.photosByElieMediaKey = (photo, size = 'gallery') => {
 };
 
 window.photosByElieMediaUrl = (photo, size = 'gallery') => {
+  const preview = photo?.media?.publicPreview;
+  const direct = size === 'detail'
+    ? (preview?.detailUrl || preview?.previewUrl)
+    : (preview?.galleryUrl || preview?.thumbnailUrl);
+  if (direct) return direct;
   const key = window.photosByElieMediaKey(photo, size);
   const base = normalizePublicMediaBase(window.photosByEliePublicMediaBase);
   if (base && key) return `${base}/${key.replace(/^\/+/, '')}`;
   return '';
 };
+
+window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
+window.photosByElieIsVideo = (photo) => window.photosByElieMediaType(photo) === "video";
+window.photosByElieVideoPosterUrl = (photo) => (
+  photo?.media?.publicPreview?.posterUrl
+  || window.photosByElieMediaUrl(photo, "gallery")
+);
 
 window.photosByElieMetadataValue = (photo, label) => (
   (photo?.metadata || []).find((item) => item.label === label)?.value || ''
@@ -1170,6 +1185,7 @@ window.photosByElieMdIcon = (name) => {
   const paths = {
     favorite: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
     favoriteBorder: 'M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5 18.5 5 20 6.5 20 8.5c0 2.89-3.14 5.74-7.9 10.05z',
+    play: 'M8 5v14l11-7z',
     shoppingBasket: 'M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42s-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27C3.81 20.39 4.59 21 5.5 21h13c.91 0 1.69-.61 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm3 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z'
   };
   const path = paths[name] || paths.favoriteBorder;

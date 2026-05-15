@@ -43,9 +43,10 @@
     missingLabel = "",
   }) => {
     const rawLabel = window.photosByElieRawSourceLabel?.(photo) || "";
+    const isVideo = window.photosByElieIsVideo?.(photo) === true;
     const origin = photoOrigin(photo, collectionKey);
-    const originLabel = photoOriginLabel(photo, collectionKey, origin);
-    const originShortLabel = photoOriginShortLabel(photo, collectionKey, origin);
+    const originLabel = isVideo ? "Video" : photoOriginLabel(photo, collectionKey, origin);
+    const originShortLabel = isVideo ? "Video" : photoOriginShortLabel(photo, collectionKey, origin);
     const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
     const title = escapeHtml(photo?.title || photo?.id || "");
     const safeId = escapeHtml(photo?.id || "");
@@ -55,14 +56,16 @@
       collectionAccent,
       photo?.className || "",
       image ? "has-image" : "",
+      isVideo ? "is-video" : "",
       rawLabel ? "has-raw-source" : ""
     ].filter(Boolean).join(" ");
     const photoAspectStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const photoOpenLabel = `Open ${title}`;
     const mediaHtml = `
       ${image ? `<img src="${escapeHtml(image)}" alt="${title}" data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
+      ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
       ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
-      <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
+      <span class="photo-origin-badge is-${escapeHtml(isVideo ? "video" : origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
     `;
     const media = href
       ? `<a class="${photoClasses}" href="${hrefAttr}" data-photo-link aria-label="${photoOpenLabel}"${photoAspectStyle}>${mediaHtml}</a>`

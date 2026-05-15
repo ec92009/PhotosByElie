@@ -995,7 +995,7 @@ if (galleryRoot && gallery) {
     const headerControls = document.querySelector(".header-controls");
     if (headerControls) {
       viewControls.classList.add("is-header-mounted");
-      headerControls.append(viewControls);
+      headerControls.insertBefore(viewControls, headerControls.querySelector(".site-version-badge"));
     } else {
       document.body.append(viewControls);
     }

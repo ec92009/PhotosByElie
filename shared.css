@@ -69,9 +69,16 @@ a:hover{
   background:color-mix(in srgb,var(--bg) 76%,transparent);
   border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent);
 }
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
 .header-controls{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;flex-wrap:wrap}
+.site-version-badge{
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
 .header-action-links{display:inline-flex;align-items:center;gap:6px}
 .header-action-link{
   display:inline-grid;

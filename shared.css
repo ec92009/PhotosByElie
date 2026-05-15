@@ -110,7 +110,16 @@ a:hover{
   display:block;
   fill:currentColor;
 }
-.version-switch,.theme-toggle,.language-toggle,.site-version-badge{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
+.version-switch,.theme-toggle,.language-toggle,.site-version-badge{
+  min-height:38px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface);
+  padding:8px 12px;
+  font-size:.85rem;
+  line-height:1.2;
+  color:var(--text);
+}
 .version-switch{display:inline-flex;gap:6px;align-items:center}
 .version-switch a{text-decoration:none;color:var(--muted);font-weight:700}
 .version-switch a.is-active{color:var(--brand)}

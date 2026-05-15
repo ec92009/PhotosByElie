@@ -866,21 +866,23 @@ window.photosByElieI18n = {
 };
 const rawSourceTypes = new Set(['DNG', 'NEF', 'CR2', 'CR3', 'ARW', 'RAF', 'ORF', 'RW2', 'RAW', 'PEF', 'SRW', 'RWL']);
 const localHostnames = new Set(['localhost', '127.0.0.1', '::1']);
-const tapFirstQuery = window.matchMedia?.('(max-width: 760px) and (hover: none) and (pointer: coarse)');
+const desktopInputQuery = window.matchMedia?.('(hover: hover) and (pointer: fine)');
 let hasKeyboardInput = false;
 
 const syncInputModeClass = () => {
-  const isTapFirst = Boolean(tapFirstQuery?.matches);
+  const isDesktopInput = Boolean(desktopInputQuery?.matches);
   root.classList.toggle('is-localhost', localHostnames.has(window.location.hostname));
-  root.classList.toggle('is-tap-first', isTapFirst);
+  root.classList.toggle('is-tap-first', !isDesktopInput);
+  root.classList.toggle('is-desktop-input', isDesktopInput);
   root.classList.toggle('has-keyboard-input', hasKeyboardInput);
 };
 
 window.photosByElieInputMode = {
   isLocalhost: () => localHostnames.has(window.location.hostname),
-  isTapFirst: () => Boolean(tapFirstQuery?.matches),
+  isTapFirst: () => !desktopInputQuery?.matches,
+  isDesktopInput: () => Boolean(desktopInputQuery?.matches),
   hasKeyboardInput: () => hasKeyboardInput,
-  shouldShowKeyboardHints: () => localHostnames.has(window.location.hostname) || !tapFirstQuery?.matches || hasKeyboardInput,
+  shouldShowKeyboardHints: () => Boolean(desktopInputQuery?.matches) || hasKeyboardInput,
   applyKeyboardHint: (element, enabled = true) => {
     if (!element) return;
     element.hidden = !enabled || !window.photosByElieInputMode.shouldShowKeyboardHints();
@@ -991,7 +993,7 @@ window.photosByElieProductSettings = {
 };
 
 syncInputModeClass();
-tapFirstQuery?.addEventListener?.('change', () => {
+desktopInputQuery?.addEventListener?.('change', () => {
   syncInputModeClass();
   window.dispatchEvent(new CustomEvent('photosbyelie:inputmodechange'));
 });

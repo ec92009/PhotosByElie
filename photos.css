@@ -1720,6 +1720,7 @@ body[data-gallery] .gallery-hero{
 }
 .topbar .gallery-density-control,
 .gallery-view-controls.is-header-mounted .gallery-density-control{
+  min-height:38px;
   padding:6px 10px;
 }
 .topbar .gallery-density-control input,
@@ -1728,6 +1729,7 @@ body[data-gallery] .gallery-hero{
 }
 .topbar .gallery-fit-control,
 .gallery-view-controls.is-header-mounted .gallery-fit-control{
+  min-height:38px;
   padding:4px;
 }
 .topbar .gallery-fit-control button,

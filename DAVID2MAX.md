@@ -16,6 +16,55 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-15 Handoff for Max
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `37310431`
+- Result: Prepared a Max-facing handoff from David.
+- Current pushed head:
+  - `37310431 photosbyelie: refresh delivery coverage docs`
+  - `5a5ebf48 photosbyelie: daily health check 2026-05-15`
+  - `ca0bd349 photosbyelie: gate basket by delivery coverage`
+- What changed recently:
+  - Basket checkout now prunes stale localStorage selections for discarded/Waste Basket tombstones and missing private deliverables.
+  - Checkout errors now identify the exact missing photo/product/object key.
+  - Owner R2 coverage excludes tombstoned Waste Basket photos from active repair targets.
+  - Owner R2 coverage can surface active photos missing private masters or JPG triplets and mark whether Saturn/source-file repair is possible.
+  - Docs/backlog were refreshed in `SUMMARY.md`, `TODO.md`, `HANDOFF.md`, and `README.md`.
+- Current product rule:
+  - Tombstoned/Waste Basket photos are not buyer inventory, even if stale browser basket state or stale private-delivery manifests mention them.
+  - Active buyer inventory requires real private master/render availability.
+  - Missing private files for active photos should be surfaced on Owner and repaired from Saturn/source paths when available.
+- Validation already run for the implementation:
+  - `npm test`
+  - `npm run validate`
+  - `node --check basket.js`
+  - `node --check owner.js`
+  - `python3 -m py_compile scripts/local_server.py`
+  - Browser checks on `basket.html?v=74.38&run=delivery-gating#checkout` and `owner.html?v=74.38&run=delivery-coverage`
+- Known dirty/untracked state intentionally left unstaged on David:
+  - Modified: `AGENTS.md`
+  - Modified: `assets/discarded/discarded-photo-ids.json`
+  - Modified: `assets/expo-manifest.json`
+  - Modified: `assets/owner-actions/title-keyword-review-queue/proposed-state.json`
+  - Modified: `scripts/asset_state.py`
+  - Modified: `title-keyword-review.js`
+  - Untracked: `.tmp-social/`
+  - Untracked: `assets/owner-actions/reserve-data.json`
+  - Untracked: `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-12.json`
+  - Untracked: `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`
+  - Untracked: `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-15.json`
+  - Untracked: `scripts/build_photo_state_tsv.py`
+- Suggested next move for Max:
+  1. Pull latest `main`.
+  2. Reconcile the dirty Owner/generated state deliberately; do not batch it with unrelated product work.
+  3. Confirm whether `scripts/build_photo_state_tsv.py` should become canonical Owner state export.
+  4. Continue revenue track: Stripe test checkout, durable order state, shared price-list data, buyer offer copy.
+  5. Resume Waste Basket cloud cleanup only when ready to monitor progress and confirm tombstone behavior.
+- Commit pushed: yes, this handoff commit.
+- Notes: `MAX2DAVID.md` was not edited; on David it remains inbound-only.
+
 ## 2026-05-15 Basket Delivery Gating + Owner Coverage Docs
 
 - Machine: David (`David-5.local`)

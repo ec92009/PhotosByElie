@@ -16,6 +16,19 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-15 Basket Delivery Gating + Owner Coverage Docs
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `ca0bd349`
+- Result: Refreshed handoff/docs after the basket delivery-gating fix.
+- Changes made:
+  - Summarized the thread in `SUMMARY.md`.
+  - Refreshed `TODO.md`, `HANDOFF.md`, and `README.md` around tombstoned basket pruning, private delivery availability, and Owner missing master/triplet coverage.
+  - Kept `MAX2DAVID.md` inbound-only.
+- Commit pushed: yes, this docs commit.
+- Notes: Remaining dirty Owner/generated state was intentionally left unstaged.
+
 ## 2026-05-13 Nightly Title/Keyword Prompt Scope Fix
 
 - Machine: David (`David-5.local`)

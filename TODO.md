@@ -1,6 +1,6 @@
 # Photos By Elie TODO
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## Current Facts
 
@@ -31,6 +31,8 @@ Last updated: 2026-05-14
 - Owner Current state recently read roughly `10,228` analyzed, `4,415` basketed/blacklisted, and `5,813` Expo photos; counts should be refreshed from generated state before launch decisions.
 - Current R2 coverage targets active Expo photos and excludes Waste Basket photos from the repair target. The generated discarded-media manifest should be updated by the sweep/cleanup tooling rather than hand-edited.
 - Checkout now validates selected private R2 masters/renders before opening Stripe, so buyers cannot pay for files that are not ready. Daily automation `Photos By Elie R2 master-chain repair` restores missing masters from Saturn/local sources first, repairs private render triplets, then prunes derivative ghosts from R2/manifests.
+- Basket checkout now also treats discarded/Waste Basket tombstones as unsellable. Stale browser basket entries for tombstoned photos are pruned even if an old private-delivery manifest still claims a master/render exists.
+- Owner R2 coverage now surfaces missing private masters or JPG triplets for active photos and marks whether repair can use the Saturn/source file path. Tombstoned photos are excluded from this active repair target.
 - Checkout remains guest-first and USD-only. Real Stripe is wired behind Worker configuration, but live payments are blocked until Stripe account setup, Worker secrets, webhook registration, and test-mode checkout verification are complete.
 - Public cloud delivery uses per-file private download tokens instead of building one large ZIP in the Worker. Local mock delivery can still write flat ZIPs for test convenience.
 - Public-facing pages now have a shared English/French/Spanish translation layer. Owner-only localhost tooling intentionally forces English when opened.
@@ -46,12 +48,7 @@ Last updated: 2026-05-14
 
 ## Numbered Backlog
 
-1. **Resume or deliberately defer the suspended Waste Basket purge.**
-   - The true basket queue was cleared, but R2 object cleanup had been paused for the TSV migration.
-   - Restart helper-driven cleanup only when ready to watch/confirm progress.
-   - Keep progress tied to `Cloud media left` and cost impact so the Owner page shows the value of the cleanup.
-
-2. **Reconcile remaining dirty Owner/generated state.**
+1. **Reconcile remaining dirty Owner/generated state.**
    - Review the dirty local owner-action state from live approval/rejection testing.
    - Decide whether to keep and commit `assets/owner-actions/title-keyword-review-queue/approvals-2026-05-13.json`.
    - Decide whether the current `assets/discarded/discarded-photo-ids.json`, `assets/expo-manifest.json`, `assets/owner-actions/reserve-data.json`, and `.tmp-social/` changes are durable or disposable.
@@ -59,45 +56,7 @@ Last updated: 2026-05-14
    - Run `npm test` and `npm run validate`.
    - Commit only the intended owner-action/generated metadata files.
 
-3. **Finish the broader TSV/state export story.**
-   - Decide whether the untracked `scripts/build_photo_state_tsv.py` becomes the canonical Owner state-table export.
-   - Document how public catalog TSV, state TSV, SQLite, and owner-action JSON relate.
-   - Add validation for TSV schema, row counts, duplicate IDs, and gzip freshness.
-   - Keep the browser public catalog path separate from local diagnostic/state tables.
-
-4. **Split public catalog TSV by collection.**
-   - Current v74.38 still loads one full `assets/catalog/photos.tsv`.
-   - Generate per-collection TSV shards such as `france.tsv`, `usa.tsv`, `spain.tsv`, and `ai.tsv`.
-   - Load only the requested gallery collection where possible.
-   - Keep a small index/collection TSV for homepage and navigation.
-   - Preserve `window.photosByElieData` compatibility until dependent code is migrated.
-
-5. **Replace the synchronous TSV bootstrap when pages are ready.**
-   - Current `photos-data.js` uses synchronous TSV reads to preserve the old script-order contract.
-   - Move gallery/detail/basket/Owner modules toward an explicit catalog-ready promise.
-   - Once ready, fetch TSV asynchronously and prefer compressed delivery where the server supports it.
-   - Keep GitHub Pages compatibility front and center.
-
-6. **Verify Waste Basket emptying on a safe test set.**
-   - Use a tiny controlled basket set before running broad cleanup.
-   - Confirm basket and put-back update the live blacklist immediately.
-   - Confirm `Empty basket` queues deletion for public previews, private masters, and private render triplets.
-   - Confirm emptied items leave durable tombstones and do not reappear after catalog regeneration/import.
-   - Confirm `Put back` remains available before emptying and is not available after tombstone-only cleanup.
-
-7. **Regenerate and review the next Title/Keywords queue.**
-   - Confirm approved/rejected rows from the previous queue no longer appear after reload.
-   - Confirm rejected rows receive rework priority.
-   - Confirm proposed keywords are deduped and keyword-blacklist aware.
-   - Generate the next batch only after deciding what to do with current local approval state.
-
-8. **Add a true vision-capable title/keyword proposal pass.**
-   - Prefer inspecting available preview pixels for proposal generation.
-   - Use catalog/source-path metadata only as fallback.
-   - Mark uncertain rows `needs_owner_context` rather than inventing facts.
-   - Keep the 10-keyword target but do not pad with blacklisted, duplicate, or generic keywords.
-
-9. **Prove Stripe checkout in test mode.**
+2. **Prove Stripe checkout in test mode.**
    - Create/sign into the Stripe account from the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Add the Stripe webhook endpoint for `/stripe-webhook`.
@@ -109,25 +68,69 @@ Last updated: 2026-05-14
    - Confirm the Worker validates private R2 files before Stripe opens and the order page exposes paid per-file downloads.
    - Cover paid-but-delivery-pending, expired download link, missing private asset, and retryable Worker error states.
 
-10. **Make checkout and delivery production-durable.**
+3. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for production order state, with D1 likely for queryable order records.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
    - Keep private R2 as private delivery storage.
    - Add receipts/order lookup language that tells buyers exactly where downloads will appear and how long links remain available.
 
-11. **Package the buyer offer clearly.**
-   - Decide the first public offer: digital-only single assets, bundles, or collection packs.
-   - Make product labels buyer-facing: usage rights, resolution, what “Full resolution” means, and when AI-origin images are included or separated.
-   - Rephrase basket/order language around “draft,” availability, manual review, and delivery so it builds trust rather than sounding provisional.
-   - Add simple FAQ/help copy for licensing, personal/commercial use, delivery time, refunds, and contact.
-
-12. **Publish a real price and offer strategy.**
+4. **Publish a real price and offer strategy.**
    - Current state: Published defaults now distinguish camera-photo digital prices from lower AI-origin digital prices, and Owner shows editable local table inputs for active digital tiers, print sizes, frame add-ons, and mock S&H prices.
    - Move the published defaults out of generated-code constants into a dedicated price-list data file shared by public basket and Worker validation.
    - Support adding, editing, disabling, and reordering price entries as the catalog of sellable products grows.
    - Keep checkout validation tied to the published price list so the Worker and public basket agree on SKU IDs, labels, currencies, and amounts.
    - Add business levers: launch pricing, bundle discounts, collection packs, “buy all liked,” and optional promo codes later.
    - Show a clear publish/version step for price changes before they affect buyers.
+
+5. **Resume or deliberately defer the suspended Waste Basket cloud cleanup.**
+   - The true basket queue was cleared, but some R2 object cleanup had been paused or left running slowly.
+   - Restart helper-driven cleanup only when ready to watch/confirm progress.
+   - Keep progress tied to `Cloud media left` and cost impact so the Owner page shows the value of the cleanup.
+   - Confirm tombstones remain after cleanup and active checkout inventory is not reduced incorrectly.
+
+6. **Verify Waste Basket emptying on a safe test set.**
+   - Use a tiny controlled basket set before running broad cleanup.
+   - Confirm basket and put-back update the live blacklist immediately.
+   - Confirm `Empty basket` queues deletion for public previews, private masters, and private render triplets.
+   - Confirm emptied items leave durable tombstones and do not reappear after catalog regeneration/import.
+   - Confirm `Put back` remains available before emptying and is not available after tombstone-only cleanup.
+
+7. **Finish the broader TSV/state export story.**
+   - Decide whether the untracked `scripts/build_photo_state_tsv.py` becomes the canonical Owner state-table export.
+   - Document how public catalog TSV, state TSV, SQLite, and owner-action JSON relate.
+   - Add validation for TSV schema, row counts, duplicate IDs, and gzip freshness.
+   - Keep the browser public catalog path separate from local diagnostic/state tables.
+
+8. **Split public catalog TSV by collection.**
+   - Current v74.38 still loads one full `assets/catalog/photos.tsv`.
+   - Generate per-collection TSV shards such as `france.tsv`, `usa.tsv`, `spain.tsv`, and `ai.tsv`.
+   - Load only the requested gallery collection where possible.
+   - Keep a small index/collection TSV for homepage and navigation.
+   - Preserve `window.photosByElieData` compatibility until dependent code is migrated.
+
+9. **Replace the synchronous TSV bootstrap when pages are ready.**
+   - Current `photos-data.js` uses synchronous TSV reads to preserve the old script-order contract.
+   - Move gallery/detail/basket/Owner modules toward an explicit catalog-ready promise.
+   - Once ready, fetch TSV asynchronously and prefer compressed delivery where the server supports it.
+   - Keep GitHub Pages compatibility front and center.
+
+10. **Regenerate and review the next Title/Keywords queue.**
+   - Confirm approved/rejected rows from the previous queue no longer appear after reload.
+   - Confirm rejected rows receive rework priority.
+   - Confirm proposed keywords are deduped and keyword-blacklist aware.
+   - Generate the next batch only after deciding what to do with current local approval state.
+
+11. **Add a true vision-capable title/keyword proposal pass.**
+   - Prefer inspecting available preview pixels for proposal generation.
+   - Use catalog/source-path metadata only as fallback.
+   - Mark uncertain rows `needs_owner_context` rather than inventing facts.
+   - Keep the 10-keyword target but do not pad with blacklisted, duplicate, or generic keywords.
+
+12. **Package the buyer offer clearly.**
+   - Decide the first public offer: digital-only single assets, bundles, or collection packs.
+   - Make product labels buyer-facing: usage rights, resolution, what “Full resolution” means, and when AI-origin images are included or separated.
+   - Rephrase basket/order language around “draft,” availability, manual review, and delivery so it builds trust rather than sounding provisional.
+   - Add simple FAQ/help copy for licensing, personal/commercial use, delivery time, refunds, and contact.
 
 13. **Curate the first sellable storefront.**
    - Review visible catalog entries before paid traffic or launch outreach.

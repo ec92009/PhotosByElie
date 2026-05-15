@@ -8,19 +8,21 @@ Use this when moving work between Max, David, or the laptop.
 - If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound reports and write outbound instructions for David in `MAX2DAVID.md`.
 - Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
 
-## Current Handoff: 2026-05-14 Revenue Track
+## Current Handoff: 2026-05-15 Revenue Track
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
 - Current visible build: `v74.38`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
-- Recent catalog/docs baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`
+- Recent baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`, and `ca0bd349 photosbyelie: gate basket by delivery coverage`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - Public catalog data is TSV-backed: `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv` hold the heavy catalog payload, while `photos-data.js` is only a small compatibility bootstrap for the existing `window.photosByElieData` browser contract.
 - Waste Basket is the Owner-facing model for unwanted photos. Basketed photos are live-blacklisted and can be put back; emptying the basket deletes public previews, private masters, and private render triplets, then leaves durable tombstones so those masters do not return.
 - Waste Basket purge was intentionally paused for the TSV migration. Resume only when ready to monitor the `Cloud media left` progress.
+- Tombstoned/Waste Basket photos are not buyer inventory. Basket checkout now prunes stale browser selections for tombstoned photos and validates selected private master/render availability before Stripe.
+- Owner R2 coverage excludes Waste Basket tombstones from active repair targets and can list missing private masters/triplets for active photos, preferring Saturn/source-file repair when the source path resolves.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Public browsing now loads previews directly from the public R2 `r2.dev` endpoint: `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev`.
@@ -62,28 +64,33 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 ## Current Priority
 
-1. **Prove Stripe checkout in test mode.**
+1. **Reconcile remaining dirty Owner/generated state.**
+   - Review local approval/proposal/discard/catalog state before the next generated-data commit.
+   - Decide what belongs in Git and what is disposable test/live-state residue.
+   - Keep unrelated local edits out of feature commits.
+
+2. **Prove Stripe checkout in test mode.**
    - Create/sign into Stripe on the Mac.
    - Configure Worker secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
    - Register `/stripe-webhook`.
    - Test successful payment, 3D Secure/authentication-required payment, declined card, verified webhook, private R2 per-file delivery, order page download, and failure states.
 
-2. **Make checkout and delivery production-durable.**
+3. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for order state.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
    - Rate-limit downloads.
    - Make receipt/order/download copy explicit and trustworthy.
 
-3. **Package the buyer offer.**
+4. **Package the buyer offer.**
    - Clarify usage rights, resolution labels, what Full resolution means, AI-origin handling, delivery expectations, refunds, and contact.
    - Decide first public offer: digital-only single assets, bundles, or collection packs.
    - Rephrase basket/order language around draft/review/availability so it builds confidence.
 
-4. **Publish a real price and offer strategy.**
+5. **Publish a real price and offer strategy.**
    - Move local Owner prices into a published price list shared by public basket and Worker validation.
    - Add launch pricing, bundles, collection packs, buy-all-liked, and later promo-code hooks.
 
-5. **Curate the first sellable storefront.**
+6. **Curate the first sellable storefront.**
    - Review visible catalog before paid traffic or launch outreach.
    - Block photos that should not be sold or shown.
    - Pick featured collections and hero images.

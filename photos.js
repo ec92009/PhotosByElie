@@ -1246,6 +1246,24 @@ const ensureHeaderActionLinks = () => {
 
 ensureHeaderActionLinks();
 
+const syncFixedHeaderOffset = () => {
+  if (!document.body?.matches?.("[data-gallery], [data-fixed-header]")) return;
+  const topbar = document.querySelector(".topbar");
+  if (!topbar) return;
+  document.documentElement.style.setProperty("--fixed-header-offset", `${Math.ceil(topbar.offsetHeight + 8)}px`);
+};
+
+if (document.body?.matches?.("[data-gallery], [data-fixed-header]")) {
+  const topbar = document.querySelector(".topbar");
+  syncFixedHeaderOffset();
+  window.addEventListener("resize", syncFixedHeaderOffset);
+  window.addEventListener("photosbyelie:languagechange", syncFixedHeaderOffset);
+  document.fonts?.ready?.then(syncFixedHeaderOffset).catch(() => {});
+  if (topbar && "ResizeObserver" in window) {
+    new ResizeObserver(syncFixedHeaderOffset).observe(topbar);
+  }
+}
+
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
   localStorage.setItem(key, root.dataset.theme);

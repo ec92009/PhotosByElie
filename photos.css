@@ -1647,7 +1647,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 body[data-gallery] main.shell,
 body[data-fixed-header] main.shell{
   width:100%;
-  padding-top:86px;
+  padding-top:var(--fixed-header-offset,86px);
 }
 body[data-gallery] .topbar,
 body[data-fixed-header] .topbar{
@@ -1771,7 +1771,7 @@ body[data-gallery] .gallery-hero{
 @media (max-width:840px){
   body[data-gallery] main.shell,
   body[data-fixed-header] main.shell{
-    padding-top:132px;
+    padding-top:var(--fixed-header-offset,132px);
   }
   .gallery-view-controls:not(.is-header-mounted){
     top:var(--gallery-view-controls-top,76px);

@@ -76,8 +76,9 @@ a:hover{
 .site-version-badge{order:3}
 .header-controls{order:4;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:0;flex:1 1 auto;flex-wrap:wrap}
 .site-version-badge{
-  color:var(--muted);
-  font-size:.78rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   font-weight:800;
   letter-spacing:.02em;
   white-space:nowrap;
@@ -109,7 +110,7 @@ a:hover{
   display:block;
   fill:currentColor;
 }
-.version-switch,.theme-toggle,.language-toggle{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
+.version-switch,.theme-toggle,.language-toggle,.site-version-badge{border:1px solid var(--line);border-radius:999px;background:var(--surface);padding:8px 12px;font-size:.85rem;color:var(--text)}
 .version-switch{display:inline-flex;gap:6px;align-items:center}
 .version-switch a{text-decoration:none;color:var(--muted);font-weight:700}
 .version-switch a.is-active{color:var(--brand)}
@@ -122,7 +123,8 @@ html[data-theme="dark"] .mode-light { display: none; }
 .language-toggle { min-width: 92px; }
 html[data-theme="dark"] .version-switch,
 html[data-theme="dark"] .theme-toggle,
-html[data-theme="dark"] .language-toggle{
+html[data-theme="dark"] .language-toggle,
+html[data-theme="dark"] .site-version-badge{
   border-color:color-mix(in srgb,var(--line) 72%,var(--text) 28%);
   background:var(--surface-2);
 }
@@ -420,7 +422,7 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .about-grid{grid-template-columns:1fr}
   .topbar{flex-wrap:wrap;gap:8px;padding:10px 0;align-items:flex-start}
   .brand{order:1;width:100%;max-width:100%;font-size:clamp(.82rem,4vw,.95rem);flex:1 1 100%;min-width:0;overflow:visible;text-overflow:clip;white-space:normal}
-  .site-version-badge{order:2;align-self:center;line-height:36px}
+  .site-version-badge{order:2;align-self:center}
   .version-switch{order:3;flex:1 1 0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
   .commerce-page .brand{font-size:clamp(1.05rem,5.2vw,1.35rem)}
   .header-controls{order:4;width:100%;flex:1 1 100%;margin-left:0;justify-content:flex-end}

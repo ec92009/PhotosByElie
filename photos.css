@@ -1665,6 +1665,47 @@ body[data-gallery] .gallery-hero{
   max-width:min(520px,calc(100dvw - (var(--page-gutter) * 2)));
   pointer-events:none;
 }
+.topbar .gallery-view-controls,
+.gallery-view-controls.is-header-mounted{
+  position:static;
+  inset:auto;
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  justify-content:flex-end;
+  max-width:none;
+  pointer-events:auto;
+}
+.topbar .gallery-view-controls .gallery-density-control,
+.topbar .gallery-view-controls .gallery-fit-control,
+.topbar .gallery-view-controls .gallery-top-button,
+.gallery-view-controls.is-header-mounted .gallery-density-control,
+.gallery-view-controls.is-header-mounted .gallery-fit-control,
+.gallery-view-controls.is-header-mounted .gallery-top-button{
+  box-shadow:none;
+  background:var(--surface);
+}
+.topbar .gallery-density-control,
+.gallery-view-controls.is-header-mounted .gallery-density-control{
+  padding:6px 10px;
+}
+.topbar .gallery-density-control input,
+.gallery-view-controls.is-header-mounted .gallery-density-control input{
+  width:clamp(72px,8vw,112px);
+}
+.topbar .gallery-fit-control,
+.gallery-view-controls.is-header-mounted .gallery-fit-control{
+  padding:4px;
+}
+.topbar .gallery-fit-control button,
+.gallery-view-controls.is-header-mounted .gallery-fit-control button{
+  padding:5px 9px;
+}
+.topbar .gallery-top-button,
+.gallery-view-controls.is-header-mounted .gallery-top-button{
+  width:38px;
+  height:38px;
+}
 .gallery-density-control,
 .gallery-fit-control,
 .gallery-top-button{
@@ -1722,9 +1763,19 @@ body[data-gallery] .gallery-hero{
   color:var(--bg);
 }
 @media (max-width:840px){
-  .gallery-view-controls{
+  .gallery-view-controls:not(.is-header-mounted){
     top:var(--gallery-view-controls-top,76px);
     right:var(--page-gutter);
+  }
+  .topbar .gallery-view-controls,
+  .gallery-view-controls.is-header-mounted{
+    order:3;
+    width:100%;
+    justify-content:flex-end;
+  }
+  .topbar .gallery-density-control input,
+  .gallery-view-controls.is-header-mounted .gallery-density-control input{
+    width:84px;
   }
 }
 .gallery-filter-bar{

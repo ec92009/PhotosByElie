@@ -943,8 +943,19 @@ if (galleryRoot && gallery) {
     topButton.dataset.galleryBackToTop = "";
     topButton.setAttribute("aria-label", t("a11y.back_to_top"));
     topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
-    viewControls.append(densityControl, topButton, fitControl);
-    document.body.append(viewControls);
+    viewControls.append(densityControl, fitControl, topButton);
+    const headerControls = document.querySelector(".header-controls");
+    const headerActions = headerControls?.querySelector("[data-header-actions]");
+    if (headerControls) {
+      viewControls.classList.add("is-header-mounted");
+      if (headerActions) {
+        headerActions.after(viewControls);
+      } else {
+        headerControls.prepend(viewControls);
+      }
+    } else {
+      document.body.append(viewControls);
+    }
     densityInput = densityControl.querySelector("[data-gallery-density]");
     densityValue = densityControl.querySelector("[data-gallery-density-value]");
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
@@ -963,10 +974,12 @@ if (galleryRoot && gallery) {
     window.addEventListener("resize", () => {
       applyGalleryDensity();
       applyGalleryPreviewLayout();
-      positionGalleryViewControls();
+      if (!viewControls?.classList.contains("is-header-mounted")) positionGalleryViewControls();
       updateSelection({ scroll: false });
     });
-    window.addEventListener("scroll", positionGalleryViewControls, { passive: true });
+    if (!viewControls.classList.contains("is-header-mounted")) {
+      window.addEventListener("scroll", positionGalleryViewControls, { passive: true });
+    }
     window.addEventListener("load", () => {
       applyGalleryPreviewLayout();
       updateSelection({ scroll: false });
@@ -979,7 +992,7 @@ if (galleryRoot && gallery) {
     }
     applyGalleryDensity();
     applyGalleryFitMode();
-    positionGalleryViewControls();
+    if (!viewControls.classList.contains("is-header-mounted")) positionGalleryViewControls();
     window.photosByElieI18n?.apply?.();
   }
 

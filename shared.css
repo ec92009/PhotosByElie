@@ -62,7 +62,7 @@ a:hover{
 .skip-link:focus{top:10px}
 .shell{width:min(1480px,calc(100dvw - (var(--page-gutter) * 2)));margin:auto}
 .topbar{
-  position:sticky;top:0;z-index:20;
+  position:sticky;top:0;z-index:80;
   display:flex;gap:10px;align-items:center;justify-content:space-between;
   padding:12px 0;
   backdrop-filter:blur(10px);
@@ -71,7 +71,7 @@ a:hover{
 }
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
-.header-controls{display:flex;align-items:center;gap:8px;margin-left:auto}
+.header-controls{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;flex-wrap:wrap}
 .header-action-links{display:inline-flex;align-items:center;gap:6px}
 .header-action-link{
   display:inline-grid;

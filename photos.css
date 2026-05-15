@@ -341,9 +341,6 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .photo-dots{
   margin-top:18px;
 }
-.photo-workflow{
-  background:var(--bg);
-}
 .gallery-hero{
   min-height:clamp(300px,42dvh,520px);
   display:flex;

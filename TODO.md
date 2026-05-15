@@ -4,7 +4,7 @@ Last updated: 2026-05-14
 
 ## Current Facts
 
-- Local visible build: `v74.37`.
+- Local visible build: `v74.38`.
 - Current social landing pattern: Pinterest/social traffic should land on first-party `campaign.html?c=...` mini-collections with an embedded-browser escape path, not directly on a single photo detail page.
 - Recovered Max review controls are in the current build: Basket, Liked, and Unknown show-more pagination; homepage Min size filtering; shared photo orientation helper; and added blacklist keywords.
 - Public Expo catalog validates in external media mode with `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
@@ -66,7 +66,7 @@ Last updated: 2026-05-14
    - Keep the browser public catalog path separate from local diagnostic/state tables.
 
 4. **Split public catalog TSV by collection.**
-   - Current v74.37 still loads one full `assets/catalog/photos.tsv`.
+   - Current v74.38 still loads one full `assets/catalog/photos.tsv`.
    - Generate per-collection TSV shards such as `france.tsv`, `usa.tsv`, `spain.tsv`, and `ai.tsv`.
    - Load only the requested gallery collection where possible.
    - Keep a small index/collection TSV for homepage and navigation.

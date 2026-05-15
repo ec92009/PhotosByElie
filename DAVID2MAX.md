@@ -622,3 +622,29 @@ _No David automation results recorded yet._
 - Behavior: Campaign grids now respond to the same floating Grid density and Fit/Fill controls as country collections, including panorama full-width behavior in Fit mode.
 - Copy: Homepage campaign shelf now says `Featured on Pinterest` instead of `Mini collections`.
 - Visible version: v74.37.
+
+## 2026-05-15 - R2 master-chain maintenance (daily)
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- `git pull --ff-only`: FAILED x2 (no network) — `Failed to connect to github.com port 443 ... Couldn't connect to server`
+- `node scripts/repair_r2_master_chain.mjs --repair --prune --audit .review-logs/r2-master-chain-audit-daily.json`: FAILED — `getaddrinfo ENOTFOUND <account>.r2.cloudflarestorage.com` (DNS/network)
+- Checks passed (local-only): `npm test` (14/14) and `npm run validate` (`Validation OK`)
+- Counts (repair/prune not executed due to network):
+  - Repaired masters: 0
+  - Repaired renders: 0
+  - Pruned private render ghosts: 0
+  - Pruned public preview ghosts: 0
+  - Remaining missing public previews: unknown (audit could not run)
+  - Failures: 1 (R2 DNS/network)
+
+## 2026-05-15 - Basket delivery gating and Owner coverage surfacing
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Result: Basket now loads tracked private-delivery coverage plus Waste Basket tombstones before checkout, removes unavailable selected delivery choices, and shows exact Worker missing-file details when checkout still catches a gap.
+- Owner page: R2 catalog coverage now excludes discarded/tombstoned photos from active repair targets and can surface concrete missing private masters/JPG triplets with source-file repair hints.
+- Root cause found: the basket contained tombstoned photo `20220511-101210-04342-d9757c336f`; checkout correctly blocked the full-resolution private master while the public basket still let it masquerade as buyable.
+- Visible version: v74.38.
+- Checks passed: `node --check basket.js`, `node --check owner.js`, `python3 -m py_compile scripts/local_server.py`, `npm test`, and `npm run validate`.
+- Browser verification: `basket.html?v=74.38&run=delivery-gating` removed the unavailable selected choice and dropped the basket from 26 assets/$1690 to 25 assets/$1625; `owner.html?v=74.38&run=delivery-coverage` showed active R2 coverage satisfied for 5,796 photos with 48 Waste Basket photos excluded.

@@ -1,10 +1,10 @@
 {
   "schema": "photosbyelie.private-delivery-manifest.v1",
-  "updatedAt": "2026-05-12T16:10:52.093Z",
+  "updatedAt": "2026-05-15T06:35:04.510Z",
   "privateBucket": "photosbyelie-private",
   "catalogPhotos": 5844,
-  "privateMasterPhotoIds": 5844,
-  "privateRenderTripletPhotoIds": 5844,
+  "privateMasterPhotoIds": 5903,
+  "privateRenderTripletPhotoIds": 10203,
   "records": {
     "20220506-160631-03403-51426edaac": {
       "id": "20220506-160631-03403-51426edaac",

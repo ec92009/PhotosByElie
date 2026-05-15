@@ -37,6 +37,9 @@ const pageSize = 24;
 let visibleLimit = pageSize;
 let moreButton = null;
 let showAllButton = null;
+let deliveryManifest = null;
+let deliveryAvailabilityLoaded = false;
+let discardedPhotoIds = new Set();
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
 const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -149,6 +152,77 @@ const framePriceFor = (frame, option) => window.photosByElieFramePrice?.(frame, 
 const optionQuantity = (option) => window.photosByElieOptionQuantity?.(option) || 1;
 const optionTotal = (option) => window.photosByElieOptionTotal?.(option) || Number(option.price) || 0;
 const optionShippingHandlingTotal = (option) => window.photosByElieOptionShippingHandlingTotal?.(option) || 0;
+
+const versionedFetchPath = (path) => window.photosByElieVersionedHref?.(path) || path;
+
+const loadDeliveryAvailability = async () => {
+  try {
+    const [deliveryResponse, discardedResponse] = await Promise.all([
+      fetch(versionedFetchPath("./assets/private-delivery-manifest.json"), { cache: "no-store" }),
+      fetch(versionedFetchPath("./assets/discarded/discarded-photo-ids.json"), { cache: "no-store" }),
+    ]);
+    deliveryManifest = deliveryResponse.ok ? await deliveryResponse.json() : null;
+    const discarded = discardedResponse.ok ? await discardedResponse.json() : {};
+    discardedPhotoIds = new Set([
+      ...(Array.isArray(discarded.photo_ids) ? discarded.photo_ids : []),
+      ...(Array.isArray(discarded.discardedPhotoIds) ? discarded.discardedPhotoIds : []),
+      ...(Array.isArray(discarded.photos) ? discarded.photos.map((photo) => photo?.id) : []),
+    ].filter(Boolean).map(String));
+  } catch {
+    deliveryManifest = null;
+    discardedPhotoIds = new Set();
+  } finally {
+    deliveryAvailabilityLoaded = true;
+    renderBasket();
+  }
+};
+
+const deliveryRecordFor = (photoId) => deliveryManifest?.records?.[photoId] || null;
+
+const deliveryAvailabilityFor = (photoId, option) => {
+  if (!option || option.type === "print") return { available: true, reason: "" };
+  if (discardedPhotoIds.has(String(photoId))) {
+    return { available: false, reason: "This photo is in the Waste Basket tombstones and is not for sale." };
+  }
+  if (!deliveryAvailabilityLoaded || !deliveryManifest) return { available: true, reason: "" };
+  const record = deliveryRecordFor(photoId);
+  if (!record) return { available: false, reason: "Private delivery coverage is not recorded for this photo." };
+  if (option.id === "full") {
+    return record.privateMaster?.present === true
+      ? { available: true, reason: "" }
+      : { available: false, reason: "Full resolution master is missing from private storage." };
+  }
+  if (option.id === "jpg-6mp" || option.id === "jpg-3mp" || option.id === "jpg-1mp") {
+    return record.privateRenders?.[option.id]?.present === true
+      ? { available: true, reason: "" }
+      : { available: false, reason: `${productLabel(option)} delivery file is missing from private storage.` };
+  }
+  return { available: true, reason: "" };
+};
+
+const availableSelectedOptionIds = (item) => new Set((item.options || [])
+  .filter((option) => deliveryAvailabilityFor(item.photoId, option).available)
+  .map((option) => option.id));
+
+const pruneUnavailableBasketSelections = (items) => {
+  if (!deliveryAvailabilityLoaded) return items;
+  let changed = false;
+  const nextItems = items.map((item, index) => {
+    const nextOptions = (item.options || []).filter((option) => deliveryAvailabilityFor(item.photoId, option).available);
+    if (nextOptions.length !== (item.options || []).length) {
+      changed = true;
+      basketStore.updateOptions(index, nextOptions.map((option) => ({ id: option.id, quantity: option.quantity, frameId: option.frame?.id || option.frameId })));
+      return { ...item, options: nextOptions };
+    }
+    return item;
+  });
+  if (changed) {
+    clearCheckoutState();
+    status.textContent = "Unavailable delivery choices were removed from the basket.";
+    return basketStore.write(basketStore.read());
+  }
+  return nextItems;
+};
 
 const basketUsesWideRows = () => window.matchMedia?.("(min-width: 761px)")?.matches ?? true;
 
@@ -337,8 +411,12 @@ const checkoutFetch = async (path, options = {}) => {
   if (!response.ok) {
     const message = body?.error?.message || `Worker request failed with HTTP ${response.status}.`;
     const missing = body?.error?.details?.missing || [];
-    const suffix = missing.length ? ` ${missing.length} selected file${missing.length === 1 ? "" : "s"} are not ready for delivery.` : "";
-    throw new Error(`${message}${suffix}`);
+    const suffix = missing.length
+      ? ` ${missing.length} selected file${missing.length === 1 ? "" : "s"} are not ready for delivery: ${missing.map((item) => `${item.photoId || "photo"} ${item.productLabel || item.productId || "file"} (${item.objectKey || item.code || "missing"})`).join("; ")}.`
+      : "";
+    const error = new Error(`${message}${suffix}`);
+    error.details = body?.error?.details || null;
+    throw error;
   }
   return body;
 };
@@ -519,7 +597,7 @@ orderEmail?.addEventListener("click", async (event) => {
 });
 
 const renderBasket = () => {
-  const items = basketStore.write(basketStore.read());
+  const items = pruneUnavailableBasketSelections(basketStore.write(basketStore.read()));
   const visibleItems = items.slice(0, visibleLimit);
   const total = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
   const assetCount = items.reduce((sum, item) => sum + (item.options || []).reduce((count, option) => count + optionQuantity(option), 0), 0);
@@ -541,7 +619,7 @@ const renderBasket = () => {
     const panoClass = window.photosByEliePhotoIsPanorama?.(photo) ? "is-pano" : "";
     const thumbStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const imageSrc = window.photosByElieMediaUrl?.(photo, "gallery") || "";
-    const selectedIds = new Set((item.options || []).map((option) => option.id));
+    const selectedIds = availableSelectedOptionIds(item);
     const selectedOptionById = new Map((item.options || []).map((option) => [option.id, option]));
     const availableOptions = photo && window.photosByElieAvailableResolutions
       ? window.photosByElieAvailableResolutions(photo, resolutionOptions)
@@ -586,16 +664,18 @@ const renderBasket = () => {
         <p class="eyebrow">${item.collection || "Collection"}</p>
         <h3>${item.title}</h3>
         <div class="basket-resolution-grid" aria-label="Resolution options for ${item.title}">
-          ${availableOptions.map((option) => `
-            <div class="basket-product-row">
+          ${availableOptions.map((option) => {
+            const availability = deliveryAvailabilityFor(item.photoId, option);
+            return `
+            <div class="basket-product-row ${availability.available ? "" : "is-unavailable"}">
             <label class="product-choice">
-              <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
-              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}</span>
+              <input type="checkbox" data-basket-resolution="${index}" value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""} ${availability.available ? "" : "disabled"}/>
+              <span><strong>${productLabel(option)}</strong>${resolutionDetail(option)}${availability.available ? "" : `<small class="basket-delivery-warning">${escapeText(availability.reason)}</small>`}</span>
               <b>${formatMoney(option.price)}</b>
             </label>
             ${printConfigMarkup(option)}
             </div>
-          `).join("")}
+          `}).join("")}
         </div>
       </div>
       <div class="basket-item-actions">
@@ -698,6 +778,7 @@ const renderBasket = () => {
 
 renderBasket();
 syncCheckoutControls();
+loadDeliveryAvailability();
 window.addEventListener("resize", syncBasketPreviewHeights);
 window.addEventListener("load", syncBasketPreviewHeights);
 window.addEventListener("photosbyelie:languagechange", () => {

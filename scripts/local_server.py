@@ -1517,13 +1517,77 @@ def _coverage_row(
     }
 
 
+def _resolve_source_path(repo_root: Path, source_path: str) -> str:
+    if not source_path:
+        return ""
+    candidates = []
+    raw = Path(source_path)
+    if raw.is_absolute():
+        candidates.append(raw)
+    else:
+        candidates.append(repo_root / raw)
+        candidates.extend(root / raw for root in SOURCE_ROOT_CANDIDATES)
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                return str(candidate)
+        except OSError:
+            continue
+    return ""
+
+
+def _private_delivery_missing_details(repo_root: Path, active_records: list[tuple[str, dict]], limit: int = 50) -> list[dict]:
+    missing: list[dict] = []
+    for photo_id, record in active_records:
+        source_path = str(record.get("sourcePath") or "")
+        source_file = _resolve_source_path(repo_root, source_path)
+        master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
+        if master.get("present") is not True:
+            missing.append({
+                "photoId": photo_id,
+                "kind": "master",
+                "productId": "full",
+                "productLabel": "Full resolution",
+                "objectKey": master.get("key") or master.get("expectedKey") or "",
+                "sourcePath": source_path,
+                "sourceFile": source_file,
+                "repair": "upload_source_master" if source_file else "source_missing",
+            })
+        renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
+        for product_id, label in (("jpg-6mp", "JPG 6 MP"), ("jpg-3mp", "JPG 3 MP"), ("jpg-1mp", "JPG 1 MP")):
+            render = renders.get(product_id) if isinstance(renders.get(product_id), dict) else {}
+            if render.get("present") is True:
+                continue
+            missing.append({
+                "photoId": photo_id,
+                "kind": "render",
+                "productId": product_id,
+                "productLabel": label,
+                "objectKey": render.get("key") or render.get("expectedKey") or "",
+                "sourcePath": source_path,
+                "sourceFile": source_file,
+                "repair": "render_from_source" if source_file else "source_missing",
+            })
+            if len(missing) >= limit:
+                return missing
+        if len(missing) >= limit:
+            return missing
+    return missing
+
+
 def _r2_coverage_summary(repo_root: Path) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
     hidden_blacklist = _read_json_file(repo_root / "assets/hidden/hidden-blacklist.json", {})
+    discarded_tombstone = _read_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, {})
     hidden_photo_ids = set()
     if isinstance(hidden_blacklist, dict) and isinstance(hidden_blacklist.get("photo_ids"), list):
         hidden_photo_ids = {str(photo_id) for photo_id in hidden_blacklist["photo_ids"] if photo_id}
+    discarded_photo_ids = set()
+    if isinstance(discarded_tombstone, dict):
+        discarded_photo_ids.update(str(photo_id) for photo_id in discarded_tombstone.get("photo_ids") or [] if photo_id)
+        discarded_photo_ids.update(str(photo.get("id")) for photo in discarded_tombstone.get("photos") or [] if isinstance(photo, dict) and photo.get("id"))
+    excluded_photo_ids = hidden_photo_ids | discarded_photo_ids
     records = private_manifest.get("records") if isinstance(private_manifest, dict) else {}
     if not isinstance(records, dict):
         records = {}
@@ -1539,8 +1603,8 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     private_bucket = str(private_manifest.get("privateBucket") or "photosbyelie-private") if isinstance(private_manifest, dict) else "photosbyelie-private"
     public_bucket = "photosbyelie-public"
     record_items = [(str(photo_id), record) for photo_id, record in records.items() if isinstance(record, dict)]
-    active_records = [(photo_id, record) for photo_id, record in record_items if photo_id not in hidden_photo_ids]
-    blocked_records = [(photo_id, record) for photo_id, record in record_items if photo_id in hidden_photo_ids]
+    active_records = [(photo_id, record) for photo_id, record in record_items if photo_id not in excluded_photo_ids]
+    blocked_records = [(photo_id, record) for photo_id, record in record_items if photo_id in excluded_photo_ids]
     active_expected = len(active_records) or expected
     blocked_excluded = len(blocked_records)
 
@@ -1573,6 +1637,7 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
         _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg", blocked_excluded, blocked_present["public"]),
     ]
     missing_rows = [row for row in rows if not row["ok"]]
+    missing_private_delivery = _private_delivery_missing_details(repo_root, active_records)
     if missing_rows:
         recommendation = "Missing coverage. Run the lock-guarded cloud media sweep."
     else:
@@ -1582,8 +1647,10 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
         "catalogPhotos": expected,
         "activeCatalogPhotos": active_expected,
         "blockedCatalogPhotos": blocked_excluded,
+        "discardedCatalogPhotos": len([photo_id for photo_id, _record in record_items if photo_id in discarded_photo_ids]),
         "sidecarPhotos": len(photos),
         "rows": rows,
+        "missingPrivateDelivery": missing_private_delivery,
         "ok": not missing_rows,
         "recommendation": recommendation,
         "fixAvailable": True,

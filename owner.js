@@ -27,6 +27,7 @@
   const r2CoverageCard = document.querySelector("[data-owner-r2-coverage-card]");
   const r2CoverageSummary = document.querySelector("[data-owner-r2-coverage-summary]");
   const r2CoverageCounts = document.querySelector("[data-owner-r2-coverage-counts]");
+  const r2CoverageMissing = document.querySelector("[data-owner-r2-coverage-missing]");
   const r2CoverageNote = document.querySelector("[data-owner-r2-coverage-note]");
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
   const r2Card = document.querySelector("[data-owner-r2-card]");
@@ -1137,6 +1138,10 @@
       r2CoverageOk = false;
       r2CoverageSummary.textContent = "R2 coverage is unavailable.";
       r2CoverageCounts.innerHTML = "";
+      if (r2CoverageMissing) {
+        r2CoverageMissing.hidden = true;
+        r2CoverageMissing.innerHTML = "";
+      }
       r2CoverageNote.textContent = "";
       if (r2FixButton) r2FixButton.disabled = true;
       return;
@@ -1164,6 +1169,26 @@
         </div>
       `;
     }).join("");
+    const missingPrivateDelivery = Array.isArray(coverage.missingPrivateDelivery)
+      ? coverage.missingPrivateDelivery
+      : [];
+    if (r2CoverageMissing) {
+      r2CoverageMissing.hidden = missingPrivateDelivery.length === 0;
+      r2CoverageMissing.innerHTML = missingPrivateDelivery.length ? `
+        <h3>Missing private delivery files</h3>
+        <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Fix it runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing JPG triplets.</p>
+        <div class="owner-coverage-missing-list">
+          ${missingPrivateDelivery.slice(0, 12).map((item) => `
+            <div class="owner-coverage-missing-row">
+              <strong>${escapeHtml(item.photoId)}</strong>
+              <span>${escapeHtml(item.productLabel || item.productId || item.kind || "Delivery file")}</span>
+              <code>${escapeHtml(item.objectKey || "")}</code>
+              <small>${escapeHtml(item.sourceFile ? `Source found: ${item.sourceFile}` : `Source not found locally: ${item.sourcePath || "unknown"}`)}</small>
+            </div>
+          `).join("")}
+        </div>
+      ` : "";
+    }
     r2CoverageNote.textContent = coverage.ok
       ? basketCatalogPhotos
         ? "Active catalog coverage is satisfied; Waste Basket media is excluded from repair targets."

@@ -7,7 +7,7 @@ Date: 2026-05-14
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Local preview: `http://localhost:8000/`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
-- Current visible build: `v74.37`
+- Current visible build: `v74.38`
 - Recent pushed catalog/docs commits include `c6306eed photosbyelie: move public catalog to TSV` and `be5c6014 photosbyelie: refresh TSV migration notes`.
 - Local Owner mutations require the helper server: `python3 scripts/local_server.py 8000`.
 - Handoff direction on David: read `MAX2DAVID.md` as inbound context and write David reports to `DAVID2MAX.md`.

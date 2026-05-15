@@ -1777,15 +1777,32 @@ body[data-gallery] .gallery-hero{
     top:var(--gallery-view-controls-top,76px);
     right:var(--page-gutter);
   }
+  .topbar .gallery-density-control input,
+  .gallery-view-controls.is-header-mounted .gallery-density-control input{
+    width:84px;
+  }
+}
+@media (min-width:841px) and (max-width:1180px){
+  body[data-gallery] .topbar,
+  body[data-fixed-header] .topbar{
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  body[data-gallery] .header-controls,
+  body[data-fixed-header] .header-controls{
+    flex:1 1 100%;
+    width:100%;
+    margin-left:0;
+    flex-wrap:nowrap;
+    justify-content:flex-end;
+  }
+}
+@media (max-width:840px) and (orientation:portrait){
   .topbar .gallery-view-controls,
   .gallery-view-controls.is-header-mounted{
     order:3;
     width:100%;
     justify-content:flex-end;
-  }
-  .topbar .gallery-density-control input,
-  .gallery-view-controls.is-header-mounted .gallery-density-control input{
-    width:84px;
   }
 }
 .gallery-filter-bar{

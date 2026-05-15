@@ -993,14 +993,9 @@ if (galleryRoot && gallery) {
     topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
     viewControls.append(densityControl, fitControl, topButton);
     const headerControls = document.querySelector(".header-controls");
-    const headerActions = headerControls?.querySelector("[data-header-actions]");
     if (headerControls) {
       viewControls.classList.add("is-header-mounted");
-      if (headerActions) {
-        headerActions.after(viewControls);
-      } else {
-        headerControls.prepend(viewControls);
-      }
+      headerControls.append(viewControls);
     } else {
       document.body.append(viewControls);
     }

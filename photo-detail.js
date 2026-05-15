@@ -313,7 +313,6 @@ if (!photo) {
   document.querySelector("[data-photo-title]").textContent = t("detail.archive_reset_title");
   setPhotoMetaText(t("detail.no_published_meta", { collection: collection.title }));
   document.querySelector("[data-back-link]").setAttribute("href", versionedHref(galleryHrefForKey(collectionKey)));
-  document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
   document.querySelector("[data-resolution-list]").innerHTML = "";
   document.querySelector("[data-selection-total]").textContent = "$0";
   const metadataRoot = document.querySelector("[data-photo-metadata]");
@@ -372,10 +371,9 @@ backLink.setAttribute("href", versionedHref(detailBackHref()));
 backLink.dataset.i18n = detailBackLabelKey();
 backLink.textContent = t(detailBackLabelKey());
 
-const prevPhotoLink = document.querySelector("[data-prev-photo]");
-const nextPhotoLink = document.querySelector("[data-next-photo]");
-const navigateToPhotoLink = (link) => {
-  const href = link?.getAttribute("href");
+let previousPhotoHref = "";
+let nextPhotoHref = "";
+const navigateToPhotoHref = (href) => {
   if (href) window.location.assign(versionedHref(href));
 };
 
@@ -387,8 +385,6 @@ const ensureDetailBottomActions = () => {
   bottomActions.dataset.detailBottomActions = "";
   bottomActions.setAttribute("aria-label", t("a11y.bottom_photo_actions"));
   bottomActions.innerHTML = `
-    <a class="btn secondary" data-bottom-prev-photo href="./photo.html" data-i18n="common.previous">Previous</a>
-    <a class="btn secondary" data-bottom-next-photo href="./photo.html" data-i18n="common.next">Next</a>
     <a class="btn secondary" data-bottom-back-link href="${galleryHrefForKey(collectionKey)}" data-i18n="common.back_to_gallery">Back to gallery</a>
   `;
   detailMain.append(bottomActions);
@@ -400,39 +396,23 @@ const syncDetailBottomActions = () => {
   ensureDetailBottomActions();
   const bottomActions = document.querySelector("[data-detail-bottom-actions]");
   if (!bottomActions) return;
-  const bottomPrev = bottomActions.querySelector("[data-bottom-prev-photo]");
-  const bottomNext = bottomActions.querySelector("[data-bottom-next-photo]");
   const bottomBack = bottomActions.querySelector("[data-bottom-back-link]");
   const topBack = document.querySelector("[data-back-link]");
-  const prevHref = prevPhotoLink?.getAttribute("href");
-  const nextHref = nextPhotoLink?.getAttribute("href");
   const backHref = topBack?.getAttribute("href") || galleryHrefForKey(collectionKey);
-  if (prevHref) bottomPrev?.setAttribute("href", versionedHref(prevHref));
-  if (nextHref) bottomNext?.setAttribute("href", versionedHref(nextHref));
   if (bottomBack) {
     bottomBack.setAttribute("href", versionedHref(backHref));
     bottomBack.dataset.i18n = topBack?.dataset.i18n || "common.back_to_gallery";
     bottomBack.textContent = topBack?.textContent || t(bottomBack.dataset.i18n);
   }
-  bottomPrev?.toggleAttribute("hidden", !prevHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
-  bottomNext?.toggleAttribute("hidden", !nextHref || document.querySelector(".detail-cycle")?.hasAttribute("hidden"));
 };
 
-if (prevPhotoLink && nextPhotoLink) {
-  const detailPhotos = activeDetailSequence();
-  const detailIndex = detailPhotos.findIndex((item) => item.photo.id === photo.id);
-  if (detailPhotos.length > 1 && detailIndex >= 0) {
-    const previousEntry = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
-    const nextEntry = detailPhotos[(detailIndex + 1) % detailPhotos.length];
-    prevPhotoLink.setAttribute("href", versionedHref(`./photo.html?id=${previousEntry.photo.id}`));
-    prevPhotoLink.setAttribute("aria-label", `Previous photo: ${previousEntry.photo.title} in ${previousEntry.collection.title}`);
-    nextPhotoLink.setAttribute("href", versionedHref(`./photo.html?id=${nextEntry.photo.id}`));
-    nextPhotoLink.setAttribute("aria-label", `Next photo: ${nextEntry.photo.title} in ${nextEntry.collection.title}`);
-  } else {
-    document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
-  }
-} else {
-  document.querySelector(".detail-cycle")?.setAttribute("hidden", "");
+const detailPhotos = activeDetailSequence();
+const detailIndex = detailPhotos.findIndex((item) => item.photo.id === photo.id);
+if (detailPhotos.length > 1 && detailIndex >= 0) {
+  const previousEntry = detailPhotos[(detailIndex - 1 + detailPhotos.length) % detailPhotos.length];
+  const nextEntry = detailPhotos[(detailIndex + 1) % detailPhotos.length];
+  previousPhotoHref = `./photo.html?id=${encodeURIComponent(previousEntry.photo.id)}`;
+  nextPhotoHref = `./photo.html?id=${encodeURIComponent(nextEntry.photo.id)}`;
 }
 syncDetailBottomActions();
 document.querySelectorAll("[data-back-link], [data-bottom-back-link]").forEach((link) => {
@@ -760,13 +740,13 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     return;
   }
-  if (event.key === "ArrowLeft" && prevPhotoLink?.getAttribute("href")) {
-    navigateToPhotoLink(prevPhotoLink);
+  if (event.key === "ArrowLeft" && previousPhotoHref) {
+    navigateToPhotoHref(previousPhotoHref);
     event.preventDefault();
     return;
   }
-  if (event.key === "ArrowRight" && nextPhotoLink?.getAttribute("href")) {
-    navigateToPhotoLink(nextPhotoLink);
+  if (event.key === "ArrowRight" && nextPhotoHref) {
+    navigateToPhotoHref(nextPhotoHref);
     event.preventDefault();
   }
 });
@@ -800,10 +780,10 @@ swipeTarget?.addEventListener("touchend", (event) => {
   swipeStart = null;
   if (elapsed > 650 || Math.abs(deltaX) < 52 || Math.abs(deltaX) < Math.abs(deltaY) * 1.35) return;
   if (deltaX < 0) {
-    navigateToPhotoLink(nextPhotoLink);
+    navigateToPhotoHref(nextPhotoHref);
     return;
   }
-  navigateToPhotoLink(prevPhotoLink);
+  navigateToPhotoHref(previousPhotoHref);
 }, { passive: true });
 
 if (localModerationEnabled) {

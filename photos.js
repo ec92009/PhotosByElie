@@ -1264,6 +1264,13 @@ if (document.body?.matches?.("[data-gallery], [data-fixed-header]")) {
   }
 }
 
+document.querySelectorAll("[data-header-back-to-top]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+  });
+});
+
 btn?.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
   localStorage.setItem(key, root.dataset.theme);

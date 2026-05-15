@@ -213,7 +213,7 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=76.9`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=76.10`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;

@@ -1163,6 +1163,10 @@ window.photosByElieMetadataValue = (photo, label) => (
 );
 
 window.photosByEliePreviewDimensions = (photo) => {
+  const actual = photo?.previewDimensions || photo?.media?.publicPreview?.dimensions;
+  if (actual?.width && actual?.height) {
+    return { width: Number(actual.width), height: Number(actual.height) };
+  }
   const value = window.photosByElieMetadataValue(photo, 'Preview file')
     || window.photosByElieMetadataValue(photo, 'Original size');
   const match = String(value).match(/(\d+)\s*x\s*(\d+)/i);

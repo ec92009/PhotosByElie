@@ -217,6 +217,10 @@ const gallerySearchText = (photo) => [
 ].filter(Boolean).join(" ").toLowerCase();
 
 const previewDimensions = (photo) => {
+  const actual = photo?.previewDimensions || photo?.media?.publicPreview?.dimensions;
+  if (actual?.width && actual?.height) {
+    return { width: Number(actual.width), height: Number(actual.height) };
+  }
   const value = metadataValue(photo, "Preview file") || metadataValue(photo, "Original size");
   const match = value.match(/(\d+)\s*x\s*(\d+)/i);
   if (!match) return null;
@@ -655,6 +659,35 @@ const photoAspectRatioStyle = (photo) => {
   return ` style="--photo-aspect-ratio:${dimensions.width} / ${dimensions.height}"`;
 };
 
+const syncGalleryImageDimensions = (photos = renderedGalleryPhotos) => {
+  let pendingLayoutUpdate = false;
+  const syncImage = (image, photo) => {
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+    if (!photo || !width || !height) return;
+    const current = previewDimensions(photo);
+    if (current?.width === width && current?.height === height) return;
+    photo.previewDimensions = { width, height };
+    image.closest("[data-photo-link]")?.style.setProperty("--photo-aspect-ratio", `${width} / ${height}`);
+    pendingLayoutUpdate = true;
+  };
+
+  galleryRoot?.querySelectorAll("[data-photo-index] img[data-photo-card-image]").forEach((image) => {
+    const card = image.closest("[data-photo-index]");
+    const photo = photos[Number(card?.dataset.photoIndex || 0)];
+    if (image.complete) {
+      syncImage(image, photo);
+      return;
+    }
+    image.addEventListener("load", () => {
+      syncImage(image, photo);
+      applyGalleryPreviewLayout();
+    }, { once: true });
+  });
+
+  if (pendingLayoutUpdate) applyGalleryPreviewLayout();
+};
+
 const updateGalleryLikeButtons = () => {
   const likedIds = likedPhotoIds();
   galleryRoot?.querySelectorAll("[data-gallery-like]").forEach((button) => {
@@ -868,6 +901,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     });
   }
   window.photosByElieVersionInternalLinks?.(galleryRoot);
+  syncGalleryImageDimensions(visibleSubset);
   applyGalleryDensity();
   applyGalleryFitMode();
   applyGalleryPreviewLayout();

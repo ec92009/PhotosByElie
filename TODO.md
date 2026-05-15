@@ -151,6 +151,7 @@ Last updated: 2026-05-15
    - Keep local Owner activity out of buyer analytics.
 
 15. **Improve public discovery and SEO.**
+   - Add fuzzy/typo-tolerant public search for titles, keywords, places, and collection terms, likely with a static client-side index such as Fuse.js or Lunr.js.
    - Add per-page titles, descriptions, Open Graph/Twitter images, canonical URLs, and image/collection metadata.
    - Generate a sitemap for homepage, collection pages, detail pages, and future high-value landing pages.
    - Add structured data where useful for image galleries/products.
@@ -182,6 +183,7 @@ Last updated: 2026-05-15
 
 20. **Add buyer account or order recovery only if needed.**
    - Decide whether buyer accounts are optional convenience after guest checkout.
+   - Consider lightweight cross-device basket/liked synchronization for high-intent buyers, such as a magic link or short recovery code backed by the Worker.
    - Prefer email-based order lookup before full accounts if that is enough for re-downloads.
    - Model saved order lookup, re-downloads, email verification, and basic account recovery.
    - Keep guest checkout low-friction.
@@ -232,6 +234,7 @@ Last updated: 2026-05-15
    - Rename `owner-auth.js` to reflect current reality, such as `owner-helper-session.js`, because it now checks helper availability rather than passwords.
    - Audit adjacent Owner naming that still says auth/login/session where the product behavior is really localhost helper availability.
    - Add clear confirmation around future discard/R2 delete actions.
+   - Add a small frontend E2E smoke suite for critical buyer paths: filter/search, open detail, like/add to basket, checkout draft, and embedded-browser checkout escape.
    - Validate blocked/discarded exclusions, public-preview/private-delivery parity, sidecar/private-delivery/discarded-media manifests, catalog consistency, and payload size budgets.
    - Keep `npm run validate` mandatory before publish.
 
@@ -244,6 +247,7 @@ Last updated: 2026-05-15
    - Keep this localhost/Owner-only and out of the public buyer bundle.
 
 28. **Keep long-horizon media and repo cleanup on the backburner.**
+   - Consider a lightweight production bundling/minification step for public JS once payment and media paths stabilize, while preserving the current modular source files and GitHub Pages compatibility.
    - Add a deliberate Owner button to write Lightroom-style XMP sidecars beside masters from manifest metadata when sidecar publishing becomes useful.
    - Decide whether videos are public gallery items, Owner-only review items, buyer deliverables, or a separate collection type.
    - Preserve 4K where available; determine whether that requires original video export rather than Photos' normal rendered export.

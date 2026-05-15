@@ -9,9 +9,11 @@
     title: $("[data-campaign-title]"),
     eyebrow: $("[data-campaign-eyebrow]"),
     description: $("[data-campaign-description]"),
+    nav: $("[data-campaign-nav]"),
     heroMedia: $("[data-campaign-hero-media]"),
     primary: $("[data-campaign-primary]"),
     related: $("[data-campaign-related]"),
+    relatedTitle: $("[data-campaign-related-title]"),
     searchForm: $("[data-campaign-search-form]"),
     searchInput: $("[data-campaign-search-input]"),
     searchStatus: $("[data-campaign-search-status]"),
@@ -41,7 +43,7 @@
 
   const photoIndex = new Map(allPhotos().map((entry) => [entry.photo.id, entry]));
 
-  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=74.37`;
+  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=76.18`;
 
   const entriesForIds = (ids) => (ids || [])
     .map((id) => photoIndex.get(id))
@@ -208,13 +210,15 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=76.17`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=76.18`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;
     if (els.title) els.title.textContent = campaign.title || "Photos By Elie";
+    if (els.nav) els.nav.href = `./campaign.html?c=${encodeURIComponent(safeCampaignId)}`;
     if (els.eyebrow) els.eyebrow.textContent = campaign.eyebrow || "Photos By Elie";
     if (els.description) els.description.textContent = campaign.description || "";
+    if (els.relatedTitle) els.relatedTitle.textContent = campaign.relatedTitle || "More from the archive";
     if (els.searchInput && campaign.searchPlaceholder) els.searchInput.placeholder = campaign.searchPlaceholder;
     primaryEntries = entriesForIds(campaign.primaryPhotoIds || []);
     relatedEntries = entriesForIds(campaign.relatedPhotoIds || []);

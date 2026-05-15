@@ -120,7 +120,7 @@
   const ensureCampaignViewControls = () => {
     if (viewControls || !primaryLayout) return;
     viewControls = document.createElement("div");
-    viewControls.className = "gallery-view-controls";
+    viewControls.className = "gallery-view-controls is-header-mounted";
     viewControls.setAttribute("aria-label", "Gallery view controls");
     const densityControl = document.createElement("label");
     densityControl.className = "gallery-density-control";
@@ -143,7 +143,14 @@
     topButton.setAttribute("aria-label", "Back to top");
     topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
     viewControls.append(densityControl, topButton, fitControl);
-    document.body.append(viewControls);
+    const headerControls = document.querySelector(".header-controls");
+    const headerActions = headerControls?.querySelector("[data-header-actions]");
+    if (headerActions) {
+      headerActions.after(viewControls);
+    } else {
+      headerControls?.prepend(viewControls);
+    }
+    if (!viewControls.isConnected) document.body.append(viewControls);
     densityInput = densityControl.querySelector("[data-gallery-density]");
     densityValue = densityControl.querySelector("[data-gallery-density-value]");
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
@@ -157,7 +164,6 @@
       if (button) setCampaignFitMode(button.dataset.galleryFitMode);
     });
     window.addEventListener("resize", applyCampaignLayout);
-    window.addEventListener("scroll", () => window.photosByEliePositionGalleryViewControls?.(viewControls), { passive: true });
     window.addEventListener("load", applyCampaignLayout, { once: true });
     document.fonts?.ready?.then(applyCampaignLayout).catch(() => {});
   };
@@ -207,7 +213,7 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=74.38`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=76.7`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;

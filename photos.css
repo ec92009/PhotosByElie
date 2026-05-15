@@ -1644,11 +1644,13 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   border-top:1px solid var(--line);
   padding:0;
 }
-body[data-gallery] main.shell{
+body[data-gallery] main.shell,
+body[data-fixed-header] main.shell{
   width:100%;
   padding-top:86px;
 }
-body[data-gallery] .topbar{
+body[data-gallery] .topbar,
+body[data-fixed-header] .topbar{
   position:fixed;
   inset:0 0 auto;
   width:min(1480px,calc(100dvw - (var(--page-gutter) * 2)));
@@ -1767,7 +1769,8 @@ body[data-gallery] .gallery-hero{
   color:var(--bg);
 }
 @media (max-width:840px){
-  body[data-gallery] main.shell{
+  body[data-gallery] main.shell,
+  body[data-fixed-header] main.shell{
     padding-top:132px;
   }
   .gallery-view-controls:not(.is-header-mounted){

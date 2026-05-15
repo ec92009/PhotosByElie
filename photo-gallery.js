@@ -436,13 +436,27 @@ const ensureGalleryMoreButton = () => {
   showAllButton.hidden = true;
   controls.append(moreButton, showAllButton);
   galleryRoot.after(controls);
+  const preserveScrollAfterRender = () => {
+    const left = window.scrollX || 0;
+    const top = window.scrollY || 0;
+    return () => {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ left, top, behavior: "auto" });
+        window.requestAnimationFrame(() => window.scrollTo({ left, top, behavior: "auto" }));
+      });
+    };
+  };
   moreButton.addEventListener("click", () => {
+    const restoreScroll = preserveScrollAfterRender();
     visibleLimit += pageSize;
     renderGallery({ scrollSelection: false });
+    restoreScroll();
   });
   showAllButton.addEventListener("click", () => {
+    const restoreScroll = preserveScrollAfterRender();
     visibleLimit = filteredVisiblePhotos().length;
     renderGallery({ scrollSelection: false });
+    restoreScroll();
   });
 };
 

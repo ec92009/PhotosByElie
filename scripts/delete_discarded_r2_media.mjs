@@ -200,14 +200,26 @@ const publicKeys = new Set((Array.isArray(tombstone.public_preview_keys) ? tombs
 for (const id of discardedIds) {
   publicKeys.add(`expo/${id}_900.jpg`);
   publicKeys.add(`expo/${id}_1800.jpg`);
+  publicKeys.add(`expo/${id}_short_5s_720p.mp4`);
 }
-const keyPhotoId = (key) => String(key || "").split("/")[1] || "";
+const keyPhotoId = (key) => {
+  const value = String(key || "");
+  if (value.startsWith("masters/")) {
+    const rest = value.slice("masters/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/\.[A-Za-z0-9]+$/, "");
+  }
+  if (value.startsWith("renders/")) {
+    const rest = value.slice("renders/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/_(?:1|3|6)mp\.jpg$/i, "");
+  }
+  return value.split("/")[1] || "";
+};
 
 const [masterKeys, renderKeys] = await Promise.all([
   listPrefix(privateBucket, "masters/"),
   listPrefix(privateBucket, "renders/"),
 ]);
-const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => discardedIds.has(key.split("/")[1])));
+const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => discardedIds.has(keyPhotoId(key))));
 (Array.isArray(tombstone.private_keys) ? tombstone.private_keys : [])
   .filter((key) => typeof key === "string" && key)
   .forEach((key) => privateKeys.add(key));

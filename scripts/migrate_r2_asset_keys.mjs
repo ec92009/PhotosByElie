@@ -18,9 +18,14 @@ const reportPath = valueFor("--report", ".review-logs/r2-asset-key-migration-rep
 const limit = Number(valueFor("--limit", "0")) || 0;
 const requestTimeoutMs = Number(valueFor("--request-timeout-ms", "180000")) || 180000;
 const retries = Number(valueFor("--retries", "4")) || 0;
+const workers = Math.max(1, Number(valueFor("--workers", "1")) || 1);
 const copy = hasFlag("--copy");
 const deleteOld = hasFlag("--delete-old");
 const includeAlreadyCopied = hasFlag("--include-already-copied");
+const verbose = hasFlag("--verbose") || (limit > 0 && limit <= 50);
+const logItem = (...parts) => {
+  if (verbose) console.log(...parts);
+};
 
 const firstEnv = (...names) => names.map((name) => process.env[name]).find(Boolean) || "";
 const credentials = {
@@ -48,9 +53,25 @@ const normalizeFormat = (value) => {
   const format = String(value || "").trim().toLowerCase().replace(/^\./, "");
   if (["jpg", "jpeg", "jpe"].includes(format)) return "jpg";
   if (["tif", "tiff"].includes(format)) return "tif";
+  if (format === "m4v") return "mp4";
   if (["png", "heic", "mp4", "mov"].includes(format)) return format;
   return format;
 };
+
+const isFlatMasterKey = (photoId, key) => new RegExp(`^masters/${photoId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.[A-Za-z0-9]+$`).test(String(key || ""));
+
+const flatMasterKey = (photo) => {
+  const source = photo?.sourceFile || {};
+  const format = normalizeFormat(source.type || basename(photo?.sourcePath).split(".").pop());
+  return photo?.id && format ? `masters/${photo.id}.${format}` : "";
+};
+
+const flatRenderKey = (photoId, productId) => {
+  const match = String(productId || "").match(/^jpg-(\d+)mp$/);
+  return photoId && match ? `renders/${photoId}_${match[1]}mp.jpg` : "";
+};
+
+const migrationId = (item) => `${item.bucket}:${item.oldKey}->${item.newKey}`;
 
 const s3SigningKey = (secretKey, datestamp) => {
   const dateKey = hmac(Buffer.from(`AWS4${secretKey}`, "utf8"), datestamp);
@@ -162,25 +183,68 @@ const writeJson = async (filePath, payload) => {
 };
 
 const loadedState = await fs.readFile(fullPath(statePath), "utf8").catch(() => "");
+const copiedMigrationIds = new Set();
 const copiedOldKeys = new Set();
 for (const line of loadedState.split("\n")) {
   if (!line.trim()) continue;
   try {
     const row = JSON.parse(line);
-    if (row.status === "copied" || row.status === "already-copied") copiedOldKeys.add(row.oldKey);
+    if (row.status === "copied" || row.status === "already-copied") {
+      if (row.migrationId) copiedMigrationIds.add(row.migrationId);
+      if (row.oldKey) copiedOldKeys.add(row.oldKey);
+    }
   } catch {}
 }
 
 const sidecar = await readJson(sidecarPath, {});
 const photos = Object.values(sidecar.photos || {});
 const candidates = photos.flatMap((photo) => {
-  const oldKey = photo?.privateDelivery?.masterKey || "";
-  const format = normalizeFormat(photo?.sourceFile?.type || basename(photo?.sourcePath).split(".").pop());
-  const newKey = photo?.id && format ? `masters/${photo.id}.${format}` : "";
-  if (!photo?.id || !oldKey || !newKey || oldKey === newKey) return [];
-  if (!includeAlreadyCopied && copiedOldKeys.has(oldKey)) return [];
-  return [{ id: photo.id, oldKey, newKey, format }];
-});
+  if (!photo?.id) return [];
+  const items = [];
+  const delivery = photo.privateDelivery || {};
+  const desiredMasterKey = flatMasterKey(photo);
+  const currentMasterKey = delivery.masterKey || "";
+  const legacyMasterKey = delivery.legacyMasterKey || (isFlatMasterKey(photo.id, currentMasterKey) ? "" : currentMasterKey);
+  if (legacyMasterKey && desiredMasterKey && legacyMasterKey !== desiredMasterKey) {
+    items.push({
+      bucket: privateBucket,
+      kind: "master",
+      id: photo.id,
+      oldKey: legacyMasterKey,
+      newKey: desiredMasterKey,
+      format: normalizeFormat(photo?.sourceFile?.type || basename(photo?.sourcePath).split(".").pop()),
+    });
+  }
+
+  const legacyRenderKeys = delivery.legacyRenderKeys || {};
+  const renderKeys = delivery.renderKeys || {};
+  for (const productId of ["jpg-6mp", "jpg-3mp", "jpg-1mp"]) {
+    const desiredRenderKey = flatRenderKey(photo.id, productId);
+    const currentRenderKey = renderKeys[productId] || "";
+    const legacyRenderKey = legacyRenderKeys[productId] || (currentRenderKey === desiredRenderKey ? "" : currentRenderKey);
+    if (legacyRenderKey && desiredRenderKey && legacyRenderKey !== desiredRenderKey) {
+      items.push({
+        bucket: privateBucket,
+        kind: "render",
+        id: photo.id,
+        productId,
+        oldKey: legacyRenderKey,
+        newKey: desiredRenderKey,
+        format: "jpg",
+      });
+    }
+  }
+  return items;
+}).filter((item) => includeAlreadyCopied || (!copiedMigrationIds.has(migrationId(item)) && !copiedOldKeys.has(item.oldKey)));
+
+const collisions = new Map();
+for (const item of candidates) {
+  const existing = collisions.get(item.newKey);
+  if (existing && existing.oldKey !== item.oldKey) {
+    throw new Error(`Destination key collision for ${item.newKey}: ${existing.oldKey} and ${item.oldKey}`);
+  }
+  collisions.set(item.newKey, item);
+}
 
 const selected = limit ? candidates.slice(0, limit) : candidates;
 const stats = {
@@ -189,8 +253,10 @@ const stats = {
   privateBucket,
   sidecarPath,
   statePath,
+  workers,
   candidates: candidates.length,
   selected: selected.length,
+  byKind: {},
   alreadyCopied: 0,
   missingOld: 0,
   copied: 0,
@@ -198,68 +264,100 @@ const stats = {
   verified: 0,
   deletedOld: 0,
   deleteSkipped: 0,
+  completed: 0,
 };
 
-for (const item of selected) {
+const processItem = async (item) => {
+  stats.byKind[item.kind] = (stats.byKind[item.kind] || 0) + 1;
   const at = new Date().toISOString();
-  const oldHead = await headObject(privateBucket, item.oldKey);
-  const newHead = await headObject(privateBucket, item.newKey);
-  if (!oldHead && !newHead) {
-    stats.missingOld += 1;
-    await appendJsonl(statePath, { at, status: "missing-old", ...item });
-    console.log(`missing old ${item.oldKey}`);
-    continue;
-  }
-  if (oldHead && newHead && oldHead.bytes === newHead.bytes) {
-    stats.alreadyCopied += 1;
-    stats.verified += 1;
-    if (deleteOld) {
-      await deleteObject(privateBucket, item.oldKey);
-      stats.deletedOld += 1;
-      await appendJsonl(statePath, { at, status: "deleted-old", ...item, bytes: newHead.bytes });
-      console.log(`deleted old ${item.oldKey}`);
-    } else {
-      stats.deleteSkipped += 1;
-      await appendJsonl(statePath, { at, status: "already-copied", ...item, bytes: newHead.bytes });
-      console.log(`already copied ${item.newKey}`);
-    }
-    continue;
-  }
-  if (!oldHead) {
-    stats.missingOld += 1;
-    await appendJsonl(statePath, { at, status: "missing-old-after-new-mismatch", ...item, newBytes: newHead?.bytes || 0 });
-    console.log(`missing old after new mismatch ${item.oldKey}`);
-    continue;
-  }
-  if (!copy) {
-    await appendJsonl(statePath, { at, status: "dry-run", ...item, oldBytes: oldHead.bytes, newBytes: newHead?.bytes || 0 });
-    console.log(`DRY copy ${item.oldKey} -> ${item.newKey}`);
-    continue;
-  }
+  const itemMigrationId = migrationId(item);
   try {
-    await copyObject(privateBucket, item.oldKey, item.newKey);
-    const copiedHead = await headObject(privateBucket, item.newKey);
-    if (!copiedHead || copiedHead.bytes !== oldHead.bytes) {
-      throw new Error(`verification failed: old=${oldHead.bytes} new=${copiedHead?.bytes || 0}`);
+    const oldHead = await headObject(item.bucket, item.oldKey);
+    const newHead = await headObject(item.bucket, item.newKey);
+    if (!oldHead && !newHead) {
+      stats.missingOld += 1;
+      await appendJsonl(statePath, { at, status: "missing-old", migrationId: itemMigrationId, ...item });
+      logItem(`missing old ${item.oldKey}`);
+      return;
     }
-    stats.copied += 1;
-    stats.verified += 1;
-    await appendJsonl(statePath, { at, status: "copied", ...item, bytes: copiedHead.bytes, oldEtag: oldHead.etag, newEtag: copiedHead.etag });
-    console.log(`copied ${item.oldKey} -> ${item.newKey}`);
-    if (deleteOld) {
-      await deleteObject(privateBucket, item.oldKey);
-      stats.deletedOld += 1;
-      await appendJsonl(statePath, { at: new Date().toISOString(), status: "deleted-old", ...item, bytes: copiedHead.bytes });
-      console.log(`deleted old ${item.oldKey}`);
-    } else {
-      stats.deleteSkipped += 1;
+    if (oldHead && newHead && oldHead.bytes === newHead.bytes) {
+      stats.alreadyCopied += 1;
+      stats.verified += 1;
+      if (deleteOld) {
+        await deleteObject(item.bucket, item.oldKey);
+        stats.deletedOld += 1;
+        await appendJsonl(statePath, { at, status: "deleted-old", migrationId: itemMigrationId, ...item, bytes: newHead.bytes });
+        logItem(`deleted old ${item.oldKey}`);
+      } else {
+        stats.deleteSkipped += 1;
+        await appendJsonl(statePath, { at, status: "already-copied", migrationId: itemMigrationId, ...item, bytes: newHead.bytes });
+        logItem(`already copied ${item.newKey}`);
+      }
+      return;
     }
-  } catch (error) {
-    stats.copyFailed += 1;
-    await appendJsonl(statePath, { at, status: "copy-failed", ...item, error: error.message });
-    console.error(`failed ${item.oldKey}: ${error.message}`);
+    if (!oldHead) {
+      stats.missingOld += 1;
+      await appendJsonl(statePath, { at, status: "missing-old-after-new-mismatch", migrationId: itemMigrationId, ...item, newBytes: newHead?.bytes || 0 });
+      logItem(`missing old after new mismatch ${item.oldKey}`);
+      return;
+    }
+    if (newHead && oldHead.bytes !== newHead.bytes) {
+      stats.copyFailed += 1;
+      await appendJsonl(statePath, {
+        at,
+        status: "destination-size-mismatch",
+        migrationId: itemMigrationId,
+        ...item,
+        oldBytes: oldHead.bytes,
+        newBytes: newHead.bytes,
+      });
+      console.error(`destination mismatch ${item.newKey} old=${oldHead.bytes} new=${newHead.bytes}`);
+      return;
+    }
+    if (!copy) {
+      await appendJsonl(statePath, { at, status: "dry-run", migrationId: itemMigrationId, ...item, oldBytes: oldHead.bytes, newBytes: newHead?.bytes || 0 });
+      logItem(`DRY copy ${item.oldKey} -> ${item.newKey}`);
+      return;
+    }
+    try {
+      await copyObject(item.bucket, item.oldKey, item.newKey);
+      const copiedHead = await headObject(item.bucket, item.newKey);
+      if (!copiedHead || copiedHead.bytes !== oldHead.bytes) {
+        throw new Error(`verification failed: old=${oldHead.bytes} new=${copiedHead?.bytes || 0}`);
+      }
+      stats.copied += 1;
+      stats.verified += 1;
+      await appendJsonl(statePath, { at, status: "copied", migrationId: itemMigrationId, ...item, bytes: copiedHead.bytes, oldEtag: oldHead.etag, newEtag: copiedHead.etag });
+      logItem(`copied ${item.oldKey} -> ${item.newKey}`);
+      if (deleteOld) {
+        await deleteObject(item.bucket, item.oldKey);
+        stats.deletedOld += 1;
+        await appendJsonl(statePath, { at: new Date().toISOString(), status: "deleted-old", migrationId: itemMigrationId, ...item, bytes: copiedHead.bytes });
+        logItem(`deleted old ${item.oldKey}`);
+      } else {
+        stats.deleteSkipped += 1;
+      }
+    } catch (error) {
+      stats.copyFailed += 1;
+      await appendJsonl(statePath, { at, status: "copy-failed", migrationId: itemMigrationId, ...item, error: error.message });
+      console.error(`failed ${item.oldKey}: ${error.message}`);
+    }
+  } finally {
+    stats.completed += 1;
+    if (stats.completed === 1 || stats.completed % 100 === 0 || stats.completed === selected.length) {
+      console.log(`progress ${stats.completed}/${selected.length} copied=${stats.copied} already=${stats.alreadyCopied} missing=${stats.missingOld} failed=${stats.copyFailed}`);
+    }
   }
-}
+};
+
+let nextIndex = 0;
+await Promise.all(Array.from({ length: Math.min(workers, selected.length) }, async () => {
+  while (nextIndex < selected.length) {
+    const item = selected[nextIndex];
+    nextIndex += 1;
+    await processItem(item);
+  }
+}));
 
 await writeJson(reportPath, {
   schema: "photosbyelie.r2-asset-key-migration-report.v1",

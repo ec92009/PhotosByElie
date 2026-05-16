@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
+from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, first_env, s3_put, wrangler_command
 
@@ -1467,13 +1467,12 @@ def r2_public_key(args: argparse.Namespace, row: dict[str, Any], path: Path) -> 
 
 
 def r2_private_key(args: argparse.Namespace, row: dict[str, Any], source_path: Path) -> str:
-    return "/".join([args.r2_private_prefix.strip("/"), row.get("id") or source_path.stem, source_path.name])
+    return private_master_key(args.r2_private_prefix, str(row.get("id") or source_path.stem), source_path)
 
 
 def r2_private_render_key(row: dict[str, Any], source_path: Path, product_id: str) -> str:
     photo_id = str(row.get("id") or source_path.stem)
-    safe_source = re.sub(r"[^A-Za-z0-9._-]+", "-", source_path.name).strip("-") or "source"
-    return "/".join(["renders", photo_id, f"{safe_source}-{product_id}.jpg"])
+    return private_render_key(photo_id, product_id)
 
 
 def long_edge_for_megapixels(size: dict[str, Any], megapixels: int) -> int:

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
+from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, public_preview_key_for_reference
 from media_policy import private_master_allowed, public_preview_allowed
 
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
@@ -264,7 +264,7 @@ def resolve_source_path(row: dict[str, Any], roots: list[Path]) -> Path | None:
 
 def private_key(private_prefix: str, row: dict[str, Any], source_path: Path) -> str:
     photo_id = str(row.get("id") or source_path.stem)
-    return "/".join([private_prefix.strip("/"), photo_id, source_path.name])
+    return private_master_key(private_prefix, photo_id, source_path)
 
 
 def private_upload_items(repo_root: Path, args: argparse.Namespace, rows: list[dict[str, Any]], manifest_payload: dict[str, Any]) -> tuple[list[UploadItem], list[dict[str, str]]]:

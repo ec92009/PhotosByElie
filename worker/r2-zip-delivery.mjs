@@ -16,14 +16,25 @@ const photoBaseName = (item) => {
   return `${idStem || basename(item.source?.path).replace(/\.[A-Za-z0-9]+$/, "")}.${sourceExt}`;
 };
 
+const productSuffix = (productId) => {
+  const match = String(productId || "").match(/^jpg-(\d+)mp$/);
+  return match ? `${match[1]}mp` : safeName(productId, "product");
+};
+
 const renderedJpgKeys = (item, product) => {
   const folder = safeName(item.photoId, "photo");
   const productName = safeName(product.id, "product");
   return Array.from(new Set([
+    `renders/${safeName(item.photoId, "photo")}_${productSuffix(product.id)}.jpg`,
     `renders/${folder}/${safeName(basename(item.source.path), "source")}-${productName}.jpg`,
     `renders/${folder}/${safeName(photoBaseName(item), "source")}-${productName}.jpg`,
   ]));
 };
+
+const masterKeysFor = (item) => Array.from(new Set([
+  ...(Array.isArray(item.source?.privateMasterKeys) ? item.source.privateMasterKeys : []),
+  item.source?.privateMasterKey,
+].filter(Boolean)));
 
 const objectBytes = (object, fallback = null) => {
   const size = Number(object?.size);
@@ -38,6 +49,22 @@ const objectMetadata = async (bucket, key) => {
   if (!key) return null;
   if (typeof bucket.head === "function") return bucket.head(key);
   return bucket.get(key);
+};
+
+const firstObjectMetadata = async (bucket, keys) => {
+  for (const key of keys) {
+    const object = await objectMetadata(bucket, key);
+    if (object) return { key, object };
+  }
+  return null;
+};
+
+const firstObject = async (bucket, keys) => {
+  for (const key of keys) {
+    const object = await bucket.get(key);
+    if (object) return { key, object };
+  }
+  return null;
 };
 
 const contentTypeFor = (path) => {
@@ -72,14 +99,15 @@ export const createR2ZipDelivery = ({
       const itemMissing = [];
       await Promise.all((item.products || []).map(async (product) => {
         if (product.id === "full") {
-          const object = await objectMetadata(privateBucket, item.source.privateMasterKey);
-          if (!object) {
+          const found = await firstObjectMetadata(privateBucket, masterKeysFor(item));
+          if (!found) {
             itemMissing.push({
               photoId: item.photoId,
               productId: product.id,
               productLabel: product.label,
               code: "missing_private_master",
               objectKey: item.source.privateMasterKey,
+              objectKeys: masterKeysFor(item),
             });
           }
           return;
@@ -95,7 +123,7 @@ export const createR2ZipDelivery = ({
 
         const canRender = renderer && typeof renderer.canRender === "function" && renderer.canRender(product.id);
         if (canRender) {
-          const sourceObject = await objectMetadata(privateBucket, item.source.privateMasterKey);
+          const sourceObject = await firstObjectMetadata(privateBucket, masterKeysFor(item));
           if (!sourceObject) {
             itemMissing.push({
               photoId: item.photoId,
@@ -103,6 +131,7 @@ export const createR2ZipDelivery = ({
               productLabel: product.label,
               code: "missing_private_master",
               objectKey: item.source.privateMasterKey,
+              objectKeys: masterKeysFor(item),
             });
           }
           return;
@@ -151,8 +180,8 @@ export const createR2ZipDelivery = ({
 
       const sourceBytes = await readSourceBytes();
       const data = await renderer.render({
-        sourceBytes,
-        sourceKey: item.source.privateMasterKey,
+        sourceBytes: sourceBytes.bytes,
+        sourceKey: sourceBytes.key,
         product,
         item,
       });
@@ -166,7 +195,7 @@ export const createR2ZipDelivery = ({
           productId: product.id,
           title: item.title || "",
           keywords: (item.keywords || []).join(", "),
-          sourceKey: item.source.privateMasterKey,
+          sourceKey: sourceBytes.key,
           generatedAt: now().toISOString(),
           watermark: "none",
         },
@@ -184,14 +213,17 @@ export const createR2ZipDelivery = ({
       let sourceBytes = null;
       const readSourceBytes = async () => {
         if (sourceBytes) return sourceBytes;
-        const object = await privateBucket.get(item.source.privateMasterKey);
-        if (!object) {
-          throw Object.assign(new Error(`Private R2 master is missing: ${item.source.privateMasterKey}`), {
+        const found = await firstObject(privateBucket, masterKeysFor(item));
+        if (!found) {
+          throw Object.assign(new Error(`Private R2 master is missing: ${masterKeysFor(item).join(" or ")}`), {
             status: 409,
             code: "missing_private_master",
           });
         }
-        sourceBytes = new Uint8Array(await object.arrayBuffer());
+        sourceBytes = {
+          key: found.key,
+          bytes: new Uint8Array(await found.object.arrayBuffer()),
+        };
         return sourceBytes;
       };
 
@@ -203,19 +235,19 @@ export const createR2ZipDelivery = ({
 
         let file;
         if (isFullResolution) {
-          const object = await privateBucket.get(item.source.privateMasterKey);
-          if (!object) {
-            throw Object.assign(new Error(`Private R2 master is missing: ${item.source.privateMasterKey}`), {
+          const found = await firstObject(privateBucket, masterKeysFor(item));
+          if (!found) {
+            throw Object.assign(new Error(`Private R2 master is missing: ${masterKeysFor(item).join(" or ")}`), {
               status: 409,
               code: "missing_private_master",
             });
           }
           file = {
-            objectKey: item.source.privateMasterKey,
+            objectKey: found.key,
             renderKey: "",
             cacheHit: false,
-            bytes: objectBytes(object),
-            contentType: object.httpMetadata?.contentType || contentTypeFor(item.source.path),
+            bytes: objectBytes(found.object),
+            contentType: found.object.httpMetadata?.contentType || contentTypeFor(item.source.path),
           };
         } else {
           file = await getOrCreateRenderedJpg({ item, product, readSourceBytes });
@@ -228,7 +260,7 @@ export const createR2ZipDelivery = ({
           keywords: item.keywords || [],
           productId: product.id,
           productLabel: product.label,
-          sourceKey: item.source.privateMasterKey,
+          sourceKey: file.renderKey ? item.source.privateMasterKey : file.objectKey,
           objectKey: file.objectKey,
           name,
           downloadUrl: `/download/${token}`,

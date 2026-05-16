@@ -48,11 +48,13 @@ Last updated: 2026-05-16
    - Face albums remain off limits by SOP.
    - The portable Pillow overlay path uses an explicit `-t 5` on the ffmpeg overlay pass.
 
-8. **Migrate R2 keys to the flat SQLite-era conventions.**
-   - Copy/verify masters from `masters/<media_id>/<original_file>` to `masters/<media_id>.<format>`.
-   - Copy/verify photo render triplets to `renders/<media_id>_1mp.jpg`, `_3mp.jpg`, and `_6mp.jpg`.
-   - Keep old keys until Worker checkout/delivery and manifests use the new keys.
-   - Delete old keys only after an audit confirms no runtime path needs them.
+8. **Completed: Migrate R2 keys to the flat SQLite-era conventions.**
+   - Worker checkout/delivery now prefers `masters/<media_id>.<format>` and `renders/<media_id>_<1|3|6>mp.jpg`.
+   - Legacy nested master/render keys remain as delivery fallbacks during the cleanup window.
+   - R2 server-side copy/verify moved the copyable private masters and photo render triplets to the flat target keys.
+   - Latest live coverage: `5,801 / 5,827` catalog photos have private masters and `5,799 / 5,827` have complete private render triplets.
+   - Residual repair queue: `26` missing masters, `6` flat render target gaps covered by legacy fallback, and `10` public preview gaps.
+   - Do not delete old keys until a later audit confirms no runtime path needs them.
 
 9. **Prove Stripe checkout in test mode.**
    - Configure Stripe test keys and webhook secret in the Worker environment.

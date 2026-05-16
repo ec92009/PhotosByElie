@@ -11,6 +11,11 @@ Date: 2026-05-16
 - Public catalog now loads `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback.
 - Owner-only workflow state now writes to the local ignored SQLite target at `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public preview media and private delivery media live in Cloudflare R2, not Git.
+- R2 private delivery has moved to the flat SQLite-era key convention for the active runtime:
+  - masters target `masters/<media_id>.<format>`
+  - photo render targets `renders/<media_id>_6mp.jpg`, `_3mp.jpg`, and `_1mp.jpg`
+  - old nested master/render keys are still retained and Worker delivery can fall back to them during the cleanup window.
+- Latest live R2 inventory after migration: `5,801 / 5,827` catalog photos have private masters and `5,799 / 5,827` have complete private render triplets. Remaining audit gaps are `26` masters, `6` target render keys, and `10` public previews.
 - Recent pushed commits before the SQLite runtime migration:
   - `95c5a07f photosbyelie: keep commerce header controls fixed`
   - `ef744dde photosbyelie: remove discarded previews from catalog`
@@ -162,7 +167,7 @@ The public preview incident showed the consequence of alternate truth sources: 1
 
 ## Public Site Fixes
 
-- Public site is now `v77.1`.
+- Public site is now `v77.2`.
 - The USA gallery missing-preview issue is fixed by removing tombstoned catalog rows rather than re-uploading banned media.
 - Liked and Basket pages now use the same fixed-header behavior as gallery/detail pages.
 - Header action buttons for liked, basket, checkout, language, and theme stay frozen during mobile scroll.
@@ -177,7 +182,7 @@ PRAGMA integrity_check: ok
 catalog rows: 5,827
 R2 complete-pair misses: 0
 npm run validate: pass
-npm test: pass, 14 tests
+npm test: pass, 15 tests
 ```
 
 GitHub Pages was checked after deploy:
@@ -193,10 +198,10 @@ photos.css: commerce fixed-header rules live
 
 The highest-value work is now:
 
-1. Move runtime catalog loading from TSV compatibility exports to `photosbyelie.sqlite`.
-2. Move Owner review state from JSON batches into `Owner.sqlite`.
-3. Add a parked state for title/keyword rows that current tooling cannot title well.
-4. Complete R2 key migration to flat master/render conventions.
-5. Prove Stripe checkout in test mode.
-6. Make checkout/order storage production-durable.
+1. Prove Stripe checkout in test mode.
+2. Make checkout/order storage production-durable.
+3. Move product/pricing data out of generated JS constants.
+4. Keep physical products behind Owner review.
+5. Curate the first sellable storefront.
+6. Replace temporary `r2.dev` preview URL with a custom media domain.
 7. Keep curation focused on sellable catalog quality and launch readiness.

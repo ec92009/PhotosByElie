@@ -56,6 +56,13 @@ const safeName = (value, fallback) => String(value || fallback)
   .replace(/^-+|-+$/g, "")
   .slice(0, 160) || fallback;
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
+const normalizedExtension = (value, fallback = "jpg") => {
+  const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
+  if (["jpeg", "jpe"].includes(extension)) return "jpg";
+  if (extension === "tiff") return "tif";
+  if (extension === "m4v") return "mp4";
+  return extension || fallback;
+};
 const quoteS3Path = (value) => `/${String(value).split("/").map((part) => encodeURIComponent(part).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)).join("/")}`;
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const hmac = (key, value) => crypto.createHmac("sha256", key).update(value).digest();
@@ -227,11 +234,39 @@ const longEdgeForMegapixels = ({ width, height }, megapixels) => {
   if (targetPixels >= sourcePixels) return Math.max(width, height);
   return Math.max(1, Math.round(Math.max(width, height) * Math.sqrt(targetPixels / sourcePixels)));
 };
-const renderKeyFor = (photo, source, productId) => (
+const renderKeyFor = (photo, _source, productId) => {
+  const match = String(productId || "").match(/^jpg-(\d+)mp$/);
+  return match ? `renders/${photo.id}_${match[1]}mp.jpg` : "";
+};
+const legacyRenderKeyFor = (photo, source, productId) => (
   `renders/${photo.id}/${safeName(basename(source.path), "source")}-${productId}.jpg`
 );
-const masterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
-const keyPhotoId = (key) => String(key || "").split("/")[1] || "";
+const masterKeyFor = (photo, source) => `masters/${photo.id}.${normalizedExtension(source?.type || basename(source?.path).split(".").pop())}`;
+const legacyMasterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
+const keyPhotoId = (key) => {
+  const value = String(key || "");
+  if (value.startsWith("masters/")) {
+    const rest = value.slice("masters/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/\.[A-Za-z0-9]+$/, "");
+  }
+  if (value.startsWith("renders/")) {
+    const rest = value.slice("renders/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/_(?:1|3|6)mp\.jpg$/i, "");
+  }
+  return value.split("/")[1] || "";
+};
+const renderProductId = (key) => {
+  const flat = String(key || "").match(/_(1|3|6)mp\.jpg$/i);
+  if (flat) return `jpg-${flat[1]}mp`;
+  const legacy = String(key || "").match(/-(jpg-[136]mp)\.jpg$/i);
+  return legacy ? legacy[1].toLowerCase() : "";
+};
+const preferTargetKey = (existing, candidate) => {
+  if (!existing) return candidate;
+  const existingFlat = !existing.slice(existing.indexOf("/") + 1).includes("/");
+  const candidateFlat = !candidate.slice(candidate.indexOf("/") + 1).includes("/");
+  return candidateFlat && !existingFlat ? candidate : existing;
+};
 const contentTypeFor = (filePath) => {
   const extension = path.extname(filePath).toLowerCase();
   if ([".jpg", ".jpeg"].includes(extension)) return "image/jpeg";
@@ -324,23 +359,20 @@ const hydrateInventoryFromState = async (inventory, hiddenIds) => {
 const buildManifest = async (inventory, publicIdsPayload) => {
   const masterKeysById = new Map();
   for (const key of inventory.masterKeys || []) {
-    const id = key.split("/")[1];
-    if (id) masterKeysById.set(id, key);
+    const id = keyPhotoId(key);
+    if (id) masterKeysById.set(id, preferTargetKey(masterKeysById.get(id), key));
   }
   const renderProductsById = new Map();
   const renderKeysById = new Map();
   for (const key of inventory.renderKeys || []) {
-    const parts = key.split("/");
-    const id = parts[1];
+    const id = keyPhotoId(key);
     if (!id) continue;
-    for (const productId of PRODUCTS.keys()) {
-      if (key.endsWith(`-${productId}.jpg`)) {
-        if (!renderProductsById.has(id)) renderProductsById.set(id, new Set());
-        if (!renderKeysById.has(id)) renderKeysById.set(id, {});
-        renderProductsById.get(id).add(productId);
-        renderKeysById.get(id)[productId] = key;
-      }
-    }
+    const productId = renderProductId(key);
+    if (!productId || !PRODUCTS.has(productId)) continue;
+    if (!renderProductsById.has(id)) renderProductsById.set(id, new Set());
+    if (!renderKeysById.has(id)) renderKeysById.set(id, {});
+    renderProductsById.get(id).add(productId);
+    renderKeysById.get(id)[productId] = preferTargetKey(renderKeysById.get(id)?.[productId], key);
   }
   const publicPreviewIds = new Set(publicIdsPayload.complete_pairs || []);
   const records = {};
@@ -353,6 +385,7 @@ const buildManifest = async (inventory, publicIdsPayload) => {
       sourcePath: source.path || "",
       privateMaster: {
         expectedKey: masterKeyFor(photo, source),
+        legacyKey: legacyMasterKeyFor(photo, source),
         key: masterKeysById.get(photoId) || "",
         present: masterKeysById.has(photoId),
       },
@@ -360,6 +393,7 @@ const buildManifest = async (inventory, publicIdsPayload) => {
         productId,
         {
           expectedKey: renderKeyFor(photo, source, productId),
+          legacyKey: legacyRenderKeyFor(photo, source, productId),
           key: renderKeysById.get(photoId)?.[productId] || "",
           present: products.has(productId),
         },

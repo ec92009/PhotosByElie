@@ -20,14 +20,34 @@ const safeName = (value, fallback) => String(value || fallback)
   .replace(/[^A-Za-z0-9._-]+/g, "-")
   .replace(/^-+|-+$/g, "")
   .slice(0, 120) || fallback;
+const normalizedExtension = (value, fallback = "jpg") => {
+  const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
+  if (["jpeg", "jpe"].includes(extension)) return "jpg";
+  if (extension === "tiff") return "tif";
+  if (extension === "m4v") return "mp4";
+  return extension || fallback;
+};
 
 const keyFor = (photoId, size) => `expo/${photoId}_${size}.jpg`;
 const privateMasterKey = (photo) => {
+  const source = (photo.sourceFiles || [])[0] || {};
+  const extension = normalizedExtension(source.type || basename(source.path).split(".").pop());
+  return photo.id && extension ? `masters/${photo.id}.${extension}` : "";
+};
+const legacyPrivateMasterKey = (photo) => {
   const source = (photo.sourceFiles || [])[0] || {};
   const name = basename(source.path);
   return name ? `masters/${photo.id}/${name}` : "";
 };
 const privateRenderKeys = (photo) => {
+  if (!photo.id) return {};
+  return {
+    "jpg-6mp": `renders/${photo.id}_6mp.jpg`,
+    "jpg-3mp": `renders/${photo.id}_3mp.jpg`,
+    "jpg-1mp": `renders/${photo.id}_1mp.jpg`,
+  };
+};
+const legacyPrivateRenderKeys = (photo) => {
   const source = (photo.sourceFiles || [])[0] || {};
   const name = safeName(basename(source.path), "source");
   if (!name) return {};
@@ -69,7 +89,9 @@ Object.entries(collections).forEach(([collectionKey, collection]) => {
       },
       privateDelivery: {
         masterKey: privateMasterKey(photo),
+        legacyMasterKey: legacyPrivateMasterKey(photo),
         renderKeys: privateRenderKeys(photo),
+        legacyRenderKeys: legacyPrivateRenderKeys(photo),
       },
     };
   });
@@ -78,8 +100,10 @@ Object.entries(collections).forEach(([collectionKey, collection]) => {
 const payload = {
   schema: "photosbyelie.media-sidecar.v1",
   publicPreviewKeyScheme: "expo/<photo-id>_<900|1800>.jpg",
-  privateMasterKeyScheme: "masters/<photo-id>/<original-file>",
-  privateRenderKeyScheme: "renders/<photo-id>/<original-file>-<product-id>.jpg",
+  privateMasterKeyScheme: "masters/<photo-id>.<original-format>",
+  privateRenderKeyScheme: "renders/<photo-id>_<1|3|6>mp.jpg",
+  legacyPrivateMasterKeyScheme: "masters/<photo-id>/<original-file>",
+  legacyPrivateRenderKeyScheme: "renders/<photo-id>/<original-file>-<product-id>.jpg",
   photosCount: Object.keys(photos).length,
   photos,
 };

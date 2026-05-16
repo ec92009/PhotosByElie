@@ -61,8 +61,38 @@ const safeName = (value, fallback) => String(value || fallback)
   .replace(/^-+|-+$/g, "")
   .slice(0, 160) || fallback;
 const sourceType = (source) => String(source?.type || basename(source?.path).split(".").pop() || "").toUpperCase();
-const keyPhotoId = (key) => String(key || "").split("/")[1] || "";
-const previewPhotoId = (key) => basename(key).replace(/_(900|1800)\.jpg$/i, "");
+const normalizedExtension = (value, fallback = "jpg") => {
+  const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
+  if (["jpeg", "jpe"].includes(extension)) return "jpg";
+  if (extension === "tiff") return "tif";
+  if (extension === "m4v") return "mp4";
+  return extension || fallback;
+};
+const keyPhotoId = (key) => {
+  const value = String(key || "");
+  if (value.startsWith("masters/")) {
+    const rest = value.slice("masters/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/\.[A-Za-z0-9]+$/, "");
+  }
+  if (value.startsWith("renders/")) {
+    const rest = value.slice("renders/".length);
+    return rest.includes("/") ? rest.split("/")[0] : rest.replace(/_(?:1|3|6)mp\.jpg$/i, "");
+  }
+  return value.split("/")[1] || "";
+};
+const renderProductId = (key) => {
+  const flat = String(key || "").match(/_(1|3|6)mp\.jpg$/i);
+  if (flat) return `jpg-${flat[1]}mp`;
+  const legacy = String(key || "").match(/-(jpg-[136]mp)\.jpg$/i);
+  return legacy ? legacy[1].toLowerCase() : "";
+};
+const preferTargetKey = (existing, candidate) => {
+  if (!existing) return candidate;
+  const existingFlat = !existing.slice(existing.indexOf("/") + 1).includes("/");
+  const candidateFlat = !candidate.slice(candidate.indexOf("/") + 1).includes("/");
+  return candidateFlat && !existingFlat ? candidate : existing;
+};
+const previewPhotoId = (key) => basename(key).replace(/_(900|1800)\.jpg$/i, "").replace(/_short_5s_720p\.mp4$/i, "");
 const decodeXml = (value) => String(value || "")
   .replace(/&lt;/g, "<")
   .replace(/&gt;/g, ">")
@@ -244,8 +274,13 @@ const contentTypeFor = (filePath) => {
   return "application/octet-stream";
 };
 
-const masterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
-const renderKeyFor = (photo, source, productId) => `renders/${photo.id}/${safeName(basename(source.path), "source")}-${productId}.jpg`;
+const masterKeyFor = (photo, source) => `masters/${photo.id}.${normalizedExtension(source?.type || basename(source?.path).split(".").pop())}`;
+const legacyMasterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
+const renderKeyFor = (photo, _source, productId) => {
+  const match = String(productId || "").match(/^jpg-(\d+)mp$/);
+  return match ? `renders/${photo.id}_${match[1]}mp.jpg` : "";
+};
+const legacyRenderKeyFor = (photo, source, productId) => `renders/${photo.id}/${safeName(basename(source.path), "source")}-${productId}.jpg`;
 const publicPreviewKeysFor = (photo) => [
   photo.media?.publicPreview?.galleryKey || `expo/${photo.id}_900.jpg`,
   photo.media?.publicPreview?.detailKey || `expo/${photo.id}_1800.jpg`,
@@ -268,8 +303,13 @@ const [initialMasterKeys, initialRenderKeys, publicPreviewKeys] = await Promise.
 
 const masterKeys = new Set(initialMasterKeys);
 const renderKeys = new Set(initialRenderKeys);
-const publicKeys = new Set(publicPreviewKeys.filter((key) => /_(900|1800)\.jpg$/i.test(key)));
+const publicKeys = new Set(publicPreviewKeys.filter((key) => /_(900|1800)\.jpg$/i.test(key) || /_short_5s_720p\.mp4$/i.test(key)));
 const masterIds = new Set([...masterKeys].map(keyPhotoId));
+const masterKeysById = new Map();
+for (const key of masterKeys) {
+  const id = keyPhotoId(key);
+  if (id) masterKeysById.set(id, preferTargetKey(masterKeysById.get(id), key));
+}
 const repaired = { masters: [], renders: [] };
 const missing = { masters: [], renders: [], publicPreviews: [] };
 const pruned = { privateRenders: [], publicPreviews: [] };
@@ -277,14 +317,16 @@ let repairedPhotoCount = 0;
 
 for (const photo of catalog.values()) {
   const masterKey = masterKeyFor(photo, photo.source);
+  const presentMasterKey = masterKeysById.get(photo.id);
   let localSource = "";
   let sourceForRendering = "";
 
-  if (!masterKeys.has(masterKey) && repair && (!limit || repairedPhotoCount < limit)) {
+  if (!presentMasterKey && repair && (!limit || repairedPhotoCount < limit)) {
     localSource = await findLocalSource(photo.source);
     if (localSource) {
       await putObject(privateBucket, masterKey, await fs.readFile(localSource), contentTypeFor(localSource));
       masterKeys.add(masterKey);
+      masterKeysById.set(photo.id, masterKey);
       masterIds.add(photo.id);
       repaired.masters.push(masterKey);
       repairedPhotoCount += 1;
@@ -292,7 +334,7 @@ for (const photo of catalog.values()) {
     }
   }
 
-  if (!masterKeys.has(masterKey)) {
+  if (!masterKeysById.has(photo.id)) {
     missing.masters.push({ photoId: photo.id, key: masterKey, sourcePath: photo.source.path });
     continue;
   }
@@ -356,15 +398,16 @@ for (const key of [...publicKeys].sort()) {
 }
 
 const renderProductsById = new Map();
+const renderKeysById = new Map();
 for (const key of renderKeys) {
   const id = keyPhotoId(key);
   if (!id) continue;
-  for (const productId of PRODUCTS.keys()) {
-    if (key.endsWith(`-${productId}.jpg`)) {
-      if (!renderProductsById.has(id)) renderProductsById.set(id, new Set());
-      renderProductsById.get(id).add(productId);
-    }
-  }
+  const productId = renderProductId(key);
+  if (!productId || !PRODUCTS.has(productId)) continue;
+  if (!renderProductsById.has(id)) renderProductsById.set(id, new Set());
+  if (!renderKeysById.has(id)) renderKeysById.set(id, {});
+  renderProductsById.get(id).add(productId);
+  renderKeysById.get(id)[productId] = preferTargetKey(renderKeysById.get(id)?.[productId], key);
 }
 
 const records = {};
@@ -372,8 +415,9 @@ let catalogMasterPhotoIds = 0;
 let catalogRenderTripletPhotoIds = 0;
 for (const photo of catalog.values()) {
   const masterKey = masterKeyFor(photo, photo.source);
+  const presentMasterKey = masterKeysById.get(photo.id);
   const products = renderProductsById.get(photo.id) || new Set();
-  if (masterKeys.has(masterKey)) catalogMasterPhotoIds += 1;
+  if (presentMasterKey) catalogMasterPhotoIds += 1;
   if ([...PRODUCTS.keys()].every((productId) => products.has(productId))) catalogRenderTripletPhotoIds += 1;
   records[photo.id] = {
     id: photo.id,
@@ -381,12 +425,20 @@ for (const photo of catalog.values()) {
     sourcePath: photo.source.path,
     privateMaster: {
       expectedKey: masterKey,
-      key: masterKeys.has(masterKey) ? masterKey : "",
-      present: masterKeys.has(masterKey),
+      legacyKey: legacyMasterKeyFor(photo, photo.source),
+      key: presentMasterKey || "",
+      present: Boolean(presentMasterKey),
+      targetPresent: masterKeys.has(masterKey),
     },
     privateRenders: Object.fromEntries([...PRODUCTS.keys()].map((productId) => {
       const key = renderKeyFor(photo, photo.source, productId);
-      return [productId, { expectedKey: key, key: renderKeys.has(key) ? key : "", present: products.has(productId) }];
+      return [productId, {
+        expectedKey: key,
+        legacyKey: legacyRenderKeyFor(photo, photo.source, productId),
+        key: renderKeysById.get(photo.id)?.[productId] || "",
+        present: products.has(productId),
+        targetPresent: renderKeys.has(key),
+      }];
     })),
     publicPreviews: {
       present: publicPreviewKeysFor(photo).every((key) => publicKeys.has(key)),

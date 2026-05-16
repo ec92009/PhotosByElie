@@ -69,6 +69,7 @@ from asset_state import (  # noqa: E402
     write_regular_manifest_from_site,
     write_reserve_data_from_site,
 )
+from media_keys import legacy_private_master_key, private_master_key, private_render_key  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
     DEFAULT_PRIVATE_BUCKET,
@@ -805,8 +806,10 @@ def _discarded_private_keys(photo: dict) -> list[str]:
         source_name = _source_basename(source)
         if not source_name:
             continue
-        keys.append(f"{DEFAULT_PRIVATE_PREFIX.strip('/')}/{photo_id}/{source_name}")
+        keys.append(private_master_key(DEFAULT_PRIVATE_PREFIX, photo_id, source_name))
+        keys.append(legacy_private_master_key(DEFAULT_PRIVATE_PREFIX, photo_id, source_name))
         safe_name = _safe_r2_source_name(source_name)
+        keys.extend(private_render_key(photo_id, product_id) for product_id in PRIVATE_RENDER_PRODUCTS)
         keys.extend(f"renders/{photo_id}/{safe_name}-{product_id}.jpg" for product_id in PRIVATE_RENDER_PRODUCTS)
     return sorted(set(keys))
 

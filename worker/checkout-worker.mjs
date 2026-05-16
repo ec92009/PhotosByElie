@@ -29,6 +29,21 @@ const cents = (dollars) => Math.round(Number(dollars || 0) * 100);
 
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
 
+const normalizedExtension = (value, fallback = "jpg") => {
+  const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
+  if (extension === "jpeg" || extension === "jpe") return "jpg";
+  if (extension === "tiff") return "tif";
+  if (extension === "m4v") return "mp4";
+  return extension || fallback;
+};
+
+const sourceExtension = (source) =>
+  normalizedExtension(source?.type || basename(source?.path).split(".").pop() || "jpg");
+
+const privateMasterKeyFor = (photo, source) => `masters/${photo.id}.${sourceExtension(source)}`;
+
+const legacyPrivateMasterKeyFor = (photo, source) => `masters/${photo.id}/${basename(source.path)}`;
+
 const photoOriginFor = (photo, collectionKey) => {
   const origin = String(photo?.sourceOrigin || photo?.origin || "").toLowerCase();
   if (origin === "ai" || origin === "camera") return origin;
@@ -206,7 +221,11 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
       source: {
         type: sourceType(source),
         path: source.path,
-        privateMasterKey: `masters/${photo.id}/${basename(source.path)}`,
+        privateMasterKey: privateMasterKeyFor(photo, source),
+        privateMasterKeys: [
+          privateMasterKeyFor(photo, source),
+          legacyPrivateMasterKeyFor(photo, source),
+        ].filter((key, index, keys) => key && keys.indexOf(key) === index),
         dimensions: originalDimensions(photo),
       },
       publicPreview: photo.media?.publicPreview || null,

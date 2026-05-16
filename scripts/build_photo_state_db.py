@@ -119,9 +119,12 @@ def infer_photo_id_from_key(key: str) -> str:
         return ""
     if parts[0] == "expo":
         stem = Path(parts[-1]).stem
-        return re.sub(r"_(900|1800)$", "", stem)
+        return re.sub(r"_(900|1800|short_5s_720p)$", "", stem)
     if parts[0] in {"masters", "renders"} and len(parts) > 1:
-        return parts[1]
+        if len(parts) > 2:
+            return parts[1]
+        stem = Path(parts[1]).stem
+        return re.sub(r"_(1|3|6)mp$", "", stem)
     return ""
 
 

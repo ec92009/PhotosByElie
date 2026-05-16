@@ -42,6 +42,13 @@ const safeName = (value, fallback) => String(value || fallback)
   .slice(0, 120) || fallback;
 
 const basename = (value) => String(value || "").split(/[\\/]/).pop();
+const normalizedExtension = (value, fallback = "jpg") => {
+  const extension = String(value || fallback).trim().toLowerCase().replace(/^\./, "");
+  if (["jpeg", "jpe"].includes(extension)) return "jpg";
+  if (extension === "tiff") return "tif";
+  if (extension === "m4v") return "mp4";
+  return extension || fallback;
+};
 const sourceType = (source) => String(source?.type || basename(source?.path).split(".").pop() || "").toUpperCase();
 const rawTypes = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 const defaultSourceRoots = [
@@ -237,8 +244,8 @@ for (const photoId of photoIds) {
   const source = (photo.sourceFiles || []).find((candidate) => !rawTypes.has(sourceType(candidate)));
   if (!source) throw new Error(`No developed source for ${photoId}`);
 
-  const sourceKey = `masters/${photoId}/${basename(source.path)}`;
-  const renderDir = `renders/${safeName(photoId, "photo")}`;
+  const sourceKey = `masters/${photoId}.${normalizedExtension(source.type || basename(source.path).split(".").pop())}`;
+  const legacySourceKey = `masters/${photoId}/${basename(source.path)}`;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-render-"));
   const downloadedSourcePath = path.join(tempDir, basename(source.path));
 
@@ -249,12 +256,17 @@ for (const photoId of photoIds) {
     console.log(`  source local ${localSourcePath}`);
   } else {
     console.log(`  source ${sourceKey}`);
-    await getObject(bucket, sourceKey, downloadedSourcePath);
+    try {
+      await getObject(bucket, sourceKey, downloadedSourcePath);
+    } catch (error) {
+      console.log(`  fallback source ${legacySourceKey}`);
+      await getObject(bucket, legacySourceKey, downloadedSourcePath);
+    }
   }
   const dimensions = await dimensionsFor(sourcePath);
 
   for (const product of selectedProducts) {
-    const renderKey = `${renderDir}/${safeName(basename(source.path), "source")}-${product}.jpg`;
+    const renderKey = `renders/${safeName(photoId, "photo")}_${String(product).replace("jpg-", "")}.jpg`;
     const outputPath = path.join(tempDir, `${product}.jpg`);
     const longEdge = longEdgeForMegapixels(dimensions, PRODUCTS.get(product));
     console.log(`  render ${product} -> ${renderKey} (${longEdge}px long edge)`);

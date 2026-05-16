@@ -251,23 +251,30 @@ For the normal daily/manual sweep, prefer the lock-guarded wrapper:
 zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 ```
 
-To migrate existing private masters toward the flat SQLite-era key convention, use the server-side copy/verify script. It is dry-run by default and writes its audit trail under `.review-logs/`:
+To migrate existing private masters and JPG render triplets toward the flat SQLite-era key convention, use the server-side copy/verify script. It is dry-run by default and writes its audit trail under `.review-logs/`:
 
 ```bash
 node scripts/migrate_r2_asset_keys.mjs --limit 10
 node scripts/migrate_r2_asset_keys.mjs --copy --limit 10
+node scripts/migrate_r2_asset_keys.mjs --copy --workers 12
 ```
 
 The script copies:
 
 ```text
 masters/<photo-id>/<original-file>
+renders/<photo-id>/<original-file>-jpg-6mp.jpg
+renders/<photo-id>/<original-file>-jpg-3mp.jpg
+renders/<photo-id>/<original-file>-jpg-1mp.jpg
 ```
 
 to:
 
 ```text
 masters/<photo-id>.<original-format>
+renders/<photo-id>_6mp.jpg
+renders/<photo-id>_3mp.jpg
+renders/<photo-id>_1mp.jpg
 ```
 
 using R2's S3-compatible `CopyObject`, then verifies the destination with `HEAD`. It keeps old keys unless `--delete-old` is explicitly supplied. Do not use `--delete-old` until checkout/Worker delivery and manifests no longer reference the old keys.

@@ -419,7 +419,7 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
   const catalog = loadCatalog();
   const photoId = firstDeliverablePhotoId(catalog);
   const sourcePath = sourcePathForPhoto(catalog, photoId);
-  const privateKey = `masters/${photoId}/${sourcePath.split(/[\\/]/).pop()}`;
+  const privateKey = `masters/${photoId}.jpg`;
   const privateR2 = createFakeR2({
     [privateKey]: {
       body: new TextEncoder().encode("private developed master bytes"),
@@ -479,7 +479,7 @@ test("deployed Worker blocks checkout when private delivery files are missing", 
 
 test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   const photoId = "photo-1";
-  const privateKey = `masters/${photoId}/source.jpg`;
+  const privateKey = `masters/${photoId}.jpg`;
   const privateR2 = createFakeR2({
     [privateKey]: {
       body: createTestJpeg(),
@@ -526,9 +526,9 @@ test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   assert.equal(renderCount, 1);
   assert.equal(firstDelivery.items.find((item) => item.products.includes("jpg-3mp")).cacheHit, false);
   assert.equal(secondDelivery.items.find((item) => item.products.includes("jpg-3mp")).cacheHit, true);
-  const renderKeys = Array.from(privateR2._debug.keys()).filter((key) => key.startsWith(`renders/${photoId}/`));
+  const renderKeys = Array.from(privateR2._debug.keys()).filter((key) => key.startsWith(`renders/${photoId}_`));
   assert.equal(renderKeys.length, 1);
-  assert.match(renderKeys[0], /jpg-3mp\.jpg$/);
+  assert.equal(renderKeys[0], `renders/${photoId}_3mp.jpg`);
   assert.equal(privateR2._debug.get(renderKeys[0]).httpMetadata.contentType, "image/jpeg");
   assert.equal(privateR2._debug.get(renderKeys[0]).customMetadata.watermark, "none");
   assert.deepEqual(firstDelivery.files.map((file) => file.name), [`${photoId}-full.jpg`, `${photoId}-jpg-3mp.jpg`]);
@@ -536,10 +536,48 @@ test("R2 ZIP delivery renders and privately caches JPG products", async () => {
   assert.equal(firstDelivery.files[1].downloadUrl.startsWith("/download/"), true);
 });
 
+test("R2 ZIP delivery falls back to legacy private masters during migration", async () => {
+  const photoId = "photo-legacy";
+  const flatKey = `masters/${photoId}.jpg`;
+  const legacyKey = `masters/${photoId}/source.jpg`;
+  const privateR2 = createFakeR2({
+    [legacyKey]: {
+      body: createTestJpeg(),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const delivery = createR2ZipDelivery({
+    privateBucket: privateR2,
+    deliveryBucket: privateR2,
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID: deterministicIds(),
+  });
+
+  const result = await delivery.createDelivery({
+    id: "PBE-LEGACY",
+    buyerEmail: "buyer@example.com",
+    currency: "usd",
+    amountPaid: 6500,
+    amountExpected: 6500,
+    items: [{
+      photoId,
+      title: "Legacy source",
+      source: {
+        path: "source.jpg",
+        privateMasterKey: flatKey,
+        privateMasterKeys: [flatKey, legacyKey],
+      },
+      products: [{ id: "full", label: "Full resolution" }],
+    }],
+  });
+
+  assert.equal(result.files[0].objectKey, legacyKey);
+});
+
 test("R2 ZIP delivery reuses cached JPG products without reading the private master", async () => {
   const photoId = "20220506-160631-03403-51426edaac";
-  const privateKey = `masters/${photoId}/20220506 160631 03403.jpg`;
-  const renderKey = `renders/${photoId}/20220506-160631-03403.jpg-jpg-3mp.jpg`;
+  const privateKey = `masters/${photoId}.jpg`;
+  const renderKey = `renders/${photoId}_3mp.jpg`;
   const privateR2 = createFakeR2({
     [privateKey]: {
       body: createTestJpeg(120, 80),

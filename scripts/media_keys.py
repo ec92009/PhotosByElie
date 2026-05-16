@@ -34,3 +34,31 @@ def legacy_public_preview_key(public_prefix: str, reference: str | Path | None) 
     if len(parts) >= 4 and parts[0] == "assets" and parts[1] in {"expo", "reserve"}:
         return prefixed_key(public_prefix, *parts[2:])
     return clean
+
+
+def normalized_private_extension(value: str | Path | None) -> str:
+    extension = str(value or "").strip().lower().removeprefix(".")
+    if not extension:
+        return "jpg"
+    if extension in {"jpeg", "jpe"}:
+        return "jpg"
+    if extension in {"tiff"}:
+        return "tif"
+    if extension == "m4v":
+        return "mp4"
+    return extension
+
+
+def private_master_key(private_prefix: str, media_id: str, source_path: str | Path) -> str:
+    suffix = Path(str(source_path or "")).suffix
+    return prefixed_key(private_prefix, f"{media_id}.{normalized_private_extension(suffix)}")
+
+
+def legacy_private_master_key(private_prefix: str, media_id: str, source_path: str | Path) -> str:
+    return prefixed_key(private_prefix, media_id, Path(str(source_path or "")).name)
+
+
+def private_render_key(media_id: str, product_id: str) -> str:
+    product = str(product_id or "").lower()
+    suffix = product.replace("jpg-", "")
+    return prefixed_key("renders", f"{media_id}_{suffix}.jpg")

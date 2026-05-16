@@ -10,6 +10,7 @@ const DEFAULT_LIMIT = 100;
 const REVIEW_FLAG = "Title_Keywords_Reviewed";
 const PROPOSED_FLAG = "Title_Keywords_Proposed";
 const REJECTED_FLAG = "Title_Keywords_Rejected";
+const PARKED_FLAG = "Title_Keywords_Parked";
 const PROPOSED_STATE_FILENAME = "proposed-state.json";
 const MIN_PROPOSED_KEYWORDS = 10;
 
@@ -371,6 +372,64 @@ const contextFromSource = (sourcePath, galleryLabel) => {
   };
 };
 
+const GENERIC_TITLE_KEYWORDS = new Set([
+  "ai",
+  "art",
+  "city",
+  "coast",
+  "gallery",
+  "generated image",
+  "illustration",
+  "landscape orientation",
+  "museum",
+  "panoramic",
+  "photograph",
+  "portrait orientation",
+  "prompt based image",
+  "square format",
+  "travel",
+  "travel photography",
+  "trip",
+  "wide composition",
+]);
+
+const titleKeywordCandidate = (keyword, galleryLabel) => {
+  const value = titleCase(keyword);
+  if (!value) return "";
+  const comparable = normalizedComparable(value);
+  if (!comparable) return "";
+  if (comparable === normalizedComparable(galleryLabel)) return "";
+  if (GENERIC_TITLE_KEYWORDS.has(value.toLowerCase())) return "";
+  if (/^title keywords /.test(value.toLowerCase())) return "";
+  if (/^\d+$/.test(value)) return "";
+  if (/^\d{4}\s+\d{2}\s+\d{2}/.test(value)) return "";
+  return value;
+};
+
+const keywordTitleJoiner = (primary, secondary) => {
+  if (!secondary) return primary;
+  if (/\b(anchor|beach|bridge|castle|cathedral|church|coast|garden|harbor|market|monastery|museum|palace|park|statue|street|tower)\b/i.test(secondary)) {
+    return `${primary} ${secondary}`;
+  }
+  return `${primary}, ${secondary}`;
+};
+
+const titleFromKeywordHints = ({ keywords, galleryLabel, context }) => {
+  const candidates = uniqueKeywords([
+    ...(keywords || []),
+    context?.venue,
+    context?.city,
+    ...(context?.parts || []),
+  ])
+    .map((keyword) => titleKeywordCandidate(keyword, galleryLabel))
+    .filter(Boolean);
+  const primary = candidates[0] || "";
+  if (!primary) return "";
+  const secondary = candidates.find((candidate) => normalizedComparable(candidate) !== normalizedComparable(primary)) || "";
+  const title = keywordTitleJoiner(primary, secondary);
+  return isPlaceholderTitle(title) ? "" : title;
+};
+
 const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklist, sourceFile }) => {
   const context = contextFromSource(sourceFile?.path || "", galleryLabel);
   const withoutBlacklisted = currentKeywords.filter((keyword) => !hasBlacklistedTerm(keyword, blacklist));
@@ -378,18 +437,20 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   const placeholder = isPlaceholderTitle(currentTitle, sourceFile?.path || metadataValue(photo, "Original file"));
   const promptTitle = compactPromptTitle(currentTitle, currentKeywords);
   const descriptiveTitle = compactDescriptiveTitle(currentTitle);
+  const keywordTitle = titleFromKeywordHints({ keywords: withoutBlacklisted, galleryLabel, context });
   const promptKeywords = compactPromptKeywords(currentTitle);
   const expansionKeywords = metadataExpansionKeywords({ photo, galleryLabel, context, currentTitle, sourceFile });
-  const proposedTitle = placeholder && context.title ? context.title : promptTitle || descriptiveTitle || currentTitle;
+  const proposedTitle = promptTitle || descriptiveTitle || (placeholder ? (context.title || keywordTitle) : currentTitle);
   const proposedKeywords = allowedKeywords(
     [...withoutBlacklisted, ...context.keywords, ...promptKeywords, ...expansionKeywords],
     blacklist,
   );
   const hasUsefulKeywords = proposedKeywords.filter((keyword) => keyword.toLowerCase() !== galleryLabel.toLowerCase()).length > 0;
-  const needsContext = (placeholder && !context.title) || !hasUsefulKeywords;
+  const weakTitle = !proposedTitle || isPlaceholderTitle(proposedTitle, sourceFile?.path || metadataValue(photo, "Original file"));
+  const needsContext = weakTitle || !hasUsefulKeywords;
 
   return {
-    title: needsContext && placeholder ? "" : (needsContext ? currentTitle : proposedTitle),
+    title: weakTitle ? "" : proposedTitle,
     keywords: needsContext && !proposedKeywords.length ? withoutBlacklisted : proposedKeywords,
     status: needsContext ? "needs_owner_context" : (placeholder ? "source_context" : (promptTitle ? "metadata_cleanup" : "metadata_context")),
     confidence: needsContext ? "low" : (placeholder || promptTitle ? "medium" : "high"),
@@ -426,8 +487,14 @@ const proposalStateEntry = (photo, proposedState) => {
   return photoId ? proposedState.photosById.get(photoId) || null : null;
 };
 
+const isParkedProposal = (entry) => {
+  const tags = Array.isArray(entry?.state_tags) ? entry.state_tags : [];
+  return tags.includes(PARKED_FLAG) || entry?.review_state === "parked" || entry?.parked === true;
+};
+
 const isRejectedForRework = (photo, proposedState) => {
   const entry = proposalStateEntry(photo, proposedState);
+  if (isParkedProposal(entry)) return false;
   const tags = Array.isArray(entry?.state_tags) ? entry.state_tags : [];
   return hasMetadataFlag(photo, REJECTED_FLAG)
     || tags.includes(REJECTED_FLAG)
@@ -455,6 +522,15 @@ const mergeBatchRecord = (state, payload, relativePath) => {
   state.batchesById.set(batchId, existing);
 };
 
+const stateTagsForEntry = (item, extraTags = []) => {
+  const parked = isParkedProposal(item) || extraTags.includes(PARKED_FLAG);
+  const base = uniqueValues([...(item?.state_tags || []), ...extraTags]);
+  if (parked) {
+    return uniqueValues(base.filter((tag) => tag !== PROPOSED_FLAG && tag !== REJECTED_FLAG).concat(PARKED_FLAG));
+  }
+  return uniqueValues(base.filter((tag) => tag !== PARKED_FLAG).concat(PROPOSED_FLAG));
+};
+
 const mergeProposedPhoto = (state, photoId, detail = {}) => {
   const normalizedId = normalizedPhotoId(photoId);
   if (!normalizedId) return;
@@ -471,11 +547,7 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
     latest_proposed_at: "",
     proposal_files: [],
   };
-  existing.state_tags = uniqueValues([
-    ...(existing.state_tags || []),
-    ...(Array.isArray(detail.state_tags) ? detail.state_tags : []),
-    PROPOSED_FLAG,
-  ]);
+  existing.state_tags = stateTagsForEntry(existing, Array.isArray(detail.state_tags) ? detail.state_tags : []);
   const batchId = String(detail.batch_id || "").trim();
   const firstBatchId = String(detail.first_proposed_batch_id || "").trim();
   const latestBatchId = String(detail.latest_proposed_batch_id || "").trim();
@@ -489,7 +561,12 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
   if (latestProposedAt || generatedAt) existing.latest_proposed_at = latestProposedAt || generatedAt;
   if (detail.review_state) existing.review_state = String(detail.review_state);
   if (detail.rework_priority != null) existing.rework_priority = Boolean(detail.rework_priority);
-  if (existing.state_tags.includes(REJECTED_FLAG)) {
+  if (isParkedProposal(existing)) {
+    existing.state_tags = stateTagsForEntry(existing, [PARKED_FLAG]);
+    existing.review_state = "parked";
+    existing.rework_priority = false;
+  }
+  if (existing.state_tags.includes(REJECTED_FLAG) && !isParkedProposal(existing)) {
     existing.review_state = "rejected";
     existing.rework_priority = true;
   }
@@ -499,13 +576,49 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
     existing.review_state = "proposed";
     existing.rework_priority = false;
     existing.rejection_comment = "";
-    existing.state_tags = uniqueValues(existing.state_tags || []).filter((tag) => tag !== REJECTED_FLAG);
+    existing.state_tags = stateTagsForEntry({
+      ...existing,
+      state_tags: uniqueValues(existing.state_tags || []).filter((tag) => tag !== REJECTED_FLAG && tag !== PARKED_FLAG),
+      review_state: "proposed",
+    });
   }
   existing.proposal_files = uniqueValues([
     ...(existing.proposal_files || []),
     ...(Array.isArray(detail.proposal_files) ? detail.proposal_files : []),
     detail.proposal_file,
   ]);
+  state.photosById.set(normalizedId, existing);
+};
+
+const parkProposedPhoto = (state, photoId, detail = {}) => {
+  const normalizedId = normalizedPhotoId(photoId);
+  if (!normalizedId) return;
+  const existing = state.photosById.get(normalizedId) || {
+    photo_id: normalizedId,
+    state_tags: [],
+    review_state: "parked",
+    rework_priority: false,
+    rejection_comment: "",
+    rejected_count: 0,
+    first_proposed_batch_id: "",
+    latest_proposed_batch_id: "",
+    first_proposed_at: "",
+    latest_proposed_at: "",
+    proposal_files: [],
+  };
+  existing.photo_id = normalizedId;
+  existing.state_tags = stateTagsForEntry({ ...existing, review_state: "parked" }, [PARKED_FLAG]);
+  existing.review_state = "parked";
+  existing.rework_priority = false;
+  existing.parked = true;
+  existing.parked_reason = String(detail.reason || "Unable to generate a defensible non-placeholder title from current local metadata.").trim();
+  existing.parked_at = String(detail.parked_at || new Date().toISOString());
+  existing.parked_from_batch_id = String(detail.batch_id || "").trim();
+  existing.parked_from_rework = detail.rework_priority === true;
+  existing.rejection_comment = String(existing.rejection_comment || detail.rejection_comment || "").trim();
+  if (detail.latest_proposal_title != null) existing.latest_proposal_title = String(detail.latest_proposal_title || "").trim();
+  if (detail.latest_proposal_keywords != null) existing.latest_proposal_keywords = uniqueKeywords(detail.latest_proposal_keywords || []);
+  existing.proposal_files = uniqueValues(existing.proposal_files || []);
   state.photosById.set(normalizedId, existing);
 };
 
@@ -563,7 +676,7 @@ const proposalStatePayload = (state) => {
   const photos = [...state.photosById.values()]
     .map((item) => ({
       ...item,
-      state_tags: uniqueValues(item.state_tags || [PROPOSED_FLAG]),
+      state_tags: stateTagsForEntry(item),
       proposal_files: uniqueValues(item.proposal_files || []),
     }))
     .sort((a, b) => a.photo_id.localeCompare(b.photo_id));
@@ -579,6 +692,7 @@ const proposalStatePayload = (state) => {
     updated_at: new Date().toISOString(),
     state_flag: PROPOSED_FLAG,
     review_flag: REVIEW_FLAG,
+    parked_flag: PARKED_FLAG,
     photo_count: photos.length,
     photo_ids: photos.map((item) => item.photo_id),
     photos,
@@ -671,6 +785,7 @@ const main = () => {
 
   const skippedReviewed = [];
   const skippedProposed = [];
+  const skippedParked = [];
   const candidates = [];
 
   for (const row of flattened) {
@@ -680,6 +795,10 @@ const main = () => {
       continue;
     }
     const stateEntry = proposalStateEntry(photo, proposedState);
+    if (isParkedProposal(stateEntry)) {
+      skippedParked.push(String(photo?.id || ""));
+      continue;
+    }
     const reworkPriority = isRejectedForRework(photo, proposedState);
     if (!args.includeAlreadyProposed && isAlreadyProposed(photo, proposedState) && !reworkPriority) {
       skippedProposed.push(String(photo?.id || ""));
@@ -705,15 +824,10 @@ const main = () => {
     return String(b.id).localeCompare(String(a.id));
   });
 
-  const reworkBatch = candidates.filter((row) => row.reworkPriority);
-  const ordinaryBatch = candidates.filter((row) => !row.reworkPriority).slice(0, args.limit);
-  const batch = [...reworkBatch, ...ordinaryBatch];
-  const rangeNewest = batch[0]?.capture?.sort || "";
-  const rangeOldest = batch[batch.length - 1]?.capture?.sort || "";
-  const ordinaryRangeNewest = ordinaryBatch[0]?.capture?.sort || "";
-  const ordinaryRangeOldest = ordinaryBatch[ordinaryBatch.length - 1]?.capture?.sort || "";
+  const reworkCandidates = candidates.filter((row) => row.reworkPriority);
+  const ordinaryCandidates = candidates.filter((row) => !row.reworkPriority);
 
-  const photos = batch.map((row) => {
+  const buildPhotoRecord = (row) => {
     const photo = row.photo || {};
     const currentKeywordsRaw = metadataValue(photo, "Keywords");
     const currentKeywords = uniqueKeywords(splitKeywordText(currentKeywordsRaw));
@@ -802,7 +916,53 @@ const main = () => {
       },
       meta,
     };
-  });
+  };
+
+  const photos = [];
+  const parkedRows = [];
+  let ordinaryNewCount = 0;
+
+  const addCandidate = (row, ordinarySlot = false) => {
+    const record = buildPhotoRecord(row);
+    const title = String(record?.proposed?.title || "").trim();
+    const sourcePath = record?.source?.file?.path || record?.meta?.original_file || "";
+    if (!title || isPlaceholderTitle(title, sourcePath)) {
+      parkedRows.push({ row, record });
+      return false;
+    }
+    photos.push(record);
+    if (ordinarySlot) ordinaryNewCount += 1;
+    return true;
+  };
+
+  for (const row of reworkCandidates) {
+    addCandidate(row, false);
+  }
+  for (const row of ordinaryCandidates) {
+    if (ordinaryNewCount >= args.limit) break;
+    addCandidate(row, true);
+  }
+
+  const ordinaryBatch = photos.filter((item) => item?.state?.rework_requested !== true);
+  const reworkBatch = photos.filter((item) => item?.state?.rework_requested === true);
+  const rangeNewest = photos[0]?.capture?.sort || "";
+  const rangeOldest = photos[photos.length - 1]?.capture?.sort || "";
+  const ordinaryRangeNewest = ordinaryBatch[0]?.capture?.sort || "";
+  const ordinaryRangeOldest = ordinaryBatch[ordinaryBatch.length - 1]?.capture?.sort || "";
+  const parkedAt = new Date().toISOString();
+  for (const parked of parkedRows) {
+    parkProposedPhoto(proposedState, parked.record.photo_id, {
+      batch_id: batchId,
+      parked_at: parkedAt,
+      rework_priority: parked.row.reworkPriority,
+      rejection_comment: parked.row.reworkComment,
+      latest_proposal_title: parked.record?.proposed?.title,
+      latest_proposal_keywords: parked.record?.proposed?.keywords || [],
+      reason: parked.row.reworkPriority
+        ? "Rejected/rework photo still needs owner context; parked until a stronger title tool is available."
+        : "Unable to generate a defensible non-placeholder title from current local metadata.",
+    });
+  }
 
   const payload = {
     format: "photosbyelie-title-keyword-review-queue",
@@ -814,6 +974,7 @@ const main = () => {
     review_flag: REVIEW_FLAG,
     proposal_state: {
       flag: PROPOSED_FLAG,
+      parked_flag: PARKED_FLAG,
       path: proposedStatePath,
       include_already_proposed: args.includeAlreadyProposed,
     },
@@ -829,14 +990,20 @@ const main = () => {
       ordinary_oldest: ordinaryRangeOldest,
     },
     selection: {
-      total_count: batch.length,
+      total_count: photos.length,
       ordinary_new_count: ordinaryBatch.length,
       rework_count: reworkBatch.length,
       ordinary_new_limit: args.limit,
+      parked_count: parkedRows.length,
+      parked_rework_count: parkedRows.filter((item) => item.row.reworkPriority).length,
+      parked_ordinary_count: parkedRows.filter((item) => !item.row.reworkPriority).length,
+      candidate_count: candidates.length,
     },
     skipped: {
       reviewed: skippedReviewed.filter(Boolean),
       proposed: skippedProposed.filter(Boolean),
+      parked: skippedParked.filter(Boolean),
+      newly_parked: parkedRows.map((item) => item.record.photo_id).filter(Boolean),
     },
     photos,
   };
@@ -854,8 +1021,10 @@ const main = () => {
     `Range: ${rangeNewest || "—"} .. ${rangeOldest || "—"}\n` +
     `Skipped reviewed: ${skippedReviewed.length}\n` +
     `Skipped proposed: ${skippedProposed.length}\n` +
+    `Skipped parked: ${skippedParked.length}\n` +
     `Ordinary new: ${ordinaryBatch.length}/${args.limit}\n` +
-    `Rework priority: ${reworkBatch.length}\n`,
+    `Rework priority: ${reworkBatch.length}\n` +
+    `Parked untitled: ${parkedRows.length}\n`,
   );
 };
 

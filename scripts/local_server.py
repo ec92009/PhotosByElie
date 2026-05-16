@@ -44,6 +44,7 @@ TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"
+TITLE_KEYWORD_PARKED_FLAG = "Title_Keywords_Parked"
 ACTION_PROGRESS: dict[str, dict] = {}
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
@@ -943,6 +944,7 @@ def _title_keyword_default_proposal_state() -> dict:
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
         "review_flag": TITLE_KEYWORD_REVIEW_FLAG,
+        "parked_flag": TITLE_KEYWORD_PARKED_FLAG,
         "photo_count": 0,
         "photo_ids": [],
         "photos": [],
@@ -999,7 +1001,21 @@ def _write_title_keyword_proposal_state(repo_root: Path, state: dict) -> None:
         photo_id = str(item.get("photo_id") or "").strip()
         if not photo_id or photo_id in seen:
             continue
-        tags = _unique_keywords([str(tag) for tag in item.get("state_tags") or []] + [TITLE_KEYWORD_PROPOSED_FLAG])
+        raw_tags = [str(tag) for tag in item.get("state_tags") or []]
+        is_parked = (
+            item.get("review_state") == "parked"
+            or item.get("parked") is True
+            or TITLE_KEYWORD_PARKED_FLAG in raw_tags
+        )
+        if is_parked:
+            tags = _unique_keywords(
+                [tag for tag in raw_tags if tag not in {TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG}]
+                + [TITLE_KEYWORD_PARKED_FLAG]
+            )
+            item["review_state"] = "parked"
+            item["rework_priority"] = False
+        else:
+            tags = _unique_keywords([tag for tag in raw_tags if tag != TITLE_KEYWORD_PARKED_FLAG] + [TITLE_KEYWORD_PROPOSED_FLAG])
         item["photo_id"] = photo_id
         item["state_tags"] = tags
         item["proposal_files"] = _unique_keywords([str(value) for value in item.get("proposal_files") or []])
@@ -1011,6 +1027,7 @@ def _write_title_keyword_proposal_state(repo_root: Path, state: dict) -> None:
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
     state["state_flag"] = TITLE_KEYWORD_PROPOSED_FLAG
     state["review_flag"] = TITLE_KEYWORD_REVIEW_FLAG
+    state["parked_flag"] = TITLE_KEYWORD_PARKED_FLAG
     state["photo_count"] = len(photos)
     state["photo_ids"] = [item["photo_id"] for item in photos]
     state["photos"] = photos
@@ -1037,9 +1054,16 @@ def _record_title_keyword_rejections(repo_root: Path, batch_id: str, rejections:
             "rejection_comment": "",
             "proposal_files": [],
         }
-        entry["state_tags"] = _unique_keywords([*(entry.get("state_tags") or []), TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG])
+        entry["state_tags"] = _unique_keywords(
+            [
+                tag
+                for tag in [*(entry.get("state_tags") or []), TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG]
+                if tag != TITLE_KEYWORD_PARKED_FLAG
+            ]
+        )
         entry["review_state"] = "rejected"
         entry["rework_priority"] = True
+        entry["parked"] = False
         entry["rejected_count"] = int(entry.get("rejected_count") or 0) + 1
         entry["latest_rejected_batch_id"] = batch_id
         entry["latest_rejected_at"] = now

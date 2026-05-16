@@ -25,5 +25,9 @@ assets/hidden/**
 .curation-logs/
 .review-logs/
 
+# Local Owner workflow database.
+assets/owner-actions/Owner.sqlite
+assets/owner-actions/Owner.sqlite-*
+
 # Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/

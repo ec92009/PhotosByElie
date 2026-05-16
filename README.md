@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v74.38`
+- Current visible version: `v76.18`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -28,6 +28,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `home-data.js`: tiny homepage manifest with collection counts and representative preview candidates
 - `photos-data.js`: small generated browser bootstrap that loads the public catalog TSV shards and exposes shared collection, photo, product option, and mock price data
+- `assets/catalog/photosbyelie.sqlite`: populated SQLite experiment for the next public catalog source of truth
 - `assets/catalog/photos.tsv`: generated public catalog rows, with a compressed `.gz` copy for archival/deploy optimization work
 - `assets/catalog/collections.tsv`: generated collection metadata rows, with a compressed `.gz` copy
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
@@ -45,7 +46,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photos.css`: photo-specific layout and carousel styles
 - `photos.js`: shared theme, translation dictionary, and language toggle behavior for public pages
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
-- `scripts/catalog_tsv.cjs`: shared Node loader/writer helpers for the TSV-backed public catalog
+- `scripts/catalog_tsv.cjs`: shared Node loader/writer helpers for the TSV-backed compatibility public catalog
 - `scripts/write_catalog_tsv.cjs`: compacts generated catalog data into TSV shards and rewrites the browser bootstrap
 - `scripts/validate_publish.js`: pre-push TSV-backed catalog, asset-pair, resolution metadata, and publish-summary check
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
@@ -55,6 +56,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations, including versioning and Lightroom image ingestion
 - `assets/`: shared By Elie logo asset, publish metadata, tiny placeholders, and ignored localhost compatibility/Waste Basket working data
+- `assets/owner-actions/Owner.sqlite`: ignored local Owner workflow database for review queues, decisions, blacklist, and country assignment state
 
 ## Preview
 
@@ -70,7 +72,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Featured on Pinterest section. These campaigns are durable first-party landing pages for Pinterest/social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
-- The full public catalog now lives in TSV shards under `assets/catalog/`. `photos-data.js` is intentionally only a small compatibility bootstrap that reconstructs `window.photosByElieData` for existing static pages.
+- The full public catalog currently still runs through TSV shards under `assets/catalog/`. The next catalog direction is `assets/catalog/photosbyelie.sqlite`, with TSV/JSON kept only as compatibility exports until the browser and tooling paths are switched.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
 - Gallery pages load the publishable Expo subset from `assets/catalog/*.tsv` through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview images through `media-config.js` and each photo's `media.publicPreview` R2/CDN key instead of relying on committed JPG assets.
@@ -79,20 +81,20 @@ Use the GitHub Pages URL above after pushing to `main`.
 - R2 media uploads should run through the lock-guarded sweep wrapper, `scripts/run_cloud_media_sweep.zsh`, or otherwise one lane at a time. The wrapper uses `.review-logs/cloud-media-sweep.lock` so the daily automation and manual runs do not race each other.
 - Public R2 sync and Saturn imports skip IDs from Waste Basket and discarded tombstones, so rejected or owner-discarded photos are not reintroduced by later bulk uploads.
 - `tmp/import-cache` holds disposable import manifests and watermarked derivative files on their way to R2. Reserve is a manifest-only owner state, not a local preview folder. Waste Basket is a blacklist/review state, not a file location.
-- Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, treat Apple Photos album exports under `/Volumes/Saturn/Pictures/LR/Apple Photo Albums` as selected by folder membership, infer country/AI/Unknown buckets, and write watermarked `*_900.jpg` and `*_1800.jpg` pairs into `tmp/import-cache` before upload. RAW/DNG/NEF files are not public-site or cloud-storage inputs.
+- Imports scan developed JPG/TIFF exports only, keep Camera photos at Lightroom green label/rating 4+, treat Apple Photos album exports under `/Volumes/Saturn/Pictures/LR/Apple Photo Albums` as selected by folder membership, infer country/AI/Unknown buckets, and currently write watermarked `*_900.jpg` and `*_1800.jpg` pairs into `tmp/import-cache` before upload. The simplified SQLite/R2 target keeps `*_900.jpg` as the public still preview and retires the 1800 preview after the runtime stops referencing it. RAW/DNG/NEF files are not public-site or cloud-storage inputs.
 - On localhost, `H` or `X` sends a live-gallery photo to the Waste Basket by adding it to the master blacklist, `U` undoes the most recent basket action, and `P` on the Waste Basket page puts a basketed photo back by removing it from the blacklist. `D` is the stronger discard action: it removes the photo from active catalog state, writes `assets/discarded/discarded-photo-ids.json`, and queues R2 deletion for matching public previews, private masters, and private render JPGs.
 - On localhost gallery/detail pages, Owner can edit Title and Keywords; saves update the catalog metadata and generated Worker catalog used by checkout deliverables. JPEG/source embedded metadata is left alone because catalog manifests are the authoritative title/keyword source.
 - On the localhost Title/Keywords review page, Owner can review the current proposal batch, single-click to select a row, double-click for detail, approve with `A`, reject with `R`, propagate with `P`, and basket with `H`/`X`. Rows autosave through the helper server; approved rows apply title/keyword values to generated catalog metadata/state files and add `Title_Keywords_Reviewed`, while rejected rows record rework state/comment in `proposed-state.json`. Saved A/R rows remain visible during the current session and disappear after leaving/reloading; basketed rows disappear immediately. JPEG/source embedded metadata, public previews, private masters, and private render files are left untouched.
 - `assets/owner-actions/keyword-blacklist.json` is the owner-maintained list of useless keyword strings. Import and export scripts omit those strings from generated keyword metadata and keyword indexes only; the list must not block photos, discard photos, or rewrite JPG/source metadata.
 - Basketed photos do not re-upload public preview objects while they are blacklisted.
-- Basket checkout treats discarded/Waste Basket tombstones as unsellable and prunes stale localStorage selections for missing private masters or JPG triplets before payment-sensitive flows.
+- Basket checkout treats discarded/Waste Basket tombstones as unsellable and currently prunes stale localStorage selections for missing private masters or JPG triplets before payment-sensitive flows. The target delivery model is simpler: public previews are for browsing, and buyer delivery is the original/full asset only.
 - On the localhost Unknown page, cards show title/keyword metadata, same-day unknown counts, day-before/day-after known-country context, and previous/next shooting-day context with relative day distance; arrow keys move the selected card, `H` or `X` baskets it, `U` undoes the last basket action, and double clicking a thumbnail opens a full-screen preview that dismisses on click.
 - Assigning an Unknown photo to a country updates every loaded same-day unknown into that country in the local catalog/preview cache, adds the country keyword to catalog metadata, refreshes the Unknown hints, and removes assigned cards from the queue. Owner metadata actions do not rewrite uploaded masters, private render triplets, or public previews; those media objects are treated as immutable after upload except when Waste Basket or discarded media are explicitly deleted.
 - Unknown country assignments are written to the local SQLite owner-state tables first, then exported back to the tracked JSONL trail and compact JSON index used by static/browser compatibility paths.
 - We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
 - The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, Waste Basket updates, Unknown assignment, metadata edits, and R2 maintenance.
 - Local owner mutation endpoints are unlocked on localhost by the helper server without a password. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.
-- The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Coverage excludes Waste Basket tombstones from active repair targets and can surface active photos missing private masters or triplets, preferring Saturn/source-file repair when possible. Current state is intentionally compact: Analyzed / Waste Basket / Expo, with a separate Camera / AI provenance split.
+- The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public low/high previews; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Coverage excludes Waste Basket tombstones from active repair targets and can surface active photos missing private masters or triplets, preferring Saturn/source-file repair when possible. The new R2 target is `expo/<media-id>_900.jpg` for still previews, `expo/<media-id>_preview_720p.mp4` for short video previews, and `masters/<media-id>.<original_format>` for buyer delivery originals.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On gallery pages, `g` makes the grid less dense/larger and `G` makes it denser/smaller; on localhost, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - Gallery filters cover orientation, camera/AI origin, color mood, and subject, with Sort defaulting to Newest first on first display.
@@ -105,7 +107,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - The Expo cap is retired. The exporter now publishes all eligible cloud-backed previews unless they are blocked/discarded or otherwise ineligible.
-- `scripts/export_photos_data.py --external-media` regenerates `home-data.js`, the catalog TSV shards, and the small `photos-data.js` compatibility bootstrap from the local import manifest and tracked owner state without committing preview JPGs.
+- `scripts/export_photos_data.py --external-media` regenerates `home-data.js`, the catalog TSV shards, and the small `photos-data.js` compatibility bootstrap from the local import manifest and tracked owner state without committing preview JPGs. The SQLite migration keeps those files as exports while `photosbyelie.sqlite` becomes the intended public catalog source.
 - The basket is the source of truth for selected product options.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.

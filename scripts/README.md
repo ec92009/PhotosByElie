@@ -68,7 +68,7 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys are flat by photo ID under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys currently include `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; the SQLite/R2 target keeps `expo/<photo-id>_900.jpg` as the public still preview and retires the 1800 preview after the runtime stops referencing it. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -108,7 +108,7 @@ After changing the generated catalog, refresh the media sidecar so each flat pub
 node scripts/write_media_sidecar.mjs
 ```
 
-For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X sends a photo to the Waste Basket by adding its undesirable master to the blocked/master blacklist, U removes the most recent block, and P on the Waste Basket page puts a basketed master back by removing it from the blacklist. The blacklist means "do not make that mistake again": future imports/renders skip those masters. Emptying the Waste Basket purges public previews, private masters, and private render triplets for basketed photos, then leaves discard tombstones so the same masters do not return. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write the local SQLite owner-state tables, and export the handoff to `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
+For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X sends a photo to the Waste Basket by adding its undesirable master to the blocked/master blacklist, U removes the most recent block, and P on the Waste Basket page puts a basketed master back by removing it from the blacklist. The blacklist means "do not make that mistake again": future imports/renders skip those masters. Emptying the Waste Basket purges public previews, private masters, and currently generated private render triplets for basketed photos, then leaves discard tombstones so the same masters do not return. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write the local SQLite owner-state tables, and export the handoff to `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
 
 If an older review snapshot needs to be replayed, use `scripts/asset_state.py` directly:
 
@@ -145,7 +145,9 @@ open -a "DB Browser for SQLite" tmp/photo-state.sqlite
 
 Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `owner_country_assignment_events`, `owner_country_assignments`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
 
-The public site still exposes the same `window.photosByElieData` browser contract, but the heavy catalog payload is TSV under `assets/catalog/`; SQLite is the local working database for inspection and owner-state mutation, not a runtime dependency for GitHub Pages.
+The public site still exposes the same `window.photosByElieData` browser contract, but the migration target is now a committed public SQLite catalog at `assets/catalog/photosbyelie.sqlite` plus an ignored local Owner workflow database at `assets/owner-actions/Owner.sqlite`. TSV and JSON state files remain compatibility exports until the site, Worker, and Owner tools have moved to the SQLite source-of-truth path.
+
+The current populated `photosbyelie.sqlite` schema has six core tables: `collections`, `cameras`, `lenses`, `media_items`, `keywords`, and `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
 
 The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
 
@@ -233,10 +235,11 @@ The approval apply path is manifest-only. It rewrites generated catalog/state fi
 
 `sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:
 
-- public watermarked previews go to `photosbyelie-public` under flat keys such as `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
+- public watermarked still previews go to `photosbyelie-public` under `expo/<photo-id>_900.jpg`
+- future public watermarked video previews go to `photosbyelie-public` under `expo/<photo-id>_preview_720p.mp4`
 - local import-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
-- private developed masters go to `photosbyelie-private` under `masters/<photo-id>/<original-file>`
-- unwatermarked buyer JPG deliverables go to `photosbyelie-private` under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg`; they stay private and the Worker streams paid files one by one after payment
+- private developed masters are moving to `photosbyelie-private` under `masters/<photo-id>.<original-format>`
+- old private JPG triplet deliverables under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg` are retired by the target model; do not delete them until checkout/worker delivery no longer references them and a migration audit confirms they are unused
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
 - IDs listed in owner discard tombstones are skipped for import/upload and should be deleted from public and private R2 by `delete_discarded_r2_media.mjs`; the tombstone stays tracked so Saturn scans do not resurrect discarded photos
 
@@ -245,6 +248,27 @@ For the normal daily/manual sweep, prefer the lock-guarded wrapper:
 ```bash
 zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 ```
+
+To migrate existing private masters toward the flat SQLite-era key convention, use the server-side copy/verify script. It is dry-run by default and writes its audit trail under `.review-logs/`:
+
+```bash
+node scripts/migrate_r2_asset_keys.mjs --limit 10
+node scripts/migrate_r2_asset_keys.mjs --copy --limit 10
+```
+
+The script copies:
+
+```text
+masters/<photo-id>/<original-file>
+```
+
+to:
+
+```text
+masters/<photo-id>.<original-format>
+```
+
+using R2's S3-compatible `CopyObject`, then verifies the destination with `HEAD`. It keeps old keys unless `--delete-old` is explicitly supplied. Do not use `--delete-old` until checkout/Worker delivery and manifests no longer reference the old keys.
 
 The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera and Leonardo developed sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
 

@@ -13,19 +13,16 @@ The current project shape bends around GitHub limits because GitHub Pages is doi
 
 The first job is a good fit. The second job is the source of the acrobatics.
 
-GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog TSV/bootstrap files, and public gallery pages. Photo binaries do not need to live in GitHub long term.
+GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Photo binaries do not need to live in GitHub long term. The current public catalog is still TSV/bootstrap-backed, but the accepted migration target is a single public SQLite catalog file.
 
 ## Future Media States
 
 Each source photo may eventually have several useful derivatives:
 
 - Developed full-resolution image.
-- 6MP delivery image.
-- 3MP delivery image.
-- 1MP delivery image.
-- Preview image.
-- Watermarked 1800px image.
-- Watermarked 900px image.
+- Full original/developed master.
+- Watermarked 900px still preview.
+- For video, a 5-second watermarked 720p preview clip.
 
 Each photo also has a curation state:
 
@@ -40,7 +37,7 @@ Those states should be metadata and/or storage location concerns. They should no
 
 The durable direction is static-first, not necessarily static-only:
 
-- GitHub Pages hosts the public storefront and TSV-backed catalog files.
+- GitHub Pages hosts the public storefront and catalog metadata, moving from TSV compatibility files toward `assets/catalog/photosbyelie.sqlite`.
 - A public media CDN or object store hosts public display derivatives.
 - Private/local storage keeps protected sales assets.
 - A tiny trusted service may eventually handle payment callbacks, delivery ZIPs, signed links, and print-on-demand order submission.
@@ -53,15 +50,11 @@ Public media should mean public display media, not all sellable files.
 
 Good public candidates:
 
-- Watermarked preview.
 - Watermarked 900px display image.
-- Watermarked 1800px display image.
+- For video, a watermarked short 720p preview clip.
 
 Questionable or likely private candidates:
 
-- Clean 1MP JPG.
-- Clean 3MP JPG.
-- Clean 6MP JPG.
 - Clean developed full-resolution JPG/TIFF.
 
 The reason to put any photo file on a public CDN is browser performance and simplicity: the public gallery needs images it can load without authentication. But if a file is something a buyer should pay for, it should not be publicly addressable just because it is small.
@@ -87,12 +80,11 @@ Private object storage is for developed sales assets and delivery artifacts, not
 Expected private storage contents:
 
 - Developed full-size masters.
-- Lazily generated clean delivery sizes, such as 6MP, 3MP, and 1MP.
 - Delivery ZIP files stored under the purchase order ID.
 
-Smaller clean delivery derivatives are generated/uploaded by the media pipeline and then reused. After masters, private render triplets, and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; Waste Basket/discarded cleanup is the exception.
+The current deployed checkout track still knows about older private render triplets. The target model retires those triplets and delivers only the full original/developed asset. After masters and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; Waste Basket/discarded cleanup is the exception.
 
-Waste Basket media retention is owner-controlled, not clock-controlled. Once a photo is basketed or discarded, it should leave the public catalog immediately. While it remains in the basket, the owner can put it back; emptying the basket purges public previews, private masters, and private render triplets from R2, then keeps only the durable blacklist/discard tombstone needed to prevent future imports from resurrecting the same master.
+Waste Basket media retention is owner-controlled, not clock-controlled. Once a photo is basketed or discarded, it should leave the public catalog immediately. While it remains in the basket, the owner can put it back; emptying the basket purges public previews, private masters, and any legacy private render triplets from R2, then keeps only the durable blacklist/discard tombstone needed to prevent future imports from resurrecting the same master.
 
 Delivery ZIP files should remain available for future re-download under their purchase order ID. Access should be rate-limited, with a rough starting rule of no more than one delivery ZIP download per order per hour. The exact rule can change later, but the intent is to avoid accidental or hostile repeated downloads.
 
@@ -114,16 +106,14 @@ GitHub Pages
   gallery pages
   JavaScript
   CSS
-  public catalogs and metadata
+  public SQLite catalog and generated compatibility metadata
 
 Public media CDN/object storage
-  watermarked previews
   watermarked 900px images
-  watermarked 1800px images
+  watermarked 720p video preview clips
 
 Private object storage
   developed full-size masters
-  lazily generated clean 6MP/3MP/1MP derivatives
   delivery ZIPs keyed by purchase order ID
 
 Local computers and backup drives

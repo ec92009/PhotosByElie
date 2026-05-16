@@ -148,7 +148,7 @@ Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keyword
 
 The public site still exposes the same `window.photosByElieData` browser contract, but the migration target is now a committed public SQLite catalog at `assets/catalog/photosbyelie.sqlite` plus an ignored local Owner workflow database at `assets/owner-actions/Owner.sqlite`. TSV and JSON state files remain compatibility exports until the site, Worker, and Owner tools have moved to the SQLite source-of-truth path.
 
-The current populated `photosbyelie.sqlite` schema has six core tables: `collections`, `cameras`, `lenses`, `media_items`, `keywords`, and `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
+The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
 
 The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
 

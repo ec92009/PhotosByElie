@@ -28,7 +28,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `home-data.js`: tiny homepage manifest with collection counts and representative preview candidates
 - `photos-data.js`: small generated browser bootstrap that loads the public catalog TSV shards and exposes shared collection, photo, product option, and mock price data
-- `assets/catalog/photosbyelie.sqlite`: populated SQLite experiment for the next public catalog source of truth
+- `assets/catalog/photosbyelie.sqlite`: compact SQLite catalog for the next public catalog source of truth
 - `assets/catalog/photos.tsv`: generated public catalog rows, with a compressed `.gz` copy for archival/deploy optimization work
 - `assets/catalog/collections.tsv`: generated collection metadata rows, with a compressed `.gz` copy
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
@@ -48,6 +48,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
 - `scripts/catalog_tsv.cjs`: shared Node loader/writer helpers for the TSV-backed compatibility public catalog
 - `scripts/write_catalog_tsv.cjs`: compacts generated catalog data into TSV shards and rewrites the browser bootstrap
+- `scripts/build_public_catalog_db.py`: rebuilds the compact public SQLite catalog at `assets/catalog/photosbyelie.sqlite`
 - `scripts/validate_publish.js`: pre-push TSV-backed catalog, asset-pair, resolution metadata, and publish-summary check
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
 - `scripts/watch_photo_state_db.zsh`: optional local background refresher for the SQLite state database
@@ -72,7 +73,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Featured on Pinterest section. These campaigns are durable first-party landing pages for Pinterest/social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
-- The full public catalog currently still runs through TSV shards under `assets/catalog/`. The next catalog direction is `assets/catalog/photosbyelie.sqlite`, with TSV/JSON kept only as compatibility exports until the browser and tooling paths are switched.
+- The full public catalog currently still runs through TSV shards under `assets/catalog/`. The next catalog direction is `assets/catalog/photosbyelie.sqlite`, with compact integer lookup ids for controlled vocabulary fields and TSV/JSON kept only as compatibility exports until the browser and tooling paths are switched.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
 - Gallery pages load the publishable Expo subset from `assets/catalog/*.tsv` through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
@@ -94,7 +95,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
 - The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, Waste Basket updates, Unknown assignment, metadata edits, and R2 maintenance.
 - Local owner mutation endpoints are unlocked on localhost by the helper server without a password. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.
-- The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public preview assets; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Coverage excludes Waste Basket tombstones from active repair targets and can surface active media missing private masters or photo triplets, preferring Saturn/source-file repair when possible. The new R2 target is `expo/<media-id>_900.jpg` for `still_900`, `expo/<media-id>_1800.jpg` for photo `still_1800`, `expo/<media-id>_short_5s_720p.mp4` for video detail previews, `renders/<media-id>_{1,3,6}mp.jpg` for sellable photo JPGs, and `masters/<media-id>.<original_format>` for full delivery.
+- The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public preview assets; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Coverage excludes Waste Basket tombstones from active repair targets and can surface active media missing private masters or photo triplets, preferring Saturn/source-file repair when possible. The new R2 target is `expo/<media-id>_900.jpg` for `still_900`, `expo/<media-id>_1800.jpg` for photo `still_1800`, `expo/<media-id>_short_5s_720p.mp4` for video detail previews, `renders/<media-id>_{1,3,6}mp.jpg` for sellable photo JPGs, and `masters/<media-id>.<format extension>` for full delivery.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On gallery pages, `g` makes the grid less dense/larger and `G` makes it denser/smaller; on localhost, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
 - Gallery filters cover orientation, camera/AI origin, color mood, and subject, with Sort defaulting to Newest first on first display.

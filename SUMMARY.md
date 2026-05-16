@@ -20,16 +20,28 @@ We designed and populated two databases:
 - `photosbyelie.sqlite`: public/deployable catalog truth.
 - `Owner.sqlite`: local/private Owner workflow truth.
 
-The public catalog has six core tables:
+The public catalog now has ten compact-id tables:
 
 ```text
 collections
 cameras
 lenses
+media_types
+source_origins
+formats
+asset_types
+keyword_terms
 media_items
-keywords
 media_assets
 ```
+
+Catalog schema rule accepted on 2026-05-16 and applied locally: keep `media_id`
+as the stable text identity, keep descriptive columns in the main `media_items`
+row, and turn controlled/repeated fields into short integer lookup references. That means
+`collection_id`, `camera_id`, `lens_id`, `media_type_id`, `source_origin_id`,
+`original_format_id`, `asset_type_id`, and `format_id` are integers. Keywords
+move to `keyword_terms`, and `media_items.keyword_ids` stores a comma-separated
+list of keyword integers.
 
 The local Owner database has seven workflow tables:
 
@@ -50,9 +62,9 @@ The split is intentional. The public catalog answers "what is the site/catalog n
 Main catalog database:
 
 ```text
-raw SQLite:        18.28 MiB
-gzip -9:            1.75 MiB
-brotli -11:         0.84 MiB
+raw SQLite:         6.6 MiB
+gzip -9:            0.89 MiB
+brotli -11:         0.46 MiB
 current TSV gzip:   0.55 MiB
 ```
 
@@ -67,8 +79,8 @@ Main-page first-load estimate:
 
 ```text
 current main page with TSV:      about 1.59 MiB
-main page with SQLite catalog:   about 2.07 MiB
-delta:                           about +495 KiB compressed
+main page with SQLite catalog:   about 1.50 MiB
+delta:                           about -95 KiB compressed
 ```
 
 This was accepted as more than good enough. Later pages should reopen the catalog from browser cache rather than download it again.
@@ -76,7 +88,7 @@ This was accepted as more than good enough. Later pages should reopen the catalo
 ## Data Findings
 
 - Catalog import produced 5,844 `media_items`, all currently photos.
-- The catalog keyword table has 85,560 rows and accounts for most of the SQLite catalog size.
+- The compact catalog has 3,113 unique keyword terms, with each media row storing comma-separated keyword ids.
 - Owner import produced 662 title/keyword queue rows, 500 proposal rows, and 398 decision rows.
 - 162 Owner queue rows refer to batch ids whose proposal details are no longer present in the current batch JSON files. This confirms the existing alternate-source-of-truth weakness.
 - Older proposal batches contain empty proposed titles. Owner.sqlite was relaxed enough to preserve that historical bad state instead of pretending it never happened.
@@ -104,7 +116,7 @@ short_5s_720p   -> expo/<media_id>_short_5s_720p.mp4
 jpeg_1mp        -> renders/<media_id>_1mp.jpg
 jpeg_3mp        -> renders/<media_id>_3mp.jpg
 jpeg_6mp        -> renders/<media_id>_6mp.jpg
-full            -> masters/<media_id>.<original_format>
+full            -> masters/<media_id>.<format extension>
 ```
 
 For photos:
@@ -149,7 +161,7 @@ masters/<media_id>/<original_file>
 to:
 
 ```text
-masters/<media_id>.<original_format>
+masters/<media_id>.<format extension>
 ```
 
 and keep old keys temporarily. Public preview assets stay first-class at `expo/<media_id>_900.jpg` for photo/video gallery previews, `expo/<media_id>_1800.jpg` for photo detail previews, and `expo/<media_id>_short_5s_720p.mp4` for video detail previews. Copy private photo render triplets to `renders/<media_id>_{1,3,6}mp.jpg` and keep the old nested keys temporarily.
@@ -183,6 +195,6 @@ npm run validate: pass
 2. Teach the public site to load `photosbyelie.sqlite` or generated output from it.
 3. Move Owner title/keyword review and country assignment workflows onto `Owner.sqlite`.
 4. Turn TSV and Owner JSON into compatibility exports, then retire them.
-5. Copy/verify R2 private masters into the new flat `masters/<media_id>.<original_format>` keys.
+5. Copy/verify R2 private masters into the new flat `masters/<media_id>.<format extension>` keys.
 6. Update Worker checkout/delivery to use four photo flavors and full-original-only video delivery.
 7. Audit and delete old nested render-triplet keys only after the runtime no longer references them.

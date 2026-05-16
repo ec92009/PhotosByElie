@@ -4,12 +4,12 @@ Last updated: 2026-05-16
 
 ## Current Facts
 
-- Current visible build: `v77.1`.
+- Current visible build: `v77.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
-- Public catalog currently serves through TSV compatibility files under `assets/catalog/`, with a tracked compact SQLite catalog at `assets/catalog/photosbyelie.sqlite`.
-- Local Owner workflow state is moving toward ignored `assets/owner-actions/Owner.sqlite`.
+- Public pages load `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback under `assets/catalog/`.
+- Local Owner workflow state writes to ignored `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public previews are R2-backed and watermarked.
 - Private sellable assets are R2-backed and unwatermarked.
 - Waste Basket/discard tombstones are durable. A banned photo stays banned.
@@ -21,43 +21,32 @@ Last updated: 2026-05-16
 
 ## Numbered Backlog
 
-1. **Switch public runtime loading to SQLite.**
-   - Load `assets/catalog/photosbyelie.sqlite` on public pages.
-   - Keep TSV/JS exports as compatibility until gallery, detail, basket, liked, Worker, and homepage paths are converted.
-   - Preserve GitHub Pages compatibility and cache behavior.
+1. **Completed: Switch public runtime loading to SQLite.**
+   - Public pages now load `assets/catalog/photosbyelie.sqlite` through `catalog-sqlite.js`.
+   - TSV remains as a compatibility fallback for GitHub Pages and current tooling.
 
-2. **Make SQLite generation fully canonical and repeatable.**
-   - Keep `scripts/build_public_catalog_db.py` as the one-command public DB rebuild.
-   - Validate counts, foreign keys, duplicate media ids, keyword id lists, and asset rows.
-   - Add a clear publish step for rebuilding SQLite plus compatibility exports.
+2. **Completed: Make SQLite generation repeatable.**
+   - `scripts/build_public_catalog_db.py` rebuilds the public DB and validates integrity, foreign keys, duplicate media ids, keyword ids, and required asset rows.
+   - `node scripts/write_catalog_tsv.cjs` refreshes TSV compatibility exports, the SQLite bootstrap, and the public DB together.
 
-3. **Move Owner workflows into `Owner.sqlite`.**
-   - Move title/keyword queue, proposals, decisions, country assignments, keyword blacklist, and settings into the local DB.
-   - Export tracked compatibility JSON only where the current UI still requires it.
-   - Keep `Owner.sqlite` ignored and local-only.
+3. **Completed: Move active Owner workflow state into `Owner.sqlite`.**
+   - Title/keyword queue, proposals, decisions, country assignments, keyword blacklist, and settings import into the local DB.
+   - Localhost actions now write blacklist, country assignment, and title/keyword decision changes into `Owner.sqlite`, then export compatibility JSON.
 
-4. **Add a parked title/keyword state.**
-   - Use parked for rejected rows where current tooling cannot create a good human title.
-   - Do not count parked rows as accepted.
-   - Do not let parked rows block new ordinary title/keyword proposal batches.
-   - Preserve Owner reject comments and previous proposal context.
+4. **Completed: Add parked title/keyword state.**
+   - The generator parks rows it cannot title defensibly and keeps filling ordinary-new slots.
+   - Parked rows are excluded from accepted/rejected scoring and future ordinary batches until manually reset.
 
-5. **Rework Owner review scoring/reporting.**
-   - Report accepted/applied, submitted-unchecked, rejected/rework, and parked counts separately.
-   - Double-check accepted rows from applied audit state, not only the latest batch file.
-   - Make score calculations use local source-of-truth state without GitHub or remote calls.
+5. **Completed: Rework Owner review scoring/reporting.**
+   - `python3 scripts/owner_state_db.py --review-counts` reports accepted/applied, submitted-unchecked, rejected/rework, and parked counts from local DB state.
 
-6. **Complete title/keyword proposal quality fixes.**
-   - Guarantee every selected row has a non-empty human-readable proposed title.
-   - Replace numeric, date-time, filename-style, and keyword-dump titles.
-   - Use visual/catalog/source context conservatively when specific subject context is uncertain.
-   - For rows rejected with "use the hints in the keywords to provide a decent title", derive the next title from keywords plus reliable context.
+6. **Completed: Enforce title/keyword proposal quality.**
+   - Queue generation refuses empty/placeholder proposed titles, parks weak rows, and derives rework titles from keyword/source context where possible.
 
-7. **Finish video import hardening.**
-   - Keep Apple Photos mixed-album import video-aware.
-   - Keep face albums off limits.
-   - Preserve the two-pass portable PNG watermark overlay path for ffmpeg builds without `drawtext`.
-   - Keep explicit `-t 5` on the overlay pass so short previews cannot drift.
+7. **Completed: Finish video import hardening.**
+   - Apple Photos mixed-album import remains video-aware.
+   - Face albums remain off limits by SOP.
+   - The portable Pillow overlay path uses an explicit `-t 5` on the ffmpeg overlay pass.
 
 8. **Migrate R2 keys to the flat SQLite-era conventions.**
    - Copy/verify masters from `masters/<media_id>/<original_file>` to `masters/<media_id>.<format>`.

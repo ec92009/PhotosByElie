@@ -1,4 +1,4 @@
-// Generated bootstrap: loads the public catalog from TSV shards.
+// Generated bootstrap: loads the public catalog from SQLite, with TSV fallback.
 (() => {
   const parseCell = (value) => {
     if (value == null || value === "") return "";
@@ -29,6 +29,36 @@
       return Object.fromEntries(columns.map((column, index) => [column, values[index] ?? ""]));
     });
   };
+  const readBinary = (relativePath) => {
+    const script = document.currentScript;
+    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
+    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
+    const url = new URL(relativePath, scriptUrl || window.location.href);
+    if (version) url.searchParams.set("v", version);
+    const request = new XMLHttpRequest();
+    request.open("GET", url.href, false);
+    request.overrideMimeType?.("text/plain; charset=x-user-defined");
+    request.send(null);
+    if (request.status && (request.status < 200 || request.status >= 300)) {
+      throw new Error(`Could not load ${relativePath}: HTTP ${request.status}`);
+    }
+    const response = request.responseText || "";
+    const bytes = new Uint8Array(response.length);
+    for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
+    return bytes;
+  };
+
+  if (window.photosByElieCatalogSqlite?.decodeCatalog) {
+    try {
+      const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
+      window.photosByElieData = bundle.data || {};
+      window.photosByElieOwnerData = bundle.owner || {};
+      window.photosByElieCatalogSource = "sqlite";
+      return;
+    } catch (error) {
+      console.warn(error?.message || "SQLite catalog load failed; falling back to TSV.");
+    }
+  }
 
   const data = {};
   const owner = {};
@@ -75,6 +105,7 @@
 
   window.photosByElieData = data;
   window.photosByElieOwnerData = owner;
+  window.photosByElieCatalogSource = "tsv";
 })();
 window.photosByElieOriginTypes = {
   camera: { label: "Camera photo", shortLabel: "Camera" },

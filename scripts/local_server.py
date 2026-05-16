@@ -84,6 +84,8 @@ from sync_r2_media import (  # noqa: E402
     wrangler_put,
 )
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
+from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
+from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -505,10 +507,12 @@ def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
         "keywords": keywords,
     }
     _write_json_file(path, next_payload)
+    db_result = record_keyword_blacklist_db(repo_root, keywords)
     return {
         "ok": True,
         "action": "save-keyword-blacklist",
         "path": path.relative_to(repo_root).as_posix(),
+        "db": db_result.get("db"),
         "keyword_count": len(keywords),
         "keywords": keywords,
     }
@@ -2039,11 +2043,22 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if normalized:
             payload_out["applied_at"] = now
         approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
+        db_result = record_title_keyword_review_decisions_db(
+            repo_root,
+            batch_id,
+            normalized,
+            normalized_rejections,
+            normalized_blocked,
+            not_found,
+            applied_at=payload_out.get("applied_at", ""),
+            decided_at=now,
+        )
         return {
             "ok": True,
             "action": action,
             "batch_id": batch_id,
             "path": approvals_path.relative_to(repo_root).as_posix(),
+            "db": db_result.get("db"),
             "approved_count": len(merged_record.get("approvals", [])),
             "rejected_count": len(merged_record.get("rejections", [])),
             "blocked_count": len(merged_record.get("blocked", [])),

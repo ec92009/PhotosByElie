@@ -5,13 +5,13 @@ Date: 2026-05-16
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Current visible build: `v77.1`
+- Current visible build: `v77.2`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
-- Public catalog currently serves through TSV compatibility files, with a tracked compact SQLite catalog at `assets/catalog/photosbyelie.sqlite`.
-- Owner-only workflow state has a local ignored SQLite target at `assets/owner-actions/Owner.sqlite`.
+- Public catalog now loads `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback.
+- Owner-only workflow state now writes to the local ignored SQLite target at `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public preview media and private delivery media live in Cloudflare R2, not Git.
-- Latest pushed commits:
+- Recent pushed commits before the SQLite runtime migration:
   - `95c5a07f photosbyelie: keep commerce header controls fixed`
   - `ef744dde photosbyelie: remove discarded previews from catalog`
   - `bd40b229 photosbyelie: compact public catalog sqlite`
@@ -49,7 +49,7 @@ media_assets
 Current public SQLite counts:
 
 ```text
-collections:     9
+collections:     8
 cameras:         12
 lenses:          18
 media_types:     2
@@ -76,6 +76,25 @@ Total:     5,827
 ```
 
 ## Owner State Direction
+
+The first SQLite migration pass is now in place:
+
+- `catalog-sqlite.js` decodes the public SQLite catalog in the browser and reconstructs the existing `window.photosByElieData` contract.
+- `photos-data.js` loads SQLite synchronously first and falls back to TSV if needed.
+- `scripts/write_catalog_tsv.cjs` now refreshes TSV compatibility exports, the SQLite bootstrap, and `assets/catalog/photosbyelie.sqlite` together.
+- `scripts/build_public_catalog_db.py` validates duplicate media ids, keyword ids, required asset rows, foreign keys, and SQLite integrity.
+- `scripts/owner_state_db.py` now targets `assets/owner-actions/Owner.sqlite` and imports/writes keyword blacklist, country assignments, title/keyword batches, queue rows, proposals, and decisions.
+- Title/keyword queue generation syncs `Owner.sqlite` after writing compatibility JSON.
+
+Current Owner title/keyword score from local DB:
+
+```text
+accepted/applied:    120
+submitted-unchecked: 210
+rejected/rework:     323
+parked:              0
+blocked:             9
+```
 
 The local Owner DB is for private workflows that should not travel with the public site:
 

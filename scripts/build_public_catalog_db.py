@@ -241,6 +241,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
         CREATE TABLE media_items (
           media_id            TEXT PRIMARY KEY,
           collection_id       INTEGER NOT NULL,
+          sort_index          INTEGER NOT NULL CHECK (sort_index >= 0),
           media_type_id       INTEGER NOT NULL,
           camera_id           INTEGER,
           lens_id             INTEGER,
@@ -255,6 +256,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
           exposure            TEXT,
           focal_length        TEXT,
           original_file       TEXT,
+          source_path         TEXT,
           original_format_id  INTEGER NOT NULL,
           location            TEXT,
           gps_latitude        REAL CHECK (gps_latitude IS NULL OR gps_latitude BETWEEN -90 AND 90),
@@ -401,6 +403,8 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
     order = {slug: index for index, slug in enumerate(COLLECTION_ORDER)}
     merged = dict(catalog)
     for slug, (title, description) in COLLECTION_DEFAULTS.items():
+        if slug == "unknown" and slug not in merged:
+            continue
         merged.setdefault(slug, {"title": title, "description": description, "photos": []})
     return sorted(merged.items(), key=lambda item: (order.get(item[0], len(order)), item[0]))
 
@@ -408,11 +412,19 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
 def write_db(repo_root: Path, output: Path) -> dict[str, int]:
     catalog = load_catalog(repo_root)
     collection_entries = ordered_collections(catalog)
-    photos: list[tuple[str, dict[str, Any], str, dict[str, Any]]] = []
+    photos: list[tuple[str, dict[str, Any], str, int, dict[str, Any]]] = []
+    seen_photo_ids: set[str] = set()
+    duplicate_photo_ids: set[str] = set()
     for sort_order, (slug, collection) in enumerate(collection_entries, start=1):
-        for photo in collection.get("photos") or []:
+        for sort_index, photo in enumerate(collection.get("photos") or []):
             if photo.get("id"):
-                photos.append((slug, collection, str(photo["id"]), photo))
+                photo_id = str(photo["id"])
+                if photo_id in seen_photo_ids:
+                    duplicate_photo_ids.add(photo_id)
+                seen_photo_ids.add(photo_id)
+                photos.append((slug, collection, photo_id, sort_index, photo))
+    if duplicate_photo_ids:
+        raise RuntimeError(f"duplicate media ids: {', '.join(sorted(duplicate_photo_ids)[:20])}")
 
     camera_names = sorted({metadata_value(photo, "Camera") for *_prefix, photo in photos if metadata_value(photo, "Camera")}, key=str.casefold)
     lens_names = sorted({metadata_value(photo, "Lens") for *_prefix, photo in photos if metadata_value(photo, "Lens")}, key=str.casefold)
@@ -480,8 +492,10 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
 
         media_rows = []
         asset_rows = []
+        asset_codes_by_photo: dict[str, set[str]] = {}
+        media_type_by_photo: dict[str, str] = {}
         errors: list[str] = []
-        for slug, collection, photo_id, photo in photos:
+        for slug, collection, photo_id, sort_index, photo in photos:
             media_type = str((photo.get("media") or {}).get("type") or "photo").strip().lower()
             if media_type not in media_type_id:
                 errors.append(f"{photo_id}: unsupported media type {media_type!r}")
@@ -495,8 +509,21 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
             if fmt not in format_id:
                 errors.append(f"{photo_id}: unsupported original format {fmt!r}")
                 continue
+            duration_seconds = None
+            if media_type == "video":
+                raw_duration = (photo.get("media") or {}).get("video", {}).get("duration") or photo.get("duration")
+                try:
+                    duration_seconds = float(raw_duration)
+                except (TypeError, ValueError):
+                    duration_seconds = None
+                if not duration_seconds or duration_seconds <= 0:
+                    errors.append(f"{photo_id}: video rows require positive duration_seconds")
+                    continue
             keywords = photo_keywords(photo)
             keyword_ids = ",".join(str(keyword_id[keyword]) for keyword in keywords)
+            if any(keyword not in keyword_id for keyword in keywords):
+                errors.append(f"{photo_id}: keyword id lookup failed")
+                continue
             camera_name = metadata_value(photo, "Camera")
             lens_name = metadata_value(photo, "Lens")
             source_origin = str(photo.get("sourceOrigin") or "").strip() or None
@@ -508,6 +535,7 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
                 {
                     "media_id": photo_id,
                     "collection_id": collection_id[slug],
+                    "sort_index": sort_index,
                     "media_type_id": media_type_id[media_type],
                     "camera_id": camera_id.get(camera_name),
                     "lens_id": lens_id.get(lens_name),
@@ -517,11 +545,12 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
                     "source_origin_id": source_origin_id.get(source_origin or ""),
                     "width": width,
                     "height": height,
-                    "duration_seconds": None,
+                    "duration_seconds": duration_seconds,
                     "captured_at": captured_at(photo),
                     "exposure": metadata_value(photo, "Exposure") or None,
                     "focal_length": metadata_value(photo, "Focal length") or None,
                     "original_file": original_file(photo) or None,
+                    "source_path": source.get("path") or None,
                     "original_format_id": format_id[fmt],
                     "location": location or None,
                     "gps_latitude": None,
@@ -530,38 +559,52 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
                     "updated_at": None,
                 }
             )
+            media_type_by_photo[photo_id] = media_type
+            asset_codes_by_photo.setdefault(photo_id, set()).add("full")
 
             source_bytes = source.get("bytes")
             full_bytes = int(source_bytes) if isinstance(source_bytes, int) or str(source_bytes).isdigit() else None
             asset_rows.append((photo_id, asset_type_id["full"], width, height, None, full_bytes, format_id[fmt]))
             gallery_width, gallery_height = scale_to_max(width, height, 900)
             asset_rows.append((photo_id, asset_type_id["still_900"], gallery_width, gallery_height, None, None, format_id["jpg"]))
+            asset_codes_by_photo.setdefault(photo_id, set()).add("still_900")
             if media_type == "photo":
                 detail_width, detail_height = scale_to_max(width, height, 1800)
                 asset_rows.append((photo_id, asset_type_id["still_1800"], detail_width, detail_height, None, None, format_id["jpg"]))
+                asset_codes_by_photo[photo_id].add("still_1800")
                 for code, target_mp in (("jpeg_1mp", 1), ("jpeg_3mp", 3), ("jpeg_6mp", 6)):
                     render_width, render_height = scale_to_megapixels(width, height, target_mp)
                     asset_rows.append((photo_id, asset_type_id[code], render_width, render_height, None, None, format_id["jpg"]))
+                    asset_codes_by_photo[photo_id].add(code)
             else:
                 preview = preview_dimensions(photo) or scale_to_max(width, height, 1280)
                 asset_rows.append((photo_id, asset_type_id["short_5s_720p"], preview[0], preview[1], 5.0, None, format_id["mp4"]))
+                asset_codes_by_photo[photo_id].add("short_5s_720p")
 
+        if errors:
+            raise RuntimeError("\n".join(errors[:20]))
+
+        for photo_id, media_type in media_type_by_photo.items():
+            required = {"full", "still_900", "short_5s_720p"} if media_type == "video" else {"full", "still_900", "still_1800", "jpeg_1mp", "jpeg_3mp", "jpeg_6mp"}
+            missing = required - asset_codes_by_photo.get(photo_id, set())
+            if missing:
+                errors.append(f"{photo_id}: missing asset rows {', '.join(sorted(missing))}")
         if errors:
             raise RuntimeError("\n".join(errors[:20]))
 
         conn.executemany(
             """
             INSERT INTO media_items (
-              media_id, collection_id, media_type_id, camera_id, lens_id, title,
+              media_id, collection_id, sort_index, media_type_id, camera_id, lens_id, title,
               description, keyword_ids, source_origin_id, width, height,
               duration_seconds, captured_at, exposure, focal_length, original_file,
-              original_format_id, location, gps_latitude, gps_longitude, created_at,
+              source_path, original_format_id, location, gps_latitude, gps_longitude, created_at,
               updated_at
             ) VALUES (
-              :media_id, :collection_id, :media_type_id, :camera_id, :lens_id, :title,
+              :media_id, :collection_id, :sort_index, :media_type_id, :camera_id, :lens_id, :title,
               :description, :keyword_ids, :source_origin_id, :width, :height,
               :duration_seconds, :captured_at, :exposure, :focal_length, :original_file,
-              :original_format_id, :location, :gps_latitude, :gps_longitude, :created_at,
+              :source_path, :original_format_id, :location, :gps_latitude, :gps_longitude, :created_at,
               :updated_at
             )
             """,

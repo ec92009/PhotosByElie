@@ -28,6 +28,7 @@
   window.photosByElieFullCatalogReady = new Promise((resolve) => {
     runWhenCatalogIsUseful(async () => {
       try {
+        await loadScript("./catalog-sqlite.js");
         await loadScript("./photos-data.js");
         window.dispatchEvent(new CustomEvent("photosbyelie:catalogloaded", {
           detail: { collections: Object.keys(window.photosByElieData || {}).length },

@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { spawnSync } from "node:child_process";
 import catalogTsv from "./catalog_tsv.cjs";
 
 const REPO_ROOT = process.cwd();
@@ -706,6 +707,16 @@ const writeProposalState = (proposedStatePath, state) => {
   fs.writeFileSync(outputPath, JSON.stringify(proposalStatePayload(state), null, 2) + "\n");
 };
 
+const syncOwnerDb = () => {
+  const result = spawnSync("python3", ["scripts/owner_state_db.py", "--import-owner-actions", "--force"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || "Owner.sqlite sync failed.").trim());
+  }
+};
+
 const parseArgs = (argv) => {
   const args = { limit: DEFAULT_LIMIT, includeAlreadyProposed: false, syncProposedStateOnly: false };
   for (let index = 2; index < argv.length; index += 1) {
@@ -759,8 +770,10 @@ const main = () => {
 
   if (args.syncProposedStateOnly) {
     writeProposalState(proposedStatePath, proposedState);
+    syncOwnerDb();
     process.stdout.write(
       `Synced ${proposedState.photosById.size} proposed photo IDs -> ${proposedStatePath}\n` +
+      "Synced Owner.sqlite\n" +
       `Proposal state flag: ${PROPOSED_FLAG}\n`,
     );
     process.exit(0);
@@ -1013,11 +1026,13 @@ const main = () => {
   fs.writeFileSync(path.join(REPO_ROOT, latestPath), JSON.stringify(payload, null, 2) + "\n");
   mergeBatchPayload(proposedState, payload, batchPath, { clearRejection: true });
   writeProposalState(proposedStatePath, proposedState);
+  syncOwnerDb();
 
   process.stdout.write(
     `Wrote ${photos.length} proposals -> ${batchPath}\n` +
     `Updated latest -> ${latestPath}\n` +
     `Updated proposed state -> ${proposedStatePath}\n` +
+    "Synced Owner.sqlite\n" +
     `Range: ${rangeNewest || "—"} .. ${rangeOldest || "—"}\n` +
     `Skipped reviewed: ${skippedReviewed.length}\n` +
     `Skipped proposed: ${skippedProposed.length}\n` +

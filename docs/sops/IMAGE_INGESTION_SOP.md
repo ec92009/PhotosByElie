@@ -126,7 +126,9 @@ We are walking away from the old Curation Pass workflow. Review snapshots are re
 Before committing a gallery import:
 
 ```bash
-node --check photos-data.js scripts/catalog_tsv.cjs scripts/write_catalog_tsv.cjs photo-gallery.js photo-detail.js basket.js liked.js photos.js
+node --check catalog-sqlite.js photos-data.js scripts/catalog_tsv.cjs scripts/write_catalog_tsv.cjs photo-gallery.js photo-detail.js basket.js liked.js photos.js
+python3 scripts/build_public_catalog_db.py --quiet
+sqlite3 assets/catalog/photosbyelie.sqlite 'pragma integrity_check; pragma foreign_key_check;'
 python3 - <<'PY'
 from html.parser import HTMLParser
 from pathlib import Path

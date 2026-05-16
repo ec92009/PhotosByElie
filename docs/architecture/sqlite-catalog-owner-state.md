@@ -7,7 +7,7 @@ PhotosByElie is moving toward two SQLite files with different trust boundaries:
 - `assets/catalog/photosbyelie.sqlite`: public/deployable catalog truth.
 - `assets/owner-actions/Owner.sqlite`: local Owner-only workflow truth, ignored by Git.
 
-The goal is to eliminate alternate sources of truth. During migration, TSV and JSON files may still exist as compatibility exports, but the durable direction is that they are generated from SQLite or retired.
+The goal is to eliminate alternate sources of truth. The public browser runtime now loads `photosbyelie.sqlite` first and keeps TSV only as a compatibility fallback. Owner JSON files remain compatibility exports while `Owner.sqlite` becomes the private write target.
 
 ## Public Catalog DB
 
@@ -41,7 +41,7 @@ media_assets
 The populated compact-id database currently contains:
 
 ```text
-collections:     9
+collections:     8
 cameras:         12
 lenses:          18
 media_types:     2
@@ -56,9 +56,9 @@ media_assets:    34,962
 Size check from the compact-id rebuild:
 
 ```text
-Raw SQLite:         6.6 MiB
-SQLite gzip -9:     0.89 MiB
-SQLite brotli -11:  0.46 MiB
+Raw SQLite:         7.4 MiB
+SQLite gzip -9:     0.93 MiB
+SQLite brotli -11:  0.49 MiB
 Current TSV gzip:   0.55 MiB
 ```
 
@@ -156,6 +156,7 @@ CREATE TABLE keyword_terms (
 CREATE TABLE media_items (
   media_id            TEXT PRIMARY KEY,
   collection_id       INTEGER NOT NULL,
+  sort_index          INTEGER NOT NULL CHECK (sort_index >= 0),
   media_type_id       INTEGER NOT NULL,
   camera_id           INTEGER,
   lens_id             INTEGER,
@@ -170,6 +171,7 @@ CREATE TABLE media_items (
   exposure            TEXT,
   focal_length        TEXT,
   original_file       TEXT,
+  source_path         TEXT,
   original_format_id INTEGER NOT NULL,
   location            TEXT,
   gps_latitude        REAL CHECK (gps_latitude IS NULL OR gps_latitude BETWEEN -90 AND 90),
@@ -213,6 +215,7 @@ Example `media_items` row in the compact-id shape:
 ```text
 media_id:            img-1219-570b09bebb
 collection_id:       6
+sort_index:          0
 media_type_id:       1
 camera_id:           1
 lens_id:             11
@@ -227,6 +230,7 @@ captured_at:         2025-05-12T18:37:28
 exposure:            1/731, f/1.6, ISO 50
 focal_length:        6.0 mm / 26 mm equivalent
 original_file:       IMG_1219.jpeg
+source_path:         2025 Cordoba, la Mezquita/IMG_1219.jpeg
 original_format_id:  1
 location:            Italy
 gps_latitude:        null
@@ -337,19 +341,29 @@ title_keyword_decisions
 
 Because this database never travels on the public internet, size is not a constraint. It carries explicit workflow indexes for review state, batch lookup, proposal status/confidence, decision timing, country assignment, and blacklist maintenance.
 
-The populated test database currently contains:
+The populated local database currently contains:
 
 ```text
-owner_settings:           2
-keyword_blacklist:        30
+owner_settings:           4
+keyword_blacklist:        32
 country_assignments:      1,553
 title_keyword_batches:    5
 title_keyword_queue:      662
-title_keyword_proposals:  500
-title_keyword_decisions:  398
+title_keyword_proposals:  662
+title_keyword_decisions:  452
 ```
 
-Important migration finding: 162 queue rows refer to batch ids whose current batch files no longer contain proposal detail. That confirms the alternate-source-of-truth problem. SQLite can preserve the current queue state, but it cannot reconstruct proposal bodies that were already overwritten or orphaned in JSON.
+Current title/keyword score from `Owner.sqlite`:
+
+```text
+accepted/applied:    120
+submitted-unchecked: 210
+rejected/rework:     323
+parked:              0
+blocked:             9
+```
+
+`Owner.sqlite` now imports title/keyword batches, queue state, proposals, decisions, country assignments, and keyword blacklist entries. The localhost helper writes decisions, country assignments, and blacklist changes into the DB, then exports the tracked JSON files that the current UI still needs.
 
 ## R2 Migration Strategy
 

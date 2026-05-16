@@ -50,9 +50,9 @@ The split is intentional. The public catalog answers "what is the site/catalog n
 Main catalog database:
 
 ```text
-raw SQLite:        20.88 MiB
-gzip -9:            1.71 MiB
-brotli -11:         0.86 MiB
+raw SQLite:        18.28 MiB
+gzip -9:            1.75 MiB
+brotli -11:         0.84 MiB
 current TSV gzip:   0.55 MiB
 ```
 
@@ -86,26 +86,40 @@ This was accepted as more than good enough. Later pages should reopen the catalo
 The accepted future asset types are:
 
 ```text
-preview_still_900
-preview_video_720p
+still_900
+still_1800
+short_5s_720p
+jpeg_1mp
+jpeg_3mp
+jpeg_6mp
 full
 ```
 
 Derived R2 keys:
 
 ```text
-preview_still_900   -> expo/<media_id>_900.jpg
-preview_video_720p  -> expo/<media_id>_preview_720p.mp4
-full                -> masters/<media_id>.<original_format>
+still_900       -> expo/<media_id>_900.jpg
+still_1800      -> expo/<media_id>_1800.jpg
+short_5s_720p   -> expo/<media_id>_short_5s_720p.mp4
+jpeg_1mp        -> renders/<media_id>_1mp.jpg
+jpeg_3mp        -> renders/<media_id>_3mp.jpg
+jpeg_6mp        -> renders/<media_id>_6mp.jpg
+full            -> masters/<media_id>.<original_format>
 ```
+
+For photos:
+
+- gallery uses `still_900`;
+- detail uses `still_1800`;
+- buyer delivery can use 1 MP JPG, 3 MP JPG, 6 MP JPG, or full.
 
 For videos:
 
-- gallery shows a still preview generated at 10% into the source;
-- detail can show a 5-second watermarked 720p clip;
+- gallery uses `still_900`, generated at 10% into the source;
+- detail uses `short_5s_720p`, a 5-second watermarked 720p clip;
 - buyer delivery is the original/full asset only.
 
-The older private render triplets (`jpg-1mp`, `jpg-3mp`, `jpg-6mp`) are retired in the target model. They must not be deleted until Worker checkout/delivery no longer references them and a migration audit says they are unused.
+The private photo render triplets (`jpg-1mp`, `jpg-3mp`, `jpg-6mp`) are still sellable deliverables. Current R2 keys are nested under `renders/<media_id>/<original-file>-jpg-{1,3,6}mp.jpg`; the target convention is the flatter `renders/<media_id>_{1,3,6}mp.jpg`. Keep old keys until checkout/delivery uses the new keys and a migration audit passes.
 
 ## R2 Migration
 
@@ -130,7 +144,7 @@ to:
 masters/<media_id>.<original_format>
 ```
 
-and keep old keys temporarily. Public `expo/<media_id>_900.jpg` objects already match the new still-preview convention. `expo/<media_id>_1800.jpg` and old private render triplets are cleanup candidates after runtime migration.
+and keep old keys temporarily. Public photo previews at `expo/<media_id>_900.jpg` and `expo/<media_id>_1800.jpg` stay first-class assets. Copy private photo render triplets to `renders/<media_id>_{1,3,6}mp.jpg` and keep the old nested keys temporarily.
 
 ## Current Commit Scope
 
@@ -162,5 +176,5 @@ npm run validate: pass
 3. Move Owner title/keyword review and country assignment workflows onto `Owner.sqlite`.
 4. Turn TSV and Owner JSON into compatibility exports, then retire them.
 5. Copy/verify R2 private masters into the new flat `masters/<media_id>.<original_format>` keys.
-6. Update Worker checkout/delivery to original-only delivery.
-7. Audit and delete obsolete 1800 previews and private render triplets only after the runtime no longer references them.
+6. Update Worker checkout/delivery to use four photo flavors and full-original-only video delivery.
+7. Audit and delete old nested render-triplet keys only after the runtime no longer references them.

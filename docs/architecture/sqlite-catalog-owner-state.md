@@ -30,15 +30,15 @@ cameras:       12
 lenses:        18
 media_items:   5,844
 keywords:      85,560
-media_assets:  11,688
+media_assets:  35,064
 ```
 
 Size check from the first populated pass:
 
 ```text
-Raw SQLite:        20.88 MiB
-SQLite gzip -9:     1.71 MiB
-SQLite brotli -11:  0.86 MiB
+Raw SQLite:        18.28 MiB
+SQLite gzip -9:     1.75 MiB
+SQLite brotli -11:  0.84 MiB
 Current TSV gzip:   0.55 MiB
 ```
 
@@ -132,7 +132,15 @@ CREATE TABLE keywords (
 CREATE TABLE media_assets (
   media_id          TEXT NOT NULL,
   asset_type        TEXT NOT NULL CHECK (
-    asset_type IN ('preview_still_900', 'preview_video_720p', 'full')
+    asset_type IN (
+      'still_900',
+      'still_1800',
+      'short_5s_720p',
+      'jpeg_1mp',
+      'jpeg_3mp',
+      'jpeg_6mp',
+      'full'
+    )
   ),
   width             INTEGER NOT NULL CHECK (width > 0),
   height            INTEGER NOT NULL CHECK (height > 0),
@@ -144,35 +152,92 @@ CREATE TABLE media_assets (
   FOREIGN KEY (media_id) REFERENCES media_items(media_id) ON DELETE CASCADE,
 
   CHECK (
-    asset_type <> 'preview_video_720p'
+    asset_type <> 'short_5s_720p'
     OR
-    (duration_seconds IS NOT NULL AND duration_seconds > 0 AND format = 'mp4')
+    (
+      duration_seconds IS NOT NULL
+      AND duration_seconds > 0
+      AND duration_seconds <= 5.5
+      AND format = 'mp4'
+    )
   ),
   CHECK (
-    asset_type <> 'preview_still_900'
+    asset_type NOT IN ('still_900', 'still_1800')
+    OR
+    (duration_seconds IS NULL AND format = 'jpg')
+  ),
+  CHECK (
+    asset_type NOT IN ('jpeg_1mp', 'jpeg_3mp', 'jpeg_6mp')
     OR
     (duration_seconds IS NULL AND format = 'jpg')
   )
 ) WITHOUT ROWID;
 ```
 
+```sql
+CREATE TRIGGER media_assets_photo_deliverable_insert
+BEFORE INSERT ON media_assets
+WHEN NEW.asset_type IN ('jpeg_1mp', 'jpeg_3mp', 'jpeg_6mp')
+  AND NOT EXISTS (
+    SELECT 1 FROM media_items
+    WHERE media_id = NEW.media_id AND media_type = 'photo'
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'photo JPEG deliverables require media_type photo');
+END;
+
+CREATE TRIGGER media_assets_photo_detail_preview_insert
+BEFORE INSERT ON media_assets
+WHEN NEW.asset_type = 'still_1800'
+  AND NOT EXISTS (
+    SELECT 1 FROM media_items
+    WHERE media_id = NEW.media_id AND media_type = 'photo'
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'photo detail previews require media_type photo');
+END;
+
+CREATE TRIGGER media_assets_short_video_insert
+BEFORE INSERT ON media_assets
+WHEN NEW.asset_type = 'short_5s_720p'
+  AND NOT EXISTS (
+    SELECT 1 FROM media_items
+    WHERE media_id = NEW.media_id AND media_type = 'video'
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'short video previews require media_type video');
+END;
+```
+
+The database also has matching update triggers for the same media-type rules.
+
 ## Asset Key Convention
 
 Asset keys are conventions, not stored database fields:
 
 ```text
-preview_still_900   -> expo/<media_id>_900.jpg
-preview_video_720p  -> expo/<media_id>_preview_720p.mp4
-full                -> masters/<media_id>.<original_format>
+still_900       -> expo/<media_id>_900.jpg
+still_1800      -> expo/<media_id>_1800.jpg
+short_5s_720p   -> expo/<media_id>_short_5s_720p.mp4
+jpeg_1mp        -> renders/<media_id>_1mp.jpg
+jpeg_3mp        -> renders/<media_id>_3mp.jpg
+jpeg_6mp        -> renders/<media_id>_6mp.jpg
+full            -> masters/<media_id>.<original_format>
 ```
+
+For photos:
+
+- gallery uses `still_900`;
+- detail uses `still_1800`;
+- buyer delivery can use `jpeg_1mp`, `jpeg_3mp`, `jpeg_6mp`, or `full`.
 
 For video:
 
-- the gallery uses `preview_still_900`, generated from 10% into the source video;
-- the detail page may use `preview_video_720p`, a 5-second watermarked clip;
+- the gallery uses `still_900`, generated from 10% into the source video;
+- the detail page uses `short_5s_720p`, a 5-second watermarked 720p clip;
 - customer delivery is the `full` original only.
 
-The old private render triplets are retired in the new model. Existing `renders/...jpg-1mp/3mp/6mp.jpg` R2 objects should be removed only after checkout/worker delivery is switched to full-original delivery and the migration audit proves they are unused.
+Existing private render triplets are still sellable photo deliverables. Their current R2 keys use the older `renders/<media_id>/<original-file>-jpg-1mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-6mp.jpg` shape. The SQLite-era target is the flatter `renders/<media_id>_1mp.jpg`, `renders/<media_id>_3mp.jpg`, and `renders/<media_id>_6mp.jpg` shape. Keep old keys until checkout, delivery, and migration audit confirm the new keys are live.
 
 ## Owner DB
 
@@ -236,4 +301,4 @@ to:
 masters/<media_id>.<original_format>
 ```
 
-and keep old keys temporarily. Public `expo/<media_id>_900.jpg` previews already match the new convention. The older `expo/<media_id>_1800.jpg` previews and private render triplets are cleanup candidates after the runtime no longer references them.
+and keep old keys temporarily. Public photo previews at `expo/<media_id>_900.jpg` and `expo/<media_id>_1800.jpg` remain first-class assets. Private photo render triplets should be copied from the old nested keys to the flatter `renders/<media_id>_{1,3,6}mp.jpg` keys and kept in both places until the runtime no longer references the old keys.

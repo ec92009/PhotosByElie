@@ -80,11 +80,12 @@ Private object storage is for developed sales assets and delivery artifacts, not
 Expected private storage contents:
 
 - Developed full-size masters.
+- Photo JPG delivery renders at 1 MP, 3 MP, and 6 MP.
 - Delivery ZIP files stored under the purchase order ID.
 
-The current deployed checkout track still knows about older private render triplets. The target model retires those triplets and delivers only the full original/developed asset. After masters and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; Waste Basket/discarded cleanup is the exception.
+The target model keeps four sellable photo delivery flavors: 1 MP JPG, 3 MP JPG, 6 MP JPG, and full original/developed asset. Photo previews remain the existing `still_900` gallery preview and `still_1800` detail preview. Videos are different: customer delivery is the full original/developed asset only, with a `still_900` gallery poster and a 5-second watermarked `short_5s_720p` detail preview. After masters, photo delivery renders, and public previews are uploaded, normal Owner metadata edits should not rewrite those media objects; Waste Basket/discarded cleanup is the exception.
 
-Waste Basket media retention is owner-controlled, not clock-controlled. Once a photo is basketed or discarded, it should leave the public catalog immediately. While it remains in the basket, the owner can put it back; emptying the basket purges public previews, private masters, and any legacy private render triplets from R2, then keeps only the durable blacklist/discard tombstone needed to prevent future imports from resurrecting the same master.
+Waste Basket media retention is owner-controlled, not clock-controlled. Once a photo is basketed or discarded, it should leave the public catalog immediately. While it remains in the basket, the owner can put it back; emptying the basket purges public previews, private masters, and private photo render triplets from R2, then keeps only the durable blacklist/discard tombstone needed to prevent future imports from resurrecting the same master.
 
 Delivery ZIP files should remain available for future re-download under their purchase order ID. Access should be rate-limited, with a rough starting rule of no more than one delivery ZIP download per order per hour. The exact rule can change later, but the intent is to avoid accidental or hostile repeated downloads.
 

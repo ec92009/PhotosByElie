@@ -161,13 +161,23 @@ def public_media_key(row: dict, reference: str) -> str:
     return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, row["id"], reference)
 
 
+def media_type_from_row(row: dict) -> str:
+    value = str(row.get("media_type") or row.get("mediaType") or "").strip().lower()
+    if value:
+        return value
+    source_types = {str(source.get("type") or "").strip().upper() for source in source_files(row)}
+    return "video" if source_types & {"MOV", "MP4", "M4V"} else "photo"
+
+
 def public_media_key_for_derivative(row: dict, derivative: str) -> str:
-    return public_preview_key(DEFAULT_PUBLIC_PREFIX, row["id"], derivative)
+    return public_preview_key(DEFAULT_PUBLIC_PREFIX, row["id"], derivative, media_type_from_row(row))
 
 
 def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
     public_allowed = public_preview_allowed(row)
-    return {
+    media_type = media_type_from_row(row)
+    media = {
+        "type": media_type,
         "sourcePolicy": media_source_policy(row),
         "publicPreview": {
             "allowed": public_allowed,
@@ -175,6 +185,17 @@ def media_object(row: dict, gallery_rel: str, detail_rel: str) -> dict:
             "detailKey": public_media_key_for_derivative(row, "detail") if public_allowed else "",
         },
     }
+    if media_type == "video":
+        duration = (row.get("dimensions") or {}).get("duration_seconds")
+        if duration:
+            media["video"] = {"duration": duration}
+        detail_facts = (row.get("derivative_files") or {}).get("detail") or {}
+        if detail_facts.get("width") and detail_facts.get("height"):
+            media["publicPreview"]["dimensions"] = {
+                "width": detail_facts["width"],
+                "height": detail_facts["height"],
+            }
+    return media
 
 
 def source_origin_from_row(row: dict, collection_slug: str | None = None) -> str:
@@ -810,6 +831,29 @@ def write_photos_data(
         'window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";',
         'window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);',
         "",
+        'window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();',
+        'window.photosByElieIsVideo = (photo) => window.photosByElieMediaType(photo) === "video";',
+        'window.photosByElieVideoPriceTiers = {',
+        '  video_short: { label: "Video under 10s", price: 20 },',
+        '  video_medium: { label: "Video 10-30s", price: 20 },',
+        '  video_long: { label: "Video 30-60s", price: 20 },',
+        '  video_extended: { label: "Video 1-3 min", price: 20 },',
+        '  video_premium: { label: "Video 3+ min", price: 20 },',
+        '};',
+        'window.photosByElieVideoTier = (photo) => {',
+        '  const duration = Number(photo?.media?.video?.duration || photo?.duration || 0);',
+        '  if (duration < 10) return "video_short";',
+        '  if (duration < 30) return "video_medium";',
+        '  if (duration < 60) return "video_long";',
+        '  if (duration < 180) return "video_extended";',
+        '  return "video_premium";',
+        '};',
+        'window.photosByElieVideoDownloadOption = (photo) => {',
+        '  const tier = window.photosByElieVideoTier(photo);',
+        '  const priceTier = window.photosByElieVideoPriceTiers?.[tier] || { price: 20 };',
+        '  return { id: "video-original", type: "video", label: "Original video download", detail: "Private original video file after purchase", price: Number(priceTier.price) || 0, priceKey: tier };',
+        '};',
+        "",
         'window.photosByEliePreviewMegapixels = (photo) => {',
         '  const preview = (photo?.metadata || []).find((item) => item.label === "Preview file")?.value || "";',
         r'  const match = preview.match(/(\d+)\s*x\s*(\d+)/i);',
@@ -823,6 +867,7 @@ def write_photos_data(
         '};',
         "",
         'window.photosByElieAvailableResolutions = (photo, options = window.photosByElieResolutions || []) => {',
+        '  if (window.photosByElieIsVideo?.(photo)) return [window.photosByElieVideoDownloadOption(photo)];',
         '  const megapixels = window.photosByElieVerifiedMegapixels(photo);',
         '  if (!megapixels) return [];',
         '  const physicalProductsEnabled = window.photosByElieProductSettings?.physicalProductsEnabled?.() === true;',
@@ -837,6 +882,8 @@ def write_photos_data(
         '  const checks = [',
         r'    { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },',
         r'    { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },',
+        r'    { label: "MOV", pattern: /\b(MOV|QUICKTIME)\b/i },',
+        r'    { label: "MP4", pattern: /\b(MP4|M4V)\b/i },',
         r'    { label: "PSD", pattern: /\bPSD\b/i },',
         "  ];",
         '  const formats = checks.filter((item) => item.pattern.test(value)).map((item) => item.label);',

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build watermarked web thumbnails from Lightroom-selected developed exports.
+Build watermarked web previews from Lightroom-selected developed exports.
 
 The script is intentionally interrupt/resume friendly:
 - source files are tracked by their path relative to --source-root
@@ -8,10 +8,10 @@ The script is intentionally interrupt/resume friendly:
 - derivative files are written atomically and skipped when present
 - reruns can use a different --source-root, such as a local external drive
 
-Developed JPG/TIFF sources are imported into a disposable local import cache only
-when Lightroom marks them green with rating 4 or higher. RAW/DNG/NEF files are
-owner-local source material only; their embedded previews are not imported,
-published, or uploaded. Expo is filled later by the review/export scripts.
+Developed JPG/TIFF photo sources and MOV/MP4/M4V video sources can be imported
+into a disposable local import cache. RAW/DNG/NEF files are owner-local source
+material only; their embedded previews are not imported, published, or uploaded.
+Expo is filled later by the review/export scripts.
 """
 
 from __future__ import annotations
@@ -32,11 +32,12 @@ from pathlib import Path
 from typing import Any
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key_for_reference
-from media_policy import DEVELOPED_IMAGE_EXTENSIONS, RAW_IMAGE_EXTENSIONS
+from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, first_env, s3_put, wrangler_command
 
 
 IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS
+VIDEO_EXTENSIONS = DEVELOPED_VIDEO_EXTENSIONS
 
 DEFAULT_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
@@ -49,8 +50,11 @@ DEFAULT_OUTPUT_ROOT = Path("tmp/import-cache")
 DEFAULT_WATERMARK = "PhotosByElie Preview - Not Licensed"
 DEFAULT_GALLERY_MAX = 900
 DEFAULT_DETAIL_MAX = 1800
+DEFAULT_VIDEO_PREVIEW_SECONDS = 5
+DEFAULT_VIDEO_POSTER_FRACTION = 0.10
+DEFAULT_VIDEO_PREVIEW_MAX = 720
 DEFAULT_BATCH_SIZE = 50
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
@@ -160,6 +164,9 @@ DISPLAY_SOURCE_TAGS = [
     "ColorSpace",
     "ProfileDescription",
     "Orientation",
+    "Rotation",
+    "Duration",
+    "MediaDuration",
 ]
 DISPLAY_LIGHTROOM_TAGS = [
     "Rating",
@@ -187,7 +194,7 @@ FFMPEG_FILTERS: set[str] | None = None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Create watermarked Reserve thumbnails from developed JPG/TIFF exports."
+        description="Create watermarked import previews from developed photo/video exports."
     )
     parser.add_argument(
         "--source-root",
@@ -199,7 +206,7 @@ def parse_args() -> argparse.Namespace:
         "--developed-root",
         type=Path,
         default=None,
-        help="Deprecated no-op. The importer now scans developed JPG/TIFF source files directly.",
+        help="Deprecated no-op. The importer now scans developed photo/video source files directly.",
     )
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--label", default="green", help="Lightroom color label to include.")
@@ -208,7 +215,7 @@ def parse_args() -> argparse.Namespace:
         "--select",
         choices=("lightroom", "all"),
         default="lightroom",
-        help="Require Lightroom rating/label metadata, or select every developed image file.",
+        help="Require Lightroom rating/label metadata, or select every developed photo/video file.",
     )
     parser.add_argument(
         "--force-country",
@@ -258,7 +265,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--r2-private-renders",
         action="store_true",
-        help="When private R2 upload is enabled, also render/upload unwatermarked JPG 6/3/1 MP buyer deliverables under private renders/ keys.",
+        help="When private R2 upload is enabled, also render/upload unwatermarked photo JPG 6/3/1 MP buyer deliverables under private renders/ keys.",
     )
     parser.add_argument(
         "--keep-uploaded-tmp",
@@ -348,6 +355,14 @@ def choose_font() -> str:
 
 def is_image(path: Path) -> bool:
     return path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def is_video(path: Path) -> bool:
+    return path.suffix.lower() in VIDEO_EXTENSIONS
+
+
+def is_importable_media(path: Path) -> bool:
+    return is_image(path) or is_video(path)
 
 
 def is_raw_image(path: Path) -> bool:
@@ -732,10 +747,33 @@ def number_value(value: Any) -> float | None:
         return None
 
 
+def duration_seconds(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    numeric = re.match(r"^([\d.]+)\s*s(?:ec(?:onds?)?)?$", text, re.IGNORECASE)
+    if numeric:
+        return float(numeric.group(1))
+    parts = text.split(":")
+    if len(parts) in {2, 3}:
+        try:
+            values = [float(part) for part in parts]
+        except ValueError:
+            return None
+        if len(values) == 2:
+            minutes, seconds = values
+            return minutes * 60 + seconds
+        hours, minutes, seconds = values
+        return hours * 3600 + minutes * 60 + seconds
+    return None
+
+
 def dimension_facts(meta: dict[str, Any]) -> dict[str, Any]:
     width = number_value(metadata_value(meta, "ImageWidth"))
     height = number_value(metadata_value(meta, "ImageHeight"))
-    orientation = metadata_value(meta, "Orientation")
+    orientation = metadata_value(meta, "Orientation", "Rotation")
     if width and height and orientation_rotates_sideways(orientation):
         width, height = height, width
     facts: dict[str, Any] = {}
@@ -754,6 +792,9 @@ def dimension_facts(meta: dict[str, Any]) -> dict[str, Any]:
         facts["megapixels"] = megapixels
     elif width and height:
         facts["megapixels"] = round(width * height / 1000000, 1)
+    duration = duration_seconds(metadata_value(meta, "Duration", "MediaDuration"))
+    if duration is not None:
+        facts["duration_seconds"] = round(duration, 3)
     return facts
 
 
@@ -780,6 +821,7 @@ def merged_selected_metadata(source: Path, metadata_path: Path, args: argparse.N
         ("Lens", metadata_value(merged, "Lens", "LensModel")),
         ("Exposure", exposure_label(merged)),
         ("Focal length", focal_length_label(merged)),
+        ("Duration", metadata_value(merged, "Duration", "MediaDuration")),
         ("Location", location_label(merged)),
         ("Software", metadata_value(merged, "Software")),
         ("Color profile", metadata_value(merged, "ProfileDescription", "ColorSpace")),
@@ -972,6 +1014,60 @@ def apply_pillow_watermark(source: Path, output: Path, watermark: str, font: str
         watermarked.save(output, format="JPEG", quality=88, optimize=True)
 
 
+def write_watermark_overlay(output: Path, width: int, height: int, watermark: str, font: str) -> None:
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError as exc:
+        raise RuntimeError(
+            "Pillow is required for baked preview watermarking. Run `python3 -m pip install --user pillow`."
+        ) from exc
+
+    overlay = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+    watermark_text = (watermark or DEFAULT_WATERMARK).strip()
+    repeat_font = ImageFont.truetype(font, max(22, round(min(width, height) / 18)))
+    repeat_stroke = max(1, round(min(width, height) / 260))
+    draw = ImageDraw.Draw(overlay)
+    bbox = draw.textbbox((0, 0), watermark_text.upper(), font=repeat_font, stroke_width=repeat_stroke)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    tile_padding = max(54, round(min(width, height) * 0.18))
+    tile = Image.new("RGBA", (text_width + tile_padding * 2, text_height + tile_padding * 2), (255, 255, 255, 0))
+    tile_draw = ImageDraw.Draw(tile)
+    tile_draw.text(
+        (tile_padding, tile_padding),
+        watermark_text.upper(),
+        font=repeat_font,
+        fill=(255, 255, 255, 38),
+        stroke_width=repeat_stroke,
+        stroke_fill=(0, 0, 0, 32),
+    )
+    rotated = tile.rotate(-28, expand=True, resample=Image.Resampling.BICUBIC)
+    step_x = max(180, round(rotated.width * 0.78))
+    step_y = max(150, round(rotated.height * 0.72))
+    for y in range(-rotated.height, height + rotated.height, step_y):
+        row_offset = 0 if (y // step_y) % 2 == 0 else -(step_x // 2)
+        for x in range(-rotated.width + row_offset, width + rotated.width, step_x):
+            overlay.alpha_composite(rotated, (x, y))
+
+    corner_font = ImageFont.truetype(font, max(18, round(min(width, height) / 24)))
+    corner_stroke = max(1, round(min(width, height) / 360))
+    corner_bbox = draw.textbbox((0, 0), "PhotosByElie", font=corner_font, stroke_width=corner_stroke)
+    margin = max(18, round(min(width, height) / 36))
+    corner_position = (
+        max(margin, width - (corner_bbox[2] - corner_bbox[0]) - margin),
+        max(margin, height - (corner_bbox[3] - corner_bbox[1]) - margin),
+    )
+    draw.text(
+        corner_position,
+        "PhotosByElie",
+        font=corner_font,
+        fill=(255, 255, 255, 185),
+        stroke_width=corner_stroke,
+        stroke_fill=(0, 0, 0, 122),
+    )
+    overlay.save(output)
+
+
 def render_derivative(
     source: Path,
     output: Path,
@@ -1037,11 +1133,188 @@ def image_size(path: Path) -> dict[str, Any]:
     }
 
 
+def ffprobe_facts(path: Path) -> dict[str, Any]:
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height:format=duration",
+            "-of",
+            "json",
+            str(path),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return {}
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        return {}
+    stream = (payload.get("streams") or [{}])[0]
+    width = int(stream.get("width") or 0)
+    height = int(stream.get("height") or 0)
+    duration = duration_seconds((payload.get("format") or {}).get("duration"))
+    facts: dict[str, Any] = {
+        "bytes": path.stat().st_size if path.exists() else 0,
+    }
+    if width and height:
+        facts.update({
+            "width": width,
+            "height": height,
+            "aspect_ratio": round(width / height, 4),
+        })
+    if duration is not None:
+        facts["duration_seconds"] = round(duration, 3)
+    return facts
+
+
 def derivative_facts(output_root: Path, relative_path: str) -> dict[str, Any]:
     path = output_root / relative_path
-    facts = image_size(path)
+    facts = ffprobe_facts(path) if path.suffix.lower() in VIDEO_EXTENSIONS else image_size(path)
     facts["path"] = relative_path
+    facts["format"] = "MP4" if path.suffix.lower() in VIDEO_EXTENSIONS else "JPG"
     return facts
+
+
+def video_poster_time(source: Path) -> float:
+    facts = ffprobe_facts(source)
+    duration = facts.get("duration_seconds")
+    if not duration:
+        return 0.0
+    return max(0.0, min(float(duration) * DEFAULT_VIDEO_POSTER_FRACTION, max(0.0, float(duration) - 0.1)))
+
+
+def video_scale_filter(max_px: int) -> str:
+    return (
+        "scale="
+        f"'if(gte(iw,ih),-2,min({max_px},iw))':"
+        f"'if(gte(iw,ih),min({max_px},ih),-2)'"
+    )
+
+
+def render_video_poster(source: Path, output: Path, watermark: str, font: str, force: bool) -> bool:
+    if output.exists() and not force:
+        return False
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="photosbyelie-video-poster-") as temp_dir:
+        base = Path(temp_dir) / "poster.jpg"
+        watermarked = Path(temp_dir) / "poster-watermarked.jpg"
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-ss",
+                f"{video_poster_time(source):.3f}",
+                "-i",
+                str(source),
+                "-frames:v",
+                "1",
+                "-vf",
+                video_scale_filter(DEFAULT_GALLERY_MAX),
+                "-q:v",
+                "3",
+                str(base),
+            ],
+            check=True,
+        )
+        apply_pillow_watermark(
+            base,
+            watermarked,
+            watermark,
+            font,
+            max(18, round(DEFAULT_GALLERY_MAX / 45)),
+            max(1, round(DEFAULT_GALLERY_MAX / 630)),
+            max(18, round(DEFAULT_GALLERY_MAX / 36)),
+        )
+        watermarked.replace(output)
+    return True
+
+
+def render_video_preview(source: Path, output: Path, watermark: str, font: str, force: bool) -> bool:
+    if output.exists() and not force:
+        return False
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="photosbyelie-video-preview-") as temp_dir:
+        base = Path(temp_dir) / "base.mp4"
+        overlay = Path(temp_dir) / "watermark.png"
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(source),
+                "-t",
+                str(DEFAULT_VIDEO_PREVIEW_SECONDS),
+                "-vf",
+                video_scale_filter(DEFAULT_VIDEO_PREVIEW_MAX),
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "28",
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+faststart",
+                str(base),
+            ],
+            check=True,
+        )
+        facts = ffprobe_facts(base)
+        width = int(facts.get("width") or 0)
+        height = int(facts.get("height") or 0)
+        if not width or not height:
+            raise RuntimeError(f"Could not read generated video preview dimensions for {source}")
+        write_watermark_overlay(overlay, width, height, watermark, font)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(base),
+                "-loop",
+                "1",
+                "-i",
+                str(overlay),
+                "-filter_complex",
+                "[0:v][1:v]overlay=0:0:format=auto",
+                "-t",
+                str(DEFAULT_VIDEO_PREVIEW_SECONDS),
+                "-shortest",
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "28",
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+faststart",
+                str(output),
+            ],
+            check=True,
+        )
+    return True
 
 
 def r2_upload_enabled(args: argparse.Namespace, scope: str) -> bool:
@@ -1275,6 +1548,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 uploaded["private_renders"] = private_renders
             shutil.rmtree(render_root, ignore_errors=True)
     if r2_upload_enabled(args, "public"):
+        detail_content_type = "video/mp4" if (row.get("media_type") == "video" or detail_path.suffix.lower() in VIDEO_EXTENSIONS) else "image/jpeg"
         uploaded["public_previews"] = [
             r2_put_file(
                 args,
@@ -1290,7 +1564,7 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 args.r2_public_bucket,
                 r2_public_key(args, row, detail_path),
                 detail_path,
-                "image/jpeg",
+                detail_content_type,
                 args.r2_retries,
                 cache_control="public, max-age=31536000, immutable",
             ),
@@ -1508,8 +1782,11 @@ def write_collection_index(path: Path, manifest: dict[str, dict[str, Any]]) -> N
     tmp.replace(path)
 
 
-def derivative_paths(output_root: Path, country_slug: str, slug: str) -> tuple[Path, Path]:
-    return output_root / country_slug / f"{slug}_900.jpg", output_root / country_slug / f"{slug}_1800.jpg"
+def derivative_paths(output_root: Path, country_slug: str, slug: str, media_type: str = "photo") -> tuple[Path, Path]:
+    gallery = output_root / country_slug / f"{slug}_900.jpg"
+    if media_type == "video":
+        return gallery, output_root / country_slug / f"{slug}_short_5s_720p.mp4"
+    return gallery, output_root / country_slug / f"{slug}_1800.jpg"
 
 
 def extract_raw_preview(source: Path, output: Path) -> dict[str, Any]:
@@ -1575,7 +1852,7 @@ def discover_images(source_root: Path, year_filter: tuple[int, int] | None = Non
         )
         for name in sorted(files, reverse=True):
             path = Path(root) / name
-            if is_image(path):
+            if is_importable_media(path):
                 yield path
 
 
@@ -1617,10 +1894,12 @@ def process_batch(
                 continue
             selected_metadata = merged_selected_metadata(source, metadata_path, args, relative_path)
             gallery_country = selected_metadata["gallery_country"]
-            gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug)
+            media_type = "video" if is_video(source) else "photo"
+            gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug, media_type)
             row = {
                 "id": slug,
                 "relative_path": relative_path,
+                "media_type": media_type,
                 "source_path_hint": str(source),
                 "metadata_path_hint": str(metadata_path),
                 "gallery_country": gallery_country,
@@ -1655,8 +1934,12 @@ def process_batch(
                         Path(source_temp),
                     )
                     source_orientation = orientation_override or selected_metadata["raw"].get("Orientation")
-                    render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
-                    render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
+                    if media_type == "video":
+                        render_video_poster(source, gallery_path, args.watermark, font, args.force)
+                        render_video_preview(source, detail_path, args.watermark, font, args.force)
+                    else:
+                        render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
+                        render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
                 if developed_files:
                     row["developed_files"] = developed_files
                 row["derivative_files"] = {
@@ -1719,6 +2002,8 @@ def main() -> int:
         raise SystemExit(f"Source root does not exist: {source_root}")
     require_tool("exiftool")
     require_tool("sips")
+    require_tool("ffmpeg")
+    require_tool("ffprobe")
     font = choose_font()
 
     manifest_path = args.output_root / "manifest.json"
@@ -1821,7 +2106,7 @@ def main() -> int:
     write_failures(failures_path, failures, args)
     if not args.redact_gps:
         write_gps_manifest(gps_manifest_path, gps_manifest, args)
-    print(f"Done. Saw {seen} images, inspected {inspected}, manifest contains {len(manifest)} selected photos.")
+    print(f"Done. Saw {seen} media files, inspected {inspected}, manifest contains {len(manifest)} selected rows.")
     print(f"Manifest: {manifest_path}")
     print(f"Keyword index: {keywords_path}")
     print(f"Collection index: {collections_path}")

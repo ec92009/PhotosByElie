@@ -12,14 +12,14 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 
 - Canonical Lightroom camera archive: `/Volumes/Saturn/Pictures/LR/Camera`
 - Apple Photos album exports for small source-agnostic import tests: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
-- Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, or `.tiff`.
+- Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.mov`, `.mp4`, or `.m4v`.
 - Do not import DNG, NEF, or other raw camera files. Develop/export them first.
 - Lightroom sidecars may sit next to the image files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
 - The importer can use Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia album can infer Spain.
 - Keep Apple Photos still-image exports at full pixel size. If explicit JPEG quality control is needed, post-process exported corrected JPEGs to quality 90 without resizing; do not switch to RAW/NEF for the public pipeline.
-- MOV/MP4 video exports are intentionally ignored by the current still-photo importer until the video pipeline is designed.
+- Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites
@@ -35,11 +35,13 @@ Required command-line tools:
 - `python3`
 - `exiftool`
 - `ffmpeg`
+- `ffprobe`
+- Python `Pillow` package, used to bake photo and video-preview watermarks.
 
 Check availability before a long run:
 
 ```bash
-command -v python3 exiftool ffmpeg
+command -v python3 exiftool ffmpeg ffprobe
 ```
 
 ## Build Derivatives
@@ -62,6 +64,20 @@ python3 scripts/build_lightroom_thumbnails.py \
 
 Use `--limit N` for a small trial and `--dry-run` when checking selection behavior without writing derivatives. Use `--force` only when intentionally rebuilding existing derivatives.
 
+Apple Photos album video test import:
+
+```bash
+python3 scripts/build_lightroom_thumbnails.py \
+  --source-root "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2025 Cordoba, la Mezquita" \
+  --output-root tmp/cordoba-import-cache \
+  --select all \
+  --force-country spain \
+  --batch-size 50 \
+  --r2-upload none
+```
+
+Use only `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`. Do not use `/Volumes/Saturn/Pictures/LR/Apple Photo Albums With Faces` unless the Owner explicitly authorizes that source in the current run.
+
 ## Resume Behavior
 
 The builder is designed to be interrupted and resumed.
@@ -73,9 +89,10 @@ The builder is designed to be interrupted and resumed.
 
 ## Outputs
 
-- `tmp/import-cache/<country>/*_900.jpg`: watermarked gallery thumbnails.
-- `tmp/import-cache/<country>/*_1800.jpg`: watermarked detail-page images.
-- `tmp/import-cache/manifest.json`: selected photo metadata and derivative references.
+- `tmp/import-cache/<country>/*_900.jpg`: watermarked photo gallery thumbnails and video gallery posters.
+- `tmp/import-cache/<country>/*_1800.jpg`: watermarked photo detail-page images.
+- `tmp/import-cache/<country>/*_short_5s_720p.mp4`: watermarked video detail-page clips.
+- `tmp/import-cache/manifest.json`: selected photo/video metadata and derivative references.
 - `tmp/import-cache/keywords.json`: keyword counts and photo references for future filtering.
 - `tmp/import-cache/collections.json`: generated indexes for years, locations, orientation, source formats, and gallery countries.
 - `tmp/import-cache/failures.json`: extraction or render failures to inspect before publishing.

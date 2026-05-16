@@ -2,7 +2,7 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes two watermarked JPEG derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF masters before importing them.
+`build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them.
 
 Required tools: `python3`, `exiftool`, `sips`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
 
@@ -55,7 +55,8 @@ Outputs:
 
 - `tmp/import-cache/<country>/*_900.jpg`: watermarked gallery thumbnails.
 - `tmp/import-cache/<country>/*_1800.jpg`: watermarked detail-page images.
-- `tmp/import-cache/manifest.json`: selected photos, derivative paths, full keyword set, rating/color label when present, and web-facing display metadata.
+- `tmp/import-cache/<country>/*_short_5s_720p.mp4`: watermarked video detail-page clips.
+- `tmp/import-cache/manifest.json`: selected photos/videos, derivative paths, full keyword set, rating/color label when present, and web-facing display metadata.
 - `tmp/import-cache/keywords.json`: keyword counts and photo references for filter UI.
 - `tmp/import-cache/collections.json`: generated indexes for years, countries, regions, cities, orientations, and source formats.
 - `tmp/import-cache/failures.json`: render/extraction errors that need attention.
@@ -68,7 +69,7 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview JPGs. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys currently include `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`; the SQLite/R2 target keeps `expo/<photo-id>_900.jpg` as the public still preview and retires the 1800 preview after the runtime stops referencing it. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -235,11 +236,12 @@ The approval apply path is manifest-only. It rewrites generated catalog/state fi
 
 `sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:
 
-- public watermarked still previews go to `photosbyelie-public` under `expo/<photo-id>_900.jpg`
-- future public watermarked video previews go to `photosbyelie-public` under `expo/<photo-id>_preview_720p.mp4`
+- public watermarked photo previews go to `photosbyelie-public` under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
+- future public watermarked video detail previews go to `photosbyelie-public` under `expo/<photo-id>_short_5s_720p.mp4`
 - local import-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
 - private developed masters are moving to `photosbyelie-private` under `masters/<photo-id>.<original-format>`
-- old private JPG triplet deliverables under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg` are retired by the target model; do not delete them until checkout/worker delivery no longer references them and a migration audit confirms they are unused
+- private photo JPG deliverables remain sellable at 6 MP, 3 MP, and 1 MP; the target keys are `renders/<photo-id>_6mp.jpg`, `renders/<photo-id>_3mp.jpg`, and `renders/<photo-id>_1mp.jpg`
+- existing private JPG triplet deliverables under `renders/<photo-id>/<original-file>-jpg-6mp.jpg`, `...-jpg-3mp.jpg`, and `...-jpg-1mp.jpg` should be copied to the flatter target keys and kept until checkout/worker delivery no longer references the nested keys and a migration audit confirms the new keys are live
 - RAW/DNG/NEF sources and their embedded previews are skipped for both public and private uploads
 - IDs listed in owner discard tombstones are skipped for import/upload and should be deleted from public and private R2 by `delete_discarded_r2_media.mjs`; the tombstone stays tracked so Saturn scans do not resurrect discarded photos
 

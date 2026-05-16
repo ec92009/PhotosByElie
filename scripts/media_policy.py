@@ -11,6 +11,12 @@ DEVELOPED_IMAGE_EXTENSIONS = {
     ".tiff",
 }
 
+DEVELOPED_VIDEO_EXTENSIONS = {
+    ".mov",
+    ".mp4",
+    ".m4v",
+}
+
 RAW_IMAGE_EXTENSIONS = {
     ".dng",
     ".cr2",
@@ -26,7 +32,10 @@ RAW_IMAGE_EXTENSIONS = {
     ".rwl",
 }
 
-DEVELOPED_SOURCE_TYPES = {extension.removeprefix(".").upper() for extension in DEVELOPED_IMAGE_EXTENSIONS}
+DEVELOPED_SOURCE_TYPES = {
+    extension.removeprefix(".").upper()
+    for extension in DEVELOPED_IMAGE_EXTENSIONS | DEVELOPED_VIDEO_EXTENSIONS
+}
 RAW_SOURCE_TYPES = {extension.removeprefix(".").upper() for extension in RAW_IMAGE_EXTENSIONS}
 
 

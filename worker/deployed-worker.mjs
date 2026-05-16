@@ -3,9 +3,9 @@ import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
-import { collections, frameOptions, resolutions } from "./photos-catalog.generated.mjs";
+import { collections, frameOptions, resolutions, videoPriceTiers } from "./photos-catalog.generated.mjs";
 
-const catalog = createCatalogIndex({ collections, resolutions, frameOptions });
+const catalog = createCatalogIndex({ collections, resolutions, frameOptions, videoPriceTiers });
 
 const requiredBinding = (env, key) => {
   if (!env?.[key]) throw new Error(`Missing Worker binding: ${key}`);

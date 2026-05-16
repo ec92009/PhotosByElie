@@ -72,12 +72,57 @@ const runtimeParser = `(() => {
     for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
     return bytes;
   };
+  const readJson = (relativePath, fallback = {}) => {
+    try {
+      const script = document.currentScript;
+      const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
+      const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
+      const url = new URL(relativePath, scriptUrl || window.location.href);
+      if (version) url.searchParams.set("v", version);
+      const request = new XMLHttpRequest();
+      request.open("GET", url.href, false);
+      request.overrideMimeType?.("application/json; charset=utf-8");
+      request.send(null);
+      if (request.status && (request.status < 200 || request.status >= 300)) return fallback;
+      return JSON.parse(request.responseText || "{}");
+    } catch {
+      return fallback;
+    }
+  };
+  const normalizePriceTiers = (priceTiers = {}) => Array.isArray(priceTiers)
+    ? Object.fromEntries(priceTiers.map((tier) => [tier.id, { label: tier.label }]))
+    : priceTiers;
+  const normalizeVideoPriceTiers = (videoPriceTiers = {}) => Array.isArray(videoPriceTiers)
+    ? Object.fromEntries(videoPriceTiers.map((tier) => [tier.id, {
+      label: tier.label,
+      price: Number(tier.price) || 0,
+      minDurationSeconds: Number(tier.minDurationSeconds || 0),
+      maxDurationSeconds: tier.maxDurationSeconds == null ? null : Number(tier.maxDurationSeconds),
+    }]))
+    : videoPriceTiers;
+  const normalizeProducts = (products = []) => products.map((product) => {
+    const option = { ...product };
+    if (option.price == null && option.prices) {
+      option.price = Number(option.prices.original ?? Object.values(option.prices)[0] ?? 0);
+    }
+    return option;
+  });
+  const applyProductCatalog = (catalog = {}) => {
+    const products = catalog.resolutions || catalog.products || [];
+    window.photosByElieProductCatalog = catalog;
+    window.photosByElieResolutions = normalizeProducts(products);
+    window.photosByEliePriceTiers = normalizePriceTiers(catalog.priceTiers || {});
+    window.photosByElieFrameOptions = (catalog.frameOptions || catalog.frames || []).map((frame) => ({ ...frame }));
+    window.photosByElieShippingHandlingPrices = { ...(catalog.shippingHandlingPrices || {}) };
+    window.photosByElieVideoPriceTiers = normalizeVideoPriceTiers(catalog.videoPriceTiers || {});
+  };
 
   if (window.photosByElieCatalogSqlite?.decodeCatalog) {
     try {
       const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
       window.photosByElieData = bundle.data || {};
       window.photosByElieOwnerData = bundle.owner || {};
+      applyProductCatalog(bundle.productCatalog || readJson("./assets/catalog/product-pricing.json"));
       window.photosByElieCatalogSource = "sqlite";
       return;
     } catch (error) {
@@ -130,6 +175,7 @@ const runtimeParser = `(() => {
 
   window.photosByElieData = data;
   window.photosByElieOwnerData = owner;
+  applyProductCatalog(readJson("./assets/catalog/product-pricing.json"));
   window.photosByElieCatalogSource = "tsv";
 })();`;
 
@@ -140,7 +186,7 @@ const writeBootstrap = () => {
     [
       "// Generated bootstrap: loads the public catalog from SQLite, with TSV fallback.",
       runtimeParser,
-      tail,
+      tail.trimEnd(),
       "",
     ].join("\n"),
   );

@@ -71,6 +71,8 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 `export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Waste Basket and discarded/tombstone ids are kept out of public metadata so the site never points at intentionally deleted R2 previews. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
+Product and pricing data comes from `assets/catalog/product-pricing.json`. `scripts/build_public_catalog_db.py` materializes that file into the public SQLite product tables, and `scripts/write_catalog_tsv.cjs` uses the same JSON as the TSV fallback source. The browser and Worker still see the existing `photosByElieResolutions`, frame, shipping, and video-tier globals, but those values are reconstructed from shared catalog data instead of hand-authored generated JS constants.
+
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
 ```bash

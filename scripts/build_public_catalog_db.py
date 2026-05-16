@@ -16,6 +16,7 @@ from typing import Any
 
 
 DEFAULT_OUTPUT = Path("assets/catalog/photosbyelie.sqlite")
+DEFAULT_PRODUCT_PRICING = Path("assets/catalog/product-pricing.json")
 COLLECTION_ORDER = ["france", "usa", "spain", "mexico", "ai", "italy", "portugal", "slovakia", "unknown"]
 COLLECTION_DEFAULTS = {
     "france": ("France", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -40,6 +41,19 @@ ASSET_TYPES = [
     (6, "jpeg_6mp"),
     (7, "full"),
 ]
+
+
+def dollars_to_cents(value: Any) -> int:
+    return int(round(float(value or 0) * 100))
+
+
+def load_product_pricing(repo_root: Path, path: Path = DEFAULT_PRODUCT_PRICING) -> dict[str, Any]:
+    target = path if path.is_absolute() else repo_root / path
+    with target.open("r", encoding="utf-8") as handle:
+        pricing = json.load(handle)
+    if pricing.get("schema") != "photosbyelie.product-pricing.v1":
+        raise RuntimeError(f"unsupported product pricing schema in {target}")
+    return pricing
 
 
 def load_catalog(repo_root: Path) -> dict[str, Any]:
@@ -238,6 +252,68 @@ def create_schema(conn: sqlite3.Connection) -> None:
           keyword    TEXT NOT NULL UNIQUE CHECK (trim(keyword) <> '')
         );
 
+        CREATE TABLE price_tiers (
+          price_tier_id  TEXT PRIMARY KEY CHECK (trim(price_tier_id) <> ''),
+          label          TEXT NOT NULL CHECK (trim(label) <> ''),
+          sort_order     INTEGER NOT NULL CHECK (sort_order > 0)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE products (
+          product_id             TEXT PRIMARY KEY CHECK (trim(product_id) <> ''),
+          product_type           TEXT NOT NULL CHECK (product_type IN ('digital', 'print')),
+          label                  TEXT NOT NULL CHECK (trim(label) <> ''),
+          detail                 TEXT,
+          dimensions_imperial    TEXT,
+          dimensions_metric      TEXT,
+          min_megapixels         REAL CHECK (min_megapixels IS NULL OR min_megapixels >= 0),
+          delivery_asset_type_id INTEGER,
+          base_price_cents       INTEGER NOT NULL CHECK (base_price_cents >= 0),
+          sort_order             INTEGER NOT NULL CHECK (sort_order > 0),
+          active                 INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+          FOREIGN KEY (delivery_asset_type_id) REFERENCES asset_types(asset_type_id)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE product_prices (
+          product_id      TEXT NOT NULL,
+          price_tier_id   TEXT NOT NULL,
+          price_cents     INTEGER NOT NULL CHECK (price_cents >= 0),
+          PRIMARY KEY (product_id, price_tier_id),
+          FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+          FOREIGN KEY (price_tier_id) REFERENCES price_tiers(price_tier_id)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE frame_options (
+          frame_id          TEXT PRIMARY KEY CHECK (trim(frame_id) <> ''),
+          label             TEXT NOT NULL CHECK (trim(label) <> ''),
+          base_price_cents  INTEGER NOT NULL CHECK (base_price_cents >= 0),
+          sort_order        INTEGER NOT NULL CHECK (sort_order > 0),
+          active            INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))
+        ) WITHOUT ROWID;
+
+        CREATE TABLE frame_prices (
+          frame_id      TEXT NOT NULL,
+          product_id    TEXT NOT NULL,
+          price_cents   INTEGER NOT NULL CHECK (price_cents >= 0),
+          PRIMARY KEY (frame_id, product_id),
+          FOREIGN KEY (frame_id) REFERENCES frame_options(frame_id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+        ) WITHOUT ROWID;
+
+        CREATE TABLE shipping_handling_prices (
+          product_id    TEXT PRIMARY KEY,
+          price_cents   INTEGER NOT NULL CHECK (price_cents >= 0),
+          FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+        ) WITHOUT ROWID;
+
+        CREATE TABLE video_price_tiers (
+          video_price_tier_id   TEXT PRIMARY KEY CHECK (trim(video_price_tier_id) <> ''),
+          label                 TEXT NOT NULL CHECK (trim(label) <> ''),
+          min_duration_seconds  REAL NOT NULL CHECK (min_duration_seconds >= 0),
+          max_duration_seconds  REAL CHECK (max_duration_seconds IS NULL OR max_duration_seconds > min_duration_seconds),
+          price_cents           INTEGER NOT NULL CHECK (price_cents >= 0),
+          sort_order            INTEGER NOT NULL CHECK (sort_order > 0)
+        ) WITHOUT ROWID;
+
         CREATE TABLE media_items (
           media_id            TEXT PRIMARY KEY,
           collection_id       INTEGER NOT NULL,
@@ -411,6 +487,7 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
 
 def write_db(repo_root: Path, output: Path) -> dict[str, int]:
     catalog = load_catalog(repo_root)
+    pricing = load_product_pricing(repo_root)
     collection_entries = ordered_collections(catalog)
     photos: list[tuple[str, dict[str, Any], str, int, dict[str, Any]]] = []
     seen_photo_ids: set[str] = set()
@@ -460,6 +537,120 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
         conn.executemany("INSERT INTO source_origins VALUES (?, ?)", source_origins)
         conn.executemany("INSERT INTO formats VALUES (?, ?)", FORMATS)
         conn.executemany("INSERT INTO asset_types VALUES (?, ?)", ASSET_TYPES)
+
+        price_tiers = sorted(pricing.get("priceTiers") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+        products = sorted(pricing.get("products") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+        frames = sorted(pricing.get("frames") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+        video_price_tiers = sorted(pricing.get("videoPriceTiers") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+
+        price_tier_ids = {str(tier.get("id") or "") for tier in price_tiers}
+        product_ids = {str(product.get("id") or "") for product in products}
+        if not price_tier_ids:
+            raise RuntimeError("product pricing requires at least one price tier")
+        if not product_ids:
+            raise RuntimeError("product pricing requires at least one product")
+
+        conn.executemany(
+            "INSERT INTO price_tiers VALUES (?, ?, ?)",
+            [
+                (
+                    str(tier.get("id") or "").strip(),
+                    str(tier.get("label") or "").strip(),
+                    int(tier.get("sortOrder") or index),
+                )
+                for index, tier in enumerate(price_tiers, start=1)
+            ],
+        )
+        product_rows = []
+        product_price_rows = []
+        for index, product in enumerate(products, start=1):
+            product_id = str(product.get("id") or "").strip()
+            if not product_id:
+                raise RuntimeError("product pricing contains a product without an id")
+            prices = product.get("prices") or {}
+            unknown_tiers = sorted(set(prices) - price_tier_ids)
+            if unknown_tiers:
+                raise RuntimeError(f"{product_id}: unknown price tiers: {', '.join(unknown_tiers)}")
+            dimensions = product.get("dimensions") or {}
+            base_price = product.get("price", prices.get("original", 0))
+            delivery_asset_type = product.get("deliveryAssetType")
+            if delivery_asset_type and delivery_asset_type not in asset_type_id:
+                raise RuntimeError(f"{product_id}: unknown delivery asset type {delivery_asset_type!r}")
+            product_rows.append(
+                (
+                    product_id,
+                    str(product.get("type") or "").strip(),
+                    str(product.get("label") or "").strip(),
+                    product.get("detail"),
+                    dimensions.get("imperial"),
+                    dimensions.get("metric"),
+                    product.get("minMegapixels"),
+                    asset_type_id.get(delivery_asset_type),
+                    dollars_to_cents(base_price),
+                    int(product.get("sortOrder") or index),
+                    0 if product.get("active") is False else 1,
+                )
+            )
+            for tier_id, price in prices.items():
+                product_price_rows.append((product_id, str(tier_id), dollars_to_cents(price)))
+        conn.executemany(
+            "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            product_rows,
+        )
+        conn.executemany(
+            "INSERT INTO product_prices VALUES (?, ?, ?)",
+            product_price_rows,
+        )
+        frame_rows = []
+        frame_price_rows = []
+        for index, frame in enumerate(frames, start=1):
+            frame_id = str(frame.get("id") or "").strip()
+            if not frame_id:
+                raise RuntimeError("product pricing contains a frame without an id")
+            frame_rows.append(
+                (
+                    frame_id,
+                    str(frame.get("label") or "").strip(),
+                    dollars_to_cents(frame.get("price", 0)),
+                    int(frame.get("sortOrder") or index),
+                    0 if frame.get("active") is False else 1,
+                )
+            )
+            for product_id, price in (frame.get("prices") or {}).items():
+                if product_id not in product_ids:
+                    raise RuntimeError(f"{frame_id}: unknown framed product {product_id!r}")
+                frame_price_rows.append((frame_id, product_id, dollars_to_cents(price)))
+        conn.executemany(
+            "INSERT INTO frame_options VALUES (?, ?, ?, ?, ?)",
+            frame_rows,
+        )
+        conn.executemany(
+            "INSERT INTO frame_prices VALUES (?, ?, ?)",
+            frame_price_rows,
+        )
+        shipping_rows = []
+        for product_id, price in (pricing.get("shippingHandlingPrices") or {}).items():
+            if product_id not in product_ids:
+                raise RuntimeError(f"shipping handling references unknown product {product_id!r}")
+            shipping_rows.append((product_id, dollars_to_cents(price)))
+        conn.executemany(
+            "INSERT INTO shipping_handling_prices VALUES (?, ?)",
+            shipping_rows,
+        )
+        conn.executemany(
+            "INSERT INTO video_price_tiers VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    str(tier.get("id") or "").strip(),
+                    str(tier.get("label") or "").strip(),
+                    float(tier.get("minDurationSeconds") or 0),
+                    None if tier.get("maxDurationSeconds") in (None, "") else float(tier.get("maxDurationSeconds")),
+                    dollars_to_cents(tier.get("price", 0)),
+                    int(tier.get("sortOrder") or index),
+                )
+                for index, tier in enumerate(video_price_tiers, start=1)
+            ],
+        )
 
         conn.executemany(
             "INSERT INTO collections VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -632,6 +823,13 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
                 "source_origins",
                 "formats",
                 "asset_types",
+                "price_tiers",
+                "products",
+                "product_prices",
+                "frame_options",
+                "frame_prices",
+                "shipping_handling_prices",
+                "video_price_tiers",
                 "keyword_terms",
                 "media_items",
                 "media_assets",

@@ -5,10 +5,11 @@ Date: 2026-05-16
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Current visible build: `v77.2`
+- Current visible build: `v77.3`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
 - Public catalog now loads `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback.
+- Product/pricing data now lives in `assets/catalog/product-pricing.json` as generator/fallback input and in public SQLite product tables at runtime.
 - Owner-only workflow state now writes to the local ignored SQLite target at `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public preview media and private delivery media live in Cloudflare R2, not Git.
 - R2 private delivery has moved to the flat SQLite-era key convention for the active runtime:
@@ -49,6 +50,13 @@ asset_types
 keyword_terms
 media_items
 media_assets
+price_tiers
+products
+product_prices
+frame_options
+frame_prices
+shipping_handling_prices
+video_price_tiers
 ```
 
 Current public SQLite counts:
@@ -64,6 +72,13 @@ asset_types:     7
 keyword_terms:   3,112
 media_items:     5,827
 media_assets:    34,962
+price_tiers:     2
+products:        8
+product_prices:  8
+frame_options:   3
+frame_prices:    8
+shipping_prices: 4
+video_tiers:     5
 ```
 
 Current public collection counts:
@@ -157,6 +172,10 @@ For videos:
 
 Videos are now first-class in the import model. The Cordoba Apple Photos album work established the video path. Face albums remain off limits.
 
+## Product Pricing
+
+Photo products, print/frame pricing, shipping/handling, and video tiers are no longer hand-authored in generated JS constants. `assets/catalog/product-pricing.json` feeds `scripts/build_public_catalog_db.py`, which materializes the public SQLite product tables. `catalog-sqlite.js`, TSV fallback tooling, and Worker catalog generation all reconstruct the existing public globals from that shared price catalog. Videos use `video-original` buyer delivery at flat `$20` for now, with length-tier rows preserved for future pricing.
+
 ## R2 And Tombstone Rules
 
 R2 has no atomic rename. Safe moves are copy, verify, record, then delete old keys only after code/manifests no longer need them.
@@ -167,7 +186,7 @@ The public preview incident showed the consequence of alternate truth sources: 1
 
 ## Public Site Fixes
 
-- Public site is now `v77.2`.
+- Public site is now `v77.3`.
 - The USA gallery missing-preview issue is fixed by removing tombstoned catalog rows rather than re-uploading banned media.
 - Liked and Basket pages now use the same fixed-header behavior as gallery/detail pages.
 - Header action buttons for liked, basket, checkout, language, and theme stay frozen during mobile scroll.
@@ -182,7 +201,7 @@ PRAGMA integrity_check: ok
 catalog rows: 5,827
 R2 complete-pair misses: 0
 npm run validate: pass
-npm test: pass, 15 tests
+npm test: pass, 16 tests
 ```
 
 GitHub Pages was checked after deploy:
@@ -200,8 +219,8 @@ The highest-value work is now:
 
 1. Prove Stripe checkout in test mode.
 2. Make checkout/order storage production-durable.
-3. Move product/pricing data out of generated JS constants.
-4. Keep physical products behind Owner review.
-5. Curate the first sellable storefront.
+3. Keep physical products behind Owner review.
+4. Curate the first sellable storefront.
+5. Add buyer-facing offer clarity.
 6. Replace temporary `r2.dev` preview URL with a custom media domain.
 7. Keep curation focused on sellable catalog quality and launch readiness.

@@ -17,6 +17,7 @@ const loadCatalog = () => {
     collections: catalogWindow.photosByElieData,
     resolutions: catalogWindow.photosByElieResolutions,
     frameOptions: catalogWindow.photosByElieFrameOptions,
+    videoPriceTiers: catalogWindow.photosByElieVideoPriceTiers,
   });
 };
 
@@ -207,6 +208,52 @@ test("sourceOrigin controls digital pricing independently of collection", async 
   const body = await response.json();
   assert.equal(body.order.items[0].collection, "France");
   assert.equal(body.order.amountExpected, 2900);
+});
+
+test("video checkout uses the shared flat video price tier", async () => {
+  const catalog = createCatalogIndex({
+    collections: {
+      spain: {
+        title: "Spain",
+        photos: [{
+          id: "video-cordoba-test",
+          title: "Cordoba video test",
+          media: { type: "video", video: { duration: 12 } },
+          duration: 12,
+          sourceOrigin: "camera",
+          megapixels: 8.3,
+          sourceFiles: [{ path: "cordoba.mov", type: "MOV" }],
+          metadata: [{ label: "Original size", value: "MOV / 3840 x 2160 / 8.3 MP" }],
+        }],
+      },
+    },
+    resolutions: [
+      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
+    ],
+    videoPriceTiers: {
+      video_medium: { label: "Video 10-30s", price: 20 },
+    },
+  });
+  const randomUUID = deterministicIds();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId: "video-cordoba-test", options: [{ id: "video-original" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  assert.equal(body.order.amountExpected, 2000);
+  assert.equal(body.order.items[0].products[0].id, "video-original");
+  assert.equal(body.order.items[0].products[0].amount, 2000);
 });
 
 test("real Stripe client creates hosted Checkout Sessions with order metadata", async () => {

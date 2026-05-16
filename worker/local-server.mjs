@@ -17,6 +17,7 @@ const loadCatalog = () => {
     collections: catalogWindow.photosByElieData,
     resolutions: catalogWindow.photosByElieResolutions,
     frameOptions: catalogWindow.photosByElieFrameOptions,
+    videoPriceTiers: catalogWindow.photosByElieVideoPriceTiers,
   });
 };
 

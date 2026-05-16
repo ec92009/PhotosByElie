@@ -78,6 +78,8 @@ const safeName = (value, fallback) => String(value || fallback)
   .replace(/^-+|-+$/g, "")
   .slice(0, 120) || fallback;
 
+const isOriginalProduct = (product) => product?.id === "full" || product?.id === "video-original";
+
 const exists = async (filePath) => {
   try {
     await fs.access(filePath, fsConstants.R_OK);
@@ -141,9 +143,18 @@ export const createLocalZipDelivery = ({
 
   const renderProduct = async ({ item, product, source, stagingDir }) => {
     const productId = product.id;
-    const outputName = `${safeName(item.photoId, "photo")}-${safeName(productId, "product")}.jpg`;
+    const originalExtension = path.extname(source.filePath) || ".jpg";
+    const outputName = `${safeName(item.photoId, "photo")}-${safeName(productId, "product")}${isOriginalProduct(product) ? originalExtension : ".jpg"}`;
     const outputPath = path.join(stagingDir, outputName);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    if (isOriginalProduct(product)) {
+      await fs.copyFile(source.filePath, outputPath);
+      return {
+        name: path.relative(stagingDir, outputPath),
+        outputPath,
+        sourceKind: source.kind,
+      };
+    }
 
     const sipsArgs = ["-s", "format", "jpeg", "-s", "formatOptions", "90"];
     const megapixels = DIGITAL_MEGAPIXELS.get(productId);

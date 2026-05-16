@@ -47,12 +47,57 @@
     for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
     return bytes;
   };
+  const readJson = (relativePath, fallback = {}) => {
+    try {
+      const script = document.currentScript;
+      const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
+      const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
+      const url = new URL(relativePath, scriptUrl || window.location.href);
+      if (version) url.searchParams.set("v", version);
+      const request = new XMLHttpRequest();
+      request.open("GET", url.href, false);
+      request.overrideMimeType?.("application/json; charset=utf-8");
+      request.send(null);
+      if (request.status && (request.status < 200 || request.status >= 300)) return fallback;
+      return JSON.parse(request.responseText || "{}");
+    } catch {
+      return fallback;
+    }
+  };
+  const normalizePriceTiers = (priceTiers = {}) => Array.isArray(priceTiers)
+    ? Object.fromEntries(priceTiers.map((tier) => [tier.id, { label: tier.label }]))
+    : priceTiers;
+  const normalizeVideoPriceTiers = (videoPriceTiers = {}) => Array.isArray(videoPriceTiers)
+    ? Object.fromEntries(videoPriceTiers.map((tier) => [tier.id, {
+      label: tier.label,
+      price: Number(tier.price) || 0,
+      minDurationSeconds: Number(tier.minDurationSeconds || 0),
+      maxDurationSeconds: tier.maxDurationSeconds == null ? null : Number(tier.maxDurationSeconds),
+    }]))
+    : videoPriceTiers;
+  const normalizeProducts = (products = []) => products.map((product) => {
+    const option = { ...product };
+    if (option.price == null && option.prices) {
+      option.price = Number(option.prices.original ?? Object.values(option.prices)[0] ?? 0);
+    }
+    return option;
+  });
+  const applyProductCatalog = (catalog = {}) => {
+    const products = catalog.resolutions || catalog.products || [];
+    window.photosByElieProductCatalog = catalog;
+    window.photosByElieResolutions = normalizeProducts(products);
+    window.photosByEliePriceTiers = normalizePriceTiers(catalog.priceTiers || {});
+    window.photosByElieFrameOptions = (catalog.frameOptions || catalog.frames || []).map((frame) => ({ ...frame }));
+    window.photosByElieShippingHandlingPrices = { ...(catalog.shippingHandlingPrices || {}) };
+    window.photosByElieVideoPriceTiers = normalizeVideoPriceTiers(catalog.videoPriceTiers || {});
+  };
 
   if (window.photosByElieCatalogSqlite?.decodeCatalog) {
     try {
       const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
       window.photosByElieData = bundle.data || {};
       window.photosByElieOwnerData = bundle.owner || {};
+      applyProductCatalog(bundle.productCatalog || readJson("./assets/catalog/product-pricing.json"));
       window.photosByElieCatalogSource = "sqlite";
       return;
     } catch (error) {
@@ -105,6 +150,7 @@
 
   window.photosByElieData = data;
   window.photosByElieOwnerData = owner;
+  applyProductCatalog(readJson("./assets/catalog/product-pricing.json"));
   window.photosByElieCatalogSource = "tsv";
 })();
 window.photosByElieOriginTypes = {
@@ -143,42 +189,15 @@ window.photosByElieApplyCollectionOrigins = (collections = {}) => {
 };
 window.photosByElieApplyCollectionOrigins(window.photosByElieData);
 window.photosByElieApplyCollectionOrigins(window.photosByElieOwnerData);
-window.photosByElieResolutions = [
-  { id: "full", type: "digital", label: "Full resolution", detail: "Original source file at native resolution", price: 65, prices: { original: 65, ai: 25 } },
-  { id: "jpg-6mp", type: "digital", label: "JPG 6 MP", detail: "Long edge export for print and premium web", price: 28, prices: { original: 28, ai: 14 }, minMegapixels: 6 },
-  { id: "jpg-3mp", type: "digital", label: "JPG 3 MP", detail: "Listing, portfolio, and editorial web use", price: 16, prices: { original: 16, ai: 8 }, minMegapixels: 3 },
-  { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", detail: "Small web preview and social draft use", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
-  { id: "print-4x6", type: "print", label: "Print", dimensions: { imperial: "4 x 6 in", metric: "10 x 15 cm" }, detail: "Small classic photo print", price: 12, minMegapixels: 1 },
-  { id: "print-5x7", type: "print", label: "Print", dimensions: { imperial: "5 x 7 in", metric: "13 x 18 cm" }, detail: "Popular gift and desk frame size", price: 18, minMegapixels: 2 },
-  { id: "print-8x10", type: "print", label: "Print", dimensions: { imperial: "8 x 10 in", metric: "20 x 25 cm" }, detail: "Popular wall and shelf print size", price: 32, minMegapixels: 6 },
-  { id: "print-11x14", type: "print", label: "Print", dimensions: { imperial: "11 x 14 in", metric: "28 x 36 cm" }, detail: "Larger display print with manual crop review", price: 48, minMegapixels: 10 }
-];
-window.photosByEliePriceTiers = {
-  original: { label: "Camera photo" },
-  ai: { label: "AI image" }
-};
-window.photosByElieFrameOptions = [
-  { id: "none", label: "No frame", price: 0 },
-  { id: "white", label: "Plain white frame", price: 37, prices: { "print-4x6": 33, "print-5x7": 37, "print-8x10": 53, "print-11x14": 77 } },
-  { id: "black", label: "Plain black frame", price: 37, prices: { "print-4x6": 33, "print-5x7": 37, "print-8x10": 53, "print-11x14": 77 } }
-];
-window.photosByElieShippingHandlingPrices = {
-  "print-4x6": 7,
-  "print-5x7": 8,
-  "print-8x10": 12,
-  "print-11x14": 16
-};
+window.photosByElieResolutions = window.photosByElieResolutions || [];
+window.photosByEliePriceTiers = window.photosByEliePriceTiers || {};
+window.photosByElieFrameOptions = window.photosByElieFrameOptions || [];
+window.photosByElieShippingHandlingPrices = window.photosByElieShippingHandlingPrices || {};
 
 window.photosByEliePricingTier = (photo) => window.photosByEliePhotoOrigin(photo) === "ai" ? "ai" : "original";
 window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";
 window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);
-window.photosByElieVideoPriceTiers = {
-  video_short: { label: "Video under 10s", price: 20 },
-  video_medium: { label: "Video 10-30s", price: 20 },
-  video_long: { label: "Video 30-60s", price: 20 },
-  video_extended: { label: "Video 1-3 min", price: 20 },
-  video_premium: { label: "Video 3+ min", price: 20 },
-};
+window.photosByElieVideoPriceTiers = window.photosByElieVideoPriceTiers || {};
 window.photosByElieVideoTier = (photo) => {
   const duration = Number(photo?.media?.video?.duration || photo?.duration || 0);
   if (duration < 10) return "video_short";

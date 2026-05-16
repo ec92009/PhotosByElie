@@ -259,6 +259,8 @@
     .map((value) => terms.get(Number(value.trim())))
     .filter(Boolean);
 
+  const centsToDollars = (value) => Math.round(Number(value || 0)) / 100;
+
   const mediaKey = (mediaId, assetCode, mediaType) => {
     if (assetCode === "still_900") return `expo/${mediaId}_900.jpg`;
     if (assetCode === "still_1800") return `expo/${mediaId}_1800.jpg`;
@@ -309,6 +311,32 @@
     const formats = mapBy(reader.table(roots, "formats", ["format_id", "extension"]), "format_id", "extension");
     const assetTypes = mapBy(reader.table(roots, "asset_types", ["asset_type_id", "code"]), "asset_type_id", "code");
     const keywordTerms = mapBy(reader.table(roots, "keyword_terms", ["keyword_id", "keyword"]), "keyword_id", "keyword");
+    const priceTiers = reader.table(roots, "price_tiers", ["price_tier_id", "label", "sort_order"], "index");
+    const products = reader.table(roots, "products", [
+      "product_id",
+      "product_type",
+      "label",
+      "detail",
+      "dimensions_imperial",
+      "dimensions_metric",
+      "min_megapixels",
+      "delivery_asset_type_id",
+      "base_price_cents",
+      "sort_order",
+      "active",
+    ], "index");
+    const productPrices = reader.table(roots, "product_prices", ["product_id", "price_tier_id", "price_cents"], "index");
+    const frameRows = reader.table(roots, "frame_options", ["frame_id", "label", "base_price_cents", "sort_order", "active"], "index");
+    const framePrices = reader.table(roots, "frame_prices", ["frame_id", "product_id", "price_cents"], "index");
+    const shippingHandlingRows = reader.table(roots, "shipping_handling_prices", ["product_id", "price_cents"], "index");
+    const videoPriceTierRows = reader.table(roots, "video_price_tiers", [
+      "video_price_tier_id",
+      "label",
+      "min_duration_seconds",
+      "max_duration_seconds",
+      "price_cents",
+      "sort_order",
+    ], "index");
     const mediaItems = reader.table(roots, "media_items", [
       "media_id",
       "collection_id",
@@ -338,6 +366,72 @@
     const mediaAssets = reader.table(roots, "media_assets", ["media_id", "asset_type_id", "width", "height", "duration_seconds", "bytes", "format_id"], "index");
 
     const collectionById = mapBy(collections, "collection_id");
+    const productPricesByProductId = new Map();
+    for (const row of productPrices) {
+      const productId = String(row.product_id || "");
+      if (!productPricesByProductId.has(productId)) productPricesByProductId.set(productId, {});
+      productPricesByProductId.get(productId)[String(row.price_tier_id || "")] = centsToDollars(row.price_cents);
+    }
+    const framePricesByFrameId = new Map();
+    for (const row of framePrices) {
+      const frameId = String(row.frame_id || "");
+      if (!framePricesByFrameId.has(frameId)) framePricesByFrameId.set(frameId, {});
+      framePricesByFrameId.get(frameId)[String(row.product_id || "")] = centsToDollars(row.price_cents);
+    }
+    const productCatalog = {
+      priceTiers: Object.fromEntries(
+        [...priceTiers]
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+          .map((tier) => [String(tier.price_tier_id || ""), { label: tier.label || "" }])
+      ),
+      resolutions: [...products]
+        .filter((product) => Number(product.active) !== 0)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+        .map((product) => {
+          const option = {
+            id: String(product.product_id || ""),
+            type: String(product.product_type || ""),
+            label: product.label || "",
+            detail: product.detail || "",
+            price: centsToDollars(product.base_price_cents),
+          };
+          if (product.dimensions_imperial || product.dimensions_metric) {
+            option.dimensions = {};
+            if (product.dimensions_imperial) option.dimensions.imperial = product.dimensions_imperial;
+            if (product.dimensions_metric) option.dimensions.metric = product.dimensions_metric;
+          }
+          if (product.min_megapixels != null) option.minMegapixels = Number(product.min_megapixels);
+          const prices = productPricesByProductId.get(option.id);
+          if (prices && Object.keys(prices).length) option.prices = prices;
+          return option;
+        }),
+      frameOptions: [...frameRows]
+        .filter((frame) => Number(frame.active) !== 0)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+        .map((frame) => {
+          const option = {
+            id: String(frame.frame_id || ""),
+            label: frame.label || "",
+            price: centsToDollars(frame.base_price_cents),
+          };
+          const prices = framePricesByFrameId.get(option.id);
+          if (prices && Object.keys(prices).length) option.prices = prices;
+          return option;
+        }),
+      shippingHandlingPrices: Object.fromEntries(
+        shippingHandlingRows.map((row) => [String(row.product_id || ""), centsToDollars(row.price_cents)])
+      ),
+      videoPriceTiers: Object.fromEntries(
+        [...videoPriceTierRows]
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+          .map((tier) => [String(tier.video_price_tier_id || ""), {
+            label: tier.label || "",
+            price: centsToDollars(tier.price_cents),
+            minDurationSeconds: Number(tier.min_duration_seconds || 0),
+            maxDurationSeconds: tier.max_duration_seconds == null ? null : Number(tier.max_duration_seconds),
+          }])
+      ),
+    };
     const assetsByMediaId = new Map();
     for (const asset of mediaAssets) {
       const mediaId = String(asset.media_id || "");
@@ -440,7 +534,18 @@
       });
     }
 
-    return { data, owner, counts: { collections: collections.length, mediaItems: mediaItems.length, mediaAssets: mediaAssets.length } };
+    return {
+      data,
+      owner,
+      productCatalog,
+      counts: {
+        collections: collections.length,
+        mediaItems: mediaItems.length,
+        mediaAssets: mediaAssets.length,
+        products: products.length,
+        priceTiers: priceTiers.length,
+      },
+    };
   };
 
   const api = { decodeCatalog, toBytes };

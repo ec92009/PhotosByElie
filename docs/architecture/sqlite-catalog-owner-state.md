@@ -36,6 +36,13 @@ asset_types
 keyword_terms
 media_items
 media_assets
+price_tiers
+products
+product_prices
+frame_options
+frame_prices
+shipping_handling_prices
+video_price_tiers
 ```
 
 The populated compact-id database currently contains:
@@ -51,6 +58,13 @@ asset_types:     7
 keyword_terms:   3,112
 media_items:     5,827
 media_assets:    34,962
+price_tiers:     2
+products:        8
+product_prices:  8
+frame_options:   3
+frame_prices:    8
+shipping_prices: 4
+video_tiers:     5
 ```
 
 Size check from the compact-id rebuild:
@@ -150,6 +164,82 @@ CREATE TABLE keyword_terms (
   keyword_id INTEGER PRIMARY KEY,
   keyword    TEXT NOT NULL UNIQUE CHECK (trim(keyword) <> '')
 );
+```
+
+```sql
+CREATE TABLE price_tiers (
+  price_tier_id  TEXT PRIMARY KEY CHECK (trim(price_tier_id) <> ''),
+  label          TEXT NOT NULL CHECK (trim(label) <> ''),
+  sort_order     INTEGER NOT NULL CHECK (sort_order > 0)
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE products (
+  product_id             TEXT PRIMARY KEY CHECK (trim(product_id) <> ''),
+  product_type           TEXT NOT NULL CHECK (product_type IN ('digital', 'print')),
+  label                  TEXT NOT NULL CHECK (trim(label) <> ''),
+  detail                 TEXT,
+  dimensions_imperial    TEXT,
+  dimensions_metric      TEXT,
+  min_megapixels         REAL CHECK (min_megapixels IS NULL OR min_megapixels >= 0),
+  delivery_asset_type_id INTEGER,
+  base_price_cents       INTEGER NOT NULL CHECK (base_price_cents >= 0),
+  sort_order             INTEGER NOT NULL CHECK (sort_order > 0),
+  active                 INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  FOREIGN KEY (delivery_asset_type_id) REFERENCES asset_types(asset_type_id)
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE product_prices (
+  product_id      TEXT NOT NULL,
+  price_tier_id   TEXT NOT NULL,
+  price_cents     INTEGER NOT NULL CHECK (price_cents >= 0),
+  PRIMARY KEY (product_id, price_tier_id),
+  FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+  FOREIGN KEY (price_tier_id) REFERENCES price_tiers(price_tier_id)
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE frame_options (
+  frame_id          TEXT PRIMARY KEY CHECK (trim(frame_id) <> ''),
+  label             TEXT NOT NULL CHECK (trim(label) <> ''),
+  base_price_cents  INTEGER NOT NULL CHECK (base_price_cents >= 0),
+  sort_order        INTEGER NOT NULL CHECK (sort_order > 0),
+  active            INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE frame_prices (
+  frame_id      TEXT NOT NULL,
+  product_id    TEXT NOT NULL,
+  price_cents   INTEGER NOT NULL CHECK (price_cents >= 0),
+  PRIMARY KEY (frame_id, product_id),
+  FOREIGN KEY (frame_id) REFERENCES frame_options(frame_id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE shipping_handling_prices (
+  product_id    TEXT PRIMARY KEY,
+  price_cents   INTEGER NOT NULL CHECK (price_cents >= 0),
+  FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE video_price_tiers (
+  video_price_tier_id   TEXT PRIMARY KEY CHECK (trim(video_price_tier_id) <> ''),
+  label                 TEXT NOT NULL CHECK (trim(label) <> ''),
+  min_duration_seconds  REAL NOT NULL CHECK (min_duration_seconds >= 0),
+  max_duration_seconds  REAL CHECK (max_duration_seconds IS NULL OR max_duration_seconds > min_duration_seconds),
+  price_cents           INTEGER NOT NULL CHECK (price_cents >= 0),
+  sort_order            INTEGER NOT NULL CHECK (sort_order > 0)
+) WITHOUT ROWID;
 ```
 
 ```sql

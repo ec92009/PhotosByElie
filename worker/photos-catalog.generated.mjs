@@ -315372,47 +315372,55 @@ export const resolutions = [
     "type": "digital",
     "label": "Full resolution",
     "detail": "Original source file at native resolution",
-    "price": 65,
+    "deliveryAssetType": "full",
     "prices": {
       "original": 65,
       "ai": 25
-    }
+    },
+    "sortOrder": 1,
+    "price": 65
   },
   {
     "id": "jpg-6mp",
     "type": "digital",
     "label": "JPG 6 MP",
     "detail": "Long edge export for print and premium web",
-    "price": 28,
+    "minMegapixels": 6,
+    "deliveryAssetType": "jpeg_6mp",
     "prices": {
       "original": 28,
       "ai": 14
     },
-    "minMegapixels": 6
+    "sortOrder": 2,
+    "price": 28
   },
   {
     "id": "jpg-3mp",
     "type": "digital",
     "label": "JPG 3 MP",
     "detail": "Listing, portfolio, and editorial web use",
-    "price": 16,
+    "minMegapixels": 3,
+    "deliveryAssetType": "jpeg_3mp",
     "prices": {
       "original": 16,
       "ai": 8
     },
-    "minMegapixels": 3
+    "sortOrder": 3,
+    "price": 16
   },
   {
     "id": "jpg-1mp",
     "type": "digital",
     "label": "JPG 1 MP",
     "detail": "Small web preview and social draft use",
-    "price": 8,
+    "minMegapixels": 1,
+    "deliveryAssetType": "jpeg_1mp",
     "prices": {
       "original": 8,
       "ai": 4
     },
-    "minMegapixels": 1
+    "sortOrder": 4,
+    "price": 8
   },
   {
     "id": "print-4x6",
@@ -315423,8 +315431,9 @@ export const resolutions = [
       "metric": "10 x 15 cm"
     },
     "detail": "Small classic photo print",
+    "minMegapixels": 1,
     "price": 12,
-    "minMegapixels": 1
+    "sortOrder": 5
   },
   {
     "id": "print-5x7",
@@ -315435,8 +315444,9 @@ export const resolutions = [
       "metric": "13 x 18 cm"
     },
     "detail": "Popular gift and desk frame size",
+    "minMegapixels": 2,
     "price": 18,
-    "minMegapixels": 2
+    "sortOrder": 6
   },
   {
     "id": "print-8x10",
@@ -315447,8 +315457,9 @@ export const resolutions = [
       "metric": "20 x 25 cm"
     },
     "detail": "Popular wall and shelf print size",
+    "minMegapixels": 6,
     "price": 32,
-    "minMegapixels": 6
+    "sortOrder": 7
   },
   {
     "id": "print-11x14",
@@ -315459,15 +315470,17 @@ export const resolutions = [
       "metric": "28 x 36 cm"
     },
     "detail": "Larger display print with manual crop review",
+    "minMegapixels": 10,
     "price": 48,
-    "minMegapixels": 10
+    "sortOrder": 8
   }
 ];
 export const frameOptions = [
   {
     "id": "none",
     "label": "No frame",
-    "price": 0
+    "price": 0,
+    "sortOrder": 1
   },
   {
     "id": "white",
@@ -315478,7 +315491,8 @@ export const frameOptions = [
       "print-5x7": 37,
       "print-8x10": 53,
       "print-11x14": 77
-    }
+    },
+    "sortOrder": 2
   },
   {
     "id": "black",
@@ -315489,6 +315503,39 @@ export const frameOptions = [
       "print-5x7": 37,
       "print-8x10": 53,
       "print-11x14": 77
-    }
+    },
+    "sortOrder": 3
   }
 ];
+export const videoPriceTiers = {
+  "video_short": {
+    "label": "Video under 10s",
+    "price": 20,
+    "minDurationSeconds": 0,
+    "maxDurationSeconds": 10
+  },
+  "video_medium": {
+    "label": "Video 10-30s",
+    "price": 20,
+    "minDurationSeconds": 10,
+    "maxDurationSeconds": 30
+  },
+  "video_long": {
+    "label": "Video 30-60s",
+    "price": 20,
+    "minDurationSeconds": 30,
+    "maxDurationSeconds": 60
+  },
+  "video_extended": {
+    "label": "Video 1-3 min",
+    "price": 20,
+    "minDurationSeconds": 60,
+    "maxDurationSeconds": 180
+  },
+  "video_premium": {
+    "label": "Video 3+ min",
+    "price": 20,
+    "minDurationSeconds": 180,
+    "maxDurationSeconds": null
+  }
+};

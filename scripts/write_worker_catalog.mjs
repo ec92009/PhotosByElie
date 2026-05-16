@@ -17,6 +17,7 @@ const lines = [
   `export const collections = ${JSON.stringify(workerCollections, null, 2)};`,
   `export const resolutions = ${JSON.stringify(catalogWindow.photosByElieResolutions || [], null, 2)};`,
   `export const frameOptions = ${JSON.stringify(catalogWindow.photosByElieFrameOptions || [], null, 2)};`,
+  `export const videoPriceTiers = ${JSON.stringify(catalogWindow.photosByElieVideoPriceTiers || {}, null, 2)};`,
   "",
 ];
 

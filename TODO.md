@@ -4,11 +4,12 @@ Last updated: 2026-05-16
 
 ## Current Facts
 
-- Current visible build: `v77.2`.
+- Current visible build: `v77.3`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
 - Public pages load `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback under `assets/catalog/`.
+- Product/pricing data is generated from `assets/catalog/product-pricing.json` into public SQLite product tables, with JSON used only as a TSV/runtime fallback.
 - Local Owner workflow state writes to ignored `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public previews are R2-backed and watermarked.
 - Private sellable assets are R2-backed and unwatermarked.
@@ -66,10 +67,11 @@ Last updated: 2026-05-16
     - Store order id, buyer email, basket snapshot, amount, payment status, delivery keys, and download events.
     - Add buyer-facing order recovery before considering full buyer accounts.
 
-11. **Move product/pricing data out of generated JS constants.**
-    - Create a dedicated price-list data file shared by public basket and Worker validation.
-    - Include camera-photo, AI-origin, and video tiers.
-    - Keep video at flat `$20` now while preserving length-tier structure for later pricing.
+11. **Completed: Move product/pricing data out of generated JS constants.**
+    - `assets/catalog/product-pricing.json` is the generator/fallback source for photo products, print/frame prices, shipping/handling, and video tiers.
+    - `assets/catalog/photosbyelie.sqlite` now contains `price_tiers`, `products`, `product_prices`, `frame_options`, `frame_prices`, `shipping_handling_prices`, and `video_price_tiers`.
+    - Public SQLite loading, TSV fallback tooling, and Worker catalog generation now reconstruct the same product price list.
+    - Videos use `video-original` delivery at flat `$20` across the current length tiers.
 
 12. **Keep physical products behind Owner review.**
     - Keep print/frame products off publicly until samples and fulfillment rules are settled.

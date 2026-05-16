@@ -56,6 +56,30 @@ const pricingTierFor = (photo, collectionKey) => photoOriginFor(photo, collectio
 const optionPriceFor = (photo, collectionKey, option) =>
   Number(option?.prices?.[pricingTierFor(photo, collectionKey)] ?? option?.price ?? 0);
 
+const mediaTypeFor = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
+
+const videoTierFor = (photo) => {
+  const duration = Number(photo?.media?.video?.duration || photo?.duration || 0);
+  if (duration < 10) return "video_short";
+  if (duration < 30) return "video_medium";
+  if (duration < 60) return "video_long";
+  if (duration < 180) return "video_extended";
+  return "video_premium";
+};
+
+const videoDownloadOptionFor = (photo, videoPriceTiers = {}) => {
+  const tier = videoTierFor(photo);
+  const priceTier = videoPriceTiers?.[tier] || { price: 20 };
+  return {
+    id: "video-original",
+    type: "video",
+    label: "Original video download",
+    detail: "Private original video file after purchase",
+    price: Number(priceTier.price) || 0,
+    priceKey: tier,
+  };
+};
+
 const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
 const defaultNow = () => new Date();
@@ -120,10 +144,14 @@ export const createCatalogIndex = ({
   collections = {},
   resolutions = [],
   frameOptions = [],
+  videoPriceTiers = {},
   physicalProductsEnabled = false,
 } = {}) => {
   const photos = new Map();
-  const options = new Map(resolutions.map((option) => [option.id, option]));
+  const options = new Map([
+    ...resolutions.map((option) => [option.id, option]),
+    ["video-original", { id: "video-original", type: "video", label: "Original video download" }],
+  ]);
 
   Object.entries(publicCatalogOnly(collections)).forEach(([collectionKey, collection]) => {
     (collection.photos || []).forEach((photo) => {
@@ -132,6 +160,7 @@ export const createCatalogIndex = ({
   });
 
   const availableOptionsFor = (photo) => {
+    if (mediaTypeFor(photo) === "video") return [videoDownloadOptionFor(photo, videoPriceTiers)];
     const megapixels = verifiedMegapixels(photo);
     if (!megapixels) return [];
     return resolutions.filter((option) =>
@@ -144,6 +173,7 @@ export const createCatalogIndex = ({
     photos,
     options,
     frameOptions,
+    videoPriceTiers,
     availableOptionsFor,
   };
 };
@@ -170,7 +200,9 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
 
     const { photo, collectionKey, collectionTitle } = entry;
     const sourceOrigin = photoOriginFor(photo, collectionKey);
-    const availableIds = new Set(catalog.availableOptionsFor(photo).map((option) => option.id));
+    const availableOptions = catalog.availableOptionsFor(photo);
+    const availableById = new Map(availableOptions.map((option) => [option.id, option]));
+    const availableIds = new Set(availableById.keys());
     const source = (photo.sourceFiles || []).find((candidate) => !RAW_SOURCE_TYPES.has(sourceType(candidate)));
     if (!source) {
       throw Object.assign(new Error(`Photo ${photo.id} does not have a developed source master for delivery.`), {
@@ -183,19 +215,21 @@ const normalizeOrderItems = (catalog, incomingItems = []) => {
     const options = [];
     for (const rawOption of item.options || []) {
       const optionId = typeof rawOption === "string" ? rawOption : rawOption?.id;
-      const catalogOption = catalog.options.get(optionId);
+      const catalogOption = availableById.get(optionId) || catalog.options.get(optionId);
       if (!catalogOption || !availableIds.has(optionId) || seenOptions.has(optionId)) continue;
       seenOptions.add(optionId);
-      if (catalogOption.type !== "digital") {
+      if (!["digital", "video"].includes(catalogOption.type)) {
         throw Object.assign(new Error(`Product ${optionId} is not supported by digital ZIP delivery yet.`), {
           status: 409,
           code: "unsupported_product_type",
         });
       }
-      const optionPrice = optionPriceFor(photo, collectionKey, catalogOption);
+      const optionPrice = catalogOption.type === "video"
+        ? Number(catalogOption.price) || 0
+        : optionPriceFor(photo, collectionKey, catalogOption);
       options.push({
         id: catalogOption.id,
-        type: "digital",
+        type: catalogOption.type === "video" ? "video" : "digital",
         label: catalogOption.label,
         detail: catalogOption.id === "full" ? `Original: ${originalSize(photo)}` : catalogOption.detail,
         quantity: 1,

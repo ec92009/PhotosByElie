@@ -31,6 +31,8 @@ const renderedJpgKeys = (item, product) => {
   ]));
 };
 
+const isOriginalProduct = (product) => product?.id === "full" || product?.id === "video-original";
+
 const masterKeysFor = (item) => Array.from(new Set([
   ...(Array.isArray(item.source?.privateMasterKeys) ? item.source.privateMasterKeys : []),
   item.source?.privateMasterKey,
@@ -72,6 +74,8 @@ const contentTypeFor = (path) => {
   if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
   if (extension === "tif" || extension === "tiff") return "image/tiff";
   if (extension === "png") return "image/png";
+  if (extension === "mp4") return "video/mp4";
+  if (extension === "mov") return "video/quicktime";
   return "application/octet-stream";
 };
 
@@ -98,7 +102,7 @@ export const createR2ZipDelivery = ({
     const missingGroups = await Promise.all((order.items || []).map(async (item) => {
       const itemMissing = [];
       await Promise.all((item.products || []).map(async (product) => {
-        if (product.id === "full") {
+        if (isOriginalProduct(product)) {
           const found = await firstObjectMetadata(privateBucket, masterKeysFor(item));
           if (!found) {
             itemMissing.push({
@@ -228,13 +232,13 @@ export const createR2ZipDelivery = ({
       };
 
       for (const product of item.products) {
-        const isFullResolution = product.id === "full";
-        const ext = isFullResolution ? extensionFor(item.source.path) : "jpg";
+        const isOriginalDelivery = isOriginalProduct(product);
+        const ext = isOriginalDelivery ? extensionFor(item.source.path) : "jpg";
         const name = `${safeName(item.photoId, "photo")}-${safeName(product.id, "product")}.${ext}`;
         const token = `dl_${randomUUID().replace(/-/g, "").slice(0, 28)}`;
 
         let file;
-        if (isFullResolution) {
+        if (isOriginalDelivery) {
           const found = await firstObject(privateBucket, masterKeysFor(item));
           if (!found) {
             throw Object.assign(new Error(`Private R2 master is missing: ${masterKeysFor(item).join(" or ")}`), {
@@ -265,7 +269,7 @@ export const createR2ZipDelivery = ({
           name,
           downloadUrl: `/download/${token}`,
           renderKey: file.renderKey || "",
-          cacheHit: !isFullResolution && file.cacheHit,
+          cacheHit: !isOriginalDelivery && file.cacheHit,
           bytes: file.bytes,
           contentType: file.contentType,
         });

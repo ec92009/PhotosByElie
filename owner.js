@@ -312,27 +312,12 @@
     original: { label: "Camera photo" },
     ai: { label: "AI image" },
   };
-  const defaultDigitalTierPrices = {
-    full: { original: 65, ai: 25 },
-    "jpg-6mp": { original: 28, ai: 14 },
-    "jpg-3mp": { original: 16, ai: 8 },
-    "jpg-1mp": { original: 8, ai: 4 },
-  };
 
   const ensureOwnerPriceTiers = () => {
     window.photosByEliePriceTiers = {
       ...defaultPriceTiers,
       ...(window.photosByEliePriceTiers || {}),
     };
-    (window.photosByElieResolutions || []).forEach((option) => {
-      const defaultPrices = defaultDigitalTierPrices[option.id];
-      if (!defaultPrices || option.type === "print") return;
-      option.prices = {
-        ...defaultPrices,
-        ...(option.prices || {}),
-      };
-      option.price = Number(option.prices.original ?? option.price ?? 0);
-    });
   };
 
   const productLabel = (option) => window.photosByElieProductLabel?.(option) || option?.label || option?.id || "";

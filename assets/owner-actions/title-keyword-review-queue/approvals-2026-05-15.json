@@ -1,0 +1,1588 @@
+{
+  "format": "photosbyelie-title-keyword-review-approvals",
+  "schema_version": 1,
+  "updated_at": "2026-05-15T06:01:07.031269+00:00",
+  "batch_id": "2026-05-15",
+  "approvals": [],
+  "rejections": [
+    {
+      "photo_id": "20180519-1655-00653-4947ca5855",
+      "rejected": true,
+      "title": "20180519 1655 00653",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1645-00645-742f23f28a",
+      "rejected": true,
+      "title": "20180519 1645 00645",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1648-00650-dde5f1e325",
+      "rejected": true,
+      "title": "20180519 1648 00650",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1639-00638-80b1868152",
+      "rejected": true,
+      "title": "20180519 1639 00638",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1634-00635-4e1f7e7911",
+      "rejected": true,
+      "title": "20180519 1634 00635",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1632-00633-53a564c2ac",
+      "rejected": true,
+      "title": "20180519 1632 00633",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1630-00630-72be9932cf",
+      "rejected": true,
+      "title": "20180519 1630 00630",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "give me a title"
+    },
+    {
+      "photo_id": "20180519-1651-00652-7df7aaac7d",
+      "rejected": true,
+      "title": "20180519 1651 00652",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1651-00651-2e9add6ac1",
+      "rejected": true,
+      "title": "20180519 1651 00651",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1640-00640-621d63bf96",
+      "rejected": true,
+      "title": "20180519 1640 00640",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1632-00634-bdf9bf75fe",
+      "rejected": true,
+      "title": "20180519 1632 00634",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1631-00632-5cf922f1f2",
+      "rejected": true,
+      "title": "20180519 1631 00632",
+      "keywords": [
+        "Ajuda National Palace",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1418-00629-8386a780e8",
+      "rejected": true,
+      "title": "20180519 1418 00629",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1357-00624-c81f59de01",
+      "rejected": true,
+      "title": "20180519 1357 00624",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1346-00621-f4a1600d6c",
+      "rejected": true,
+      "title": "20180519 1346 00621",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1341-00617-1a5cb6364b",
+      "rejected": true,
+      "title": "20180519 1341 00617",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1341-00616-43a986dc00",
+      "rejected": true,
+      "title": "20180519 1341 00616",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1323-00610-fb6853bbc0",
+      "rejected": true,
+      "title": "20180519 1323 00610",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1321-00607-fa749ebd28",
+      "rejected": true,
+      "title": "20180519 1321 00607",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1321-00606-529856e2f5",
+      "rejected": true,
+      "title": "20180519 1321 00606",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1320-00604-d88c8483c4",
+      "rejected": true,
+      "title": "20180519 1320 00604",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1318-00599-da9a107edb",
+      "rejected": true,
+      "title": "20180519 1318 00599",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1315-00592-7d8c933c15",
+      "rejected": true,
+      "title": "20180519 1315 00592",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1315-00593-3be94446d1",
+      "rejected": true,
+      "title": "20180519 1315 00593",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1257-00588-0a41704545",
+      "rejected": true,
+      "title": "20180519 1257 00588",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180518-1943-00586-774731a7a1",
+      "rejected": true,
+      "title": "20180518 1943 00586",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1907-00581-fd6a59f062",
+      "rejected": true,
+      "title": "20180518 1907 00581",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-185735-00109-147cc22d5b",
+      "rejected": true,
+      "title": "20180518 185735 00109",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1857-00578-94deb09cb0",
+      "rejected": true,
+      "title": "20180518 1857 00578",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1856-00576-9b3565b612",
+      "rejected": true,
+      "title": "20180518 1856 00576",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1522-00564-8ed80527e5",
+      "rejected": true,
+      "title": "20180518 1522 00564",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1520-00559-72f1bcdf6b",
+      "rejected": true,
+      "title": "20180518 1520 00559",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1519-00556-5a996cd928",
+      "rejected": true,
+      "title": "20180518 1519 00556",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1511-00548-7e601dc5e5",
+      "rejected": true,
+      "title": "20180518 1511 00548",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1504-00542-472210677a",
+      "rejected": true,
+      "title": "20180518 1504 00542",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1503-00540-3593b6a6bc",
+      "rejected": true,
+      "title": "20180518 1503 00540",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1455-00537-98ade82e35",
+      "rejected": true,
+      "title": "20180518 1455 00537",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1426-00532-8a4be21e00",
+      "rejected": true,
+      "title": "20180518 1426 00532",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1413-00528-52bd93647f",
+      "rejected": true,
+      "title": "20180518 1413 00528",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1411-00526-027a2bdee4",
+      "rejected": true,
+      "title": "20180518 1411 00526",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1409-00525-036de41c3c",
+      "rejected": true,
+      "title": "20180518 1409 00525",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1405-00520-cc9e8a8faf",
+      "rejected": true,
+      "title": "20180518 1405 00520",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1403-00516-5b3fba25ea",
+      "rejected": true,
+      "title": "20180518 1403 00516",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1352-00512-66edf23998",
+      "rejected": true,
+      "title": "20180518 1352 00512",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1343-00509-788722bc52",
+      "rejected": true,
+      "title": "20180518 1343 00509",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1340-00504-13096677a9",
+      "rejected": true,
+      "title": "20180518 1340 00504",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2236-00503-0d228da9ee",
+      "rejected": true,
+      "title": "20180517 2236 00503",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2138-00495-cd8355432a",
+      "rejected": true,
+      "title": "20180517 2138 00495",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2135-00492-564b88a104",
+      "rejected": true,
+      "title": "20180517 2135 00492",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180519-1647-00649-71a3cb2386",
+      "rejected": true,
+      "title": "20180519 1647 00649",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1643-00643-85d67b6e3f",
+      "rejected": true,
+      "title": "20180519 1643 00643",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1641-00641-2ec3697723",
+      "rejected": true,
+      "title": "20180519 1641 00641",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1634-00636-d2ec43a7f8",
+      "rejected": true,
+      "title": "20180519 1634 00636",
+      "keywords": [
+        "Ajuda National Palace",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "i wanted a title too"
+    },
+    {
+      "photo_id": "20180519-1348-00622-dfc37390ca",
+      "rejected": true,
+      "title": "20180519 1348 00622",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1346-00619-fc41df1f05",
+      "rejected": true,
+      "title": "20180519 1346 00619",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1346-00618-d2b7edc2d4",
+      "rejected": true,
+      "title": "20180519 1346 00618",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1337-00615-a2dda38e79",
+      "rejected": true,
+      "title": "20180519 1337 00615",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1329-00614-04486d9b61",
+      "rejected": true,
+      "title": "20180519 1329 00614",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "square format",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1328-00612-3bbc44d831",
+      "rejected": true,
+      "title": "20180519 1328 00612",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1326-00611-4b92cde21c",
+      "rejected": true,
+      "title": "20180519 1326 00611",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1323-00609-8acf5ae002",
+      "rejected": true,
+      "title": "20180519 1323 00609",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1322-00608-18764ce389",
+      "rejected": true,
+      "title": "20180519 1322 00608",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1321-00605-2ea1eba277",
+      "rejected": true,
+      "title": "20180519 1321 00605",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1319-00603-1cd180d6e4",
+      "rejected": true,
+      "title": "20180519 1319 00603",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1319-00601-5cd2cd1ceb",
+      "rejected": true,
+      "title": "20180519 1319 00601",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1317-00594-407fa2a7b2",
+      "rejected": true,
+      "title": "20180519 1317 00594",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1303-00590-5a73dfed14",
+      "rejected": true,
+      "title": "20180519 1303 00590",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Panoramic",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180519-1258-00589-6ca05ec1ee",
+      "rejected": true,
+      "title": "20180519 1258 00589",
+      "keywords": [
+        "Jeronimos Monastery",
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "Title please"
+    },
+    {
+      "photo_id": "20180518-1913-00585-250cb95ac6",
+      "rejected": true,
+      "title": "20180518 1913 00585",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1909-00583-cbdb3185f0",
+      "rejected": true,
+      "title": "20180518 1909 00583",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1908-00582-ce14d231bb",
+      "rejected": true,
+      "title": "20180518 1908 00582",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1900-00580-35bb6f1333",
+      "rejected": true,
+      "title": "20180518 1900 00580",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1857-00579-1-e904bc0341",
+      "rejected": true,
+      "title": "20180518 1857 00579 1",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1857-00577-1cac9c1962",
+      "rejected": true,
+      "title": "20180518 1857 00577",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1853-00571-b0f6d48e09",
+      "rejected": true,
+      "title": "20180518 1853 00571",
+      "keywords": [
+        "Cascais",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1522-00563-6e60338108",
+      "rejected": true,
+      "title": "20180518 1522 00563",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1518-00555-2fda7a62dd",
+      "rejected": true,
+      "title": "20180518 1518 00555",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1513-00550-bf71b5719d",
+      "rejected": true,
+      "title": "20180518 1513 00550",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "vertical composition",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1513-00549-8b042c1963",
+      "rejected": true,
+      "title": "20180518 1513 00549",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1510-00547-fb38f6323b",
+      "rejected": true,
+      "title": "20180518 1510 00547",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1505-00544-1b1ab30c30",
+      "rejected": true,
+      "title": "20180518 1505 00544",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1504-00543-385794ba82",
+      "rejected": true,
+      "title": "20180518 1504 00543",
+      "keywords": [
+        "Panoramic",
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1503-00541-62669e193f",
+      "rejected": true,
+      "title": "20180518 1503 00541",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1455-00538-42841411e1",
+      "rejected": true,
+      "title": "20180518 1455 00538",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1451-00535-699e1184aa",
+      "rejected": true,
+      "title": "20180518 1451 00535",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "portrait orientation",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1447-00534-8d73c77f95",
+      "rejected": true,
+      "title": "20180518 1447 00534",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1423-00531-54ae327384",
+      "rejected": true,
+      "title": "20180518 1423 00531",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1423-00530-8a9b5e980a",
+      "rejected": true,
+      "title": "20180518 1423 00530",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1413-00529-2ca25709d3",
+      "rejected": true,
+      "title": "20180518 1413 00529",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1408-00523-ccdae512ee",
+      "rejected": true,
+      "title": "20180518 1408 00523",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1408-00522-d4b425a4cc",
+      "rejected": true,
+      "title": "20180518 1408 00522",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1408-00521-560ec85707",
+      "rejected": true,
+      "title": "20180518 1408 00521",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1402-00514-7b4f60aad8",
+      "rejected": true,
+      "title": "20180518 1402 00514",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1359-00513-759c490e7d",
+      "rejected": true,
+      "title": "20180518 1359 00513",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1343-00508-fe5541c766",
+      "rejected": true,
+      "title": "20180518 1343 00508",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180518-1342-00506-7a25cd91e6",
+      "rejected": true,
+      "title": "20180518 1342 00506",
+      "keywords": [
+        "Portugal",
+        "castelo dos mouros",
+        "lisbon",
+        "lisbonne",
+        "sintra",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2236-00501-42b08a2940",
+      "rejected": true,
+      "title": "20180517 2236 00501",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2208-00500-d164887094",
+      "rejected": true,
+      "title": "20180517 2208 00500",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "wide composition",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2140-00499-bdffe517ce",
+      "rejected": true,
+      "title": "20180517 2140 00499",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    },
+    {
+      "photo_id": "20180517-2139-00498-3f6caeaf91",
+      "rejected": true,
+      "title": "20180517 2139 00498",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Photograph",
+        "Travel photography"
+      ],
+      "comment": "title please"
+    }
+  ],
+  "blocked": [],
+  "proposal_state_path": "assets/owner-actions/title-keyword-review-queue/proposed-state.json",
+  "not_found": [],
+  "applied_at": "2026-05-15T06:01:07.030676+00:00",
+  "review_flag": "Title_Keywords_Reviewed",
+  "proposal_state_flag": "Title_Keywords_Proposed",
+  "rejection_flag": "Title_Keywords_Rejected"
+}

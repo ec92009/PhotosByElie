@@ -973,7 +973,7 @@ if __name__ == "__main__":
     parser.add_argument("--review-snapshot", "--blacklist", dest="review_snapshot", type=Path, default=None, help="Optional Review Snapshot file to apply hidden, reserve, and classification choices.")
     parser.add_argument("--keyword-blacklist", type=Path, default=DEFAULT_KEYWORD_BLACKLIST, help="Owner metadata keywords to omit from generated public/reserve catalogs.")
     parser.add_argument("--no-sync-assets", action="store_true")
-    parser.add_argument("--external-media", action="store_true", help="Write public metadata/R2 keys without copying local JPG derivatives.")
+    parser.add_argument("--external-media", action="store_true", help="Write public metadata/R2 keys without copying local preview derivatives.")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     review_payload = load_blacklist_payload(args.review_snapshot)

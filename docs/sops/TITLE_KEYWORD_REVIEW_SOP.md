@@ -9,7 +9,7 @@ This SOP defines the Owner title/keyword proposal workflow.
 - `Title_Keywords_Parked`: the current local tooling could not produce a defensible non-placeholder title, so the photo is parked outside the active review queue until better tooling or manual reset is available.
 - `Title_Keywords_Reviewed`: Owner approved and applied the title/keyword metadata. The nightly queue should always skip this photo.
 
-Proposal/rejection state lives in `assets/owner-actions/title-keyword-review-queue/proposed-state.json`. Approved metadata lives in generated catalog/state files only. Do not write JPG/source embedded metadata, public previews, private masters, or private render files.
+Proposal/rejection state lives in `assets/owner-actions/title-keyword-review-queue/proposed-state.json`. Approved metadata lives in generated catalog/state files only. Do not write source-file embedded metadata, public previews, private masters, or private render files.
 
 ## Nightly Generation
 

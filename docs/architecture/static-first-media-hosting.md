@@ -2,29 +2,29 @@
 
 Date: 2026-05-06
 
-This note captures the "thinking out loud" discussion about whether PhotosByElie can stay mostly static while the photo library grows beyond what is comfortable for GitHub Pages.
+This note captures the "thinking out loud" discussion about whether PhotosByElie can stay mostly static while the media library grows beyond what is comfortable for GitHub Pages.
 
 ## Current Pressure
 
 The current project shape bends around GitHub limits because GitHub Pages is doing two jobs:
 
 - Hosting the static site code.
-- Hosting some public photo assets.
+- Hosting some public media assets.
 
 The first job is a good fit. The second job is the source of the acrobatics.
 
-GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Photo binaries do not need to live in GitHub long term. The current public catalog is still TSV/bootstrap-backed, but the accepted migration target is a single public SQLite catalog file.
+GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Media binaries do not need to live in GitHub long term. The current public catalog is still TSV/bootstrap-backed, but the accepted migration target is a single public SQLite catalog file.
 
 ## Future Media States
 
-Each source photo may eventually have several useful derivatives:
+Each source media item may eventually have several useful derivatives:
 
-- Developed full-resolution image.
+- Developed full-resolution photo image.
 - Full original/developed master.
 - Watermarked 900px still preview.
 - For video, a 5-second watermarked 720p preview clip.
 
-Each photo also has a curation state:
+Each media item also has a curation state:
 
 - Expo.
 - Reserve.
@@ -50,16 +50,17 @@ Public media should mean public display media, not all sellable files.
 
 Good public candidates:
 
-- Watermarked 900px display image.
-- For video, a watermarked short 720p preview clip.
+- Watermarked 900px still preview.
+- For video, a watermarked 900px poster plus short 720p preview clip.
 
 Questionable or likely private candidates:
 
 - Clean developed full-resolution JPG/TIFF.
+- Original MOV/MP4/M4V video files.
 
-The reason to put any photo file on a public CDN is browser performance and simplicity: the public gallery needs images it can load without authentication. But if a file is something a buyer should pay for, it should not be publicly addressable just because it is small.
+The reason to put any media file on a public CDN is browser performance and simplicity: the public gallery needs previews it can load without authentication. But if a file is something a buyer should pay for, it should not be publicly addressable just because it is small.
 
-Decision: public object storage/CDN should contain watermarked images only.
+Decision: public object storage/CDN should contain watermarked preview media only: still JPG previews and short video preview clips.
 
 ## Originals And RAW Files
 
@@ -110,7 +111,7 @@ GitHub Pages
   public SQLite catalog and generated compatibility metadata
 
 Public media CDN/object storage
-  watermarked 900px images
+  watermarked 900px still previews/posters
   watermarked 720p video preview clips
 
 Private object storage

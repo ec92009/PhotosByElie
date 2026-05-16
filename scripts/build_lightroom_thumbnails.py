@@ -233,7 +233,7 @@ def parse_args() -> argparse.Namespace:
         help="Only scan one year (YYYY) or an inclusive year range (YYYY-YYYY), based on relative path.",
     )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
-    parser.add_argument("--limit", type=int, default=0, help="Stop after N selected photos; useful for tests.")
+    parser.add_argument("--limit", type=int, default=0, help="Stop after N selected media rows; useful for tests.")
     parser.add_argument("--dry-run", action="store_true", help="Scan and checkpoint, but do not render files.")
     parser.add_argument("--force", action="store_true", help="Ignore checkpoints and rebuild existing derivatives.")
     parser.add_argument("--clean-missing", action="store_true", help="Drop manifest rows whose derivatives are missing.")
@@ -270,7 +270,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--keep-uploaded-tmp",
         action="store_true",
-        help="Keep tmp/import-cache preview JPGs after confirmed public R2 upload. By default, uploaded preview JPGs are removed from the disposable tmp workspace.",
+        help="Keep tmp/import-cache preview media after confirmed public R2 upload. By default, uploaded preview media files are removed from the disposable tmp workspace.",
     )
     parser.add_argument(
         "--include-private-keywords",
@@ -1822,7 +1822,7 @@ def render_sources_for(
     temp_dir: Path,
 ) -> tuple[Path, Path, dict[str, Any] | None, Any]:
     if is_raw_image(source):
-        raise ValueError(f"{source} is a RAW file; export a developed JPG/TIFF before importing.")
+        raise ValueError(f"{source} is a RAW file; export a developed still image before importing.")
     return source, source, None, None
 
 

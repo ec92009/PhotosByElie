@@ -1,10 +1,10 @@
 # Image Ingestion SOP
 
-Repeatable workflow for importing Lightroom-selected photos into the static Photos By Elie site.
+Repeatable workflow for importing Lightroom-selected photo and video media into the static Photos By Elie site.
 
 ## Scope
 
-Use this SOP when adding or refreshing real-photo galleries from developed Lightroom exports. The automated path builds watermarked gallery and detail JPEG derivatives plus metadata manifests into a disposable local import cache; Expo is filled later by live Owner review or export tooling.
+Use this SOP when adding or refreshing real media galleries from developed Lightroom exports. The automated path builds watermarked photo gallery/detail JPEG derivatives, video poster/short-preview derivatives, and metadata manifests into a disposable local import cache; Expo is filled later by live Owner review or export tooling.
 
 Do not use this SOP for repo-only documentation edits, CSS-only page polish, or manual one-off fixes to existing gallery data.
 
@@ -14,7 +14,7 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 - Apple Photos album exports for small source-agnostic import tests: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.mov`, `.mp4`, or `.m4v`.
 - Do not import DNG, NEF, or other raw camera files. Develop/export them first.
-- Lightroom sidecars may sit next to the image files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
+- Lightroom sidecars may sit next to source media files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
 - The importer can use Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia album can infer Spain.
@@ -100,9 +100,9 @@ The builder is designed to be interrupted and resumed.
 
 ## Privacy Rules
 
-- Keep `tmp/import-cache` untracked. Hidden uses JSON state only (`assets/hidden/hidden-blacklist.json` and local `assets/hidden/hidden-data.json`); do not keep local preview JPGs under Hidden.
+- Keep `tmp/import-cache` untracked. Hidden uses JSON state only (`assets/hidden/hidden-blacklist.json` and local `assets/hidden/hidden-data.json`); do not keep local preview media under Hidden.
 - Keep `assets/owner-actions/country-assignments.jsonl` and `assets/owner-actions/country-assignments.json` tracked; they are exported handoff artifacts for localhost Unknown-to-country moves, while the ignored local SQLite owner-state tables are the write path. Each Unknown assignment is a live server action, not a browser-staged value: it should remove the chosen photo and same-day cohort from Unknown immediately and move them into the target Reserve country. If the move fails, the card should remain visible and the country selector should reset.
-- Keep `assets/owner-actions/keyword-blacklist.json` tracked. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite photos/JPGs.
+- Keep `assets/owner-actions/keyword-blacklist.json` tracked. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite media/source files.
 - Treat Waste Basket media as owner-controlled undo assets, not clock-controlled assets. Basketed photos can be put back until the owner empties the basket; emptying deletes public previews, private masters, and private render triplets, then keeps only durable tombstone state: photo id plus blacklisted master/source path so future Saturn/import sweeps do not resurrect the file.
 - Do not paste exact GPS coordinates into public site data.
 - Review public keywords before promoting them into the generated catalog TSV/bootstrap files.

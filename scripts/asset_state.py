@@ -160,9 +160,18 @@ def public_media_key(photo: dict, reference: str | None) -> str:
     return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, photo["id"], reference)
 
 
+def media_type_for_photo(photo: dict) -> str:
+    value = str((photo.get("media") or {}).get("type") or photo.get("media_type") or photo.get("type") or "").lower()
+    if value:
+        return value
+    source_types = {str(source.get("type") or "").strip().upper() for source in (photo.get("sourceFiles") or []) if isinstance(source, dict)}
+    return "video" if source_types & {"MOV", "MP4", "M4V"} else "photo"
+
+
 def media_object_for_photo(photo: dict) -> dict:
     public_allowed = public_preview_allowed(photo)
     return {
+        "type": media_type_for_photo(photo),
         "sourcePolicy": media_source_policy(photo),
         "publicPreview": {
             "allowed": public_allowed,
@@ -681,8 +690,8 @@ def write_regular_manifest_from_site(
                 },
                 "source_mode": source_mode_for(photo, slug),
                 "derivatives": {
-                    "gallery": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "gallery"),
-                    "detail": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "detail"),
+                    "gallery": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "gallery", media_type_for_photo(photo)),
+                    "detail": public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], "detail", media_type_for_photo(photo)),
                 },
             }
             for slug, photo in regular_rows

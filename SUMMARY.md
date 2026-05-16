@@ -144,7 +144,7 @@ to:
 masters/<media_id>.<original_format>
 ```
 
-and keep old keys temporarily. Public photo previews at `expo/<media_id>_900.jpg` and `expo/<media_id>_1800.jpg` stay first-class assets. Copy private photo render triplets to `renders/<media_id>_{1,3,6}mp.jpg` and keep the old nested keys temporarily.
+and keep old keys temporarily. Public preview assets stay first-class at `expo/<media_id>_900.jpg` for photo/video gallery previews, `expo/<media_id>_1800.jpg` for photo detail previews, and `expo/<media_id>_short_5s_720p.mp4` for video detail previews. Copy private photo render triplets to `renders/<media_id>_{1,3,6}mp.jpg` and keep the old nested keys temporarily.
 
 ## Current Commit Scope
 

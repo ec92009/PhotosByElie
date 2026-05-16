@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build Pinterest-ready artifacts from catalog search terms.
 
-The script reads assets/catalog/photos.tsv, finds public photos matching all
-query terms, downloads their public preview images, and writes a dated
+The script reads assets/catalog/photos.tsv, finds public catalog rows matching
+all query terms, downloads a still public preview image, and writes a dated
 artifact package under socials/Pinterest.
 """
 
@@ -93,17 +93,29 @@ def read_catalog(path: Path, terms: list[str]) -> list[dict[str, str]]:
             ).lower()
             if not all(term.lower() in blob for term in terms):
                 continue
-            detail_key = rx(r'detailKey\\":\\"([^\\]+)', row.get("media_json", ""))
+            media_json = row.get("media_json", "")
+            source_files_json = row.get("sourceFiles_json", "")
+            gallery_key = rx(r'galleryKey\\":\\"([^\\]+)', media_json)
+            detail_key = rx(r'detailKey\\":\\"([^\\]+)', media_json)
             if not detail_key:
                 continue
+            is_video = detail_key.lower().endswith(".mp4") or bool(
+                re.search(r'\.(mov|mp4|m4v)(\\"|$)', source_files_json, re.IGNORECASE)
+                or re.search(r'type\\":\\"(MOV|MP4|M4V)', source_files_json, re.IGNORECASE)
+                or re.search(r'"type"\s*:\s*"(MOV|MP4|M4V)', source_files_json, re.IGNORECASE)
+            )
+            preview_key = gallery_key if is_video and gallery_key else detail_key
             preview = rx(r'Preview file\\",\\"value\\":\\"([^\\]+)', row.get("metadata_json", ""))
             captured = rx(r'Captured\\",\\"value\\":\\"([^\\]+)', row.get("metadata_json", ""))
-            source = rx(r'path\\":\\"([^\\]+)', row.get("sourceFiles_json", ""))
+            source = rx(r'path\\":\\"([^\\]+)', source_files_json)
             results.append(
                 {
                     "id": row["id"],
                     "title": row["title"],
                     "caption": row["caption"],
+                    "media_type": "video" if is_video else "photo",
+                    "preview_key": preview_key,
+                    "gallery_key": gallery_key,
                     "detail_key": detail_key,
                     "preview": preview,
                     "captured": captured,
@@ -144,7 +156,7 @@ def main() -> int:
     for index, item in enumerate(matches, 1):
         base_name = f"{index:02d}-{item['id']}"
         source_path = source_dir / f"{base_name}-source.jpg"
-        source_url = R2_BASE_URL + item["detail_key"]
+        source_url = R2_BASE_URL + item["preview_key"]
         try:
             download(source_url, source_path)
         except HTTPError as error:
@@ -152,7 +164,7 @@ def main() -> int:
                 {
                     "id": item["id"],
                     "title": item["title"],
-                    "detail_key": item["detail_key"],
+                    "preview_key": item["preview_key"],
                     "source_url": source_url,
                     "reason": f"HTTP {error.code}",
                 }
@@ -163,14 +175,26 @@ def main() -> int:
                 {
                     "id": item["id"],
                     "title": item["title"],
-                    "detail_key": item["detail_key"],
+                    "preview_key": item["preview_key"],
                     "source_url": source_url,
                     "reason": str(error.reason),
                 }
             )
             continue
 
-        source = Image.open(source_path).convert("RGB")
+        try:
+            source = Image.open(source_path).convert("RGB")
+        except OSError as error:
+            skipped_items.append(
+                {
+                    "id": item["id"],
+                    "title": item["title"],
+                    "preview_key": item["preview_key"],
+                    "source_url": source_url,
+                    "reason": f"not a readable still image: {error}",
+                }
+            )
+            continue
         square = cap_size(crop_to_ratio(source, 1.0))
         portrait = cap_size(crop_to_ratio(source, 2 / 3))
 

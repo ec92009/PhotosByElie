@@ -220,7 +220,7 @@ def public_upload_items(repo_root: Path, args: argparse.Namespace, rows_by_id: d
                 bucket=args.public_bucket,
                 key=key,
                 path=path,
-                content_type="image/jpeg",
+                content_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
                 cache_control="public, max-age=31536000, immutable",
             )
         )

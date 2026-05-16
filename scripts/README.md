@@ -4,9 +4,9 @@
 
 `build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them.
 
-Required tools: `python3`, `exiftool`, `sips`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
+Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, `ffprobe`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
 
-Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`. The importer considers only developed `.jpg`, `.jpeg`, `.tif`, and `.tiff` files.
+Default source resolves to the first available Camera folder in this order: `/Volumes/Saturn/Pictures/LR/Camera`, `/Volumes/Saturn-1/Pictures/LR/Camera`, `~/Pictures/LR/Camera`, then `~/Pictures/LR/2024`. The importer considers only developed `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.mov`, `.mp4`, and `.m4v` files.
 
 Default run:
 
@@ -26,9 +26,9 @@ python3 scripts/build_lightroom_thumbnails.py \
   --detail-max 1800
 ```
 
-Resume on another machine by pointing `--source-root` at that machine's developed export folder. The script scans folders and files in reverse lexical order so newer year/month/day folders are handled first, tracks photos by relative path, and writes checkpoints to `tmp/import-cache/.build-state.jsonl`, so already-inspected files and already-rendered derivatives are skipped.
+Resume on another machine by pointing `--source-root` at that machine's developed export folder. The script scans folders and files in reverse lexical order so newer year/month/day folders are handled first, tracks media by relative path, and writes checkpoints to `tmp/import-cache/.build-state.jsonl`, so already-inspected files and already-rendered derivatives are skipped.
 
-Use `--years 2024` for one year or `--years 2022-2024` for an inclusive range. The filter uses the first four-digit year found in each photo's path relative to the `Camera` folder.
+Use `--years 2024` for one year or `--years 2022-2024` for an inclusive range. The filter uses the first four-digit year found in each media path relative to the `Camera` folder.
 
 For Leonardo/AI folders where files are already selected by presence rather than Lightroom rating, opt into every image and force the gallery bucket to AI:
 
@@ -53,19 +53,19 @@ python3 scripts/build_lightroom_thumbnails.py \
 
 Outputs:
 
-- `tmp/import-cache/<country>/*_900.jpg`: watermarked gallery thumbnails.
-- `tmp/import-cache/<country>/*_1800.jpg`: watermarked detail-page images.
+- `tmp/import-cache/<country>/*_900.jpg`: watermarked photo gallery thumbnails and video gallery posters.
+- `tmp/import-cache/<country>/*_1800.jpg`: watermarked photo detail-page images.
 - `tmp/import-cache/<country>/*_short_5s_720p.mp4`: watermarked video detail-page clips.
 - `tmp/import-cache/manifest.json`: selected photos/videos, derivative paths, full keyword set, rating/color label when present, and web-facing display metadata.
 - `tmp/import-cache/keywords.json`: keyword counts and photo references for filter UI.
 - `tmp/import-cache/collections.json`: generated indexes for years, countries, regions, cities, orientations, and source formats.
 - `tmp/import-cache/failures.json`: render/extraction errors that need attention.
-- `tmp/import-cache/gps-metadata.json`: exact GPS coordinates keyed by the same relative photo paths.
+- `tmp/import-cache/gps-metadata.json`: exact GPS coordinates keyed by the same relative media paths.
 - `tmp/import-cache/.build-state.jsonl`: append-only resume checkpoint.
 
-When `--r2-upload public` or `--r2-upload both` is enabled, confirmed-upload preview JPGs are removed from `tmp/import-cache` by default; the manifest, checkpoints, keyword indexes, GPS file, and diagnostics remain. Use `--keep-uploaded-tmp` only when deliberately debugging local staging files.
+When `--r2-upload public` or `--r2-upload both` is enabled, confirmed-upload preview media files are removed from `tmp/import-cache` by default; the manifest, checkpoints, keyword indexes, GPS file, and diagnostics remain. Use `--keep-uploaded-tmp` only when deliberately debugging local staging files.
 
-By default the import metadata omits owner-blacklisted keyword strings from `assets/owner-actions/keyword-blacklist.json`. This blacklist affects only generated keyword metadata and keyword indexes; it does not block, discard, skip, or rewrite any photo/JPG. Use `--keyword-blacklist <path>` to point at a different metadata-only keyword blacklist. Exact GPS coordinates are written to the separate ignored GPS file by default. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
+By default the import metadata omits owner-blacklisted keyword strings from `assets/owner-actions/keyword-blacklist.json`. This blacklist affects only generated keyword metadata and keyword indexes; it does not block, discard, skip, or rewrite any media/source file. Use `--keyword-blacklist <path>` to point at a different metadata-only keyword blacklist. Exact GPS coordinates are written to the separate ignored GPS file by default. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
 
 ## Public Catalog Export
 
@@ -95,7 +95,7 @@ The Expo cap is retired. For standalone exports, omit `--expo-cap` so the export
 python3 scripts/export_photos_data.py
 ```
 
-For the GitHub-code/R2-media publishing model, write the same public catalog and Expo manifest without copying preview JPGs into the repo:
+For the GitHub-code/R2-media publishing model, write the same public catalog and Expo manifest without copying preview media into the repo:
 
 ```bash
 python3 scripts/export_photos_data.py --external-media
@@ -137,7 +137,7 @@ The active storage contract is: Git tracks code/metadata and tiny assets; `tmp/i
 
 ## State SQLite
 
-`build_photo_state_db.py` creates an ignored local SQLite database at `tmp/photo-state.sqlite` so the current photo universe can be inspected without opening every JSON/JS manifest by hand. It combines the public catalog, homepage manifest, import cache, Expo manifest, private delivery manifest, media sidecar, blocked/discarded tombstones, Unknown country assignments, compatibility Reserve data, and R2 upload/delete logs.
+`build_photo_state_db.py` creates an ignored local SQLite database at `tmp/photo-state.sqlite` so the current media universe can be inspected without opening every JSON/JS manifest by hand. It combines the public catalog, homepage manifest, import cache, Expo manifest, private delivery manifest, media sidecar, blocked/discarded tombstones, Unknown country assignments, compatibility Reserve data, and R2 upload/delete logs.
 
 ```bash
 python3 scripts/build_photo_state_db.py
@@ -213,7 +213,7 @@ node scripts/generate_social_post_packages.mjs --dry-run
 
 ## Owner Title / Keyword Review Queue
 
-`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` and the proposal state flag `Title_Keywords_Proposed` for manual Owner review. It writes proposals and proposal-state tracking to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify JPG/source embedded metadata.
+`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` and the proposal state flag `Title_Keywords_Proposed` for manual Owner review. It writes proposals and proposal-state tracking to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify source-file embedded metadata.
 
 Generate (nightly batch):
 
@@ -230,14 +230,14 @@ Review on localhost:
 
 Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write/merge approvals, rejections, and blocked rows into an audit JSON under `assets/owner-actions/title-keyword-review-queue/`; saved rows are filtered out when the page is opened again. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through `assets/owner-actions/keyword-blacklist.json` before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections are also recorded in `proposed-state.json` for priority rework.
 
-The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/*.tsv`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite JPG/source embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
+The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/*.tsv`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite source-file embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 
 ## R2 Media Sync
 
 `sync_r2_media.py` prepares the Cloudflare R2 upload sets for the post-GitHub media layout:
 
 - public watermarked photo previews go to `photosbyelie-public` under `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`
-- future public watermarked video detail previews go to `photosbyelie-public` under `expo/<photo-id>_short_5s_720p.mp4`
+- public watermarked video detail previews go to `photosbyelie-public` under `expo/<photo-id>_short_5s_720p.mp4`
 - local import-cache and current catalog previews share that same public prefix because Reserve disappears from the cloud model and country/gallery origin lives in metadata
 - private developed masters are moving to `photosbyelie-private` under `masters/<photo-id>.<original-format>`
 - private photo JPG deliverables remain sellable at 6 MP, 3 MP, and 1 MP; the target keys are `renders/<photo-id>_6mp.jpg`, `renders/<photo-id>_3mp.jpg`, and `renders/<photo-id>_1mp.jpg`

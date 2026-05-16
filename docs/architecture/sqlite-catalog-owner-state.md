@@ -301,4 +301,4 @@ to:
 masters/<media_id>.<original_format>
 ```
 
-and keep old keys temporarily. Public photo previews at `expo/<media_id>_900.jpg` and `expo/<media_id>_1800.jpg` remain first-class assets. Private photo render triplets should be copied from the old nested keys to the flatter `renders/<media_id>_{1,3,6}mp.jpg` keys and kept in both places until the runtime no longer references the old keys.
+and keep old keys temporarily. Public preview assets remain first-class at `expo/<media_id>_900.jpg` for photo/video gallery previews, `expo/<media_id>_1800.jpg` for photo detail previews, and `expo/<media_id>_short_5s_720p.mp4` for video detail previews. Private photo render triplets should be copied from the old nested keys to the flatter `renders/<media_id>_{1,3,6}mp.jpg` keys and kept in both places until the runtime no longer references the old keys.

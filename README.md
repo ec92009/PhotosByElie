@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v76.19`
+- Current visible version: `v77.1`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -16,8 +16,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
 - `owner-review.html`: shared localhost-only Owner review shell for Unknown classification, Waste Basket review, and Title/Keywords review
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
-- `basket.html`: localStorage-backed static basket page with a sticky total band
-- `liked.html`: localStorage-backed liked photos page; basketed photos are automatically liked
+- `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
+- `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
 - `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, and R2 maintenance
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
@@ -73,14 +73,14 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Featured on Pinterest section. These campaigns are durable first-party landing pages for Pinterest/social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
-- The full public catalog currently still runs through TSV shards under `assets/catalog/`. The next catalog direction is `assets/catalog/photosbyelie.sqlite`, with compact integer lookup ids for controlled vocabulary fields and TSV/JSON kept only as compatibility exports until the browser and tooling paths are switched.
+- The full public catalog currently still runs through TSV shards under `assets/catalog/`. The next catalog direction is `assets/catalog/photosbyelie.sqlite`, with compact integer lookup ids for controlled vocabulary fields and TSV/JSON kept only as compatibility exports until the browser and tooling paths are switched. Current active public catalog count is `5,827` media rows.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
 - Gallery pages load the publishable Expo subset from `assets/catalog/*.tsv` through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
 - Public previews currently resolve directly through the public R2 `r2.dev` media endpoint backed by `photosbyelie-public`; move `publicBaseUrl` to a custom media domain when that is attached.
 - Local preview asset folders are retired. Public previews should resolve from R2/CDN keys; use `node scripts/validate_publish.js --external-media` for that publishing mode.
 - R2 media uploads should run through the lock-guarded sweep wrapper, `scripts/run_cloud_media_sweep.zsh`, or otherwise one lane at a time. The wrapper uses `.review-logs/cloud-media-sweep.lock` so the daily automation and manual runs do not race each other.
-- Public R2 sync and Saturn imports skip IDs from Waste Basket and discarded tombstones, so rejected or owner-discarded photos are not reintroduced by later bulk uploads.
+- Public R2 sync and Saturn imports skip IDs from Waste Basket and discarded tombstones, so rejected or owner-discarded photos are not reintroduced by later bulk uploads. Publish validation now fails if a discarded/tombstoned id leaks into the public catalog or `assets/expo-manifest.json`.
 - `tmp/import-cache` holds disposable import manifests and watermarked derivative files on their way to R2. Reserve is a manifest-only owner state, not a local preview folder. Waste Basket is a blacklist/review state, not a file location.
 - Imports scan developed JPG/TIFF photo exports and MOV/MP4/M4V video exports, keep Camera photos at Lightroom green label/rating 4+, treat Apple Photos album exports under `/Volumes/Saturn/Pictures/LR/Apple Photo Albums` as selected by folder membership, infer country/AI/Unknown buckets, and write watermarked photo `*_900.jpg`/`*_1800.jpg` pairs plus video `*_900.jpg`/`*_short_5s_720p.mp4` previews into `tmp/import-cache` before upload. RAW/DNG/NEF files are not public-site or cloud-storage inputs.
 - On localhost, `H` or `X` sends a live-gallery photo to the Waste Basket by adding it to the master blacklist, `U` undoes the most recent basket action, and `P` on the Waste Basket page puts a basketed photo back by removing it from the blacklist. Purging Waste Basket R2 copies deletes the media objects only and writes permanent tombstones; a banned photo stays banned. `D` is the stronger discard action: it removes the photo from active catalog state, writes `assets/discarded/discarded-photo-ids.json`, and queues R2 deletion for matching public previews, private masters, and private render JPGs.
@@ -113,8 +113,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.
 - Basket rail actions include both Open basket and Liked.
-- The basket page has a reduced hero and a sticky product total band that remains visible while scrolling.
-- The liked page mirrors the basket layout, but rows come from hearted photos and totals count only selected products.
+- The basket page has a reduced hero, fixed header action controls, and a pinned product total band that remains visible while scrolling.
+- The liked page mirrors the basket layout, with fixed header action controls; rows come from hearted photos and totals count only selected products.
 - The liked page includes bulk selectors for Full, JPG 6 MP, JPG 3 MP, and JPG 1 MP resolution choices.
 - Public-facing pages share a client-side English/French/Spanish translation layer. The header language button cycles languages, persists the selected state, and translates public navigation, homepage copy, gallery controls/statuses, detail actions, basket/liked flows, and order-status copy. Owner-only tools remain English; the Owner language button beeps instead of switching.
 - Detail pages start with no product checked unless that photo is already in the basket.

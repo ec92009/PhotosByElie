@@ -6,14 +6,14 @@ This note captures the "thinking out loud" discussion about whether PhotosByElie
 
 ## Current Pressure
 
-The current project shape bends around GitHub limits because GitHub Pages is doing two jobs:
+The current project shape bends around GitHub limits because GitHub Pages used to do two jobs:
 
 - Hosting the static site code.
 - Hosting some public media assets.
 
-The first job is a good fit. The second job is the source of the acrobatics.
+The first job is a good fit. The second job is the source of the acrobatics and has moved to R2 for public previews and private delivery assets.
 
-GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Media binaries do not need to live in GitHub long term. The current public catalog is still TSV/bootstrap-backed, but the accepted migration target is a single public SQLite catalog file.
+GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Media binaries do not need to live in GitHub. The current public catalog is still TSV/bootstrap-backed, but the accepted migration target is a single public SQLite catalog file. Discarded/tombstoned media must leave the public catalog as soon as it is banned; public metadata must never point at R2 objects that cleanup intentionally deleted.
 
 ## Future Media States
 

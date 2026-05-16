@@ -5,22 +5,33 @@ Date: 2026-05-16
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Current visible build: `v76.19`
+- Current visible build: `v77.1`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
-- Public catalog currently still runs through TSV compatibility files, but the accepted direction is a committed SQLite catalog at `assets/catalog/photosbyelie.sqlite`.
-- Owner-only workflow state should move into a local ignored SQLite database at `assets/owner-actions/Owner.sqlite`.
-- `Owner.sqlite` is ignored by Git; public catalog SQLite is intended to be tracked.
-- Public preview media and private delivery media live in Cloudflare R2, not in Git.
+- Public catalog currently serves through TSV compatibility files, with a tracked compact SQLite catalog at `assets/catalog/photosbyelie.sqlite`.
+- Owner-only workflow state has a local ignored SQLite target at `assets/owner-actions/Owner.sqlite`.
+- Public preview media and private delivery media live in Cloudflare R2, not Git.
+- Latest pushed commits:
+  - `95c5a07f photosbyelie: keep commerce header controls fixed`
+  - `ef744dde photosbyelie: remove discarded previews from catalog`
+  - `bd40b229 photosbyelie: compact public catalog sqlite`
+  - `0ff44c75 photosbyelie: apply owner review fixes`
+  - `21387907 photosbyelie: remove stale photo-only media assumptions`
+  - `b657fff3 photosbyelie: add video-aware album import`
 
-## SQLite Decision
+## Source Of Truth Direction
 
-We designed and populated two databases:
+We identified a major weakness in the current storage/retrieval approach: several TSV, JSON, generated JS, and manifest files can all appear authoritative at once.
+
+Accepted direction:
 
 - `photosbyelie.sqlite`: public/deployable catalog truth.
 - `Owner.sqlite`: local/private Owner workflow truth.
+- TSV and JSON files remain compatibility exports until the browser, Worker, and Owner tools move to the database-backed path.
 
-The public catalog now has ten compact-id tables:
+The public catalog keeps `media_id` as the stable text identity because it drives URLs and R2 key conventions. Controlled values use short integer lookup ids. `media_items.keyword_ids` stores a comma-separated list of keyword integers.
+
+Current public SQLite tables:
 
 ```text
 collections
@@ -35,15 +46,38 @@ media_items
 media_assets
 ```
 
-Catalog schema rule accepted on 2026-05-16 and applied locally: keep `media_id`
-as the stable text identity, keep descriptive columns in the main `media_items`
-row, and turn controlled/repeated fields into short integer lookup references. That means
-`collection_id`, `camera_id`, `lens_id`, `media_type_id`, `source_origin_id`,
-`original_format_id`, `asset_type_id`, and `format_id` are integers. Keywords
-move to `keyword_terms`, and `media_items.keyword_ids` stores a comma-separated
-list of keyword integers.
+Current public SQLite counts:
 
-The local Owner database has seven workflow tables:
+```text
+collections:     9
+cameras:         12
+lenses:          18
+media_types:     2
+source_origins:  2
+formats:         6
+asset_types:     7
+keyword_terms:   3,112
+media_items:     5,827
+media_assets:    34,962
+```
+
+Current public collection counts:
+
+```text
+France:    289
+USA:       151
+Spain:     223
+Mexico:    2
+AI:        4,920
+Italy:     24
+Portugal:  216
+Slovakia:  2
+Total:     5,827
+```
+
+## Owner State Direction
+
+The local Owner DB is for private workflows that should not travel with the public site:
 
 ```text
 owner_settings
@@ -55,47 +89,13 @@ title_keyword_proposals
 title_keyword_decisions
 ```
 
-The split is intentional. The public catalog answers "what is the site/catalog now?" Owner.sqlite answers "what is pending, rejected, parked, proposed, or locally reviewed?"
+Owner title/keyword review needs explicit states for approved, rejected, pending/proposed, and parked. Parked is for rejected photos where current tooling cannot produce an acceptable title; parked rows should not block new proposal batches.
 
-## Populated Size Snapshot
+Approved title/keyword rows now apply approved metadata into generated catalog state and mark `Title_Keywords_Reviewed`. Rejected rows retain rework state. Empty approved titles are rejected rather than silently skipped.
 
-Main catalog database:
+## Media And Asset Model
 
-```text
-raw SQLite:         6.6 MiB
-gzip -9:            0.89 MiB
-brotli -11:         0.46 MiB
-current TSV gzip:   0.55 MiB
-```
-
-Owner database:
-
-```text
-Owner JSON set:    3.46 MiB
-Owner.sqlite:      1.74 MiB
-```
-
-Main-page first-load estimate:
-
-```text
-current main page with TSV:      about 1.59 MiB
-main page with SQLite catalog:   about 1.50 MiB
-delta:                           about -95 KiB compressed
-```
-
-This was accepted as more than good enough. Later pages should reopen the catalog from browser cache rather than download it again.
-
-## Data Findings
-
-- Catalog import produced 5,844 `media_items`, all currently photos.
-- The compact catalog has 3,113 unique keyword terms, with each media row storing comma-separated keyword ids.
-- Owner import produced 662 title/keyword queue rows, 500 proposal rows, and 398 decision rows.
-- 162 Owner queue rows refer to batch ids whose proposal details are no longer present in the current batch JSON files. This confirms the existing alternate-source-of-truth weakness.
-- Older proposal batches contain empty proposed titles. Owner.sqlite was relaxed enough to preserve that historical bad state instead of pretending it never happened.
-
-## Asset Model
-
-The accepted future asset types are:
+Accepted asset types:
 
 ```text
 still_900
@@ -107,7 +107,7 @@ jpeg_6mp
 full
 ```
 
-Derived R2 keys:
+Target R2 key conventions:
 
 ```text
 still_900       -> expo/<media_id>_900.jpg
@@ -127,74 +127,57 @@ For photos:
 
 For videos:
 
-- gallery uses `still_900`, generated at 10% into the source;
+- gallery uses `still_900`, generated around 10% into the source;
 - detail uses `short_5s_720p`, a 5-second watermarked 720p clip;
 - buyer delivery is the original/full asset only.
 
-The private photo render triplets (`jpg-1mp`, `jpg-3mp`, `jpg-6mp`) are still sellable deliverables. Current R2 keys are nested under `renders/<media_id>/<original-file>-jpg-{1,3,6}mp.jpg`; the target convention is the flatter `renders/<media_id>_{1,3,6}mp.jpg`. Keep old keys until checkout/delivery uses the new keys and a migration audit passes.
+Videos are now first-class in the import model. The Cordoba Apple Photos album work established the video path. Face albums remain off limits.
 
-## Latest Owner Fixes
+## R2 And Tombstone Rules
 
-- Title/keyword approval saves now apply approved titles and keywords directly into generated catalog metadata/state files, add `Title_Keywords_Reviewed`, and reject empty approved titles instead of silently skipping them.
-- The 2026-05-16 Owner title/keyword review file has 44 approvals applied and 10 rejections preserved for rework state.
-- Owner price controls now include video tiers at a flat `$20` default for every length bucket; this is deliberately ready for future length-based pricing.
-- Waste Basket/R2 cleanup wording now says what it actually does: purge R2 copies while preserving ban/tombstone records. A banned photo stays banned.
-- Cloud media sweep progress now reports banned-photo R2 deletion counts and a countdown instead of a vague running bar.
+R2 has no atomic rename. Safe moves are copy, verify, record, then delete old keys only after code/manifests no longer need them.
 
-## R2 Migration
+Waste Basket/discarded photos are permanent tombstones unless explicitly put back before purge. A banned photo stays banned.
 
-R2 has no atomic rename. The safe move is:
+The public preview incident showed the consequence of alternate truth sources: 17 tombstoned photos were still in the public catalog after their R2 preview files had been deleted. The fix removed those 17 rows from public catalog state and added validation so discarded/tombstoned ids cannot leak into public catalog or `assets/expo-manifest.json` again.
 
-```text
-CopyObject old_key -> new_key
-HEAD/verify new_key
-record success
-delete old_key only after code and manifests no longer need it
-```
+## Public Site Fixes
 
-Phase 1 should copy private masters from:
-
-```text
-masters/<media_id>/<original_file>
-```
-
-to:
-
-```text
-masters/<media_id>.<format extension>
-```
-
-and keep old keys temporarily. Public preview assets stay first-class at `expo/<media_id>_900.jpg` for photo/video gallery previews, `expo/<media_id>_1800.jpg` for photo detail previews, and `expo/<media_id>_short_5s_720p.mp4` for video detail previews. Copy private photo render triplets to `renders/<media_id>_{1,3,6}mp.jpg` and keep the old nested keys temporarily.
-
-## Current Commit Scope
-
-The intended commit for this thread should include:
-
-- refreshed docs;
-- `SUMMARY.md`;
-- `.gitignore` rule for local Owner.sqlite;
-- populated public `assets/catalog/photosbyelie.sqlite`;
-- R2 migration tooling if added.
-
-It should not include ignored `assets/owner-actions/Owner.sqlite`.
+- Public site is now `v77.1`.
+- The USA gallery missing-preview issue is fixed by removing tombstoned catalog rows rather than re-uploading banned media.
+- Liked and Basket pages now use the same fixed-header behavior as gallery/detail pages.
+- Header action buttons for liked, basket, checkout, language, and theme stay frozen during mobile scroll.
+- The Liked/Basket total band is fixed below the measured header height instead of relying on a hard-coded mobile offset.
 
 ## Verification
 
-After populating the databases:
+Recent verification:
 
 ```text
 PRAGMA integrity_check: ok
-foreign_key_check: 0 violations
-npm test: pass
+catalog rows: 5,827
+R2 complete-pair misses: 0
 npm run validate: pass
+npm test: pass, 14 tests
 ```
 
-## Next Work
+GitHub Pages was checked after deploy:
 
-1. Make SQLite generation repeatable instead of one-off.
-2. Teach the public site to load `photosbyelie.sqlite` or generated output from it.
-3. Move Owner title/keyword review and country assignment workflows onto `Owner.sqlite`.
-4. Turn TSV and Owner JSON into compatibility exports, then retire them.
-5. Copy/verify R2 private masters into the new flat `masters/<media_id>.<format extension>` keys.
-6. Update Worker checkout/delivery to use four photo flavors and full-original-only video delivery.
-7. Audit and delete old nested render-triplet keys only after the runtime no longer references them.
+```text
+VERSION: 77.1
+liked.html body: class="commerce-page" data-fixed-header
+basket.html body: class="commerce-page" data-fixed-header
+photos.css: commerce fixed-header rules live
+```
+
+## Current Backlog Themes
+
+The highest-value work is now:
+
+1. Move runtime catalog loading from TSV compatibility exports to `photosbyelie.sqlite`.
+2. Move Owner review state from JSON batches into `Owner.sqlite`.
+3. Add a parked state for title/keyword rows that current tooling cannot title well.
+4. Complete R2 key migration to flat master/render conventions.
+5. Prove Stripe checkout in test mode.
+6. Make checkout/order storage production-durable.
+7. Keep curation focused on sellable catalog quality and launch readiness.

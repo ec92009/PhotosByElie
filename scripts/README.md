@@ -69,7 +69,7 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Waste Basket and discarded/tombstone ids are kept out of public metadata so the site never points at intentionally deleted R2 previews. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -148,7 +148,7 @@ Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keyword
 
 The public site still exposes the same `window.photosByElieData` browser contract, but the migration target is now a committed public SQLite catalog at `assets/catalog/photosbyelie.sqlite` plus an ignored local Owner workflow database at `assets/owner-actions/Owner.sqlite`. TSV and JSON state files remain compatibility exports until the site, Worker, and Owner tools have moved to the SQLite source-of-truth path.
 
-The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
+The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`; the current active public database has `5,827` `media_items` and `34,962` `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
 
 The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
 
@@ -166,7 +166,7 @@ Stop it with `Ctrl-C`. The database lives under `tmp/`, so it is disposable and 
 
 ## Publish Validation
 
-`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the catalog TSV/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
+`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the catalog TSV/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, discarded/tombstone exclusions, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
 
 The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` still carries the lightweight helper functions that infer the browser-locale measurement system and expose pricing helpers. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated catalog TSV/bootstrap files keep the public checkout model intact.
 

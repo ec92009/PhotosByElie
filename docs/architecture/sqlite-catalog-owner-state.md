@@ -48,9 +48,9 @@ media_types:     2
 source_origins:  2
 formats:         6
 asset_types:     7
-keyword_terms:   3,113
-media_items:     5,844
-media_assets:    35,064
+keyword_terms:   3,112
+media_items:     5,827
+media_assets:    34,962
 ```
 
 Size check from the compact-id rebuild:
@@ -62,7 +62,13 @@ SQLite brotli -11:  0.46 MiB
 Current TSV gzip:   0.55 MiB
 ```
 
-The brotli-compressed SQLite catalog is now smaller than the current gzipped TSV
+The active count dropped from 5,844 to 5,827 after 17 discarded/tombstoned rows
+were removed from the public catalog. Those media objects had already been
+purged from R2, so keeping them in public metadata caused missing-preview cards.
+The validator now rejects discarded/tombstoned ids in the public catalog and
+Expo manifest.
+
+The brotli-compressed SQLite catalog is smaller than the current gzipped TSV
 catalog. Later pages should reopen the same database from browser cache instead
 of downloading catalog data again.
 

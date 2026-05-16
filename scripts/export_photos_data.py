@@ -38,6 +38,8 @@ IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 EXPO_MANIFEST_PATH = Path("assets/expo-manifest.json")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
+DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
+DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
 
 
 def compact_catalog_tsv(repo_root: Path) -> None:
@@ -533,6 +535,31 @@ def hidden_ids_from_current_state(repo_root: Path) -> set[str]:
     return hidden_ids
 
 
+def discarded_ids_from_payload(payload: object) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    discarded_ids: set[str] = set()
+    for key in ("photo_ids", "discardedPhotoIds"):
+        values = payload.get(key)
+        if isinstance(values, list):
+            discarded_ids.update(str(value) for value in values if str(value).strip())
+    photos = payload.get("photos")
+    if isinstance(photos, list):
+        for photo in photos:
+            if isinstance(photo, dict) and str(photo.get("id") or "").strip():
+                discarded_ids.add(str(photo["id"]))
+            elif str(photo).strip():
+                discarded_ids.add(str(photo))
+    return discarded_ids
+
+
+def discarded_ids_from_current_state(repo_root: Path) -> set[str]:
+    discarded_ids: set[str] = set()
+    for relative_path in (DISCARDED_TOMBSTONE_PATH, DISCARDED_MEDIA_MANIFEST_PATH):
+        discarded_ids.update(discarded_ids_from_payload(load_json(repo_root / relative_path, {})))
+    return discarded_ids
+
+
 def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
     value = payload.get("expo_state")
     if not isinstance(value, dict):
@@ -977,7 +1004,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     review_payload = load_blacklist_payload(args.review_snapshot)
-    hidden_ids = hidden_ids_from_current_state(repo_root) | blacklist_ids_from_payload(review_payload)
+    hidden_ids = (
+        hidden_ids_from_current_state(repo_root)
+        | discarded_ids_from_current_state(repo_root)
+        | blacklist_ids_from_payload(review_payload)
+    )
     country_assignments = country_assignments_from_owner_index(repo_root)
     country_assignments.update(country_assignments_from_payload(review_payload))
     keyword_blacklist = load_keyword_blacklist(repo_root / args.keyword_blacklist)

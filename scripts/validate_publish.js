@@ -89,6 +89,45 @@ const loadHomeData = () => {
   return sandbox.window.photosByElieHomeData || {};
 };
 
+const readJson = (target, fallback = {}) => {
+  try {
+    return JSON.parse(fs.readFileSync(target, "utf8"));
+  } catch {
+    return fallback;
+  }
+};
+
+const discardedIdsFromPayload = (payload) => {
+  const ids = new Set();
+  if (!payload || typeof payload !== "object") return ids;
+  ["photo_ids", "discardedPhotoIds"].forEach((key) => {
+    if (Array.isArray(payload[key])) {
+      payload[key].forEach((value) => {
+        const id = String(value || "").trim();
+        if (id) ids.add(id);
+      });
+    }
+  });
+  if (Array.isArray(payload.photos)) {
+    payload.photos.forEach((photo) => {
+      const id = String((photo && typeof photo === "object" ? photo.id : photo) || "").trim();
+      if (id) ids.add(id);
+    });
+  }
+  return ids;
+};
+
+const loadDiscardedIds = () => {
+  const ids = new Set();
+  [
+    path.join(repoRoot, "assets", "discarded", "discarded-photo-ids.json"),
+    path.join(repoRoot, "assets", "discarded-media-manifest.json"),
+  ].forEach((target) => {
+    discardedIdsFromPayload(readJson(target)).forEach((id) => ids.add(id));
+  });
+  return ids;
+};
+
 const cleanLocalReference = (reference) => String(reference || "")
   .replace(/[?#].*$/, "")
   .replace(/^\.\//, "");
@@ -117,6 +156,7 @@ const validate = () => {
   const seenPhotoIds = new Map();
   const seenPublicPreview = new Map();
   const resolutionIds = new Set();
+  const discardedIds = loadDiscardedIds();
 
   resolutions.forEach((resolution) => {
     if (!resolution?.id) errors.push("Resolution option is missing an id.");
@@ -155,6 +195,9 @@ const validate = () => {
         errors.push(`Duplicate photo id ${photo.id} in ${collectionKey}; first seen in ${seenPhotoIds.get(photo.id)}.`);
       } else {
         seenPhotoIds.set(photo.id, collectionKey);
+      }
+      if (discardedIds.has(photo.id)) {
+        errors.push(`${photo.id} is discarded/tombstoned and must not be in the public catalog.`);
       }
       if (!photo.title) errors.push(`${photo.id} is missing a title.`);
       if (!externalMedia && !photo.gallerySrc) errors.push(`${photo.id} is missing gallerySrc.`);
@@ -309,6 +352,15 @@ const validate = () => {
       errors.push(`assets/media-sidecar.json is not valid JSON: ${error.message}`);
     }
   }
+
+  const expoManifestPath = path.join(repoRoot, "assets", "expo-manifest.json");
+  const expoManifest = readJson(expoManifestPath, {});
+  (Array.isArray(expoManifest.photos) ? expoManifest.photos : []).forEach((photo) => {
+    const photoId = String(photo?.id || "").trim();
+    if (photoId && discardedIds.has(photoId)) {
+      errors.push(`${photoId} is discarded/tombstoned and must not be in assets/expo-manifest.json.`);
+    }
+  });
 
   return { collections, errors, warnings };
 };

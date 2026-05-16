@@ -3,7 +3,7 @@
   "publicPreviewKeyScheme": "expo/<photo-id>_<900|1800>.jpg",
   "privateMasterKeyScheme": "masters/<photo-id>/<original-file>",
   "privateRenderKeyScheme": "renders/<photo-id>/<original-file>-<product-id>.jpg",
-  "photosCount": 5844,
+  "photosCount": 5827,
   "photos": {
     "20220506-160631-03403-51426edaac": {
       "id": "20220506-160631-03403-51426edaac",
@@ -3862,35 +3862,6 @@
         }
       }
     },
-    "20110106-0650-15111-66ae093dc8": {
-      "id": "20110106-0650-15111-66ae093dc8",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110106 0650 15111.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110106 0650 15111.jpg",
-        "type": "JPG",
-        "bytes": 2038037
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110106-0650-15111-66ae093dc8_900.jpg",
-        "detailKey": "expo/20110106-0650-15111-66ae093dc8_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110106-0650-15111-66ae093dc8/20110106 0650 15111.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110106-0650-15111-66ae093dc8/20110106-0650-15111.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110106-0650-15111-66ae093dc8/20110106-0650-15111.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110106-0650-15111-66ae093dc8/20110106-0650-15111.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
     "20110106-0650-16478-1522b0ac25": {
       "id": "20110106-0650-16478-1522b0ac25",
       "collectionKey": "france",
@@ -4062,35 +4033,6 @@
           "jpg-6mp": "renders/20110106-0635-15715-8eeb2ce0b5/20110106-0635-15715.jpg-jpg-6mp.jpg",
           "jpg-3mp": "renders/20110106-0635-15715-8eeb2ce0b5/20110106-0635-15715.jpg-jpg-3mp.jpg",
           "jpg-1mp": "renders/20110106-0635-15715-8eeb2ce0b5/20110106-0635-15715.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20110106-0634-28072-6c101f40de": {
-      "id": "20110106-0634-28072-6c101f40de",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110106 0634 28072.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110106 0634 28072.jpg",
-        "type": "JPG",
-        "bytes": 2083647
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110106-0634-28072-6c101f40de_900.jpg",
-        "detailKey": "expo/20110106-0634-28072-6c101f40de_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110106-0634-28072-6c101f40de/20110106 0634 28072.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110106-0634-28072-6c101f40de/20110106-0634-28072.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110106-0634-28072-6c101f40de/20110106-0634-28072.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110106-0634-28072-6c101f40de/20110106-0634-28072.jpg-jpg-1mp.jpg"
         }
       }
     },
@@ -4645,35 +4587,6 @@
         }
       }
     },
-    "20110106-0610-16019-0c5b0d4ad5": {
-      "id": "20110106-0610-16019-0c5b0d4ad5",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110106 0610 16019.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110106 0610 16019.jpg",
-        "type": "JPG",
-        "bytes": 2020519
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110106-0610-16019-0c5b0d4ad5_900.jpg",
-        "detailKey": "expo/20110106-0610-16019-0c5b0d4ad5_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110106-0610-16019-0c5b0d4ad5/20110106 0610 16019.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110106-0610-16019-0c5b0d4ad5/20110106-0610-16019.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110106-0610-16019-0c5b0d4ad5/20110106-0610-16019.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110106-0610-16019-0c5b0d4ad5/20110106-0610-16019.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
     "20110106-0609-16534-817c01ca21": {
       "id": "20110106-0609-16534-817c01ca21",
       "collectionKey": "france",
@@ -4729,35 +4642,6 @@
           "jpg-6mp": "renders/20110106-0608-15403-88a884278b/20110106-0608-15403.jpg-jpg-6mp.jpg",
           "jpg-3mp": "renders/20110106-0608-15403-88a884278b/20110106-0608-15403.jpg-jpg-3mp.jpg",
           "jpg-1mp": "renders/20110106-0608-15403-88a884278b/20110106-0608-15403.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20110106-0604-15760-b33d411aab": {
-      "id": "20110106-0604-15760-b33d411aab",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110106 0604 15760.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110106 0604 15760.jpg",
-        "type": "JPG",
-        "bytes": 1931536
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110106-0604-15760-b33d411aab_900.jpg",
-        "detailKey": "expo/20110106-0604-15760-b33d411aab_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110106-0604-15760-b33d411aab/20110106 0604 15760.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110106-0604-15760-b33d411aab/20110106-0604-15760.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110106-0604-15760-b33d411aab/20110106-0604-15760.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110106-0604-15760-b33d411aab/20110106-0604-15760.jpg-jpg-1mp.jpg"
         }
       }
     },
@@ -5657,64 +5541,6 @@
           "jpg-6mp": "renders/20110106-0526-28042-2d67946dcb/20110106-0526-28042.jpg-jpg-6mp.jpg",
           "jpg-3mp": "renders/20110106-0526-28042-2d67946dcb/20110106-0526-28042.jpg-jpg-3mp.jpg",
           "jpg-1mp": "renders/20110106-0526-28042-2d67946dcb/20110106-0526-28042.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20110105-0224-16002-8bfdc2da47": {
-      "id": "20110105-0224-16002-8bfdc2da47",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110105 0224 16002.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110105 0224 16002.jpg",
-        "type": "JPG",
-        "bytes": 2059093
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110105-0224-16002-8bfdc2da47_900.jpg",
-        "detailKey": "expo/20110105-0224-16002-8bfdc2da47_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110105-0224-16002-8bfdc2da47/20110105 0224 16002.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110105-0224-16002-8bfdc2da47/20110105-0224-16002.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110105-0224-16002-8bfdc2da47/20110105-0224-16002.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110105-0224-16002-8bfdc2da47/20110105-0224-16002.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20110104-0723-16703-6059a0763e": {
-      "id": "20110104-0723-16703-6059a0763e",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110104 0723 16703.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110104 0723 16703.jpg",
-        "type": "JPG",
-        "bytes": 1966170
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110104-0723-16703-6059a0763e_900.jpg",
-        "detailKey": "expo/20110104-0723-16703-6059a0763e_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110104-0723-16703-6059a0763e/20110104 0723 16703.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110104-0723-16703-6059a0763e/20110104-0723-16703.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110104-0723-16703-6059a0763e/20110104-0723-16703.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110104-0723-16703-6059a0763e/20110104-0723-16703.jpg-jpg-1mp.jpg"
         }
       }
     },
@@ -8560,35 +8386,6 @@
         }
       }
     },
-    "20110103-0618-16449-81310cae1b": {
-      "id": "20110103-0618-16449-81310cae1b",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2010-2014/20110103 0618 16449.jpg",
-      "sourceFile": {
-        "path": "2010-2014/20110103 0618 16449.jpg",
-        "type": "JPG",
-        "bytes": 1861649
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20110103-0618-16449-81310cae1b_900.jpg",
-        "detailKey": "expo/20110103-0618-16449-81310cae1b_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20110103-0618-16449-81310cae1b/20110103 0618 16449.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20110103-0618-16449-81310cae1b/20110103-0618-16449.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20110103-0618-16449-81310cae1b/20110103-0618-16449.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20110103-0618-16449-81310cae1b/20110103-0618-16449.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
     "20190723-1419-16523-3d4da421c4": {
       "id": "20190723-1419-16523-3d4da421c4",
       "collectionKey": "usa",
@@ -8731,122 +8528,6 @@
           "jpg-6mp": "renders/20180813-0936-18935-ff4ebcc12a/20180813-0936-18935.jpg-jpg-6mp.jpg",
           "jpg-3mp": "renders/20180813-0936-18935-ff4ebcc12a/20180813-0936-18935.jpg-jpg-3mp.jpg",
           "jpg-1mp": "renders/20180813-0936-18935-ff4ebcc12a/20180813-0936-18935.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20180731-1238-42139-523fc863bd": {
-      "id": "20180731-1238-42139-523fc863bd",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20180731 1238 42139.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20180731 1238 42139.jpg",
-        "type": "JPG",
-        "bytes": 3795651
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20180731-1238-42139-523fc863bd_900.jpg",
-        "detailKey": "expo/20180731-1238-42139-523fc863bd_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20180731-1238-42139-523fc863bd/20180731 1238 42139.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20180731-1238-42139-523fc863bd/20180731-1238-42139.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20180731-1238-42139-523fc863bd/20180731-1238-42139.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20180731-1238-42139-523fc863bd/20180731-1238-42139.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20180731-1227-42017-4a4d4f3d8a": {
-      "id": "20180731-1227-42017-4a4d4f3d8a",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20180731 1227 42017.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20180731 1227 42017.jpg",
-        "type": "JPG",
-        "bytes": 2141160
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20180731-1227-42017-4a4d4f3d8a_900.jpg",
-        "detailKey": "expo/20180731-1227-42017-4a4d4f3d8a_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20180731-1227-42017-4a4d4f3d8a/20180731 1227 42017.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20180731-1227-42017-4a4d4f3d8a/20180731-1227-42017.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20180731-1227-42017-4a4d4f3d8a/20180731-1227-42017.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20180731-1227-42017-4a4d4f3d8a/20180731-1227-42017.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20180731-1226-42081-faf34323e9": {
-      "id": "20180731-1226-42081-faf34323e9",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20180731 1226 42081.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20180731 1226 42081.jpg",
-        "type": "JPG",
-        "bytes": 1566514
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20180731-1226-42081-faf34323e9_900.jpg",
-        "detailKey": "expo/20180731-1226-42081-faf34323e9_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20180731-1226-42081-faf34323e9/20180731 1226 42081.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20180731-1226-42081-faf34323e9/20180731-1226-42081.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20180731-1226-42081-faf34323e9/20180731-1226-42081.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20180731-1226-42081-faf34323e9/20180731-1226-42081.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20180731-1156-42014-420ac2b2d2": {
-      "id": "20180731-1156-42014-420ac2b2d2",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20180731 1156 42014.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20180731 1156 42014.jpg",
-        "type": "JPG",
-        "bytes": 2267274
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20180731-1156-42014-420ac2b2d2_900.jpg",
-        "detailKey": "expo/20180731-1156-42014-420ac2b2d2_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20180731-1156-42014-420ac2b2d2/20180731 1156 42014.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20180731-1156-42014-420ac2b2d2/20180731-1156-42014.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20180731-1156-42014-420ac2b2d2/20180731-1156-42014.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20180731-1156-42014-420ac2b2d2/20180731-1156-42014.jpg-jpg-1mp.jpg"
         }
       }
     },
@@ -12620,151 +12301,6 @@
         }
       }
     },
-    "20161018-1611-15583-ebcf17ac43": {
-      "id": "20161018-1611-15583-ebcf17ac43",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20161018 1611 15583.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20161018 1611 15583.jpg",
-        "type": "JPG",
-        "bytes": 3766852
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20161018-1611-15583-ebcf17ac43_900.jpg",
-        "detailKey": "expo/20161018-1611-15583-ebcf17ac43_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20161018-1611-15583-ebcf17ac43/20161018 1611 15583.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20161018-1611-15583-ebcf17ac43/20161018-1611-15583.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20161018-1611-15583-ebcf17ac43/20161018-1611-15583.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20161018-1611-15583-ebcf17ac43/20161018-1611-15583.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20161005-0851-16297-832c828571": {
-      "id": "20161005-0851-16297-832c828571",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20161005 0851 16297.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20161005 0851 16297.jpg",
-        "type": "JPG",
-        "bytes": 4930354
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20161005-0851-16297-832c828571_900.jpg",
-        "detailKey": "expo/20161005-0851-16297-832c828571_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20161005-0851-16297-832c828571/20161005 0851 16297.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20161005-0851-16297-832c828571/20161005-0851-16297.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20161005-0851-16297-832c828571/20161005-0851-16297.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20161005-0851-16297-832c828571/20161005-0851-16297.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20160927-1606-16583-39cfdc87d1": {
-      "id": "20160927-1606-16583-39cfdc87d1",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20160927 1606 16583.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20160927 1606 16583.jpg",
-        "type": "JPG",
-        "bytes": 4242776
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20160927-1606-16583-39cfdc87d1_900.jpg",
-        "detailKey": "expo/20160927-1606-16583-39cfdc87d1_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20160927-1606-16583-39cfdc87d1/20160927 1606 16583.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20160927-1606-16583-39cfdc87d1/20160927-1606-16583.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20160927-1606-16583-39cfdc87d1/20160927-1606-16583.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20160927-1606-16583-39cfdc87d1/20160927-1606-16583.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20160927-0851-20718-57ee626a89": {
-      "id": "20160927-0851-20718-57ee626a89",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20160927 0851 20718.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20160927 0851 20718.jpg",
-        "type": "JPG",
-        "bytes": 4343209
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20160927-0851-20718-57ee626a89_900.jpg",
-        "detailKey": "expo/20160927-0851-20718-57ee626a89_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20160927-0851-20718-57ee626a89/20160927 0851 20718.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20160927-0851-20718-57ee626a89/20160927-0851-20718.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20160927-0851-20718-57ee626a89/20160927-0851-20718.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20160927-0851-20718-57ee626a89/20160927-0851-20718.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20160926-0800-20396-30b40cffa4": {
-      "id": "20160926-0800-20396-30b40cffa4",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20160926 0800 20396.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20160926 0800 20396.jpg",
-        "type": "JPG",
-        "bytes": 3212522
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20160926-0800-20396-30b40cffa4_900.jpg",
-        "detailKey": "expo/20160926-0800-20396-30b40cffa4_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20160926-0800-20396-30b40cffa4/20160926 0800 20396.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20160926-0800-20396-30b40cffa4/20160926-0800-20396.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20160926-0800-20396-30b40cffa4/20160926-0800-20396.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20160926-0800-20396-30b40cffa4/20160926-0800-20396.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
     "20160925-1606-06527-pano-92f9bfd02b": {
       "id": "20160925-1606-06527-pano-92f9bfd02b",
       "collectionKey": "usa",
@@ -12907,35 +12443,6 @@
           "jpg-6mp": "renders/20160918-1707-18404-3c0f041a87/20160918-1707-18404.jpg-jpg-6mp.jpg",
           "jpg-3mp": "renders/20160918-1707-18404-3c0f041a87/20160918-1707-18404.jpg-jpg-3mp.jpg",
           "jpg-1mp": "renders/20160918-1707-18404-3c0f041a87/20160918-1707-18404.jpg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "20160916-1609-06444-6a9e325351": {
-      "id": "20160916-1609-06444-6a9e325351",
-      "collectionKey": "usa",
-      "collectionTitle": "USA",
-      "sourcePath": "2015-2019/20160916 1609 06444.jpg",
-      "sourceFile": {
-        "path": "2015-2019/20160916 1609 06444.jpg",
-        "type": "JPG",
-        "bytes": 2703564
-      },
-      "sourceMode": "reserve",
-      "originalGalleryCountry": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/20160916-1609-06444-6a9e325351_900.jpg",
-        "detailKey": "expo/20160916-1609-06444-6a9e325351_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/20160916-1609-06444-6a9e325351/20160916 1609 06444.jpg",
-        "renderKeys": {
-          "jpg-6mp": "renders/20160916-1609-06444-6a9e325351/20160916-1609-06444.jpg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/20160916-1609-06444-6a9e325351/20160916-1609-06444.jpg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/20160916-1609-06444-6a9e325351/20160916-1609-06444.jpg-jpg-1mp.jpg"
         }
       }
     },

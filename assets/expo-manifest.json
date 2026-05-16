@@ -5,7 +5,7 @@
   "publish_scope": "all-eligible",
   "selection_mode": "live-local-action",
   "seed": null,
-  "photos_count": 5844,
+  "photos_count": 5827,
   "reserve_counts": {
     "france": 0,
     "usa": 0,
@@ -18,8 +18,8 @@
     "unknown": 0
   },
   "hidden_counts": {
-    "france": 0,
-    "usa": 0,
+    "france": 7,
+    "usa": 10,
     "spain": 0,
     "mexico": 0,
     "ai": 0,
@@ -1892,20 +1892,6 @@
       }
     },
     {
-      "id": "20110106-0650-15111-66ae093dc8",
-      "relative_path": "2010-2014/20110106 0650 15111.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110106-0650-15111-66ae093dc8_900.jpg",
-        "detail": "expo/20110106-0650-15111-66ae093dc8_1800.jpg"
-      }
-    },
-    {
       "id": "20110106-0650-16478-1522b0ac25",
       "relative_path": "2010-2014/20110106 0650 16478.jpg",
       "gallery_country": {
@@ -1987,20 +1973,6 @@
       "derivatives": {
         "gallery": "expo/20110106-0635-15715-8eeb2ce0b5_900.jpg",
         "detail": "expo/20110106-0635-15715-8eeb2ce0b5_1800.jpg"
-      }
-    },
-    {
-      "id": "20110106-0634-28072-6c101f40de",
-      "relative_path": "2010-2014/20110106 0634 28072.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110106-0634-28072-6c101f40de_900.jpg",
-        "detail": "expo/20110106-0634-28072-6c101f40de_1800.jpg"
       }
     },
     {
@@ -2270,20 +2242,6 @@
       }
     },
     {
-      "id": "20110106-0610-16019-0c5b0d4ad5",
-      "relative_path": "2010-2014/20110106 0610 16019.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110106-0610-16019-0c5b0d4ad5_900.jpg",
-        "detail": "expo/20110106-0610-16019-0c5b0d4ad5_1800.jpg"
-      }
-    },
-    {
       "id": "20110106-0609-16534-817c01ca21",
       "relative_path": "2010-2014/20110106 0609 16534.jpg",
       "gallery_country": {
@@ -2309,20 +2267,6 @@
       "derivatives": {
         "gallery": "expo/20110106-0608-15403-88a884278b_900.jpg",
         "detail": "expo/20110106-0608-15403-88a884278b_1800.jpg"
-      }
-    },
-    {
-      "id": "20110106-0604-15760-b33d411aab",
-      "relative_path": "2010-2014/20110106 0604 15760.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110106-0604-15760-b33d411aab_900.jpg",
-        "detail": "expo/20110106-0604-15760-b33d411aab_1800.jpg"
       }
     },
     {
@@ -2757,34 +2701,6 @@
       "derivatives": {
         "gallery": "expo/20110106-0526-28042-2d67946dcb_900.jpg",
         "detail": "expo/20110106-0526-28042-2d67946dcb_1800.jpg"
-      }
-    },
-    {
-      "id": "20110105-0224-16002-8bfdc2da47",
-      "relative_path": "2010-2014/20110105 0224 16002.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110105-0224-16002-8bfdc2da47_900.jpg",
-        "detail": "expo/20110105-0224-16002-8bfdc2da47_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0723-16703-6059a0763e",
-      "relative_path": "2010-2014/20110104 0723 16703.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110104-0723-16703-6059a0763e_900.jpg",
-        "detail": "expo/20110104-0723-16703-6059a0763e_1800.jpg"
       }
     },
     {
@@ -4160,20 +4076,6 @@
       }
     },
     {
-      "id": "20110103-0618-16449-81310cae1b",
-      "relative_path": "2010-2014/20110103 0618 16449.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20110103-0618-16449-81310cae1b_900.jpg",
-        "detail": "expo/20110103-0618-16449-81310cae1b_1800.jpg"
-      }
-    },
-    {
       "id": "20190723-1419-16523-3d4da421c4",
       "relative_path": "2015-2019/20190723 1419 16523.jpg",
       "gallery_country": {
@@ -4241,62 +4143,6 @@
       "derivatives": {
         "gallery": "expo/20180813-0936-18935-ff4ebcc12a_900.jpg",
         "detail": "expo/20180813-0936-18935-ff4ebcc12a_1800.jpg"
-      }
-    },
-    {
-      "id": "20180731-1238-42139-523fc863bd",
-      "relative_path": "2015-2019/20180731 1238 42139.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20180731-1238-42139-523fc863bd_900.jpg",
-        "detail": "expo/20180731-1238-42139-523fc863bd_1800.jpg"
-      }
-    },
-    {
-      "id": "20180731-1227-42017-4a4d4f3d8a",
-      "relative_path": "2015-2019/20180731 1227 42017.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20180731-1227-42017-4a4d4f3d8a_900.jpg",
-        "detail": "expo/20180731-1227-42017-4a4d4f3d8a_1800.jpg"
-      }
-    },
-    {
-      "id": "20180731-1226-42081-faf34323e9",
-      "relative_path": "2015-2019/20180731 1226 42081.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20180731-1226-42081-faf34323e9_900.jpg",
-        "detail": "expo/20180731-1226-42081-faf34323e9_1800.jpg"
-      }
-    },
-    {
-      "id": "20180731-1156-42014-420ac2b2d2",
-      "relative_path": "2015-2019/20180731 1156 42014.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20180731-1156-42014-420ac2b2d2_900.jpg",
-        "detail": "expo/20180731-1156-42014-420ac2b2d2_1800.jpg"
       }
     },
     {
@@ -6120,76 +5966,6 @@
       }
     },
     {
-      "id": "20161018-1611-15583-ebcf17ac43",
-      "relative_path": "2015-2019/20161018 1611 15583.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20161018-1611-15583-ebcf17ac43_900.jpg",
-        "detail": "expo/20161018-1611-15583-ebcf17ac43_1800.jpg"
-      }
-    },
-    {
-      "id": "20161005-0851-16297-832c828571",
-      "relative_path": "2015-2019/20161005 0851 16297.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20161005-0851-16297-832c828571_900.jpg",
-        "detail": "expo/20161005-0851-16297-832c828571_1800.jpg"
-      }
-    },
-    {
-      "id": "20160927-1606-16583-39cfdc87d1",
-      "relative_path": "2015-2019/20160927 1606 16583.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20160927-1606-16583-39cfdc87d1_900.jpg",
-        "detail": "expo/20160927-1606-16583-39cfdc87d1_1800.jpg"
-      }
-    },
-    {
-      "id": "20160927-0851-20718-57ee626a89",
-      "relative_path": "2015-2019/20160927 0851 20718.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20160927-0851-20718-57ee626a89_900.jpg",
-        "detail": "expo/20160927-0851-20718-57ee626a89_1800.jpg"
-      }
-    },
-    {
-      "id": "20160926-0800-20396-30b40cffa4",
-      "relative_path": "2015-2019/20160926 0800 20396.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20160926-0800-20396-30b40cffa4_900.jpg",
-        "detail": "expo/20160926-0800-20396-30b40cffa4_1800.jpg"
-      }
-    },
-    {
       "id": "20160925-1606-06527-pano-92f9bfd02b",
       "relative_path": "2015-2019/20160925 1606 06527-Pano.jpg",
       "gallery_country": {
@@ -6257,20 +6033,6 @@
       "derivatives": {
         "gallery": "expo/20160918-1707-18404-3c0f041a87_900.jpg",
         "detail": "expo/20160918-1707-18404-3c0f041a87_1800.jpg"
-      }
-    },
-    {
-      "id": "20160916-1609-06444-6a9e325351",
-      "relative_path": "2015-2019/20160916 1609 06444.jpg",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "reserve",
-      "derivatives": {
-        "gallery": "expo/20160916-1609-06444-6a9e325351_900.jpg",
-        "detail": "expo/20160916-1609-06444-6a9e325351_1800.jpg"
       }
     },
     {

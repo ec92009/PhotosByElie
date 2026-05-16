@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-title-keyword-proposal-state",
   "schema_version": 1,
-  "updated_at": "2026-05-16T07:54:37.603Z",
+  "updated_at": "2026-05-16T07:59:54.279Z",
   "state_flag": "Title_Keywords_Proposed",
   "review_flag": "Title_Keywords_Reviewed",
   "parked_flag": "Title_Keywords_Parked",
@@ -8868,9 +8868,9 @@
     {
       "photo_id": "a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 2,
@@ -8881,14 +8881,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -8899,7 +8903,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "adventure-sports-rafting-kayaking-hiking-biking-skiing-0-upscale-32427e8a-ec99-4a59-aa18-8ccb5346a175-jpgx2-377f43e3c9",
@@ -8990,9 +8998,9 @@
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-0-upscale-ca47133c-cc49-4399-b4f2-5c8a4e159401-jpgx2-b3f399486a",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9003,14 +9011,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-0-upscale-f4edf735-4697-4f45-8189-5c5113e1fb47-jpgx2-faa162dd7f",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9021,14 +9033,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-9b47f97e-99d7-4629-9323-f0d38d7e047f-jpgx2-39da94ecb9",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9039,7 +9055,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-9f715c87-ca85-4c66-bf58-55ca8601371f-jpgx2-007bd44a93",
@@ -9061,9 +9081,9 @@
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-1-upscale-a6229fc5-541f-4b34-9e51-d1d77c631a5e-jpgx2-21a02388d9",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9074,14 +9094,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-2-upscale-45226e1a-063b-41bb-9d3a-081b3622ea77-jpgx2-0dc3834f4e",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9092,14 +9116,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-2-upscale-71338091-62c9-401d-b0c8-8e8d657f7969-jpgx2-189f49e0f1",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9110,14 +9138,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-2-upscale-7d8d8abe-605c-48aa-8fec-ddd041ec33c6-jpgx2-8e26b400eb",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9128,14 +9160,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-502f002a-8e84-4c28-a000-a89a2db8e54b-jpgx2-c2c80793d6",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9146,14 +9182,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-86273066-892d-43ce-9a57-2d723d1cbc53-jpgx2-f02e611e8d",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -9164,7 +9204,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "artemis-the-goddess-of-the-hunt-wilderness-childbirth-a-3-upscale-c9fabf68-fba2-45c6-ae59-7c269b308adf-jpgx2-3ac8a7c159",
@@ -9526,9 +9570,9 @@
     {
       "photo_id": "bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 9,
@@ -9539,7 +9583,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96",
@@ -10880,9 +10928,9 @@
     {
       "photo_id": "img-1196-7c59c4b110",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -10893,14 +10941,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1197-0132d88761",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -10911,14 +10963,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1198-bb563d6235",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -10929,7 +10985,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1199-0ebd1a5044",
@@ -10952,9 +11012,9 @@
     {
       "photo_id": "img-1200-8b6f63148c",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -10965,7 +11025,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1201-0d34709cc0",
@@ -10988,9 +11052,9 @@
     {
       "photo_id": "img-1202-cd5854fcaa",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11001,14 +11065,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1203-d7219d5193",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11019,14 +11087,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1204-3a889ed776",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11037,7 +11109,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1205-78f89398bc",
@@ -11060,9 +11136,9 @@
     {
       "photo_id": "img-1206-9aa38d2a4c",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11073,14 +11149,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1207-5079ff3336",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11091,14 +11171,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1208-d059e156dc",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11109,14 +11193,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1209-2397d71a31",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11127,14 +11215,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1210-e222dcb15c",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11145,7 +11237,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1211-d55a7c07cb",
@@ -11168,9 +11264,9 @@
     {
       "photo_id": "img-1212-96505e7356",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11181,14 +11277,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1213-7276413ecc",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11199,14 +11299,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1214-bde4dfb750",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11217,14 +11321,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1215-f021b9e4a9",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 14,
@@ -11235,7 +11343,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1216-601dd6c052",
@@ -11258,9 +11370,9 @@
     {
       "photo_id": "img-1217-fba9ecc01d",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11271,7 +11383,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1218-fe487846d6",
@@ -11294,9 +11410,9 @@
     {
       "photo_id": "img-1219-570b09bebb",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11307,7 +11423,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "img-1558-97860683e7",
@@ -11628,9 +11748,9 @@
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-0-upscale-1eda54c1-1ec4-4966-a53c-86c1b43019ba-jpgx2-597da29f87",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11641,7 +11761,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-0-upscale-4b45033a-dc19-4090-9c0b-b2427aac2b85-jpgx2-3136a2824e",
@@ -11680,9 +11804,9 @@
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-1-upscale-cead4407-7863-4ca5-bcc0-2990d73aea7c-jpgx2-dac220982c",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11693,7 +11817,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-2-upscale-16a32e99-e9ce-4ccf-976f-1e7632398367-jpgx2-8baaa26347",
@@ -11716,9 +11844,9 @@
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-2-upscale-83691768-9e17-478e-a7a2-6f6777cf1885-jpgx2-1aa2630b6b",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 10,
@@ -11729,14 +11857,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-3-upscale-40dba669-d415-451a-a7de-a9ad5e7b7a28-jpgx2-f1a677279c",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11747,14 +11879,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-3-upscale-e0783dd5-87c0-4cdb-a7a1-f85274c09976-jpgx2-70a24d45a2",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11765,14 +11901,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-5-upscale-e5c47b36-e2c2-43fe-a571-e328e02de881-jpgx2-f1d8b9487a",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11783,14 +11923,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-6-upscale-eb24a26b-6949-4866-93f1-73169426d9d6-jpgx2-66d673c52b",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11801,14 +11945,18 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "pandora-the-first-woman-created-by-the-gods-who-was-given-7-upscale-9bfda99c-8ea7-4937-a60f-eb11cb5bc95d-jpgx2-d1a1a13cea",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Parked"
       ],
-      "review_state": "proposed",
+      "review_state": "parked",
       "rework_priority": false,
       "rejection_comment": "",
       "rejected_count": 1,
@@ -11819,7 +11967,11 @@
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-12.json",
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-13.json"
-      ]
+      ],
+      "parked": true,
+      "parked_at": "2026-05-16T07:59:54.279Z",
+      "parked_reason": "Historical Owner rejection indicates current tooling could not produce an acceptable title; parked until better title classification is available.",
+      "parked_from_rejection_history": true
     },
     {
       "photo_id": "road-trips-adventure-car-rental-scenic-highways-landsca-0-upscale-71717adf-3843-443f-8b3e-3d5579437713-jpgx2-5884fdc1ec",

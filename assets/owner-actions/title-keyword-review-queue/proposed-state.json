@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-title-keyword-proposal-state",
   "schema_version": 1,
-  "updated_at": "2026-05-16T08:04:20.481Z",
+  "updated_at": "2026-05-16T11:11:56.014170+00:00",
   "state_flag": "Title_Keywords_Proposed",
   "review_flag": "Title_Keywords_Reviewed",
   "parked_flag": "Title_Keywords_Parked",
@@ -1830,137 +1830,269 @@
     {
       "photo_id": "20180516-1158-00451-6162511ebb",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "wide composition",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1159-00454-f6c81b2b52",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1200-00455-4c4be1568e",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1203-00457-2ae6ab48d7",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "wide composition",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1204-00458-38aa91047d",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "wide composition",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1213-00460-50ceda44ef",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1213-00461-5ca874c74d",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1446-00463-8954f923ce",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 3,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "wide composition",
+        "Travel photography"
       ]
     },
     {
@@ -1983,35 +2115,68 @@
     {
       "photo_id": "20180516-1747-00465-ea76f3d5a3",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 2,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "wide composition",
+        "Travel photography"
       ]
     },
     {
       "photo_id": "20180516-1750-00466-4c85ba0f03",
       "state_tags": [
-        "Title_Keywords_Proposed"
+        "Title_Keywords_Proposed",
+        "Title_Keywords_Rejected"
       ],
-      "review_state": "proposed",
-      "rework_priority": false,
-      "rejection_comment": "",
-      "rejected_count": 0,
+      "review_state": "rejected",
+      "rework_priority": true,
+      "rejection_comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain",
+      "rejected_count": 25,
       "first_proposed_batch_id": "2026-05-16",
       "latest_proposed_batch_id": "2026-05-16",
       "first_proposed_at": "2026-05-16T07:54:37.598Z",
       "latest_proposed_at": "2026-05-16T07:54:37.598Z",
       "proposal_files": [
         "assets/owner-actions/title-keyword-review-queue/batch-2026-05-16.json"
+      ],
+      "parked": false,
+      "latest_rejected_batch_id": "2026-05-16",
+      "latest_rejected_at": "2026-05-16T11:11:56.013231+00:00",
+      "latest_rejected_title": "Landscape, Mountain",
+      "latest_rejected_keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "Travel photography"
       ]
     },
     {

@@ -5,7 +5,7 @@ Date: 2026-05-16
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Current visible build: `v76.18`
+- Current visible build: `v76.19`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
 - Public catalog currently still runs through TSV compatibility files, but the accepted direction is a committed SQLite catalog at `assets/catalog/photosbyelie.sqlite`.
@@ -120,6 +120,14 @@ For videos:
 - buyer delivery is the original/full asset only.
 
 The private photo render triplets (`jpg-1mp`, `jpg-3mp`, `jpg-6mp`) are still sellable deliverables. Current R2 keys are nested under `renders/<media_id>/<original-file>-jpg-{1,3,6}mp.jpg`; the target convention is the flatter `renders/<media_id>_{1,3,6}mp.jpg`. Keep old keys until checkout/delivery uses the new keys and a migration audit passes.
+
+## Latest Owner Fixes
+
+- Title/keyword approval saves now apply approved titles and keywords directly into generated catalog metadata/state files, add `Title_Keywords_Reviewed`, and reject empty approved titles instead of silently skipping them.
+- The 2026-05-16 Owner title/keyword review file has 44 approvals applied and 10 rejections preserved for rework state.
+- Owner price controls now include video tiers at a flat `$20` default for every length bucket; this is deliberately ready for future length-based pricing.
+- Waste Basket/R2 cleanup wording now says what it actually does: purge R2 copies while preserving ban/tombstone records. A banned photo stays banned.
+- Cloud media sweep progress now reports banned-photo R2 deletion counts and a countdown instead of a vague running bar.
 
 ## R2 Migration
 

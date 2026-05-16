@@ -88,14 +88,14 @@
 
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
-    ["discard-start", "Delete discarded media"],
+    ["discard-start", "Delete banned R2 objects"],
     ["camera", "Import Camera sources"],
     ["leonardo", "Import Leonardo sources"],
     ["catalog", "Export catalog"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
     ["private", "Backfill private JPGs"],
-    ["discard-final", "Final discard cleanup"],
+    ["discard-final", "Final banned R2 cleanup"],
     ["storage", "Refresh storage estimate"],
     ["test", "Run tests"],
     ["validate", "Validate publish"],
@@ -226,6 +226,16 @@
   };
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
+  const numberFromLog = (value) => Number(String(value || "").replace(/,/g, "")) || 0;
+  const formatDuration = (seconds) => {
+    const wholeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+    const hours = Math.floor(wholeSeconds / 3600);
+    const minutes = Math.floor((wholeSeconds % 3600) / 60);
+    const remainingSeconds = wholeSeconds % 60;
+    if (hours) return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+    if (minutes) return `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s`;
+    return `${remainingSeconds}s`;
+  };
 
   const withTimeout = (promise, ms, label) => {
     let timer = null;
@@ -337,6 +347,8 @@
     const printOptions = options.filter((option) => option.type === "print");
     const priceTiers = window.photosByEliePriceTiers || defaultPriceTiers;
     const digitalTierIds = Object.keys(priceTiers);
+    const digitalTierColumnSpan = Math.max(1, digitalTierIds.length);
+    const videoTiers = window.photosByElieVideoPriceTiers || {};
     const frameColumns = frames.filter((frame) => frame.id !== "none");
     const frameGroupIds = frameColumns.map((frame) => frame.id).join(",");
     const framePrice = (frame, option) => window.photosByElieFramePrice?.(frame, option) || Number(frame?.price) || 0;
@@ -364,6 +376,20 @@
           })}</td>
         `).join("")}
         <td colspan="2">Digital delivery</td>
+      </tr>
+    `).join("");
+    const videoRows = Object.entries(videoTiers).map(([tierId, tier]) => `
+      <tr>
+        <th scope="row">${escapeHtml(tier?.label || tierId)}</th>
+        <td>Original video download</td>
+        <td colspan="${digitalTierColumnSpan}">${priceInput({
+          kind: "video-tier",
+          id: tierId,
+          value: Number(tier?.price) || 0,
+          label: `${tier?.label || tierId} video price`,
+        })}</td>
+        <td>Digital delivery</td>
+        <td>No S&amp;H</td>
       </tr>
     `).join("");
     const printRows = printOptions.map((option) => `
@@ -395,6 +421,7 @@
         </thead>
         <tbody>
           ${digitalRows}
+          ${videoRows}
           ${printRows}
         </tbody>
       </table>
@@ -411,6 +438,8 @@
           const tier = input.dataset.ownerPriceOption;
           overrides.optionPrices = { ...(overrides.optionPrices || {}) };
           overrides.optionPrices[optionId] = { ...(overrides.optionPrices[optionId] || {}), [tier]: value };
+        } else if (input.dataset.ownerPriceKind === "video-tier") {
+          overrides.videoPriceTiers = { ...(overrides.videoPriceTiers || {}), [input.dataset.ownerPriceId]: value };
         } else if (input.dataset.ownerPriceKind === "frame-group") {
           const frameIds = String(input.dataset.ownerPriceId || "").split(",").filter(Boolean);
           const optionId = input.dataset.ownerPriceOption;
@@ -669,7 +698,7 @@
       const completed = Number(activeEmptyTask.completed || 0);
       if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(Math.max(0, total - completed));
       if (blockedPreviewNoteRoot) {
-        blockedPreviewNoteRoot.textContent = "Emptying is in progress: the undo queue is already cleared, and R2 is now deleting the remaining public previews, private masters, and private render files.";
+        blockedPreviewNoteRoot.textContent = "R2 purge is in progress: the undo queue is already cleared, ban tombstones are preserved, and R2 is deleting the remaining public previews, private masters, and private render files.";
       }
       return;
     }
@@ -677,7 +706,7 @@
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMedia);
     if (blockedPreviewNoteRoot) {
       blockedPreviewNoteRoot.textContent = blockedCloudMedia
-        ? `${formatCount(blockedCloudMedia)} cloud media copies are still present. Preview cleanup checks old public objects; In basket drops only when Empty basket clears the live queue.`
+        ? `${formatCount(blockedCloudMedia)} cloud media copies are still present. Preview cleanup checks old public objects; In basket drops only when R2 purge clears the live undo queue and writes tombstones.`
         : "Basketed photos no longer have cloud media copies in R2.";
     }
   };
@@ -726,7 +755,7 @@
     r2FixButton.disabled = r2CoverageOk || r2RepairActive;
     r2FixButton.textContent = r2RepairActive ? "Repair running" : "Fix it";
     if (r2CoverageNote && r2RepairActive) {
-      setText(r2CoverageNote, "Repair is running. You do not need to remain on this page while the repair takes place.");
+      setText(r2CoverageNote, "Repair is running. Banned photos stay banned; this only removes their old R2 objects.");
     }
   };
 
@@ -740,7 +769,9 @@
       }
       return null;
     };
-    const deleted = lastMatch(/^Done\. Deleted ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
+    const deleted = lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
+    const deleteStart = lastMatch(/^DELETE_START\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
+    const deleteProgress = lastMatch(/^DELETE_PROGRESS\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
     const scan = lastMatch(/^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/);
     const started = lastMatch(/^START\s+([0-9,]+):\s+(\S+)\s+(\S+)\s+(.+)/);
     const imported = lastMatch(/^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/);
@@ -753,7 +784,8 @@
       .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
       .filter(Boolean));
     let phase = "Starting cloud media sweep";
-    if (deleted) phase = "Deleted discarded R2 media";
+    if (deleteProgress || deleteStart) phase = "Deleting R2 objects for banned photos";
+    if (deleted) phase = "Deleted R2 objects for banned photos";
     if (scan) phase = "Scanning and importing Saturn sources";
     if (started) phase = "Rendering and uploading selected photo";
     if (imported) phase = "Rendering and uploading selected previews";
@@ -766,10 +798,10 @@
     if (!phaseKey) {
       if (upload || processed || manifest) phaseKey = "private";
       else if (scan || started || imported) phaseKey = "camera";
-      else if (deleted) phaseKey = "discard-start";
+      else if (deleted || deleteProgress || deleteStart) phaseKey = "discard-start";
       else phaseKey = "prepare";
     }
-    return { latest, phase, phaseKey, doneKeys, deleted, scan, started, imported, upload, processed, manifest, error };
+    return { latest, phase, phaseKey, doneKeys, deleted, deleteStart, deleteProgress, scan, started, imported, upload, processed, manifest, error };
   };
 
   const privateBackfillProgress = (logSummary) => {
@@ -801,10 +833,48 @@
     return missing ? `${formatCount(missing)} missing` : "Still missing coverage";
   };
 
+  const deleteObjectProgress = (logSummary) => {
+    const progress = logSummary?.deleteProgress;
+    const started = logSummary?.deleteStart;
+    const completed = numberFromLog(progress?.match?.[1]);
+    const total = numberFromLog(progress?.match?.[2] || started?.match?.[1]);
+    const elapsedSeconds = numberFromLog(progress?.match?.[5]);
+    const publicCompleted = numberFromLog(progress?.match?.[3]);
+    const privateCompleted = numberFromLog(progress?.match?.[4]);
+    const publicTotal = numberFromLog(started?.match?.[2]);
+    const privateTotal = numberFromLog(started?.match?.[3]);
+    const discardedPhotos = numberFromLog(started?.match?.[4] || logSummary?.deleted?.match?.[3]);
+    const percent = total
+      ? Math.min(completed >= total ? 100 : 99, Math.max(completed ? 1 : 0, Math.round((completed / total) * 100)))
+      : 18;
+    const secondsLeft = completed > 0 && total > completed && elapsedSeconds > 0
+      ? ((total - completed) / completed) * elapsedSeconds
+      : 0;
+    const countdown = secondsLeft ? `${formatDuration(secondsLeft)} left` : (total && completed >= total ? "0s left" : "Calculating time left");
+    const detail = total
+      ? `${formatCount(completed)} / ${formatCount(total)} objects, ${countdown}`
+      : "Finding banned R2 objects";
+    return {
+      percent,
+      detail,
+      completed,
+      total,
+      publicCompleted,
+      privateCompleted,
+      publicTotal,
+      privateTotal,
+      discardedPhotos,
+      countdown,
+    };
+  };
+
   const phaseProgress = (phase, logSummary, failed) => {
     if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
-    if (phase.key === "discard-start" && logSummary?.deleted) {
-      return { percent: 100, detail: `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private` };
+    if ((phase.key === "discard-start" || phase.key === "discard-final") && (logSummary?.deleteProgress || logSummary?.deleteStart || logSummary?.deleted)) {
+      if (logSummary?.deleted) {
+        return { percent: 100, detail: `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private` };
+      }
+      return deleteObjectProgress(logSummary);
     }
     if (phase.key === "camera" && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
       const selected = Number(logSummary?.scan?.match?.[3] || 0);
@@ -820,7 +890,7 @@
   };
 
   const completedPhaseDetail = (phase, logSummary) => {
-    if (phase.key === "discard-start" && logSummary?.deleted) {
+    if ((phase.key === "discard-start" || phase.key === "discard-final") && logSummary?.deleted) {
       return `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`;
     }
     if (phase.key === "coverage") return "Satisfied";
@@ -895,6 +965,18 @@
     const rows = [];
     let lastPhotoId = "";
     if (latest.external_pid) rows.push(["Sweep PID", latest.external_pid]);
+    if (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted) {
+      const progress = deleteObjectProgress(logSummary);
+      if (progress.total) rows.push(["R2 objects", `${formatCount(progress.completed)} / ${formatCount(progress.total)}`]);
+      if (active && progress.countdown) rows.push(["Countdown", progress.countdown]);
+      if (progress.publicTotal || progress.privateTotal) {
+        rows.push([
+          "Public/private",
+          `${formatCount(progress.publicCompleted)} / ${formatCount(progress.publicTotal)} public, ${formatCount(progress.privateCompleted)} / ${formatCount(progress.privateTotal)} private`,
+        ]);
+      }
+      if (progress.discardedPhotos) rows.push(["Banned photos", formatCount(progress.discardedPhotos)]);
+    }
     if (logSummary?.started && !logSummary?.upload) {
       rows.push(["Current photo", logSummary.started.match[2]]);
       rows.push(["Collection", logSummary.started.match[3]]);
@@ -1032,10 +1114,7 @@
     const perMinute = completed / elapsedSeconds * 60;
     if (!Number.isFinite(perMinute) || perMinute <= 0) return "";
     const remaining = Math.max(0, total - completed);
-    const etaMinutes = remaining / perMinute;
-    const etaLabel = etaMinutes >= 120
-      ? `${Math.round(etaMinutes / 60)} hr`
-      : `${Math.max(1, Math.round(etaMinutes))} min`;
+    const etaLabel = formatDuration((remaining / perMinute) * 60);
     return `about ${Math.max(1, Math.round(perMinute))}/min, ETA ${etaLabel}`;
   };
 
@@ -1050,10 +1129,10 @@
     wasteDeleteActive = activeEmptyTasks.length > 0;
     if (wipeHiddenR2Button) {
       wipeHiddenR2Button.disabled = wasteDeleteActive;
-      wipeHiddenR2Button.textContent = wasteDeleteActive ? "Emptying..." : "Empty basket";
+      wipeHiddenR2Button.textContent = wasteDeleteActive ? "Purging..." : "Purge R2 copies";
     }
     if (basketStateNoteRoot) {
-      basketStateNoteRoot.textContent = wasteDeleteActive ? "Clearing now" : "Undo queue";
+      basketStateNoteRoot.textContent = wasteDeleteActive ? "Purging R2 copies" : "Undo queue";
     }
     if (!blockedPreviewProgressRoot) return;
     if (!latestWasteTask) {
@@ -1073,7 +1152,7 @@
       const completed = Number(latestWasteTask.completed || 0);
       blockedPreviewCountRoot.textContent = formatCount(Math.max(0, total - completed));
       if (blockedPreviewNoteRoot) {
-        blockedPreviewNoteRoot.textContent = "Emptying is in progress: the undo queue is already cleared, and R2 is now deleting the remaining public previews, private masters, and private render files.";
+        blockedPreviewNoteRoot.textContent = "R2 purge is in progress: the undo queue is already cleared, ban tombstones are preserved, and R2 is deleting the remaining public previews, private masters, and private render files.";
       }
     }
   };
@@ -1351,13 +1430,13 @@
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
     if (wasteDeleteActive) {
-      setStatus("Waste Basket emptying is already running. Watch Cloud media left on the card.");
+      setStatus("Waste Basket R2 purge is already running. Watch Cloud media left on the card.");
       return;
     }
-    const ok = window.confirm("Empty the Waste Basket? This purges public previews, private masters, and private render triplets for basketed photos, then leaves blacklist tombstones so those masters do not return.");
+    const ok = window.confirm("Purge R2 copies for every Waste Basket photo? This deletes public previews, private masters, and private render triplets. Ban/tombstone records stay, so these photos remain banned and do not return.");
     if (!ok) return;
     wipeHiddenR2Button.disabled = true;
-    setStatus("Queueing Waste Basket cloud media purge...");
+    setStatus("Queueing banned-photo R2 purge...");
     try {
       const result = await hiddenActions.wipeHiddenR2?.();
       renderCounts();
@@ -1366,9 +1445,9 @@
       await refreshBlockedSyncPanel();
       if (result?.r2_delete_task) renderR2Progress([result.r2_delete_task]);
       loadR2Progress();
-      setStatus(`Waste Basket emptied: ${formatCount(result?.hidden_count || 0)} in basket, ${formatCount(result?.discarded_count || 0)} tombstones.`);
+      setStatus(`R2 purge queued: ${formatCount(result?.moved_to_tombstones_count || 0)} live bans moved to permanent tombstones, ${formatCount(result?.discarded_count || 0)} total tombstones.`);
     } catch (error) {
-      setStatus(error?.message || "Could not queue Waste Basket cloud media purge.");
+      setStatus(error?.message || "Could not queue banned-photo R2 purge.");
     } finally {
       if (!wasteDeleteActive) wipeHiddenR2Button.disabled = false;
     }
@@ -1377,7 +1456,7 @@
   r2FixButton?.addEventListener("click", async () => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to repair R2 coverage.");
     if (ownerAuth?.enabled && !authorized) return;
-    const ok = window.confirm("Run the full lock-guarded cloud media sweep now? This may upload/render missing objects, delete discarded R2 media, validate, commit, and push manifest changes.");
+    const ok = window.confirm("Run the full lock-guarded cloud media sweep now? This may upload/render missing objects, delete R2 objects for banned photos while keeping their ban records, validate, commit, and push manifest changes.");
     if (!ok) return;
     r2FixButton.disabled = true;
     setStatus("Starting cloud media sweep repair...");

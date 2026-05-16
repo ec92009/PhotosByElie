@@ -954,7 +954,7 @@ def write_photos_data(
     ]
 
     output = repo_root / "photos-data.js"
-    output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    output.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     compact_catalog_tsv(repo_root)
     return output
 

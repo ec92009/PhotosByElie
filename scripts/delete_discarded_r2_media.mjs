@@ -123,6 +123,18 @@ const s3Request = async (...requestArgs) => {
   throw lastError;
 };
 
+const deleteProgressLine = (progress) => {
+  const elapsedSeconds = Math.max(0, Math.round((Date.now() - progress.startedAt) / 1000));
+  console.log([
+    "DELETE_PROGRESS",
+    progress.completed,
+    progress.total,
+    progress.publicCompleted,
+    progress.privateCompleted,
+    elapsedSeconds,
+  ].join(" "));
+};
+
 const listPrefix = async (bucket, prefix) => {
   const keys = [];
   let token = "";
@@ -140,12 +152,18 @@ const listPrefix = async (bucket, prefix) => {
   return keys;
 };
 
-const deleteKeys = async (bucket, keys) => {
+const deleteKeys = async (bucket, keys, progress, scope) => {
   const deleted = [];
   for (const key of keys) {
     if (!dryRun) await s3Request("DELETE", bucket, key);
     deleted.push(key);
+    progress.completed += 1;
+    if (scope === "public") progress.publicCompleted += 1;
+    if (scope === "private") progress.privateCompleted += 1;
     console.log(`${dryRun ? "would delete" : "deleted"} ${bucket}/${key}`);
+    if (progress.completed === 1 || progress.completed % 25 === 0 || progress.completed === progress.total) {
+      deleteProgressLine(progress);
+    }
   }
   return deleted;
 };
@@ -198,8 +216,28 @@ const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => disca
   .filter((key) => discardedIds.has(keyPhotoId(key)))
   .forEach((key) => privateKeys.add(key));
 
-const deletedPublic = await deleteKeys(publicBucket, [...publicKeys].sort());
-const deletedPrivate = await deleteKeys(privateBucket, [...privateKeys].sort());
+const deleteProgress = {
+  total: publicKeys.size + privateKeys.size,
+  publicTotal: publicKeys.size,
+  privateTotal: privateKeys.size,
+  publicCompleted: 0,
+  privateCompleted: 0,
+  completed: 0,
+  discardedCount: discardedIds.size,
+  startedAt: Date.now(),
+};
+console.log([
+  "DELETE_START",
+  deleteProgress.total,
+  deleteProgress.publicTotal,
+  deleteProgress.privateTotal,
+  deleteProgress.discardedCount,
+].join(" "));
+deleteProgressLine(deleteProgress);
+
+const deletedPublic = await deleteKeys(publicBucket, [...publicKeys].sort(), deleteProgress, "public");
+const deletedPrivate = await deleteKeys(privateBucket, [...privateKeys].sort(), deleteProgress, "private");
+if (deleteProgress.total === 0) deleteProgressLine(deleteProgress);
 
 if (!dryRun) {
   const privateInventory = await readJson(privateInventoryPath, null);

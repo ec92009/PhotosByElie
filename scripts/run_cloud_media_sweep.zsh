@@ -52,7 +52,7 @@ if [[ ! -d node_modules ]]; then
 fi
 done_phase prepare
 
-phase discard-start "Delete discarded media"
+phase discard-start "Delete R2 objects for banned photos"
 node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 done_phase discard-start
 
@@ -119,7 +119,7 @@ fi
 node scripts/sync_private_deliverables.mjs "${SYNC_ARGS[@]}"
 done_phase private
 
-phase discard-final "Final discard cleanup"
+phase discard-final "Final banned R2 cleanup"
 node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 done_phase discard-final
 phase storage "Refresh storage estimate"

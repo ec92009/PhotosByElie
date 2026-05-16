@@ -1083,6 +1083,10 @@ html[data-theme="light"] .photo-art.has-photo::after{
   background-size:26px 100%,100% 100%;
   animation:owner-sweep-stripe .85s linear infinite;
 }
+.owner-sweep-phase.is-running .owner-sweep-phase-copy span{
+  white-space:normal;
+  text-align:right;
+}
 .owner-sweep-phase.is-done .owner-sweep-bar span{
   background:color-mix(in srgb,#2f8f5b 74%,var(--text));
 }
@@ -3290,6 +3294,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .owner-sweep-phase-copy strong,
   .owner-sweep-phase-copy span{
     white-space:normal;
+  }
+  .owner-sweep-phase.is-running .owner-sweep-phase-copy span{
+    text-align:left;
   }
   .owner-r2-preview{
     grid-template-columns:96px minmax(0,1fr);

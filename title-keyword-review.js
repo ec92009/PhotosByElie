@@ -390,10 +390,12 @@
         setRowStatus(card, "Auth required", "error");
         return;
       }
-      const label = decision.rejection ? "Rejected and saved" : "Approved and saved";
+      const label = decision.rejection ? "Rejected and saved" : "Approved and applied";
       setRowStatus(card, label, "saved");
       if (status) {
-        status.textContent = `${photoId} ${decision.rejection ? "rejection" : "approval"} saved to the review record.`;
+        status.textContent = decision.rejection
+          ? `${photoId} rejection saved to the review record.`
+          : `${photoId} approval applied to catalog metadata and saved to the review record.`;
       }
     };
 

@@ -25,7 +25,7 @@
     "update-photo-metadata": "Saving title and keyword metadata...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
     "publish-hidden-blacklist": "Publishing master blacklist...",
-    "wipe-hidden-r2": "Emptying Waste Basket cloud media...",
+    "wipe-hidden-r2": "Purging banned-photo R2 copies...",
     "save-title-keyword-review-approvals": "Saving title/keyword review decisions...",
   };
 

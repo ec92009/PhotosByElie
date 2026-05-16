@@ -1137,6 +1137,38 @@ def _ensure_photo_flag(photo: dict, flag: str) -> bool:
     return _set_metadata_value(photo, "Flags", ", ".join(current))
 
 
+def _apply_title_keyword_approvals_to_groups(
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    hidden_groups: dict[str, list[dict]],
+    approvals: list[dict],
+) -> tuple[list[dict], list[str], int]:
+    updated = []
+    not_found = []
+    metadata_changed = 0
+    review_flag = TITLE_KEYWORD_REVIEW_FLAG
+    for approval in approvals:
+        approval_photo_id = approval["photo_id"]
+        matches = (
+            [("expo", *item) for item in _matching_photos(expo_groups, approval_photo_id)]
+            + [("reserve", *item) for item in _matching_photos(reserve_groups, approval_photo_id)]
+            + [("hidden", *item) for item in _matching_photos(hidden_groups, approval_photo_id)]
+        )
+        if not matches:
+            not_found.append(approval_photo_id)
+            continue
+        photo_changed = False
+        for state, slug, photo in matches:
+            title_changed = _set_photo_title(photo, approval["title"])
+            keywords_changed = _set_photo_keywords(photo, approval["keywords"])
+            flag_changed = _ensure_photo_flag(photo, review_flag)
+            photo_changed = title_changed or keywords_changed or flag_changed or photo_changed
+            updated.append({"state": state, "slug": slug, "id": approval_photo_id})
+        if photo_changed:
+            metadata_changed += 1
+    return updated, not_found, metadata_changed
+
+
 def _remove_photo_keyword(photo: dict, keyword: str) -> bool:
     target = str(keyword or "").strip().casefold()
     if not target:
@@ -1928,6 +1960,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             if item.get("approved") is not True:
                 continue
             title = str(item.get("title") or "").strip()
+            if not title:
+                raise ValueError(f"approved title must be non-empty for {current_photo_id}")
             normalized.append(
                 {
                     "photo_id": current_photo_id,
@@ -1952,6 +1986,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "comment": str(item.get("comment") or "").strip(),
                 }
             )
+        rejected_ids = {item["photo_id"] for item in normalized_rejections}
+        normalized = [item for item in normalized if item["photo_id"] not in rejected_ids]
         now = datetime.now(timezone.utc).isoformat()
         normalized_blocked = []
         for item in blocked:
@@ -1967,17 +2003,41 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "blocked_at": now,
                 }
             )
+        updated = []
+        not_found = []
+        metadata_changed = 0
+        site_state = {}
+        worker_catalog = {}
+        review_flag = TITLE_KEYWORD_REVIEW_FLAG
+        if normalized:
+            ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
+            (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)
+            expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+            _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+            updated, not_found, metadata_changed = _apply_title_keyword_approvals_to_groups(
+                expo_groups,
+                reserve_groups,
+                hidden_groups,
+                normalized,
+            )
+            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
         rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
         payload_out = {
             "format": "photosbyelie-title-keyword-review-approvals",
             "schema_version": 1,
             "updated_at": now,
             "batch_id": batch_id,
+            "review_flag": review_flag,
+            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
+            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
             "approvals": normalized,
             "rejections": normalized_rejections,
             "blocked": normalized_blocked,
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
+            "not_found": not_found,
         }
+        if normalized:
+            payload_out["applied_at"] = now
         approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
         return {
             "ok": True,
@@ -1987,7 +2047,16 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "approved_count": len(merged_record.get("approvals", [])),
             "rejected_count": len(merged_record.get("rejections", [])),
             "blocked_count": len(merged_record.get("blocked", [])),
+            "applied_count": len({item["id"] for item in updated}),
+            "metadata_changed": metadata_changed,
             "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
+            "not_found": not_found,
+            "updated": updated,
+            "review_flag": review_flag,
+            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
+            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
         }
 
     if action == "save-keyword-blacklist":
@@ -2047,7 +2116,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         }
 
     if action == "wipe-hidden-r2":
-        tombstone = _write_discarded_tombstones(repo_root, _waste_basket_discard_entries(hidden_groups))
+        discard_entries = _waste_basket_discard_entries(hidden_groups)
+        hidden_count_before = sum(len(photos) for photos in hidden_groups.values())
+        tombstone = _write_discarded_tombstones(repo_root, discard_entries)
         r2_task = _start_r2_delete_task(
             "waste-basket-cloud-media",
             _waste_basket_delete_items(repo_root, hidden_groups),
@@ -2059,6 +2130,8 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "ok": True,
             "action": action,
             "hidden_count": 0,
+            "hidden_count_before": hidden_count_before,
+            "moved_to_tombstones_count": len(discard_entries),
             "discarded_count": len(tombstone.get("photo_ids") or []),
             "hidden_ids": [],
             "r2_delete_task": r2_task,
@@ -2128,7 +2201,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 continue
             title = str(item.get("title") or "").strip()
             if not title:
-                continue
+                raise ValueError(f"approved title must be non-empty for {current_photo_id}")
             keywords = _review_keywords(repo_root, item.get("keywords"))
             normalized.append(
                 {
@@ -2159,29 +2232,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if not normalized and not normalized_rejections:
             raise ValueError("approvals must include at least one approved or rejected photo")
 
-        updated = []
-        not_found = []
-        metadata_changed = 0
         review_flag = TITLE_KEYWORD_REVIEW_FLAG
-        for approval in normalized:
-            approval_photo_id = approval["photo_id"]
-            matches = (
-                [("expo", *item) for item in _matching_photos(expo_groups, approval_photo_id)]
-                + [("reserve", *item) for item in _matching_photos(reserve_groups, approval_photo_id)]
-                + [("hidden", *item) for item in _matching_photos(hidden_groups, approval_photo_id)]
-            )
-            if not matches:
-                not_found.append(approval_photo_id)
-                continue
-            photo_changed = False
-            for state, slug, photo in matches:
-                title_changed = _set_photo_title(photo, approval["title"])
-                keywords_changed = _set_photo_keywords(photo, approval["keywords"])
-                flag_changed = _ensure_photo_flag(photo, review_flag)
-                photo_changed = title_changed or keywords_changed or flag_changed or photo_changed
-                updated.append({"state": state, "slug": slug, "id": approval_photo_id})
-            if photo_changed:
-                metadata_changed += 1
+        updated, not_found, metadata_changed = _apply_title_keyword_approvals_to_groups(
+            expo_groups,
+            reserve_groups,
+            hidden_groups,
+            normalized,
+        )
 
         rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
         payload_out = {

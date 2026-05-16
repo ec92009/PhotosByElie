@@ -13,6 +13,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -27,6 +28,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -41,6 +43,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -55,6 +58,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -79,6 +83,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -93,6 +98,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -107,6 +113,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -121,6 +128,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -145,6 +153,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -159,6 +168,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -173,6 +183,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -187,6 +198,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -211,6 +223,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -225,6 +238,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -249,6 +263,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -263,6 +278,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -277,6 +293,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -291,6 +308,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -315,6 +333,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -329,6 +348,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -343,6 +363,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -357,6 +378,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -381,6 +403,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -395,6 +418,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -409,6 +433,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -423,6 +448,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -447,6 +473,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
@@ -461,6 +488,7 @@ window.photosByElieHomeData = {
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
+          "type": "photo",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,

@@ -1,0 +1,65 @@
+{
+  "france": {
+    "number": "01",
+    "title": "France",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source.",
+    "accent": "france-gallery",
+    "photos": []
+  },
+  "usa": {
+    "number": "02",
+    "title": "USA",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source.",
+    "accent": "usa-gallery",
+    "photos": []
+  },
+  "spain": {
+    "number": "03",
+    "title": "Spain",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source.",
+    "accent": "spain-gallery",
+    "photos": []
+  },
+  "mexico": {
+    "number": "04",
+    "title": "Mexico",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source.",
+    "accent": "mexico-gallery",
+    "photos": []
+  },
+  "ai": {
+    "number": "05",
+    "title": "AI",
+    "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
+    "accent": "ai-gallery",
+    "photos": []
+  },
+  "italy": {
+    "number": "06",
+    "title": "Italy",
+    "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
+    "accent": "italy-gallery",
+    "photos": []
+  },
+  "portugal": {
+    "number": "07",
+    "title": "Portugal",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source.",
+    "accent": "portugal-gallery",
+    "photos": []
+  },
+  "slovakia": {
+    "number": "08",
+    "title": "Slovakia",
+    "description": "Saturn Lightroom archive selections prepared from the Camera source.",
+    "accent": "slovakia-gallery",
+    "photos": []
+  },
+  "unknown": {
+    "number": "09",
+    "title": "Unknown",
+    "description": "Saturn Lightroom selections that still need a final gallery assignment.",
+    "accent": "unknown-gallery",
+    "photos": []
+  }
+}

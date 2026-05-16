@@ -156,8 +156,10 @@ def clean_site_src(value: str | None) -> str:
     return str(value or "").removeprefix("./")
 
 
-def public_media_key(photo: dict, reference: str | None) -> str:
-    return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, photo["id"], reference)
+def public_media_key(photo: dict, reference: str | None, derivative: str) -> str:
+    if reference:
+        return public_preview_key_for_reference(DEFAULT_PUBLIC_PREFIX, photo["id"], reference)
+    return public_preview_key(DEFAULT_PUBLIC_PREFIX, photo["id"], derivative, media_type_for_photo(photo))
 
 
 def media_type_for_photo(photo: dict) -> str:
@@ -175,8 +177,8 @@ def media_object_for_photo(photo: dict) -> dict:
         "sourcePolicy": media_source_policy(photo),
         "publicPreview": {
             "allowed": public_allowed,
-            "galleryKey": public_media_key(photo, photo.get("gallerySrc")) if public_allowed else "",
-            "detailKey": public_media_key(photo, photo.get("imageSrc")) if public_allowed else "",
+            "galleryKey": public_media_key(photo, photo.get("gallerySrc"), "gallery") if public_allowed else "",
+            "detailKey": public_media_key(photo, photo.get("imageSrc"), "detail") if public_allowed else "",
         },
     }
 
@@ -608,7 +610,7 @@ def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[
                 "title": title,
                 "description": description,
                 "accent": accent,
-                "photos": [copy_photo(photo) for photo in photos],
+                "photos": [photo_with_media(photo) for photo in photos],
             }
     lines += [
         "};",
@@ -618,7 +620,7 @@ def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[
         "delete window.photosByElieData.unknown;",
     ]
     lines += helper_lines()
-    (repo_root / "photos-data.js").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (repo_root / "photos-data.js").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     compact_catalog_tsv(repo_root)
     write_home_data_from_collections(repo_root, home_collections)
 

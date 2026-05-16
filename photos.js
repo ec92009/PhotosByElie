@@ -918,6 +918,8 @@ const captureProductPriceDefaults = () => {
       prices: { ...(frame.prices || {}) },
     }])),
     shippingHandling: { ...(window.photosByElieShippingHandlingPrices || {}) },
+    videoPriceTiers: Object.fromEntries(Object.entries(window.photosByElieVideoPriceTiers || {})
+      .map(([id, tier]) => [id, Number(tier?.price) || 0])),
   };
   return productPriceDefaults;
 };
@@ -934,6 +936,8 @@ const cleanPriceOverrides = (overrides = {}) => ({
       .map(([optionId, value]) => [optionId, Math.max(0, Number(value) || 0)])),
   }])),
   shippingHandling: Object.fromEntries(Object.entries(overrides.shippingHandling || {})
+    .map(([id, value]) => [id, Math.max(0, Number(value) || 0)])),
+  videoPriceTiers: Object.fromEntries(Object.entries(overrides.videoPriceTiers || {})
     .map(([id, value]) => [id, Math.max(0, Number(value) || 0)])),
 });
 const applyProductPriceOverrides = () => {
@@ -957,6 +961,10 @@ const applyProductPriceOverrides = () => {
     ...(defaults.shippingHandling || {}),
     ...(overrides.shippingHandling || {}),
   };
+  Object.entries(window.photosByElieVideoPriceTiers || {}).forEach(([id, tier]) => {
+    const fallbackPrice = defaults.videoPriceTiers?.[id] ?? Number(tier?.price) ?? 20;
+    tier.price = overrides.videoPriceTiers[id] ?? fallbackPrice;
+  });
   return overrides;
 };
 const saveProductPriceOverrides = (overrides = {}) => {

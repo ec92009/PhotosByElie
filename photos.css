@@ -1845,6 +1845,22 @@ body[data-gallery] .gallery-hero{
     justify-content:flex-end;
   }
 }
+body.commerce-page[data-fixed-header]{
+  --commerce-total-band-height:42px;
+}
+body.commerce-page[data-fixed-header] main.shell{
+  padding-top:calc(var(--fixed-header-offset,86px) + var(--commerce-total-band-height) + 8px);
+}
+body.commerce-page[data-fixed-header] .basket-total-band{
+  position:fixed;
+  top:calc(var(--fixed-header-offset,86px) - 8px);
+  left:50%;
+  width:min(1480px,calc(100dvw - (var(--page-gutter) * 2)));
+  min-height:var(--commerce-total-band-height);
+  margin:0;
+  transform:translateX(-50%);
+  z-index:79;
+}
 .gallery-filter-bar{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));

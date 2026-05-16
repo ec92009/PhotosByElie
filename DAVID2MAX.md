@@ -720,3 +720,13 @@ _No David automation results recorded yet._
 - `npm test`: PASSED (14/14)
 - `npm run validate`: PASSED (`Validation OK`)
 - Notes: Working tree was already dirty before the run (owner/generated state); health check did not stage or modify those files.
+
+## 2026-05-16 - R2 master-chain maintenance (daily)
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- `git pull --ff-only`: FAILED x2 — `Failed to connect to github.com port 443 ... Couldn't connect to server`
+- `node scripts/repair_r2_master_chain.mjs --repair --prune --audit .review-logs/r2-master-chain-audit-daily.json`: FAILED — `getaddrinfo ENOTFOUND <account>.r2.cloudflarestorage.com` (no audit JSON written)
+- `npm test`: PASSED (14/14)
+- `npm run validate`: PASSED (`Validation OK`)
+- Counts (no-op due to R2 DNS failure): repaired masters 0; repaired renders 0; pruned private render ghosts 0; pruned public preview ghosts 0; remaining missing public previews unknown (repair did not reach audit phase)

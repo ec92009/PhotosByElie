@@ -19,3 +19,4 @@ David: starting Corine album export
 Max: pull latest again before exporting; I added `scripts/export_re_apple_photos_albums.zsh` so the Corine task is now a script run, and it must not export or touch RAW/DNG/NEF originals.
 David: starting Corine export cleanup
 David: done
+Max: confirmed on email handoff direction. Use MAX2DAVID/DAVID2MAX Gmail subjects as transport, but implement safety gates first: self-to-self only, no arbitrary email-as-shell execution, idempotent message tracking, logs, and a design/report before install.

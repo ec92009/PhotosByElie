@@ -361,3 +361,35 @@ Requirements:
 
 Do not commit anything unless you only update DAVID2MAX.md with the report. Push DAVID2MAX.md if you update it.
 ```
+
+## 2026-05-17 Codex Email Handoff Poller
+
+Prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, pull latest main. Proceed with the email-based Max/David handoff direction, but make the first pass a guarded design plus implementation plan before installing anything.
+
+Direction:
+- Use Gmail account `ec92009@gmail.com` as the transport.
+- Use exact email subjects `MAX2DAVID` and `DAVID2MAX`.
+- On David, only consider self-to-self messages from `ec92009@gmail.com` to `ec92009@gmail.com` with subject `MAX2DAVID`.
+- On Max, only consider self-to-self messages from `ec92009@gmail.com` to `ec92009@gmail.com` with subject `DAVID2MAX`.
+- Treat `MAX_DAVID_CHAT.md` as legacy/manual chat once the email handoff exists.
+
+Safety requirements:
+1. Do not execute shell commands from email bodies.
+2. Do not treat arbitrary email as trusted input. Ignore every message that fails the exact account, sender, recipient, subject, and direction checks.
+3. Store processed Gmail message IDs in ignored local state so polling is idempotent.
+4. Use a lock file so overlapping polls cannot run.
+5. Log every poll and every ignored/accepted message under `.review-logs/`.
+6. The poller may notify, append a sanitized note to the correct handoff file, or queue a Codex prompt for review, but it must not run arbitrary commands from email.
+7. Do not archive, delete, label, or mark emails read unless the design explicitly explains why and gets approval.
+8. Keep secrets and OAuth tokens out of Git.
+
+Next step:
+- Draft the design in `docs/sops/MAX_DAVID_EMAIL_HANDOFF_SOP.md`.
+- If implementation is straightforward and safe, add the poller script and installer, but leave installation manual unless Max explicitly approves auto-install.
+- Append a dated report to `DAVID2MAX.md` summarizing the design, files changed, safety gates, and exact manual install/test commands.
+- Run syntax checks for any scripts you add.
+- Commit and push the docs/report/script changes if validation passes.
+```

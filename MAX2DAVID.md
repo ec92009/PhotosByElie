@@ -329,7 +329,7 @@ Expected output in `DAVID2MAX.md`:
 Prompt for David:
 
 ```text
-In /Users/ecohen/Dev/PhotosByElie, pull latest main. Export developed master/source files for Corine's two Real Estate albums from the Photos database/library on David into new source folders under Saturn-2.
+In /Users/ecohen/Dev/PhotosByElie, pull latest main. Export developed master/source files for Corine's two Real Estate albums from the Photos database/library on David into new source folders on the Saturn external drive.
 
 Albums:
 - RE 2026 La Concha 1 Apt 8AB1

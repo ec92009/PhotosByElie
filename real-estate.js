@@ -275,7 +275,7 @@
     letter: { key: "letter", label: "Letter", width: 612, height: 792 },
   };
   const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
-  const pdfPhotoWatermarkText = "\u00a9 2026 Photos By Elie";
+  const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -339,11 +339,11 @@
   const syncFileActionLabels = () => {
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
       button.textContent = "Download project PDFs";
-      button.title = "Browser will save project PDFs to Downloads";
+      button.title = "Browser will save project PDFs to your Downloads folder";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = "Download selection file";
-      button.title = "Browser will save the selection JSON file to Downloads";
+      button.title = "Browser will save the selection JSON file to your Downloads folder";
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
       button.textContent = "Load selection file...";
@@ -549,8 +549,10 @@
         pageOrientation: "portrait",
         layout: "landscape-two-per-page-portrait-one-per-page",
         fitMode: "contain",
-        photoWatermark: pdfPhotoWatermarkText,
+        photoWatermark: pdfWatermarkText,
         photoWatermarkPlacement: "bottom-center",
+        pageWatermark: pdfWatermarkText,
+        pageWatermarkPlacement: "footer-center",
       },
       projects: projects.map((project) => ({
         projectId: project.projectId,
@@ -596,17 +598,11 @@
     const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`;
     try {
       const saved = await downloadBlob(blob, filename);
-      setStatus(`Downloaded ${saved.filename} (${formatBytes(saved.bytes)})`);
+      setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
     } catch (error) {
       setStatus(error?.name === "AbortError" ? "Download canceled" : "Selection file could not be downloaded");
     }
   };
-
-  const pdfEscape = (value) => String(value || "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)")
-    .replace(/\u00a9/g, "\\251");
 
   const pdfDimensionsFor = (photo) => {
     const dimensions = photo?.cloudPdfSource?.dimensions
@@ -618,19 +614,15 @@
     return { width, height };
   };
 
-  const truncatePdfTitle = (value) => {
-    const text = String(value || "");
-    return text.length > 86 ? `${text.slice(0, 83)}...` : text;
-  };
-
   const fetchPdfImages = async (photos) => {
     const images = [];
     for (const photo of photos) {
       const imageUrl = imageFor(photo, "detail");
       const response = await fetch(imageUrl);
       if (!response.ok) throw new Error(`Could not load ${titleFor(photo)}`);
+      const blob = await response.blob();
       images.push({
-        bytes: new Uint8Array(await response.arrayBuffer()),
+        blob,
         dimensions: pdfDimensionsFor(photo),
         photo,
       });
@@ -674,11 +666,141 @@
       y: box.y + ((box.height - height) / 2),
     };
   };
-  const pdfTextCenterX = (text, centerX, fontSize = 8) => (
-    centerX - (String(text || "").length * fontSize * 0.23)
-  );
 
-  const buildPdfBlob = (images) => {
+  const loadPdfImage = (blob) => new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(blob);
+    const cleanup = () => URL.revokeObjectURL(objectUrl);
+    image.onload = () => resolve({ image, cleanup });
+    image.onerror = () => {
+      cleanup();
+      reject(new Error("Could not decode a PDF image"));
+    };
+    image.src = objectUrl;
+  });
+
+  const canvasToJpegBytes = (canvas, quality = 0.86) => new Promise((resolve, reject) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        reject(new Error("Could not render PDF page"));
+        return;
+      }
+      resolve(new Uint8Array(await blob.arrayBuffer()));
+    }, "image/jpeg", quality);
+  });
+
+  const fittedCanvasText = (context, value, maxWidth) => {
+    const text = String(value || "");
+    if (context.measureText(text).width <= maxWidth) return text;
+    const ellipsis = "...";
+    let low = 0;
+    let high = text.length;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (context.measureText(`${text.slice(0, mid)}${ellipsis}`).width <= maxWidth) low = mid;
+      else high = mid - 1;
+    }
+    return `${text.slice(0, low)}${ellipsis}`;
+  };
+
+  const drawCenteredCanvasText = (context, text, x, y, width) => {
+    context.fillText(text, x + (width / 2), y);
+  };
+
+  const renderPdfPages = async (images) => {
+    const pages = paginatePdfImages(images);
+    const paper = paperFormatFor();
+    const pageWidth = paper.width;
+    const pageHeight = paper.height;
+    const margin = 30;
+    const titleArea = 28;
+    const rowGap = 18;
+    const scale = 2;
+    const renderedPages = [];
+
+    for (const page of pages) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(pageWidth * scale);
+      canvas.height = Math.round(pageHeight * scale);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Could not render PDF page");
+      context.setTransform(scale, 0, 0, scale, 0, 0);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, pageWidth, pageHeight);
+
+      const slotHeight = page.layout === "two-up-landscape"
+        ? ((pageHeight - (margin * 2) - rowGap) / 2)
+        : (pageHeight - (margin * 2));
+      const slots = page.layout === "two-up-landscape"
+        ? [
+          { x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight },
+          { x: margin, y: margin + slotHeight + rowGap, width: pageWidth - (margin * 2), height: slotHeight },
+        ]
+        : [{ x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight }];
+
+      for (const [index, item] of page.items.entries()) {
+        const slot = slots[index];
+        const loaded = await loadPdfImage(item.blob);
+        try {
+          const naturalDimensions = {
+            width: loaded.image.naturalWidth || item.dimensions.width,
+            height: loaded.image.naturalHeight || item.dimensions.height,
+          };
+          const imageBox = {
+            x: slot.x,
+            y: slot.y + titleArea,
+            width: slot.width,
+            height: Math.max(1, slot.height - titleArea),
+          };
+          const placement = imagePlacement(naturalDimensions, imageBox);
+          context.fillStyle = "#111111";
+          context.font = "700 12px Arial, Helvetica, sans-serif";
+          context.textAlign = "left";
+          context.textBaseline = "middle";
+          context.fillText(
+            fittedCanvasText(context, titleFor(item.photo), slot.width),
+            slot.x,
+            slot.y + 13
+          );
+          context.drawImage(loaded.image, placement.x, placement.y, placement.width, placement.height);
+
+          const watermarkFontSize = Math.max(8, Math.min(12, placement.width / 48));
+          context.font = `700 ${watermarkFontSize}px Arial, Helvetica, sans-serif`;
+          context.textAlign = "center";
+          context.textBaseline = "alphabetic";
+          const photoWatermark = fittedCanvasText(context, pdfWatermarkText, placement.width - 18);
+          const watermarkY = placement.y + placement.height - Math.max(8, watermarkFontSize * 0.8);
+          context.fillStyle = "rgba(0, 0, 0, 0.38)";
+          drawCenteredCanvasText(context, photoWatermark, placement.x + 1, watermarkY + 1, placement.width);
+          context.fillStyle = "rgba(255, 255, 255, 0.70)";
+          drawCenteredCanvasText(context, photoWatermark, placement.x, watermarkY, placement.width);
+        } finally {
+          loaded.cleanup();
+        }
+      }
+
+      context.font = "700 8px Arial, Helvetica, sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "alphabetic";
+      context.fillStyle = "rgba(0, 0, 0, 0.42)";
+      context.fillText(pdfWatermarkText, pageWidth / 2, pageHeight - 10);
+
+      renderedPages.push({
+        bytes: await canvasToJpegBytes(canvas),
+        width: canvas.width,
+        height: canvas.height,
+      });
+    }
+
+    return {
+      pages: renderedPages,
+      pageWidth,
+      pageHeight,
+    };
+  };
+
+  const buildPdfBlob = async (images) => {
+    const rendered = await renderPdfPages(images);
     const encoder = new TextEncoder();
     const objects = [];
     const setObject = (id, parts) => {
@@ -687,82 +809,29 @@
     };
     const toBytes = (part) => part instanceof Uint8Array ? part : encoder.encode(String(part));
     const pageIds = [];
-    let nextId = 4;
-    const pages = paginatePdfImages(images);
-    const paper = paperFormatFor();
-    const pageWidth = paper.width;
-    const pageHeight = paper.height;
-    const margin = 30;
-    const titleArea = 24;
-    const rowGap = 18;
+    let nextId = 3;
+    const { pageWidth, pageHeight } = rendered;
 
     setObject(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
-    setObject(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);
 
-    images.forEach((item, index) => {
-      item.imageId = nextId++;
-      item.imageName = `Im${index + 1}`;
-      setObject(item.imageId, [
-        `<< /Type /XObject /Subtype /Image /Width ${Math.round(item.dimensions.width)} /Height ${Math.round(item.dimensions.height)} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${item.bytes.byteLength} >>\nstream\n`,
-        item.bytes,
+    rendered.pages.forEach((page, index) => {
+      const imageId = nextId++;
+      const imageName = `Pg${index + 1}`;
+      setObject(imageId, [
+        `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.byteLength} >>\nstream\n`,
+        page.bytes,
         "\nendstream",
       ]);
-    });
-
-    pages.forEach((page) => {
       const contentId = nextId++;
       const pageId = nextId++;
-      const slotHeight = page.layout === "two-up-landscape"
-        ? ((pageHeight - (margin * 2) - rowGap) / 2)
-        : (pageHeight - (margin * 2));
-      const slots = page.layout === "two-up-landscape"
-        ? [
-          { x: margin, y: margin + slotHeight + rowGap, width: pageWidth - (margin * 2), height: slotHeight },
-          { x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight },
-        ]
-        : [{ x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight }];
-      const itemContent = page.items.map((item, index) => {
-        const slot = slots[index];
-        const box = {
-          x: slot.x,
-          y: slot.y,
-          width: slot.width,
-          height: Math.max(1, slot.height - titleArea),
-        };
-        const placement = imagePlacement(item.dimensions, box);
-        const title = pdfEscape(truncatePdfTitle(titleFor(item.photo)));
-        const watermark = pdfEscape(pdfPhotoWatermarkText);
-        const watermarkX = pdfTextCenterX(pdfPhotoWatermarkText, placement.x + (placement.width / 2), 8);
-        return [
-          "BT\n",
-          "/F1 14 Tf\n",
-          `${slot.x.toFixed(2)} ${(slot.y + slot.height - 16).toFixed(2)} Td\n`,
-          `(${title}) Tj\n`,
-          "ET\n",
-          "q\n",
-          `${placement.width.toFixed(2)} 0 0 ${placement.height.toFixed(2)} ${placement.x.toFixed(2)} ${placement.y.toFixed(2)} cm\n`,
-          `/${item.imageName} Do\n`,
-          "Q\n",
-          "q\n",
-          "0.74 g\n",
-          "BT\n",
-          "/F1 8 Tf\n",
-          `${watermarkX.toFixed(2)} ${(placement.y + 9).toFixed(2)} Td\n`,
-          `(${watermark}) Tj\n`,
-          "ET\n",
-          "Q\n",
-        ].join("");
-      }).join("");
-      const content = itemContent;
-      const xObjects = page.items.map((item) => `/${item.imageName} ${item.imageId} 0 R`).join(" ");
-
+      const content = `q\n${pageWidth.toFixed(2)} 0 0 ${pageHeight.toFixed(2)} 0 0 cm\n/${imageName} Do\nQ\n`;
       setObject(contentId, [
         `<< /Length ${encoder.encode(content).byteLength} >>\nstream\n`,
         content,
         "endstream",
       ]);
       setObject(pageId, [
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /Font << /F1 3 0 R >> /XObject << ${xObjects} >> >> /Contents ${contentId} 0 R >>`,
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /XObject << /${imageName} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
       ]);
       pageIds.push(pageId);
     });
@@ -811,13 +880,13 @@
     let savedProjectCount = 0;
     try {
       for (const project of projects) {
-        const blob = buildPdfBlob(await fetchPdfImages(project.photos));
+        const blob = await buildPdfBlob(await fetchPdfImages(project.photos));
         const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
         const saved = await downloadBlob(blob, filename);
         savedProjectCount += 1;
-        setStatus(`Downloaded ${saved.filename} (${formatBytes(saved.bytes)})`);
+        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
-      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
+      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} to Downloads with ${photos.length} photos`);
     } catch (error) {
       if (error?.name === "AbortError") {
         setStatus(savedProjectCount

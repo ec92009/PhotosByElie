@@ -6,8 +6,9 @@
   const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   const pageVersion = pageParams.get("v");
   const defaultLocalContext = `./tmp/real-estate-import/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
+  const defaultPublicContext = `./assets/real-estate/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
   const contextParam = pageParams.get("context");
-  const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : "");
+  const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : defaultPublicContext);
   const densityKey = "photosbyelie-real-estate-card-density";
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
 
@@ -94,6 +95,12 @@
     } catch {
       return raw;
     }
+  };
+
+  const publicMediaUrl = (key) => {
+    const cleanKey = String(key || "").replace(/^\/+/, "");
+    const baseUrl = String(window.photosByElieMediaConfig?.publicBaseUrl || "").replace(/\/+$/, "");
+    return cleanKey && baseUrl ? `${baseUrl}/${cleanKey}` : "";
   };
 
   const loadScript = (src) => new Promise((resolve, reject) => {
@@ -202,8 +209,16 @@
 
   const renderLoginCodeIcon = () => {
     const showing = elements.loginCode?.type === "text";
+    const fallbackIcon = (name) => {
+      const paths = {
+        visibility: "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z",
+        visibilityOff: "M12 6.5c3.79 0 7.17 2.13 8.82 5.5-.7 1.43-1.79 2.62-3.08 3.49L19.16 16.91C20.69 15.88 22 14.2 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l1.65 1.65c.74-.23 1.52-.35 2.33-.35zM2.1 3.27.82 4.55l3.01 3.01C2.67 8.68 1.7 10.19 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l3.07 3.07 1.27-1.27L2.1 3.27zm7.53 7.53 1.55 1.55c-.11-.39-.02-.82.29-1.13.31-.31.74-.4 1.13-.29l-1.55-1.55c.31-.08.63-.12.95-.12 1.66 0 3 1.34 3 3 0 .32-.04.64-.12.95l1.54 1.54c.37-.68.58-1.45.58-2.29 0-2.76-2.24-5-5-5-.84 0-1.61.21-2.29.58zm2.37 6.2c-2.76 0-5-2.24-5-5 0-.84.21-1.61.58-2.29l1.54 1.54c-.08.31-.12.63-.12.95 0 1.66 1.34 3 3 3 .32 0 .64-.04.95-.12l1.54 1.54c-.68.37-1.45.58-2.29.58z",
+      };
+      return `<svg class="md-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${paths[name]}"></path></svg>`;
+    };
     if (elements.loginCodeIcon) {
-      elements.loginCodeIcon.innerHTML = window.photosByElieMdIcon?.(showing ? "visibilityOff" : "visibility") || "";
+      const name = showing ? "visibilityOff" : "visibility";
+      elements.loginCodeIcon.innerHTML = window.photosByElieMdIcon?.(name) || fallbackIcon(name);
     }
     if (elements.loginCodeToggle) {
       elements.loginCodeToggle.setAttribute("aria-label", showing ? "Hide password" : "Show password");
@@ -232,6 +247,10 @@
 
   const imageFor = (photo, size = "gallery") => {
     const preview = photo?.media?.publicPreview || {};
+    const remoteUrl = size === "detail"
+      ? publicMediaUrl(preview.detailKey || photo?.cloudPdfSource?.publicKey)
+      : publicMediaUrl(preview.galleryKey);
+    if (!isLocalHost && remoteUrl) return remoteUrl;
     return safeUrl(
       size === "detail"
         ? preview.detailUrl || preview.previewUrl || photo?.imageSrc || preview.galleryUrl || photo?.gallerySrc
@@ -1085,6 +1104,8 @@
   };
 
   const bindEvents = () => {
+    renderLoginCodeIcon();
+
     elements.loginCodeToggle?.addEventListener("click", () => {
       if (!elements.loginCode) return;
       elements.loginCode.type = elements.loginCode.type === "password" ? "text" : "password";

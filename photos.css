@@ -2090,7 +2090,7 @@ body[data-real-estate] main.shell{
 .real-estate-draft-item{
   position:relative;
   display:grid;
-  grid-template-columns:54px minmax(0,1fr) auto;
+  grid-template-columns:28px 54px minmax(0,1fr) auto;
   gap:9px;
   align-items:center;
   min-width:0;
@@ -2107,6 +2107,30 @@ body[data-real-estate] main.shell{
 }
 .real-estate-draft-item.is-dragging{
   opacity:.46;
+}
+.real-estate-draft-handle{
+  display:grid;
+  width:28px;
+  height:44px;
+  place-items:center;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--bg);
+  color:var(--muted);
+  cursor:grab;
+  touch-action:none;
+}
+.real-estate-draft-handle:active,
+.real-estate-draft-item.is-dragging .real-estate-draft-handle{
+  cursor:grabbing;
+}
+.real-estate-draft-handle span{
+  width:14px;
+  height:24px;
+  background-image:radial-gradient(currentColor 1.4px,transparent 1.6px);
+  background-position:0 0;
+  background-size:7px 7px;
+  opacity:.78;
 }
 .real-estate-draft-item.is-drop-before,
 .real-estate-draft-item.is-drop-after{
@@ -2130,7 +2154,7 @@ body[data-real-estate] main.shell{
 .real-estate-draft-item.is-drop-after::before{
   bottom:-3px;
 }
-.real-estate-draft-item > span{
+.real-estate-draft-index{
   position:absolute;
   left:4px;
   top:4px;

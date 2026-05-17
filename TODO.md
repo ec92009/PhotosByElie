@@ -4,7 +4,7 @@ Last updated: 2026-05-17
 
 ## Current Facts
 
-- Current visible build: `v78.20`.
+- Current visible build: `v78.21`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
@@ -75,6 +75,7 @@ Last updated: 2026-05-17
    - Show photo previews in the main part of the window.
    - Reserve roughly one sixth of the right side as a selected-photo basket, similar to the mainline basket rail.
    - Let the selected-photo basket scroll vertically on its own while the preview grid remains usable.
+   - Let selected photos be dragged up and down in the basket to set the PDF/order sequence, with arrow buttons as a non-drag fallback.
    - Keep the layout responsive so phones retain the current mobile-friendly selection flow.
 
 12. **Prove Stripe checkout in test mode.**

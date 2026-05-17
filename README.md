@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v78.20`
+- Current visible version: `v78.21`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -18,7 +18,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
 - `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
-- `real-estate.html`: private real-estate review workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, supports album filtering, selection, title edits, and browser/share-sheet-friendly selection table export
+- `real-estate.html`: private real-estate review workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, supports album filtering, selection, title edits, draggable PDF draft ordering, and browser/share-sheet-friendly selection table export
 - `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, and R2 maintenance
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
@@ -38,7 +38,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo-detail.js`: shared detail page, real-image preview support, and automatic basket sync
 - `basket.js`: basket rendering, item removal, resolution reselection, delivery availability pruning, and sticky total updates
 - `liked.js`: liked page rendering, unlike actions, and resolution selection into the basket
-- `real-estate.js`: private client-gallery controller for Real Estate album filters, selected-photo draft state, editable PDF titles, selection table loading/export, and legacy batch JSON loading
+- `real-estate.js`: private client-gallery controller for Real Estate album filters, selected-photo draft state and drag ordering, editable PDF titles, selection table loading/export, and legacy batch JSON loading
 - `media-config.js`: public-media base URL configuration for GitHub Pages/R2 preview delivery
 - `worker/`: mockable Cloudflare Worker-track checkout and fulfillment prototype
 - `shared.css`: copied from the By Elie visual system
@@ -130,7 +130,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
 - The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the configured checkout Worker for guest checkout. When the Worker is configured with Stripe secrets, buyers are redirected to hosted Stripe Checkout; local mock mode can still simulate payment with `?workerBase=http://localhost:8787`. After payment, buyers land on `order.html` with order status and a per-file private download list.
-- The private Real Estate review page loads the public-safe Corine bundle at `assets/real-estate/corine/app-context.js` on GitHub Pages and the ignored local bundle at `tmp/real-estate-import/corine/app-context.js` on localhost by default. A same-origin bundle can still be passed with `?context=<path>`. It has a static client access gate, persists selected photo IDs and edited PDF titles with the store keys emitted by the importer, can reload an older selection, exports a browser-friendly HTML selection table with embedded machine-readable batch data, can share that table through the browser/OS share sheet where available, still accepts legacy JSON batch manifests, and can generate a selected-photo PDF directly in the browser.
+- The private Real Estate review page loads the public-safe Corine bundle at `assets/real-estate/corine/app-context.js` on GitHub Pages and the ignored local bundle at `tmp/real-estate-import/corine/app-context.js` on localhost by default. A same-origin bundle can still be passed with `?context=<path>`. It has a static client access gate, persists selected photo IDs and edited PDF titles with the store keys emitted by the importer, lets selected photos be reordered in the PDF draft basket, can reload an older selection, exports a browser-friendly HTML selection table with embedded machine-readable batch data, can share that table through the browser/OS share sheet where available, still accepts legacy JSON batch manifests, and can generate a selected-photo PDF directly in the browser.
 - The order page shows explicit payment, file preparation, and download phases; cloud delivery failures are shown as blocked delivery instead of indefinite preparation.
 - Public cloud delivery avoids building one large archive in the Worker. The deployed Worker creates one signed-style download token per purchased file and streams each private R2 object separately from the order page.
 - The checkout Worker expects JPG 6 MP, 3 MP, and 1 MP buyer deliverables to exist in private R2 under `renders/...`; those unwatermarked files are generated by the media pipeline on the machine that owns the developed masters and reused for future per-file delivery.

@@ -451,7 +451,10 @@
     if (elements.draftCount) elements.draftCount.textContent = String(selectedPhotos.length);
     if (!elements.draftList) return;
     elements.draftList.innerHTML = selectedPhotos.length ? selectedPhotos.map((photo, index) => `
-      <article class="real-estate-draft-item" data-draft-photo="${escapeHtml(photo.id)}" draggable="true" aria-label="Drag ${escapeHtml(titleFor(photo))} to reorder PDF draft">
+      <article class="real-estate-draft-item" data-draft-photo="${escapeHtml(photo.id)}" aria-label="Drag ${escapeHtml(titleFor(photo))} to reorder PDF draft">
+        <span class="real-estate-draft-handle" data-draft-drag-handle aria-hidden="true" title="Drag to reorder">
+          <span aria-hidden="true"></span>
+        </span>
         <img src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
@@ -462,7 +465,7 @@
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="1" aria-label="Move ${escapeHtml(titleFor(photo))} down">&darr;</button>
           <button type="button" data-remove-draft="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(titleFor(photo))}">&times;</button>
         </div>
-        <span>${index + 1}</span>
+        <span class="real-estate-draft-index">${index + 1}</span>
       </article>
     `).join("") : `<p class="real-estate-muted">No selected photos yet.</p>`;
   };
@@ -1094,7 +1097,8 @@
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
     state.selectedOrder = next;
     persistSelection();
-    renderDraft();
+    render();
+    setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${nextIndex + 1}`);
   };
 
   const clearDraftDropHints = () => {
@@ -1109,13 +1113,25 @@
   };
 
   const draftDropTarget = (event) => {
+    if (!state.dragDraftId) return null;
     const node = document.elementFromPoint(event.clientX, event.clientY);
-    const item = node?.closest?.("[data-draft-photo]");
-    if (!item || !state.dragDraftId || item.dataset.draftPhoto === state.dragDraftId) return null;
-    return {
-      item,
-      position: draftDropPosition(event, item),
-    };
+    const directItem = node?.closest?.("[data-draft-photo]");
+    if (directItem && directItem.dataset.draftPhoto !== state.dragDraftId) {
+      return {
+        item: directItem,
+        position: draftDropPosition(event, directItem),
+      };
+    }
+
+    const items = [...(elements.draftList?.querySelectorAll("[data-draft-photo]") || [])]
+      .filter((item) => item.dataset.draftPhoto !== state.dragDraftId);
+    if (!items.length) return null;
+    const beforeItem = items.find((item) => {
+      const rect = item.getBoundingClientRect();
+      return event.clientY < rect.top + (rect.height / 2);
+    });
+    if (beforeItem) return { item: beforeItem, position: "before" };
+    return { item: items[items.length - 1], position: "after" };
   };
 
   const showDraftDropHint = (event) => {
@@ -1150,7 +1166,8 @@
     next.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, photoId);
     state.selectedOrder = next;
     persistSelection();
-    renderDraft();
+    render();
+    setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${state.selectedOrder.indexOf(photoId) + 1}`);
   };
 
   const dialogPhotos = () => filteredPhotos();
@@ -1366,7 +1383,7 @@
       if (removeButton) setSelected(removeButton.dataset.removeDraft, false);
     });
     elements.draftList?.addEventListener("dragstart", (event) => {
-      if (event.target.closest("button")) {
+      if (event.target.closest("button:not([data-draft-drag-handle])")) {
         event.preventDefault();
         return;
       }
@@ -1378,12 +1395,11 @@
       event.dataTransfer.setData("text/plain", state.dragDraftId);
     });
     elements.draftList?.addEventListener("dragover", (event) => {
-      const item = event.target.closest("[data-draft-photo]");
-      if (!item || !state.dragDraftId || item.dataset.draftPhoto === state.dragDraftId) return;
+      if (!state.dragDraftId) return;
+      const target = showDraftDropHint(event);
+      if (!target) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      clearDraftDropHints();
-      item.classList.add(draftDropPosition(event, item) === "after" ? "is-drop-after" : "is-drop-before");
     });
     elements.draftList?.addEventListener("dragleave", (event) => {
       const item = event.target.closest("[data-draft-photo]");
@@ -1392,13 +1408,14 @@
       }
     });
     elements.draftList?.addEventListener("drop", (event) => {
-      const item = event.target.closest("[data-draft-photo]");
       const draggedId = state.dragDraftId || event.dataTransfer.getData("text/plain");
-      if (!item || !draggedId) return;
+      if (!draggedId) return;
+      if (!state.dragDraftId) state.dragDraftId = draggedId;
+      const target = draftDropTarget(event);
+      if (!target) return;
       event.preventDefault();
-      const position = draftDropPosition(event, item);
       clearDraftDropHints();
-      moveDraftItemTo(draggedId, item.dataset.draftPhoto, position);
+      moveDraftItemTo(draggedId, target.item.dataset.draftPhoto, target.position);
       state.dragDraftId = "";
     });
     elements.draftList?.addEventListener("dragend", (event) => {
@@ -1407,9 +1424,12 @@
       state.dragDraftId = "";
     });
     elements.draftList?.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || event.target.closest("button")) return;
+      const handle = event.target.closest("[data-draft-drag-handle]");
+      if (event.button !== 0 || event.target.closest("button:not([data-draft-drag-handle])")) return;
       const item = event.target.closest("[data-draft-photo]");
       if (!item) return;
+      if (event.pointerType !== "mouse" && !handle) return;
+      if (handle) event.preventDefault();
       state.pointerDraftId = item.dataset.draftPhoto || "";
       state.dragDraftId = state.pointerDraftId;
       state.pointerDraftStartX = event.clientX;

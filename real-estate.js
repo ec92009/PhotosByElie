@@ -67,6 +67,11 @@
     editedTitles: {},
     projectAssignments: {},
     activePhotoId: "",
+    dragDraftId: "",
+    pointerDraftId: "",
+    pointerDraftStartX: 0,
+    pointerDraftStartY: 0,
+    pointerDraftActive: false,
     unlocked: false,
     pdfBusy: false,
   };
@@ -324,20 +329,21 @@
       elements.actionStatus.title = message;
     }
   };
+  const formatBytes = (bytes) => {
+    const value = Number(bytes) || 0;
+    if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+    if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+    return `${value} bytes`;
+  };
 
   const syncFileActionLabels = () => {
-    const canPickSaveLocation = typeof window.showSaveFilePicker === "function";
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = canPickSaveLocation ? "Save project PDFs..." : "Download project PDFs";
-      button.title = canPickSaveLocation
-        ? "Choose where to save each project PDF"
-        : "Browser will save project PDFs to Downloads";
+      button.textContent = "Download project PDFs";
+      button.title = "Browser will save project PDFs to Downloads";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
-      button.textContent = canPickSaveLocation ? "Save selection file..." : "Save to Downloads";
-      button.title = canPickSaveLocation
-        ? "Choose where to save the selection JSON file"
-        : "Browser will save the selection JSON file to Downloads";
+      button.textContent = "Download selection file";
+      button.title = "Browser will save the selection JSON file to Downloads";
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
       button.textContent = "Load selection file...";
@@ -426,8 +432,8 @@
     if (elements.draftCount) elements.draftCount.textContent = String(selectedPhotos.length);
     if (!elements.draftList) return;
     elements.draftList.innerHTML = selectedPhotos.length ? selectedPhotos.map((photo, index) => `
-      <article class="real-estate-draft-item" data-draft-photo="${escapeHtml(photo.id)}">
-        <img src="${escapeHtml(imageFor(photo))}" alt=""/>
+      <article class="real-estate-draft-item" data-draft-photo="${escapeHtml(photo.id)}" draggable="true" aria-label="Drag ${escapeHtml(titleFor(photo))} to reorder PDF draft">
+        <img src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
           <small>${escapeHtml(assignedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + "))}</small>
@@ -564,7 +570,7 @@
       await navigator.clipboard.writeText(batch);
       setStatus(`Copied ${manifest.projects.length} project selection list${manifest.projects.length === 1 ? "" : "s"}`);
     } catch {
-      setStatus("Clipboard unavailable; use Save selection file...");
+      setStatus("Clipboard unavailable; use Download selection file");
     }
   };
 
@@ -575,44 +581,12 @@
     document.body.append(link);
     link.click();
     link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 60000);
   };
 
-  const saveBlob = async (blob, filename, options = {}) => {
-    const config = typeof options === "string" ? { description: options } : options;
-    const description = config.description || "File";
-    const mimeType = config.mimeType || blob.type || "application/octet-stream";
-    const extensions = Array.isArray(config.extensions) ? config.extensions : [];
-    if (window.showSaveFilePicker) {
-      const pickerOptions = {
-        suggestedName: filename,
-      };
-      if (extensions.length) {
-        pickerOptions.types = [{
-          description,
-          accept: { [mimeType]: extensions },
-        }];
-      }
-      const handle = await window.showSaveFilePicker(pickerOptions);
-      const bytes = new Uint8Array(await blob.arrayBuffer());
-      const writable = await handle.createWritable({ keepExistingData: false });
-      try {
-        await writable.write({ type: "write", position: 0, data: bytes });
-        await writable.truncate(bytes.byteLength);
-        await writable.close();
-      } catch (error) {
-        await writable.abort?.();
-        throw error;
-      }
-      const savedFile = typeof handle.getFile === "function" ? await handle.getFile() : null;
-      const savedSize = Number(savedFile?.size ?? bytes.byteLength);
-      if (savedSize !== bytes.byteLength) {
-        throw new Error(`Saved file is ${savedSize} bytes; expected ${bytes.byteLength}`);
-      }
-      return { filename: handle.name || filename, pickedLocation: true, bytes: savedSize };
-    }
+  const downloadBlob = async (blob, filename) => {
     triggerDownload(blob, filename);
-    return { filename, pickedLocation: false };
+    return { filename, pickedLocation: false, bytes: Number(blob.size) || 0 };
   };
 
   const downloadBatch = async () => {
@@ -621,14 +595,10 @@
     const blob = new Blob([JSON.stringify(batch, null, 2) + "\n"], { type: "application/json" });
     const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`;
     try {
-      const saved = await saveBlob(blob, filename, {
-        description: "Photos By Elie selection file",
-        mimeType: "application/json",
-        extensions: [".json"],
-      });
-      setStatus(saved.pickedLocation ? `Saved to chosen location: ${saved.filename}` : `Saved to Downloads: ${saved.filename}`);
+      const saved = await downloadBlob(blob, filename);
+      setStatus(`Downloaded ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
-      setStatus(error?.name === "AbortError" ? "Save canceled" : "Selection file could not be saved");
+      setStatus(error?.name === "AbortError" ? "Download canceled" : "Selection file could not be downloaded");
     }
   };
 
@@ -843,23 +813,18 @@
       for (const project of projects) {
         const blob = buildPdfBlob(await fetchPdfImages(project.photos));
         const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
-        const saved = await saveBlob(blob, filename, {
-          description: "Photos By Elie project PDF",
-          mimeType: "application/pdf",
-          extensions: [".pdf"],
-        });
+        const saved = await downloadBlob(blob, filename);
         savedProjectCount += 1;
-        setStatus(saved.pickedLocation ? `Saved ${saved.filename}` : `Saved to Downloads: ${saved.filename}`);
+        setStatus(`Downloaded ${saved.filename} (${formatBytes(saved.bytes)})`);
       }
-      const action = typeof window.showSaveFilePicker === "function" ? "Saved" : "Downloaded";
-      setStatus(`${action} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
+      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
     } catch (error) {
       if (error?.name === "AbortError") {
         setStatus(savedProjectCount
-          ? `Save canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
-          : "PDF save canceled");
+          ? `Download canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
+          : "PDF download canceled");
       } else {
-        setStatus(error?.message || "PDF save failed");
+        setStatus(error?.message || "PDF download failed");
       }
     } finally {
       state.pdfBusy = false;
@@ -889,6 +854,62 @@
     if (index < 0 || nextIndex < 0 || nextIndex >= state.selectedOrder.length) return;
     const next = [...state.selectedOrder];
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    state.selectedOrder = next;
+    persistSelection();
+    renderDraft();
+  };
+
+  const clearDraftDropHints = () => {
+    document.querySelectorAll(".real-estate-draft-item.is-drop-before, .real-estate-draft-item.is-drop-after").forEach((item) => {
+      item.classList.remove("is-drop-before", "is-drop-after");
+    });
+  };
+
+  const draftDropPosition = (event, item) => {
+    const rect = item.getBoundingClientRect();
+    return event.clientY > rect.top + (rect.height / 2) ? "after" : "before";
+  };
+
+  const draftDropTarget = (event) => {
+    const node = document.elementFromPoint(event.clientX, event.clientY);
+    const item = node?.closest?.("[data-draft-photo]");
+    if (!item || !state.dragDraftId || item.dataset.draftPhoto === state.dragDraftId) return null;
+    return {
+      item,
+      position: draftDropPosition(event, item),
+    };
+  };
+
+  const showDraftDropHint = (event) => {
+    const target = draftDropTarget(event);
+    clearDraftDropHints();
+    if (!target) return null;
+    target.item.classList.add(target.position === "after" ? "is-drop-after" : "is-drop-before");
+    return target;
+  };
+
+  const draftElementFor = (photoId) => (
+    [...(elements.draftList?.querySelectorAll("[data-draft-photo]") || [])]
+      .find((item) => item.dataset.draftPhoto === photoId)
+  );
+
+  const resetPointerDraftDrag = () => {
+    draftElementFor(state.pointerDraftId)?.classList.remove("is-dragging");
+    state.pointerDraftId = "";
+    state.pointerDraftStartX = 0;
+    state.pointerDraftStartY = 0;
+    state.pointerDraftActive = false;
+    state.dragDraftId = "";
+    clearDraftDropHints();
+  };
+
+  const moveDraftItemTo = (photoId, targetPhotoId, position) => {
+    if (!photoId || !targetPhotoId || photoId === targetPhotoId) return;
+    if (!state.selectedIds.has(photoId) || !state.selectedIds.has(targetPhotoId)) return;
+    const next = state.selectedOrder.filter((id) => id !== photoId);
+    const targetIndex = next.indexOf(targetPhotoId);
+    if (targetIndex < 0) return;
+    next.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, photoId);
     state.selectedOrder = next;
     persistSelection();
     renderDraft();
@@ -1091,10 +1112,81 @@
       if (moveButton) moveDraftItem(moveButton.dataset.moveDraft, moveButton.dataset.direction);
       if (removeButton) setSelected(removeButton.dataset.removeDraft, false);
     });
+    elements.draftList?.addEventListener("dragstart", (event) => {
+      if (event.target.closest("button")) {
+        event.preventDefault();
+        return;
+      }
+      const item = event.target.closest("[data-draft-photo]");
+      if (!item) return;
+      state.dragDraftId = item.dataset.draftPhoto || "";
+      item.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", state.dragDraftId);
+    });
+    elements.draftList?.addEventListener("dragover", (event) => {
+      const item = event.target.closest("[data-draft-photo]");
+      if (!item || !state.dragDraftId || item.dataset.draftPhoto === state.dragDraftId) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      clearDraftDropHints();
+      item.classList.add(draftDropPosition(event, item) === "after" ? "is-drop-after" : "is-drop-before");
+    });
+    elements.draftList?.addEventListener("dragleave", (event) => {
+      const item = event.target.closest("[data-draft-photo]");
+      if (item && !item.contains(event.relatedTarget)) {
+        item.classList.remove("is-drop-before", "is-drop-after");
+      }
+    });
+    elements.draftList?.addEventListener("drop", (event) => {
+      const item = event.target.closest("[data-draft-photo]");
+      const draggedId = state.dragDraftId || event.dataTransfer.getData("text/plain");
+      if (!item || !draggedId) return;
+      event.preventDefault();
+      const position = draftDropPosition(event, item);
+      clearDraftDropHints();
+      moveDraftItemTo(draggedId, item.dataset.draftPhoto, position);
+      state.dragDraftId = "";
+    });
+    elements.draftList?.addEventListener("dragend", (event) => {
+      event.target.closest("[data-draft-photo]")?.classList.remove("is-dragging");
+      clearDraftDropHints();
+      state.dragDraftId = "";
+    });
+    elements.draftList?.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target.closest("button")) return;
+      const item = event.target.closest("[data-draft-photo]");
+      if (!item) return;
+      state.pointerDraftId = item.dataset.draftPhoto || "";
+      state.dragDraftId = state.pointerDraftId;
+      state.pointerDraftStartX = event.clientX;
+      state.pointerDraftStartY = event.clientY;
+      state.pointerDraftActive = false;
+      item.setPointerCapture?.(event.pointerId);
+    });
+    elements.draftList?.addEventListener("pointermove", (event) => {
+      if (!state.pointerDraftId) return;
+      const distance = Math.hypot(event.clientX - state.pointerDraftStartX, event.clientY - state.pointerDraftStartY);
+      if (!state.pointerDraftActive && distance < 6) return;
+      if (!state.pointerDraftActive) {
+        state.pointerDraftActive = true;
+        draftElementFor(state.pointerDraftId)?.classList.add("is-dragging");
+      }
+      event.preventDefault();
+      showDraftDropHint(event);
+    });
+    elements.draftList?.addEventListener("pointerup", (event) => {
+      if (!state.pointerDraftId) return;
+      const draggedId = state.pointerDraftId;
+      const target = state.pointerDraftActive ? draftDropTarget(event) : null;
+      resetPointerDraftDrag();
+      if (target) moveDraftItemTo(draggedId, target.item.dataset.draftPhoto, target.position);
+    });
+    elements.draftList?.addEventListener("pointercancel", resetPointerDraftDrag);
 
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
-      downloadBatch().catch(() => setStatus("Selection file could not be saved"));
+      downloadBatch().catch(() => setStatus("Selection file could not be downloaded"));
     }));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {

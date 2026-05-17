@@ -2097,6 +2097,38 @@ body[data-real-estate] main.shell{
   border:1px solid var(--line);
   background:var(--surface);
   padding:7px;
+  cursor:grab;
+  touch-action:pan-y;
+  user-select:none;
+  transition:border-color .14s ease,box-shadow .14s ease,opacity .14s ease;
+}
+.real-estate-draft-item:active{
+  cursor:grabbing;
+}
+.real-estate-draft-item.is-dragging{
+  opacity:.46;
+}
+.real-estate-draft-item.is-drop-before,
+.real-estate-draft-item.is-drop-after{
+  border-color:color-mix(in srgb,var(--re-accent) 70%,var(--line));
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--re-accent) 18%,transparent);
+}
+.real-estate-draft-item.is-drop-before::before,
+.real-estate-draft-item.is-drop-after::before{
+  content:"";
+  position:absolute;
+  left:6px;
+  right:6px;
+  z-index:4;
+  height:3px;
+  border-radius:999px;
+  background:var(--re-accent);
+}
+.real-estate-draft-item.is-drop-before::before{
+  top:-3px;
+}
+.real-estate-draft-item.is-drop-after::before{
+  bottom:-3px;
 }
 .real-estate-draft-item > span{
   position:absolute;
@@ -2190,12 +2222,13 @@ body[data-real-estate] main.shell{
   left:50%;
   bottom:12px;
   z-index:85;
-  display:flex;
+  display:grid;
+  grid-template-columns:auto repeat(6,auto);
   align-items:center;
-  justify-content:flex-end;
-  gap:8px;
-  width:min(980px,calc(100dvw - 24px));
-  min-height:54px;
+  justify-content:center;
+  gap:6px 8px;
+  width:min(1120px,calc(100dvw - 24px));
+  min-height:76px;
   border:1px solid var(--line);
   background:color-mix(in srgb,var(--surface) 92%,transparent);
   padding:8px;
@@ -2208,16 +2241,22 @@ body[data-real-estate] main.shell{
   display:none;
 }
 .real-estate-action-bar strong{
-  margin-right:auto;
+  grid-column:1;
+  grid-row:1 / span 2;
+  margin-right:8px;
 }
 .real-estate-action-bar > span{
+  grid-column:2 / -1;
+  grid-row:1;
   min-width:0;
-  overflow:hidden;
   color:var(--muted);
   font-size:.78rem;
   font-weight:800;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+.real-estate-action-bar .btn{
+  grid-row:2;
 }
 .real-estate-help-button{
   width:42px;
@@ -4262,6 +4301,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     min-height:0;
+  }
+  .real-estate-action-bar .btn{
+    grid-row:auto;
   }
   .real-estate-action-bar strong,
   .real-estate-action-bar > span{

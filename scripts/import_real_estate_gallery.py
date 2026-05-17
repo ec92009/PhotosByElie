@@ -19,6 +19,7 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
 DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE/Corine")
 DEFAULT_OUTPUT_ROOT = Path("tmp/real-estate-import")
 PDF_BATCH_SCHEMA = "photosbyelie.realEstatePdfBatch.v1"
+DEFAULT_R2_ROOT = "real-estate"
 
 
 def slugify(value: str) -> str:
@@ -79,6 +80,10 @@ def repo_relative(path: Path, repo_root: Path) -> str:
 
 def output_relative(path: Path, output_dir: Path) -> str:
     return path.resolve().relative_to(output_dir.resolve()).as_posix()
+
+
+def key_prefix(value: str) -> str:
+    return re.sub(r"/+", "/", value.strip().strip("/"))
 
 
 def scan_album_files(album_dir: Path) -> list[Path]:
@@ -187,20 +192,22 @@ def build_manifest(
     customer: str,
     gallery_key: str,
     gallery_title: str,
+    public_key_prefix: str,
+    private_key_prefix: str,
     albums: list[Path],
-    gallery_max_edge: int,
-    pdf_source_max_edge: int,
-    gallery_quality: int,
-    pdf_source_quality: int,
+    preview_900_max_edge: int,
+    preview_1800_max_edge: int,
+    preview_900_quality: int,
+    preview_1800_quality: int,
     force: bool,
 ) -> dict[str, Any]:
     photos: list[dict[str, Any]] = []
     album_entries: list[dict[str, Any]] = []
     total_source_bytes = 0
-    total_gallery_bytes = 0
-    total_pdf_source_bytes = 0
-    rendered_gallery = 0
-    rendered_pdf_source = 0
+    total_preview_900_bytes = 0
+    total_preview_1800_bytes = 0
+    rendered_preview_900 = 0
+    rendered_preview_1800 = 0
 
     for album_index, album_dir in enumerate(albums, start=1):
         if not album_dir.exists() or not album_dir.is_dir():
@@ -225,18 +232,21 @@ def build_manifest(
             file_slug = slugify(source.stem)
             photo_id = f"{slugify(customer)}-{album_slug}-{file_slug}"
             default_title = f"{album_title} - {photo_index:02d}"
-            gallery_path = output_dir / "gallery" / album_slug / f"{photo_id}_gallery.jpg"
-            pdf_source_path = output_dir / "pdf-source" / album_slug / f"{photo_id}_pdf_source.jpg"
-            gallery_render = render_derivative(source, gallery_path, gallery_max_edge, gallery_quality, force)
-            pdf_source_render = render_derivative(source, pdf_source_path, pdf_source_max_edge, pdf_source_quality, force)
-            rendered_gallery += 1 if gallery_render["rendered"] else 0
-            rendered_pdf_source += 1 if pdf_source_render["rendered"] else 0
-            total_gallery_bytes += int(gallery_render["bytes"])
-            total_pdf_source_bytes += int(pdf_source_render["bytes"])
+            preview_900_path = output_dir / "previews" / album_slug / f"{photo_id}_900.jpg"
+            preview_1800_path = output_dir / "previews" / album_slug / f"{photo_id}_1800.jpg"
+            preview_900_render = render_derivative(source, preview_900_path, preview_900_max_edge, preview_900_quality, force)
+            preview_1800_render = render_derivative(source, preview_1800_path, preview_1800_max_edge, preview_1800_quality, force)
+            rendered_preview_900 += 1 if preview_900_render["rendered"] else 0
+            rendered_preview_1800 += 1 if preview_1800_render["rendered"] else 0
+            total_preview_900_bytes += int(preview_900_render["bytes"])
+            total_preview_1800_bytes += int(preview_1800_render["bytes"])
 
             original_dimensions = image_dimensions(source)
-            gallery_rel = output_relative(gallery_path, output_dir)
-            pdf_source_rel = output_relative(pdf_source_path, output_dir)
+            preview_900_rel = output_relative(preview_900_path, output_dir)
+            preview_1800_rel = output_relative(preview_1800_path, output_dir)
+            preview_900_key = f"{public_key_prefix}/{album_slug}/{photo_id}_900.jpg"
+            preview_1800_key = f"{public_key_prefix}/{album_slug}/{photo_id}_1800.jpg"
+            private_master_key = f"{private_key_prefix}/{album_slug}/{photo_id}{source.suffix.lower()}"
             photos.append({
                 "id": photo_id,
                 "title": default_title,
@@ -244,8 +254,8 @@ def build_manifest(
                 "caption": album_title,
                 "className": "real-estate-photo",
                 "full": source.name,
-                "gallerySrc": gallery_rel,
-                "imageSrc": pdf_source_rel,
+                "gallerySrc": preview_900_rel,
+                "imageSrc": preview_1800_rel,
                 "album": album_name,
                 "albumSlug": album_slug,
                 "albumTitle": album_title,
@@ -255,40 +265,52 @@ def build_manifest(
                     {"label": "Album", "value": album_name},
                     {"label": "Original file", "value": source.name},
                     {"label": "Original size", "value": f"{original_dimensions['width']} x {original_dimensions['height']}"},
-                    {"label": "Gallery derivative", "value": f"{gallery_render['width']} x {gallery_render['height']}"},
-                    {"label": "Cloud PDF source", "value": f"{pdf_source_render['width']} x {pdf_source_render['height']}"},
+                    {"label": "Preview 900", "value": f"{preview_900_render['width']} x {preview_900_render['height']}"},
+                    {"label": "Preview 1800", "value": f"{preview_1800_render['width']} x {preview_1800_render['height']}"},
                 ],
                 "media": {
                     "type": "photo",
                     "publicPreview": {
                         "allowed": True,
-                        "galleryUrl": gallery_rel,
-                        "thumbnailUrl": gallery_rel,
-                        "detailUrl": pdf_source_rel,
-                        "previewUrl": pdf_source_rel,
+                        "galleryKey": preview_900_key,
+                        "detailKey": preview_1800_key,
+                        "galleryUrl": preview_900_rel,
+                        "thumbnailUrl": preview_900_rel,
+                        "detailUrl": preview_1800_rel,
+                        "previewUrl": preview_1800_rel,
                         "dimensions": {
-                            "width": int(gallery_render["width"]),
-                            "height": int(gallery_render["height"]),
+                            "width": int(preview_900_render["width"]),
+                            "height": int(preview_900_render["height"]),
+                        },
+                        "detailDimensions": {
+                            "width": int(preview_1800_render["width"]),
+                            "height": int(preview_1800_render["height"]),
                         },
                     },
                 },
                 "cloudPdfSource": {
                     "title": default_title,
-                    "imageUrl": pdf_source_rel,
-                    "maxEdge": pdf_source_max_edge,
+                    "imageUrl": preview_1800_rel,
+                    "publicKey": preview_1800_key,
+                    "maxEdge": preview_1800_max_edge,
                     "dimensions": {
-                        "width": int(pdf_source_render["width"]),
-                        "height": int(pdf_source_render["height"]),
+                        "width": int(preview_1800_render["width"]),
+                        "height": int(preview_1800_render["height"]),
                     },
-                    "bytes": int(pdf_source_render["bytes"]),
+                    "bytes": int(preview_1800_render["bytes"]),
                 },
                 "realEstate": {
                     "customer": customer,
                     "sourcePath": str(source),
                     "sourceBytes": source_bytes,
                     "sourceDimensions": original_dimensions,
-                    "galleryPath": repo_relative(gallery_path, repo_root),
-                    "cloudPdfSourcePath": repo_relative(pdf_source_path, repo_root),
+                    "privateMasterKey": private_master_key,
+                    "preview900Path": repo_relative(preview_900_path, repo_root),
+                    "preview1800Path": repo_relative(preview_1800_path, repo_root),
+                    "publicPreviewKeys": {
+                        "900": preview_900_key,
+                        "1800": preview_1800_key,
+                    },
                 },
             })
 
@@ -302,6 +324,12 @@ def build_manifest(
         },
         "sourceRoot": str(source_root),
         "outputRoot": repo_relative(output_dir, repo_root),
+        "r2": {
+            "publicBucket": "photosbyelie-public",
+            "privateBucket": "photosbyelie-private",
+            "publicPreviewPrefix": public_key_prefix,
+            "privateMasterPrefix": private_key_prefix,
+        },
         "gallery": {
             "key": gallery_key,
             "title": gallery_title,
@@ -316,6 +344,7 @@ def build_manifest(
             "selectionStoreKey": f"photosbyelie-real-estate-liked-{gallery_key}",
             "titleStoreKey": f"photosbyelie-real-estate-titles-{gallery_key}",
             "imageField": "cloudPdfSource.imageUrl",
+            "cloudImageKeyField": "cloudPdfSource.publicKey",
             "mode": "one-photo-per-page",
             "assembly": "Cloud service receives liked photo ids plus edited titles, then generates the final PDF on demand.",
             "batchManifest": {
@@ -337,12 +366,12 @@ def build_manifest(
             "albumCount": len(album_entries),
             "photoCount": len(photos),
             "sourceBytes": total_source_bytes,
-            "galleryBytes": total_gallery_bytes,
-            "pdfSourceBytes": total_pdf_source_bytes,
-            "galleryRendered": rendered_gallery,
-            "pdfSourceRendered": rendered_pdf_source,
-            "galleryMaxEdge": gallery_max_edge,
-            "pdfSourceMaxEdge": pdf_source_max_edge,
+            "preview900Bytes": total_preview_900_bytes,
+            "preview1800Bytes": total_preview_1800_bytes,
+            "preview900Rendered": rendered_preview_900,
+            "preview1800Rendered": rendered_preview_1800,
+            "preview900MaxEdge": preview_900_max_edge,
+            "preview1800MaxEdge": preview_1800_max_edge,
         },
     }
 
@@ -356,11 +385,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--customer", default="Corine")
     parser.add_argument("--gallery-key", default="")
     parser.add_argument("--gallery-title", default="")
+    parser.add_argument("--public-key-prefix", default="", help="R2 public preview key prefix. Default: real-estate/<gallery-key>/previews.")
+    parser.add_argument("--private-key-prefix", default="", help="R2 private master key prefix. Default: real-estate/<gallery-key>/masters.")
     parser.add_argument("--album", action="append", default=[], help="Album folder name to import. Repeatable.")
-    parser.add_argument("--gallery-max-edge", type=int, default=1400)
-    parser.add_argument("--pdf-source-max-edge", "--pdf-max-edge", dest="pdf_source_max_edge", type=int, default=2200)
-    parser.add_argument("--gallery-quality", type=int, default=84)
-    parser.add_argument("--pdf-source-quality", "--pdf-quality", dest="pdf_source_quality", type=int, default=88)
+    parser.add_argument("--preview-900-max-edge", "--gallery-max-edge", dest="preview_900_max_edge", type=int, default=900)
+    parser.add_argument("--preview-1800-max-edge", "--pdf-source-max-edge", "--pdf-max-edge", dest="preview_1800_max_edge", type=int, default=1800)
+    parser.add_argument("--preview-900-quality", "--gallery-quality", dest="preview_900_quality", type=int, default=84)
+    parser.add_argument("--preview-1800-quality", "--pdf-source-quality", "--pdf-quality", dest="preview_1800_quality", type=int, default=88)
     parser.add_argument("--force", action="store_true", help="Re-render existing derivatives.")
     parser.add_argument("--allow-raw-present", action="store_true", help="Do not fail when RAW/DNG/NEF files are present near the source JPGs.")
     return parser.parse_args()
@@ -386,6 +417,8 @@ def main() -> int:
     customer_slug = slugify(args.customer)
     gallery_key = args.gallery_key or f"{customer_slug}-real-estate"
     gallery_title = args.gallery_title or f"{args.customer} Real Estate"
+    public_key_prefix = key_prefix(args.public_key_prefix or f"{DEFAULT_R2_ROOT}/{gallery_key}/previews")
+    private_key_prefix = key_prefix(args.private_key_prefix or f"{DEFAULT_R2_ROOT}/{gallery_key}/masters")
     output_dir = args.output_root / customer_slug
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -401,11 +434,13 @@ def main() -> int:
         customer=args.customer,
         gallery_key=gallery_key,
         gallery_title=gallery_title,
+        public_key_prefix=public_key_prefix,
+        private_key_prefix=private_key_prefix,
         albums=albums,
-        gallery_max_edge=args.gallery_max_edge,
-        pdf_source_max_edge=args.pdf_source_max_edge,
-        gallery_quality=args.gallery_quality,
-        pdf_source_quality=args.pdf_source_quality,
+        preview_900_max_edge=args.preview_900_max_edge,
+        preview_1800_max_edge=args.preview_1800_max_edge,
+        preview_900_quality=args.preview_900_quality,
+        preview_1800_quality=args.preview_1800_quality,
         force=args.force,
     )
 
@@ -432,8 +467,8 @@ def main() -> int:
 
     stats = manifest["stats"]
     print(f"Imported {stats['photoCount']} photos across {stats['albumCount']} albums for {args.customer}.")
-    print(f"Gallery derivatives: {stats['galleryRendered']} rendered, {stats['galleryBytes']} bytes total.")
-    print(f"Cloud PDF source images: {stats['pdfSourceRendered']} rendered, {stats['pdfSourceBytes']} bytes total.")
+    print(f"Preview 900 images: {stats['preview900Rendered']} rendered, {stats['preview900Bytes']} bytes total.")
+    print(f"Preview 1800 images: {stats['preview1800Rendered']} rendered, {stats['preview1800Bytes']} bytes total.")
     print(f"Manifest: {repo_relative(manifest_path, repo_root)}")
     print(f"App context: {repo_relative(app_context_path, repo_root)}")
     print(f"PDF batch template: {repo_relative(batch_template_path, repo_root)}")

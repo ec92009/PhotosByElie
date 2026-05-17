@@ -71,6 +71,17 @@ The importer reads `/Volumes/Saturn/Pictures/RE/Corine` by default, refuses to r
 
 Each cloud PDF generation should also write a tiny timestamped batch manifest using the `photosbyelie.realEstatePdfBatch.v1` shape declared in `cloudPdfWorkflow.batchManifest`. Store those manifests under `real-estate/pdf-batches/<gallery-key>/<YYYYMMDDTHHMMSSZ>.json`; each item is just `photoId`, `title`, and `sortIndex`. Listing manifests by date/time lets a client open an older batch, reuse its liked photos and edited titles as the starting point, then save a new batch with `sourceBatchId` pointing back to the original.
 
+Upload the initial Real Estate media set from that manifest:
+
+```bash
+python3 scripts/upload_real_estate_media.py \
+  --manifest tmp/real-estate-import/corine/manifest.json \
+  --backend s3 \
+  --upload
+```
+
+The upload inventory is three objects per imported photo: one private master JPG in `photosbyelie-private` under `real-estate/<gallery-key>/masters/...`, plus unwatermarked public `_900` and `_1800` previews in `photosbyelie-public` under `real-estate/<gallery-key>/previews/...`. The uploader writes an ignored resume log at `.review-logs/real-estate-r2-upload-state.jsonl`.
+
 Outputs:
 
 - `tmp/import-cache/<country>/*_900.jpg`: watermarked photo gallery thumbnails and video gallery posters.

@@ -18,6 +18,7 @@ RAW_EXTENSIONS = {".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".orf", ".raf"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
 DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE/Corine")
 DEFAULT_OUTPUT_ROOT = Path("tmp/real-estate-import")
+PDF_BATCH_SCHEMA = "photosbyelie.realEstatePdfBatch.v1"
 
 
 def slugify(value: str) -> str:
@@ -152,6 +153,30 @@ def write_app_context(manifest: dict[str, Any], output_dir: Path) -> Path:
     path = output_dir / "app-context.js"
     path.write_text(context, encoding="utf-8")
     return path
+
+
+def pdf_batch_manifest_template(
+    *,
+    customer: str,
+    gallery_key: str,
+    import_generated_at: str,
+) -> dict[str, Any]:
+    return {
+        "schema": PDF_BATCH_SCHEMA,
+        "batchId": "",
+        "createdAt": "",
+        "galleryKey": gallery_key,
+        "customer": customer,
+        "sourceImportGeneratedAt": import_generated_at,
+        "sourceBatchId": "",
+        "items": [
+            {
+                "photoId": "",
+                "title": "",
+                "sortIndex": 1,
+            }
+        ],
+    }
 
 
 def build_manifest(
@@ -293,6 +318,19 @@ def build_manifest(
             "imageField": "cloudPdfSource.imageUrl",
             "mode": "one-photo-per-page",
             "assembly": "Cloud service receives liked photo ids plus edited titles, then generates the final PDF on demand.",
+            "batchManifest": {
+                "schema": PDF_BATCH_SCHEMA,
+                "batchIdFormat": "YYYYMMDDTHHMMSSZ",
+                "storageKeyPattern": f"real-estate/pdf-batches/{gallery_key}/{{batchId}}.json",
+                "retrievalOrder": "createdAt desc",
+                "itemFields": ["photoId", "title", "sortIndex"],
+                "resumeBehavior": "Loading a prior batch manifest seeds the liked photo IDs and edited titles; generating a PDF from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
+                "template": pdf_batch_manifest_template(
+                    customer=customer,
+                    gallery_key=gallery_key,
+                    import_generated_at=generated_at,
+                ),
+            },
             "largeFileMitigation": "Importer prepares cloud PDF source JPGs instead of final PDFs; final PDF assembly/download belongs to the cloud path so the browser does not build one huge Blob locally.",
         },
         "stats": {
@@ -374,6 +412,11 @@ def main() -> int:
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     app_context_path = write_app_context(manifest, output_dir)
+    batch_template_path = output_dir / "pdf-batch-template.json"
+    batch_template_path.write_text(
+        json.dumps(manifest["cloudPdfWorkflow"]["batchManifest"]["template"], indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     summary_path = output_dir / "summary.json"
     summary_path.write_text(json.dumps({
         "generatedAt": manifest["generatedAt"],
@@ -384,6 +427,7 @@ def main() -> int:
         "stats": manifest["stats"],
         "manifestPath": repo_relative(manifest_path, repo_root),
         "appContextPath": repo_relative(app_context_path, repo_root),
+        "batchTemplatePath": repo_relative(batch_template_path, repo_root),
     }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     stats = manifest["stats"]
@@ -392,6 +436,7 @@ def main() -> int:
     print(f"Cloud PDF source images: {stats['pdfSourceRendered']} rendered, {stats['pdfSourceBytes']} bytes total.")
     print(f"Manifest: {repo_relative(manifest_path, repo_root)}")
     print(f"App context: {repo_relative(app_context_path, repo_root)}")
+    print(f"PDF batch template: {repo_relative(batch_template_path, repo_root)}")
     print(f"Summary: {repo_relative(summary_path, repo_root)}")
     return 0
 

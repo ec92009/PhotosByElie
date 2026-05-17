@@ -69,6 +69,8 @@ python3 scripts/import_real_estate_gallery.py \
 
 The importer reads `/Volumes/Saturn/Pictures/RE/Corine` by default, refuses to run if RAW/DNG/NEF-style files are present, and writes the client-gallery bundle under `tmp/real-estate-import/corine/`. The generated `manifest.json` and `app-context.js` use the same collection/photo shape as the public gallery code, include stable liked-selection and editable-title store keys, and point the future cloud PDF builder at cloud-PDF-source JPGs instead of original exports. Final PDFs are not generated or uploaded from this script; the cloud path should receive liked photo IDs plus edited titles and assemble the final PDF on demand.
 
+Each cloud PDF generation should also write a tiny timestamped batch manifest using the `photosbyelie.realEstatePdfBatch.v1` shape declared in `cloudPdfWorkflow.batchManifest`. Store those manifests under `real-estate/pdf-batches/<gallery-key>/<YYYYMMDDTHHMMSSZ>.json`; each item is just `photoId`, `title`, and `sortIndex`. Listing manifests by date/time lets a client open an older batch, reuse its liked photos and edited titles as the starting point, then save a new batch with `sourceBatchId` pointing back to the original.
+
 Outputs:
 
 - `tmp/import-cache/<country>/*_900.jpg`: watermarked photo gallery thumbnails and video gallery posters.

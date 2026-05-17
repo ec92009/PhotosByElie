@@ -91,6 +91,10 @@ const translations = {
     'gallery.search_placeholder': 'Title or keyword',
     'gallery.date_from': 'Date from',
     'gallery.date_to': 'Date to',
+    'gallery.media': 'Media',
+    'gallery.all_media': 'All media',
+    'gallery.photos': 'Photos',
+    'gallery.videos': 'Videos',
     'gallery.color_mood': 'Color mood',
     'gallery.subject': 'Subject',
     'gallery.sort': 'Sort',
@@ -100,12 +104,19 @@ const translations = {
     'gallery.portrait': 'Portrait',
     'gallery.square': 'Square',
     'gallery.min_size': 'Min size',
+    'gallery.min_duration': 'Min duration',
     'gallery.any_size': 'Any size',
+    'gallery.any_duration': 'Any duration',
     'gallery.size_1mp': '1 MP+',
     'gallery.size_3mp': '3 MP+',
     'gallery.size_6mp': '6 MP+',
     'gallery.size_10mp': '10 MP+',
     'gallery.size_20mp': '20 MP+',
+    'gallery.duration_5s': '5 sec+',
+    'gallery.duration_10s': '10 sec+',
+    'gallery.duration_20s': '20 sec+',
+    'gallery.duration_30s': '30 sec+',
+    'gallery.duration_60s': '60 sec+',
     'origin.camera': 'Camera photo',
     'origin.ai': 'AI image',
     'gallery.warm': 'Warm',
@@ -124,8 +135,11 @@ const translations = {
     'gallery.title': 'Title',
     'gallery.largest_mp': 'Largest MP',
     'gallery.smallest_mp': 'Smallest MP',
+    'gallery.longest_duration': 'Longest',
+    'gallery.shortest_duration': 'Shortest',
     'gallery.highest_price': 'Highest price',
     'gallery.lowest_price': 'Lowest price',
+    'gallery.mood_photos_only': 'Color mood is available for photos only',
     'gallery.clear': 'Clear',
     'gallery.no_filter_matches': 'No photos match the current filters',
     'gallery.no_visible': 'No locally visible photos in this collection',
@@ -368,6 +382,10 @@ const translations = {
     'gallery.search_placeholder': 'Titre ou mot-cle',
     'gallery.date_from': 'Date debut',
     'gallery.date_to': 'Date fin',
+    'gallery.media': 'Media',
+    'gallery.all_media': 'Tous medias',
+    'gallery.photos': 'Photos',
+    'gallery.videos': 'Videos',
     'gallery.color_mood': 'Ambiance couleur',
     'gallery.subject': 'Sujet',
     'gallery.sort': 'Tri',
@@ -377,12 +395,19 @@ const translations = {
     'gallery.portrait': 'Portrait',
     'gallery.square': 'Carré',
     'gallery.min_size': 'Taille min',
+    'gallery.min_duration': 'Duree min',
     'gallery.any_size': 'Toute taille',
+    'gallery.any_duration': 'Toute duree',
     'gallery.size_1mp': '1 MP+',
     'gallery.size_3mp': '3 MP+',
     'gallery.size_6mp': '6 MP+',
     'gallery.size_10mp': '10 MP+',
     'gallery.size_20mp': '20 MP+',
+    'gallery.duration_5s': '5 s+',
+    'gallery.duration_10s': '10 s+',
+    'gallery.duration_20s': '20 s+',
+    'gallery.duration_30s': '30 s+',
+    'gallery.duration_60s': '60 s+',
     'origin.camera': 'Photo camera',
     'origin.ai': 'Image IA',
     'gallery.warm': 'Chaud',
@@ -401,8 +426,11 @@ const translations = {
     'gallery.title': 'Titre',
     'gallery.largest_mp': 'Plus de MP',
     'gallery.smallest_mp': 'Moins de MP',
+    'gallery.longest_duration': 'Plus long',
+    'gallery.shortest_duration': 'Plus court',
     'gallery.highest_price': 'Prix haut',
     'gallery.lowest_price': 'Prix bas',
+    'gallery.mood_photos_only': 'Ambiance couleur disponible pour les photos seulement',
     'gallery.clear': 'Effacer',
     'gallery.no_filter_matches': 'Aucune photo ne correspond aux filtres',
     'gallery.no_visible': 'Aucune photo visible localement dans cette collection',
@@ -645,6 +673,10 @@ const translations = {
     'gallery.search_placeholder': 'Titulo o palabra clave',
     'gallery.date_from': 'Desde',
     'gallery.date_to': 'Hasta',
+    'gallery.media': 'Medios',
+    'gallery.all_media': 'Todos',
+    'gallery.photos': 'Fotos',
+    'gallery.videos': 'Videos',
     'gallery.color_mood': 'Color',
     'gallery.subject': 'Tema',
     'gallery.sort': 'Orden',
@@ -654,12 +686,19 @@ const translations = {
     'gallery.portrait': 'Vertical',
     'gallery.square': 'Cuadrada',
     'gallery.min_size': 'Tamano min',
+    'gallery.min_duration': 'Duracion min',
     'gallery.any_size': 'Cualquier tamano',
+    'gallery.any_duration': 'Cualquier duracion',
     'gallery.size_1mp': '1 MP+',
     'gallery.size_3mp': '3 MP+',
     'gallery.size_6mp': '6 MP+',
     'gallery.size_10mp': '10 MP+',
     'gallery.size_20mp': '20 MP+',
+    'gallery.duration_5s': '5 s+',
+    'gallery.duration_10s': '10 s+',
+    'gallery.duration_20s': '20 s+',
+    'gallery.duration_30s': '30 s+',
+    'gallery.duration_60s': '60 s+',
     'origin.camera': 'Foto de camara',
     'origin.ai': 'Imagen IA',
     'gallery.warm': 'Calido',
@@ -678,8 +717,11 @@ const translations = {
     'gallery.title': 'Titulo',
     'gallery.largest_mp': 'Mas MP',
     'gallery.smallest_mp': 'Menos MP',
+    'gallery.longest_duration': 'Mas largo',
+    'gallery.shortest_duration': 'Mas corto',
     'gallery.highest_price': 'Precio alto',
     'gallery.lowest_price': 'Precio bajo',
+    'gallery.mood_photos_only': 'El color esta disponible solo para fotos',
     'gallery.clear': 'Limpiar',
     'gallery.no_filter_matches': 'Ninguna foto coincide con los filtros',
     'gallery.no_visible': 'No hay fotos visibles localmente en esta coleccion',
@@ -1165,6 +1207,10 @@ window.photosByEliePreviewDimensions = (photo) => {
   if (actual?.width && actual?.height) {
     return { width: Number(actual.width), height: Number(actual.height) };
   }
+  const video = photo?.media?.video || photo?.video;
+  if (video?.width && video?.height) {
+    return { width: Number(video.width), height: Number(video.height) };
+  }
   const value = window.photosByElieMetadataValue(photo, 'Preview file')
     || window.photosByElieMetadataValue(photo, 'Original size');
   const match = String(value).match(/(\d+)\s*x\s*(\d+)/i);
@@ -1192,6 +1238,285 @@ window.photosByEliePhotoOrientation = (photo) => {
   if (ratio < .9) return 'portrait';
   return 'square';
 };
+
+window.photosByEliePhotoFilter = (() => {
+  const defaultState = {
+    query: '',
+    collection: 'all',
+    origin: 'all',
+    orientation: 'all',
+    mediaType: 'all',
+    minSize: 'all',
+    mood: 'all',
+    subject: 'all',
+    sort: 'newest',
+    dateFrom: '',
+    dateTo: ''
+  };
+  const normalizeState = (state = {}) => ({ ...defaultState, ...state });
+  const metadataValue = (photo, label) => window.photosByElieMetadataValue?.(photo, label) || '';
+  const photoOrigin = (photo, collectionKey = '') => (
+    window.photosByEliePhotoOrigin?.(photo, collectionKey)
+    || (collectionKey === 'ai' ? 'ai' : 'camera')
+  );
+  const mediaType = (photo) => (window.photosByElieIsVideo?.(photo) ? 'video' : 'photo');
+  const verifiedMegapixels = (photo) => (
+    window.photosByElieVerifiedMegapixels ? window.photosByElieVerifiedMegapixels(photo) : Number(photo?.megapixels) || 0
+  );
+  const durationSeconds = (photo) => {
+    const direct = Number(
+      photo?.media?.video?.duration
+      ?? photo?.media?.video?.durationSeconds
+      ?? photo?.video?.duration
+      ?? photo?.durationSeconds
+      ?? 0
+    );
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    const raw = [
+      metadataValue(photo, 'Duration'),
+      metadataValue(photo, 'Original size'),
+      metadataValue(photo, 'Preview file')
+    ].filter(Boolean).join(' ');
+    const match = raw.match(/(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/i);
+    return match ? Number(match[1]) || 0 : 0;
+  };
+  const maxAvailablePrice = (photo) => {
+    const available = window.photosByElieAvailableResolutions
+      ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
+      : [];
+    return Math.max(0, ...available.map((option) => option.price || 0));
+  };
+  const parseCaptureTime = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return 0;
+    const capturedMatch = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
+    if (capturedMatch) {
+      return Date.parse(`${capturedMatch[1]}-${capturedMatch[2]}-${capturedMatch[3]}T${capturedMatch[4]}`) || 0;
+    }
+    const dateMatch = raw.match(/\b(\d{4})[:/-]?(\d{2})[:/-]?(\d{2})(?:[ T:_-]+(\d{2}):?(\d{2})(?::?(\d{2}))?)?/);
+    if (!dateMatch) return 0;
+    const hour = dateMatch[4] || '00';
+    const minute = dateMatch[5] || '00';
+    const second = dateMatch[6] || '00';
+    return Date.parse(`${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T${hour}:${minute}:${second}`) || 0;
+  };
+  const captureTime = (photo) => [
+    metadataValue(photo, 'Captured'),
+    photo?.id,
+    photo?.title,
+    photo?.caption,
+    photo?.full
+  ].map(parseCaptureTime).find(Boolean) || 0;
+  const dateFilterValue = (value) => {
+    const normalized = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : '';
+  };
+  const dateRangeBoundary = (value, edge) => {
+    const normalized = dateFilterValue(value);
+    if (!normalized) return 0;
+    const suffix = edge === 'end' ? 'T23:59:59.999' : 'T00:00:00.000';
+    return Date.parse(`${normalized}${suffix}`) || 0;
+  };
+  const searchTerms = (state = {}) => String(state.query || '')
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  const searchText = (photo, context = {}) => [
+    photo?.title,
+    photo?.caption,
+    photo?.full,
+    photo?.id,
+    metadataValue(photo, 'Keywords'),
+    metadataValue(photo, 'Description'),
+    metadataValue(photo, 'Original file'),
+    metadataValue(photo, 'Original size'),
+    metadataValue(photo, 'Preview file'),
+    Array.isArray(photo?.keywords) ? photo.keywords.join(' ') : photo?.keywords,
+    context.collectionTitle
+  ].filter(Boolean).join(' ').toLowerCase();
+  const moodTags = (photo, context = {}) => {
+    const text = searchText(photo, context);
+    const tags = new Set();
+    if (/(sunset|sunrise|gold|yellow|orange|red|beach|desert|summer|warm)/.test(text)) tags.add('warm');
+    if (/(ocean|sea|river|water|blue|snow|winter|harbor|harbour|atlantic|seine|cool)/.test(text)) tags.add('cool');
+    if (/(gray|grey|unsaturated|black|white|interior|church|museum|palace|castle|architecture)/.test(text)) tags.add('neutral');
+    if (/(art|garden|flower|green|color|colour|vivid|market|festival)/.test(text)) tags.add('vivid');
+    return tags.size ? tags : new Set(['neutral']);
+  };
+  const subjectTags = (photo, context = {}) => {
+    const text = searchText(photo, context);
+    const tags = new Set();
+    if (/(architecture|church|castle|chateau|fortress|palace|monastery|building|interior|invalides|versailles)/.test(text)) tags.add('architecture');
+    if (/(ocean|sea|river|water|beach|harbor|harbour|coast|atlantic|seine|boat|bateau)/.test(text)) tags.add('water');
+    if (/(art|museum|statue|monet|painting|gallery|sculpture)/.test(text)) tags.add('art');
+    if (/(family|person|people|child|mom|bar mitzvah|portrait)/.test(text)) tags.add('people');
+    if (/(garden|park|flower|tree|mountain|animal|nature|landscape)/.test(text)) tags.add('nature');
+    if (/(city|street|travel|paris|lisbon|lisboa|mexico|slovakia|france|usa|portugal|spain)/.test(text)) tags.add('city');
+    return tags.size ? tags : new Set(['other']);
+  };
+  const minSizeThreshold = (state = {}) => {
+    const threshold = Number(state.minSize || 0);
+    return Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
+  };
+  const matchesPhoto = (photo, state = {}, context = {}) => {
+    const filterState = normalizeState(state);
+    const terms = searchTerms(filterState);
+    if (terms.length && !terms.every((term) => searchText(photo, context).includes(term))) return false;
+    if (filterState.collection !== 'all' && context.collectionKey !== filterState.collection) return false;
+    if (filterState.origin !== 'all' && photoOrigin(photo, context.collectionKey) !== filterState.origin) return false;
+    if (filterState.orientation !== 'all' && window.photosByEliePhotoOrientation(photo) !== filterState.orientation) return false;
+    const itemMediaType = mediaType(photo);
+    if (filterState.mediaType !== 'all' && itemMediaType !== filterState.mediaType) return false;
+    const threshold = minSizeThreshold(filterState);
+    if (threshold) {
+      if (itemMediaType === 'video' && filterState.mediaType !== 'video') return false;
+      const metric = itemMediaType === 'video' ? durationSeconds(photo) : verifiedMegapixels(photo);
+      if (metric < threshold) return false;
+    }
+    if (filterState.mood !== 'all') {
+      if (itemMediaType === 'video') return false;
+      if (!moodTags(photo, context).has(filterState.mood)) return false;
+    }
+    if (filterState.subject !== 'all' && !subjectTags(photo, context).has(filterState.subject)) return false;
+    const fromDate = dateRangeBoundary(filterState.dateFrom, 'start');
+    const toDate = dateRangeBoundary(filterState.dateTo, 'end');
+    if (fromDate || toDate) {
+      const captured = captureTime(photo);
+      if (!captured) return false;
+      if (fromDate && captured < fromDate) return false;
+      if (toDate && captured > toDate) return false;
+    }
+    return true;
+  };
+  const sortItems = (items = [], state = {}, context = {}) => {
+    const filterState = normalizeState(state);
+    const photoFor = context.photoFor || ((item) => item);
+    const sorted = [...items];
+    if (filterState.sort === 'newest') sorted.sort((a, b) => captureTime(photoFor(b)) - captureTime(photoFor(a)));
+    if (filterState.sort === 'oldest') sorted.sort((a, b) => captureTime(photoFor(a)) - captureTime(photoFor(b)));
+    if (filterState.sort === 'title') sorted.sort((a, b) => String(photoFor(a)?.title || '').localeCompare(String(photoFor(b)?.title || '')));
+    if (filterState.sort === 'megapixels-desc') sorted.sort((a, b) => verifiedMegapixels(photoFor(b)) - verifiedMegapixels(photoFor(a)));
+    if (filterState.sort === 'megapixels-asc') sorted.sort((a, b) => verifiedMegapixels(photoFor(a)) - verifiedMegapixels(photoFor(b)));
+    if (filterState.sort === 'duration-desc') sorted.sort((a, b) => durationSeconds(photoFor(b)) - durationSeconds(photoFor(a)));
+    if (filterState.sort === 'duration-asc') sorted.sort((a, b) => durationSeconds(photoFor(a)) - durationSeconds(photoFor(b)));
+    if (filterState.sort === 'price-desc') sorted.sort((a, b) => maxAvailablePrice(photoFor(b)) - maxAvailablePrice(photoFor(a)));
+    if (filterState.sort === 'price-asc') sorted.sort((a, b) => maxAvailablePrice(photoFor(a)) - maxAvailablePrice(photoFor(b)));
+    return sorted;
+  };
+  const adaptiveOptionSets = {
+    photoMinSize: [
+      ['all', 'gallery.any_size'],
+      ['1', 'gallery.size_1mp'],
+      ['3', 'gallery.size_3mp'],
+      ['6', 'gallery.size_6mp'],
+      ['10', 'gallery.size_10mp'],
+      ['20', 'gallery.size_20mp'],
+    ],
+    videoMinSize: [
+      ['all', 'gallery.any_duration'],
+      ['5', 'gallery.duration_5s'],
+      ['10', 'gallery.duration_10s'],
+      ['20', 'gallery.duration_20s'],
+      ['30', 'gallery.duration_30s'],
+      ['60', 'gallery.duration_60s'],
+    ],
+    photoSortMetrics: [
+      ['megapixels-desc', 'gallery.largest_mp'],
+      ['megapixels-asc', 'gallery.smallest_mp'],
+    ],
+    videoSortMetrics: [
+      ['duration-desc', 'gallery.longest_duration'],
+      ['duration-asc', 'gallery.shortest_duration'],
+    ],
+  };
+  const setOptions = (select, options, translate) => {
+    if (!select) return false;
+    const previous = select.value;
+    select.innerHTML = options.map(([value, key]) => `<option value="${value}" data-i18n="${key}">${translate(key)}</option>`).join('');
+    if ([...select.options].some((option) => option.value === previous)) {
+      select.value = previous;
+      return false;
+    }
+    select.value = 'all';
+    return previous !== select.value;
+  };
+  const labelTextForControl = (control) => control?.closest('label')?.querySelector('span');
+  const syncAdaptiveControls = ({ root, state, filterSelector, translate }) => {
+    if (!root || !state || !filterSelector) return state;
+    const t = translate || ((key) => key);
+    const nextState = state;
+    const videoMode = nextState.mediaType === 'video';
+    const control = (key) => root.querySelector(`[${filterSelector}="${key}"]`);
+    const minSize = control('minSize');
+    const minLabel = labelTextForControl(minSize);
+    if (minLabel) minLabel.textContent = t(videoMode ? 'gallery.min_duration' : 'gallery.min_size');
+    const minOptions = videoMode ? adaptiveOptionSets.videoMinSize : adaptiveOptionSets.photoMinSize;
+    if (setOptions(minSize, minOptions, t)) nextState.minSize = minSize?.value || 'all';
+
+    const mood = control('mood');
+    const moodLabel = mood?.closest('label');
+    if (mood) {
+      mood.disabled = videoMode;
+      mood.title = videoMode ? t('gallery.mood_photos_only') : '';
+      moodLabel?.classList.toggle('is-disabled', videoMode);
+      if (videoMode && nextState.mood !== 'all') {
+        nextState.mood = 'all';
+        mood.value = 'all';
+      }
+    }
+
+    const sort = control('sort');
+    if (sort) {
+      const previousSort = sort.value || nextState.sort;
+      const metricOptions = videoMode ? adaptiveOptionSets.videoSortMetrics : adaptiveOptionSets.photoSortMetrics;
+      const baseOptions = [
+        ['newest', 'gallery.newest'],
+        ['oldest', 'gallery.oldest'],
+        ['collection', 'gallery.collection_order'],
+        ['title', 'gallery.title'],
+        ...metricOptions,
+        ['price-desc', 'gallery.highest_price'],
+        ['price-asc', 'gallery.lowest_price'],
+      ];
+      sort.innerHTML = baseOptions.map(([value, key]) => `<option value="${value}" data-i18n="${key}">${t(key)}</option>`).join('');
+      const mappedSort = videoMode && previousSort === 'megapixels-desc'
+        ? 'duration-desc'
+        : videoMode && previousSort === 'megapixels-asc'
+          ? 'duration-asc'
+          : !videoMode && previousSort === 'duration-desc'
+            ? 'megapixels-desc'
+            : !videoMode && previousSort === 'duration-asc'
+              ? 'megapixels-asc'
+              : previousSort;
+      sort.value = [...sort.options].some((option) => option.value === mappedSort) ? mappedSort : 'newest';
+      nextState.sort = sort.value;
+    }
+    return nextState;
+  };
+  const activeFilterCount = (state = {}, keys = ['query', 'collection', 'origin', 'orientation', 'mediaType', 'minSize', 'mood', 'subject', 'dateFrom', 'dateTo']) => {
+    const filterState = normalizeState(state);
+    return keys.reduce((count, key) => {
+      if (key === 'query') return count + (searchTerms(filterState).length ? 1 : 0);
+      if (key === 'dateFrom' || key === 'dateTo') return count + (dateFilterValue(filterState[key]) ? 1 : 0);
+      return count + (filterState[key] && filterState[key] !== 'all' ? 1 : 0);
+    }, 0);
+  };
+  return {
+    activeFilterCount,
+    captureTime,
+    dateFilterValue,
+    defaultState: () => ({ ...defaultState }),
+    durationSeconds,
+    matchesPhoto,
+    mediaType,
+    photoOrigin,
+    searchText,
+    searchTerms,
+    sortItems,
+    syncAdaptiveControls,
+  };
+})();
 
 window.photosByElieCssUrlValue = (url) => `url("${String(url || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\n\r]/g, "")}")`;
 

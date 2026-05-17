@@ -79,7 +79,7 @@ const uniqueName = (name, usedNames) => {
 const defaultGalleries = [{
   key: "corine-real-estate",
   username: "Corine",
-  accessCode: "LaConcha",
+  accessCode: "",
   privateMasterPrefix: "real-estate/corine-real-estate/masters",
   maxItems: 300,
 }];

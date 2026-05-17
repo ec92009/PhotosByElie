@@ -820,3 +820,14 @@ _No David automation results recorded yet._
 - Remaining extension breakdown: `.jpg` 72
 - Remaining total bytes: 409,760,901
 - Remaining RAW/DNG/NEF files: 0
+
+## 2026-05-17 - Cordoba Mezquita Apple Photos import
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Source album export: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums/2025 Cordoba, la Mezquita`
+- Imported media: 14 total (`.jpg` 10, `.mov` 4)
+- Catalog result: public catalog now has 5,841 media items; Spain now has 237; video rows now total 4.
+- R2 public previews: 28/28 new Cordoba preview objects returned HTTP 200, including 4 `_short_5s_720p.mp4` video previews.
+- Private delivery: 14/14 private masters recorded; 10/10 photo render triplets recorded; videos intentionally have private masters only.
+- Validation: `npm test` PASSED (18/18); `npm run validate` PASSED (`Validation OK`) after updating the validator to accept video preview detail keys.

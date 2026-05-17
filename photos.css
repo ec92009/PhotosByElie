@@ -2008,20 +2008,6 @@ body[data-real-estate] main.shell{
   text-transform:uppercase;
   white-space:nowrap;
 }
-.real-estate-media-type-badge{
-  position:absolute;
-  top:8px;
-  right:8px;
-  border:1px solid rgba(255,255,255,.38);
-  background:rgba(0,0,0,.64);
-  color:#fff;
-  padding:4px 7px;
-  font-size:.62rem;
-  font-weight:850;
-  letter-spacing:.08em;
-  line-height:1;
-  text-transform:uppercase;
-}
 .real-estate-photo-select{
   position:absolute;
   right:8px;
@@ -2693,44 +2679,56 @@ body.commerce-page[data-fixed-header] .basket-total-band{
   z-index:79;
 }
 .gallery-filter-bar{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
   align-items:end;
   margin-top:14px;
 }
 .gallery-filter-bar label{
-  display:grid;
-  gap:6px;
+  display:flex;
+  flex:1 1 124px;
+  flex-direction:column;
+  gap:4px;
+  max-width:190px;
   min-width:0;
   color:var(--muted);
-  font-size:.72rem;
+  font-size:.62rem;
   font-weight:800;
-  letter-spacing:.08em;
+  letter-spacing:.07em;
   text-transform:uppercase;
+}
+.gallery-filter-bar label:has(input[type="date"]){
+  flex:0 1 146px;
+}
+.gallery-filter-bar label.is-disabled{
+  opacity:.56;
 }
 .gallery-filter-bar select,
 .gallery-filter-bar input{
   width:100%;
-  min-height:42px;
+  min-height:34px;
   border:1px solid var(--line);
   border-radius:0;
   background:var(--bg);
   color:var(--text);
-  padding:0 34px 0 10px;
+  padding:0 28px 0 9px;
   font:inherit;
-  font-size:.9rem;
+  font-size:.78rem;
   font-weight:700;
   text-transform:none;
 }
 .gallery-filter-bar input{
-  padding:0 10px;
+  padding:0 9px;
 }
 .gallery-search-label{
-  grid-column:span 2;
+  flex:2 1 280px;
+  max-width:420px;
 }
 .gallery-filter-clear{
-  min-height:42px;
+  flex:0 0 auto;
+  min-height:34px;
+  padding:0 18px;
   align-self:end;
 }
 .gallery-pagination-controls{
@@ -4013,14 +4011,17 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .purchase-panel{
     grid-template-columns:1fr;
   }
-  .gallery-filter-bar{
-    grid-template-columns:repeat(2,minmax(0,1fr));
+  .gallery-filter-bar label,
+  .gallery-filter-bar label:has(input[type="date"]){
+    flex:1 1 calc(50% - 6px);
+    max-width:none;
+  }
+  .gallery-filter-bar .gallery-search-label,
+  .gallery-filter-bar .gallery-sort-label{
+    flex-basis:100%;
   }
   .gallery-filter-clear{
-    grid-column:1 / -1;
-  }
-  .gallery-sort-label{
-    grid-column:1 / -1;
+    flex:1 1 100%;
   }
   .home-discovery-head{
     display:block;

@@ -226,6 +226,11 @@ const validate = () => {
       const publicPreview = photo.media?.publicPreview || {};
       const publicGalleryKey = String(publicPreview.galleryKey || "");
       const publicDetailKey = String(publicPreview.detailKey || "");
+      const mediaType = String(photo.media?.type || photo.type || "photo").toLowerCase();
+      const isVideo = mediaType === "video";
+      const expectedDetailKey = isVideo
+        ? `expo/${photo.id}_short_5s_720p.mp4`
+        : `expo/${photo.id}_1800.jpg`;
 
       if (externalMedia) {
         if (!publicGalleryKey) errors.push(`${photo.id} is missing publicPreview.galleryKey for external media.`);
@@ -233,16 +238,19 @@ const validate = () => {
         if (publicGalleryKey && !/_900\.jpg$/i.test(publicGalleryKey)) {
           errors.push(`${photo.id} publicPreview.galleryKey does not end in _900.jpg.`);
         }
-        if (publicDetailKey && !/_1800\.jpg$/i.test(publicDetailKey)) {
+        if (publicDetailKey && isVideo && !/_short_5s_720p\.mp4$/i.test(publicDetailKey)) {
+          errors.push(`${photo.id} video publicPreview.detailKey does not end in _short_5s_720p.mp4.`);
+        }
+        if (publicDetailKey && !isVideo && !/_1800\.jpg$/i.test(publicDetailKey)) {
           errors.push(`${photo.id} publicPreview.detailKey does not end in _1800.jpg.`);
         }
         if (publicGalleryKey && publicGalleryKey !== `expo/${photo.id}_900.jpg`) {
           errors.push(`${photo.id} publicPreview.galleryKey is not flat by photo id.`);
         }
-        if (publicDetailKey && publicDetailKey !== `expo/${photo.id}_1800.jpg`) {
+        if (publicDetailKey && publicDetailKey !== expectedDetailKey) {
           errors.push(`${photo.id} publicPreview.detailKey is not flat by photo id.`);
         }
-        if (publicGalleryKey && publicDetailKey && pairFor(publicGalleryKey) !== publicDetailKey) {
+        if (publicGalleryKey && publicDetailKey && publicDetailKey !== expectedDetailKey) {
           errors.push(`${photo.id} public preview gallery/detail keys do not match.`);
         }
       } else {

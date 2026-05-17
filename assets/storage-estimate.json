@@ -1,35 +1,35 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-14T06:53:27.466Z",
+  "updatedAt": "2026-05-17T19:27:53.542Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
   },
   "catalog": {
-    "photos": 5844,
-    "sourceBytes": 96249678040
+    "photos": 5841,
+    "sourceBytes": 96353283039
   },
   "current": {
-    "publicPreviewObjects": 23278,
-    "publicPreviewBytes": 7032360368,
-    "privateMasterObjects": 5914,
-    "privateMasterBytes": 96839643092,
-    "privateRenderObjects": 17658,
-    "privateRenderBytes": 14919485889,
-    "totalBytes": 118791489349
+    "publicPreviewObjects": 23158,
+    "publicPreviewBytes": 7005897462,
+    "privateMasterObjects": 11627,
+    "privateMasterBytes": 192016933113,
+    "privateRenderObjects": 34863,
+    "privateRenderBytes": 29414282201,
+    "totalBytes": 228437112776
   },
   "blocked": {
     "photoIds": 4359,
     "publicPreviewObjects": 17438,
-    "publicPreviewBytesEstimate": 5268077159,
+    "publicPreviewBytesEstimate": 5275448655,
     "privateMasterObjects": 28,
-    "privateMasterBytes": 6818243399,
+    "privateMasterBytes": 0,
     "privateRenderObjects": 0,
     "privateRenderBytesEstimate": 0,
-    "totalBytesEstimate": 12086320558
+    "totalBytesEstimate": 5275448655
   },
   "noCleanup": {
-    "totalBytesEstimate": 130877809907
+    "totalBytesEstimate": 233712561431
   },
   "pricing": {
     "provider": "Cloudflare R2 Standard storage",
@@ -52,29 +52,29 @@
     "notes": [
       "Storage bytes are measured; R2 Class A/Class B operations and Workers request/CPU usage need Cloudflare analytics to become invoice-complete.",
       "R2 billing uses GB-month, not GiB-month. Displayed byte totals use binary units.",
-      "Current R2 object bytes are read from live bucket listings. Blocked/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted."
+      "Current R2 object bytes are read from live bucket listings. Waste Basket/deleted public preview and private render bytes are estimated from current average object sizes because those objects were already deleted."
     ]
   },
   "cost": {
-    "currentMonthlyUsd": 1.7819,
-    "currentMonthlyUsdAfterFreeTier": 1.6319,
-    "noCleanupMonthlyUsdEstimate": 1.9632,
-    "noCleanupMonthlyUsdEstimateAfterFreeTier": 1.8132,
-    "avoidedMonthlyUsdEstimate": 0.1813
+    "currentMonthlyUsd": 3.4266,
+    "currentMonthlyUsdAfterFreeTier": 3.2766,
+    "noCleanupMonthlyUsdEstimate": 3.5057,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 3.3557,
+    "avoidedMonthlyUsdEstimate": 0.0791
   },
   "billing": {
-    "generatedAt": "2026-05-14T06:53:27.445Z",
+    "generatedAt": "2026-05-17T19:27:53.507Z",
     "month": "May 2026",
     "nextMonth": "Jun 2026",
-    "elapsedMonthRatio": 0.431305,
+    "elapsedMonthRatio": 0.54498,
     "measuredStorageOnly": {
-      "consumedMonthToDateUsd": 0.7038,
-      "expectedThisMonthUsd": 1.6319,
-      "expectedNextMonthUsdAtCurrentRate": 1.6319
+      "consumedMonthToDateUsd": 1.7857,
+      "expectedThisMonthUsd": 3.2766,
+      "expectedNextMonthUsdAtCurrentRate": 3.2766
     },
     "withWorkersPaidBaseIfEnabled": {
-      "expectedThisMonthUsd": 6.6319,
-      "expectedNextMonthUsdAtCurrentRate": 6.6319
+      "expectedThisMonthUsd": 8.2766,
+      "expectedNextMonthUsdAtCurrentRate": 8.2766
     },
     "unmeasuredLineItems": [
       "R2 Class A/Class B operations",

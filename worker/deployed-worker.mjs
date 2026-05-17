@@ -13,6 +13,39 @@ const requiredBinding = (env, key) => {
   return env[key];
 };
 
+const cleanRealEstateGallery = (gallery = {}) => {
+  const key = String(gallery.key || "").trim();
+  if (!key) return null;
+  return {
+    key,
+    username: String(gallery.username || gallery.customer || "").trim(),
+    accessCode: String(gallery.accessCode || gallery.password || "").trim(),
+    privateMasterPrefix: String(gallery.privateMasterPrefix || `real-estate/${key}/masters`).replace(/^\/+|\/+$/g, ""),
+    maxItems: Number(gallery.maxItems || 300) || 300,
+  };
+};
+
+const realEstateGalleriesFor = (env = {}) => {
+  const rawJson = String(env.REAL_ESTATE_GALLERIES_JSON || "").trim();
+  if (rawJson) {
+    try {
+      const parsed = JSON.parse(rawJson);
+      const source = Array.isArray(parsed) ? parsed : Array.isArray(parsed.galleries) ? parsed.galleries : [];
+      const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username && gallery?.accessCode);
+      if (galleries.length) return galleries;
+    } catch {
+      // Fall through to the legacy single-gallery environment variables.
+    }
+  }
+  const legacy = cleanRealEstateGallery({
+    key: "corine-real-estate",
+    username: env.REAL_ESTATE_CORINE_USERNAME || "",
+    accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "",
+    privateMasterPrefix: env.REAL_ESTATE_CORINE_PRIVATE_MASTER_PREFIX || "real-estate/corine-real-estate/masters",
+  });
+  return legacy?.username && legacy?.accessCode ? [legacy] : [];
+};
+
 const mediaHeaders = (object = null) => ({
   "access-control-allow-origin": "*",
   "cache-control": "public, max-age=31536000, immutable",
@@ -84,12 +117,7 @@ export default {
       realEstateOriginals: createRealEstateOriginals({
         privateBucket,
         store,
-        galleries: [{
-          key: "corine-real-estate",
-          username: env.REAL_ESTATE_CORINE_USERNAME || "Corine",
-          accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "LaConcha",
-          privateMasterPrefix: "real-estate/corine-real-estate/masters",
-        }],
+        galleries: realEstateGalleriesFor(env),
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,

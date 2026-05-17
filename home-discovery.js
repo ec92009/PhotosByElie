@@ -12,16 +12,8 @@
   const collectionSelect = root.querySelector('[data-home-filter="collection"]');
   const detailSequenceKey = "photosbyelie-detail-sequence";
   const pageSize = 24;
-  const defaultState = {
-    query: "",
-    collection: "all",
-    origin: "all",
-    orientation: "all",
-    minSize: "all",
-    mood: "all",
-    subject: "all",
-    sort: "newest",
-  };
+  const photoFilter = window.photosByEliePhotoFilter;
+  const defaultState = photoFilter.defaultState();
   let filterState = { ...defaultState };
   let catalogItems = [];
   let visibleLimit = pageSize;
@@ -94,26 +86,7 @@
     const translated = t(`collection.${key}`);
     return translated && translated !== `collection.${key}` ? translated : collection?.title || key;
   };
-  const photoSearchText = (item) => {
-    const photo = item.photo;
-    return [
-      photo?.title,
-      photo?.caption,
-      metadataValue(photo, "Keywords"),
-      metadataValue(photo, "Description"),
-      metadataValue(photo, "Original file"),
-      metadataValue(photo, "Original size"),
-      metadataValue(photo, "Preview file"),
-      item.collectionTitle,
-    ].filter(Boolean).join(" ").toLowerCase();
-  };
-  const searchTerms = () => String(filterState.query || "")
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
-  const photoOrientation = (photo) => window.photosByEliePhotoOrientation?.(photo) || "unknown";
-  const photoOrigin = (photo, collectionKey) => window.photosByEliePhotoOrigin?.(photo, collectionKey) || (collectionKey === "ai" ? "ai" : "camera");
+  const photoOrigin = (photo, collectionKey) => photoFilter.photoOrigin(photo, collectionKey);
   const photoOriginLabel = (photo, collectionKey) => (
     t(photoOrigin(photo, collectionKey) === "ai" ? "origin.ai" : "origin.camera")
   );
@@ -121,71 +94,14 @@
     window.photosByEliePhotoOriginShortLabel?.(photo, collectionKey)
     || (photoOrigin(photo, collectionKey) === "ai" ? "AI" : "Camera")
   );
-  const photoMoodTags = (item) => {
-    const text = photoSearchText(item);
-    const tags = new Set();
-    if (/(sunset|sunrise|gold|yellow|orange|red|beach|desert|summer|warm)/.test(text)) tags.add("warm");
-    if (/(ocean|sea|river|water|blue|snow|winter|harbor|harbour|atlantic|seine|cool)/.test(text)) tags.add("cool");
-    if (/(gray|grey|unsaturated|black|white|interior|church|museum|palace|castle|architecture)/.test(text)) tags.add("neutral");
-    if (/(art|garden|flower|green|color|colour|vivid|market|festival)/.test(text)) tags.add("vivid");
-    return tags.size ? tags : new Set(["neutral"]);
-  };
-  const photoSubjectTags = (item) => {
-    const text = photoSearchText(item);
-    const tags = new Set();
-    if (/(architecture|church|castle|chateau|fortress|palace|monastery|building|interior|invalides|versailles)/.test(text)) tags.add("architecture");
-    if (/(ocean|sea|river|water|beach|harbor|harbour|coast|atlantic|seine|boat|bateau)/.test(text)) tags.add("water");
-    if (/(art|museum|statue|monet|painting|gallery|sculpture)/.test(text)) tags.add("art");
-    if (/(family|person|people|child|mom|bar mitzvah|portrait)/.test(text)) tags.add("people");
-    if (/(garden|park|flower|tree|mountain|animal|nature|landscape)/.test(text)) tags.add("nature");
-    if (/(city|street|travel|paris|lisbon|lisboa|mexico|slovakia|france|usa|portugal|spain)/.test(text)) tags.add("city");
-    return tags.size ? tags : new Set(["other"]);
-  };
-  const captureTime = (photo) => {
-    const raw = metadataValue(photo, "Captured");
-    const match = String(raw).match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
-    if (!match) return 0;
-    return Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}`) || 0;
-  };
-  const verifiedMegapixels = (photo) => (
-    window.photosByElieVerifiedMegapixels ? window.photosByElieVerifiedMegapixels(photo) : Number(photo?.megapixels) || 0
-  );
-  const maxAvailablePrice = (photo) => {
-    const available = window.photosByElieAvailableResolutions
-      ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
-      : [];
-    return Math.max(0, ...available.map((option) => option.price || 0));
-  };
-  const hasActiveFilters = () => (
-    searchTerms().length > 0
-    || ["collection", "origin", "orientation", "minSize", "mood", "subject"].some((key) => filterState[key] && filterState[key] !== "all")
-  );
-  const minSizeThreshold = () => {
-    const threshold = Number(filterState.minSize || 0);
-    return Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
-  };
-  const matchesFilterState = (item) => {
-    const terms = searchTerms();
-    if (terms.length && !terms.every((term) => photoSearchText(item).includes(term))) return false;
-    if (filterState.collection !== "all" && item.collectionKey !== filterState.collection) return false;
-    if (filterState.origin !== "all" && photoOrigin(item.photo, item.collectionKey) !== filterState.origin) return false;
-    if (filterState.orientation !== "all" && photoOrientation(item.photo) !== filterState.orientation) return false;
-    if (minSizeThreshold() && verifiedMegapixels(item.photo) < minSizeThreshold()) return false;
-    if (filterState.mood !== "all" && !photoMoodTags(item).has(filterState.mood)) return false;
-    if (filterState.subject !== "all" && !photoSubjectTags(item).has(filterState.subject)) return false;
-    return true;
-  };
-  const sortItems = (items) => {
-    const sorted = [...items];
-    if (filterState.sort === "newest") sorted.sort((a, b) => captureTime(b.photo) - captureTime(a.photo));
-    if (filterState.sort === "oldest") sorted.sort((a, b) => captureTime(a.photo) - captureTime(b.photo));
-    if (filterState.sort === "title") sorted.sort((a, b) => String(a.photo.title || "").localeCompare(String(b.photo.title || "")));
-    if (filterState.sort === "megapixels-desc") sorted.sort((a, b) => verifiedMegapixels(b.photo) - verifiedMegapixels(a.photo));
-    if (filterState.sort === "megapixels-asc") sorted.sort((a, b) => verifiedMegapixels(a.photo) - verifiedMegapixels(b.photo));
-    if (filterState.sort === "price-desc") sorted.sort((a, b) => maxAvailablePrice(b.photo) - maxAvailablePrice(a.photo));
-    if (filterState.sort === "price-asc") sorted.sort((a, b) => maxAvailablePrice(a.photo) - maxAvailablePrice(b.photo));
-    return sorted;
-  };
+  const homeFilterKeys = ["query", "collection", "origin", "orientation", "mediaType", "minSize", "mood", "subject", "dateFrom", "dateTo"];
+  const filterContextFor = (item) => ({
+    collectionKey: item.collectionKey,
+    collectionTitle: item.collectionTitle,
+  });
+  const hasActiveFilters = () => photoFilter.activeFilterCount(filterState, homeFilterKeys) > 0;
+  const matchesFilterState = (item) => photoFilter.matchesPhoto(item.photo, filterState, filterContextFor(item));
+  const sortItems = (items) => photoFilter.sortItems(items, filterState, { photoFor: (item) => item.photo });
   const visiblePhotosFor = (photos = []) => {
     const publicPhotos = window.photosByElieFilterPublicHidden?.(photos) || photos;
     return window.photosByElieHiddenActions?.filterPhotos
@@ -228,7 +144,15 @@
   const syncControls = () => {
     if (searchInput) searchInput.value = filterState.query || "";
     filterControls.forEach((control) => {
-      control.value = filterState[control.dataset.homeFilter] || "all";
+      const key = control.dataset.homeFilter;
+      const fallback = control instanceof HTMLSelectElement ? "all" : "";
+      control.value = filterState[key] || fallback;
+    });
+    photoFilter.syncAdaptiveControls({
+      root,
+      state: filterState,
+      filterSelector: "data-home-filter",
+      translate: t,
     });
   };
   const setStatus = (key, replacements = {}) => {
@@ -411,9 +335,11 @@
     resultsRoot.innerHTML = visibleItems.map((item, index) => {
       const photo = item.photo;
       const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
+      const isVideo = window.photosByElieIsVideo?.(photo) === true;
       const origin = photoOrigin(photo, item.collectionKey);
-      const originLabel = photoOriginLabel(photo, item.collectionKey);
-      const originShortLabel = photoOriginShortLabel(photo, item.collectionKey);
+      const originLabel = isVideo ? "Video" : photoOriginLabel(photo, item.collectionKey);
+      const originShortLabel = isVideo ? "Video" : photoOriginShortLabel(photo, item.collectionKey);
+      const badgeOrigin = isVideo ? "video" : origin;
       const title = escapeHtml(photo.title);
       const href = escapeHtml(versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}`));
       const isLiked = likedIds.has(photo.id);
@@ -425,9 +351,10 @@
           data-photo-id="${escapeHtml(photo.id)}"
           data-photo-href="${href}"
         >
-          <a class="mock-photo ${photo.className || ""} ${image ? "has-image" : ""}" href="${href}" data-home-result-link ${window.photosByEliePhotoAspectStyle?.(photo) || ""}>
+          <a class="mock-photo ${photo.className || ""} ${image ? "has-image" : ""} ${isVideo ? "is-video" : ""}" href="${href}" data-home-result-link ${window.photosByEliePhotoAspectStyle?.(photo) || ""}>
             ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy"/>` : ""}
-            <span class="photo-origin-badge is-${escapeHtml(origin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
+            ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
+            <span class="photo-origin-badge is-${escapeHtml(badgeOrigin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
           </a>
           ${likedStore() ? `
             <div class="gallery-card-actions">
@@ -506,8 +433,12 @@
       query: searchInput?.value || "",
     };
     filterControls.forEach((control) => {
-      filterState[control.dataset.homeFilter] = control.value || "all";
+      const key = control.dataset.homeFilter;
+      filterState[key] = control instanceof HTMLInputElement && control.type === "date"
+        ? photoFilter.dateFilterValue(control.value)
+        : control.value || "all";
     });
+    syncControls();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderResults();
@@ -667,6 +598,7 @@
   });
   window.addEventListener("photosbyelie:languagechange", () => {
     populateCollectionOptions(window.photosByElieData || window.photosByElieHomeData || {});
+    syncControls();
     renderResults();
     window.photosByElieI18n?.apply?.();
   });

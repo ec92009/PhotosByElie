@@ -38,6 +38,7 @@ const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const diversityBucketMinutes = 10;
+const photoFilter = window.photosByEliePhotoFilter;
 const defaultFilterState = {
   query: "",
   orientation: "all",
@@ -45,10 +46,11 @@ const defaultFilterState = {
   mood: "all",
   subject: "all",
   sort: "newest",
+  mediaType: "all",
   dateFrom: "",
   dateTo: ""
 };
-const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "dateFrom", "dateTo"];
+const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
@@ -202,172 +204,15 @@ const setMetadataValue = (photo, label, value) => {
   photo.metadata.unshift({ label, value });
 };
 
-const rawSourceLabel = (photo) => window.photosByElieRawSourceLabel?.(photo) || "";
-
-const photoSearchText = (photo) => [
-  photo?.title,
-  photo?.caption,
-  photo?.full,
-  metadataValue(photo, "Keywords"),
-  metadataValue(photo, "Description"),
-  metadataValue(photo, "Original file"),
-  metadataValue(photo, "Original size"),
-  metadataValue(photo, "Preview file")
-].filter(Boolean).join(" ").toLowerCase();
-
-const gallerySearchText = (photo) => [
-  photo?.title,
-  metadataValue(photo, "Keywords"),
-  Array.isArray(photo?.keywords) ? photo.keywords.join(" ") : photo?.keywords
-].filter(Boolean).join(" ").toLowerCase();
-
-const previewDimensions = (photo) => {
-  const actual = photo?.previewDimensions || photo?.media?.publicPreview?.dimensions;
-  if (actual?.width && actual?.height) {
-    return { width: Number(actual.width), height: Number(actual.height) };
-  }
-  const value = metadataValue(photo, "Preview file") || metadataValue(photo, "Original size");
-  const match = value.match(/(\d+)\s*x\s*(\d+)/i);
-  if (!match) return null;
-  return { width: Number(match[1]), height: Number(match[2]) };
-};
-
-const photoOrientation = (photo) => {
-  return window.photosByEliePhotoOrientation?.(photo) || "unknown";
-};
-
-const photoOrigin = (photo) => (
-  window.photosByEliePhotoOrigin?.(photo, galleryKey)
-  || (galleryKey === "ai" ? "ai" : "camera")
-);
-const photoOriginLabel = (photo) => t(photoOrigin(photo) === "ai" ? "origin.ai" : "origin.camera");
-const photoOriginShortLabel = (photo) => (
-  window.photosByEliePhotoOriginShortLabel?.(photo, galleryKey)
-  || (photoOrigin(photo) === "ai" ? "AI" : "Camera")
-);
-
-const photoMoodTags = (photo) => {
-  const text = photoSearchText(photo);
-  const tags = new Set();
-  if (/(sunset|sunrise|gold|yellow|orange|red|beach|desert|summer|warm)/.test(text)) tags.add("warm");
-  if (/(ocean|sea|river|water|blue|snow|winter|harbor|harbour|atlantic|seine|cool)/.test(text)) tags.add("cool");
-  if (/(gray|grey|unsaturated|black|white|interior|church|museum|palace|castle|architecture)/.test(text)) tags.add("neutral");
-  if (/(art|garden|flower|green|color|colour|vivid|market|festival)/.test(text)) tags.add("vivid");
-  return tags.size ? tags : new Set(["neutral"]);
-};
-
-const photoSubjectTags = (photo) => {
-  const text = photoSearchText(photo);
-  const tags = new Set();
-  if (/(architecture|church|castle|chateau|fortress|palace|monastery|building|interior|invalides|versailles)/.test(text)) tags.add("architecture");
-  if (/(ocean|sea|river|water|beach|harbor|harbour|coast|atlantic|seine|boat|bateau)/.test(text)) tags.add("water");
-  if (/(art|museum|statue|monet|painting|gallery|sculpture)/.test(text)) tags.add("art");
-  if (/(family|person|people|child|mom|bar mitzvah|portrait)/.test(text)) tags.add("people");
-  if (/(garden|park|flower|tree|mountain|animal|nature|landscape)/.test(text)) tags.add("nature");
-  if (/(city|street|travel|paris|lisbon|lisboa|mexico|slovakia|france|usa|portugal|spain)/.test(text)) tags.add("city");
-  return tags.size ? tags : new Set(["other"]);
-};
-
-const parseCaptureTime = (value) => {
-  const raw = String(value || "").trim();
-  if (!raw) return 0;
-  const capturedMatch = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
-  if (capturedMatch) {
-    return Date.parse(`${capturedMatch[1]}-${capturedMatch[2]}-${capturedMatch[3]}T${capturedMatch[4]}`) || 0;
-  }
-  const dateMatch = raw.match(/\b(\d{4})[:/-]?(\d{2})[:/-]?(\d{2})(?:[ T:_-]+(\d{2}):?(\d{2})(?::?(\d{2}))?)?/);
-  if (!dateMatch) return 0;
-  const hour = dateMatch[4] || "00";
-  const minute = dateMatch[5] || "00";
-  const second = dateMatch[6] || "00";
-  return Date.parse(`${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T${hour}:${minute}:${second}`) || 0;
-};
-
-const captureTime = (photo) => {
-  const values = [
-    metadataValue(photo, "Captured"),
-    photo?.id,
-    photo?.title,
-    photo?.caption,
-    photo?.full
-  ];
-  return values.map(parseCaptureTime).find(Boolean) || 0;
-};
-
-const dateFilterValue = (value) => {
-  const normalized = String(value || "").trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : "";
-};
-
-const dateRangeBoundary = (value, edge) => {
-  const normalized = dateFilterValue(value);
-  if (!normalized) return 0;
-  const suffix = edge === "end" ? "T23:59:59.999" : "T00:00:00.000";
-  return Date.parse(`${normalized}${suffix}`) || 0;
-};
-
-const verifiedMegapixels = (photo) => (
-  window.photosByElieVerifiedMegapixels ? window.photosByElieVerifiedMegapixels(photo) : Number(photo?.megapixels) || 0
-);
-
-const maxAvailablePrice = (photo) => {
-  const available = window.photosByElieAvailableResolutions
-    ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])
-    : [];
-  return Math.max(0, ...available.map((option) => option.price || 0));
-};
-
-const searchTerms = () => String(filterState.query || "")
-  .trim()
-  .toLowerCase()
-  .split(/\s+/)
-  .filter(Boolean);
-
-const activeFilterCount = () => (
-  ["orientation", "minSize", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
-  + (dateFilterValue(filterState.dateFrom) ? 1 : 0)
-  + (dateFilterValue(filterState.dateTo) ? 1 : 0)
-  + (searchTerms().length ? 1 : 0)
-);
-
-const minSizeThreshold = () => {
-  const threshold = Number(filterState.minSize || 0);
-  return Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
-};
-
-const matchesFilterState = (photo) => {
-  const terms = searchTerms();
-  if (terms.length) {
-    const text = gallerySearchText(photo);
-    if (!terms.every((term) => text.includes(term))) return false;
-  }
-  if (filterState.orientation !== "all" && photoOrientation(photo) !== filterState.orientation) return false;
-  if (minSizeThreshold() && verifiedMegapixels(photo) < minSizeThreshold()) return false;
-  if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
-  if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
-  const fromDate = dateRangeBoundary(filterState.dateFrom, "start");
-  const toDate = dateRangeBoundary(filterState.dateTo, "end");
-  if (fromDate || toDate) {
-    const captured = captureTime(photo);
-    if (!captured) return false;
-    if (fromDate && captured < fromDate) return false;
-    if (toDate && captured > toDate) return false;
-  }
-  return true;
-};
-
-const sortPhotos = (photos) => {
-  const sorted = [...photos];
-  if (filterState.sort === "newest") sorted.sort((a, b) => captureTime(b) - captureTime(a));
-  if (filterState.sort === "oldest") sorted.sort((a, b) => captureTime(a) - captureTime(b));
-  if (filterState.sort === "title") sorted.sort((a, b) => a.title.localeCompare(b.title));
-  if (filterState.sort === "megapixels-desc") sorted.sort((a, b) => verifiedMegapixels(b) - verifiedMegapixels(a));
-  if (filterState.sort === "megapixels-asc") sorted.sort((a, b) => verifiedMegapixels(a) - verifiedMegapixels(b));
-  if (filterState.sort === "price-desc") sorted.sort((a, b) => maxAvailablePrice(b) - maxAvailablePrice(a));
-  if (filterState.sort === "price-asc") sorted.sort((a, b) => maxAvailablePrice(a) - maxAvailablePrice(b));
-  return sorted;
-};
-
+const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
+const galleryFilterKeys = ["query", "orientation", "mediaType", "minSize", "mood", "subject", "dateFrom", "dateTo"];
+const filterContext = () => ({
+  collectionKey: galleryKey,
+  collectionTitle: localizedCollectionTitle(),
+});
+const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys);
+const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterState, filterContext());
+const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
 
 const syncFilterControls = () => {
@@ -375,6 +220,12 @@ const syncFilterControls = () => {
   filterBar.querySelectorAll("[data-gallery-filter]").forEach((control) => {
     const key = control.dataset.galleryFilter;
     control.value = filterState[key] || (control instanceof HTMLSelectElement ? "all" : "");
+  });
+  photoFilter.syncAdaptiveControls({
+    root: filterBar,
+    state: filterState,
+    filterSelector: "data-gallery-filter",
+    translate: t,
   });
   const searchInput = filterBar.querySelector("[data-gallery-search]");
   if (searchInput) searchInput.value = filterState.query || "";
@@ -391,6 +242,11 @@ const ensureGalleryFilterControls = () => {
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
     <label><span data-i18n="gallery.date_from">Date from</span><input type="date" data-gallery-filter="dateFrom"/></label>
     <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-gallery-filter="dateTo"/></label>
+    <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
+      <option value="all" data-i18n="gallery.all_media">All media</option>
+      <option value="photo" data-i18n="gallery.photos">Photos</option>
+      <option value="video" data-i18n="gallery.videos">Videos</option>
+    </select></label>
     <label><span data-i18n="gallery.orientation">Orientation</span><select data-gallery-filter="orientation">
       <option value="all" data-i18n="gallery.all">All</option>
       <option value="pano" data-i18n="gallery.pano">Pano</option>
@@ -444,9 +300,10 @@ const ensureGalleryFilterControls = () => {
     const control = event.target;
     if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement) || !control.dataset.galleryFilter) return;
     const value = control instanceof HTMLInputElement && control.type === "date"
-      ? dateFilterValue(control.value)
+      ? photoFilter.dateFilterValue(control.value)
       : control.value;
     filterState = { ...filterState, [control.dataset.galleryFilter]: value };
+    syncFilterControls();
     writeFilterState();
     visibleLimit = pageSize;
     selectedIndex = 0;
@@ -1253,6 +1110,7 @@ if (galleryRoot && gallery) {
       document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
       document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
       document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
+      syncFilterControls();
       renderGallery();
     }
   });

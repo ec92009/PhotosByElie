@@ -86,7 +86,8 @@
   };
 
   const finishCatalogLoad = (source, data, owner, productCatalog) => {
-    window.photosByElieData = data || {};
+    const supplementalData = window.photosByElieData || {};
+    window.photosByElieData = { ...(data || {}), ...supplementalData };
     window.photosByElieOwnerData = owner || {};
     applyProductCatalog(productCatalog || readJson("./assets/catalog/product-pricing.json"));
     window.photosByElieCatalogSource = source;

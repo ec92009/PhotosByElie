@@ -31,6 +31,11 @@
         await loadScript("./catalog-sqlite.js");
         await loadScript("./photos-data.js");
         await window.photosByElieCatalogReady;
+        await Promise.allSettled([
+          loadScript("./assets/video-trial/cordoba/app-context.js"),
+          loadScript("./assets/apple-photos/2026/2026-malaga-museo-ruso/app-context.js"),
+          loadScript("./assets/apple-photos/2026/2026-nerja-caves/app-context.js"),
+        ]);
         window.dispatchEvent(new CustomEvent("photosbyelie:catalogloaded", {
           detail: { collections: Object.keys(window.photosByElieData || {}).length },
         }));

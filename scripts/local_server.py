@@ -27,6 +27,7 @@ PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
+REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
@@ -41,6 +42,9 @@ COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
 TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
+REAL_ESTATE_CLIENTS_PATH = OWNER_ACTION_ROOT / "real-estate-clients.local.json"
+REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
+REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"
@@ -132,6 +136,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_COVERAGE_PATH:
             self._handle_r2_coverage()
             return
+        if path == REAL_ESTATE_OWNER_PATH:
+            self._handle_real_estate_owner()
+            return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -147,6 +154,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
+            return
+        if path == REAL_ESTATE_OWNER_PATH:
+            self._handle_real_estate_owner()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -200,6 +210,23 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         task = _start_cloud_media_sweep(Path.cwd())
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_real_estate_owner(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            if self.command == "GET":
+                result = real_estate_owner_summary(Path.cwd())
+            else:
+                result = apply_real_estate_owner_action(Path.cwd(), self._read_json_body())
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
 
     def _handle_owner_session(self) -> None:
         if not self._is_loopback_request():

@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import json
+import os
 import re
+import secrets
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,6 +23,7 @@ DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE/Corine")
 DEFAULT_OUTPUT_ROOT = Path("tmp/real-estate-import")
 PDF_BATCH_SCHEMA = "photosbyelie.realEstatePdfBatch.v1"
 DEFAULT_R2_ROOT = "real-estate"
+ACCESS_CODE_HASH_ALGORITHM = "sha256-salt-v1"
 
 
 def slugify(value: str) -> str:
@@ -84,6 +88,17 @@ def output_relative(path: Path, output_dir: Path) -> str:
 
 def key_prefix(value: str) -> str:
     return re.sub(r"/+", "/", value.strip().strip("/"))
+
+
+def normalize_credential(value: str) -> str:
+    return str(value or "").strip().casefold()
+
+
+def access_code_hash(access_code: str, salt: str) -> str:
+    normalized = normalize_credential(access_code)
+    if not normalized or not salt:
+        return ""
+    return hashlib.sha256(f"{salt}:{normalized}".encode("utf-8")).hexdigest()
 
 
 def scan_album_files(album_dir: Path) -> list[Path]:
@@ -210,7 +225,9 @@ def build_manifest(
     source_root: Path,
     output_dir: Path,
     customer: str,
+    username: str,
     access_code: str,
+    access_code_salt: str,
     gallery_key: str,
     gallery_title: str,
     public_key_prefix: str,
@@ -336,14 +353,22 @@ def build_manifest(
             })
 
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    credential_hash = access_code_hash(access_code, access_code_salt)
+    customer_payload = {
+        "name": customer,
+        "username": username or customer,
+    }
+    if credential_hash:
+        customer_payload.update({
+            "accessCodeHash": credential_hash,
+            "accessCodeSalt": access_code_salt,
+            "accessCodeAlgorithm": ACCESS_CODE_HASH_ALGORITHM,
+        })
+
     return {
         "schema": "photosbyelie.realEstateImport.v1",
         "generatedAt": generated_at,
-        "customer": {
-            "name": customer,
-            "username": customer,
-            "accessCode": access_code,
-        },
+        "customer": customer_payload,
         "sourceRoot": str(source_root),
         "outputRoot": repo_relative(output_dir, repo_root),
         "r2": {
@@ -407,7 +432,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--customer", default="Corine")
+    parser.add_argument("--username", default="", help="Client username. Defaults to --customer.")
     parser.add_argument("--access-code", default="LaConcha")
+    parser.add_argument("--access-code-env", default="", help="Read the access code from this environment variable.")
+    parser.add_argument("--access-code-salt", default="", help="Salt used for the public access-code hash. Defaults to a generated random salt.")
     parser.add_argument("--gallery-key", default="")
     parser.add_argument("--gallery-title", default="")
     parser.add_argument("--public-key-prefix", default="", help="R2 public preview key prefix. Default: real-estate/<gallery-key>/previews.")
@@ -440,6 +468,9 @@ def main() -> int:
         return 1
 
     customer_slug = slugify(args.customer)
+    username = args.username or args.customer
+    access_code = os.environ.get(args.access_code_env, args.access_code) if args.access_code_env else args.access_code
+    access_code_salt = args.access_code_salt or secrets.token_hex(16)
     gallery_key = args.gallery_key or f"{customer_slug}-real-estate"
     gallery_title = args.gallery_title or f"{args.customer} Real Estate"
     public_key_prefix = key_prefix(args.public_key_prefix or f"{DEFAULT_R2_ROOT}/{gallery_key}/previews")
@@ -457,7 +488,9 @@ def main() -> int:
         source_root=source_root,
         output_dir=output_dir,
         customer=args.customer,
-        access_code=args.access_code,
+        username=username,
+        access_code=access_code,
+        access_code_salt=access_code_salt,
         gallery_key=gallery_key,
         gallery_title=gallery_title,
         public_key_prefix=public_key_prefix,

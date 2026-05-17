@@ -1,10 +1,10 @@
 {
   "schema": "photosbyelie.private-delivery-manifest.v1",
-  "updatedAt": "2026-05-16T16:59:59.451Z",
+  "updatedAt": "2026-05-17T19:27:15.033Z",
   "privateBucket": "photosbyelie-private",
-  "catalogPhotos": 5827,
-  "privateMasterPhotoIds": 5801,
-  "privateRenderTripletPhotoIds": 5799,
+  "catalogPhotos": 5841,
+  "privateMasterPhotoIds": 5815,
+  "privateRenderTripletPhotoIds": 5809,
   "records": {
     "20220506-160631-03403-51426edaac": {
       "id": "20220506-160631-03403-51426edaac",
@@ -221426,6 +221426,538 @@
           "key": "renders/20190624-1826-16542-1eb5098247_1mp.jpg",
           "present": true,
           "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1416-ce14e9f776": {
+      "id": "img-1416-ce14e9f776",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1416.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1416-ce14e9f776.jpg",
+        "legacyKey": "masters/img-1416-ce14e9f776/IMG_1416.JPG",
+        "key": "masters/img-1416-ce14e9f776.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1416-ce14e9f776_6mp.jpg",
+          "legacyKey": "renders/img-1416-ce14e9f776/IMG_1416.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1416-ce14e9f776_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1416-ce14e9f776_3mp.jpg",
+          "legacyKey": "renders/img-1416-ce14e9f776/IMG_1416.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1416-ce14e9f776_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1416-ce14e9f776_1mp.jpg",
+          "legacyKey": "renders/img-1416-ce14e9f776/IMG_1416.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1416-ce14e9f776_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1415-a0898b65fc": {
+      "id": "img-1415-a0898b65fc",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1415.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1415-a0898b65fc.jpg",
+        "legacyKey": "masters/img-1415-a0898b65fc/IMG_1415.JPG",
+        "key": "masters/img-1415-a0898b65fc.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1415-a0898b65fc_6mp.jpg",
+          "legacyKey": "renders/img-1415-a0898b65fc/IMG_1415.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1415-a0898b65fc_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1415-a0898b65fc_3mp.jpg",
+          "legacyKey": "renders/img-1415-a0898b65fc/IMG_1415.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1415-a0898b65fc_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1415-a0898b65fc_1mp.jpg",
+          "legacyKey": "renders/img-1415-a0898b65fc/IMG_1415.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1415-a0898b65fc_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1414-a8d42b2515": {
+      "id": "img-1414-a8d42b2515",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1414.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1414-a8d42b2515.jpg",
+        "legacyKey": "masters/img-1414-a8d42b2515/IMG_1414.JPG",
+        "key": "masters/img-1414-a8d42b2515.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1414-a8d42b2515_6mp.jpg",
+          "legacyKey": "renders/img-1414-a8d42b2515/IMG_1414.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1414-a8d42b2515_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1414-a8d42b2515_3mp.jpg",
+          "legacyKey": "renders/img-1414-a8d42b2515/IMG_1414.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1414-a8d42b2515_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1414-a8d42b2515_1mp.jpg",
+          "legacyKey": "renders/img-1414-a8d42b2515/IMG_1414.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1414-a8d42b2515_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1413-96ea2c869f": {
+      "id": "img-1413-96ea2c869f",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1413.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1413-96ea2c869f.jpg",
+        "legacyKey": "masters/img-1413-96ea2c869f/IMG_1413.JPG",
+        "key": "masters/img-1413-96ea2c869f.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1413-96ea2c869f_6mp.jpg",
+          "legacyKey": "renders/img-1413-96ea2c869f/IMG_1413.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1413-96ea2c869f_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1413-96ea2c869f_3mp.jpg",
+          "legacyKey": "renders/img-1413-96ea2c869f/IMG_1413.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1413-96ea2c869f_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1413-96ea2c869f_1mp.jpg",
+          "legacyKey": "renders/img-1413-96ea2c869f/IMG_1413.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1413-96ea2c869f_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1412-dde0e52bcb": {
+      "id": "img-1412-dde0e52bcb",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1412.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1412-dde0e52bcb.jpg",
+        "legacyKey": "masters/img-1412-dde0e52bcb/IMG_1412.JPG",
+        "key": "masters/img-1412-dde0e52bcb.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1412-dde0e52bcb_6mp.jpg",
+          "legacyKey": "renders/img-1412-dde0e52bcb/IMG_1412.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1412-dde0e52bcb_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1412-dde0e52bcb_3mp.jpg",
+          "legacyKey": "renders/img-1412-dde0e52bcb/IMG_1412.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1412-dde0e52bcb_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1412-dde0e52bcb_1mp.jpg",
+          "legacyKey": "renders/img-1412-dde0e52bcb/IMG_1412.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1412-dde0e52bcb_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1408-94456ca4fc": {
+      "id": "img-1408-94456ca4fc",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1408.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1408-94456ca4fc.jpg",
+        "legacyKey": "masters/img-1408-94456ca4fc/IMG_1408.JPG",
+        "key": "masters/img-1408-94456ca4fc.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1408-94456ca4fc_6mp.jpg",
+          "legacyKey": "renders/img-1408-94456ca4fc/IMG_1408.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1408-94456ca4fc_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1408-94456ca4fc_3mp.jpg",
+          "legacyKey": "renders/img-1408-94456ca4fc/IMG_1408.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1408-94456ca4fc_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1408-94456ca4fc_1mp.jpg",
+          "legacyKey": "renders/img-1408-94456ca4fc/IMG_1408.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1408-94456ca4fc_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1404-b704ed7a17": {
+      "id": "img-1404-b704ed7a17",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1404.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1404-b704ed7a17.jpg",
+        "legacyKey": "masters/img-1404-b704ed7a17/IMG_1404.JPG",
+        "key": "masters/img-1404-b704ed7a17.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1404-b704ed7a17_6mp.jpg",
+          "legacyKey": "renders/img-1404-b704ed7a17/IMG_1404.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1404-b704ed7a17_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1404-b704ed7a17_3mp.jpg",
+          "legacyKey": "renders/img-1404-b704ed7a17/IMG_1404.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1404-b704ed7a17_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1404-b704ed7a17_1mp.jpg",
+          "legacyKey": "renders/img-1404-b704ed7a17/IMG_1404.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1404-b704ed7a17_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1402-4c2c98e288": {
+      "id": "img-1402-4c2c98e288",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1402.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1402-4c2c98e288.jpg",
+        "legacyKey": "masters/img-1402-4c2c98e288/IMG_1402.JPG",
+        "key": "masters/img-1402-4c2c98e288.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1402-4c2c98e288_6mp.jpg",
+          "legacyKey": "renders/img-1402-4c2c98e288/IMG_1402.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1402-4c2c98e288_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1402-4c2c98e288_3mp.jpg",
+          "legacyKey": "renders/img-1402-4c2c98e288/IMG_1402.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1402-4c2c98e288_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1402-4c2c98e288_1mp.jpg",
+          "legacyKey": "renders/img-1402-4c2c98e288/IMG_1402.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1402-4c2c98e288_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1396-aa0d5786b9": {
+      "id": "img-1396-aa0d5786b9",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1396.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1396-aa0d5786b9.jpg",
+        "legacyKey": "masters/img-1396-aa0d5786b9/IMG_1396.JPG",
+        "key": "masters/img-1396-aa0d5786b9.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1396-aa0d5786b9_6mp.jpg",
+          "legacyKey": "renders/img-1396-aa0d5786b9/IMG_1396.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1396-aa0d5786b9_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1396-aa0d5786b9_3mp.jpg",
+          "legacyKey": "renders/img-1396-aa0d5786b9/IMG_1396.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1396-aa0d5786b9_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1396-aa0d5786b9_1mp.jpg",
+          "legacyKey": "renders/img-1396-aa0d5786b9/IMG_1396.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1396-aa0d5786b9_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1395-81cbfcb7d3": {
+      "id": "img-1395-81cbfcb7d3",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1395.JPG",
+      "privateMaster": {
+        "expectedKey": "masters/img-1395-81cbfcb7d3.jpg",
+        "legacyKey": "masters/img-1395-81cbfcb7d3/IMG_1395.JPG",
+        "key": "masters/img-1395-81cbfcb7d3.jpg",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1395-81cbfcb7d3_6mp.jpg",
+          "legacyKey": "renders/img-1395-81cbfcb7d3/IMG_1395.JPG-jpg-6mp.jpg",
+          "key": "renders/img-1395-81cbfcb7d3_6mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1395-81cbfcb7d3_3mp.jpg",
+          "legacyKey": "renders/img-1395-81cbfcb7d3/IMG_1395.JPG-jpg-3mp.jpg",
+          "key": "renders/img-1395-81cbfcb7d3_3mp.jpg",
+          "present": true,
+          "targetPresent": true
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1395-81cbfcb7d3_1mp.jpg",
+          "legacyKey": "renders/img-1395-81cbfcb7d3/IMG_1395.JPG-jpg-1mp.jpg",
+          "key": "renders/img-1395-81cbfcb7d3_1mp.jpg",
+          "present": true,
+          "targetPresent": true
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1418-6d70351932": {
+      "id": "img-1418-6d70351932",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1418.MOV",
+      "privateMaster": {
+        "expectedKey": "masters/img-1418-6d70351932.mov",
+        "legacyKey": "masters/img-1418-6d70351932/IMG_1418.MOV",
+        "key": "masters/img-1418-6d70351932.mov",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1418-6d70351932_6mp.jpg",
+          "legacyKey": "renders/img-1418-6d70351932/IMG_1418.MOV-jpg-6mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1418-6d70351932_3mp.jpg",
+          "legacyKey": "renders/img-1418-6d70351932/IMG_1418.MOV-jpg-3mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1418-6d70351932_1mp.jpg",
+          "legacyKey": "renders/img-1418-6d70351932/IMG_1418.MOV-jpg-1mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1410-58bbd8e4cc": {
+      "id": "img-1410-58bbd8e4cc",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1410.MOV",
+      "privateMaster": {
+        "expectedKey": "masters/img-1410-58bbd8e4cc.mov",
+        "legacyKey": "masters/img-1410-58bbd8e4cc/IMG_1410.MOV",
+        "key": "masters/img-1410-58bbd8e4cc.mov",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1410-58bbd8e4cc_6mp.jpg",
+          "legacyKey": "renders/img-1410-58bbd8e4cc/IMG_1410.MOV-jpg-6mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1410-58bbd8e4cc_3mp.jpg",
+          "legacyKey": "renders/img-1410-58bbd8e4cc/IMG_1410.MOV-jpg-3mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1410-58bbd8e4cc_1mp.jpg",
+          "legacyKey": "renders/img-1410-58bbd8e4cc/IMG_1410.MOV-jpg-1mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1398-0afbc52312": {
+      "id": "img-1398-0afbc52312",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1398.MOV",
+      "privateMaster": {
+        "expectedKey": "masters/img-1398-0afbc52312.mov",
+        "legacyKey": "masters/img-1398-0afbc52312/IMG_1398.MOV",
+        "key": "masters/img-1398-0afbc52312.mov",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1398-0afbc52312_6mp.jpg",
+          "legacyKey": "renders/img-1398-0afbc52312/IMG_1398.MOV-jpg-6mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1398-0afbc52312_3mp.jpg",
+          "legacyKey": "renders/img-1398-0afbc52312/IMG_1398.MOV-jpg-3mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1398-0afbc52312_1mp.jpg",
+          "legacyKey": "renders/img-1398-0afbc52312/IMG_1398.MOV-jpg-1mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        }
+      },
+      "publicPreviews": {
+        "present": true
+      }
+    },
+    "img-1393-0f04ef2606": {
+      "id": "img-1393-0f04ef2606",
+      "collectionKey": "spain",
+      "sourcePath": "2025 Cordoba, la Mezquita/IMG_1393.MOV",
+      "privateMaster": {
+        "expectedKey": "masters/img-1393-0f04ef2606.mov",
+        "legacyKey": "masters/img-1393-0f04ef2606/IMG_1393.MOV",
+        "key": "masters/img-1393-0f04ef2606.mov",
+        "present": true,
+        "targetPresent": true
+      },
+      "privateRenders": {
+        "jpg-6mp": {
+          "expectedKey": "renders/img-1393-0f04ef2606_6mp.jpg",
+          "legacyKey": "renders/img-1393-0f04ef2606/IMG_1393.MOV-jpg-6mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-3mp": {
+          "expectedKey": "renders/img-1393-0f04ef2606_3mp.jpg",
+          "legacyKey": "renders/img-1393-0f04ef2606/IMG_1393.MOV-jpg-3mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
+        },
+        "jpg-1mp": {
+          "expectedKey": "renders/img-1393-0f04ef2606_1mp.jpg",
+          "legacyKey": "renders/img-1393-0f04ef2606/IMG_1393.MOV-jpg-1mp.jpg",
+          "key": "",
+          "present": false,
+          "targetPresent": false
         }
       },
       "publicPreviews": {

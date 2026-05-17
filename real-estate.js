@@ -32,7 +32,6 @@
     search: app.querySelector("[data-re-search]"),
     sort: app.querySelector("[data-re-sort]"),
     density: app.querySelector("[data-re-density]"),
-    mediaType: app.querySelector("[data-re-media-type]"),
     selectedOnly: app.querySelector("[data-re-selected-only]"),
     pdfFormat: app.querySelector("[data-re-pdf-format]"),
     status: app.querySelector("[data-re-status]"),
@@ -66,7 +65,6 @@
     query: "",
     sort: "album",
     density: localStorage.getItem(densityKey) || "balanced",
-    mediaType: "all",
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
     selectedOnly: false,
     selectedOrder: [],
@@ -289,6 +287,36 @@
     || state.payload?.customer?.accessCode
     || ""
   );
+  const expectedAccessCodeHash = () => String(
+    state.payload?.accessCodeHash
+    || state.payload?.customer?.accessCodeHash
+    || ""
+  ).trim().toLowerCase();
+  const expectedAccessCodeSalt = () => String(
+    state.payload?.accessCodeSalt
+    || state.payload?.customer?.accessCodeSalt
+    || ""
+  ).trim();
+
+  const sha256Hex = async (value) => {
+    if (!window.crypto?.subtle || typeof TextEncoder !== "function") return "";
+    const bytes = new TextEncoder().encode(String(value || ""));
+    const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  };
+
+  const credentialMatches = async (enteredUser, enteredCode) => {
+    if (enteredUser !== expectedUsername()) return false;
+    const expectedHash = expectedAccessCodeHash();
+    const salt = expectedAccessCodeSalt();
+    if (expectedHash && salt) {
+      const actualHash = await sha256Hex(`${salt}:${enteredCode}`);
+      return Boolean(actualHash) && actualHash === expectedHash;
+    }
+    return Boolean(expectedAccessCode()) && enteredCode === expectedAccessCode();
+  };
 
   const hasUnlockedSession = () => {
     const saved = readJson(authStoreKey(), {});
@@ -359,16 +387,6 @@
 
   const titleFor = (photo) => state.editedTitles[photo?.id] || photo?.editableTitle || photo?.title || photo?.id || "";
   const albumTitleFor = (photo) => photo?.albumTitle || photo?.caption || photo?.album || "Property";
-  const mediaTypeFor = (photo) => {
-    const rawType = String(
-      photo?.media?.type
-      || photo?.mediaType
-      || photo?.type
-      || photo?.kind
-      || ""
-    ).toLowerCase();
-    return rawType.includes("video") ? "video" : "photo";
-  };
   const projectIdFor = (photo) => photo?.albumSlug || "project";
   const projectTitleFor = (photo) => albumTitleFor(photo);
   const projectOptions = () => state.albums.map((album, index) => ({
@@ -412,7 +430,6 @@
     photo?.album,
     photo?.albumTitle,
     photo?.caption,
-    mediaTypeFor(photo),
   ].filter(Boolean).join(" ").toLowerCase();
 
   const normalizeSelectedOrder = (value) => {
@@ -435,7 +452,6 @@
     const selectedRank = new Map(state.selectedOrder.map((id, index) => [id, index]));
     const photos = state.photos.filter((photo) => {
       if (state.album !== "all" && photo.albumSlug !== state.album) return false;
-      if (state.mediaType !== "all" && mediaTypeFor(photo) !== state.mediaType) return false;
       if (state.selectedOnly && !state.selectedIds.has(photo.id)) return false;
       if (query && !photoSearchText(photo).includes(query)) return false;
       return true;
@@ -525,14 +541,12 @@
     elements.grid.innerHTML = photos.length ? photos.map((photo) => {
       const selected = state.selectedIds.has(photo.id);
       const assignedProjects = new Set(assignedProjectIdsFor(photo));
-      const mediaType = mediaTypeFor(photo);
       return `
-        <article class="real-estate-photo-card ${selected ? "is-selected" : ""} is-${escapeHtml(mediaType)}" data-photo-id="${escapeHtml(photo.id)}" data-media-type="${escapeHtml(mediaType)}">
+        <article class="real-estate-photo-card ${selected ? "is-selected" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
             <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
               <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
               <span>${escapeHtml(albumTitleFor(photo))}</span>
-              ${mediaType === "video" ? `<b class="real-estate-media-type-badge">Video</b>` : ""}
             </button>
             <label class="real-estate-check real-estate-photo-select">
               <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))} for PDF" ${selected ? "checked" : ""}/>
@@ -591,7 +605,6 @@
   const render = () => {
     document.body.dataset.realEstateDensity = state.density;
     if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
-    if (elements.mediaType) elements.mediaType.value = state.mediaType;
     syncAuthUi();
     renderAlbums();
     renderGrid();
@@ -1125,8 +1138,8 @@
         } catch (error) {
           if (error?.code === "real_estate_auth_required" && attempt === 0) {
             clearSessionCredentials();
-            passwordMessage = "That password did not work. Enter LaConcha exactly.";
-            setStatus("Password did not work; enter LaConcha exactly to create the originals ZIP");
+            passwordMessage = "That password did not work. Enter the client password again.";
+            setStatus("Password did not work; enter the client password again to create the originals ZIP");
             continue;
           }
           throw error;
@@ -1679,13 +1692,11 @@
       elements.loginCode.focus();
     });
 
-    elements.loginForm?.addEventListener("submit", (event) => {
+    elements.loginForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const expectedUser = expectedUsername();
-      const expectedCode = expectedAccessCode();
       const enteredUser = normalizeCredential(elements.loginName?.value);
       const enteredCode = normalizeCredential(elements.loginCode?.value);
-      if (!expectedUser || !expectedCode || enteredUser !== expectedUser || enteredCode !== expectedCode) {
+      if (!await credentialMatches(enteredUser, enteredCode)) {
         if (elements.loginStatus) elements.loginStatus.textContent = "Credentials do not match this review.";
         return;
       }
@@ -1719,11 +1730,6 @@
       localStorage.setItem(densityKey, state.density);
       renderGrid();
     });
-    elements.mediaType?.addEventListener("change", (event) => {
-      state.mediaType = ["all", "photo", "video"].includes(event.target.value) ? event.target.value : "all";
-      event.target.value = state.mediaType;
-      renderGrid();
-    });
     elements.pdfFormat?.addEventListener("change", (event) => {
       state.pdfFormat = paperFormatFor(event.target.value).key;
       localStorage.setItem(pdfFormatKey, state.pdfFormat);
@@ -1742,11 +1748,9 @@
         state.album = "all";
         state.query = "";
         state.sort = "album";
-        state.mediaType = "all";
         state.selectedOnly = false;
         if (elements.search) elements.search.value = "";
         if (elements.sort) elements.sort.value = "album";
-        if (elements.mediaType) elements.mediaType.value = "all";
         if (elements.selectedOnly) elements.selectedOnly.checked = false;
         render();
       }

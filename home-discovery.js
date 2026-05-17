@@ -422,9 +422,10 @@
       showAllButton.hidden = !hasMore;
       showAllButton.textContent = t("home.show_all");
     }
-    setStatus(hasActiveFilters() ? "home.showing_matches" : "home.showing_results", {
+    setStatus("gallery.showing_filtered_items", {
       count: visibleItems.length,
       total: latestMatches.length,
+      items: photoFilter.statusNoun(filterState, t),
     });
   };
   const updateFilterState = (options = {}) => {

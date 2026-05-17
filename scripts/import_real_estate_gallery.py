@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import private real-estate media exports for a client gallery/cloud-PDF workflow."""
+"""Import private real-estate media exports for a client gallery/cloud-output workflow."""
 
 from __future__ import annotations
 
@@ -288,10 +288,13 @@ def pdf_batch_manifest_template(
                         "title": "",
                         "sortIndex": 1,
                         "mediaType": "photo",
+                        "durationSeconds": None,
                         "pdfTreatment": "photo",
                         "pdfStillPercent": None,
                         "slideshowDurationPolicy": "fixed-photo-duration",
                         "slideshowDurationSeconds": 4,
+                        "sourceVideoPrivateKey": "",
+                        "sourceDurationSeconds": None,
                         "projectId": "",
                         "projectTitle": "",
                     }
@@ -304,10 +307,13 @@ def pdf_batch_manifest_template(
                 "title": "",
                 "sortIndex": 1,
                 "mediaType": "photo",
+                "durationSeconds": None,
                 "pdfTreatment": "photo",
                 "pdfStillPercent": None,
                 "slideshowDurationPolicy": "fixed-photo-duration",
                 "slideshowDurationSeconds": 4,
+                "sourceVideoPrivateKey": "",
+                "sourceDurationSeconds": None,
                 "projectId": "",
                 "projectTitle": "",
                 "projectIds": [],
@@ -528,7 +534,7 @@ def build_manifest(
         "gallery": {
             "key": gallery_key,
             "title": gallery_title,
-            "description": "Private real-estate selection gallery for cloud PDF assembly.",
+            "description": "Private real-estate selection gallery for project PDF and slideshow assembly.",
             "accent": "spain",
             "photos": photos,
         },
@@ -541,7 +547,7 @@ def build_manifest(
             "projectStoreKey": f"photosbyelie-real-estate-projects-{gallery_key}",
             "imageField": "cloudPdfSource.imageUrl",
             "cloudImageKeyField": "cloudPdfSource.publicKey",
-            "mode": "one-photo-per-page",
+            "mode": "one-output-per-project",
             "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
             "batchManifest": {
                 "schema": PDF_BATCH_SCHEMA,
@@ -549,7 +555,7 @@ def build_manifest(
                 "storageKeyPattern": f"real-estate/pdf-batches/{gallery_key}/{{batchId}}.json",
                 "retrievalOrder": "createdAt desc",
                 "projectFields": ["projectId", "projectTitle", "sortIndex", "items"],
-                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "projectId", "projectTitle", "projectIds"],
+                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "durationSeconds", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "sourceVideoPrivateKey", "sourceDurationSeconds", "projectId", "projectTitle", "projectIds"],
                 "resumeBehavior": "Loading a prior batch manifest seeds the selected media IDs and edited titles by project; generating PDFs or slideshow plans from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
                 "template": pdf_batch_manifest_template(
                     customer=customer,
@@ -596,7 +602,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--preview-900-quality", "--gallery-quality", dest="preview_900_quality", type=int, default=84)
     parser.add_argument("--preview-1800-quality", "--pdf-source-quality", "--pdf-quality", dest="preview_1800_quality", type=int, default=88)
     parser.add_argument("--force", action="store_true", help="Re-render existing derivatives.")
-    parser.add_argument("--allow-raw-present", action="store_true", help="Do not fail when RAW/DNG/NEF files are present near the source JPGs.")
+    parser.add_argument("--allow-raw-present", action="store_true", help="Do not fail when RAW/DNG/NEF files are present near the source media.")
     return parser.parse_args()
 
 

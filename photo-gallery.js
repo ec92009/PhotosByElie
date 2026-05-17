@@ -846,9 +846,10 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     showAllButton.textContent = t("home.show_all");
   }
   const paginated = photos.length > visibleSubset.length;
+  const mediaNoun = photoFilter.statusNoun(filterState, t);
   const filterStatus = activeFilterCount() || paginated
-    ? t("gallery.showing_filtered", { count: visibleSubset.length, total: photos.length })
-    : t("gallery.showing_count", { count: visibleSubset.length });
+    ? t("gallery.showing_filtered_items", { count: visibleSubset.length, total: photos.length, items: mediaNoun })
+    : t("gallery.showing_count_items", { count: visibleSubset.length, items: mediaNoun });
   if (localModerationEnabled) {
     const reserveCount = reserveFillEnabled ? reserveStore.photosFor(galleryKey).length : 0;
     setGalleryStatus(reserveCount

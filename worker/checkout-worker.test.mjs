@@ -507,12 +507,18 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
 
 test("real-estate originals endpoint creates private download tokens", async () => {
   const photoId = "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043";
+  const videoId = "corine-re-2026-la-concha-1-apt-8ab1-video-001";
   const albumSlug = "re-2026-la-concha-1-apt-8ab1";
   const privateKey = `real-estate/corine-real-estate/masters/${albumSlug}/${photoId}.jpg`;
+  const privateVideoKey = `real-estate/corine-real-estate/masters/${albumSlug}/${videoId}.mp4`;
   const privateR2 = createFakeR2({
     [privateKey]: {
       body: new TextEncoder().encode("real estate original bytes"),
       httpMetadata: { contentType: "image/jpeg" },
+    },
+    [privateVideoKey]: {
+      body: new TextEncoder().encode("real estate video bytes"),
+      httpMetadata: { contentType: "video/mp4" },
     },
   });
   const randomUUID = deterministicIds();
@@ -546,18 +552,28 @@ test("real-estate originals endpoint creates private download tokens", async () 
     galleryKey: "corine-real-estate",
     username: "Corine",
     accessCode: "LaConcha",
-    items: [{
-      photoId,
-      albumSlug,
-      sourceFile: "D5H_3043.JPG",
-      title: "La Concha 1 Apt 8AB1 - 01",
-      sortIndex: 1,
-    }],
+    items: [
+      {
+        photoId,
+        albumSlug,
+        sourceFile: "D5H_3043.JPG",
+        title: "La Concha 1 Apt 8AB1 - 01",
+        sortIndex: 1,
+      },
+      {
+        photoId: videoId,
+        albumSlug,
+        sourceFile: "VIDEO_001.mp4",
+        title: "La Concha 1 Apt 8AB1 - Video",
+        sortIndex: 2,
+      },
+    ],
   }));
   assert.equal(sessionResponse.status, 201);
   const session = await sessionResponse.json();
-  assert.equal(session.originals.fileCount, 1);
+  assert.equal(session.originals.fileCount, 2);
   assert.equal(session.originals.files[0].photoId, photoId);
+  assert.equal(session.originals.files[1].photoId, videoId);
   assert.match(session.originals.files[0].downloadUrl, /^\/download\/re_/);
 
   const token = session.originals.files[0].downloadUrl.split("/").pop();
@@ -566,6 +582,13 @@ test("real-estate originals endpoint creates private download tokens", async () 
   assert.equal(downloadResponse.headers.get("content-type"), "image/jpeg");
   const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
   assert.ok(fileBytes.includes(Buffer.from("real estate original bytes")));
+
+  const videoToken = session.originals.files[1].downloadUrl.split("/").pop();
+  const videoResponse = await worker.fetch(new Request(`https://worker.test/download/${videoToken}`));
+  assert.equal(videoResponse.status, 200);
+  assert.equal(videoResponse.headers.get("content-type"), "video/mp4");
+  const videoBytes = Buffer.from(await videoResponse.arrayBuffer());
+  assert.ok(videoBytes.includes(Buffer.from("real estate video bytes")));
 });
 
 test("real-estate originals endpoint rejects the wrong client password", async () => {

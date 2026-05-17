@@ -551,7 +551,7 @@
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
       button.textContent = state.originalsBusy ? "Building originals ZIP..." : "Share originals ZIP";
-      button.title = "Prepare a ZIP of selected original JPG files from private delivery storage";
+      button.title = "Prepare a ZIP of selected original source media from private delivery storage";
       button.disabled = state.originalsBusy;
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
@@ -563,13 +563,12 @@
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
-    const videoCount = photos.filter(isVideo).length;
     if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
     if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
     if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
     if (elements.description) elements.description.textContent = gallery?.description || "Private media review workspace for project PDFs and slideshow delivery.";
     if (elements.total) elements.total.textContent = String(photos.length);
-    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = videoCount ? "Media" : "Photos";
+    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Media";
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
   };
 
@@ -663,7 +662,7 @@
         </div>
         <span class="real-estate-draft-index">${index + 1}</span>
       </article>
-    `).join("") : `<p class="real-estate-muted">No selected photos yet.</p>`;
+    `).join("") : `<p class="real-estate-muted">No selected media yet.</p>`;
   };
 
   const render = () => {
@@ -755,7 +754,9 @@
     slideshowDurationPolicy: isVideo(photo) ? "preserve-source-duration" : "fixed-photo-duration",
     slideshowDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : state.slideshowPhotoSeconds,
     transition: slideshowTransition,
-    cloudSourceKey: isVideo(photo) ? photo?.realEstate?.privateMasterKey || "" : photo?.cloudPdfSource?.publicKey || "",
+    cloudSourceKey: isVideo(photo) ? photo?.cloudPdfSource?.sourceVideoPrivateKey || photo?.realEstate?.privateMasterKey || "" : photo?.cloudPdfSource?.publicKey || "",
+    sourceVideoPrivateKey: isVideo(photo) ? photo?.cloudPdfSource?.sourceVideoPrivateKey || photo?.realEstate?.privateMasterKey || "" : "",
+    sourceDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : null,
     publicStillKey: photo?.cloudPdfSource?.publicKey || photo?.media?.publicPreview?.detailKey || "",
     projectId: project?.projectId || projectIdFor(photo),
     projectTitle: project?.projectTitle || projectTitleFor(photo),
@@ -837,13 +838,13 @@
       `Batch: ${manifest.batchId || ""}`,
       `Created: ${manifest.createdAt || ""}`,
       "",
-      ["Project", "Order", "Type", "Duration", "Title", "Photo ID"].join("\t"),
+      ["Project", "Order", "Type", "Duration", "Title", "Media ID"].join("\t"),
       ...rows.map(({ projectTitle, item }) => [
         projectTitle || item.projectTitle || "",
         item.sortIndex || "",
         item.mediaType || "photo",
         item.mediaType === "video"
-          ? "preserve source"
+          ? `preserve source${formatDuration(item.durationSeconds) ? ` (${formatDuration(item.durationSeconds)})` : ""}`
           : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
         item.title || "",
         item.photoId || "",
@@ -890,11 +891,11 @@
 <body>
   <main>
     <h1>Photos By Elie selection</h1>
-    <p>${escapeHtml(manifest.customer || state.payload?.customer?.name || "Client")} real-estate PDF draft</p>
+    <p>${escapeHtml(manifest.customer || state.payload?.customer?.name || "Client")} real-estate output draft</p>
     <dl class="meta">
       <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
       <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
-      <div><dt>Photos</dt><dd>${selectedCount}</dd></div>
+      <div><dt>Media</dt><dd>${selectedCount}</dd></div>
       <div><dt>Projects</dt><dd>${projectCount}</dd></div>
       <div><dt>Paper</dt><dd>${escapeHtml(manifest.pdfSettings?.paperLabel || manifest.pdfSettings?.paperFormat || "")}</dd></div>
     </dl>
@@ -906,7 +907,7 @@
           <th>Type</th>
           <th>Duration</th>
           <th>Title</th>
-          <th>Photo ID</th>
+          <th>Media ID</th>
         </tr>
       </thead>
       <tbody>
@@ -915,7 +916,7 @@
           <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
           <td>${escapeHtml(item.sortIndex || "")}</td>
           <td>${escapeHtml(item.mediaType || "photo")}</td>
-          <td>${escapeHtml(item.mediaType === "video" ? "preserve source" : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`)}</td>
+          <td>${escapeHtml(item.mediaType === "video" ? `preserve source${formatDuration(item.durationSeconds) ? ` (${formatDuration(item.durationSeconds)})` : ""}` : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`)}</td>
           <td>${escapeHtml(item.title || "")}</td>
           <td><code>${escapeHtml(item.photoId || "")}</code></td>
         </tr>`).join("")}
@@ -1016,7 +1017,7 @@
           <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
           <td>${escapeHtml(item.sortIndex || "")}</td>
           <td>${escapeHtml(item.mediaType || "photo")}</td>
-          <td>${escapeHtml(item.mediaType === "video" ? "preserve source" : `${item.durationSeconds || state.slideshowPhotoSeconds}s`)}</td>
+          <td>${escapeHtml(item.mediaType === "video" ? `preserve source${formatDuration(item.durationSeconds) ? ` (${formatDuration(item.durationSeconds)})` : ""}` : `${item.durationSeconds || state.slideshowPhotoSeconds}s`)}</td>
           <td>${escapeHtml(item.title || "")}</td>
           <td><code>${escapeHtml(item.cloudSourceKey || item.publicStillKey || item.photoId || "")}</code></td>
         </tr>`).join("")}
@@ -1352,7 +1353,7 @@
     if (!requireUnlocked() || state.originalsBusy) return;
     const photos = selectedPhotos();
     if (!photos.length) {
-      setStatus("Select photos before preparing originals ZIP");
+      setStatus("Select media before preparing originals ZIP");
       return;
     }
     state.originalsBusy = true;
@@ -1361,7 +1362,7 @@
       let session = null;
       let passwordMessage = "";
       for (let attempt = 0; attempt < 2 && !session; attempt += 1) {
-        setStatus(`Preparing private original links for ${photos.length} selected photo${photos.length === 1 ? "" : "s"}...`);
+        setStatus(`Preparing private original links for ${photos.length} selected media item${photos.length === 1 ? "" : "s"}...`);
         try {
           session = await requestOriginalsSession(photos, passwordMessage);
         } catch (error) {
@@ -1669,7 +1670,7 @@
     if (!requireUnlocked() || state.pdfBusy) return;
     const photos = selectedPhotos();
     if (!photos.length) {
-      setStatus("Select photos before downloading project PDFs");
+      setStatus("Select media before downloading project PDFs");
       return;
     }
     const projects = projectGroupsFor(photos);

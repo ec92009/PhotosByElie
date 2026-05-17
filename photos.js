@@ -149,6 +149,11 @@ const translations = {
     'gallery.adjust_filters': 'Adjust or clear filters to show this collection again.',
     'gallery.showing_count': 'Showing {count} photos.',
     'gallery.showing_filtered': 'Showing {count} of {total} photos.',
+    'gallery.showing_count_items': 'Showing {count} {items}.',
+    'gallery.showing_filtered_items': 'Showing {count} of {total} {items}.',
+    'gallery.media_photos': 'photos',
+    'gallery.media_videos': 'videos',
+    'gallery.media_items': 'media items',
     'gallery.reserve_available': '{status} Reserve refill is available.',
     'detail.pick_resolution': 'Pick a resolution',
     'detail.total_selected': 'Total selected:',
@@ -442,6 +447,11 @@ const translations = {
     'gallery.adjust_filters': 'Ajustez ou effacez les filtres pour revoir cette collection.',
     'gallery.showing_count': '{count} photos affichees.',
     'gallery.showing_filtered': '{count} sur {total} photos.',
+    'gallery.showing_count_items': '{count} {items} affiches.',
+    'gallery.showing_filtered_items': '{count} sur {total} {items}.',
+    'gallery.media_photos': 'photos',
+    'gallery.media_videos': 'videos',
+    'gallery.media_items': 'medias',
     'gallery.reserve_available': '{status} Le remplissage de reserve est disponible.',
     'detail.pick_resolution': 'Choisir une resolution',
     'detail.total_selected': 'Total choisi :',
@@ -735,6 +745,11 @@ const translations = {
     'gallery.adjust_filters': 'Ajusta o limpia los filtros para volver a mostrar esta coleccion.',
     'gallery.showing_count': 'Mostrando {count} fotos.',
     'gallery.showing_filtered': 'Mostrando {count} de {total} fotos.',
+    'gallery.showing_count_items': 'Mostrando {count} {items}.',
+    'gallery.showing_filtered_items': 'Mostrando {count} de {total} {items}.',
+    'gallery.media_photos': 'fotos',
+    'gallery.media_videos': 'videos',
+    'gallery.media_items': 'elementos multimedia',
     'gallery.reserve_available': '{status} El relleno de reserva esta disponible.',
     'detail.pick_resolution': 'Elige una resolucion',
     'detail.total_selected': 'Total seleccionado:',
@@ -1508,6 +1523,13 @@ window.photosByEliePhotoFilter = (() => {
       return count + (filterState[key] && filterState[key] !== 'all' ? 1 : 0);
     }, 0);
   };
+  const statusNoun = (state = {}, translate = window.photosByElieI18n?.t) => {
+    const filterState = normalizeState(state);
+    const t = typeof translate === 'function' ? translate : ((key) => key);
+    if (filterState.mediaType === 'video') return t('gallery.media_videos');
+    if (filterState.mediaType === 'photo') return t('gallery.media_photos');
+    return t('gallery.media_items');
+  };
   return {
     activeFilterCount,
     captureTime,
@@ -1520,6 +1542,7 @@ window.photosByEliePhotoFilter = (() => {
     searchText,
     searchTerms,
     sortItems,
+    statusNoun,
     syncAdaptiveControls,
   };
 })();

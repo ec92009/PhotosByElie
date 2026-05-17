@@ -5,7 +5,7 @@ Date: 2026-05-17
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
-- Current visible build: `v78.29`
+- Current visible build: `v78.32`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Public catalog count: `5,827` active media rows.
@@ -39,7 +39,7 @@ The phone and 5G workflow drove the latest Real Estate changes:
 - The ZIP password flow now uses a masked in-page dialog rather than `window.prompt()`.
 - Wrong ZIP passwords clear the cached ZIP credential and reopen the masked dialog with a retry message.
 - The main Real Estate login password field has an eye toggle next to the field.
-- Localhost Owner now has a Real Estate client panel that stores credentials/config in ignored local JSON, imports source folders through the helper server, publishes public-safe context bundles, runs upload dry-runs or uploads, and can emit the Worker secret payload.
+- Localhost Owner now has a Real Estate client table/editor that stores email/password/config in ignored local JSON, derives naming conventions from the client name, imports configured property folders through the helper server, publishes public-safe context bundles, runs upload dry-runs or uploads, and can emit the Worker secret payload.
 - The public Corine context now stores a salted password hash instead of the previous plaintext access code.
 
 ## Recent Commits

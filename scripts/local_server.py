@@ -45,6 +45,8 @@ TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
 REAL_ESTATE_CLIENTS_PATH = OWNER_ACTION_ROOT / "real-estate-clients.local.json"
 REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
 REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
+REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
+REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
@@ -1943,12 +1945,38 @@ def _key_prefix(value: str) -> str:
     return re.sub(r"/+", "/", str(value or "").strip().strip("/"))
 
 
+def _real_estate_client_name(client) -> str:
+    if isinstance(client, dict):
+        return str(client.get("customer") or client.get("name") or client.get("id") or "").strip()
+    return str(client or "").strip()
+
+
+def _real_estate_client_slug(client) -> str:
+    return _slugify(_real_estate_client_name(client), "client")
+
+
+def _real_estate_convention_fields(customer: str) -> dict[str, str]:
+    client_name = _real_estate_client_name(customer)
+    client_slug = _real_estate_client_slug(client_name)
+    return {
+        "id": client_slug,
+        "username": client_name,
+        "sourceRoot": str(REAL_ESTATE_SOURCE_ROOT / client_name) if client_name else "",
+        "outputSlug": client_slug,
+        "publicSlug": client_slug,
+        "galleryKey": f"{client_name}-gallery" if client_name else "",
+        "galleryTitle": client_name,
+        "publicKeyPrefix": _key_prefix(f"RE/{client_name}/previews") if client_name else "",
+        "privateKeyPrefix": _key_prefix(f"RE/{client_name}/masters") if client_name else "",
+    }
+
+
 def _real_estate_config_path(repo_root: Path) -> Path:
     return repo_root / REAL_ESTATE_CLIENTS_PATH
 
 
 def _real_estate_client_output_slug(client: dict) -> str:
-    return _slugify(str(client.get("outputSlug") or client.get("id") or client.get("customer") or ""), "client")
+    return _slugify(str(client.get("outputSlug") or _real_estate_client_slug(client)), "client")
 
 
 def _real_estate_client_public_slug(client: dict) -> str:
@@ -1979,23 +2007,24 @@ def _repo_rel(repo_root: Path, path: Path) -> str:
 
 def _manifest_client_seed(repo_root: Path, output_slug: str, manifest: dict) -> dict:
     customer = manifest.get("customer") if isinstance(manifest.get("customer"), dict) else {}
-    r2 = manifest.get("r2") if isinstance(manifest.get("r2"), dict) else {}
     gallery = manifest.get("gallery") if isinstance(manifest.get("gallery"), dict) else {}
     customer_name = str(customer.get("name") or output_slug).strip()
-    gallery_key = str(gallery.get("key") or f"{_slugify(customer_name)}-real-estate").strip()
+    convention = _real_estate_convention_fields(customer_name)
     return {
-        "id": _slugify(output_slug),
+        "id": convention["id"],
         "customer": customer_name,
-        "username": str(customer.get("username") or customer_name).strip(),
+        "email": str(customer.get("email") or "").strip(),
+        "username": convention["username"],
         "accessCode": str(customer.get("accessCode") or "").strip(),
         "accessCodeSalt": str(customer.get("accessCodeSalt") or uuid.uuid4().hex).strip(),
-        "sourceRoot": str(manifest.get("sourceRoot") or ""),
-        "outputSlug": output_slug,
-        "publicSlug": output_slug,
-        "galleryKey": gallery_key,
-        "galleryTitle": str(gallery.get("title") or f"{customer_name} Real Estate").strip(),
-        "publicKeyPrefix": str(r2.get("publicPreviewPrefix") or f"real-estate/{gallery_key}/previews").strip(),
-        "privateKeyPrefix": str(r2.get("privateMasterPrefix") or f"real-estate/{gallery_key}/masters").strip(),
+        "sourceRoot": convention["sourceRoot"],
+        "outputSlug": output_slug or convention["outputSlug"],
+        "publicSlug": output_slug or convention["publicSlug"],
+        "galleryKey": convention["galleryKey"] or str(gallery.get("key") or "").strip(),
+        "galleryTitle": convention["galleryTitle"] or str(gallery.get("title") or "").strip(),
+        "publicKeyPrefix": convention["publicKeyPrefix"],
+        "privateKeyPrefix": convention["privateKeyPrefix"],
+        "properties": [],
         "albums": [],
         "maxItems": 300,
     }
@@ -2012,16 +2041,18 @@ def _default_real_estate_clients(repo_root: Path) -> list[dict]:
     return [{
         "id": "corine",
         "customer": "Corine",
+        "email": "",
         "username": "Corine",
         "accessCode": "",
         "accessCodeSalt": uuid.uuid4().hex,
         "sourceRoot": "/Volumes/Saturn/Pictures/RE/Corine",
         "outputSlug": "corine",
         "publicSlug": "corine",
-        "galleryKey": "corine-real-estate",
-        "galleryTitle": "Corine Real Estate",
-        "publicKeyPrefix": "real-estate/corine-real-estate/previews",
-        "privateKeyPrefix": "real-estate/corine-real-estate/masters",
+        "galleryKey": "Corine-gallery",
+        "galleryTitle": "Corine",
+        "publicKeyPrefix": "RE/Corine/previews",
+        "privateKeyPrefix": "RE/Corine/masters",
+        "properties": [],
         "albums": [],
         "maxItems": 300,
     }]
@@ -2040,6 +2071,10 @@ def _read_real_estate_client_payload(repo_root: Path) -> dict:
         clients = saved_clients
     else:
         clients = _default_real_estate_clients(repo_root)
+    clients = [
+        _normalize_real_estate_client(client, client, require_password=False)
+        for client in clients
+    ]
     return {
         "format": "photosbyelie-real-estate-owner-local",
         "schema_version": 1,
@@ -2077,6 +2112,31 @@ def _real_estate_manifest_stats(repo_root: Path, client: dict) -> dict:
     }
 
 
+def _real_estate_client_properties(client: dict) -> list[str]:
+    raw = client.get("properties") if "properties" in client else client.get("albums")
+    return _normalize_album_list(raw)
+
+
+def _real_estate_discovered_properties(source_root: str) -> list[str]:
+    root = Path(str(source_root or "")).expanduser()
+    if not root.is_dir():
+        return []
+    properties: list[str] = []
+    for path in sorted(root.iterdir()):
+        if not path.is_dir():
+            continue
+        try:
+            has_media = any(
+                child.is_file() and child.suffix.lower() in REAL_ESTATE_MEDIA_EXTENSIONS
+                for child in path.iterdir()
+            )
+        except OSError:
+            has_media = False
+        if has_media:
+            properties.append(path.name)
+    return properties
+
+
 def _real_estate_public_url(path: str) -> str:
     clean_path = str(path or "").lstrip("./")
     return f"{PUBLIC_SITE_BASE_URL}real-estate.html?context=./{clean_path}&logout=1"
@@ -2089,10 +2149,14 @@ def _safe_real_estate_client(repo_root: Path, client: dict) -> dict:
     local_context_rel = _repo_rel(repo_root, paths["local_context"])
     public_context_rel = _repo_rel(repo_root, paths["public_context"])
     source_root = str(client.get("sourceRoot") or "")
+    properties = _real_estate_client_properties(client)
+    available_properties = _real_estate_discovered_properties(source_root)
     return {
         "id": str(client.get("id") or output_slug),
         "customer": str(client.get("customer") or ""),
+        "email": str(client.get("email") or ""),
         "username": str(client.get("username") or ""),
+        "accessCode": str(client.get("accessCode") or ""),
         "passwordSet": bool(str(client.get("accessCode") or "").strip()),
         "sourceRoot": source_root,
         "sourceRootExists": bool(source_root and Path(source_root).expanduser().is_dir()),
@@ -2102,7 +2166,10 @@ def _safe_real_estate_client(repo_root: Path, client: dict) -> dict:
         "galleryTitle": str(client.get("galleryTitle") or ""),
         "publicKeyPrefix": str(client.get("publicKeyPrefix") or ""),
         "privateKeyPrefix": str(client.get("privateKeyPrefix") or ""),
-        "albums": list(client.get("albums") or []),
+        "properties": properties,
+        "availableProperties": available_properties,
+        "effectiveProperties": properties or available_properties,
+        "albums": properties,
         "maxItems": int(client.get("maxItems") or 300),
         "lastImportedAt": str(client.get("lastImportedAt") or ""),
         "lastPublishedAt": str(client.get("lastPublishedAt") or ""),
@@ -2147,34 +2214,40 @@ def _normalize_album_list(value: object) -> list[str]:
     return albums
 
 
-def _normalize_real_estate_client(incoming: dict, existing: dict | None = None) -> dict:
+def _normalize_real_estate_client(incoming: dict, existing: dict | None = None, *, require_password: bool = True) -> dict:
     existing = existing or {}
     customer = str(incoming.get("customer") or existing.get("customer") or "").strip()
     if not customer:
         raise ValueError("customer is required")
-    client_id = _slugify(str(incoming.get("id") or existing.get("id") or customer))
-    username = str(incoming.get("username") or existing.get("username") or customer).strip()
+    convention = _real_estate_convention_fields(customer)
+    client_id = convention["id"]
+    email = str(incoming.get("email") or existing.get("email") or "").strip()
     access_code = str(incoming.get("accessCode") or "").strip() or str(existing.get("accessCode") or "").strip()
-    if not access_code:
+    if require_password and not access_code:
         raise ValueError("password is required for real-estate client access")
-    output_slug = _slugify(str(incoming.get("outputSlug") or existing.get("outputSlug") or client_id))
-    public_slug = _slugify(str(incoming.get("publicSlug") or existing.get("publicSlug") or output_slug))
-    gallery_key = _slugify(str(incoming.get("galleryKey") or existing.get("galleryKey") or f"{client_id}-real-estate"), "gallery")
+    properties_source = incoming.get("properties") if "properties" in incoming else (
+        incoming.get("albums") if "albums" in incoming else (
+            existing.get("properties") if "properties" in existing else existing.get("albums")
+        )
+    )
+    properties = _normalize_album_list(properties_source)
     return {
         **existing,
         "id": client_id,
         "customer": customer,
-        "username": username,
+        "email": email,
+        "username": convention["username"],
         "accessCode": access_code,
         "accessCodeSalt": str(existing.get("accessCodeSalt") or incoming.get("accessCodeSalt") or uuid.uuid4().hex),
-        "sourceRoot": str(incoming.get("sourceRoot") or existing.get("sourceRoot") or "").strip(),
-        "outputSlug": output_slug,
-        "publicSlug": public_slug,
-        "galleryKey": gallery_key,
-        "galleryTitle": str(incoming.get("galleryTitle") or existing.get("galleryTitle") or f"{customer} Real Estate").strip(),
-        "publicKeyPrefix": _key_prefix(str(incoming.get("publicKeyPrefix") or existing.get("publicKeyPrefix") or f"real-estate/{gallery_key}/previews")),
-        "privateKeyPrefix": _key_prefix(str(incoming.get("privateKeyPrefix") or existing.get("privateKeyPrefix") or f"real-estate/{gallery_key}/masters")),
-        "albums": _normalize_album_list(incoming.get("albums") if "albums" in incoming else existing.get("albums")),
+        "sourceRoot": convention["sourceRoot"],
+        "outputSlug": convention["outputSlug"],
+        "publicSlug": convention["publicSlug"],
+        "galleryKey": convention["galleryKey"],
+        "galleryTitle": convention["galleryTitle"],
+        "publicKeyPrefix": convention["publicKeyPrefix"],
+        "privateKeyPrefix": convention["privateKeyPrefix"],
+        "properties": properties,
+        "albums": properties,
         "maxItems": max(1, int(incoming.get("maxItems") or existing.get("maxItems") or 300)),
     }
 
@@ -2184,6 +2257,8 @@ def _save_real_estate_client(repo_root: Path, incoming: dict) -> dict:
     clients_by_id = _real_estate_clients_by_id(payload)
     client_id = _slugify(str(incoming.get("id") or incoming.get("customer") or "client"))
     client = _normalize_real_estate_client(incoming, clients_by_id.get(client_id))
+    if client_id in clients_by_id and client_id != client["id"]:
+        del clients_by_id[client_id]
     clients_by_id[client["id"]] = client
     payload["clients"] = sorted(clients_by_id.values(), key=lambda item: str(item.get("customer") or item.get("id")))
     _write_real_estate_client_payload(repo_root, payload)
@@ -2191,6 +2266,25 @@ def _save_real_estate_client(repo_root: Path, incoming: dict) -> dict:
         "ok": True,
         "action": "save-client",
         "client": _safe_real_estate_client(repo_root, client),
+        "clients": [_safe_real_estate_client(repo_root, item) for item in payload["clients"]],
+    }
+
+
+def _delete_real_estate_client(repo_root: Path, incoming: dict) -> dict:
+    payload = _read_real_estate_client_payload(repo_root)
+    client_id = _slugify(str(incoming.get("id") or incoming.get("clientId") or ""))
+    if not client_id:
+        raise ValueError("client id is required")
+    clients_by_id = _real_estate_clients_by_id(payload)
+    client = clients_by_id.pop(client_id, None)
+    if not client:
+        raise ValueError("real-estate client was not found")
+    payload["clients"] = sorted(clients_by_id.values(), key=lambda item: str(item.get("customer") or item.get("id")))
+    _write_real_estate_client_payload(repo_root, payload)
+    return {
+        "ok": True,
+        "action": "delete-client",
+        "deletedClient": _safe_real_estate_client(repo_root, client),
         "clients": [_safe_real_estate_client(repo_root, item) for item in payload["clients"]],
     }
 
@@ -2234,7 +2328,7 @@ def _sanitize_real_estate_public_manifest(manifest: dict) -> dict:
     public_manifest["customer"] = {
         key: value
         for key, value in customer.items()
-        if key in {"name", "username", "accessCodeAlgorithm", "accessCodeHash", "accessCodeSalt"}
+        if key in {"name", "username", "email", "accessCodeAlgorithm", "accessCodeHash", "accessCodeSalt"}
     }
     public_manifest.pop("sourceRoot", None)
     public_manifest.pop("outputRoot", None)
@@ -2342,6 +2436,8 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         str(client.get("customer") or ""),
         "--username",
         str(client.get("username") or client.get("customer") or ""),
+        "--email",
+        str(client.get("email") or ""),
         "--access-code-env",
         "PBE_REAL_ESTATE_ACCESS_CODE",
         "--access-code-salt",
@@ -2355,8 +2451,8 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         "--private-key-prefix",
         str(client.get("privateKeyPrefix") or ""),
     ]
-    for album in client.get("albums") or []:
-        command.extend(["--album", str(album)])
+    for property_name in _real_estate_client_properties(client):
+        command.extend(["--album", str(property_name)])
     if payload.get("force") is True:
         command.append("--force")
     result = _run_real_estate_command(repo_root, command, {"PBE_REAL_ESTATE_ACCESS_CODE": access_code})
@@ -2443,6 +2539,7 @@ def _real_estate_worker_secret(repo_root: Path) -> dict:
         galleries.append({
             "key": str(client.get("galleryKey") or ""),
             "username": str(client.get("username") or client.get("customer") or ""),
+            "email": str(client.get("email") or ""),
             "accessCode": access_code,
             "privateMasterPrefix": str(client.get("privateKeyPrefix") or ""),
             "maxItems": int(client.get("maxItems") or 300),
@@ -2462,6 +2559,8 @@ def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
     action = str(payload.get("action") or "").strip()
     if action == "save-client":
         return _save_real_estate_client(repo_root, payload.get("client") if isinstance(payload.get("client"), dict) else payload)
+    if action == "delete-client":
+        return _delete_real_estate_client(repo_root, payload)
     if action == "import-client":
         return _import_real_estate_client(repo_root, payload)
     if action == "publish-client":

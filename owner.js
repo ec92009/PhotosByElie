@@ -65,6 +65,10 @@
     [...document.querySelectorAll("[data-owner-re-field]")]
       .map((field) => [field.dataset.ownerReField, field])
   );
+  const realEstateComputed = Object.fromEntries(
+    [...document.querySelectorAll("[data-owner-re-computed]")]
+      .map((field) => [field.dataset.ownerReComputed, field])
+  );
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -651,8 +655,12 @@
 
   const setRealEstateBusy = (busy) => {
     realEstateBusy = busy;
-    if (realEstateForm) {
-      realEstateForm.querySelectorAll("button, input, textarea").forEach((control) => {
+    if (realEstateCard) {
+      realEstateCard.querySelectorAll("button, input, textarea").forEach((control) => {
+        if (control.dataset.ownerReAction === "new-client") {
+          control.disabled = false;
+          return;
+        }
         control.disabled = busy;
       });
     }
@@ -660,9 +668,9 @@
   };
 
   const selectedRealEstateClient = () => (
-    realEstateClients.find((client) => client.id === selectedRealEstateClientId)
-    || realEstateClients[0]
-    || null
+    selectedRealEstateClientId
+      ? realEstateClients.find((client) => client.id === selectedRealEstateClientId) || null
+      : null
   );
 
   const renderRealEstateOutput = (value = "", forceOpen = false) => {
@@ -683,32 +691,58 @@
     }
   };
 
+  const realEstatePropertiesFor = (client) => (
+    client?.properties?.length ? client.properties : (client?.effectiveProperties || client?.availableProperties || client?.albums || [])
+  );
+
+  const realEstateConventionsFor = (clientName) => {
+    const name = String(clientName || "").trim();
+    return {
+      sourceRoot: name ? `/Volumes/Saturn/Pictures/RE/${name}` : "/Volumes/Saturn/Pictures/RE/<Client>",
+      username: name || "<Client>",
+      slug: name || "<Client>",
+      galleryKey: name ? `${name}-gallery` : "<Client>-gallery",
+      galleryTitle: name || "<Client>",
+      publicKeyPrefix: name ? `RE/${name}/previews` : "RE/<Client>/previews",
+      privateKeyPrefix: name ? `RE/${name}/masters` : "RE/<Client>/masters",
+    };
+  };
+
+  const updateRealEstateComputed = (clientNameOrClient) => {
+    const clientName = typeof clientNameOrClient === "string"
+      ? clientNameOrClient
+      : (clientNameOrClient?.customer || "");
+    const conventions = realEstateConventionsFor(clientName);
+    Object.entries(conventions).forEach(([key, value]) => {
+      if (realEstateComputed[key]) realEstateComputed[key].textContent = value;
+    });
+  };
+
+  const blankRealEstateClient = () => ({
+    id: "",
+    customer: "",
+    email: "",
+    accessCode: "",
+    maxItems: 300,
+    properties: [],
+    effectiveProperties: [],
+  });
+
   const fillRealEstateForm = (client) => {
     if (!client || !realEstateForm) return;
-    selectedRealEstateClientId = client.id;
+    selectedRealEstateClientId = client.id || "";
     const values = {
-      id: client.id,
-      customer: client.customer,
-      username: client.username,
-      accessCode: "",
-      sourceRoot: client.sourceRoot,
-      outputSlug: client.outputSlug,
-      publicSlug: client.publicSlug,
-      galleryKey: client.galleryKey,
-      galleryTitle: client.galleryTitle,
-      albums: (client.albums || []).join("\n"),
-      publicKeyPrefix: client.publicKeyPrefix,
-      privateKeyPrefix: client.privateKeyPrefix,
+      id: client.id || "",
+      customer: client.customer || "",
+      email: client.email || "",
+      accessCode: client.accessCode || "",
+      properties: realEstatePropertiesFor(client).join("\n"),
       maxItems: client.maxItems || 300,
     };
     Object.entries(values).forEach(([key, value]) => {
       if (realEstateFields[key]) realEstateFields[key].value = value ?? "";
     });
-    if (realEstateFields.accessCode) {
-      realEstateFields.accessCode.placeholder = client.passwordSet
-        ? "Keep current password"
-        : "Required before import";
-    }
+    updateRealEstateComputed(client);
     updateRealEstateLinks(client);
   };
 
@@ -720,25 +754,38 @@
       realEstatePhotoCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Number(client.stats?.photoCount || 0), 0));
     }
     if (realEstateAlbumCountRoot) {
-      realEstateAlbumCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Number(client.stats?.albumCount || 0), 0));
+      realEstateAlbumCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Math.max(
+        Number(client.stats?.albumCount || 0),
+        realEstatePropertiesFor(client).length
+      ), 0));
     }
     if (realEstateClientList) {
       realEstateClientList.innerHTML = realEstateClients.length ? realEstateClients.map((client) => {
         const active = client.id === selected?.id;
-        const bits = [
-          client.passwordSet ? "password set" : "needs password",
+        const properties = realEstatePropertiesFor(client);
+        const statusBits = [
           client.sourceRootExists ? "source ok" : "source missing",
           client.publicContextExists ? "published" : "not published",
         ];
         return `
-          <button class="owner-real-estate-client ${active ? "is-active" : ""}" type="button" data-owner-re-client="${escapeHtml(client.id)}" aria-pressed="${active}">
-            <span>${escapeHtml(client.customer || client.id)}</span>
-            <small>${escapeHtml(formatCount(client.stats?.photoCount || 0))} photos / ${escapeHtml(bits.join(" / "))}</small>
-          </button>
+          <tr class="${active ? "is-active" : ""}" data-owner-re-client="${escapeHtml(client.id)}">
+            <td><strong>${escapeHtml(client.customer || client.id)}</strong></td>
+            <td>${escapeHtml(client.email || "")}</td>
+            <td><code>${escapeHtml(client.accessCode || "")}</code></td>
+            <td>${escapeHtml(properties.join(", ") || "All folders")}</td>
+            <td>${escapeHtml(formatCount(client.stats?.photoCount || 0))}</td>
+            <td>${escapeHtml(statusBits.join(" / "))}</td>
+            <td>
+              <div class="owner-real-estate-row-actions">
+                <button class="btn secondary" type="button" data-owner-re-row-action="edit" data-owner-re-client-id="${escapeHtml(client.id)}">Edit</button>
+                <button class="btn secondary danger" type="button" data-owner-re-row-action="delete" data-owner-re-client-id="${escapeHtml(client.id)}">Delete</button>
+              </div>
+            </td>
+          </tr>
         `;
-      }).join("") : `<p class="owner-card-note">No real estate clients yet.</p>`;
+      }).join("") : `<tr><td colspan="7">No real estate clients yet. Create one below.</td></tr>`;
     }
-    if (selected) fillRealEstateForm(selected);
+    fillRealEstateForm(selected || blankRealEstateClient());
   };
 
   const loadRealEstateOwner = async () => {
@@ -766,16 +813,9 @@
   const realEstateFormPayload = () => ({
     id: realEstateFields.id?.value || "",
     customer: realEstateFields.customer?.value || "",
-    username: realEstateFields.username?.value || "",
+    email: realEstateFields.email?.value || "",
     accessCode: realEstateFields.accessCode?.value || "",
-    sourceRoot: realEstateFields.sourceRoot?.value || "",
-    outputSlug: realEstateFields.outputSlug?.value || "",
-    publicSlug: realEstateFields.publicSlug?.value || "",
-    galleryKey: realEstateFields.galleryKey?.value || "",
-    galleryTitle: realEstateFields.galleryTitle?.value || "",
-    albums: realEstateFields.albums?.value || "",
-    publicKeyPrefix: realEstateFields.publicKeyPrefix?.value || "",
-    privateKeyPrefix: realEstateFields.privateKeyPrefix?.value || "",
+    properties: realEstateFields.properties?.value || "",
     maxItems: realEstateFields.maxItems?.value || 300,
   });
 
@@ -810,8 +850,50 @@
     }
   };
 
+  const startNewRealEstateClient = () => {
+    selectedRealEstateClientId = "";
+    fillRealEstateForm(blankRealEstateClient());
+    renderRealEstateOutput("");
+    setRealEstateStatus("Enter a client name, email, password, and property folders.");
+  };
+
+  const deleteRealEstateClient = async (clientId = selectedRealEstateClientId) => {
+    const client = realEstateClients.find((item) => item.id === clientId);
+    if (!client) {
+      setRealEstateStatus("Select a real estate client to delete.");
+      return;
+    }
+    const ok = window.confirm(`Delete ${client.customer} from the local Real Estate client list? Imported media and published contexts are left on disk.`);
+    if (!ok) return;
+    setRealEstateBusy(true);
+    setRealEstateStatus(`Deleting ${client.customer}...`);
+    try {
+      const payload = await postRealEstateOwnerAction({
+        action: "delete-client",
+        id: client.id,
+      });
+      realEstateClients = Array.isArray(payload.clients) ? payload.clients : [];
+      selectedRealEstateClientId = realEstateClients[0]?.id || "";
+      renderRealEstateClients();
+      renderRealEstateOutput("");
+      setRealEstateStatus(`${client.customer} deleted from the local client list.`);
+    } catch (error) {
+      setRealEstateStatus(error?.message || "Could not delete real estate client.");
+    } finally {
+      setRealEstateBusy(false);
+    }
+  };
+
   const runRealEstateClientAction = async (action) => {
     if (realEstateBusy) return;
+    if (action === "new-client") {
+      startNewRealEstateClient();
+      return;
+    }
+    if (action === "delete-client") {
+      deleteRealEstateClient();
+      return;
+    }
     const selected = selectedRealEstateClient();
     if (!selected) {
       setRealEstateStatus("Save a real estate client first.");
@@ -1656,12 +1738,29 @@
   });
 
   realEstateClientList?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-owner-re-client]");
-    if (!button) return;
-    selectedRealEstateClientId = button.dataset.ownerReClient || "";
+    const rowAction = event.target.closest("[data-owner-re-row-action]");
+    if (rowAction) {
+      const clientId = rowAction.dataset.ownerReClientId || "";
+      if (rowAction.dataset.ownerReRowAction === "delete") {
+        deleteRealEstateClient(clientId);
+        return;
+      }
+      selectedRealEstateClientId = clientId;
+      renderRealEstateClients();
+      const selected = selectedRealEstateClient();
+      setRealEstateStatus(selected ? `${selected.customer} selected.` : "No real estate client selected.");
+      return;
+    }
+    const row = event.target.closest("[data-owner-re-client]");
+    if (!row) return;
+    selectedRealEstateClientId = row.dataset.ownerReClient || "";
     renderRealEstateClients();
     const selected = selectedRealEstateClient();
     setRealEstateStatus(selected ? `${selected.customer} selected.` : "No real estate client selected.");
+  });
+
+  realEstateFields.customer?.addEventListener("input", (event) => {
+    updateRealEstateComputed(event.target.value || "");
   });
 
   realEstateForm?.addEventListener("submit", (event) => {

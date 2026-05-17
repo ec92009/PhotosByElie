@@ -329,6 +329,7 @@ def build_manifest(
     output_dir: Path,
     customer: str,
     username: str,
+    email: str,
     access_code: str,
     access_code_salt: str,
     gallery_key: str,
@@ -512,6 +513,8 @@ def build_manifest(
         "name": customer,
         "username": username or customer,
     }
+    if email:
+        customer_payload["email"] = email
     if credential_hash:
         customer_payload.update({
             "accessCodeHash": credential_hash,
@@ -589,6 +592,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--customer", default="Corine")
     parser.add_argument("--username", default="", help="Client username. Defaults to --customer.")
+    parser.add_argument("--email", default="", help="Client email address accepted for login.")
     parser.add_argument("--access-code", default="LaConcha")
     parser.add_argument("--access-code-env", default="", help="Read the access code from this environment variable.")
     parser.add_argument("--access-code-salt", default="", help="Salt used for the public access-code hash. Defaults to a generated random salt.")
@@ -645,6 +649,7 @@ def main() -> int:
         output_dir=output_dir,
         customer=args.customer,
         username=username,
+        email=args.email.strip(),
         access_code=access_code,
         access_code_salt=access_code_salt,
         gallery_key=gallery_key,

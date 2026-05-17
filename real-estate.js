@@ -283,11 +283,11 @@
   };
 
   const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
-  const expectedUsername = () => normalizeCredential(
-    state.payload?.customer?.username
-    || state.payload?.customer?.name
-    || ""
-  );
+  const expectedLoginNames = () => new Set([
+    state.payload?.customer?.username,
+    state.payload?.customer?.email,
+    state.payload?.customer?.name,
+  ].map(normalizeCredential).filter(Boolean));
   const expectedAccessCode = () => normalizeCredential(
     state.payload?.accessCode
     || state.payload?.customer?.accessCode
@@ -314,7 +314,7 @@
   };
 
   const credentialMatches = async (enteredUser, enteredCode) => {
-    if (enteredUser !== expectedUsername()) return false;
+    if (!expectedLoginNames().has(enteredUser)) return false;
     const expectedHash = expectedAccessCodeHash();
     const salt = expectedAccessCodeSalt();
     if (expectedHash && salt) {
@@ -329,7 +329,7 @@
     return Boolean(
       saved?.unlocked
       && saved?.galleryKey === state.gallery?.key
-      && normalizeCredential(saved?.username) === expectedUsername()
+      && expectedLoginNames().has(normalizeCredential(saved?.username))
     );
   };
 

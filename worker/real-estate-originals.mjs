@@ -113,11 +113,15 @@ export const createRealEstateOriginals = ({
   };
 
   const authorize = (gallery, payload) => {
-    const expectedUser = normalizeCredential(gallery.username || gallery.customer || "");
+    const expectedUsers = new Set([
+      gallery.username,
+      gallery.customer,
+      gallery.email,
+    ].map(normalizeCredential).filter(Boolean));
     const expectedCode = normalizeCredential(gallery.accessCode || "");
     const enteredUser = normalizeCredential(payload.username || payload.customer || "");
     const enteredCode = normalizeCredential(payload.accessCode || payload.password || "");
-    if (!expectedUser || !expectedCode || enteredUser !== expectedUser || enteredCode !== expectedCode) {
+    if (!expectedUsers.size || !expectedCode || !expectedUsers.has(enteredUser) || enteredCode !== expectedCode) {
       throw Object.assign(new Error("Real-estate originals require the client password."), {
         status: 403,
         code: "real_estate_auth_required",

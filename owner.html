@@ -78,89 +78,106 @@
             </div>
             <button class="owner-refresh-button" type="button" data-owner-refresh="real-estate" aria-label="Refresh real estate clients" title="Refresh real estate clients"><span aria-hidden="true">↻</span></button>
           </div>
-          <p>Create and maintain client credentials, import previews from the project export folders, publish the review context, and upload public previews plus private masters.</p>
-          <div class="owner-real-estate-layout">
-            <section class="owner-real-estate-list-panel" aria-label="Real estate clients">
-              <div class="owner-real-estate-client-list" data-owner-re-client-list></div>
-              <dl class="owner-counts owner-real-estate-counts">
-                <div>
-                  <dt>Clients</dt>
-                  <dd data-owner-re-client-count>0</dd>
-                </div>
-                <div>
-                  <dt>Photos</dt>
-                  <dd data-owner-re-photo-count>0</dd>
-                </div>
-                <div>
-                  <dt>Albums</dt>
-                  <dd data-owner-re-album-count>0</dd>
-                </div>
-              </dl>
-              <div class="owner-real-estate-links">
-                <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-local-link>Open local review</a>
-                <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-public-link>Open public review</a>
-              </div>
-            </section>
-            <form class="owner-real-estate-form" data-owner-re-form>
-              <input type="hidden" data-owner-re-field="id"/>
-              <label>
-                <span>Client</span>
-                <input type="text" data-owner-re-field="customer" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Username</span>
-                <input type="text" data-owner-re-field="username" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Password</span>
-                <input type="password" data-owner-re-field="accessCode" autocomplete="new-password" placeholder="Keep current password"/>
-              </label>
-              <label class="is-wide">
-                <span>Source folder</span>
-                <input type="text" data-owner-re-field="sourceRoot" autocomplete="off" placeholder="/Volumes/Saturn/Pictures/RE/Client"/>
-              </label>
-              <label>
-                <span>Output slug</span>
-                <input type="text" data-owner-re-field="outputSlug" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Public slug</span>
-                <input type="text" data-owner-re-field="publicSlug" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Gallery key</span>
-                <input type="text" data-owner-re-field="galleryKey" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Gallery title</span>
-                <input type="text" data-owner-re-field="galleryTitle" autocomplete="off" required/>
-              </label>
-              <label class="is-wide">
-                <span>Albums</span>
-                <textarea rows="2" data-owner-re-field="albums" placeholder="Optional folder names, one per line"></textarea>
-              </label>
-              <label>
-                <span>Public prefix</span>
-                <input type="text" data-owner-re-field="publicKeyPrefix" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Private prefix</span>
-                <input type="text" data-owner-re-field="privateKeyPrefix" autocomplete="off" required/>
-              </label>
-              <label>
-                <span>Max ZIP items</span>
-                <input type="number" min="1" step="1" data-owner-re-field="maxItems"/>
-              </label>
-              <div class="owner-real-estate-actions is-wide">
-                <button class="btn secondary" type="submit">Save client</button>
-                <button class="btn secondary" type="button" data-owner-re-action="import-client">Import previews</button>
-                <button class="btn secondary" type="button" data-owner-re-action="publish-client">Publish context</button>
-                <button class="btn secondary" type="button" data-owner-re-action="upload-dry-run">Upload dry run</button>
-                <button class="btn secondary danger" type="button" data-owner-re-action="upload-client">Upload masters/previews</button>
-                <button class="btn secondary" type="button" data-owner-re-action="worker-secret">Copy Worker secret</button>
-              </div>
-            </form>
+          <p>Client name drives the source folder, username, slugs, gallery key, title, and R2 prefixes. Add the email, plain-text local password, and property folders to import.</p>
+          <dl class="owner-counts owner-real-estate-counts">
+            <div>
+              <dt>Clients</dt>
+              <dd data-owner-re-client-count>0</dd>
+            </div>
+            <div>
+              <dt>Media</dt>
+              <dd data-owner-re-photo-count>0</dd>
+            </div>
+            <div>
+              <dt>Properties</dt>
+              <dd data-owner-re-album-count>0</dd>
+            </div>
+          </dl>
+          <div class="owner-real-estate-table-wrap">
+            <table class="owner-real-estate-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Email</th>
+                  <th>Password</th>
+                  <th>Properties</th>
+                  <th>Media</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody data-owner-re-client-list>
+                <tr><td colspan="7">Loading real estate clients...</td></tr>
+              </tbody>
+            </table>
           </div>
+          <form class="owner-real-estate-form" data-owner-re-form>
+            <input type="hidden" data-owner-re-field="id"/>
+            <label>
+              <span>Client</span>
+              <input type="text" data-owner-re-field="customer" autocomplete="off" required/>
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" data-owner-re-field="email" autocomplete="off" placeholder="client@example.com"/>
+            </label>
+            <label>
+              <span>Password</span>
+              <input type="text" data-owner-re-field="accessCode" autocomplete="off" required/>
+            </label>
+            <label>
+              <span>Max ZIP items</span>
+              <input type="number" min="1" step="1" data-owner-re-field="maxItems"/>
+            </label>
+            <label class="is-wide">
+              <span>Properties</span>
+              <textarea rows="3" data-owner-re-field="properties" placeholder="Property folder names, one per line"></textarea>
+            </label>
+            <dl class="owner-real-estate-computed is-wide" aria-label="Real estate naming conventions">
+              <div>
+                <dt>Source</dt>
+                <dd data-owner-re-computed="sourceRoot">/Volumes/Saturn/Pictures/RE/&lt;Client&gt;</dd>
+              </div>
+              <div>
+                <dt>Login name</dt>
+                <dd data-owner-re-computed="username">&lt;Client&gt;</dd>
+              </div>
+              <div>
+                <dt>Slug</dt>
+                <dd data-owner-re-computed="slug">&lt;Client&gt;</dd>
+              </div>
+              <div>
+                <dt>Gallery key</dt>
+                <dd data-owner-re-computed="galleryKey">&lt;Client&gt;-gallery</dd>
+              </div>
+              <div>
+                <dt>Title</dt>
+                <dd data-owner-re-computed="galleryTitle">&lt;Client&gt;</dd>
+              </div>
+              <div>
+                <dt>Public prefix</dt>
+                <dd data-owner-re-computed="publicKeyPrefix">RE/&lt;Client&gt;/previews</dd>
+              </div>
+              <div>
+                <dt>Private prefix</dt>
+                <dd data-owner-re-computed="privateKeyPrefix">RE/&lt;Client&gt;/masters</dd>
+              </div>
+            </dl>
+            <div class="owner-real-estate-links is-wide">
+              <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-local-link>Open local review</a>
+              <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-public-link>Open public review</a>
+            </div>
+            <div class="owner-real-estate-actions is-wide">
+              <button class="btn secondary" type="button" data-owner-re-action="new-client">New client</button>
+              <button class="btn secondary" type="submit">Save client</button>
+              <button class="btn secondary danger" type="button" data-owner-re-action="delete-client">Delete client</button>
+              <button class="btn secondary" type="button" data-owner-re-action="import-client">Import media</button>
+              <button class="btn secondary" type="button" data-owner-re-action="publish-client">Publish context</button>
+              <button class="btn secondary" type="button" data-owner-re-action="upload-dry-run">Upload dry run</button>
+              <button class="btn secondary danger" type="button" data-owner-re-action="upload-client">Upload masters/previews</button>
+              <button class="btn secondary" type="button" data-owner-re-action="worker-secret">Copy Worker secret</button>
+            </div>
+          </form>
           <p class="owner-card-note" data-owner-re-status>Loading real estate clients...</p>
           <pre class="owner-real-estate-output" data-owner-re-output hidden></pre>
         </article>

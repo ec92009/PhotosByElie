@@ -958,51 +958,88 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-card-real-estate{
   grid-column:1 / -1;
 }
-.owner-real-estate-layout{
-  display:grid;
-  grid-template-columns:minmax(220px,320px) minmax(0,1fr);
-  gap:14px;
-  align-items:start;
-}
-.owner-real-estate-list-panel{
-  display:grid;
-  gap:12px;
-  min-width:0;
-}
-.owner-real-estate-client-list{
-  display:grid;
-  gap:8px;
-}
-.owner-real-estate-client{
-  display:grid;
-  gap:3px;
-  width:100%;
-  min-height:58px;
+.owner-real-estate-table-wrap{
+  overflow:auto;
   border:1px solid var(--line);
   background:var(--surface);
+}
+.owner-real-estate-table{
+  width:100%;
+  min-width:1120px;
+  border-collapse:collapse;
   color:var(--text);
+}
+.owner-real-estate-table th,
+.owner-real-estate-table td{
+  border-bottom:1px solid var(--line);
   padding:9px 10px;
   text-align:left;
-  cursor:pointer;
+  vertical-align:top;
 }
-.owner-real-estate-client.is-active{
-  border-color:color-mix(in srgb,#2f8f5b 70%,var(--line));
+.owner-real-estate-table th{
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-real-estate-table th:nth-child(1),
+.owner-real-estate-table td:nth-child(1){
+  min-width:130px;
+}
+.owner-real-estate-table th:nth-child(2),
+.owner-real-estate-table td:nth-child(2){
+  min-width:180px;
+}
+.owner-real-estate-table th:nth-child(3),
+.owner-real-estate-table td:nth-child(3){
+  min-width:130px;
+}
+.owner-real-estate-table th:nth-child(4),
+.owner-real-estate-table td:nth-child(4){
+  min-width:360px;
+}
+.owner-real-estate-table th:nth-child(6),
+.owner-real-estate-table td:nth-child(6){
+  min-width:170px;
+}
+.owner-real-estate-table th:nth-child(7),
+.owner-real-estate-table td:nth-child(7){
+  min-width:170px;
+}
+.owner-real-estate-table tr.is-active td{
+  background:color-mix(in srgb,#2f8f5b 8%,var(--surface));
   box-shadow:inset 3px 0 0 color-mix(in srgb,#2f8f5b 84%,var(--text));
 }
-.owner-real-estate-client span{
-  overflow:hidden;
-  font-weight:850;
-  line-height:1.15;
-  text-overflow:ellipsis;
+.owner-real-estate-table td:nth-child(1),
+.owner-real-estate-table td:nth-child(2),
+.owner-real-estate-table td:nth-child(3),
+.owner-real-estate-table td:nth-child(5),
+.owner-real-estate-table td:nth-child(6),
+.owner-real-estate-table td:nth-child(7){
   white-space:nowrap;
 }
-.owner-real-estate-client small{
+.owner-real-estate-table td strong,
+.owner-real-estate-table td small,
+.owner-real-estate-table td code{
+  display:block;
+  overflow-wrap:anywhere;
+}
+.owner-real-estate-table td small{
   color:var(--muted);
   font-size:.7rem;
   font-weight:800;
   letter-spacing:.04em;
-  line-height:1.25;
   text-transform:uppercase;
+}
+.owner-real-estate-table td code{
+  color:var(--text);
+  font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+.owner-real-estate-row-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
 }
 .owner-real-estate-counts{
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -1019,7 +1056,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-real-estate-form{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:10px;
   min-width:0;
 }
@@ -1056,6 +1093,33 @@ html[data-theme="light"] .photo-art.has-photo::after{
   min-height:76px;
   resize:vertical;
   line-height:1.4;
+}
+.owner-real-estate-computed{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:8px;
+  margin:0;
+}
+.owner-real-estate-computed div{
+  min-width:0;
+  border:1px solid var(--line);
+  background:var(--surface);
+  padding:8px 10px;
+}
+.owner-real-estate-computed dt{
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  margin:0 0 4px;
+  text-transform:uppercase;
+}
+.owner-real-estate-computed dd{
+  overflow-wrap:anywhere;
+  color:var(--text);
+  font-size:.8rem;
+  font-weight:760;
+  margin:0;
 }
 .owner-real-estate-form :disabled{
   cursor:progress;
@@ -4267,8 +4331,8 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .owner-overview-layout{
     grid-template-columns:1fr;
   }
-  .owner-real-estate-layout,
-  .owner-real-estate-form{
+  .owner-real-estate-form,
+  .owner-real-estate-computed{
     grid-template-columns:1fr;
   }
   .owner-catalog-pie{

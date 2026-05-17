@@ -4,7 +4,7 @@ Last updated: 2026-05-17
 
 ## Current Facts
 
-- Current visible build: `v78.2`.
+- Current visible build: `v78.3`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.

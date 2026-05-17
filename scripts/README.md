@@ -51,6 +51,15 @@ python3 scripts/build_lightroom_thumbnails.py \
   --batch-size 50
 ```
 
+For Real Estate customer handoffs, first export rendered/current Apple Photos album versions to a customer folder on the Saturn drive. Do not export RAW/DNG/NEF originals:
+
+```bash
+zsh scripts/export_re_apple_photos_albums.zsh \
+  --customer Corine
+```
+
+The default destination is `/Volumes/Saturn/Pictures/RE/Corine/<Album Name>`. The wrapper calls `scripts/export_apple_photos_album.applescript`, exports current rendered Apple Photos versions rather than originals, fails if RAW/DNG/NEF files appear in the destination, and writes an ignored report under `.review-logs/corine-real-estate-export/`.
+
 Outputs:
 
 - `tmp/import-cache/<country>/*_900.jpg`: watermarked photo gallery thumbnails and video gallery posters.

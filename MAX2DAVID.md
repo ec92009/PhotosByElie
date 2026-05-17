@@ -330,7 +330,9 @@ Expected output in `DAVID2MAX.md`:
 Prompt for David:
 
 ```text
-In /Users/ecohen/Dev/PhotosByElie, pull latest main. Export Corine's two Apple Photos Real Estate albums from Apple Photos on David to the Saturn external drive.
+In /Users/ecohen/Dev/PhotosByElie, pull latest main. Export Corine's two Apple Photos Real Estate albums from Apple Photos on David to the Saturn external drive by running the repo script:
+
+zsh scripts/export_re_apple_photos_albums.zsh
 
 Albums:
 - RE 2026 La Concha 1 Apt 8AB1
@@ -341,12 +343,12 @@ Destination folders:
 - /Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 2 Apt 8A5
 
 Requirements:
-1. Treat this as an Apple Photos export task only. Do not modify Photos library records, image metadata, public catalog files, Owner.sqlite, or R2 objects.
-2. Create the destination folders if needed, under `/Volumes/Saturn/Pictures/RE/Corine/`.
-3. Preserve original filenames and file extensions where possible. If Photos export tooling creates collisions, keep all files and report the collision handling.
-4. Prefer the highest-quality export available from Apple Photos for each album item. Do not watermark these Real Estate sources.
+1. Treat this as an Apple Photos rendered-export task only. Do not modify Photos library records, image metadata, public catalog files, Owner.sqlite, or R2 objects.
+2. Do not export or touch RAW/DNG/NEF originals. The script exports current rendered Apple Photos versions and fails if RAW/DNG/NEF files appear in the destination.
+3. Create the destination folders if needed, under `/Volumes/Saturn/Pictures/RE/Corine/`.
+4. Preserve original filenames and file extensions where Apple Photos allows it. If Photos export tooling creates collisions, keep all files and report the collision handling.
 5. Do not commit exported image files, checksum manifests, or private client media.
-6. After export, verify each destination folder exists and count files by extension plus total bytes.
+6. After export, verify each destination folder exists and count files by extension plus total bytes. The script writes a report under `.review-logs/corine-real-estate-export/`.
 7. Append a dated report to DAVID2MAX.md with:
    - album name
    - destination path
@@ -355,7 +357,7 @@ Requirements:
    - total bytes
    - any missing/unexportable items
    - exact command/tooling used
-8. If you can safely compute hashes without taking too long, write an ignored checksum manifest under `.review-logs/corine-real-estate-export/` and mention its path. Do not commit the exported image files or checksum manifest.
+   - generated `.review-logs/corine-real-estate-export/` report path
 
 Do not commit anything unless you only update DAVID2MAX.md with the report. Push DAVID2MAX.md if you update it.
 ```

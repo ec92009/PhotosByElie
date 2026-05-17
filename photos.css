@@ -1706,6 +1706,48 @@ body[data-real-estate] main.shell{
   letter-spacing:0;
   text-transform:none;
 }
+.real-estate-password-field{
+  position:relative;
+  display:block;
+  color:var(--text);
+  font-size:1rem;
+  font-weight:720;
+  letter-spacing:0;
+  text-transform:none;
+}
+.real-estate-password-field input{
+  padding-right:52px;
+}
+.real-estate-password-toggle{
+  position:absolute;
+  right:6px;
+  top:50%;
+  display:grid;
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  padding:0;
+  place-items:center;
+  transform:translateY(-50%);
+}
+.real-estate-password-toggle:hover,
+.real-estate-password-toggle:focus-visible,
+.real-estate-password-toggle[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--text) 8%,transparent);
+  color:var(--text);
+}
+.real-estate-password-toggle:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--text) 32%,transparent);
+  outline-offset:2px;
+}
+.real-estate-password-toggle .md-icon{
+  width:20px;
+  height:20px;
+}
 .real-estate-login-status{
   min-height:1.25rem;
   margin:0;

@@ -15,6 +15,8 @@
     loginCustomer: app.querySelector("[data-re-login-customer]"),
     loginName: app.querySelector("[data-re-login-name]"),
     loginCode: app.querySelector("[data-re-login-code]"),
+    loginCodeToggle: app.querySelector("[data-re-toggle-code]"),
+    loginCodeIcon: app.querySelector("[data-re-code-icon]"),
     loginStatus: app.querySelector("[data-re-login-status]"),
     customer: app.querySelector("[data-re-customer]"),
     title: app.querySelector("[data-re-title]"),
@@ -149,11 +151,26 @@
     unlockedAt: new Date().toISOString(),
   });
 
+  const renderLoginCodeIcon = () => {
+    const showing = elements.loginCode?.type === "text";
+    if (elements.loginCodeIcon) {
+      elements.loginCodeIcon.innerHTML = window.photosByElieMdIcon?.(showing ? "visibilityOff" : "visibility") || "";
+    }
+    if (elements.loginCodeToggle) {
+      elements.loginCodeToggle.setAttribute("aria-label", showing ? "Hide access code" : "Show access code");
+      elements.loginCodeToggle.setAttribute("aria-pressed", String(showing));
+    }
+  };
+
   const syncAuthUi = () => {
     app.classList.toggle("is-locked", !state.unlocked);
     if (elements.actionBar) elements.actionBar.hidden = !state.unlocked;
     if (elements.loginStatus && state.unlocked) elements.loginStatus.textContent = "";
-    if (!state.unlocked && elements.loginCode) elements.loginCode.value = "";
+    if (!state.unlocked && elements.loginCode) {
+      elements.loginCode.value = "";
+      elements.loginCode.type = "password";
+    }
+    renderLoginCodeIcon();
   };
 
   const requireUnlocked = () => {
@@ -634,6 +651,13 @@
   };
 
   const bindEvents = () => {
+    elements.loginCodeToggle?.addEventListener("click", () => {
+      if (!elements.loginCode) return;
+      elements.loginCode.type = elements.loginCode.type === "password" ? "text" : "password";
+      renderLoginCodeIcon();
+      elements.loginCode.focus();
+    });
+
     elements.loginForm?.addEventListener("submit", (event) => {
       event.preventDefault();
       const expected = expectedAccessCode();

@@ -174,11 +174,31 @@ def pdf_batch_manifest_template(
         "customer": customer,
         "sourceImportGeneratedAt": import_generated_at,
         "sourceBatchId": "",
+        "pdfMode": "one-pdf-per-project",
+        "projects": [
+            {
+                "projectId": "",
+                "projectTitle": "",
+                "sortIndex": 1,
+                "items": [
+                    {
+                        "photoId": "",
+                        "title": "",
+                        "sortIndex": 1,
+                        "projectId": "",
+                        "projectTitle": "",
+                    }
+                ],
+            }
+        ],
         "items": [
             {
                 "photoId": "",
                 "title": "",
                 "sortIndex": 1,
+                "projectId": "",
+                "projectTitle": "",
+                "projectIds": [],
             }
         ],
     }
@@ -345,17 +365,19 @@ def build_manifest(
             "titleField": "editableTitle",
             "selectionStoreKey": f"photosbyelie-real-estate-liked-{gallery_key}",
             "titleStoreKey": f"photosbyelie-real-estate-titles-{gallery_key}",
+            "projectStoreKey": f"photosbyelie-real-estate-projects-{gallery_key}",
             "imageField": "cloudPdfSource.imageUrl",
             "cloudImageKeyField": "cloudPdfSource.publicKey",
             "mode": "one-photo-per-page",
-            "assembly": "Cloud service receives liked photo ids plus edited titles, then generates the final PDF on demand.",
+            "assembly": "Cloud service receives liked photo ids grouped by apartment project plus edited titles, then generates one PDF per project on demand.",
             "batchManifest": {
                 "schema": PDF_BATCH_SCHEMA,
                 "batchIdFormat": "YYYYMMDDTHHMMSSZ",
                 "storageKeyPattern": f"real-estate/pdf-batches/{gallery_key}/{{batchId}}.json",
                 "retrievalOrder": "createdAt desc",
-                "itemFields": ["photoId", "title", "sortIndex"],
-                "resumeBehavior": "Loading a prior batch manifest seeds the liked photo IDs and edited titles; generating a PDF from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
+                "projectFields": ["projectId", "projectTitle", "sortIndex", "items"],
+                "itemFields": ["photoId", "title", "sortIndex", "projectId", "projectTitle", "projectIds"],
+                "resumeBehavior": "Loading a prior batch manifest seeds the liked photo IDs and edited titles by project; generating PDFs from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
                 "template": pdf_batch_manifest_template(
                     customer=customer,
                     gallery_key=gallery_key,

@@ -61,6 +61,7 @@
     selectedOrder: [],
     selectedIds: new Set(),
     editedTitles: {},
+    projectAssignments: {},
     activePhotoId: "",
     unlocked: false,
     pdfBusy: false,
@@ -128,6 +129,7 @@
   const workflow = () => state.payload?.cloudPdfWorkflow || {};
   const selectionStoreKey = () => workflow().selectionStoreKey || `photosbyelie-real-estate-liked-${state.gallery?.key || "default"}`;
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
+  const projectStoreKey = () => workflow().projectStoreKey || `photosbyelie-real-estate-projects-${state.gallery?.key || "default"}`;
   const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
 
   const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
@@ -199,6 +201,35 @@
 
   const titleFor = (photo) => state.editedTitles[photo?.id] || photo?.editableTitle || photo?.title || photo?.id || "";
   const albumTitleFor = (photo) => photo?.albumTitle || photo?.caption || photo?.album || "Property";
+  const projectIdFor = (photo) => photo?.albumSlug || "project";
+  const projectTitleFor = (photo) => albumTitleFor(photo);
+  const projectOptions = () => state.albums.map((album, index) => ({
+    projectId: album.slug,
+    projectTitle: album.displayTitle || album.title || album.slug,
+    sortIndex: Number(album.sortIndex) || index + 1,
+  }));
+  const projectOptionFor = (projectId, photo) => (
+    projectOptions().find((project) => project.projectId === projectId)
+    || {
+      projectId,
+      projectTitle: projectTitleFor(photo),
+      sortIndex: projectOptions().length + 1,
+    }
+  );
+  const assignedProjectIdsFor = (photo) => {
+    const knownProjectIds = new Set(projectOptions().map((project) => project.projectId));
+    const saved = Array.isArray(state.projectAssignments[photo?.id]) ? state.projectAssignments[photo.id] : [];
+    const sourceProject = projectIdFor(photo);
+    const ids = (saved.length ? saved : [sourceProject])
+      .filter((projectId, index, items) => projectId && items.indexOf(projectId) === index)
+      .filter((projectId) => knownProjectIds.has(projectId) || projectId === sourceProject);
+    return ids.length ? ids : [sourceProject];
+  };
+  const fileSlug = (value) => String(value || "project")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "project";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -222,6 +253,7 @@
   };
 
   const persistTitles = () => writeJson(titleStoreKey(), state.editedTitles);
+  const persistProjectAssignments = () => writeJson(projectStoreKey(), state.projectAssignments);
 
   const filteredPhotos = () => {
     const query = state.query.trim().toLowerCase();
@@ -287,6 +319,7 @@
     elements.grid.dataset.density = state.density;
     elements.grid.innerHTML = photos.length ? photos.map((photo) => {
       const selected = state.selectedIds.has(photo.id);
+      const assignedProjects = new Set(assignedProjectIdsFor(photo));
       return `
         <article class="real-estate-photo-card ${selected ? "is-selected" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
@@ -296,13 +329,20 @@
             </button>
             <label class="real-estate-check real-estate-photo-select">
               <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))} for PDF" ${selected ? "checked" : ""}/>
-              <span>Select</span>
             </label>
           </div>
           <div class="real-estate-photo-card-body">
             <label class="real-estate-title-field">
               <input type="text" data-title-photo="${escapeHtml(photo.id)}" aria-label="PDF title for ${escapeHtml(titleFor(photo))}" value="${escapeHtml(titleFor(photo))}"/>
             </label>
+            <div class="real-estate-project-picker" aria-label="Projects for ${escapeHtml(titleFor(photo))}">
+              ${projectOptions().map((project) => `
+                <label class="real-estate-project-choice">
+                  <input type="checkbox" data-project-photo="${escapeHtml(photo.id)}" data-project-id="${escapeHtml(project.projectId)}" ${assignedProjects.has(project.projectId) ? "checked" : ""}/>
+                  <span>${escapeHtml(project.projectTitle)}</span>
+                </label>
+              `).join("")}
+            </div>
           </div>
         </article>
       `;
@@ -326,7 +366,7 @@
         <img src="${escapeHtml(imageFor(photo))}" alt=""/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
-          <small>${escapeHtml(albumTitleFor(photo))}</small>
+          <small>${escapeHtml(assignedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + "))}</small>
         </div>
         <div class="real-estate-draft-actions">
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="-1" aria-label="Move ${escapeHtml(titleFor(photo))} up">&uarr;</button>
@@ -370,12 +410,58 @@
     if (state.activePhotoId === photoId && elements.dialogTitle) elements.dialogTitle.textContent = titleFor(photo);
   };
 
+  const setPhotoProject = (photoId, projectId, assigned) => {
+    const photo = state.photosById.get(photoId);
+    if (!photo) return;
+    const current = assignedProjectIdsFor(photo);
+    let next = assigned
+      ? [...current, projectId]
+      : current.filter((id) => id !== projectId);
+    next = next.filter((id, index, items) => id && items.indexOf(id) === index);
+    if (!next.length) next = [projectIdFor(photo)];
+    state.projectAssignments[photoId] = next;
+    persistProjectAssignments();
+    render();
+  };
+
   const timestampId = () => new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const selectedPhotos = () => state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
+  const projectGroupsFor = (photos) => {
+    const groups = new Map();
+    photos.forEach((photo) => {
+      assignedProjectIdsFor(photo).forEach((projectId) => {
+        const project = projectOptionFor(projectId, photo);
+        if (!groups.has(projectId)) {
+          groups.set(projectId, {
+            projectId,
+            projectTitle: project.projectTitle,
+            projectIndex: project.sortIndex,
+            photos: [],
+          });
+        }
+        groups.get(projectId).photos.push(photo);
+      });
+    });
+    return [...groups.values()].sort((a, b) => {
+      const byIndex = Number(a.projectIndex) - Number(b.projectIndex);
+      return byIndex || a.projectTitle.localeCompare(b.projectTitle);
+    });
+  };
+
+  const batchItemsFor = (photos, project = null) => photos.map((photo, index) => ({
+    photoId: photo.id,
+    title: titleFor(photo),
+    sortIndex: index + 1,
+    projectId: project?.projectId || projectIdFor(photo),
+    projectTitle: project?.projectTitle || projectTitleFor(photo),
+    projectIds: project ? [project.projectId] : assignedProjectIdsFor(photo),
+  }));
 
   const buildBatchManifest = () => {
     const template = workflow().batchManifest?.template || {};
     const batchId = timestampId();
-    const selectedPhotos = state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
+    const photos = selectedPhotos();
+    const projects = projectGroupsFor(photos);
     return {
       ...template,
       schema: template.schema || workflow().batchManifest?.schema || "photosbyelie.realEstatePdfBatch.v1",
@@ -384,37 +470,45 @@
       customer: template.customer || state.payload?.customer?.name || "",
       galleryKey: template.galleryKey || state.gallery?.key || "",
       sourceBatchId: template.sourceBatchId || "",
-      items: selectedPhotos.map((photo, index) => ({
-        photoId: photo.id,
-        title: titleFor(photo),
-        sortIndex: index + 1,
+      pdfMode: "one-pdf-per-project",
+      projects: projects.map((project) => ({
+        projectId: project.projectId,
+        projectTitle: project.projectTitle,
+        sortIndex: project.projectIndex,
+        items: batchItemsFor(project.photos, project),
       })),
+      items: batchItemsFor(photos),
     };
   };
 
   const copyBatch = async () => {
     if (!requireUnlocked()) return;
-    const batch = JSON.stringify(buildBatchManifest(), null, 2);
+    const manifest = buildBatchManifest();
+    const batch = JSON.stringify(manifest, null, 2);
     try {
       await navigator.clipboard.writeText(batch);
-      setStatus(`Copied ${state.selectedOrder.length} selected photos`);
+      setStatus(`Copied ${manifest.projects.length} project selection list${manifest.projects.length === 1 ? "" : "s"}`);
     } catch {
-      setStatus("Clipboard unavailable; use Download batch");
+      setStatus("Clipboard unavailable; use Download selection file");
     }
+  };
+
+  const triggerDownload = (blob, filename) => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
 
   const downloadBatch = () => {
     if (!requireUnlocked()) return;
     const batch = buildBatchManifest();
     const blob = new Blob([JSON.stringify(batch, null, 2) + "\n"], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    setStatus(`Downloaded ${state.selectedOrder.length} selected photos`);
+    triggerDownload(blob, `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`);
+    setStatus(`Downloaded selection file for ${batch.projects.length} project${batch.projects.length === 1 ? "" : "s"}`);
   };
 
   const pdfEscape = (value) => String(value || "")
@@ -542,23 +636,24 @@
 
   const downloadPdf = async () => {
     if (!requireUnlocked() || state.pdfBusy) return;
-    const selectedPhotos = state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
-    if (!selectedPhotos.length) {
-      setStatus("Select photos before downloading PDF");
+    const photos = selectedPhotos();
+    if (!photos.length) {
+      setStatus("Select photos before downloading project PDFs");
       return;
     }
+    const projects = projectGroupsFor(photos);
+    const batchId = timestampId();
     state.pdfBusy = true;
-    setStatus(`Building PDF from ${selectedPhotos.length} photos...`);
+    setStatus(`Building ${projects.length} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} photos...`);
     try {
-      const blob = buildPdfBlob(await fetchPdfImages(selectedPhotos));
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${state.gallery?.key || "real-estate"}-${timestampId()}.pdf`;
-      document.body.append(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-      setStatus(`Downloaded PDF with ${selectedPhotos.length} photos`);
+      for (const project of projects) {
+        const blob = buildPdfBlob(await fetchPdfImages(project.photos));
+        triggerDownload(
+          blob,
+          `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${batchId}.pdf`
+        );
+      }
+      setStatus(`Downloaded ${projects.length} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
     } catch (error) {
       setStatus(error?.message || "PDF download failed");
     } finally {
@@ -635,15 +730,42 @@
     if (!file) return;
     const text = await file.text();
     const batch = JSON.parse(text);
-    const items = Array.isArray(batch.items) ? [...batch.items].sort((a, b) => Number(a.sortIndex) - Number(b.sortIndex)) : [];
-    state.selectedOrder = items.map((item) => item.photoId).filter((id) => state.photosById.has(id));
+    const projectItems = Array.isArray(batch.projects)
+      ? batch.projects.flatMap((project) => (Array.isArray(project.items) ? project.items : [])
+        .map((item) => ({
+          ...item,
+          projectId: project.projectId || item.projectId,
+          projectTitle: project.projectTitle || item.projectTitle,
+          projectSortIndex: Number(project.sortIndex) || 0,
+        })))
+      : [];
+    const sourceItems = projectItems.length ? projectItems : (Array.isArray(batch.items) ? batch.items : []);
+    const items = [...sourceItems].sort((a, b) => (
+      Number(a.projectSortIndex) - Number(b.projectSortIndex)
+      || Number(a.sortIndex) - Number(b.sortIndex)
+    ));
+    const selectedOrder = [];
+    const projectAssignments = {};
     items.forEach((item) => {
-      if (item.photoId && typeof item.title === "string") state.editedTitles[item.photoId] = item.title;
+      if (!item.photoId || !state.photosById.has(item.photoId)) return;
+      if (!selectedOrder.includes(item.photoId)) selectedOrder.push(item.photoId);
+      const itemProjectIds = Array.isArray(item.projectIds) ? item.projectIds : (item.projectId ? [item.projectId] : []);
+      itemProjectIds.forEach((projectId) => {
+        projectAssignments[item.photoId] = projectAssignments[item.photoId] || [];
+        if (!projectAssignments[item.photoId].includes(projectId)) projectAssignments[item.photoId].push(projectId);
+      });
+      if (typeof item.title === "string") state.editedTitles[item.photoId] = item.title;
     });
+    state.selectedOrder = selectedOrder;
+    state.projectAssignments = {
+      ...state.projectAssignments,
+      ...projectAssignments,
+    };
     persistSelection();
     persistTitles();
+    persistProjectAssignments();
     render();
-    setStatus(`Loaded ${state.selectedOrder.length} selected photos`);
+    setStatus(`Loaded ${state.selectedOrder.length} selected photos across ${projectGroupsFor(selectedPhotos()).length} projects`);
   };
 
   const bindEvents = () => {
@@ -717,6 +839,14 @@
     elements.grid?.addEventListener("change", (event) => {
       const checkbox = event.target.closest("[data-select-photo]");
       if (checkbox) setSelected(checkbox.dataset.selectPhoto, checkbox.checked);
+      const projectCheckbox = event.target.closest("[data-project-photo][data-project-id]");
+      if (projectCheckbox) {
+        setPhotoProject(
+          projectCheckbox.dataset.projectPhoto,
+          projectCheckbox.dataset.projectId,
+          projectCheckbox.checked
+        );
+      }
     });
     elements.grid?.addEventListener("input", (event) => {
       const input = event.target.closest("[data-title-photo]");
@@ -777,6 +907,7 @@
     state.selectedOrder = normalizeSelectedOrder(readJson(selectionStoreKey(), []));
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});
+    state.projectAssignments = readJson(projectStoreKey(), {});
     if (pageParams.has("logout")) localStorage.removeItem(authStoreKey());
     state.unlocked = hasUnlockedSession();
     if (elements.density) elements.density.value = state.density;

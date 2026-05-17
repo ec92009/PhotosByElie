@@ -190,6 +190,7 @@ def build_manifest(
     source_root: Path,
     output_dir: Path,
     customer: str,
+    access_code: str,
     gallery_key: str,
     gallery_title: str,
     public_key_prefix: str,
@@ -321,6 +322,7 @@ def build_manifest(
         "customer": {
             "name": customer,
             "username": customer,
+            "accessCode": access_code,
         },
         "sourceRoot": str(source_root),
         "outputRoot": repo_relative(output_dir, repo_root),
@@ -383,6 +385,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--customer", default="Corine")
+    parser.add_argument("--access-code", default="LaConcha")
     parser.add_argument("--gallery-key", default="")
     parser.add_argument("--gallery-title", default="")
     parser.add_argument("--public-key-prefix", default="", help="R2 public preview key prefix. Default: real-estate/<gallery-key>/previews.")
@@ -432,6 +435,7 @@ def main() -> int:
         source_root=source_root,
         output_dir=output_dir,
         customer=args.customer,
+        access_code=args.access_code,
         gallery_key=gallery_key,
         gallery_title=gallery_title,
         public_key_prefix=public_key_prefix,

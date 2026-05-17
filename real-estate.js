@@ -4,7 +4,8 @@
 
   const pageParams = new URLSearchParams(window.location.search);
   const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
-  const defaultLocalContext = "./tmp/real-estate-import/corine/app-context.js";
+  const pageVersion = pageParams.get("v");
+  const defaultLocalContext = `./tmp/real-estate-import/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
   const contextParam = pageParams.get("context");
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : "");
   const densityKey = "photosbyelie-real-estate-card-density";
@@ -130,23 +131,30 @@
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
   const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
 
-  const normalizeAccessCode = (value) => String(value || "").trim().toLowerCase();
-  const expectedAccessCode = () => normalizeAccessCode(
+  const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
+  const expectedUsername = () => normalizeCredential(
+    state.payload?.customer?.username
+    || state.payload?.customer?.name
+    || ""
+  );
+  const expectedAccessCode = () => normalizeCredential(
     state.payload?.accessCode
     || state.payload?.customer?.accessCode
-    || state.payload?.customer?.username
-    || state.payload?.customer?.name
     || ""
   );
 
   const hasUnlockedSession = () => {
     const saved = readJson(authStoreKey(), {});
-    return Boolean(saved?.unlocked && saved?.galleryKey === state.gallery?.key);
+    return Boolean(
+      saved?.unlocked
+      && saved?.galleryKey === state.gallery?.key
+      && normalizeCredential(saved?.username) === expectedUsername()
+    );
   };
 
-  const writeSession = (name = "") => writeJson(authStoreKey(), {
+  const writeSession = (username = "") => writeJson(authStoreKey(), {
     galleryKey: state.gallery?.key || "",
-    name,
+    username,
     unlocked: true,
     unlockedAt: new Date().toISOString(),
   });
@@ -157,7 +165,7 @@
       elements.loginCodeIcon.innerHTML = window.photosByElieMdIcon?.(showing ? "visibilityOff" : "visibility") || "";
     }
     if (elements.loginCodeToggle) {
-      elements.loginCodeToggle.setAttribute("aria-label", showing ? "Hide access code" : "Show access code");
+      elements.loginCodeToggle.setAttribute("aria-label", showing ? "Hide password" : "Show password");
       elements.loginCodeToggle.setAttribute("aria-pressed", String(showing));
     }
   };
@@ -175,7 +183,7 @@
 
   const requireUnlocked = () => {
     if (state.unlocked) return true;
-    if (elements.loginStatus) elements.loginStatus.textContent = "Enter the client access code to open this review.";
+    if (elements.loginStatus) elements.loginStatus.textContent = "Enter the client credentials to open this review.";
     syncAuthUi();
     window.scrollTo({ top: 0, behavior: "smooth" });
     return false;
@@ -245,8 +253,7 @@
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
-    if (elements.loginCustomer) elements.loginCustomer.textContent = payload?.customer?.name ? `${payload.customer.name} access` : "Private client access";
-    if (elements.loginName && !elements.loginName.value) elements.loginName.value = payload?.customer?.name || "";
+    if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
     if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
     if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
     if (elements.description) elements.description.textContent = gallery?.description || "Private photo review workspace for property PDF delivery.";
@@ -660,10 +667,12 @@
 
     elements.loginForm?.addEventListener("submit", (event) => {
       event.preventDefault();
-      const expected = expectedAccessCode();
-      const entered = normalizeAccessCode(elements.loginCode?.value);
-      if (!expected || entered !== expected) {
-        if (elements.loginStatus) elements.loginStatus.textContent = "Access code does not match this review.";
+      const expectedUser = expectedUsername();
+      const expectedCode = expectedAccessCode();
+      const enteredUser = normalizeCredential(elements.loginName?.value);
+      const enteredCode = normalizeCredential(elements.loginCode?.value);
+      if (!expectedUser || !expectedCode || enteredUser !== expectedUser || enteredCode !== expectedCode) {
+        if (elements.loginStatus) elements.loginStatus.textContent = "Credentials do not match this review.";
         return;
       }
       state.unlocked = true;
@@ -780,10 +789,6 @@
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});
     if (pageParams.has("logout")) localStorage.removeItem(authStoreKey());
-    const accessParam = pageParams.get("access");
-    if (accessParam && normalizeAccessCode(accessParam) === expectedAccessCode()) {
-      writeSession(payload?.customer?.name || "");
-    }
     state.unlocked = hasUnlockedSession();
     if (elements.density) elements.density.value = state.density;
     renderHero();

@@ -60,6 +60,15 @@ zsh scripts/export_re_apple_photos_albums.zsh \
 
 The default destination is `/Volumes/Saturn/Pictures/RE/Corine/<Album Name>`. The wrapper calls `scripts/export_apple_photos_album.applescript`, exports current rendered Apple Photos versions rather than originals, fails if RAW/DNG/NEF files appear in the destination, and writes an ignored report under `.review-logs/corine-real-estate-export/`.
 
+Then build the ignored client-gallery import bundle for the Real Estate UX:
+
+```bash
+python3 scripts/import_real_estate_gallery.py \
+  --customer Corine
+```
+
+The importer reads `/Volumes/Saturn/Pictures/RE/Corine` by default, refuses to run if RAW/DNG/NEF-style files are present, and writes the client-gallery bundle under `tmp/real-estate-import/corine/`. The generated `manifest.json` and `app-context.js` use the same collection/photo shape as the public gallery code, include stable liked-selection and editable-title store keys, and point the future cloud PDF builder at cloud-PDF-source JPGs instead of original exports. Final PDFs are not generated or uploaded from this script; the cloud path should receive liked photo IDs plus edited titles and assemble the final PDF on demand.
+
 Outputs:
 
 - `tmp/import-cache/<country>/*_900.jpg`: watermarked photo gallery thumbnails and video gallery posters.

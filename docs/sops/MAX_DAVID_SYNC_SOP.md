@@ -39,6 +39,18 @@ The poller:
 
 The poller does not execute instructions. It only makes sure David has the latest notes locally and alerts the user/Codex session that new Max/David notes exist.
 
+## Start Acknowledgement
+
+When David begins acting on a new task from `MAX2DAVID.md` or `MAX_DAVID_CHAT.md`, David should first append a short start line to `MAX_DAVID_CHAT.md`, commit it, and push it to `main`.
+
+Use this format:
+
+```text
+David: starting <short task name>
+```
+
+This acknowledgement proves David has moved from "pulled the instruction" to "trying the task." After the work finishes, David should still write the durable result in `DAVID2MAX.md`, then commit and push only the report/chat updates unless the task explicitly authorizes other tracked changes.
+
 ## Current Owner DB Sync Target
 
 Use the private R2 bucket with this key for the latest David-to-Max Owner DB snapshot:

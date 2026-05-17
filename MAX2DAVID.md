@@ -16,6 +16,7 @@ git pull --ff-only origin main
 - Do not rewrite image/JPG metadata.
 - Do not use the keyword blacklist to filter photos. It only removes useless keyword strings from generated metadata.
 - If an automation creates tracked changes, run validation before committing.
+- Before starting a new Max task, append `David: starting <short task name>` to `MAX_DAVID_CHAT.md`, commit it, and push it so Max can see the task is in progress.
 - Use commit prefix `photosbyelie:`.
 - Push successful commits to `main`.
 - Record what happened in `DAVID2MAX.md`.

@@ -1,6 +1,6 @@
 # Max to David Automation Handoff
 
-Use this file for instructions prepared on Max for David, the always-on machine. David should treat these as automation prompts or recurring job specs, then report results in `DAVID2MAX.md`.
+Use this file for instructions prepared on Max for David, the always-on machine. David should treat these as automation prompts or recurring job specs, then report results in `DAVID2MAX.md`. Use `MAX_DAVID_CHAT.md` for quick acknowledgements and short coordination messages.
 
 ## Operating Rules
 

@@ -14,7 +14,7 @@ Do not commit `assets/owner-actions/Owner.sqlite`, SQLite WAL/SHM files, private
 
 ## David Instruction Poller
 
-Install this on David when you want David to pull `main` and check `MAX2DAVID.md` at the top of every minute:
+Install this on David when you want David to pull `main` and check Max/David handoff notes at the top of every minute:
 
 ```bash
 cd /Users/ecohen/Dev/PhotosByElie
@@ -32,12 +32,12 @@ The poller:
 
 - Runs only on machines whose ComputerName or hostname starts with `David`, unless `PBE_POLL_ALLOW_NON_DAVID=1` is set for a deliberate test.
 - Runs `git fetch origin main`, then `git pull --ff-only origin main` when `origin/main` is ahead.
-- Watches `MAX2DAVID.md` by SHA-256.
-- Copies the latest instructions to `.review-logs/MAX2DAVID.latest.md`.
+- Watches `MAX2DAVID.md` and `MAX_DAVID_CHAT.md` by SHA-256.
+- Copies the latest notes to `.review-logs/MAX2DAVID.latest.md` and `.review-logs/MAX_DAVID_CHAT.latest.md`.
 - Logs to `.review-logs/max-instruction-poll.log`.
-- Shows a macOS notification when `MAX2DAVID.md` changes.
+- Shows a macOS notification when either watched file changes.
 
-The poller does not execute the instructions in `MAX2DAVID.md`. It only makes sure David has them locally and alerts the user/Codex session that new instructions exist.
+The poller does not execute instructions. It only makes sure David has the latest notes locally and alerts the user/Codex session that new Max/David notes exist.
 
 ## Current Owner DB Sync Target
 

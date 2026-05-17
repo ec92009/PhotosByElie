@@ -54,26 +54,53 @@ if [[ "$local_head" != "$remote_head" ]]; then
   fi
 fi
 
-if [[ ! -f MAX2DAVID.md ]]; then
-  log "error: MAX2DAVID.md missing after poll"
-  exit 1
+watched_files=(MAX2DAVID.md MAX_DAVID_CHAT.md)
+
+for watched_file in "${watched_files[@]}"; do
+  if [[ ! -f "$watched_file" ]]; then
+    log "error: $watched_file missing after poll"
+    exit 1
+  fi
+done
+
+state_value() {
+  local key="$1"
+  if [[ -f "$state_file" ]]; then
+    awk -F= -v key="$key" '$1 == key {print $2}' "$state_file" 2>/dev/null || true
+  fi
+}
+
+hash_for() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+max2david_hash="$(hash_for MAX2DAVID.md)"
+max_david_chat_hash="$(hash_for MAX_DAVID_CHAT.md)"
+previous_max2david_hash="$(state_value max2david_sha256)"
+previous_max_david_chat_hash="$(state_value max_david_chat_sha256)"
+
+changed_files=()
+if [[ "$max2david_hash" != "$previous_max2david_hash" ]]; then
+  changed_files+=(MAX2DAVID.md)
+fi
+if [[ "$max_david_chat_hash" != "$previous_max_david_chat_hash" ]]; then
+  changed_files+=(MAX_DAVID_CHAT.md)
 fi
 
-instruction_hash="$(shasum -a 256 MAX2DAVID.md | awk '{print $1}')"
-previous_hash=""
-if [[ -f "$state_file" ]]; then
-  previous_hash="$(awk -F= '/^max2david_sha256=/{print $2}' "$state_file" 2>/dev/null || true)"
-fi
-
-if [[ "$instruction_hash" != "$previous_hash" ]]; then
+if (( ${#changed_files[@]} > 0 )); then
   {
-    printf 'max2david_sha256=%s\n' "$instruction_hash"
+    printf 'max2david_sha256=%s\n' "$max2david_hash"
+    printf 'max_david_chat_sha256=%s\n' "$max_david_chat_hash"
     printf 'last_seen_at=%s\n' "$(timestamp)"
     printf 'head=%s\n' "$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
   } > "$state_file"
+
   cp MAX2DAVID.md "$log_dir/MAX2DAVID.latest.md"
-  log "MAX2DAVID.md changed: ${previous_hash:-none} -> $instruction_hash (head $(git rev-parse --short HEAD 2>/dev/null || echo unknown), before $before_head)"
-  osascript -e 'display notification "MAX2DAVID.md changed. Review latest instructions." with title "PhotosByElie"' >/dev/null 2>&1 || true
+  cp MAX_DAVID_CHAT.md "$log_dir/MAX_DAVID_CHAT.latest.md"
+
+  changed_label="${(j:, :)changed_files}"
+  log "changed: $changed_label (head $(git rev-parse --short HEAD 2>/dev/null || echo unknown), before $before_head)"
+  osascript -e "display notification \"$changed_label changed. Review latest Max/David notes.\" with title \"PhotosByElie\"" >/dev/null 2>&1 || true
 else
-  log "ok: no new MAX2DAVID.md instructions (head $(git rev-parse --short HEAD 2>/dev/null || echo unknown))"
+  log "ok: no new Max/David notes (head $(git rev-parse --short HEAD 2>/dev/null || echo unknown))"
 fi

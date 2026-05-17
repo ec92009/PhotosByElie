@@ -51,6 +51,20 @@
   const keywordBlacklistForm = document.querySelector("[data-owner-keyword-blacklist-form]");
   const keywordBlacklistInput = document.querySelector("[data-owner-keyword-blacklist-input]");
   const keywordBlacklistStatus = document.querySelector("[data-owner-keyword-blacklist-status]");
+  const realEstateCard = document.querySelector("[data-owner-real-estate-card]");
+  const realEstateClientList = document.querySelector("[data-owner-re-client-list]");
+  const realEstateForm = document.querySelector("[data-owner-re-form]");
+  const realEstateStatus = document.querySelector("[data-owner-re-status]");
+  const realEstateOutput = document.querySelector("[data-owner-re-output]");
+  const realEstateClientCountRoot = document.querySelector("[data-owner-re-client-count]");
+  const realEstatePhotoCountRoot = document.querySelector("[data-owner-re-photo-count]");
+  const realEstateAlbumCountRoot = document.querySelector("[data-owner-re-album-count]");
+  const realEstateLocalLink = document.querySelector("[data-owner-re-local-link]");
+  const realEstatePublicLink = document.querySelector("[data-owner-re-public-link]");
+  const realEstateFields = Object.fromEntries(
+    [...document.querySelectorAll("[data-owner-re-field]")]
+      .map((field) => [field.dataset.ownerReField, field])
+  );
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -65,6 +79,9 @@
   let latestR2ProgressTasks = [];
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
+  let realEstateClients = [];
+  let selectedRealEstateClientId = "";
+  let realEstateBusy = false;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -116,6 +133,7 @@
       loadR2Coverage();
       loadCostEstimate();
       loadKeywordBlacklist();
+      loadRealEstateOwner();
       startR2Polling();
       if (options.scrollToControls && controls) {
         window.requestAnimationFrame(() => {
@@ -624,6 +642,226 @@
     } catch (error) {
       renderKeywordBlacklist([]);
       setKeywordBlacklistStatus(error?.message || "Could not load blacklist.");
+    }
+  };
+
+  const setRealEstateStatus = (message) => {
+    if (realEstateStatus) realEstateStatus.textContent = message;
+  };
+
+  const setRealEstateBusy = (busy) => {
+    realEstateBusy = busy;
+    if (realEstateForm) {
+      realEstateForm.querySelectorAll("button, input, textarea").forEach((control) => {
+        control.disabled = busy;
+      });
+    }
+    setRefreshBusy("real-estate", busy);
+  };
+
+  const selectedRealEstateClient = () => (
+    realEstateClients.find((client) => client.id === selectedRealEstateClientId)
+    || realEstateClients[0]
+    || null
+  );
+
+  const renderRealEstateOutput = (value = "", forceOpen = false) => {
+    if (!realEstateOutput) return;
+    const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    realEstateOutput.textContent = text;
+    realEstateOutput.hidden = !forceOpen && !text;
+  };
+
+  const updateRealEstateLinks = (client) => {
+    if (realEstateLocalLink) {
+      realEstateLocalLink.href = client?.localContextExists ? client.localReviewUrl : "./real-estate.html?logout=1";
+      realEstateLocalLink.toggleAttribute("aria-disabled", !client?.localContextExists);
+    }
+    if (realEstatePublicLink) {
+      realEstatePublicLink.href = client?.publicContextExists ? client.publicReviewUrl : "./real-estate.html?logout=1";
+      realEstatePublicLink.toggleAttribute("aria-disabled", !client?.publicContextExists);
+    }
+  };
+
+  const fillRealEstateForm = (client) => {
+    if (!client || !realEstateForm) return;
+    selectedRealEstateClientId = client.id;
+    const values = {
+      id: client.id,
+      customer: client.customer,
+      username: client.username,
+      accessCode: "",
+      sourceRoot: client.sourceRoot,
+      outputSlug: client.outputSlug,
+      publicSlug: client.publicSlug,
+      galleryKey: client.galleryKey,
+      galleryTitle: client.galleryTitle,
+      albums: (client.albums || []).join("\n"),
+      publicKeyPrefix: client.publicKeyPrefix,
+      privateKeyPrefix: client.privateKeyPrefix,
+      maxItems: client.maxItems || 300,
+    };
+    Object.entries(values).forEach(([key, value]) => {
+      if (realEstateFields[key]) realEstateFields[key].value = value ?? "";
+    });
+    if (realEstateFields.accessCode) {
+      realEstateFields.accessCode.placeholder = client.passwordSet
+        ? "Keep current password"
+        : "Required before import";
+    }
+    updateRealEstateLinks(client);
+  };
+
+  const renderRealEstateClients = () => {
+    if (!realEstateCard) return;
+    const selected = selectedRealEstateClient();
+    if (realEstateClientCountRoot) realEstateClientCountRoot.textContent = formatCount(realEstateClients.length);
+    if (realEstatePhotoCountRoot) {
+      realEstatePhotoCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Number(client.stats?.photoCount || 0), 0));
+    }
+    if (realEstateAlbumCountRoot) {
+      realEstateAlbumCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Number(client.stats?.albumCount || 0), 0));
+    }
+    if (realEstateClientList) {
+      realEstateClientList.innerHTML = realEstateClients.length ? realEstateClients.map((client) => {
+        const active = client.id === selected?.id;
+        const bits = [
+          client.passwordSet ? "password set" : "needs password",
+          client.sourceRootExists ? "source ok" : "source missing",
+          client.publicContextExists ? "published" : "not published",
+        ];
+        return `
+          <button class="owner-real-estate-client ${active ? "is-active" : ""}" type="button" data-owner-re-client="${escapeHtml(client.id)}" aria-pressed="${active}">
+            <span>${escapeHtml(client.customer || client.id)}</span>
+            <small>${escapeHtml(formatCount(client.stats?.photoCount || 0))} photos / ${escapeHtml(bits.join(" / "))}</small>
+          </button>
+        `;
+      }).join("") : `<p class="owner-card-note">No real estate clients yet.</p>`;
+    }
+    if (selected) fillRealEstateForm(selected);
+  };
+
+  const loadRealEstateOwner = async () => {
+    if (!realEstateCard) return;
+    setRealEstateStatus("Loading real estate clients...");
+    try {
+      const response = await fetch("/__photosbyelie/real-estate-owner", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load real estate clients.");
+      realEstateClients = Array.isArray(payload.clients) ? payload.clients : [];
+      if (!selectedRealEstateClientId || !realEstateClients.some((client) => client.id === selectedRealEstateClientId)) {
+        selectedRealEstateClientId = realEstateClients[0]?.id || "";
+      }
+      renderRealEstateClients();
+      const selected = selectedRealEstateClient();
+      setRealEstateStatus(selected
+        ? `${selected.customer}: ${formatCount(selected.stats?.photoCount || 0)} photos, ${selected.passwordSet ? "password set" : "password needed"}.`
+        : "No real estate clients configured.");
+      renderRealEstateOutput("");
+    } catch (error) {
+      setRealEstateStatus(error?.message || "Could not load real estate clients.");
+    }
+  };
+
+  const realEstateFormPayload = () => ({
+    id: realEstateFields.id?.value || "",
+    customer: realEstateFields.customer?.value || "",
+    username: realEstateFields.username?.value || "",
+    accessCode: realEstateFields.accessCode?.value || "",
+    sourceRoot: realEstateFields.sourceRoot?.value || "",
+    outputSlug: realEstateFields.outputSlug?.value || "",
+    publicSlug: realEstateFields.publicSlug?.value || "",
+    galleryKey: realEstateFields.galleryKey?.value || "",
+    galleryTitle: realEstateFields.galleryTitle?.value || "",
+    albums: realEstateFields.albums?.value || "",
+    publicKeyPrefix: realEstateFields.publicKeyPrefix?.value || "",
+    privateKeyPrefix: realEstateFields.privateKeyPrefix?.value || "",
+    maxItems: realEstateFields.maxItems?.value || 300,
+  });
+
+  const postRealEstateOwnerAction = async (body) => {
+    const response = await fetch("/__photosbyelie/real-estate-owner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Real estate action failed.");
+    return payload;
+  };
+
+  const saveRealEstateClient = async () => {
+    setRealEstateBusy(true);
+    setRealEstateStatus("Saving real estate client...");
+    try {
+      const payload = await postRealEstateOwnerAction({
+        action: "save-client",
+        client: realEstateFormPayload(),
+      });
+      realEstateClients = Array.isArray(payload.clients) ? payload.clients : realEstateClients;
+      selectedRealEstateClientId = payload.client?.id || selectedRealEstateClientId;
+      renderRealEstateClients();
+      renderRealEstateOutput("");
+      setRealEstateStatus(`${payload.client?.customer || "Client"} saved.`);
+    } catch (error) {
+      setRealEstateStatus(error?.message || "Could not save real estate client.");
+    } finally {
+      setRealEstateBusy(false);
+    }
+  };
+
+  const runRealEstateClientAction = async (action) => {
+    if (realEstateBusy) return;
+    const selected = selectedRealEstateClient();
+    if (!selected) {
+      setRealEstateStatus("Save a real estate client first.");
+      return;
+    }
+    if (action === "upload-client") {
+      const ok = window.confirm("Upload public previews and private masters for this real estate client?");
+      if (!ok) return;
+    }
+    setRealEstateBusy(true);
+    const labels = {
+      "import-client": "Importing previews...",
+      "publish-client": "Publishing context...",
+      "upload-dry-run": "Checking upload inventory...",
+      "upload-client": "Uploading masters and previews...",
+      "worker-secret": "Preparing Worker secret...",
+    };
+    setRealEstateStatus(labels[action] || "Running real estate action...");
+    try {
+      const payload = await postRealEstateOwnerAction({
+        action,
+        id: selected.id,
+      });
+      if (payload.client) {
+        const byId = new Map(realEstateClients.map((client) => [client.id, client]));
+        byId.set(payload.client.id, payload.client);
+        realEstateClients = [...byId.values()].sort((a, b) => String(a.customer).localeCompare(String(b.customer)));
+        selectedRealEstateClientId = payload.client.id;
+        renderRealEstateClients();
+      }
+      if (action === "worker-secret") {
+        const secretText = payload.secretJson || "[]";
+        renderRealEstateOutput(`${payload.wranglerCommand}\n\n${secretText}`, true);
+        await navigator.clipboard?.writeText(secretText).catch(() => {});
+        setRealEstateStatus(`Worker secret prepared for ${formatCount(payload.galleryCount || 0)} real estate galleries.`);
+      } else {
+        renderRealEstateOutput(payload.summary || payload.command?.output || payload, true);
+        const clientName = payload.client?.customer || selected.customer;
+        const doneLabels = {
+          "import-client": `${clientName} previews imported.`,
+          "publish-client": `${clientName} context published.`,
+          "upload-dry-run": `${clientName} upload dry run complete.`,
+          "upload-client": `${clientName} upload complete.`,
+        };
+        setRealEstateStatus(doneLabels[action] || "Real estate action complete.");
+      }
+    } catch (error) {
+      setRealEstateStatus(error?.message || "Real estate action failed.");
+    } finally {
+      setRealEstateBusy(false);
     }
   };
 
@@ -1322,6 +1560,9 @@
       } else if (kind === "keyword-blacklist") {
         await loadKeywordBlacklist();
         setStatus("Keyword blacklist refreshed.");
+      } else if (kind === "real-estate") {
+        await loadRealEstateOwner();
+        setStatus("Real estate clients refreshed.");
       }
     } catch (error) {
       setStatus(error?.message || "Could not refresh this Owner panel.");
@@ -1414,6 +1655,26 @@
     }
   });
 
+  realEstateClientList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-owner-re-client]");
+    if (!button) return;
+    selectedRealEstateClientId = button.dataset.ownerReClient || "";
+    renderRealEstateClients();
+    const selected = selectedRealEstateClient();
+    setRealEstateStatus(selected ? `${selected.customer} selected.` : "No real estate client selected.");
+  });
+
+  realEstateForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveRealEstateClient();
+  });
+
+  realEstateForm?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-owner-re-action]");
+    if (!button) return;
+    runRealEstateClientAction(button.dataset.ownerReAction || "");
+  });
+
   wipeHiddenR2Button?.addEventListener("click", async () => {
     if (wasteDeleteActive) {
       setStatus("Waste Basket R2 purge is already running. Watch Cloud media left on the card.");
@@ -1488,6 +1749,7 @@
     loadR2Coverage();
     loadCostEstimate();
     loadKeywordBlacklist();
+    loadRealEstateOwner();
     startR2Polling();
   }
 })();

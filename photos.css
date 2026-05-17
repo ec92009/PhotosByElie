@@ -955,6 +955,126 @@ html[data-theme="light"] .photo-art.has-photo::after{
   grid-column:1 / -1;
   min-height:0;
 }
+.owner-card-real-estate{
+  grid-column:1 / -1;
+}
+.owner-real-estate-layout{
+  display:grid;
+  grid-template-columns:minmax(220px,320px) minmax(0,1fr);
+  gap:14px;
+  align-items:start;
+}
+.owner-real-estate-list-panel{
+  display:grid;
+  gap:12px;
+  min-width:0;
+}
+.owner-real-estate-client-list{
+  display:grid;
+  gap:8px;
+}
+.owner-real-estate-client{
+  display:grid;
+  gap:3px;
+  width:100%;
+  min-height:58px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  padding:9px 10px;
+  text-align:left;
+  cursor:pointer;
+}
+.owner-real-estate-client.is-active{
+  border-color:color-mix(in srgb,#2f8f5b 70%,var(--line));
+  box-shadow:inset 3px 0 0 color-mix(in srgb,#2f8f5b 84%,var(--text));
+}
+.owner-real-estate-client span{
+  overflow:hidden;
+  font-weight:850;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.owner-real-estate-client small{
+  color:var(--muted);
+  font-size:.7rem;
+  font-weight:800;
+  letter-spacing:.04em;
+  line-height:1.25;
+  text-transform:uppercase;
+}
+.owner-real-estate-counts{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.owner-real-estate-links,
+.owner-real-estate-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.owner-real-estate-links .btn[aria-disabled="true"]{
+  pointer-events:none;
+  opacity:.5;
+}
+.owner-real-estate-form{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  min-width:0;
+}
+.owner-real-estate-form label{
+  display:grid;
+  gap:6px;
+  min-width:0;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-real-estate-form label.is-wide,
+.owner-real-estate-actions.is-wide{
+  grid-column:1 / -1;
+}
+.owner-real-estate-form input,
+.owner-real-estate-form textarea{
+  width:100%;
+  min-height:42px;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:.92rem;
+  font-weight:720;
+  letter-spacing:0;
+  padding:8px 10px;
+  text-transform:none;
+}
+.owner-real-estate-form textarea{
+  min-height:76px;
+  resize:vertical;
+  line-height:1.4;
+}
+.owner-real-estate-form :disabled{
+  cursor:progress;
+  opacity:.68;
+}
+.owner-real-estate-output{
+  max-height:300px;
+  overflow:auto;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  margin:0;
+  padding:10px;
+  white-space:pre-wrap;
+}
+.owner-real-estate-output[hidden]{
+  display:none;
+}
 .owner-card-price-list{
   grid-column:1 / -1;
 }
@@ -1897,6 +2017,7 @@ body[data-real-estate] main.shell{
 .real-estate-filter-form input,
 .real-estate-filter-form select,
 .real-estate-pdf-setting select,
+.real-estate-pdf-setting input,
 .real-estate-title-field input,
 .real-estate-lightbox input{
   width:100%;
@@ -2008,6 +2129,20 @@ body[data-real-estate] main.shell{
   text-transform:uppercase;
   white-space:nowrap;
 }
+.real-estate-media-type-badge{
+  position:absolute;
+  top:8px;
+  right:8px;
+  border:1px solid rgba(255,255,255,.38);
+  background:rgba(0,0,0,.64);
+  color:#fff;
+  padding:4px 7px;
+  font-size:.62rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1;
+  text-transform:uppercase;
+}
 .real-estate-photo-select{
   position:absolute;
   right:8px;
@@ -2107,6 +2242,9 @@ body[data-real-estate] main.shell{
 }
 .real-estate-draft-item.is-dragging{
   opacity:.46;
+}
+.real-estate-draft-item.is-video{
+  border-color:color-mix(in srgb,var(--re-accent) 46%,var(--line));
 }
 .real-estate-draft-handle{
   display:grid;
@@ -2407,7 +2545,8 @@ body[data-real-estate] main.shell{
   place-items:center;
   background:#101010;
 }
-.real-estate-lightbox figure img{
+.real-estate-lightbox figure img,
+.real-estate-lightbox figure video{
   display:block;
   max-width:100%;
   max-height:calc(100dvh - 30px);
@@ -4122,6 +4261,10 @@ html[data-theme="light"] .detail-preview.has-image::after{
     grid-column:span 1;
   }
   .owner-overview-layout{
+    grid-template-columns:1fr;
+  }
+  .owner-real-estate-layout,
+  .owner-real-estate-form{
     grid-template-columns:1fr;
   }
   .owner-catalog-pie{

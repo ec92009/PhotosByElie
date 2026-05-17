@@ -29,8 +29,8 @@ const extensionFor = (value) => {
   const extension = match ? match[1].toLowerCase() : "jpg";
   if (extension === "jpg" || extension === "jpeg") return extension;
   if (extension === "jpe") return "jpg";
-  if (!["jpg", "jpeg"].includes(extension)) {
-    throw Object.assign(new Error("Real-estate originals currently support JPG masters."), {
+  if (!["mov", "mp4", "m4v"].includes(extension)) {
+    throw Object.assign(new Error("Real-estate originals currently support JPG and video masters."), {
       status: 400,
       code: "unsupported_real_estate_original",
       details: { extension },
@@ -39,7 +39,12 @@ const extensionFor = (value) => {
   return extension;
 };
 
-const contentTypeFor = (extension) => ["jpg", "jpeg"].includes(extension) ? "image/jpeg" : "application/octet-stream";
+const contentTypeFor = (extension) => {
+  if (["jpg", "jpeg"].includes(extension)) return "image/jpeg";
+  if (extension === "mp4" || extension === "m4v") return "video/mp4";
+  if (extension === "mov") return "video/quicktime";
+  return "application/octet-stream";
+};
 
 const objectMetadata = async (bucket, key) => {
   if (!key) return null;

@@ -14,6 +14,7 @@ Last updated: 2026-05-17
 - Public previews are R2-backed and watermarked.
 - Private sellable assets are R2-backed and unwatermarked.
 - Real Estate selected-original ZIPs are browser-built from Worker-created private download tokens; the Worker does not assemble the archive.
+- Real Estate client and originals-ZIP password entries use masked in-page fields, with a retry dialog when the ZIP password is rejected.
 - Waste Basket/discard tombstones are durable. A banned photo stays banned.
 - The public catalog validator now rejects discarded/tombstoned ids in public catalog data and `assets/expo-manifest.json`.
 - Photos sell four digital delivery flavors: full, JPG 6 MP, JPG 3 MP, and JPG 1 MP.

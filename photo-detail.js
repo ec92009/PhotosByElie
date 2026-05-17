@@ -103,6 +103,9 @@ const photoOriginLabel = photo ? (() => {
   const translated = t(key);
   return translated && translated !== key ? translated : window.photosByEliePhotoOriginLabel?.(photo, collectionKey);
 })() : "";
+const videoDurationLabel = photo && window.photosByElieIsVideo?.(photo)
+  ? window.photosByElieVideoDurationLabel?.(photo) || ""
+  : "";
 if (window.photosByElieIsPublicHidden?.(photo)) {
   window.location.replace(versionedHref(galleryHrefForKey(collectionKey)));
   return;
@@ -335,6 +338,7 @@ setPhotoMetaText([
   collection.title,
   photoOriginLabel,
   window.photosByElieSourceFormats ? window.photosByElieSourceFormats(photo) : photo.full,
+  videoDurationLabel,
   window.photosByElieVerifiedMegapixels && window.photosByElieVerifiedMegapixels(photo)
     ? t("detail.mp_verified", { mp: window.photosByElieVerifiedMegapixels(photo) })
     : ""
@@ -427,8 +431,10 @@ const renderMetadataRows = () => {
   const metadata = Array.isArray(photo.metadata)
     ? photo.metadata.filter((item) => item.label && item.value && !hiddenLabels.has(String(item.label).toLowerCase()))
     : [];
+  const hasDurationRow = metadata.some((item) => String(item.label).toLowerCase() === "duration");
   const rows = [
     { label: "Origin", value: photoOriginLabel },
+    ...(!hasDurationRow && videoDurationLabel ? [{ label: "Duration", value: videoDurationLabel }] : []),
     ...metadata,
   ].filter((item) => item.label && item.value);
   metadataRoot.hidden = rows.length === 0;

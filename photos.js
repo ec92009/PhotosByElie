@@ -1214,6 +1214,40 @@ window.photosByElieMediaUrl = (photo, size = 'gallery') => {
 
 window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
 window.photosByElieIsVideo = (photo) => window.photosByElieMediaType(photo) === "video";
+window.photosByElieVideoDurationSeconds = (photo) => {
+  const direct = Number(
+    photo?.media?.video?.duration
+    ?? photo?.media?.video?.durationSeconds
+    ?? photo?.video?.duration
+    ?? photo?.durationSeconds
+    ?? 0
+  );
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const raw = [
+    window.photosByElieMetadataValue(photo, 'Duration'),
+    window.photosByElieMetadataValue(photo, 'Original size'),
+    window.photosByElieMetadataValue(photo, 'Preview file')
+  ].filter(Boolean).join(' ');
+  const secondsMatch = raw.match(/(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/i);
+  if (secondsMatch) return Number(secondsMatch[1]) || 0;
+  const clockMatch = raw.match(/\b(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\.\d+)?\b/);
+  if (!clockMatch) return 0;
+  return (Number(clockMatch[1]) || 0) * 3600 + (Number(clockMatch[2]) || 0) * 60 + Number(clockMatch[3]);
+};
+window.photosByElieFormatVideoDuration = (seconds) => {
+  const rounded = Math.round(Number(seconds) || 0);
+  if (!Number.isFinite(rounded) || rounded <= 0) return '';
+  if (rounded < 60) return `${rounded} sec`;
+  const minutes = Math.floor(rounded / 60);
+  const remainingSeconds = String(rounded % 60).padStart(2, '0');
+  if (minutes < 60) return `${minutes}:${remainingSeconds}`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = String(minutes % 60).padStart(2, '0');
+  return `${hours}:${remainingMinutes}:${remainingSeconds}`;
+};
+window.photosByElieVideoDurationLabel = (photo) => (
+  window.photosByElieFormatVideoDuration(window.photosByElieVideoDurationSeconds(photo))
+);
 window.photosByElieVideoPosterUrl = (photo) => (
   photo?.media?.publicPreview?.posterUrl
   || window.photosByElieMediaUrl(photo, "gallery")
@@ -1284,23 +1318,7 @@ window.photosByEliePhotoFilter = (() => {
   const verifiedMegapixels = (photo) => (
     window.photosByElieVerifiedMegapixels ? window.photosByElieVerifiedMegapixels(photo) : Number(photo?.megapixels) || 0
   );
-  const durationSeconds = (photo) => {
-    const direct = Number(
-      photo?.media?.video?.duration
-      ?? photo?.media?.video?.durationSeconds
-      ?? photo?.video?.duration
-      ?? photo?.durationSeconds
-      ?? 0
-    );
-    if (Number.isFinite(direct) && direct > 0) return direct;
-    const raw = [
-      metadataValue(photo, 'Duration'),
-      metadataValue(photo, 'Original size'),
-      metadataValue(photo, 'Preview file')
-    ].filter(Boolean).join(' ');
-    const match = raw.match(/(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/i);
-    return match ? Number(match[1]) || 0 : 0;
-  };
+  const durationSeconds = (photo) => window.photosByElieVideoDurationSeconds?.(photo) || 0;
   const maxAvailablePrice = (photo) => {
     const available = window.photosByElieAvailableResolutions
       ? window.photosByElieAvailableResolutions(photo, window.photosByElieResolutions || [])

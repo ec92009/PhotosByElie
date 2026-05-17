@@ -799,3 +799,24 @@ _No David automation results recorded yet._
 - Collision handling: no obvious Photos collision-renamed files found in either destination folder.
 - Checksum manifest: `.review-logs/corine-real-estate-export/sha256sums.txt` (ignored, 284 SHA-256 entries; not committed).
 - Validation before commit: `git diff --check` PASSED; `npm run validate` PASSED (`Validation OK`).
+
+## 2026-05-17 - Corine export cleanup
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- `git pull --ff-only origin main`: PASSED (`Already up to date.`)
+- Scope: deleted only exported raw-format copies (`.raw`, `.dng`, `.nef`) from the two requested Saturn Real Estate export folders. Did not touch Apple Photos library records, repo catalog files, Owner.sqlite, public media, or R2.
+- Album: `RE 2026 La Concha 1 Apt 8AB1`
+- Destination: `/Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 1 Apt 8AB1`
+- Raw-format files deleted: 70 (`.nef` 70; `.raw` 0; `.dng` 0)
+- Remaining file count: 70
+- Remaining extension breakdown: `.jpg` 70
+- Remaining total bytes: 391,644,109
+- Remaining RAW/DNG/NEF files: 0
+- Album: `RE 2026 La Concha 2 Apt 8A5`
+- Destination: `/Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 2 Apt 8A5`
+- Raw-format files deleted: 72 (`.nef` 72; `.raw` 0; `.dng` 0)
+- Remaining file count: 72
+- Remaining extension breakdown: `.jpg` 72
+- Remaining total bytes: 409,760,901
+- Remaining RAW/DNG/NEF files: 0

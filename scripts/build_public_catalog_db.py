@@ -148,8 +148,12 @@ def original_format(photo: dict[str, Any]) -> str:
     return "jpg"
 
 
-def original_file(photo: dict[str, Any]) -> str:
-    return metadata_value(photo, "Original file") or Path(str(source_file(photo).get("path") or "")).name
+def split_source_path(path: str) -> tuple[str, str]:
+    clean = str(path or "").strip()
+    if "/" not in clean:
+        return "", clean
+    folder, filename = clean.rsplit("/", 1)
+    return folder, filename
 
 
 def original_dimensions(photo: dict[str, Any]) -> tuple[int, int] | None:
@@ -252,6 +256,20 @@ def create_schema(conn: sqlite3.Connection) -> None:
           keyword    TEXT NOT NULL UNIQUE CHECK (trim(keyword) <> '')
         );
 
+        CREATE TABLE source_folders (
+          source_folder_id INTEGER PRIMARY KEY,
+          source_folder    TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE source_files (
+          source_file_id INTEGER PRIMARY KEY,
+          source_folder_id INTEGER NOT NULL,
+          filename       TEXT NOT NULL CHECK (trim(filename) <> ''),
+          format_id      INTEGER NOT NULL,
+          FOREIGN KEY (source_folder_id) REFERENCES source_folders(source_folder_id),
+          FOREIGN KEY (format_id) REFERENCES formats(format_id)
+        );
+
         CREATE TABLE price_tiers (
           price_tier_id  TEXT PRIMARY KEY CHECK (trim(price_tier_id) <> ''),
           label          TEXT NOT NULL CHECK (trim(label) <> ''),
@@ -325,15 +343,10 @@ def create_schema(conn: sqlite3.Connection) -> None:
           description         TEXT,
           keyword_ids         TEXT,
           source_origin_id    INTEGER,
-          width               INTEGER NOT NULL CHECK (width > 0),
-          height              INTEGER NOT NULL CHECK (height > 0),
-          duration_seconds    REAL,
           captured_at         TEXT,
           exposure            TEXT,
           focal_length        TEXT,
-          original_file       TEXT,
-          source_path         TEXT,
-          original_format_id  INTEGER NOT NULL,
+          source_file_id      INTEGER NOT NULL,
           location            TEXT,
           gps_latitude        REAL CHECK (gps_latitude IS NULL OR gps_latitude BETWEEN -90 AND 90),
           gps_longitude       REAL CHECK (gps_longitude IS NULL OR gps_longitude BETWEEN -180 AND 180),
@@ -344,7 +357,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY (camera_id) REFERENCES cameras(camera_id),
           FOREIGN KEY (lens_id) REFERENCES lenses(lens_id),
           FOREIGN KEY (source_origin_id) REFERENCES source_origins(source_origin_id),
-          FOREIGN KEY (original_format_id) REFERENCES formats(format_id),
+          FOREIGN KEY (source_file_id) REFERENCES source_files(source_file_id),
           CHECK ((gps_latitude IS NULL AND gps_longitude IS NULL) OR (gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL))
         ) WITHOUT ROWID;
 
@@ -362,36 +375,60 @@ def create_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY (format_id) REFERENCES formats(format_id)
         ) WITHOUT ROWID;
 
-        CREATE TRIGGER media_items_photo_duration_insert
-        BEFORE INSERT ON media_items
-        WHEN (SELECT code FROM media_types WHERE media_type_id = NEW.media_type_id) = 'photo'
+        CREATE TRIGGER media_assets_full_photo_duration_insert
+        BEFORE INSERT ON media_assets
+        WHEN (SELECT code FROM asset_types WHERE asset_type_id = NEW.asset_type_id) = 'full'
+          AND EXISTS (
+            SELECT 1
+            FROM media_items
+            JOIN media_types USING (media_type_id)
+            WHERE media_items.media_id = NEW.media_id AND media_types.code = 'photo'
+          )
           AND NEW.duration_seconds IS NOT NULL
         BEGIN
-          SELECT RAISE(ABORT, 'photo rows must not have duration_seconds');
+          SELECT RAISE(ABORT, 'photo full assets must not have duration_seconds');
         END;
 
-        CREATE TRIGGER media_items_photo_duration_update
-        BEFORE UPDATE OF media_type_id, duration_seconds ON media_items
-        WHEN (SELECT code FROM media_types WHERE media_type_id = NEW.media_type_id) = 'photo'
+        CREATE TRIGGER media_assets_full_photo_duration_update
+        BEFORE UPDATE OF media_id, asset_type_id, duration_seconds ON media_assets
+        WHEN (SELECT code FROM asset_types WHERE asset_type_id = NEW.asset_type_id) = 'full'
+          AND EXISTS (
+            SELECT 1
+            FROM media_items
+            JOIN media_types USING (media_type_id)
+            WHERE media_items.media_id = NEW.media_id AND media_types.code = 'photo'
+          )
           AND NEW.duration_seconds IS NOT NULL
         BEGIN
-          SELECT RAISE(ABORT, 'photo rows must not have duration_seconds');
+          SELECT RAISE(ABORT, 'photo full assets must not have duration_seconds');
         END;
 
-        CREATE TRIGGER media_items_video_duration_insert
-        BEFORE INSERT ON media_items
-        WHEN (SELECT code FROM media_types WHERE media_type_id = NEW.media_type_id) = 'video'
+        CREATE TRIGGER media_assets_full_video_duration_insert
+        BEFORE INSERT ON media_assets
+        WHEN (SELECT code FROM asset_types WHERE asset_type_id = NEW.asset_type_id) = 'full'
+          AND EXISTS (
+            SELECT 1
+            FROM media_items
+            JOIN media_types USING (media_type_id)
+            WHERE media_items.media_id = NEW.media_id AND media_types.code = 'video'
+          )
           AND (NEW.duration_seconds IS NULL OR NEW.duration_seconds <= 0)
         BEGIN
-          SELECT RAISE(ABORT, 'video rows require positive duration_seconds');
+          SELECT RAISE(ABORT, 'video full assets require positive duration_seconds');
         END;
 
-        CREATE TRIGGER media_items_video_duration_update
-        BEFORE UPDATE OF media_type_id, duration_seconds ON media_items
-        WHEN (SELECT code FROM media_types WHERE media_type_id = NEW.media_type_id) = 'video'
+        CREATE TRIGGER media_assets_full_video_duration_update
+        BEFORE UPDATE OF media_id, asset_type_id, duration_seconds ON media_assets
+        WHEN (SELECT code FROM asset_types WHERE asset_type_id = NEW.asset_type_id) = 'full'
+          AND EXISTS (
+            SELECT 1
+            FROM media_items
+            JOIN media_types USING (media_type_id)
+            WHERE media_items.media_id = NEW.media_id AND media_types.code = 'video'
+          )
           AND (NEW.duration_seconds IS NULL OR NEW.duration_seconds <= 0)
         BEGIN
-          SELECT RAISE(ABORT, 'video rows require positive duration_seconds');
+          SELECT RAISE(ABORT, 'video full assets require positive duration_seconds');
         END;
 
         CREATE TRIGGER media_assets_photo_detail_preview_insert
@@ -525,6 +562,19 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
     source_origin_id = {code: row_id for row_id, code in source_origins}
     format_id = {code: row_id for row_id, code in FORMATS}
     asset_type_id = {code: row_id for row_id, code in ASSET_TYPES}
+    source_paths = sorted({
+        str(source_file(photo).get("path") or "").strip()
+        for *_prefix, photo in photos
+        if str(source_file(photo).get("path") or "").strip()
+    })
+    source_file_id = {path: index for index, path in enumerate(source_paths, start=1)}
+    source_folders = sorted({split_source_path(path)[0] for path in source_paths})
+    source_folder_id = {folder: index for index, folder in enumerate(source_folders, start=1)}
+    source_format_by_path: dict[str, str] = {}
+    for *_prefix, photo in photos:
+        path = str(source_file(photo).get("path") or "").strip()
+        if path and path not in source_format_by_path:
+            source_format_by_path[path] = original_format(photo)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(prefix=output.name, suffix=".tmp", dir=output.parent, delete=False) as temp:
@@ -680,6 +730,22 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
             "INSERT INTO keyword_terms VALUES (?, ?)",
             [(keyword_id[name], name) for name in keyword_names],
         )
+        conn.executemany(
+            "INSERT INTO source_folders VALUES (?, ?)",
+            [(source_folder_id[folder], folder) for folder in source_folders],
+        )
+        conn.executemany(
+            "INSERT INTO source_files VALUES (?, ?, ?, ?)",
+            [
+                (
+                    source_file_id[path],
+                    source_folder_id[split_source_path(path)[0]],
+                    split_source_path(path)[1],
+                    format_id[source_format_by_path[path]],
+                )
+                for path in source_paths
+            ],
+        )
 
         media_rows = []
         asset_rows = []
@@ -722,6 +788,10 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
             if not location and slug != "ai":
                 location = collection.get("title") or None
             source = source_file(photo)
+            source_path = str(source.get("path") or "").strip()
+            if not source_path:
+                errors.append(f"{photo_id}: missing source path")
+                continue
             media_rows.append(
                 {
                     "media_id": photo_id,
@@ -734,15 +804,10 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
                     "description": None,
                     "keyword_ids": keyword_ids or None,
                     "source_origin_id": source_origin_id.get(source_origin or ""),
-                    "width": width,
-                    "height": height,
-                    "duration_seconds": duration_seconds,
                     "captured_at": captured_at(photo),
                     "exposure": metadata_value(photo, "Exposure") or None,
                     "focal_length": metadata_value(photo, "Focal length") or None,
-                    "original_file": original_file(photo) or None,
-                    "source_path": source.get("path") or None,
-                    "original_format_id": format_id[fmt],
+                    "source_file_id": source_file_id[source_path],
                     "location": location or None,
                     "gps_latitude": None,
                     "gps_longitude": None,
@@ -755,7 +820,7 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
 
             source_bytes = source.get("bytes")
             full_bytes = int(source_bytes) if isinstance(source_bytes, int) or str(source_bytes).isdigit() else None
-            asset_rows.append((photo_id, asset_type_id["full"], width, height, None, full_bytes, format_id[fmt]))
+            asset_rows.append((photo_id, asset_type_id["full"], width, height, duration_seconds, full_bytes, format_id[fmt]))
             gallery_width, gallery_height = scale_to_max(width, height, 900)
             asset_rows.append((photo_id, asset_type_id["still_900"], gallery_width, gallery_height, None, None, format_id["jpg"]))
             asset_codes_by_photo.setdefault(photo_id, set()).add("still_900")
@@ -787,16 +852,12 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
             """
             INSERT INTO media_items (
               media_id, collection_id, sort_index, media_type_id, camera_id, lens_id, title,
-              description, keyword_ids, source_origin_id, width, height,
-              duration_seconds, captured_at, exposure, focal_length, original_file,
-              source_path, original_format_id, location, gps_latitude, gps_longitude, created_at,
-              updated_at
+              description, keyword_ids, source_origin_id, captured_at, exposure, focal_length,
+              source_file_id, location, gps_latitude, gps_longitude, created_at, updated_at
             ) VALUES (
               :media_id, :collection_id, :sort_index, :media_type_id, :camera_id, :lens_id, :title,
-              :description, :keyword_ids, :source_origin_id, :width, :height,
-              :duration_seconds, :captured_at, :exposure, :focal_length, :original_file,
-              :source_path, :original_format_id, :location, :gps_latitude, :gps_longitude, :created_at,
-              :updated_at
+              :description, :keyword_ids, :source_origin_id, :captured_at, :exposure, :focal_length,
+              :source_file_id, :location, :gps_latitude, :gps_longitude, :created_at, :updated_at
             )
             """,
             media_rows,
@@ -823,6 +884,8 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
                 "source_origins",
                 "formats",
                 "asset_types",
+                "source_folders",
+                "source_files",
                 "price_tiers",
                 "products",
                 "product_prices",

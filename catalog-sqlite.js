@@ -286,8 +286,9 @@
     add("Lens", context.lens);
     add("Exposure", item.exposure);
     add("Focal length", item.focal_length);
-    add("Original file", item.original_file);
-    add("Original size", `${originalFormat} / ${item.width} x ${item.height} / ${roundMegapixels(item.width, item.height)} MP`);
+    const originalFile = String(context.sourceFile?.filename || "");
+    add("Original file", originalFile);
+    if (fullAsset) add("Original size", `${originalFormat} / ${fullAsset.width} x ${fullAsset.height} / ${roundMegapixels(fullAsset.width, fullAsset.height)} MP`);
     if (item.location) add("Location", item.location);
     if (detailAsset) {
       add(
@@ -295,7 +296,7 @@
         `${mediaKey(item.media_id, context.assetCodeById.get(Number(detailAsset.asset_type_id)), context.mediaType).split("/").pop()} / ${detailAsset.width} x ${detailAsset.height} / ${formatDisplay(context.formatById.get(Number(detailAsset.format_id)))}`,
       );
     } else if (fullAsset) {
-      add("Preview file", `${item.media_id}_900.jpg / ${item.width} x ${item.height} / ${originalFormat}`);
+      add("Preview file", `${item.media_id}_900.jpg / ${fullAsset.width} x ${fullAsset.height} / ${originalFormat}`);
     }
     return rows;
   };
@@ -311,6 +312,8 @@
     const formats = mapBy(reader.table(roots, "formats", ["format_id", "extension"]), "format_id", "extension");
     const assetTypes = mapBy(reader.table(roots, "asset_types", ["asset_type_id", "code"]), "asset_type_id", "code");
     const keywordTerms = mapBy(reader.table(roots, "keyword_terms", ["keyword_id", "keyword"]), "keyword_id", "keyword");
+    const sourceFolders = mapBy(reader.table(roots, "source_folders", ["source_folder_id", "source_folder"]), "source_folder_id");
+    const sourceFiles = mapBy(reader.table(roots, "source_files", ["source_file_id", "source_folder_id", "filename", "format_id"]), "source_file_id");
     const priceTiers = reader.table(roots, "price_tiers", ["price_tier_id", "label", "sort_order"], "index");
     const products = reader.table(roots, "products", [
       "product_id",
@@ -348,15 +351,10 @@
       "description",
       "keyword_ids",
       "source_origin_id",
-      "width",
-      "height",
-      "duration_seconds",
       "captured_at",
       "exposure",
       "focal_length",
-      "original_file",
-      "source_path",
-      "original_format_id",
+      "source_file_id",
       "location",
       "gps_latitude",
       "gps_longitude",
@@ -464,12 +462,15 @@
       if (!target) continue;
       const mediaType = mediaTypes.get(Number(item.media_type_id)) || "photo";
       const sourceOrigin = sourceOrigins.get(Number(item.source_origin_id)) || "";
-      const originalFormat = formats.get(Number(item.original_format_id)) || "jpg";
       const assets = assetsByMediaId.get(String(item.media_id || "")) || {};
+      const sourceFile = sourceFiles.get(Number(item.source_file_id));
+      const sourceFolder = sourceFolders.get(Number(sourceFile?.source_folder_id));
+      const sourcePath = [String(sourceFolder?.source_folder || ""), String(sourceFile?.filename || "")].filter(Boolean).join("/");
+      const fullAsset = assets.full;
+      const originalFormat = formats.get(Number(fullAsset?.format_id || sourceFile?.format_id)) || "jpg";
       const keywordList = keywordsFor(item.keyword_ids, keywordTerms);
       const galleryAsset = assets.still_900;
       const detailAsset = mediaType === "video" ? assets.short_5s_720p : assets.still_1800;
-      const fullAsset = assets.full;
       const sortIndex = Number(item.sort_index || 0);
       sortIndexByMediaId.set(String(item.media_id || ""), sortIndex);
       const location = String(item.location || "");
@@ -490,7 +491,7 @@
         title: String(item.title || item.media_id || ""),
         caption,
         full: `${sourceType(originalFormat)} master`,
-        megapixels: roundMegapixels(item.width, item.height),
+        megapixels: roundMegapixels(fullAsset?.width, fullAsset?.height),
         sourceOrigin,
         pricingTier: sourceOrigin === "ai" ? "ai" : "original",
         gallerySrc: "",
@@ -502,6 +503,8 @@
           lens: lenses.get(Number(item.lens_id)) || "",
           mediaType,
           originalFormat,
+          sourceFile,
+          sourceFolder,
           formatById: formats,
           keywords: keywordList,
         }),
@@ -512,7 +515,7 @@
         },
         sourceFiles: [
           {
-            path: String(item.source_path || item.original_file || ""),
+            path: sourcePath,
             type: sourceType(originalFormat),
             bytes: Number(fullAsset?.bytes || 0),
           },
@@ -520,7 +523,7 @@
         keywords: keywordList,
       };
       if (mediaType === "video") {
-        photo.duration = Number(item.duration_seconds || detailAsset?.duration_seconds || 0);
+        photo.duration = Number(fullAsset?.duration_seconds || detailAsset?.duration_seconds || 0);
         photo.media.video = { duration: photo.duration };
       }
       if (!galleryAsset) photo.media.publicPreview.galleryMissing = true;

@@ -1,6 +1,6 @@
 # SQLite Catalog And Owner State
 
-Date: 2026-05-16
+Date: 2026-05-17
 
 PhotosByElie is moving toward two SQLite files with different trust boundaries:
 
@@ -16,8 +16,12 @@ rule is:
 
 - keep stable external identities as text, especially `media_id`, because it
   drives URLs and R2 key conventions;
-- keep descriptive/free-text fields in place, such as `title`, `description`,
-  `exposure`, `focal_length`, `original_file`, and `location`;
+- keep descriptive/free-text media fields in place, such as `title`,
+  `description`, `exposure`, `focal_length`, and `location`;
+- store original source provenance through `source_folders` and `source_files`,
+  with `media_items.source_file_id` pointing to the original file record;
+- store original dimensions, duration, bytes, and format on the `full`
+  `media_assets` row instead of duplicating those facts in `media_items`;
 - store controlled/repeated values as short integer references into lookup
   tables;
 - store a media item's keywords as a comma-separated list of short integer
@@ -34,6 +38,8 @@ source_origins
 formats
 asset_types
 keyword_terms
+source_folders
+source_files
 media_items
 media_assets
 price_tiers
@@ -56,6 +62,8 @@ source_origins:  2
 formats:         6
 asset_types:     7
 keyword_terms:   3,112
+source_folders:  128
+source_files:    5,827
 media_items:     5,827
 media_assets:    34,962
 price_tiers:     2
@@ -70,9 +78,9 @@ video_tiers:     5
 Size check from the compact-id rebuild:
 
 ```text
-Raw SQLite:         7.4 MiB
-SQLite gzip -9:     0.93 MiB
-SQLite brotli -11:  0.49 MiB
+Raw SQLite:         6.6 MiB
+SQLite gzip -9:     1.04 MiB
+SQLite brotli -11:  0.50 MiB
 Current TSV gzip:   0.55 MiB
 ```
 
@@ -167,6 +175,25 @@ CREATE TABLE keyword_terms (
 ```
 
 ```sql
+CREATE TABLE source_folders (
+  source_folder_id INTEGER PRIMARY KEY,
+  source_folder    TEXT NOT NULL UNIQUE
+);
+```
+
+```sql
+CREATE TABLE source_files (
+  source_file_id   INTEGER PRIMARY KEY,
+  source_folder_id INTEGER NOT NULL,
+  filename         TEXT NOT NULL CHECK (trim(filename) <> ''),
+  format_id        INTEGER NOT NULL,
+
+  FOREIGN KEY (source_folder_id) REFERENCES source_folders(source_folder_id),
+  FOREIGN KEY (format_id) REFERENCES formats(format_id)
+);
+```
+
+```sql
 CREATE TABLE price_tiers (
   price_tier_id  TEXT PRIMARY KEY CHECK (trim(price_tier_id) <> ''),
   label          TEXT NOT NULL CHECK (trim(label) <> ''),
@@ -254,15 +281,10 @@ CREATE TABLE media_items (
   description         TEXT,
   keyword_ids         TEXT,
   source_origin_id    INTEGER,
-  width               INTEGER NOT NULL CHECK (width > 0),
-  height              INTEGER NOT NULL CHECK (height > 0),
-  duration_seconds    REAL,
   captured_at         TEXT,
   exposure            TEXT,
   focal_length        TEXT,
-  original_file       TEXT,
-  source_path         TEXT,
-  original_format_id INTEGER NOT NULL,
+  source_file_id      INTEGER NOT NULL,
   location            TEXT,
   gps_latitude        REAL CHECK (gps_latitude IS NULL OR gps_latitude BETWEEN -90 AND 90),
   gps_longitude       REAL CHECK (gps_longitude IS NULL OR gps_longitude BETWEEN -180 AND 180),
@@ -274,7 +296,7 @@ CREATE TABLE media_items (
   FOREIGN KEY (camera_id) REFERENCES cameras(camera_id),
   FOREIGN KEY (lens_id) REFERENCES lenses(lens_id),
   FOREIGN KEY (source_origin_id) REFERENCES source_origins(source_origin_id),
-  FOREIGN KEY (original_format_id) REFERENCES formats(format_id),
+  FOREIGN KEY (source_file_id) REFERENCES source_files(source_file_id),
   CHECK (
     (gps_latitude IS NULL AND gps_longitude IS NULL)
     OR
@@ -313,20 +335,26 @@ title:               IMG 1219
 description:         null
 keyword_ids:         1583
 source_origin_id:    1
-width:               4284
-height:              5712
-duration_seconds:    null
 captured_at:         2025-05-12T18:37:28
 exposure:            1/731, f/1.6, ISO 50
 focal_length:        6.0 mm / 26 mm equivalent
-original_file:       IMG_1219.jpeg
-source_path:         2025 Cordoba, la Mezquita/IMG_1219.jpeg
-original_format_id:  1
+source_file_id:      42
 location:            Italy
 gps_latitude:        null
 gps_longitude:       null
 created_at:          null
 updated_at:          null
+```
+
+The original file facts are reconstructed by joining through `source_files`,
+`source_folders`, and the `full` `media_assets` row:
+
+```text
+source_folders.source_folder: 2025 Cordoba, la Mezquita
+source_files.filename:        IMG_1219.jpeg
+source_files.format_id:       1
+media_assets(full).width:     4284
+media_assets(full).height:    5712
 ```
 
 ```sql

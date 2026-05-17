@@ -327,6 +327,12 @@
 
   const syncFileActionLabels = () => {
     const canPickSaveLocation = typeof window.showSaveFilePicker === "function";
+    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
+      button.textContent = canPickSaveLocation ? "Save project PDFs..." : "Download project PDFs";
+      button.title = canPickSaveLocation
+        ? "Choose where to save each project PDF"
+        : "Browser will save project PDFs to Downloads";
+    });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = canPickSaveLocation ? "Save selection file..." : "Save to Downloads";
       button.title = canPickSaveLocation
@@ -572,19 +578,38 @@
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
 
-  const saveBlob = async (blob, filename, description = "Selection file") => {
+  const saveBlob = async (blob, filename, options = {}) => {
+    const config = typeof options === "string" ? { description: options } : options;
+    const description = config.description || "File";
+    const mimeType = config.mimeType || blob.type || "application/octet-stream";
+    const extensions = Array.isArray(config.extensions) ? config.extensions : [];
     if (window.showSaveFilePicker) {
-      const handle = await window.showSaveFilePicker({
+      const pickerOptions = {
         suggestedName: filename,
-        types: [{
+      };
+      if (extensions.length) {
+        pickerOptions.types = [{
           description,
-          accept: { "application/json": [".json"] },
-        }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return { filename: handle.name || filename, pickedLocation: true };
+          accept: { [mimeType]: extensions },
+        }];
+      }
+      const handle = await window.showSaveFilePicker(pickerOptions);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const writable = await handle.createWritable({ keepExistingData: false });
+      try {
+        await writable.write({ type: "write", position: 0, data: bytes });
+        await writable.truncate(bytes.byteLength);
+        await writable.close();
+      } catch (error) {
+        await writable.abort?.();
+        throw error;
+      }
+      const savedFile = typeof handle.getFile === "function" ? await handle.getFile() : null;
+      const savedSize = Number(savedFile?.size ?? bytes.byteLength);
+      if (savedSize !== bytes.byteLength) {
+        throw new Error(`Saved file is ${savedSize} bytes; expected ${bytes.byteLength}`);
+      }
+      return { filename: handle.name || filename, pickedLocation: true, bytes: savedSize };
     }
     triggerDownload(blob, filename);
     return { filename, pickedLocation: false };
@@ -596,7 +621,11 @@
     const blob = new Blob([JSON.stringify(batch, null, 2) + "\n"], { type: "application/json" });
     const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`;
     try {
-      const saved = await saveBlob(blob, filename, "Photos By Elie selection file");
+      const saved = await saveBlob(blob, filename, {
+        description: "Photos By Elie selection file",
+        mimeType: "application/json",
+        extensions: [".json"],
+      });
       setStatus(saved.pickedLocation ? `Saved to chosen location: ${saved.filename}` : `Saved to Downloads: ${saved.filename}`);
     } catch (error) {
       setStatus(error?.name === "AbortError" ? "Save canceled" : "Selection file could not be saved");
@@ -809,17 +838,29 @@
     const paper = paperFormatFor();
     state.pdfBusy = true;
     setStatus(`Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} photos...`);
+    let savedProjectCount = 0;
     try {
       for (const project of projects) {
         const blob = buildPdfBlob(await fetchPdfImages(project.photos));
-        triggerDownload(
-          blob,
-          `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`
-        );
+        const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
+        const saved = await saveBlob(blob, filename, {
+          description: "Photos By Elie project PDF",
+          mimeType: "application/pdf",
+          extensions: [".pdf"],
+        });
+        savedProjectCount += 1;
+        setStatus(saved.pickedLocation ? `Saved ${saved.filename}` : `Saved to Downloads: ${saved.filename}`);
       }
-      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
+      const action = typeof window.showSaveFilePicker === "function" ? "Saved" : "Downloaded";
+      setStatus(`${action} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
     } catch (error) {
-      setStatus(error?.message || "PDF download failed");
+      if (error?.name === "AbortError") {
+        setStatus(savedProjectCount
+          ? `Save canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
+          : "PDF save canceled");
+      } else {
+        setStatus(error?.message || "PDF save failed");
+      }
     } finally {
       state.pdfBusy = false;
     }

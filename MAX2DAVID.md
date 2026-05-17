@@ -20,6 +20,14 @@ git pull --ff-only origin main
 - Push successful commits to `main`.
 - Record what happened in `DAVID2MAX.md`.
 
+## 2026-05-17 Install Max Instruction Poller
+
+Prompt for David:
+
+```text
+In /Users/ecohen/Dev/PhotosByElie, pull latest main, read docs/sops/MAX_DAVID_SYNC_SOP.md and HANDOFF.md, then run zsh scripts/install_david_instruction_poll.zsh. Confirm in DAVID2MAX.md that the LaunchAgent was installed, the poll log exists, and David will poll GitHub/MAX2DAVID.md at the top of every minute. Do not change Owner.sqlite during this acknowledgement.
+```
+
 ## 2026-05-13 R2-Only Preview Cleanup
 
 Prompt for David:

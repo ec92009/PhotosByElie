@@ -2,6 +2,12 @@
 
 Use this when moving work between Max, David, or the laptop.
 
+For ignored Owner DB state and other sensitive Max/David handoffs, follow
+[`docs/sops/MAX_DAVID_SYNC_SOP.md`](./docs/sops/MAX_DAVID_SYNC_SOP.md).
+GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
+snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
+for remote execution.
+
 ## Handoff Direction
 
 - If `hostname` or ComputerName starts with `David`, read `MAX2DAVID.md` as inbound instructions and write outbound notes for Max in `DAVID2MAX.md`.

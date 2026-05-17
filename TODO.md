@@ -1,6 +1,6 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Current Facts
 
@@ -109,37 +109,43 @@ Last updated: 2026-05-16
     - Update `media-config.js`.
     - Retest GitHub Pages gallery/detail/basket/liked preview loading.
 
-19. **Extend Owner operations dashboard.**
+19. **Create private customer collections for Real Estate and Wedding/Events.**
+    - Add password-locked collection pages for customer-delivered Real Estate Photos and Wedding/Events Photos.
+    - Keep private collection access separate from public country/AI galleries and search.
+    - Decide where passwords and access metadata live, ideally Worker/D1 or another server-side store rather than public static files.
+    - Preserve buyer-facing commerce paths where appropriate while preventing unauthenticated preview or asset discovery.
+
+20. **Extend Owner operations dashboard.**
     - Surface catalog counts, private delivery coverage, discarded tombstones, Waste Basket state, active sweep status, and latest automation result.
     - Keep destructive R2 actions legible and confirmable.
     - Show progress in terms of actual deletion/repair counts.
 
-20. **Add Owner state-table browser.**
+21. **Add Owner state-table browser.**
     - Browse public/Owner state tables in a localhost-only UI.
     - Support table switching, filters, quick search, sorting, row counts, and copy/export.
     - Add photo-aware jumps to public detail, Owner detail, collection, and R2 keys.
 
-21. **Make country collections open-ended.**
+22. **Make country collections open-ended.**
     - Stop treating countries as a fixed list.
     - Let Owner create new countries from Unknown assignment with `Other...`.
     - Generate collection metadata, slug, translations, route data, and homepage entries safely.
 
-22. **Add gallery multi-select Owner metadata edits.**
+23. **Add gallery multi-select Owner metadata edits.**
     - Support shift range and command toggles.
     - Batch-add keywords without replacing existing keywords.
     - Design batch title behavior carefully before implementation.
     - Persist through manifest/DB Owner metadata paths without rewriting media files.
 
-23. **Harden Owner identity and naming.**
+24. **Harden Owner identity and naming.**
     - Keep localhost helper boundaries for now.
     - Decide whether production Owner needs Cloudflare Access or Worker-backed login.
     - Rename auth-like files if they are really helper-availability checks.
 
-24. **Add frontend smoke tests for buyer paths.**
+25. **Add frontend smoke tests for buyer paths.**
     - Cover search/filter, detail open, like, add to basket, basket view, checkout draft, and embedded-browser escape.
     - Include mobile header behavior for gallery, detail, liked, and basket.
 
-25. **Keep repo/media cleanup deliberate.**
+26. **Keep repo/media cleanup deliberate.**
     - Do not use GitHub as a media vault.
     - Keep source metadata edits non-destructive.
     - Keep root HTML while GitHub Pages serves from repo root.

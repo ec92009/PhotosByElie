@@ -409,6 +409,14 @@ Run it only after confirming no public/private R2 upload lane is active. The scr
 
 `sync_local_assets.py` moves ignored local review state between the David and Max checkouts. It syncs Hidden JSON state and `.review-logs` by default. The disposable import cache under `tmp/import-cache` should be rebuilt or uploaded, not handed off through Git. The tracked public metadata should normally move through Git.
 
+For `assets/owner-actions/Owner.sqlite`, prefer the R2 snapshot workflow in `docs/sops/MAX_DAVID_SYNC_SOP.md`: create a SQLite `.backup`, gzip it, upload it to private R2, then download and restore on the destination machine after verifying SHA-256 and `PRAGMA integrity_check`. Do not commit `Owner.sqlite` or copy a live DB file directly.
+
+David can install a LaunchAgent that polls GitHub for fresh `MAX2DAVID.md` instructions at the top of every minute:
+
+```bash
+zsh scripts/install_david_instruction_poll.zsh
+```
+
 The script can run from either computer. Pass a known peer name when that machine is mounted, or pass an explicit repo path:
 
 ```bash

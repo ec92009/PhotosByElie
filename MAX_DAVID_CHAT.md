@@ -11,3 +11,5 @@ Do not put secrets, private client data, signed URLs, or private media paths her
 ## Chat
 
 Max: just reply hello if you get this
+David: hello
+David: got it

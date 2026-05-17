@@ -1758,10 +1758,11 @@ body[data-real-estate] main.shell{
 }
 .real-estate-hero{
   display:grid;
-  grid-template-columns:minmax(280px,.78fr) minmax(320px,1fr);
-  align-items:center;
-  gap:clamp(22px,4vw,60px);
-  min-height:clamp(360px,calc(74dvh - var(--fixed-header-offset,86px)),640px);
+  grid-template-columns:minmax(0,1fr);
+  align-items:start;
+  gap:20px;
+  min-height:0;
+  padding-block:clamp(30px,7dvh,64px);
   padding-inline:max(var(--panel-inline),var(--page-gutter));
   background:
     linear-gradient(130deg,color-mix(in srgb,var(--re-accent) 13%,transparent),transparent 48%),
@@ -1771,10 +1772,11 @@ body[data-real-estate] main.shell{
   display:grid;
   gap:14px;
   align-content:center;
+  max-width:900px;
 }
 .real-estate-hero h1{
-  max-width:10ch;
-  font-size:clamp(2.7rem,6.4vw,6.2rem);
+  max-width:14ch;
+  font-size:clamp(2.7rem,5.4vw,5.8rem);
   line-height:.92;
 }
 .real-estate-stats{
@@ -1800,57 +1802,6 @@ body[data-real-estate] main.shell{
   font-size:clamp(1.45rem,2.6vw,2.2rem);
   font-weight:850;
   line-height:1;
-}
-.real-estate-hero-preview{
-  position:relative;
-  min-height:clamp(300px,42vw,580px);
-}
-.real-estate-hero-tile{
-  position:absolute;
-  display:block;
-  overflow:hidden;
-  border:1px solid color-mix(in srgb,var(--line) 88%,transparent);
-  background:var(--surface);
-  color:inherit;
-  cursor:pointer;
-  padding:0;
-  box-shadow:0 18px 46px rgba(0,0,0,.18);
-}
-.real-estate-hero-tile img{
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-.real-estate-hero-tile span{
-  position:absolute;
-  left:10px;
-  bottom:10px;
-  z-index:2;
-  max-width:calc(100% - 20px);
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.45);
-  background:rgba(0,0,0,.58);
-  color:#fff;
-  padding:5px 8px;
-  font-size:.72rem;
-  font-weight:850;
-  letter-spacing:.06em;
-  text-overflow:ellipsis;
-  text-transform:uppercase;
-  white-space:nowrap;
-}
-.real-estate-hero-tile.tile-1{
-  inset:4% 20% 22% 0;
-}
-.real-estate-hero-tile.tile-2{
-  inset:0 0 56% 54%;
-}
-.real-estate-hero-tile.tile-3{
-  inset:52% 48% 0 8%;
-}
-.real-estate-hero-tile.tile-4{
-  inset:39% 4% 6% 46%;
 }
 .real-estate-workbench{
   display:grid;
@@ -2011,11 +1962,18 @@ body[data-real-estate] main.shell{
   border-color:color-mix(in srgb,var(--re-positive) 78%,var(--line));
   box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--re-positive) 58%,transparent);
 }
+.real-estate-photo-media-shell{
+  position:relative;
+  width:100%;
+  aspect-ratio:3 / 2;
+  overflow:hidden;
+  background:var(--surface-2);
+}
 .real-estate-photo-media{
   position:relative;
   display:block;
   width:100%;
-  aspect-ratio:3 / 2;
+  height:100%;
   overflow:hidden;
   border:0;
   background:var(--surface-2);
@@ -2037,7 +1995,7 @@ body[data-real-estate] main.shell{
   position:absolute;
   left:8px;
   bottom:8px;
-  max-width:calc(100% - 16px);
+  max-width:calc(100% - 116px);
   overflow:hidden;
   background:rgba(0,0,0,.58);
   color:#fff;
@@ -2048,6 +2006,35 @@ body[data-real-estate] main.shell{
   text-overflow:ellipsis;
   text-transform:uppercase;
   white-space:nowrap;
+}
+.real-estate-photo-select{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:2;
+  width:auto;
+  max-width:108px;
+  min-height:31px;
+  padding:5px 7px 5px 6px;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:6px;
+  background:rgba(0,0,0,.62);
+  color:#fff!important;
+  cursor:pointer;
+  font-size:.7rem!important;
+  font-weight:850;
+  letter-spacing:.04em!important;
+  text-transform:uppercase!important;
+  box-shadow:0 8px 18px rgba(0,0,0,.22);
+}
+.real-estate-photo-select input{
+  width:18px!important;
+  min-height:18px!important;
+  height:18px;
+}
+.real-estate-photo-card.is-selected .real-estate-photo-select{
+  background:color-mix(in srgb,var(--re-positive) 82%,rgba(0,0,0,.45));
+  border-color:rgba(255,255,255,.55);
 }
 .real-estate-photo-card-body{
   display:grid;
@@ -4134,16 +4121,12 @@ html[data-theme="light"] .detail-preview.has-image::after{
 }
 @media (max-width:980px){
   .real-estate-hero{
-    grid-template-columns:1fr;
     min-height:0;
     padding-block:clamp(32px,7dvh,56px);
   }
   .real-estate-hero h1{
     max-width:12ch;
     font-size:clamp(2.4rem,12vw,4.9rem);
-  }
-  .real-estate-hero-preview{
-    min-height:clamp(240px,58vw,430px);
   }
   .real-estate-workbench{
     grid-template-columns:1fr;
@@ -4176,22 +4159,6 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .real-estate-stats,
   .real-estate-sidebar{
     grid-template-columns:1fr;
-  }
-  .real-estate-hero-preview{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:8px;
-    min-height:0;
-  }
-  .real-estate-hero-tile,
-  .real-estate-hero-tile.tile-1,
-  .real-estate-hero-tile.tile-2,
-  .real-estate-hero-tile.tile-3,
-  .real-estate-hero-tile.tile-4{
-    position:relative;
-    inset:auto;
-    aspect-ratio:3 / 2;
-    box-shadow:none;
   }
   .real-estate-gallery-toolbar{
     display:grid;

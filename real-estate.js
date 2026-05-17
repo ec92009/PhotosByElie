@@ -25,7 +25,6 @@
     total: app.querySelector("[data-re-total]"),
     albumTotal: app.querySelector("[data-re-album-total]"),
     selectedTotal: app.querySelector("[data-re-selected-total]"),
-    heroPreview: app.querySelector("[data-re-hero-preview]"),
     albums: app.querySelector("[data-re-albums]"),
     filterForm: app.querySelector("[data-re-filter-form]"),
     search: app.querySelector("[data-re-search]"),
@@ -259,17 +258,6 @@
     if (elements.description) elements.description.textContent = gallery?.description || "Private photo review workspace for property PDF delivery.";
     if (elements.total) elements.total.textContent = String(photos.length);
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
-    if (!elements.heroPreview) return;
-    const heroPhotos = albums.flatMap((album) => {
-      const albumPhotos = photos.filter((photo) => photo.albumSlug === album.slug);
-      return [albumPhotos[0], albumPhotos[Math.floor(albumPhotos.length / 2)]].filter(Boolean);
-    }).slice(0, 4);
-    elements.heroPreview.innerHTML = heroPhotos.map((photo, index) => `
-      <button class="real-estate-hero-tile tile-${index + 1}" type="button" data-open-photo="${escapeHtml(photo.id)}">
-        <img src="${escapeHtml(imageFor(photo, index === 0 ? "detail" : "gallery"))}" alt="${escapeHtml(titleFor(photo))}"/>
-        <span>${escapeHtml(albumTitleFor(photo))}</span>
-      </button>
-    `).join("");
   };
 
   const albumSelectedCount = (slug) => state.photos
@@ -301,18 +289,19 @@
       const selected = state.selectedIds.has(photo.id);
       return `
         <article class="real-estate-photo-card ${selected ? "is-selected" : ""}" data-photo-id="${escapeHtml(photo.id)}">
-          <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
-            <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
-            <span>${escapeHtml(albumTitleFor(photo))}</span>
-          </button>
-          <div class="real-estate-photo-card-body">
-            <label class="real-estate-check">
-              <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" ${selected ? "checked" : ""}/>
+          <div class="real-estate-photo-media-shell">
+            <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
+              <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
+              <span>${escapeHtml(albumTitleFor(photo))}</span>
+            </button>
+            <label class="real-estate-check real-estate-photo-select">
+              <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))} for PDF" ${selected ? "checked" : ""}/>
               <span>Select</span>
             </label>
+          </div>
+          <div class="real-estate-photo-card-body">
             <label class="real-estate-title-field">
-              <span>PDF title</span>
-              <input type="text" data-title-photo="${escapeHtml(photo.id)}" value="${escapeHtml(titleFor(photo))}"/>
+              <input type="text" data-title-photo="${escapeHtml(photo.id)}" aria-label="PDF title for ${escapeHtml(titleFor(photo))}" value="${escapeHtml(titleFor(photo))}"/>
             </label>
           </div>
         </article>

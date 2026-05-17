@@ -2083,6 +2083,9 @@ body[data-real-estate] main.shell{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.real-estate-hidden-file{
+  display:none!important;
+}
 .real-estate-draft-item{
   position:relative;
   display:grid;

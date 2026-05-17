@@ -278,7 +278,24 @@
 
   const setStatus = (message) => {
     if (elements.status) elements.status.textContent = message;
-    if (elements.actionStatus) elements.actionStatus.textContent = message;
+    if (elements.actionStatus) {
+      elements.actionStatus.textContent = message;
+      elements.actionStatus.title = message;
+    }
+  };
+
+  const syncFileActionLabels = () => {
+    const canPickSaveLocation = typeof window.showSaveFilePicker === "function";
+    document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
+      button.textContent = canPickSaveLocation ? "Save selection file..." : "Save to Downloads";
+      button.title = canPickSaveLocation
+        ? "Choose where to save the selection JSON file"
+        : "Browser will save the selection JSON file to Downloads";
+    });
+    document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
+      button.textContent = "Load selection file...";
+      button.title = "Open a saved selection JSON file";
+    });
   };
 
   const renderHero = () => {
@@ -384,6 +401,7 @@
     renderAlbums();
     renderGrid();
     renderDraft();
+    syncFileActionLabels();
     window.photosByElieVersionInternalLinks?.(app);
   };
 
@@ -489,7 +507,7 @@
       await navigator.clipboard.writeText(batch);
       setStatus(`Copied ${manifest.projects.length} project selection list${manifest.projects.length === 1 ? "" : "s"}`);
     } catch {
-      setStatus("Clipboard unavailable; use Download selection file");
+      setStatus("Clipboard unavailable; use Save selection file...");
     }
   };
 
@@ -503,12 +521,35 @@
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
 
-  const downloadBatch = () => {
+  const saveBlob = async (blob, filename, description = "Selection file") => {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description,
+          accept: { "application/json": [".json"] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return { filename: handle.name || filename, pickedLocation: true };
+    }
+    triggerDownload(blob, filename);
+    return { filename, pickedLocation: false };
+  };
+
+  const downloadBatch = async () => {
     if (!requireUnlocked()) return;
     const batch = buildBatchManifest();
     const blob = new Blob([JSON.stringify(batch, null, 2) + "\n"], { type: "application/json" });
-    triggerDownload(blob, `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`);
-    setStatus(`Downloaded selection file for ${batch.projects.length} project${batch.projects.length === 1 ? "" : "s"}`);
+    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`;
+    try {
+      const saved = await saveBlob(blob, filename, "Photos By Elie selection file");
+      setStatus(saved.pickedLocation ? `Saved to chosen location: ${saved.filename}` : `Saved to Downloads: ${saved.filename}`);
+    } catch (error) {
+      setStatus(error?.name === "AbortError" ? "Save canceled" : "Selection file could not be saved");
+    }
   };
 
   const pdfEscape = (value) => String(value || "")
@@ -768,6 +809,27 @@
     setStatus(`Loaded ${state.selectedOrder.length} selected photos across ${projectGroupsFor(selectedPhotos()).length} projects`);
   };
 
+  const openBatchFile = async () => {
+    if (!requireUnlocked()) return;
+    if (window.showOpenFilePicker) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{
+            description: "Photos By Elie selection file",
+            accept: { "application/json": [".json"] },
+          }],
+        });
+        if (handle) await loadBatchFile(await handle.getFile());
+      } catch (error) {
+        setStatus(error?.name === "AbortError" ? "Open canceled" : "Selection file could not be loaded");
+      }
+      return;
+    }
+    const input = document.querySelector("[data-re-load-batch-input]");
+    if (input) input.click();
+  };
+
   const bindEvents = () => {
     elements.loginCodeToggle?.addEventListener("click", () => {
       if (!elements.loginCode) return;
@@ -861,8 +923,13 @@
     });
 
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
-    document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", downloadBatch));
+    document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
+      downloadBatch().catch(() => setStatus("Selection file could not be saved"));
+    }));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
+    document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
+      openBatchFile().catch(() => setStatus("Selection file could not be loaded"));
+    }));
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
     document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
       localStorage.removeItem(authStoreKey());
@@ -870,8 +937,8 @@
       syncAuthUi();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }));
-    document.querySelector("[data-re-load-batch]")?.addEventListener("change", (event) => {
-      loadBatchFile(event.target.files?.[0]).catch(() => setStatus("Batch file could not be loaded"));
+    document.querySelector("[data-re-load-batch-input]")?.addEventListener("change", (event) => {
+      loadBatchFile(event.target.files?.[0]).catch(() => setStatus("Selection file could not be loaded"));
       event.target.value = "";
     });
 

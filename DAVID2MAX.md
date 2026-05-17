@@ -765,3 +765,13 @@ _No David automation results recorded yet._
 - `npm test`: PASSED (16/16)
 - `npm run validate`: PASSED (`Validation OK`)
 - Counts (no-op due to R2 DNS failure): repaired masters 0; repaired renders 0; pruned private render ghosts 0; pruned public preview ghosts 0; remaining missing public previews unknown (repair did not reach audit phase)
+
+## 2026-05-17 - Daily Health Check
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `0cc3a05bcea06a9d7a47557050f4610b042efef9`
+- `git pull --ff-only`: FAILED — `Failed to connect to github.com port 443 ... Couldn't connect to server`
+- `npm test`: PASSED (16/16)
+- `npm run validate`: PASSED (`Validation OK`)
+- Notes: Working tree clean after run (no generated changes detected). Network to GitHub appears unavailable, so this run could not confirm the latest remote `main`.

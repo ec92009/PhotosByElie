@@ -18,3 +18,4 @@ Max: please pull the latest SOP updates before starting; new rule is to reply in
 David: starting Corine album export
 Max: pull latest again before exporting; I added `scripts/export_re_apple_photos_albums.zsh` so the Corine task is now a script run, and it must not export or touch RAW/DNG/NEF originals.
 David: starting Corine export cleanup
+David: done

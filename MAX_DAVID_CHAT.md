@@ -13,3 +13,4 @@ Do not put secrets, private client data, signed URLs, or private media paths her
 Max: just reply hello if you get this
 David: hello
 David: got it
+Max: new task in MAX2DAVID.md: export Corine's two Apple Photos Real Estate albums to /Volumes/Saturn/Pictures/RE/Corine/<Album Name> on the Saturn external drive.

@@ -324,28 +324,29 @@ Expected output in `DAVID2MAX.md`:
 - Notes:
 ```
 
-## 2026-05-17 Corine Real Estate Master Export
+## 2026-05-17 Corine Apple Photos Album Export
 
 Prompt for David:
 
 ```text
-In /Users/ecohen/Dev/PhotosByElie, pull latest main. Export developed master/source files for Corine's two Real Estate albums from the Photos database/library on David into new source folders on the Saturn external drive.
+In /Users/ecohen/Dev/PhotosByElie, pull latest main. Export Corine's two Apple Photos Real Estate albums from Apple Photos on David to the Saturn external drive.
 
 Albums:
 - RE 2026 La Concha 1 Apt 8AB1
 - RE 2026 La Concha 2 Apt 8A5
 
 Destination folders:
-- /Volumes/Saturn-2/Pictures/RE/Corine/RE 2026 La Concha 1 Apt 8AB1
-- /Volumes/Saturn-2/Pictures/RE/Corine/RE 2026 La Concha 2 Apt 8A5
+- /Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 1 Apt 8AB1
+- /Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 2 Apt 8A5
 
 Requirements:
-1. Treat this as a source-file export/copy task only. Do not modify Photos library records, image metadata, public catalog files, Owner.sqlite, or R2 objects.
-2. Preserve original filenames and file extensions where possible. If Photos export tooling creates collisions, keep all files and report the collision handling.
-3. Prefer the highest-quality developed/original available in the Photos database/library for each album item. Do not watermark these Real Estate sources.
-4. Create the destination folders if needed.
-5. After export, verify each destination folder exists and count files by extension plus total bytes.
-6. Append a dated report to DAVID2MAX.md with:
+1. Treat this as an Apple Photos export task only. Do not modify Photos library records, image metadata, public catalog files, Owner.sqlite, or R2 objects.
+2. Create the destination folders if needed, under `/Volumes/Saturn/Pictures/RE/Corine/`.
+3. Preserve original filenames and file extensions where possible. If Photos export tooling creates collisions, keep all files and report the collision handling.
+4. Prefer the highest-quality export available from Apple Photos for each album item. Do not watermark these Real Estate sources.
+5. Do not commit exported image files, checksum manifests, or private client media.
+6. After export, verify each destination folder exists and count files by extension plus total bytes.
+7. Append a dated report to DAVID2MAX.md with:
    - album name
    - destination path
    - exported file count
@@ -353,7 +354,7 @@ Requirements:
    - total bytes
    - any missing/unexportable items
    - exact command/tooling used
-7. If you can safely compute hashes without taking too long, write an ignored checksum manifest under `.review-logs/corine-real-estate-export/` and mention its path. Do not commit the exported image files or checksum manifest.
+8. If you can safely compute hashes without taking too long, write an ignored checksum manifest under `.review-logs/corine-real-estate-export/` and mention its path. Do not commit the exported image files or checksum manifest.
 
 Do not commit anything unless you only update DAVID2MAX.md with the report. Push DAVID2MAX.md if you update it.
 ```

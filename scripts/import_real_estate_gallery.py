@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import private real-estate JPG exports for a client gallery/cloud-PDF workflow."""
+"""Import private real-estate media exports for a client gallery/cloud-PDF workflow."""
 
 from __future__ import annotations
 
@@ -10,7 +10,9 @@ import json
 import os
 import re
 import secrets
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +21,8 @@ from PIL import Image, ImageOps
 
 RAW_EXTENSIONS = {".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".orf", ".raf", ".rw2"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
+VIDEO_EXTENSIONS = {".mov", ".mp4", ".m4v"}
+MEDIA_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 DEFAULT_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE/Corine")
 DEFAULT_OUTPUT_ROOT = Path("tmp/real-estate-import")
 PDF_BATCH_SCHEMA = "photosbyelie.realEstatePdfBatch.v1"
@@ -38,6 +42,40 @@ def display_album_title(album: str) -> str:
 def image_dimensions(path: Path) -> dict[str, int]:
     with Image.open(path) as image:
         return {"width": int(image.width), "height": int(image.height)}
+
+
+def is_video(path: Path) -> bool:
+    return path.suffix.lower() in VIDEO_EXTENSIONS
+
+
+def video_metadata(path: Path) -> dict[str, Any]:
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height,duration:format=duration",
+        "-of",
+        "json",
+        str(path),
+    ]
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+    except FileNotFoundError as error:
+        raise RuntimeError("ffprobe is required to import real-estate videos.") from error
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(f"Could not inspect video {path}: {error.stderr.strip() or error}") from error
+
+    payload = json.loads(result.stdout or "{}")
+    stream = (payload.get("streams") or [{}])[0]
+    duration = float(stream.get("duration") or (payload.get("format") or {}).get("duration") or 0)
+    return {
+        "width": int(stream.get("width") or 0),
+        "height": int(stream.get("height") or 0),
+        "durationSeconds": duration,
+    }
 
 
 def render_derivative(source: Path, destination: Path, max_edge: int, quality: int, force: bool) -> dict[str, Any]:
@@ -75,6 +113,55 @@ def render_derivative(source: Path, destination: Path, max_edge: int, quality: i
     }
 
 
+def render_video_still_derivative(
+    source: Path,
+    destination: Path,
+    max_edge: int,
+    quality: int,
+    force: bool,
+    duration_seconds: float,
+    percent: float = 10,
+) -> dict[str, Any]:
+    if (
+        destination.exists()
+        and not force
+        and destination.stat().st_mtime >= source.stat().st_mtime
+    ):
+        dimensions = image_dimensions(destination)
+        return {
+            "path": destination,
+            "width": dimensions["width"],
+            "height": dimensions["height"],
+            "bytes": destination.stat().st_size,
+            "rendered": False,
+        }
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    seek_seconds = max(0, duration_seconds * (percent / 100))
+    with tempfile.TemporaryDirectory(prefix="photosbyelie-re-video-still-") as temp_dir:
+        frame_path = Path(temp_dir) / "frame.jpg"
+        command = [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            f"{seek_seconds:.3f}",
+            "-i",
+            str(source),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(frame_path),
+        ]
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)
+        except FileNotFoundError as error:
+            raise RuntimeError("ffmpeg is required to import real-estate videos.") from error
+        except subprocess.CalledProcessError as error:
+            raise RuntimeError(f"Could not render video still for {source}: {error.stderr.strip() or error}") from error
+        return render_derivative(frame_path, destination, max_edge, quality, force=True)
+
+
 def repo_relative(path: Path, repo_root: Path) -> str:
     try:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
@@ -105,7 +192,7 @@ def scan_album_files(album_dir: Path) -> list[Path]:
     return sorted(
         path
         for path in album_dir.iterdir()
-        if path.is_file() and path.name != ".DS_Store" and path.suffix.lower() in IMAGE_EXTENSIONS
+        if path.is_file() and path.name != ".DS_Store" and path.suffix.lower() in MEDIA_EXTENSIONS
     )
 
 
@@ -200,6 +287,11 @@ def pdf_batch_manifest_template(
                         "photoId": "",
                         "title": "",
                         "sortIndex": 1,
+                        "mediaType": "photo",
+                        "pdfTreatment": "photo",
+                        "pdfStillPercent": None,
+                        "slideshowDurationPolicy": "fixed-photo-duration",
+                        "slideshowDurationSeconds": 4,
                         "projectId": "",
                         "projectTitle": "",
                     }
@@ -211,6 +303,11 @@ def pdf_batch_manifest_template(
                 "photoId": "",
                 "title": "",
                 "sortIndex": 1,
+                "mediaType": "photo",
+                "pdfTreatment": "photo",
+                "pdfStillPercent": None,
+                "slideshowDurationPolicy": "fixed-photo-duration",
+                "slideshowDurationSeconds": 4,
                 "projectId": "",
                 "projectTitle": "",
                 "projectIds": [],
@@ -270,27 +367,67 @@ def build_manifest(
             file_slug = slugify(source.stem)
             photo_id = f"{slugify(customer)}-{album_slug}-{file_slug}"
             default_title = f"{album_title} - {photo_index:02d}"
+            media_type = "video" if is_video(source) else "photo"
+            video_info = video_metadata(source) if media_type == "video" else {}
+            video_still_percent = 10
             preview_900_path = output_dir / "previews" / album_slug / f"{photo_id}_900.jpg"
             preview_1800_path = output_dir / "previews" / album_slug / f"{photo_id}_1800.jpg"
-            preview_900_render = render_derivative(source, preview_900_path, preview_900_max_edge, preview_900_quality, force)
-            preview_1800_render = render_derivative(source, preview_1800_path, preview_1800_max_edge, preview_1800_quality, force)
+            if media_type == "video":
+                duration_seconds = float(video_info.get("durationSeconds") or 0)
+                preview_900_render = render_video_still_derivative(
+                    source,
+                    preview_900_path,
+                    preview_900_max_edge,
+                    preview_900_quality,
+                    force,
+                    duration_seconds,
+                    video_still_percent,
+                )
+                preview_1800_render = render_video_still_derivative(
+                    source,
+                    preview_1800_path,
+                    preview_1800_max_edge,
+                    preview_1800_quality,
+                    force,
+                    duration_seconds,
+                    video_still_percent,
+                )
+                original_dimensions = {
+                    "width": int(video_info.get("width") or preview_1800_render["width"]),
+                    "height": int(video_info.get("height") or preview_1800_render["height"]),
+                }
+            else:
+                preview_900_render = render_derivative(source, preview_900_path, preview_900_max_edge, preview_900_quality, force)
+                preview_1800_render = render_derivative(source, preview_1800_path, preview_1800_max_edge, preview_1800_quality, force)
+                original_dimensions = image_dimensions(source)
             rendered_preview_900 += 1 if preview_900_render["rendered"] else 0
             rendered_preview_1800 += 1 if preview_1800_render["rendered"] else 0
             total_preview_900_bytes += int(preview_900_render["bytes"])
             total_preview_1800_bytes += int(preview_1800_render["bytes"])
 
-            original_dimensions = image_dimensions(source)
             preview_900_rel = output_relative(preview_900_path, output_dir)
             preview_1800_rel = output_relative(preview_1800_path, output_dir)
             preview_900_key = f"{public_key_prefix}/{album_slug}/{photo_id}_900.jpg"
             preview_1800_key = f"{public_key_prefix}/{album_slug}/{photo_id}_1800.jpg"
             private_master_key = f"{private_key_prefix}/{album_slug}/{photo_id}{source.suffix.lower()}"
+            metadata = [
+                {"label": "Client", "value": customer},
+                {"label": "Album", "value": album_name},
+                {"label": "Original file", "value": source.name},
+                {"label": "Original size", "value": f"{original_dimensions['width']} x {original_dimensions['height']}"},
+                {"label": "Preview 900", "value": f"{preview_900_render['width']} x {preview_900_render['height']}"},
+                {"label": "Preview 1800", "value": f"{preview_1800_render['width']} x {preview_1800_render['height']}"},
+            ]
+            if media_type == "video":
+                metadata.insert(3, {"label": "Media type", "value": "Video"})
+                metadata.insert(4, {"label": "Duration", "value": f"{float(video_info.get('durationSeconds') or 0):.2f} seconds"})
+                metadata.append({"label": "PDF still", "value": f"{video_still_percent}% into video"})
             photos.append({
                 "id": photo_id,
                 "title": default_title,
                 "editableTitle": default_title,
                 "caption": album_title,
-                "className": "real-estate-photo",
+                "className": "real-estate-photo" + (" real-estate-video" if media_type == "video" else ""),
                 "full": source.name,
                 "gallerySrc": preview_900_rel,
                 "imageSrc": preview_1800_rel,
@@ -298,16 +435,16 @@ def build_manifest(
                 "albumSlug": album_slug,
                 "albumTitle": album_title,
                 "sortIndex": len(photos) + 1,
-                "metadata": [
-                    {"label": "Client", "value": customer},
-                    {"label": "Album", "value": album_name},
-                    {"label": "Original file", "value": source.name},
-                    {"label": "Original size", "value": f"{original_dimensions['width']} x {original_dimensions['height']}"},
-                    {"label": "Preview 900", "value": f"{preview_900_render['width']} x {preview_900_render['height']}"},
-                    {"label": "Preview 1800", "value": f"{preview_1800_render['width']} x {preview_1800_render['height']}"},
-                ],
+                "metadata": metadata,
                 "media": {
-                    "type": "photo",
+                    "type": media_type,
+                    **({
+                        "video": {
+                            "durationSeconds": float(video_info.get("durationSeconds") or 0),
+                            "durationPolicy": "preserve-source-duration",
+                            "posterPercent": video_still_percent,
+                        },
+                    } if media_type == "video" else {}),
                     "publicPreview": {
                         "allowed": True,
                         "galleryKey": preview_900_key,
@@ -331,6 +468,12 @@ def build_manifest(
                     "imageUrl": preview_1800_rel,
                     "publicKey": preview_1800_key,
                     "maxEdge": preview_1800_max_edge,
+                    "mediaType": media_type,
+                    **({
+                        "videoStillPercent": video_still_percent,
+                        "sourceVideoPrivateKey": private_master_key,
+                        "sourceDurationSeconds": float(video_info.get("durationSeconds") or 0),
+                    } if media_type == "video" else {}),
                     "dimensions": {
                         "width": int(preview_1800_render["width"]),
                         "height": int(preview_1800_render["height"]),
@@ -339,9 +482,14 @@ def build_manifest(
                 },
                 "realEstate": {
                     "customer": customer,
+                    "mediaType": media_type,
                     "sourcePath": str(source),
                     "sourceBytes": source_bytes,
                     "sourceDimensions": original_dimensions,
+                    **({
+                        "videoDurationSeconds": float(video_info.get("durationSeconds") or 0),
+                        "videoStillPercent": video_still_percent,
+                    } if media_type == "video" else {}),
                     "privateMasterKey": private_master_key,
                     "preview900Path": repo_relative(preview_900_path, repo_root),
                     "preview1800Path": repo_relative(preview_1800_path, repo_root),
@@ -394,26 +542,28 @@ def build_manifest(
             "imageField": "cloudPdfSource.imageUrl",
             "cloudImageKeyField": "cloudPdfSource.publicKey",
             "mode": "one-photo-per-page",
-            "assembly": "Cloud service receives liked photo ids grouped by apartment project plus edited titles, then generates one PDF per project on demand.",
+            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
             "batchManifest": {
                 "schema": PDF_BATCH_SCHEMA,
                 "batchIdFormat": "YYYYMMDDTHHMMSSZ",
                 "storageKeyPattern": f"real-estate/pdf-batches/{gallery_key}/{{batchId}}.json",
                 "retrievalOrder": "createdAt desc",
                 "projectFields": ["projectId", "projectTitle", "sortIndex", "items"],
-                "itemFields": ["photoId", "title", "sortIndex", "projectId", "projectTitle", "projectIds"],
-                "resumeBehavior": "Loading a prior batch manifest seeds the liked photo IDs and edited titles by project; generating PDFs from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
+                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "projectId", "projectTitle", "projectIds"],
+                "resumeBehavior": "Loading a prior batch manifest seeds the selected media IDs and edited titles by project; generating PDFs or slideshow plans from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
                 "template": pdf_batch_manifest_template(
                     customer=customer,
                     gallery_key=gallery_key,
                     import_generated_at=generated_at,
                 ),
             },
-            "largeFileMitigation": "Importer prepares cloud PDF source JPGs instead of final PDFs; final PDF assembly/download belongs to the cloud path so the browser does not build one huge Blob locally.",
+            "largeFileMitigation": "Importer prepares cloud PDF/slideshow source metadata instead of final outputs; final assembly/download belongs to the cloud path so the browser does not build one huge Blob locally.",
         },
         "stats": {
             "albumCount": len(album_entries),
             "photoCount": len(photos),
+            "imageCount": sum(1 for photo in photos if ((photo.get("media") or {}).get("type") == "photo")),
+            "videoCount": sum(1 for photo in photos if ((photo.get("media") or {}).get("type") == "video")),
             "sourceBytes": total_source_bytes,
             "preview900Bytes": total_preview_900_bytes,
             "preview1800Bytes": total_preview_1800_bytes,
@@ -427,7 +577,7 @@ def build_manifest(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build ignored Real Estate gallery/cloud-PDF source assets from JPG customer exports."
+        description="Build ignored Real Estate gallery/cloud-PDF source assets from customer photo/video exports."
     )
     parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
@@ -460,7 +610,7 @@ def main() -> int:
 
     raw_hits = raw_files(source_root)
     if raw_hits and not args.allow_raw_present:
-        print("RAW/DNG/NEF files are present; refusing to import until the customer export is JPG-only.", file=sys.stderr)
+        print("RAW/DNG/NEF files are present; refusing to import until the customer export is final JPG/video media only.", file=sys.stderr)
         for path in raw_hits[:25]:
             print(f"  {path}", file=sys.stderr)
         if len(raw_hits) > 25:
@@ -525,7 +675,7 @@ def main() -> int:
     }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     stats = manifest["stats"]
-    print(f"Imported {stats['photoCount']} photos across {stats['albumCount']} albums for {args.customer}.")
+    print(f"Imported {stats['photoCount']} media files ({stats['imageCount']} photos, {stats['videoCount']} videos) across {stats['albumCount']} albums for {args.customer}.")
     print(f"Preview 900 images: {stats['preview900Rendered']} rendered, {stats['preview900Bytes']} bytes total.")
     print(f"Preview 1800 images: {stats['preview1800Rendered']} rendered, {stats['preview1800Bytes']} bytes total.")
     print(f"Manifest: {repo_relative(manifest_path, repo_root)}")

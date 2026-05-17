@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v78.23`
+- Current visible version: `v78.29`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -19,7 +19,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
 - `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
 - `real-estate.html`: private real-estate review workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, supports album filtering, selection, title edits, draggable PDF draft ordering, browser/share-sheet-friendly selection table export, masked password entry, and selected-original ZIP delivery through the Worker
-- `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, and R2 maintenance
+- `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, Real Estate client credential/import/publish/upload actions, and R2 maintenance
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages
@@ -58,6 +58,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `docs/sops/`: local SOP copies/adaptations, including versioning and Lightroom image ingestion
 - `assets/`: shared By Elie logo asset, publish metadata, tiny placeholders, and ignored localhost compatibility/Waste Basket working data
 - `assets/owner-actions/Owner.sqlite`: ignored local Owner workflow database for review queues, decisions, blacklist, and country assignment state
+- `assets/owner-actions/real-estate-clients.local.json`: ignored local Real Estate client credential and import settings file used by the Owner dashboard
 
 ## Preview
 
@@ -95,6 +96,8 @@ Use the GitHub Pages URL above after pushing to `main`.
 - We are walking away from the old Curation Pass model: localhost Owner actions are live state changes, and any exported `.pbe-review` file is only an audit/batch snapshot.
 - The localhost preview can be served by `python3 scripts/local_server.py 8000`, which keeps the public site static while adding localhost-only endpoints for review snapshot saving, Waste Basket updates, Unknown assignment, metadata edits, and R2 maintenance.
 - Local owner mutation endpoints are unlocked on localhost by the helper server without a password. For private-LAN owner review, start the server with `--bind 0.0.0.0 --allow-lan-owner`; without that opt-in, owner helper endpoints remain loopback-only.
+- The Owner dashboard has a Real Estate client gallery panel backed by the localhost helper endpoint at `/__photosbyelie/real-estate-owner`. It saves client usernames/passwords in the ignored local settings file, imports source JPG exports into `tmp/real-estate-import/<client>/`, publishes a sanitized public context under `assets/real-estate/<client>/app-context.js`, runs R2 upload dry-runs, can upload public previews plus private masters, and can prepare the `REAL_ESTATE_GALLERIES_JSON` Worker secret payload.
+- Real Estate public contexts store a salted client password hash for the browser login gate. The plaintext client password stays only in the ignored local Owner settings file and the deployed Worker secret used to authorize originals ZIP delivery.
 - The Owner dashboard summarizes tracked R2 coverage for private masters, private JPG 1/3/6 MP deliverables, and public preview assets; its Fix it button starts the same lock-guarded cloud media sweep used by manual and scheduled backfills. Coverage excludes Waste Basket tombstones from active repair targets and can surface active media missing private masters or photo triplets, preferring Saturn/source-file repair when possible. The new R2 target is `expo/<media-id>_900.jpg` for `still_900`, `expo/<media-id>_1800.jpg` for photo `still_1800`, `expo/<media-id>_short_5s_720p.mp4` for video detail previews, `renders/<media-id>_{1,3,6}mp.jpg` for sellable photo JPGs, and `masters/<media-id>.<format extension>` for full delivery.
 - Every page has the shared footer band; the Owner link appears only on localhost.
 - On gallery pages, `g` makes the grid less dense/larger and `G` makes it denser/smaller; on localhost, single click moves the selection rectangle, Enter or double click opens detail, and the Grid slider adjusts thumbnail density within the current viewport limits.
@@ -130,7 +133,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Full resolution choices show the verified developed source format, such as `JPG preview/export` or `TIFF preview/export`.
 - Detail and basket pages now state the baseline personal print/web license and call out that commercial, resale, and AI-training use need written approval.
 - The basket page generates a static order-intent summary and mail draft from the local basket contents, and can call the configured checkout Worker for guest checkout. When the Worker is configured with Stripe secrets, buyers are redirected to hosted Stripe Checkout; local mock mode can still simulate payment with `?workerBase=http://localhost:8787`. After payment, buyers land on `order.html` with order status and a per-file private download list.
-- The private Real Estate review page loads the public-safe Corine bundle at `assets/real-estate/corine/app-context.js` on GitHub Pages and the ignored local bundle at `tmp/real-estate-import/corine/app-context.js` on localhost by default. A same-origin bundle can still be passed with `?context=<path>`. It has a static client access gate with a password visibility toggle, persists selected photo IDs and edited PDF titles with the store keys emitted by the importer, lets selected photos be reordered in the PDF draft basket, can reload an older selection, exports a browser-friendly HTML selection table with embedded machine-readable batch data, can share that table through the browser/OS share sheet where available, still accepts legacy JSON batch manifests, can generate a selected-photo PDF directly in the browser, and can ask the Worker for selected private original download tokens through a masked in-page password dialog so the browser can build one shareable ZIP.
+- The private Real Estate review page loads the public-safe Corine bundle at `assets/real-estate/corine/app-context.js` on GitHub Pages and the ignored local bundle at `tmp/real-estate-import/corine/app-context.js` on localhost by default. A same-origin bundle can still be passed with `?context=<path>`. It has a static client access gate with a password visibility toggle, persists selected photo IDs and edited PDF titles with the store keys emitted by the importer, lets selected photos be reordered in the PDF draft basket, can reload an older selection, exports a browser-friendly HTML selection table with embedded machine-readable batch data, can share that table through the browser/OS share sheet where available, still accepts legacy JSON batch manifests, can generate a selected-photo PDF directly in the browser, and can ask the Worker for selected private original download tokens through a masked in-page password dialog so the browser can build one shareable ZIP. Localhost Owner now maintains ignored client credentials/config at `assets/owner-actions/real-estate-clients.local.json`, imports previews, publishes public-safe context bundles, runs upload dry-runs or uploads, and prepares the Worker real-estate gallery secret payload.
 - The order page shows explicit payment, file preparation, and download phases; cloud delivery failures are shown as blocked delivery instead of indefinite preparation.
 - Public cloud delivery avoids building one large archive in the Worker. The deployed Worker creates one signed-style download token per purchased file and streams each private R2 object separately from the order page.
 - The checkout Worker expects JPG 6 MP, 3 MP, and 1 MP buyer deliverables to exist in private R2 under `renders/...`; those unwatermarked files are generated by the media pipeline on the machine that owns the developed masters and reused for future per-file delivery.

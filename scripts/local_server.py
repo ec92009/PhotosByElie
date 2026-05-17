@@ -45,6 +45,7 @@ TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
 REAL_ESTATE_CLIENTS_PATH = OWNER_ACTION_ROOT / "real-estate-clients.local.json"
 REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
 REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
+PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"
@@ -326,6 +327,7 @@ def main() -> int:
     url_host = "localhost" if args.bind in {"127.0.0.1", "::1"} else args.bind
     print(f"Serving Photos By Elie at http://{url_host}:{args.port}/")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
+    print(f"Real Estate owner endpoint: {REAL_ESTATE_OWNER_PATH}")
     print("Owner helper endpoints are enabled on loopback without a password.")
     if args.allow_lan_owner:
         print("Owner helper endpoints are enabled for private LAN clients without a password.")
@@ -1930,6 +1932,549 @@ def _sync_collection_keywords(repo_root: Path, *state_groups: dict[str, list[dic
         "errors": errors[:20],
         "error_count": len(errors),
     }
+
+
+def _slugify(value: str, fallback: str = "client") -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").casefold()).strip("-")
+    return slug or fallback
+
+
+def _key_prefix(value: str) -> str:
+    return re.sub(r"/+", "/", str(value or "").strip().strip("/"))
+
+
+def _real_estate_config_path(repo_root: Path) -> Path:
+    return repo_root / REAL_ESTATE_CLIENTS_PATH
+
+
+def _real_estate_client_output_slug(client: dict) -> str:
+    return _slugify(str(client.get("outputSlug") or client.get("id") or client.get("customer") or ""), "client")
+
+
+def _real_estate_client_public_slug(client: dict) -> str:
+    return _slugify(str(client.get("publicSlug") or _real_estate_client_output_slug(client)), "client")
+
+
+def _real_estate_paths(repo_root: Path, client: dict) -> dict[str, Path]:
+    output_slug = _real_estate_client_output_slug(client)
+    public_slug = _real_estate_client_public_slug(client)
+    import_dir = repo_root / REAL_ESTATE_IMPORT_ROOT / output_slug
+    public_dir = repo_root / REAL_ESTATE_PUBLIC_ROOT / public_slug
+    return {
+        "import_dir": import_dir,
+        "manifest": import_dir / "manifest.json",
+        "summary": import_dir / "summary.json",
+        "local_context": import_dir / "app-context.js",
+        "public_dir": public_dir,
+        "public_context": public_dir / "app-context.js",
+    }
+
+
+def _repo_rel(repo_root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _manifest_client_seed(repo_root: Path, output_slug: str, manifest: dict) -> dict:
+    customer = manifest.get("customer") if isinstance(manifest.get("customer"), dict) else {}
+    r2 = manifest.get("r2") if isinstance(manifest.get("r2"), dict) else {}
+    gallery = manifest.get("gallery") if isinstance(manifest.get("gallery"), dict) else {}
+    customer_name = str(customer.get("name") or output_slug).strip()
+    gallery_key = str(gallery.get("key") or f"{_slugify(customer_name)}-real-estate").strip()
+    return {
+        "id": _slugify(output_slug),
+        "customer": customer_name,
+        "username": str(customer.get("username") or customer_name).strip(),
+        "accessCode": str(customer.get("accessCode") or "").strip(),
+        "accessCodeSalt": str(customer.get("accessCodeSalt") or uuid.uuid4().hex).strip(),
+        "sourceRoot": str(manifest.get("sourceRoot") or ""),
+        "outputSlug": output_slug,
+        "publicSlug": output_slug,
+        "galleryKey": gallery_key,
+        "galleryTitle": str(gallery.get("title") or f"{customer_name} Real Estate").strip(),
+        "publicKeyPrefix": str(r2.get("publicPreviewPrefix") or f"real-estate/{gallery_key}/previews").strip(),
+        "privateKeyPrefix": str(r2.get("privateMasterPrefix") or f"real-estate/{gallery_key}/masters").strip(),
+        "albums": [],
+        "maxItems": 300,
+    }
+
+
+def _default_real_estate_clients(repo_root: Path) -> list[dict]:
+    clients: list[dict] = []
+    for manifest_path in sorted((repo_root / REAL_ESTATE_IMPORT_ROOT).glob("*/manifest.json")):
+        manifest = _read_json_file(manifest_path, {})
+        if isinstance(manifest, dict):
+            clients.append(_manifest_client_seed(repo_root, manifest_path.parent.name, manifest))
+    if clients:
+        return clients
+    return [{
+        "id": "corine",
+        "customer": "Corine",
+        "username": "Corine",
+        "accessCode": "",
+        "accessCodeSalt": uuid.uuid4().hex,
+        "sourceRoot": "/Volumes/Saturn/Pictures/RE/Corine",
+        "outputSlug": "corine",
+        "publicSlug": "corine",
+        "galleryKey": "corine-real-estate",
+        "galleryTitle": "Corine Real Estate",
+        "publicKeyPrefix": "real-estate/corine-real-estate/previews",
+        "privateKeyPrefix": "real-estate/corine-real-estate/masters",
+        "albums": [],
+        "maxItems": 300,
+    }]
+
+
+def _read_real_estate_client_payload(repo_root: Path) -> dict:
+    path = _real_estate_config_path(repo_root)
+    saved = _read_json_file(path, {})
+    if not isinstance(saved, dict):
+        saved = {}
+    saved_clients = [
+        client for client in saved.get("clients") or []
+        if isinstance(client, dict) and str(client.get("id") or client.get("customer") or "").strip()
+    ]
+    if saved_clients:
+        clients = saved_clients
+    else:
+        clients = _default_real_estate_clients(repo_root)
+    return {
+        "format": "photosbyelie-real-estate-owner-local",
+        "schema_version": 1,
+        "updated_at": saved.get("updated_at") or "",
+        "clients": clients,
+    }
+
+
+def _write_real_estate_client_payload(repo_root: Path, payload: dict) -> None:
+    payload = {
+        "format": "photosbyelie-real-estate-owner-local",
+        "schema_version": 1,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "clients": payload.get("clients") or [],
+    }
+    _write_json_file(_real_estate_config_path(repo_root), payload)
+
+
+def _real_estate_manifest_stats(repo_root: Path, client: dict) -> dict:
+    paths = _real_estate_paths(repo_root, client)
+    manifest = _read_json_file(paths["manifest"], {})
+    if not isinstance(manifest, dict):
+        manifest = {}
+    stats = manifest.get("stats") if isinstance(manifest.get("stats"), dict) else {}
+    albums = manifest.get("albums") if isinstance(manifest.get("albums"), list) else []
+    return {
+        "generatedAt": manifest.get("generatedAt") or "",
+        "photoCount": int(stats.get("photoCount") or 0),
+        "albumCount": int(stats.get("albumCount") or len(albums)),
+        "preview900Rendered": int(stats.get("preview900Rendered") or 0),
+        "preview1800Rendered": int(stats.get("preview1800Rendered") or 0),
+        "sourceBytes": int(stats.get("sourceBytes") or 0),
+        "preview900Bytes": int(stats.get("preview900Bytes") or 0),
+        "preview1800Bytes": int(stats.get("preview1800Bytes") or 0),
+    }
+
+
+def _real_estate_public_url(path: str) -> str:
+    clean_path = str(path or "").lstrip("./")
+    return f"{PUBLIC_SITE_BASE_URL}real-estate.html?context=./{clean_path}&logout=1"
+
+
+def _safe_real_estate_client(repo_root: Path, client: dict) -> dict:
+    paths = _real_estate_paths(repo_root, client)
+    output_slug = _real_estate_client_output_slug(client)
+    public_slug = _real_estate_client_public_slug(client)
+    local_context_rel = _repo_rel(repo_root, paths["local_context"])
+    public_context_rel = _repo_rel(repo_root, paths["public_context"])
+    source_root = str(client.get("sourceRoot") or "")
+    return {
+        "id": str(client.get("id") or output_slug),
+        "customer": str(client.get("customer") or ""),
+        "username": str(client.get("username") or ""),
+        "passwordSet": bool(str(client.get("accessCode") or "").strip()),
+        "sourceRoot": source_root,
+        "sourceRootExists": bool(source_root and Path(source_root).expanduser().is_dir()),
+        "outputSlug": output_slug,
+        "publicSlug": public_slug,
+        "galleryKey": str(client.get("galleryKey") or ""),
+        "galleryTitle": str(client.get("galleryTitle") or ""),
+        "publicKeyPrefix": str(client.get("publicKeyPrefix") or ""),
+        "privateKeyPrefix": str(client.get("privateKeyPrefix") or ""),
+        "albums": list(client.get("albums") or []),
+        "maxItems": int(client.get("maxItems") or 300),
+        "lastImportedAt": str(client.get("lastImportedAt") or ""),
+        "lastPublishedAt": str(client.get("lastPublishedAt") or ""),
+        "lastUploadAt": str(client.get("lastUploadAt") or ""),
+        "localManifestPath": _repo_rel(repo_root, paths["manifest"]),
+        "localManifestExists": paths["manifest"].exists(),
+        "localContextPath": local_context_rel,
+        "localContextExists": paths["local_context"].exists(),
+        "publicContextPath": public_context_rel,
+        "publicContextExists": paths["public_context"].exists(),
+        "localReviewUrl": f"./real-estate.html?context=./{local_context_rel}&logout=1",
+        "publicReviewUrl": _real_estate_public_url(public_context_rel),
+        "stats": _real_estate_manifest_stats(repo_root, client),
+    }
+
+
+def real_estate_owner_summary(repo_root: Path) -> dict:
+    payload = _read_real_estate_client_payload(repo_root)
+    return {
+        "ok": True,
+        "path": REAL_ESTATE_CLIENTS_PATH.as_posix(),
+        "pathExists": _real_estate_config_path(repo_root).exists(),
+        "clients": [_safe_real_estate_client(repo_root, client) for client in payload.get("clients") or []],
+    }
+
+
+def _real_estate_clients_by_id(payload: dict) -> dict[str, dict]:
+    return {
+        str(client.get("id") or _real_estate_client_output_slug(client)): client
+        for client in payload.get("clients") or []
+        if isinstance(client, dict)
+    }
+
+
+def _normalize_album_list(value: object) -> list[str]:
+    source = value if isinstance(value, list) else re.split(r"[\n,]", str(value or ""))
+    albums = []
+    for item in source:
+        album = str(item or "").strip()
+        if album and album not in albums:
+            albums.append(album)
+    return albums
+
+
+def _normalize_real_estate_client(incoming: dict, existing: dict | None = None) -> dict:
+    existing = existing or {}
+    customer = str(incoming.get("customer") or existing.get("customer") or "").strip()
+    if not customer:
+        raise ValueError("customer is required")
+    client_id = _slugify(str(incoming.get("id") or existing.get("id") or customer))
+    username = str(incoming.get("username") or existing.get("username") or customer).strip()
+    access_code = str(incoming.get("accessCode") or "").strip() or str(existing.get("accessCode") or "").strip()
+    if not access_code:
+        raise ValueError("password is required for real-estate client access")
+    output_slug = _slugify(str(incoming.get("outputSlug") or existing.get("outputSlug") or client_id))
+    public_slug = _slugify(str(incoming.get("publicSlug") or existing.get("publicSlug") or output_slug))
+    gallery_key = _slugify(str(incoming.get("galleryKey") or existing.get("galleryKey") or f"{client_id}-real-estate"), "gallery")
+    return {
+        **existing,
+        "id": client_id,
+        "customer": customer,
+        "username": username,
+        "accessCode": access_code,
+        "accessCodeSalt": str(existing.get("accessCodeSalt") or incoming.get("accessCodeSalt") or uuid.uuid4().hex),
+        "sourceRoot": str(incoming.get("sourceRoot") or existing.get("sourceRoot") or "").strip(),
+        "outputSlug": output_slug,
+        "publicSlug": public_slug,
+        "galleryKey": gallery_key,
+        "galleryTitle": str(incoming.get("galleryTitle") or existing.get("galleryTitle") or f"{customer} Real Estate").strip(),
+        "publicKeyPrefix": _key_prefix(str(incoming.get("publicKeyPrefix") or existing.get("publicKeyPrefix") or f"real-estate/{gallery_key}/previews")),
+        "privateKeyPrefix": _key_prefix(str(incoming.get("privateKeyPrefix") or existing.get("privateKeyPrefix") or f"real-estate/{gallery_key}/masters")),
+        "albums": _normalize_album_list(incoming.get("albums") if "albums" in incoming else existing.get("albums")),
+        "maxItems": max(1, int(incoming.get("maxItems") or existing.get("maxItems") or 300)),
+    }
+
+
+def _save_real_estate_client(repo_root: Path, incoming: dict) -> dict:
+    payload = _read_real_estate_client_payload(repo_root)
+    clients_by_id = _real_estate_clients_by_id(payload)
+    client_id = _slugify(str(incoming.get("id") or incoming.get("customer") or "client"))
+    client = _normalize_real_estate_client(incoming, clients_by_id.get(client_id))
+    clients_by_id[client["id"]] = client
+    payload["clients"] = sorted(clients_by_id.values(), key=lambda item: str(item.get("customer") or item.get("id")))
+    _write_real_estate_client_payload(repo_root, payload)
+    return {
+        "ok": True,
+        "action": "save-client",
+        "client": _safe_real_estate_client(repo_root, client),
+        "clients": [_safe_real_estate_client(repo_root, item) for item in payload["clients"]],
+    }
+
+
+def _real_estate_client_for_action(repo_root: Path, payload: dict) -> tuple[dict, dict]:
+    state = _read_real_estate_client_payload(repo_root)
+    client_id = _slugify(str(payload.get("id") or payload.get("clientId") or ""))
+    clients = _real_estate_clients_by_id(state)
+    client = clients.get(client_id)
+    if not client:
+        raise ValueError("real-estate client was not found")
+    return state, client
+
+
+def _run_real_estate_command(repo_root: Path, command: list[str], env: dict[str, str] | None = None) -> dict:
+    result = subprocess.run(
+        command,
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, **(env or {})},
+    )
+    output = ((result.stdout or "") + (("\n" + result.stderr) if result.stderr else "")).strip()
+    return {
+        "exitCode": result.returncode,
+        "ok": result.returncode == 0,
+        "output": output[-12000:],
+    }
+
+
+def _strip_public_real_estate_photo(photo: dict) -> dict:
+    public_photo = json.loads(json.dumps(photo))
+    public_photo.pop("realEstate", None)
+    return public_photo
+
+
+def _sanitize_real_estate_public_manifest(manifest: dict) -> dict:
+    public_manifest = json.loads(json.dumps(manifest))
+    customer = public_manifest.get("customer") if isinstance(public_manifest.get("customer"), dict) else {}
+    public_manifest["customer"] = {
+        key: value
+        for key, value in customer.items()
+        if key in {"name", "username", "accessCodeAlgorithm", "accessCodeHash", "accessCodeSalt"}
+    }
+    public_manifest.pop("sourceRoot", None)
+    public_manifest.pop("outputRoot", None)
+
+    r2 = public_manifest.get("r2") if isinstance(public_manifest.get("r2"), dict) else {}
+    public_manifest["r2"] = {
+        key: value
+        for key, value in r2.items()
+        if key in {"publicBucket", "publicPreviewPrefix"}
+    }
+
+    if isinstance(public_manifest.get("albums"), list):
+        public_manifest["albums"] = [
+            {key: value for key, value in album.items() if key != "sourcePath"}
+            if isinstance(album, dict)
+            else album
+            for album in public_manifest["albums"]
+        ]
+
+    photos = [
+        _strip_public_real_estate_photo(photo)
+        for photo in public_manifest.get("photos") or []
+        if isinstance(photo, dict)
+    ]
+    public_manifest["photos"] = photos
+    gallery = public_manifest.get("gallery") if isinstance(public_manifest.get("gallery"), dict) else {}
+    gallery["photos"] = photos
+    public_manifest["gallery"] = gallery
+    return public_manifest
+
+
+def _write_real_estate_app_context(manifest: dict, path: Path) -> None:
+    payload = json.dumps(manifest, indent=2, sort_keys=True)
+    context = f"""(() => {{
+  const payload = {payload};
+  const script = document.currentScript;
+  const base = script?.src ? new URL("./", script.src) : new URL("./", window.location.href);
+  const absoluteUrl = (value) => {{
+    if (!value || /^(https?:|data:|blob:|\\/)/i.test(value)) return value || "";
+    return new URL(value, base).href;
+  }};
+  const photos = (payload.photos || []).map((photo) => {{
+    const publicPreview = photo.media?.publicPreview || {{}};
+    const pdfSource = photo.cloudPdfSource || {{}};
+    return {{
+      ...photo,
+      media: {{
+        ...(photo.media || {{}}),
+        publicPreview: {{
+          ...publicPreview,
+          galleryUrl: absoluteUrl(publicPreview.galleryUrl || photo.gallerySrc),
+          detailUrl: absoluteUrl(publicPreview.detailUrl || photo.imageSrc),
+          previewUrl: absoluteUrl(publicPreview.previewUrl || photo.imageSrc),
+          thumbnailUrl: absoluteUrl(publicPreview.thumbnailUrl || photo.gallerySrc),
+        }},
+      }},
+      cloudPdfSource: {{
+        ...pdfSource,
+        imageUrl: absoluteUrl(pdfSource.imageUrl),
+      }},
+    }};
+  }});
+  const gallery = {{
+    ...(payload.gallery || {{}}),
+    photos,
+  }};
+  window.photosByElieRealEstateImport = {{
+    ...payload,
+    gallery,
+    photos,
+  }};
+  window.photosByElieRealEstateGalleryKey = gallery.key;
+  window.photosByElieData = {{
+    ...(window.photosByElieData || {{}}),
+    [gallery.key]: gallery,
+  }};
+}})();
+"""
+    path.write_text(context, encoding="utf-8")
+
+
+def _persist_real_estate_client_update(repo_root: Path, state: dict, client: dict) -> None:
+    clients = _real_estate_clients_by_id(state)
+    clients[str(client.get("id"))] = client
+    state["clients"] = sorted(clients.values(), key=lambda item: str(item.get("customer") or item.get("id")))
+    _write_real_estate_client_payload(repo_root, state)
+
+
+def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
+    state, client = _real_estate_client_for_action(repo_root, payload)
+    source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
+    if not source_root.is_dir():
+        raise ValueError(f"source root not found: {source_root}")
+    access_code = str(client.get("accessCode") or "").strip()
+    if not access_code:
+        raise ValueError("client password is required before import")
+    command = [
+        sys.executable,
+        "scripts/import_real_estate_gallery.py",
+        "--source-root",
+        str(source_root),
+        "--output-root",
+        REAL_ESTATE_IMPORT_ROOT.as_posix(),
+        "--customer",
+        str(client.get("customer") or ""),
+        "--username",
+        str(client.get("username") or client.get("customer") or ""),
+        "--access-code-env",
+        "PBE_REAL_ESTATE_ACCESS_CODE",
+        "--access-code-salt",
+        str(client.get("accessCodeSalt") or uuid.uuid4().hex),
+        "--gallery-key",
+        str(client.get("galleryKey") or ""),
+        "--gallery-title",
+        str(client.get("galleryTitle") or ""),
+        "--public-key-prefix",
+        str(client.get("publicKeyPrefix") or ""),
+        "--private-key-prefix",
+        str(client.get("privateKeyPrefix") or ""),
+    ]
+    for album in client.get("albums") or []:
+        command.extend(["--album", str(album)])
+    if payload.get("force") is True:
+        command.append("--force")
+    result = _run_real_estate_command(repo_root, command, {"PBE_REAL_ESTATE_ACCESS_CODE": access_code})
+    if not result["ok"]:
+        raise OSError(result["output"] or "real-estate import failed")
+    client["lastImportedAt"] = datetime.now(timezone.utc).isoformat()
+    _persist_real_estate_client_update(repo_root, state, client)
+    return {
+        "ok": True,
+        "action": "import-client",
+        "client": _safe_real_estate_client(repo_root, client),
+        "command": result,
+    }
+
+
+def _publish_real_estate_client(repo_root: Path, payload: dict) -> dict:
+    state, client = _real_estate_client_for_action(repo_root, payload)
+    paths = _real_estate_paths(repo_root, client)
+    if not paths["manifest"].exists():
+        raise ValueError("import the client before publishing the public context")
+    manifest = _read_json_file(paths["manifest"], {})
+    if not isinstance(manifest, dict):
+        raise ValueError("real-estate manifest is not readable")
+    paths["public_dir"].mkdir(parents=True, exist_ok=True)
+    _write_real_estate_app_context(
+        _sanitize_real_estate_public_manifest(manifest),
+        paths["public_context"],
+    )
+    client["lastPublishedAt"] = datetime.now(timezone.utc).isoformat()
+    _persist_real_estate_client_update(repo_root, state, client)
+    return {
+        "ok": True,
+        "action": "publish-client",
+        "client": _safe_real_estate_client(repo_root, client),
+        "path": _repo_rel(repo_root, paths["public_context"]),
+    }
+
+
+def _upload_real_estate_client(repo_root: Path, payload: dict) -> dict:
+    state, client = _real_estate_client_for_action(repo_root, payload)
+    paths = _real_estate_paths(repo_root, client)
+    if not paths["manifest"].exists():
+        raise ValueError("import the client before uploading real-estate media")
+    scope = str(payload.get("scope") or "both").strip().lower()
+    if scope not in {"public", "private", "both"}:
+        raise ValueError("scope must be public, private, or both")
+    command = [
+        sys.executable,
+        "scripts/upload_real_estate_media.py",
+        "--manifest",
+        _repo_rel(repo_root, paths["manifest"]),
+        "--scope",
+        scope,
+        "--json",
+    ]
+    if payload.get("upload") is True:
+        command.append("--upload")
+    result = _run_real_estate_command(repo_root, command)
+    if not result["ok"]:
+        raise OSError(result["output"] or "real-estate upload failed")
+    client["lastUploadAt"] = datetime.now(timezone.utc).isoformat() if payload.get("upload") is True else str(client.get("lastUploadAt") or "")
+    _persist_real_estate_client_update(repo_root, state, client)
+    summary = {}
+    try:
+        summary = json.loads(result["output"] or "{}")
+    except json.JSONDecodeError:
+        summary = {}
+    return {
+        "ok": True,
+        "action": "upload-client" if payload.get("upload") is True else "upload-dry-run",
+        "client": _safe_real_estate_client(repo_root, client),
+        "summary": summary,
+        "command": result,
+    }
+
+
+def _real_estate_worker_secret(repo_root: Path) -> dict:
+    state = _read_real_estate_client_payload(repo_root)
+    galleries = []
+    for client in state.get("clients") or []:
+        access_code = str(client.get("accessCode") or "").strip()
+        if not access_code:
+            continue
+        galleries.append({
+            "key": str(client.get("galleryKey") or ""),
+            "username": str(client.get("username") or client.get("customer") or ""),
+            "accessCode": access_code,
+            "privateMasterPrefix": str(client.get("privateKeyPrefix") or ""),
+            "maxItems": int(client.get("maxItems") or 300),
+        })
+    secret_json = json.dumps(galleries, indent=2, sort_keys=True)
+    return {
+        "ok": True,
+        "action": "worker-secret",
+        "secretName": "REAL_ESTATE_GALLERIES_JSON",
+        "secretJson": secret_json,
+        "wranglerCommand": "npx wrangler secret put REAL_ESTATE_GALLERIES_JSON",
+        "galleryCount": len(galleries),
+    }
+
+
+def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
+    action = str(payload.get("action") or "").strip()
+    if action == "save-client":
+        return _save_real_estate_client(repo_root, payload.get("client") if isinstance(payload.get("client"), dict) else payload)
+    if action == "import-client":
+        return _import_real_estate_client(repo_root, payload)
+    if action == "publish-client":
+        return _publish_real_estate_client(repo_root, payload)
+    if action == "upload-client":
+        payload["upload"] = True
+        return _upload_real_estate_client(repo_root, payload)
+    if action == "upload-dry-run":
+        payload["upload"] = False
+        return _upload_real_estate_client(repo_root, payload)
+    if action == "worker-secret":
+        return _real_estate_worker_secret(repo_root)
+    raise ValueError("unsupported real-estate owner action")
 
 
 def apply_photo_action(repo_root: Path, payload: dict) -> dict:

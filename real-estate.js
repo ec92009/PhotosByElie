@@ -11,6 +11,7 @@
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : defaultPublicContext);
   const densityKey = "photosbyelie-real-estate-card-density";
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
+  const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
 
   const elements = {
     login: app.querySelector("[data-re-login]"),
@@ -31,9 +32,11 @@
     filterForm: app.querySelector("[data-re-filter-form]"),
     search: app.querySelector("[data-re-search]"),
     sort: app.querySelector("[data-re-sort]"),
+    mediaType: app.querySelector("[data-re-media-type]"),
     density: app.querySelector("[data-re-density]"),
     selectedOnly: app.querySelector("[data-re-selected-only]"),
     pdfFormat: app.querySelector("[data-re-pdf-format]"),
+    slideshowPhotoSeconds: app.querySelector("[data-re-slideshow-photo-seconds]"),
     status: app.querySelector("[data-re-status]"),
     draftCount: app.querySelector("[data-re-draft-count]"),
     draftList: app.querySelector("[data-re-draft-list]"),
@@ -41,6 +44,7 @@
     actionBarSelected: document.querySelector("[data-re-selected-bar]"),
     actionStatus: document.querySelector("[data-re-action-status]"),
     dialog: document.querySelector("[data-re-dialog]"),
+    dialogFigure: document.querySelector("[data-re-dialog-figure]"),
     dialogImage: document.querySelector("[data-re-dialog-image]"),
     dialogAlbum: document.querySelector("[data-re-dialog-album]"),
     dialogTitle: document.querySelector("[data-re-dialog-title]"),
@@ -63,9 +67,11 @@
     albums: [],
     album: "all",
     query: "",
+    mediaType: "all",
     sort: "album",
     density: localStorage.getItem(densityKey) || "balanced",
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
+    slideshowPhotoSeconds: Number(localStorage.getItem(slideshowPhotoSecondsKey)) || 4,
     selectedOnly: false,
     selectedOrder: [],
     selectedIds: new Set(),
@@ -385,6 +391,51 @@
     );
   };
 
+  const videoPreviewFor = (photo) => {
+    const preview = photo?.media?.publicPreview || {};
+    const remoteUrl = publicMediaUrl(
+      preview.detailVideoKey
+      || preview.videoKey
+      || preview.previewVideoKey
+      || photo?.media?.video?.publicPreviewKey
+    );
+    if (!isLocalHost && remoteUrl) return remoteUrl;
+    return safeUrl(
+      preview.detailVideoUrl
+      || preview.videoUrl
+      || preview.previewVideoUrl
+      || photo?.media?.video?.previewUrl
+      || ""
+    );
+  };
+
+  const mediaTypeFor = (photo) => String(photo?.media?.type || photo?.mediaType || "photo").toLowerCase() === "video" ? "video" : "photo";
+  const isVideo = (photo) => mediaTypeFor(photo) === "video";
+  const mediaLabelFor = (photo) => isVideo(photo) ? "Video" : "Photo";
+  const videoStillPercentFor = (photo) => Number(photo?.cloudPdfSource?.videoStillPercent || photo?.media?.video?.posterPercent || 10) || 10;
+  const durationSecondsFor = (photo) => {
+    const direct = Number(
+      photo?.media?.video?.durationSeconds
+      ?? photo?.media?.video?.duration
+      ?? photo?.realEstate?.videoDurationSeconds
+      ?? photo?.durationSeconds
+      ?? 0
+    );
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    const text = (photo?.metadata || []).map((item) => `${item.label} ${item.value}`).join(" ");
+    const match = text.match(/(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/i);
+    return match ? Number(match[1]) || 0 : 0;
+  };
+
+  const formatDuration = (seconds) => {
+    const value = Math.max(0, Number(seconds) || 0);
+    if (!value) return "";
+    const minutes = Math.floor(value / 60);
+    const remainder = Math.round(value % 60);
+    if (!minutes) return `${remainder}s`;
+    return `${minutes}:${String(remainder).padStart(2, "0")}`;
+  };
+
   const titleFor = (photo) => state.editedTitles[photo?.id] || photo?.editableTitle || photo?.title || photo?.id || "";
   const albumTitleFor = (photo) => photo?.albumTitle || photo?.caption || photo?.album || "Property";
   const projectIdFor = (photo) => photo?.albumSlug || "project";
@@ -422,6 +473,7 @@
   };
   const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
+  const slideshowTransition = "basic-carousel";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -430,6 +482,7 @@
     photo?.album,
     photo?.albumTitle,
     photo?.caption,
+    mediaLabelFor(photo),
   ].filter(Boolean).join(" ").toLowerCase();
 
   const normalizeSelectedOrder = (value) => {
@@ -452,6 +505,7 @@
     const selectedRank = new Map(state.selectedOrder.map((id, index) => [id, index]));
     const photos = state.photos.filter((photo) => {
       if (state.album !== "all" && photo.albumSlug !== state.album) return false;
+      if (state.mediaType !== "all" && mediaTypeFor(photo) !== state.mediaType) return false;
       if (state.selectedOnly && !state.selectedIds.has(photo.id)) return false;
       if (query && !photoSearchText(photo).includes(query)) return false;
       return true;
@@ -485,7 +539,11 @@
   const syncFileActionLabels = () => {
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
       button.textContent = "Download project PDFs";
-      button.title = "Browser will save project PDFs to your Downloads folder";
+      button.title = "Browser will save project PDFs to your Downloads folder; selected videos appear as stills from 10% in";
+    });
+    document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
+      button.textContent = "Share slideshow plan";
+      button.title = "Share a cloud-video slideshow plan; selected videos keep their full duration";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = "Share selection table";
@@ -505,11 +563,13 @@
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
+    const videoCount = photos.filter(isVideo).length;
     if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
     if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
     if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
-    if (elements.description) elements.description.textContent = gallery?.description || "Private photo review workspace for property PDF delivery.";
+    if (elements.description) elements.description.textContent = gallery?.description || "Private media review workspace for project PDFs and slideshow delivery.";
     if (elements.total) elements.total.textContent = String(photos.length);
+    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = videoCount ? "Media" : "Photos";
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
   };
 
@@ -523,12 +583,12 @@
     elements.albums.innerHTML = [
       `<button class="real-estate-album-filter ${state.album === "all" ? "is-active" : ""}" type="button" data-album-filter="all" aria-pressed="${state.album === "all"}">
         <span>All properties</span>
-        <small>${state.photos.length} photos / ${allSelected} selected</small>
+        <small>${state.photos.length} media / ${allSelected} selected</small>
       </button>`,
       ...state.albums.map((album) => `
         <button class="real-estate-album-filter ${state.album === album.slug ? "is-active" : ""}" type="button" data-album-filter="${escapeHtml(album.slug)}" aria-pressed="${state.album === album.slug}">
           <span>${escapeHtml(album.displayTitle || album.title)}</span>
-          <small>${Number(album.photoCount) || 0} photos / ${albumSelectedCount(album.slug)} selected</small>
+          <small>${Number(album.photoCount) || 0} media / ${albumSelectedCount(album.slug)} selected</small>
         </button>
       `),
     ].join("");
@@ -541,20 +601,24 @@
     elements.grid.innerHTML = photos.length ? photos.map((photo) => {
       const selected = state.selectedIds.has(photo.id);
       const assignedProjects = new Set(assignedProjectIdsFor(photo));
+      const video = isVideo(photo);
+      const mediaLabel = mediaLabelFor(photo);
+      const duration = formatDuration(durationSecondsFor(photo));
       return `
-        <article class="real-estate-photo-card ${selected ? "is-selected" : ""}" data-photo-id="${escapeHtml(photo.id)}">
+        <article class="real-estate-photo-card ${selected ? "is-selected" : ""} ${video ? "is-video" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
             <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
               <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
               <span>${escapeHtml(albumTitleFor(photo))}</span>
+              ${video ? `<b class="real-estate-media-type-badge">${escapeHtml(duration ? `${mediaLabel} ${duration}` : mediaLabel)}</b>` : ""}
             </button>
             <label class="real-estate-check real-estate-photo-select">
-              <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))} for PDF" ${selected ? "checked" : ""}/>
+              <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))}" ${selected ? "checked" : ""}/>
             </label>
           </div>
           <div class="real-estate-photo-card-body">
             <label class="real-estate-title-field">
-              <input type="text" data-title-photo="${escapeHtml(photo.id)}" aria-label="PDF title for ${escapeHtml(titleFor(photo))}" value="${escapeHtml(titleFor(photo))}"/>
+              <input type="text" data-title-photo="${escapeHtml(photo.id)}" aria-label="Output title for ${escapeHtml(titleFor(photo))}" value="${escapeHtml(titleFor(photo))}"/>
             </label>
             <div class="real-estate-project-picker" aria-label="Projects for ${escapeHtml(titleFor(photo))}">
               ${projectOptions().map((project) => `
@@ -573,7 +637,7 @@
         <span>Clear filters or choose another album.</span>
       </div>
     `;
-    setStatus(`${photos.length} visible / ${state.photos.length} photos`);
+    setStatus(`${photos.length} visible / ${state.photos.length} media`);
   };
 
   const renderDraft = () => {
@@ -583,14 +647,14 @@
     if (elements.draftCount) elements.draftCount.textContent = String(selectedPhotos.length);
     if (!elements.draftList) return;
     elements.draftList.innerHTML = selectedPhotos.length ? selectedPhotos.map((photo, index) => `
-      <article class="real-estate-draft-item" data-draft-photo="${escapeHtml(photo.id)}" aria-label="Drag ${escapeHtml(titleFor(photo))} to reorder PDF draft">
+      <article class="real-estate-draft-item ${isVideo(photo) ? "is-video" : ""}" data-draft-photo="${escapeHtml(photo.id)}" aria-label="Drag ${escapeHtml(titleFor(photo))} to reorder selection">
         <span class="real-estate-draft-handle" data-draft-drag-handle aria-hidden="true" title="Drag to reorder">
           <span aria-hidden="true"></span>
         </span>
         <img src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
-          <small>${escapeHtml(assignedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + "))}</small>
+          <small>${escapeHtml([mediaLabelFor(photo), assignedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + ")].filter(Boolean).join(" / "))}</small>
         </div>
         <div class="real-estate-draft-actions">
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="-1" aria-label="Move ${escapeHtml(titleFor(photo))} up">&uarr;</button>
@@ -605,6 +669,8 @@
   const render = () => {
     document.body.dataset.realEstateDensity = state.density;
     if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
+    if (elements.mediaType) elements.mediaType.value = state.mediaType;
+    if (elements.slideshowPhotoSeconds) elements.slideshowPhotoSeconds.value = String(state.slideshowPhotoSeconds);
     syncAuthUi();
     renderAlbums();
     renderGrid();
@@ -652,6 +718,10 @@
 
   const timestampId = () => new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const selectedPhotos = () => state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
+  const selectedMediaSummary = (photos = selectedPhotos()) => ({
+    photos: photos.filter((photo) => !isVideo(photo)).length,
+    videos: photos.filter(isVideo).length,
+  });
   const projectGroupsFor = (photos) => {
     const groups = new Map();
     photos.forEach((photo) => {
@@ -678,6 +748,15 @@
     photoId: photo.id,
     title: titleFor(photo),
     sortIndex: index + 1,
+    mediaType: mediaTypeFor(photo),
+    durationSeconds: isVideo(photo) ? durationSecondsFor(photo) : null,
+    pdfTreatment: isVideo(photo) ? "still-from-video" : "photo",
+    pdfStillPercent: isVideo(photo) ? videoStillPercentFor(photo) : null,
+    slideshowDurationPolicy: isVideo(photo) ? "preserve-source-duration" : "fixed-photo-duration",
+    slideshowDurationSeconds: isVideo(photo) ? durationSecondsFor(photo) : state.slideshowPhotoSeconds,
+    transition: slideshowTransition,
+    cloudSourceKey: isVideo(photo) ? photo?.realEstate?.privateMasterKey || "" : photo?.cloudPdfSource?.publicKey || "",
+    publicStillKey: photo?.cloudPdfSource?.publicKey || photo?.media?.publicPreview?.detailKey || "",
     projectId: project?.projectId || projectIdFor(photo),
     projectTitle: project?.projectTitle || projectTitleFor(photo),
     projectIds: project ? [project.projectId] : assignedProjectIdsFor(photo),
@@ -688,6 +767,7 @@
     const batchId = timestampId();
     const photos = selectedPhotos();
     const projects = projectGroupsFor(photos);
+    const mediaSummary = selectedMediaSummary(photos);
     return {
       ...template,
       schema: template.schema || workflow().batchManifest?.schema || "photosbyelie.realEstatePdfBatch.v1",
@@ -697,16 +777,26 @@
       galleryKey: template.galleryKey || state.gallery?.key || "",
       sourceBatchId: template.sourceBatchId || "",
       pdfMode: "one-pdf-per-project",
+      outputModes: ["project-pdf", "project-slideshow"],
+      mediaSummary,
       pdfSettings: {
         paperFormat: paperFormatFor().key,
         paperLabel: paperFormatFor().label,
         pageOrientation: "portrait",
         layout: "landscape-two-per-page-portrait-one-per-page",
         fitMode: "contain",
+        videoTreatment: "still-from-video",
+        videoStillPercent: 10,
         photoWatermark: pdfWatermarkText,
         photoWatermarkPlacement: "bottom-center",
         pageWatermark: pdfWatermarkText,
         pageWatermarkPlacement: "footer-center",
+      },
+      slideshowSettings: {
+        mode: "one-slideshow-per-project",
+        photoDurationSeconds: state.slideshowPhotoSeconds,
+        videoDurationPolicy: "preserve-source-duration",
+        transition: slideshowTransition,
       },
       projects: projects.map((project) => ({
         projectId: project.projectId,
@@ -747,10 +837,14 @@
       `Batch: ${manifest.batchId || ""}`,
       `Created: ${manifest.createdAt || ""}`,
       "",
-      ["Project", "Order", "Title", "Photo ID"].join("\t"),
+      ["Project", "Order", "Type", "Duration", "Title", "Photo ID"].join("\t"),
       ...rows.map(({ projectTitle, item }) => [
         projectTitle || item.projectTitle || "",
         item.sortIndex || "",
+        item.mediaType || "photo",
+        item.mediaType === "video"
+          ? "preserve source"
+          : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
         item.title || "",
         item.photoId || "",
       ].map((value) => String(value || "").replace(/\s+/g, " ").trim()).join("\t")),
@@ -809,6 +903,8 @@
         <tr>
           <th>Project</th>
           <th>Order</th>
+          <th>Type</th>
+          <th>Duration</th>
           <th>Title</th>
           <th>Photo ID</th>
         </tr>
@@ -818,12 +914,115 @@
         <tr>
           <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
           <td>${escapeHtml(item.sortIndex || "")}</td>
+          <td>${escapeHtml(item.mediaType || "photo")}</td>
+          <td>${escapeHtml(item.mediaType === "video" ? "preserve source" : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`)}</td>
           <td>${escapeHtml(item.title || "")}</td>
           <td><code>${escapeHtml(item.photoId || "")}</code></td>
         </tr>`).join("")}
       </tbody>
     </table>
     <p class="note">This table file can be opened in a browser for review and loaded back into the Photos By Elie Real Estate page to continue editing the selection.</p>
+    <script type="application/json" data-re-selection-batch>${safeJson}</script>
+  </main>
+</body>
+</html>
+`;
+  };
+
+  const buildSlideshowManifest = () => {
+    const base = buildBatchManifest();
+    return {
+      ...base,
+      schema: "photosbyelie.realEstateSlideshowBatch.v1",
+      outputMode: "one-slideshow-per-project",
+      pdfSettings: undefined,
+      slideshowSettings: {
+        mode: "one-slideshow-per-project",
+        photoDurationSeconds: state.slideshowPhotoSeconds,
+        videoDurationPolicy: "preserve-source-duration",
+        transition: slideshowTransition,
+      },
+      projects: (base.projects || []).map((project) => ({
+        ...project,
+        items: (project.items || []).map((item) => ({
+          ...item,
+          outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
+          durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
+        })),
+      })),
+      items: (base.items || []).map((item) => ({
+        ...item,
+        outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
+        durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
+      })),
+    };
+  };
+
+  const slideshowHtmlFor = (manifest) => {
+    const rows = selectionRowsFor(manifest);
+    const safeJson = JSON.stringify(manifest, null, 2)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const dateLabel = manifest.createdAt ? new Date(manifest.createdAt).toLocaleString() : "";
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie Slideshow ${escapeHtml(manifest.batchId || "")}</title>
+  <style>
+    :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4}
+    body{margin:0;background:Canvas;color:CanvasText}
+    main{max-width:980px;margin:0 auto;padding:24px 16px 40px}
+    h1{margin:0 0 6px;font-size:clamp(1.6rem,5vw,2.4rem)}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:18px 0}
+    .meta div{border:1px solid color-mix(in srgb,CanvasText 18%,transparent);padding:10px}
+    .meta dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
+    .meta dd{margin:4px 0 0;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.95rem}
+    th,td{border:1px solid color-mix(in srgb,CanvasText 16%,transparent);padding:9px;text-align:left;vertical-align:top}
+    th{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
+    tbody tr:nth-child(even){background:color-mix(in srgb,CanvasText 4%,transparent)}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
+    .note{margin-top:20px;font-size:.9rem;opacity:.72}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Photos By Elie slideshow plan</h1>
+    <p>${escapeHtml(manifest.customer || state.payload?.customer?.name || "Client")} project slideshow draft</p>
+    <dl class="meta">
+      <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
+      <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
+      <div><dt>Photo duration</dt><dd>${escapeHtml(manifest.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds)}s</dd></div>
+      <div><dt>Videos</dt><dd>Full source duration</dd></div>
+      <div><dt>Transition</dt><dd>Basic carousel</dd></div>
+    </dl>
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Order</th>
+          <th>Type</th>
+          <th>Duration</th>
+          <th>Title</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(({ projectTitle, item }) => `
+        <tr>
+          <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
+          <td>${escapeHtml(item.sortIndex || "")}</td>
+          <td>${escapeHtml(item.mediaType || "photo")}</td>
+          <td>${escapeHtml(item.mediaType === "video" ? "preserve source" : `${item.durationSeconds || state.slideshowPhotoSeconds}s`)}</td>
+          <td>${escapeHtml(item.title || "")}</td>
+          <td><code>${escapeHtml(item.cloudSourceKey || item.publicStillKey || item.photoId || "")}</code></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="note">Cloud assembly should use the full source duration for videos, ${escapeHtml(state.slideshowPhotoSeconds)} seconds for still photos, and a basic carousel transition between items.</p>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
   </main>
 </body>
@@ -907,6 +1106,35 @@
       }
     } catch (error) {
       setStatus(error?.name === "AbortError" ? "Share canceled" : "Selection table could not be shared");
+    }
+  };
+
+  const shareSlideshowPlan = async () => {
+    if (!requireUnlocked()) return;
+    const selected = selectedPhotos();
+    if (!selected.length) {
+      setStatus("Select media before sharing a slideshow plan");
+      return;
+    }
+    const batch = buildSlideshowManifest();
+    const blob = new Blob([slideshowHtmlFor(batch)], { type: "text/html" });
+    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
+    try {
+      const saved = await shareOrOpenBlob({
+        blob,
+        filename,
+        title: "Photos By Elie slideshow plan",
+        text: `${batch.customer || "Client"} slideshow plan`,
+      });
+      if (saved.method === "share") {
+        setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
+      } else if (saved.method === "open") {
+        setStatus(`Opened ${saved.filename}; videos keep their full source duration`);
+      } else {
+        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+      }
+    } catch (error) {
+      setStatus(error?.name === "AbortError" ? "Share canceled" : "Slideshow plan could not be shared");
     }
   };
 
@@ -1070,6 +1298,7 @@
     photoId: photo.id,
     albumSlug: photo.albumSlug,
     sourceFile: photo.full || "",
+    mediaType: mediaTypeFor(photo),
     title: titleFor(photo),
     sortIndex: index + 1,
   }));
@@ -1159,7 +1388,7 @@
         blob,
         filename,
         title: "Photos By Elie originals",
-        text: `${state.payload?.customer?.name || "Client"} selected original photos`,
+        text: `${state.payload?.customer?.name || "Client"} selected original media`,
         openFallback: false,
       });
       if (saved.method === "share") {
@@ -1446,8 +1675,10 @@
     const projects = projectGroupsFor(photos);
     const batchId = timestampId();
     const paper = paperFormatFor();
+    const summary = selectedMediaSummary(photos);
+    const videoNote = summary.videos ? `; ${summary.videos} video${summary.videos === 1 ? "" : "s"} will use 10% stills` : "";
     state.pdfBusy = true;
-    setStatus(`Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} photos...`);
+    setStatus(`Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} selected media${videoNote}...`);
     let savedProjectCount = 0;
     try {
       for (const project of projects) {
@@ -1457,7 +1688,7 @@
         savedProjectCount += 1;
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
-      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} to Downloads with ${photos.length} photos`);
+      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} to Downloads with ${photos.length} media${videoNote}`);
     } catch (error) {
       if (error?.name === "AbortError") {
         setStatus(savedProjectCount
@@ -1575,8 +1806,14 @@
     const photo = state.photosById.get(photoId);
     if (!photo || !elements.dialog) return;
     state.activePhotoId = photoId;
-    if (elements.dialogImage) {
-      elements.dialogImage.src = imageFor(photo, "detail");
+    const imageUrl = imageFor(photo, "detail");
+    const videoUrl = isVideo(photo) ? videoPreviewFor(photo) : "";
+    if (elements.dialogFigure) {
+      elements.dialogFigure.innerHTML = videoUrl
+        ? `<video controls playsinline poster="${escapeHtml(imageUrl)}" src="${escapeHtml(videoUrl)}"></video>`
+        : `<img data-re-dialog-image src="${escapeHtml(imageUrl)}" alt="${escapeHtml(titleFor(photo))}"/>`;
+    } else if (elements.dialogImage) {
+      elements.dialogImage.src = imageUrl;
       elements.dialogImage.alt = titleFor(photo);
     }
     if (elements.dialogAlbum) elements.dialogAlbum.textContent = albumTitleFor(photo);
@@ -1584,7 +1821,12 @@
     if (elements.dialogTitleInput) elements.dialogTitleInput.value = titleFor(photo);
     if (elements.dialogSelected) elements.dialogSelected.checked = state.selectedIds.has(photoId);
     if (elements.dialogDetails) {
-      elements.dialogDetails.innerHTML = (photo.metadata || []).map((item) => `
+      const duration = durationSecondsFor(photo);
+      const mediaDetails = [
+        { label: "Media", value: isVideo(photo) ? `Video${duration ? ` / ${formatDuration(duration)}` : ""}` : "Photo" },
+        ...(isVideo(photo) ? [{ label: "PDF still", value: `${videoStillPercentFor(photo)}% into video` }] : []),
+      ];
+      elements.dialogDetails.innerHTML = [...mediaDetails, ...(photo.metadata || [])].map((item) => `
         <div>
           <dt>${escapeHtml(item.label)}</dt>
           <dd>${escapeHtml(item.value)}</dd>
@@ -1655,7 +1897,7 @@
     persistTitles();
     persistProjectAssignments();
     render();
-    setStatus(`Loaded ${state.selectedOrder.length} selected photos across ${projectGroupsFor(selectedPhotos()).length} projects`);
+    setStatus(`Loaded ${state.selectedOrder.length} selected media across ${projectGroupsFor(selectedPhotos()).length} projects`);
   };
 
   const openBatchFile = async () => {
@@ -1704,7 +1946,7 @@
       writeSessionCredentials(elements.loginName?.value || "", elements.loginCode?.value || "");
       writeSession(elements.loginName?.value || "");
       syncAuthUi();
-      setStatus(`${state.photos.length} visible / ${state.photos.length} photos`);
+      setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
       window.setTimeout(() => showHelp(), 120);
     });
 
@@ -1725,6 +1967,10 @@
       state.sort = event.target.value;
       renderGrid();
     });
+    elements.mediaType?.addEventListener("change", (event) => {
+      state.mediaType = event.target.value || "all";
+      renderGrid();
+    });
     elements.density?.addEventListener("change", (event) => {
       state.density = event.target.value;
       localStorage.setItem(densityKey, state.density);
@@ -1734,6 +1980,12 @@
       state.pdfFormat = paperFormatFor(event.target.value).key;
       localStorage.setItem(pdfFormatKey, state.pdfFormat);
       event.target.value = state.pdfFormat;
+    });
+    elements.slideshowPhotoSeconds?.addEventListener("change", (event) => {
+      const next = Math.max(1, Math.min(30, Math.round(Number(event.target.value) || 4)));
+      state.slideshowPhotoSeconds = next;
+      localStorage.setItem(slideshowPhotoSecondsKey, String(next));
+      event.target.value = String(next);
     });
     elements.selectedOnly?.addEventListener("change", (event) => {
       state.selectedOnly = event.target.checked;
@@ -1747,9 +1999,11 @@
       if (event.target.closest("[data-re-clear-filters]")) {
         state.album = "all";
         state.query = "";
+        state.mediaType = "all";
         state.sort = "album";
         state.selectedOnly = false;
         if (elements.search) elements.search.value = "";
+        if (elements.mediaType) elements.mediaType.value = "all";
         if (elements.sort) elements.sort.value = "album";
         if (elements.selectedOnly) elements.selectedOnly.checked = false;
         render();
@@ -1858,6 +2112,9 @@
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
       shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
+    }));
+    document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => button.addEventListener("click", () => {
+      shareSlideshowPlan().catch(() => setStatus("Slideshow plan could not be shared"));
     }));
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
       shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));

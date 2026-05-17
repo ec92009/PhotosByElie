@@ -5,12 +5,12 @@ Date: 2026-05-17
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
-- Current visible build: `v78.23`
+- Current visible build: `v78.29`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Public catalog count: `5,827` active media rows.
 - Public previews are served from public R2 media; private sellable and Real Estate originals are served through Worker-created private download tokens.
-- The worktree was clean after the latest pushed public-site fix before this documentation refresh.
+- Current handoff work adds localhost Owner controls for Real Estate client config, import, publish, upload, and Worker secret preparation.
 
 ## Conversation Context
 
@@ -39,6 +39,8 @@ The phone and 5G workflow drove the latest Real Estate changes:
 - The ZIP password flow now uses a masked in-page dialog rather than `window.prompt()`.
 - Wrong ZIP passwords clear the cached ZIP credential and reopen the masked dialog with a retry message.
 - The main Real Estate login password field has an eye toggle next to the field.
+- Localhost Owner now has a Real Estate client panel that stores credentials/config in ignored local JSON, imports source folders through the helper server, publishes public-safe context bundles, runs upload dry-runs or uploads, and can emit the Worker secret payload.
+- The public Corine context now stores a salted password hash instead of the previous plaintext access code.
 
 ## Recent Commits
 
@@ -48,14 +50,19 @@ The phone and 5G workflow drove the latest Real Estate changes:
 
 ## Verification
 
-Recent verification before this documentation refresh:
+Recent verification before this handoff:
 
 ```text
+node --check owner.js: pass
 node --check real-estate.js: pass
+node --check assets/real-estate/corine/app-context.js: pass
+python3 -m py_compile scripts/local_server.py: pass
+python3 -m py_compile scripts/import_real_estate_gallery.py: pass
 npm test: pass, 18 tests
 npm run validate: pass
-GitHub Pages served visible build: v78.23
-Live one-file Real Estate originals ZIP download: pass, 5.3 MB zip
+git diff --check: pass
+Previous GitHub Pages served visible build: v78.23
+Previous live one-file Real Estate originals ZIP download: pass, 5.3 MB zip
 ```
 
 ## Current Backlog Priorities

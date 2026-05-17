@@ -28,6 +28,7 @@ assets/hidden/**
 # Local Owner workflow database.
 assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
+assets/owner-actions/real-estate-clients.local.json
 
 # Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/

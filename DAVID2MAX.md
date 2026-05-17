@@ -775,3 +775,27 @@ _No David automation results recorded yet._
 - `npm test`: PASSED (16/16)
 - `npm run validate`: PASSED (`Validation OK`)
 - Notes: Working tree clean after run (no generated changes detected). Network to GitHub appears unavailable, so this run could not confirm the latest remote `main`.
+
+## 2026-05-17 - Corine Apple Photos Real Estate export
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- `git pull --ff-only`: PASSED (`Already up to date.`)
+- Tooling used: AppleScript through `osascript`, exporting `media items of album <name>` to the matching Saturn folder `with using originals`; destination folders were created with `mkdir -p`.
+- Album: `RE 2026 La Concha 1 Apt 8AB1`
+- Destination: `/Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 1 Apt 8AB1`
+- Apple Photos album items: 70
+- Exported file count: 140
+- Extension breakdown: `.jpg` 70, `.nef` 70
+- Total bytes: 2,109,213,959
+- Missing/unexportable items: none reported; AppleScript exited successfully and exported the expected original JPG/NEF pair count.
+- Album: `RE 2026 La Concha 2 Apt 8A5`
+- Destination: `/Volumes/Saturn/Pictures/RE/Corine/RE 2026 La Concha 2 Apt 8A5`
+- Apple Photos album items: 72
+- Exported file count: 144
+- Extension breakdown: `.jpg` 72, `.nef` 72
+- Total bytes: 2,171,570,979
+- Missing/unexportable items: none reported; AppleScript exited successfully and exported the expected original JPG/NEF pair count.
+- Collision handling: no obvious Photos collision-renamed files found in either destination folder.
+- Checksum manifest: `.review-logs/corine-real-estate-export/sha256sums.txt` (ignored, 284 SHA-256 entries; not committed).
+- Validation before commit: `git diff --check` PASSED; `npm run validate` PASSED (`Validation OK`).

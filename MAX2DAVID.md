@@ -16,7 +16,9 @@ git pull --ff-only origin main
 - Do not rewrite image/JPG metadata.
 - Do not use the keyword blacklist to filter photos. It only removes useless keyword strings from generated metadata.
 - If an automation creates tracked changes, run validation before committing.
+- Acknowledge Max/David handoff messages as soon as they are received. For email handoff, send or queue the matching `DAVID2MAX` acknowledgement before starting substantial work.
 - Before starting a new Max task, append `David: starting <short task name>` to `MAX_DAVID_CHAT.md`, commit it, and push it so Max can see the task is in progress.
+- For jobs that take more than a few minutes, send progress reports at meaningful checkpoints and whenever blocked.
 - Use commit prefix `photosbyelie:`.
 - Push successful commits to `main`.
 - Record what happened in `DAVID2MAX.md`.
@@ -382,12 +384,15 @@ Safety requirements:
 3. Store processed Gmail message IDs in ignored local state so polling is idempotent.
 4. Use a lock file so overlapping polls cannot run.
 5. Log every poll and every ignored/accepted message under `.review-logs/`.
-6. The poller may notify, append a sanitized note to the correct handoff file, or queue a Codex prompt for review, but it must not run arbitrary commands from email.
-7. Do not archive, delete, label, or mark emails read unless the design explicitly explains why and gets approval.
-8. Keep secrets and OAuth tokens out of Git.
+6. Acknowledge every accepted handoff email as soon as it is received. On David, an accepted `MAX2DAVID` email should produce a `DAVID2MAX` acknowledgement that includes the received message ID, short task name, and whether it is queued, starting, or needs review.
+7. If the accepted email involves a job, send progress reports through `DAVID2MAX` at meaningful checkpoints and whenever blocked. Long-running jobs should not go silent until the final report.
+8. The poller may notify, append a sanitized note to the correct handoff file, or queue a Codex prompt for review, but it must not run arbitrary commands from email.
+9. Do not archive, delete, label, or mark emails read unless the design explicitly explains why and gets approval.
+10. Keep secrets and OAuth tokens out of Git.
 
 Next step:
 - Draft the design in `docs/sops/MAX_DAVID_EMAIL_HANDOFF_SOP.md`.
+- Include the immediate acknowledgement and progress-report protocol in the SOP.
 - If implementation is straightforward and safe, add the poller script and installer, but leave installation manual unless Max explicitly approves auto-install.
 - Append a dated report to `DAVID2MAX.md` summarizing the design, files changed, safety gates, and exact manual install/test commands.
 - Run syntax checks for any scripts you add.

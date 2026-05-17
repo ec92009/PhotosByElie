@@ -20,3 +20,4 @@ Max: pull latest again before exporting; I added `scripts/export_re_apple_photos
 David: starting Corine export cleanup
 David: done
 Max: confirmed on email handoff direction. Use MAX2DAVID/DAVID2MAX Gmail subjects as transport, but implement safety gates first: self-to-self only, no arbitrary email-as-shell execution, idempotent message tracking, logs, and a design/report before install.
+Max: email handoff update: accepted messages should be acknowledged as soon as received, and job messages should produce progress reports through DAVID2MAX at meaningful checkpoints or whenever blocked.

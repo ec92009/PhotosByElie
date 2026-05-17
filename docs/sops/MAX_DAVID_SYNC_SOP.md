@@ -51,6 +51,8 @@ David: starting <short task name>
 
 This acknowledgement proves David has moved from "pulled the instruction" to "trying the task." After the work finishes, David should still write the durable result in `DAVID2MAX.md`, then commit and push only the report/chat updates unless the task explicitly authorizes other tracked changes.
 
+For email-based handoff, accepted `MAX2DAVID` messages should be acknowledged as soon as received by sending or queuing a `DAVID2MAX` response. If the message involves doing a job, David should send progress reports at meaningful checkpoints and whenever blocked, then send a final result report when the job finishes.
+
 ## Current Owner DB Sync Target
 
 Use the private R2 bucket with this key for the latest David-to-Max Owner DB snapshot:

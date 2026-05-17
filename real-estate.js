@@ -10,6 +10,12 @@
   const densityKey = "photosbyelie-real-estate-card-density";
 
   const elements = {
+    login: app.querySelector("[data-re-login]"),
+    loginForm: app.querySelector("[data-re-login-form]"),
+    loginCustomer: app.querySelector("[data-re-login-customer]"),
+    loginName: app.querySelector("[data-re-login-name]"),
+    loginCode: app.querySelector("[data-re-login-code]"),
+    loginStatus: app.querySelector("[data-re-login-status]"),
     customer: app.querySelector("[data-re-customer]"),
     title: app.querySelector("[data-re-title]"),
     description: app.querySelector("[data-re-description]"),
@@ -36,6 +42,7 @@
     dialogTitleInput: document.querySelector("[data-re-dialog-title-input]"),
     dialogSelected: document.querySelector("[data-re-dialog-selected]"),
     dialogDetails: document.querySelector("[data-re-dialog-details]"),
+    actionBar: document.querySelector("[data-re-action-bar]"),
   };
 
   const state = {
@@ -53,6 +60,8 @@
     selectedIds: new Set(),
     editedTitles: {},
     activePhotoId: "",
+    unlocked: false,
+    pdfBusy: false,
   };
 
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -117,6 +126,43 @@
   const workflow = () => state.payload?.cloudPdfWorkflow || {};
   const selectionStoreKey = () => workflow().selectionStoreKey || `photosbyelie-real-estate-liked-${state.gallery?.key || "default"}`;
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
+  const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
+
+  const normalizeAccessCode = (value) => String(value || "").trim().toLowerCase();
+  const expectedAccessCode = () => normalizeAccessCode(
+    state.payload?.accessCode
+    || state.payload?.customer?.accessCode
+    || state.payload?.customer?.username
+    || state.payload?.customer?.name
+    || ""
+  );
+
+  const hasUnlockedSession = () => {
+    const saved = readJson(authStoreKey(), {});
+    return Boolean(saved?.unlocked && saved?.galleryKey === state.gallery?.key);
+  };
+
+  const writeSession = (name = "") => writeJson(authStoreKey(), {
+    galleryKey: state.gallery?.key || "",
+    name,
+    unlocked: true,
+    unlockedAt: new Date().toISOString(),
+  });
+
+  const syncAuthUi = () => {
+    app.classList.toggle("is-locked", !state.unlocked);
+    if (elements.actionBar) elements.actionBar.hidden = !state.unlocked;
+    if (elements.loginStatus && state.unlocked) elements.loginStatus.textContent = "";
+    if (!state.unlocked && elements.loginCode) elements.loginCode.value = "";
+  };
+
+  const requireUnlocked = () => {
+    if (state.unlocked) return true;
+    if (elements.loginStatus) elements.loginStatus.textContent = "Enter the client access code to open this review.";
+    syncAuthUi();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return false;
+  };
 
   const imageFor = (photo, size = "gallery") => {
     const preview = photo?.media?.publicPreview || {};
@@ -182,6 +228,8 @@
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
+    if (elements.loginCustomer) elements.loginCustomer.textContent = payload?.customer?.name ? `${payload.customer.name} access` : "Private client access";
+    if (elements.loginName && !elements.loginName.value) elements.loginName.value = payload?.customer?.name || "";
     if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
     if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
     if (elements.description) elements.description.textContent = gallery?.description || "Private photo review workspace for property PDF delivery.";
@@ -279,6 +327,7 @@
 
   const render = () => {
     document.body.dataset.realEstateDensity = state.density;
+    syncAuthUi();
     renderAlbums();
     renderGrid();
     renderDraft();
@@ -331,6 +380,7 @@
   };
 
   const copyBatch = async () => {
+    if (!requireUnlocked()) return;
     const batch = JSON.stringify(buildBatchManifest(), null, 2);
     try {
       await navigator.clipboard.writeText(batch);
@@ -341,6 +391,7 @@
   };
 
   const downloadBatch = () => {
+    if (!requireUnlocked()) return;
     const batch = buildBatchManifest();
     const blob = new Blob([JSON.stringify(batch, null, 2) + "\n"], { type: "application/json" });
     const link = document.createElement("a");
@@ -353,7 +404,157 @@
     setStatus(`Downloaded ${state.selectedOrder.length} selected photos`);
   };
 
+  const pdfEscape = (value) => String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+
+  const pdfDimensionsFor = (photo) => {
+    const dimensions = photo?.cloudPdfSource?.dimensions
+      || photo?.media?.publicPreview?.detailDimensions
+      || photo?.media?.publicPreview?.dimensions
+      || {};
+    const width = Number(dimensions.width) || 1800;
+    const height = Number(dimensions.height) || 1200;
+    return { width, height };
+  };
+
+  const truncatePdfTitle = (value) => {
+    const text = String(value || "");
+    return text.length > 86 ? `${text.slice(0, 83)}...` : text;
+  };
+
+  const fetchPdfImages = async (photos) => {
+    const images = [];
+    for (const photo of photos) {
+      const imageUrl = imageFor(photo, "detail");
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error(`Could not load ${titleFor(photo)}`);
+      images.push({
+        bytes: new Uint8Array(await response.arrayBuffer()),
+        dimensions: pdfDimensionsFor(photo),
+        photo,
+      });
+    }
+    return images;
+  };
+
+  const buildPdfBlob = (images) => {
+    const encoder = new TextEncoder();
+    const objects = [];
+    const setObject = (id, parts) => {
+      objects[id] = parts;
+      return id;
+    };
+    const toBytes = (part) => part instanceof Uint8Array ? part : encoder.encode(String(part));
+    const objectCount = 3 + images.length * 3;
+    const pageIds = [];
+    let nextId = 4;
+
+    setObject(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
+    setObject(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]);
+
+    images.forEach((item, index) => {
+      const imageId = nextId++;
+      const contentId = nextId++;
+      const pageId = nextId++;
+      const { width: imageWidth, height: imageHeight } = item.dimensions;
+      const landscape = imageWidth >= imageHeight;
+      const pageWidth = landscape ? 842 : 595;
+      const pageHeight = landscape ? 595 : 842;
+      const maxWidth = pageWidth - 60;
+      const maxHeight = pageHeight - 96;
+      const scale = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
+      const drawWidth = imageWidth * scale;
+      const drawHeight = imageHeight * scale;
+      const drawX = (pageWidth - drawWidth) / 2;
+      const drawY = 30 + ((maxHeight - drawHeight) / 2);
+      const imageName = `Im${index + 1}`;
+      const title = pdfEscape(truncatePdfTitle(titleFor(item.photo)));
+      const content = [
+        "q\n",
+        `${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${drawX.toFixed(2)} ${drawY.toFixed(2)} cm\n`,
+        `/${imageName} Do\n`,
+        "Q\n",
+        "BT\n",
+        "/F1 14 Tf\n",
+        `30 ${Math.round(pageHeight - 34)} Td\n`,
+        `(${title}) Tj\n`,
+        "ET\n",
+      ].join("");
+
+      setObject(imageId, [
+        `<< /Type /XObject /Subtype /Image /Width ${Math.round(imageWidth)} /Height ${Math.round(imageHeight)} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${item.bytes.byteLength} >>\nstream\n`,
+        item.bytes,
+        "\nendstream",
+      ]);
+      setObject(contentId, [
+        `<< /Length ${encoder.encode(content).byteLength} >>\nstream\n`,
+        content,
+        "endstream",
+      ]);
+      setObject(pageId, [
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R >> /XObject << /${imageName} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+      ]);
+      pageIds.push(pageId);
+    });
+
+    setObject(2, [`<< /Type /Pages /Count ${pageIds.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`]);
+
+    const chunks = [];
+    const offsets = [];
+    let position = 0;
+    const push = (part) => {
+      const bytes = toBytes(part);
+      chunks.push(bytes);
+      position += bytes.byteLength;
+    };
+
+    push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+    for (let id = 1; id <= objectCount; id += 1) {
+      offsets[id] = position;
+      push(`${id} 0 obj\n`);
+      (objects[id] || ["<<>>"]).forEach(push);
+      push("\nendobj\n");
+    }
+    const xrefStart = position;
+    push(`xref\n0 ${objectCount + 1}\n`);
+    push("0000000000 65535 f \n");
+    for (let id = 1; id <= objectCount; id += 1) {
+      push(`${String(offsets[id]).padStart(10, "0")} 00000 n \n`);
+    }
+    push(`trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`);
+    return new Blob(chunks, { type: "application/pdf" });
+  };
+
+  const downloadPdf = async () => {
+    if (!requireUnlocked() || state.pdfBusy) return;
+    const selectedPhotos = state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
+    if (!selectedPhotos.length) {
+      setStatus("Select photos before downloading PDF");
+      return;
+    }
+    state.pdfBusy = true;
+    setStatus(`Building PDF from ${selectedPhotos.length} photos...`);
+    try {
+      const blob = buildPdfBlob(await fetchPdfImages(selectedPhotos));
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${state.gallery?.key || "real-estate"}-${timestampId()}.pdf`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      setStatus(`Downloaded PDF with ${selectedPhotos.length} photos`);
+    } catch (error) {
+      setStatus(error?.message || "PDF download failed");
+    } finally {
+      state.pdfBusy = false;
+    }
+  };
+
   const selectVisible = () => {
+    if (!requireUnlocked()) return;
     const visible = filteredPhotos().map((photo) => photo.id);
     visible.forEach((id) => {
       if (!state.selectedIds.has(id)) state.selectedOrder.push(id);
@@ -363,6 +564,7 @@
   };
 
   const clearSelection = () => {
+    if (!requireUnlocked()) return;
     state.selectedOrder = [];
     persistSelection();
     render();
@@ -432,9 +634,24 @@
   };
 
   const bindEvents = () => {
+    elements.loginForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const expected = expectedAccessCode();
+      const entered = normalizeAccessCode(elements.loginCode?.value);
+      if (!expected || entered !== expected) {
+        if (elements.loginStatus) elements.loginStatus.textContent = "Access code does not match this review.";
+        return;
+      }
+      state.unlocked = true;
+      writeSession(elements.loginName?.value || "");
+      syncAuthUi();
+      setStatus(`${state.photos.length} visible / ${state.photos.length} photos`);
+    });
+
     elements.albums?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-album-filter]");
       if (!button) return;
+      if (!requireUnlocked()) return;
       state.album = button.dataset.albumFilter || "all";
       render();
     });
@@ -460,7 +677,7 @@
 
     app.addEventListener("click", (event) => {
       const openButton = event.target.closest("[data-open-photo]");
-      if (openButton) showPhoto(openButton.dataset.openPhoto);
+      if (openButton && requireUnlocked()) showPhoto(openButton.dataset.openPhoto);
 
       if (event.target.closest("[data-re-clear-filters]")) {
         state.album = "all";
@@ -493,7 +710,14 @@
 
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", downloadBatch));
+    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
+    document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
+      localStorage.removeItem(authStoreKey());
+      state.unlocked = false;
+      syncAuthUi();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }));
     document.querySelector("[data-re-load-batch]")?.addEventListener("change", (event) => {
       loadBatchFile(event.target.files?.[0]).catch(() => setStatus("Batch file could not be loaded"));
       event.target.value = "";
@@ -531,6 +755,12 @@
     state.selectedOrder = normalizeSelectedOrder(readJson(selectionStoreKey(), []));
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});
+    if (pageParams.has("logout")) localStorage.removeItem(authStoreKey());
+    const accessParam = pageParams.get("access");
+    if (accessParam && normalizeAccessCode(accessParam) === expectedAccessCode()) {
+      writeSession(payload?.customer?.name || "");
+    }
+    state.unlocked = hasUnlockedSession();
     if (elements.density) elements.density.value = state.density;
     renderHero();
     render();

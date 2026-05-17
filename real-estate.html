@@ -8,9 +8,9 @@
   <meta name="description" content="Private real-estate photo review and PDF batch selection workspace for Photos By Elie clients."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=78.3"/>
-  <link rel="stylesheet" href="./styles.css?v=78.3"/>
-  <link rel="stylesheet" href="./photos.css?v=78.3"/>
+  <link rel="stylesheet" href="./shared.css?v=78.4"/>
+  <link rel="stylesheet" href="./styles.css?v=78.4"/>
+  <link rel="stylesheet" href="./photos.css?v=78.4"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,14 +24,33 @@
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a class="is-active" href="./real-estate.html">Real Estate</a>
     </nav>
-    <span class="site-version-badge">v78.3</span>
+    <span class="site-version-badge">v78.4</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
     </div>
   </header>
 
-  <main id="main-content" class="shell real-estate-shell" data-real-estate-app>
+  <main id="main-content" class="shell real-estate-shell is-locked" data-real-estate-app>
+    <section class="panel real-estate-login" data-re-login aria-labelledby="real-estate-login-title">
+      <div class="real-estate-login-card">
+        <p class="eyebrow" data-re-login-customer>Private client access</p>
+        <h1 id="real-estate-login-title">Review login</h1>
+        <form class="real-estate-login-form" data-re-login-form>
+          <label>
+            <span>Name</span>
+            <input type="text" autocomplete="name" data-re-login-name placeholder="Client name"/>
+          </label>
+          <label>
+            <span>Access code</span>
+            <input type="password" autocomplete="current-password" data-re-login-code placeholder="Client code"/>
+          </label>
+          <button class="btn primary" type="submit">Open review</button>
+          <p class="real-estate-login-status" data-re-login-status aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
     <section class="panel real-estate-hero" aria-labelledby="real-estate-title">
       <div class="real-estate-hero-copy">
         <p class="eyebrow" data-re-customer>Client review</p>
@@ -53,7 +72,8 @@
         </dl>
         <div class="cta">
           <a class="btn primary" href="#real-estate-gallery">Review photos</a>
-          <button class="btn secondary" type="button" data-re-copy-batch>Copy PDF batch</button>
+          <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
+          <button class="btn secondary" type="button" data-re-copy-batch>Copy batch JSON</button>
         </div>
       </div>
       <div class="real-estate-hero-preview" data-re-hero-preview aria-label="Featured property photos"></div>
@@ -119,7 +139,8 @@
           </div>
           <div class="real-estate-toolbar-actions">
             <button class="btn secondary" type="button" data-re-select-visible>Select visible</button>
-            <button class="btn secondary" type="button" data-re-download-batch>Download batch</button>
+            <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
+            <button class="btn secondary" type="button" data-re-download-batch>Download batch JSON</button>
           </div>
         </div>
         <div class="real-estate-grid" data-re-grid></div>
@@ -130,9 +151,11 @@
   <div class="real-estate-action-bar" data-re-action-bar>
     <strong><span data-re-selected-bar>0</span> selected</strong>
     <span data-re-action-status>Ready</span>
-    <button class="btn secondary" type="button" data-re-copy-batch>Copy PDF batch</button>
-    <button class="btn secondary" type="button" data-re-download-batch>Download batch</button>
+    <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
+    <button class="btn secondary" type="button" data-re-copy-batch>Copy batch JSON</button>
+    <button class="btn secondary" type="button" data-re-download-batch>Download batch JSON</button>
     <button class="btn secondary" type="button" data-re-clear-selection>Clear selected</button>
+    <button class="btn secondary" type="button" data-re-logout>Sign out</button>
   </div>
 
   <dialog class="real-estate-lightbox" data-re-dialog>
@@ -173,8 +196,8 @@
     </div>
   </footer>
 
-  <script src="./photos.js?v=78.3"></script>
-  <script src="./site-version.js?v=78.3"></script>
-  <script src="./real-estate.js?v=78.3"></script>
+  <script src="./photos.js?v=78.4"></script>
+  <script src="./site-version.js?v=78.4"></script>
+  <script src="./real-estate.js?v=78.4"></script>
 </body>
 </html>

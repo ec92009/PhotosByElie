@@ -1650,6 +1650,70 @@ body[data-real-estate] main.shell{
   display:grid;
   gap:clamp(10px,1.5dvh,16px);
 }
+.real-estate-shell.is-locked .real-estate-hero,
+.real-estate-shell.is-locked .real-estate-workbench{
+  display:none;
+}
+.real-estate-shell:not(.is-locked) .real-estate-login{
+  display:none;
+}
+.real-estate-login{
+  display:grid;
+  min-height:clamp(360px,calc(76dvh - var(--fixed-header-offset,86px)),620px);
+  place-items:center;
+  padding-inline:max(var(--panel-inline),var(--page-gutter));
+  background:
+    linear-gradient(130deg,color-mix(in srgb,var(--re-accent) 12%,transparent),transparent 46%),
+    var(--bg);
+}
+.real-estate-login-card{
+  display:grid;
+  gap:16px;
+  width:min(520px,100%);
+  border:1px solid var(--line);
+  background:var(--surface);
+  padding:clamp(18px,4vw,34px);
+  box-shadow:0 18px 48px rgba(0,0,0,.12);
+}
+.real-estate-login-card h1{
+  max-width:12ch;
+  font-size:clamp(2.3rem,6vw,4.8rem);
+}
+.real-estate-login-form{
+  display:grid;
+  gap:12px;
+}
+.real-estate-login-form label{
+  display:grid;
+  gap:7px;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.real-estate-login-form input{
+  width:100%;
+  min-height:44px;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--bg);
+  color:var(--text);
+  padding:9px 11px;
+  font:inherit;
+  font-size:1rem;
+  font-weight:720;
+  letter-spacing:0;
+  text-transform:none;
+}
+.real-estate-login-status{
+  min-height:1.25rem;
+  margin:0;
+  color:var(--muted);
+  font-size:.82rem;
+  font-weight:800;
+  line-height:1.35;
+}
 .real-estate-hero{
   display:grid;
   grid-template-columns:minmax(280px,.78fr) minmax(320px,1fr);
@@ -2072,6 +2136,10 @@ body[data-real-estate] main.shell{
   transform:translateX(-50%);
   box-shadow:0 18px 46px rgba(0,0,0,.18);
   backdrop-filter:blur(14px);
+}
+.real-estate-shell.is-locked ~ .real-estate-action-bar,
+.real-estate-action-bar[hidden]{
+  display:none;
 }
 .real-estate-action-bar strong{
   margin-right:auto;

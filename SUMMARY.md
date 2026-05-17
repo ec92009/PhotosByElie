@@ -5,7 +5,7 @@ Date: 2026-05-16
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Current visible build: `v78.3`
+- Current visible build: `v78.4`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
 - Public catalog attempts `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain SQLite as the guaranteed fallback.
@@ -186,7 +186,7 @@ The public preview incident showed the consequence of alternate truth sources: 1
 
 ## Public Site Fixes
 
-- Public site is now `v78.3`.
+- Public site is now `v78.4`.
 - The USA gallery missing-preview issue is fixed by removing tombstoned catalog rows rather than re-uploading banned media.
 - Liked and Basket pages now use the same fixed-header behavior as gallery/detail pages.
 - Header action buttons for liked, basket, checkout, language, and theme stay frozen during mobile scroll.

@@ -8,9 +8,9 @@
   <meta name="description" content="Private real-estate photo review and PDF batch selection workspace for Photos By Elie clients."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=78.22"/>
-  <link rel="stylesheet" href="./styles.css?v=78.22"/>
-  <link rel="stylesheet" href="./photos.css?v=78.22"/>
+  <link rel="stylesheet" href="./shared.css?v=78.23"/>
+  <link rel="stylesheet" href="./styles.css?v=78.23"/>
+  <link rel="stylesheet" href="./photos.css?v=78.23"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a class="is-active" href="./real-estate.html">Real Estate</a>
     </nav>
-    <span class="site-version-badge">v78.22</span>
+    <span class="site-version-badge">v78.23</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -221,6 +221,25 @@
     </div>
   </dialog>
 
+  <dialog class="real-estate-help real-estate-originals-auth" data-re-originals-dialog aria-labelledby="real-estate-originals-title">
+    <button class="gallery-top-button real-estate-originals-close" type="button" data-re-originals-cancel aria-label="Cancel originals ZIP">&times;</button>
+    <div class="real-estate-help-panel">
+      <p class="eyebrow">Private originals</p>
+      <h2 id="real-estate-originals-title">Originals ZIP password</h2>
+      <form class="real-estate-originals-form" data-re-originals-form>
+        <label for="real-estate-originals-code">
+          <span>Password</span>
+          <input id="real-estate-originals-code" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" data-re-originals-code placeholder="Password" required/>
+        </label>
+        <p class="real-estate-login-status" data-re-originals-status aria-live="polite"></p>
+        <div class="real-estate-dialog-actions">
+          <button class="btn primary" type="submit">Create ZIP</button>
+          <button class="btn secondary" type="button" data-re-originals-cancel>Cancel</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   <footer class="site-footer">
     <div class="shell">
       <p class="footer-note">© 2026 Photos By Elie</p>
@@ -231,9 +250,9 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=78.22"></script>
-  <script src="./photos.js?v=78.22"></script>
-  <script src="./site-version.js?v=78.22"></script>
-  <script src="./real-estate.js?v=78.22"></script>
+  <script src="./media-config.js?v=78.23"></script>
+  <script src="./photos.js?v=78.23"></script>
+  <script src="./site-version.js?v=78.23"></script>
+  <script src="./real-estate.js?v=78.23"></script>
 </body>
 </html>

@@ -48,6 +48,10 @@
     dialogSelected: document.querySelector("[data-re-dialog-selected]"),
     dialogDetails: document.querySelector("[data-re-dialog-details]"),
     helpDialog: document.querySelector("[data-re-help-dialog]"),
+    originalsDialog: document.querySelector("[data-re-originals-dialog]"),
+    originalsForm: document.querySelector("[data-re-originals-form]"),
+    originalsCode: document.querySelector("[data-re-originals-code]"),
+    originalsStatus: document.querySelector("[data-re-originals-status]"),
     actionBar: document.querySelector("[data-re-action-bar]"),
   };
 
@@ -76,6 +80,7 @@
     unlocked: false,
     pdfBusy: false,
     originalsBusy: false,
+    originalsCredentialRequest: null,
     username: "",
     accessCode: "",
   };
@@ -228,6 +233,47 @@
   const dismissHelp = () => {
     writeJson(helpDismissedKey(), true);
     closeDialog(elements.helpDialog);
+  };
+
+  const abortError = (message) => Object.assign(new Error(message), { name: "AbortError" });
+
+  const promptOriginalsPassword = (message = "") => new Promise((resolve, reject) => {
+    if (!elements.originalsDialog || !elements.originalsCode || !elements.originalsForm) {
+      const accessCode = "";
+      reject(abortError("Originals ZIP canceled"));
+      return accessCode;
+    }
+    if (state.originalsCredentialRequest?.reject) {
+      state.originalsCredentialRequest.reject(abortError("Originals ZIP canceled"));
+    }
+    state.originalsCredentialRequest = { resolve, reject };
+    elements.originalsCode.value = "";
+    if (elements.originalsStatus) {
+      elements.originalsStatus.textContent = message || "Enter the client password to prepare the private originals ZIP.";
+    }
+    openDialog(elements.originalsDialog);
+    window.setTimeout(() => elements.originalsCode?.focus(), 80);
+  });
+
+  const completeOriginalsPassword = () => {
+    const request = state.originalsCredentialRequest;
+    if (!request) return;
+    const accessCode = String(elements.originalsCode?.value || "").trim();
+    if (!accessCode) {
+      if (elements.originalsStatus) elements.originalsStatus.textContent = "Enter the client password.";
+      elements.originalsCode?.focus();
+      return;
+    }
+    state.originalsCredentialRequest = null;
+    closeDialog(elements.originalsDialog);
+    request.resolve(accessCode);
+  };
+
+  const cancelOriginalsPassword = () => {
+    const request = state.originalsCredentialRequest;
+    state.originalsCredentialRequest = null;
+    closeDialog(elements.originalsDialog);
+    if (request?.reject) request.reject(abortError("Originals ZIP canceled"));
   };
 
   const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
@@ -998,24 +1044,21 @@
     sortIndex: index + 1,
   }));
 
-  const credentialsForOriginals = () => {
+  const credentialsForOriginals = async (message = "") => {
     const saved = readSessionCredentials();
     const username = state.username || saved.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
     let accessCode = state.accessCode || saved.accessCode || "";
-    if (!accessCode) {
-      accessCode = window.prompt("Password for originals ZIP") || "";
-      if (!accessCode) {
-        throw Object.assign(new Error("Originals ZIP canceled"), { name: "AbortError" });
-      }
+    if (!accessCode || message) {
+      accessCode = await promptOriginalsPassword(message);
     }
     writeSessionCredentials(username, accessCode);
     return { username, accessCode };
   };
 
-  const requestOriginalsSession = async (photos) => {
+  const requestOriginalsSession = async (photos, passwordMessage = "") => {
     const baseUrl = workerBaseUrl();
     if (!baseUrl) throw new Error("Originals ZIP needs the Photos By Elie Worker.");
-    const credentials = credentialsForOriginals();
+    const credentials = await credentialsForOriginals(passwordMessage);
     const response = await fetch(`${baseUrl}/real-estate/originals/session`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1029,7 +1072,9 @@
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
       const message = body?.error?.message || "Originals ZIP could not be prepared.";
-      throw new Error(message);
+      const error = new Error(message);
+      error.code = body?.error?.code || "originals_session_failed";
+      throw error;
     }
     return body.originals;
   };
@@ -1054,8 +1099,23 @@
     state.originalsBusy = true;
     syncFileActionLabels();
     try {
-      setStatus(`Preparing private original links for ${photos.length} selected photo${photos.length === 1 ? "" : "s"}...`);
-      const session = await requestOriginalsSession(photos);
+      let session = null;
+      let passwordMessage = "";
+      for (let attempt = 0; attempt < 2 && !session; attempt += 1) {
+        setStatus(`Preparing private original links for ${photos.length} selected photo${photos.length === 1 ? "" : "s"}...`);
+        try {
+          session = await requestOriginalsSession(photos, passwordMessage);
+        } catch (error) {
+          if (error?.code === "real_estate_auth_required" && attempt === 0) {
+            clearSessionCredentials();
+            passwordMessage = "That password did not work. Enter LaConcha exactly.";
+            setStatus("Password did not work; enter LaConcha exactly to create the originals ZIP");
+            continue;
+          }
+          throw error;
+        }
+      }
+      if (!session) throw new Error("Originals ZIP could not be prepared.");
       const files = originalZipFilesFor(session);
       const totalBytes = Number(session.totalBytes) || files.reduce((sum, file) => sum + (Number(file.bytes) || 0), 0);
       setStatus(`Building originals ZIP from ${files.length} file${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`);
@@ -1780,6 +1840,14 @@
     }));
     document.querySelectorAll("[data-re-help-open]").forEach((button) => button.addEventListener("click", () => showHelp({ force: true })));
     document.querySelector("[data-re-help-dismiss]")?.addEventListener("click", dismissHelp);
+    elements.originalsForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      completeOriginalsPassword();
+    });
+    document.querySelectorAll("[data-re-originals-cancel]").forEach((button) => button.addEventListener("click", cancelOriginalsPassword));
+    elements.originalsDialog?.addEventListener("close", () => {
+      if (state.originalsCredentialRequest) cancelOriginalsPassword();
+    });
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
     document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
       localStorage.removeItem(authStoreKey());

@@ -2338,6 +2338,42 @@ body[data-real-estate] main.shell{
   font-size:clamp(1.9rem,5vw,3rem);
   line-height:.95;
 }
+.real-estate-originals-auth{
+  width:min(520px,calc(100dvw - 30px));
+}
+.real-estate-originals-close{
+  position:absolute;
+  right:10px;
+  top:10px;
+  z-index:2;
+}
+.real-estate-originals-form{
+  display:grid;
+  gap:14px;
+}
+.real-estate-originals-form label{
+  display:grid;
+  gap:7px;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.real-estate-originals-form input{
+  width:100%;
+  min-height:46px;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:var(--bg);
+  color:var(--text);
+  padding:10px 12px;
+  font:inherit;
+  font-size:1rem;
+  font-weight:720;
+  letter-spacing:0;
+  text-transform:none;
+}
 .real-estate-help-list{
   display:grid;
   gap:10px;

@@ -24,9 +24,9 @@ for remote execution.
 - Recent baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`, and `ca0bd349 photosbyelie: gate basket by delivery coverage`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `5,844` publishable photos: France `296`, USA `161`, Spain `223`, Mexico `2`, AI/Leonardo `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
-- Public catalog data is TSV-backed: `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv` hold the heavy catalog payload, while `photos-data.js` is only a small compatibility bootstrap for the existing `window.photosByElieData` browser contract.
+- Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite.br` is the preferred payload, `assets/catalog/photosbyelie.sqlite` is the fallback, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract.
 - Waste Basket is the Owner-facing model for unwanted photos. Basketed photos are live-blacklisted and can be put back; emptying the basket deletes public previews, private masters, and private render triplets, then leaves durable tombstones so those masters do not return.
-- Waste Basket purge was intentionally paused for the TSV migration. Resume only when ready to monitor the `Cloud media left` progress.
+- Waste Basket purge was intentionally paused during catalog migration. Resume only when ready to monitor the `Cloud media left` progress.
 - Tombstoned/Waste Basket photos are not buyer inventory. Basket checkout now prunes stale browser selections for tombstoned photos and validates selected private master/render availability before Stripe.
 - Owner R2 coverage excludes Waste Basket tombstones from active repair targets and can list missing private masters/triplets for active photos, preferring Saturn/source-file repair when the source path resolves.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
@@ -36,7 +36,7 @@ for remote execution.
 - Private developed sources are in `photosbyelie-private/masters/<photo-id>/<original-file>`.
 - Private buyer JPG deliverables are in `photosbyelie-private/renders/<photo-id>/<original-file>-jpg-{6mp,3mp,1mp}.jpg`.
 - Public buyer delivery uses per-file private R2 download tokens. Local mock delivery can still generate flat ZIPs for test convenience.
-- Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalog TSV/bootstrap files only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
+- Uploaded masters, private render triplets, and public previews are treated as immutable after upload. Owner title/keyword/country edits update manifests/catalog SQLite/bootstrap files only; a future Lightroom-style XMP sidecar save should be an explicit Owner maintenance action.
 - Physical print/frame products are buyer-hidden by default. Owner can deliberately enable them on localhost for review, but digital checkout should be proven first.
 - Owner has local price editing. Published defaults now distinguish camera-photo digital downloads from lower AI-origin downloads, with print/frame launch prices also refreshed; moving those defaults into a dedicated shared price-list file remains high priority.
 - Camera vs AI is now a first-class catalog origin (`sourceOrigin`) used by public gallery filters, detail metadata, Owner active-catalog counts, and Worker checkout pricing. Do not rely only on the `ai` collection slug for AI-origin behavior.
@@ -123,7 +123,7 @@ The sweep:
 2. Deletes discarded public/private R2 media while preserving tombstones.
 3. Scans Saturn Camera, Apple Photos album exports, and Leonardo developed-source folders.
 4. Imports/uploads only non-discarded candidates.
-5. Regenerates `assets/catalog/*.tsv`, the small `photos-data.js` compatibility bootstrap, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
+5. Regenerates the public SQLite catalog artifacts, the small `photos-data.js` bootstrap, `worker/photos-catalog.generated.mjs`, `assets/media-sidecar.json`, and private delivery manifests.
 6. Backfills missing private JPG 1/3/6 MP render triplets.
 7. Deletes discarded R2 media again.
 8. Runs tests and validation.

@@ -66,6 +66,21 @@ process.stdout.write(JSON.stringify(catalog));
     return json.loads(output)
 
 
+def write_brotli_copy(path: Path) -> None:
+    script = """
+const fs = require("node:fs");
+const zlib = require("node:zlib");
+const input = process.argv[1];
+const output = `${input}.br`;
+const bytes = fs.readFileSync(input);
+const compressed = zlib.brotliCompressSync(bytes, {
+  params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
+});
+fs.writeFileSync(output, compressed);
+"""
+    subprocess.run(["node", "-e", script, str(path)], check=True)
+
+
 def metadata_value(photo: dict[str, Any], label: str) -> str:
     for item in photo.get("metadata") or []:
         if item.get("label") == label and item.get("value") not in (None, ""):
@@ -900,6 +915,7 @@ def write_db(repo_root: Path, output: Path) -> dict[str, int]:
         }
         conn.close()
         temp_path.replace(output)
+        write_brotli_copy(output)
         return counts
     except Exception:
         temp_path.unlink(missing_ok=True)

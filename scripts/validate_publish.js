@@ -305,7 +305,7 @@ const validate = () => {
       return;
     }
     if (Number(homeCollection.count || 0) !== (collection.photos || []).length) {
-      errors.push(`home-data.js ${collectionKey} count does not match the TSV-backed public catalog.`);
+      errors.push(`home-data.js ${collectionKey} count does not match the SQLite-backed public catalog.`);
     }
     const samples = homeCollection.photos || [];
     if (!samples.length && (collection.photos || []).length) {

@@ -1,4 +1,5 @@
-(() => {
+(async () => {
+  await window.photosByElieCatalogReady;
   const hiddenActions = window.photosByElieHiddenActions;
   const reserveStore = window.photosByElieReserve;
   const hiddenStore = window.photosByElieHidden;

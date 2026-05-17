@@ -1,4 +1,5 @@
 ((async () => {
+await window.photosByElieCatalogReady;
 if (window.photosByElieReserve?.enabled) {
   await window.photosByElieReserve.load();
 }

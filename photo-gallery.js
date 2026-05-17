@@ -1,3 +1,5 @@
+((async () => {
+await window.photosByElieCatalogReady;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const galleryKeyFromPage = () => {
   const params = new URLSearchParams(window.location.search);
@@ -1198,5 +1200,9 @@ if (galleryRoot && gallery) {
       renderGallery();
     }
   });
-  window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
+window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
 }
+})().catch((error) => {
+  const status = document.querySelector("[data-gallery-status]");
+  if (status) status.textContent = error?.message || "Could not load gallery.";
+}));

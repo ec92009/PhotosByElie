@@ -1,3 +1,5 @@
+((async () => {
+await window.photosByElieCatalogReady;
 const formatMoney = (value) => `$${value}`;
 const allCollections = window.photosByElieData || {};
 window.photosByElieProductSettings?.applyPriceOverrides?.();
@@ -377,3 +379,7 @@ bulkResolutionButtons.forEach((button) => {
 
 renderLiked();
 window.addEventListener("photosbyelie:languagechange", renderLiked);
+})().catch((error) => {
+  const status = document.querySelector("[data-liked-status]");
+  if (status) status.textContent = error?.message || "Could not load liked photos.";
+}));

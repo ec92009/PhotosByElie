@@ -42,7 +42,7 @@ DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
 
 
-def compact_catalog_tsv(repo_root: Path) -> None:
+def refresh_public_catalog_artifacts(repo_root: Path) -> None:
     subprocess.run(
         ["node", "scripts/write_catalog_tsv.cjs"],
         cwd=repo_root,
@@ -955,7 +955,7 @@ def write_photos_data(
 
     output = repo_root / "photos-data.js"
     output.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    compact_catalog_tsv(repo_root)
+    refresh_public_catalog_artifacts(repo_root)
     return output
 
 

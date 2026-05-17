@@ -7,7 +7,7 @@ PhotosByElie is moving toward two SQLite files with different trust boundaries:
 - `assets/catalog/photosbyelie.sqlite`: public/deployable catalog truth.
 - `assets/owner-actions/Owner.sqlite`: local Owner-only workflow truth, ignored by Git.
 
-The goal is to eliminate alternate sources of truth. The public browser runtime now loads `photosbyelie.sqlite` first and keeps TSV only as a compatibility fallback. Owner JSON files remain compatibility exports while `Owner.sqlite` becomes the private write target.
+The goal is to eliminate alternate sources of truth. The public browser runtime now attempts `photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available and keeps plain `photosbyelie.sqlite` as the guaranteed fallback. Owner JSON files remain compatibility exports while `Owner.sqlite` becomes the private write target.
 
 ## Public Catalog DB
 
@@ -81,7 +81,6 @@ Size check from the compact-id rebuild:
 Raw SQLite:         6.6 MiB
 SQLite gzip -9:     1.04 MiB
 SQLite brotli -11:  0.50 MiB
-Current TSV gzip:   0.55 MiB
 ```
 
 The active count dropped from 5,844 to 5,827 after 17 discarded/tombstoned rows
@@ -90,7 +89,7 @@ purged from R2, so keeping them in public metadata caused missing-preview cards.
 The validator now rejects discarded/tombstoned ids in the public catalog and
 Expo manifest.
 
-The brotli-compressed SQLite catalog is smaller than the current gzipped TSV
+The brotli-compressed SQLite catalog is the preferred public transfer artifact
 catalog. Later pages should reopen the same database from browser cache instead
 of downloading catalog data again.
 

@@ -105,7 +105,7 @@ The builder is designed to be interrupted and resumed.
 - Keep `assets/owner-actions/keyword-blacklist.json` tracked. It is metadata-only: import/export scripts use it to omit useless keyword strings from generated catalog metadata and keyword indexes, not to block, discard, skip, or rewrite media/source files.
 - Treat Waste Basket media as owner-controlled undo assets, not clock-controlled assets. Basketed photos can be put back until the owner empties the basket; emptying deletes public previews, private masters, and private render triplets, then keeps only durable tombstone state: photo id plus blacklisted master/source path so future Saturn/import sweeps do not resurrect the file.
 - Do not paste exact GPS coordinates into public site data.
-- Review public keywords before promoting them into the generated catalog TSV/bootstrap files.
+- Review public keywords before promoting them into the generated catalog SQLite/bootstrap files.
 - Use `--redact-private-keywords` if generating a sanitized manifest for publishing or review.
 - Use `--redact-gps` for a run that should not write the private GPS file at all.
 

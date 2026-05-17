@@ -1,3 +1,5 @@
+((async () => {
+await window.photosByElieCatalogReady;
 const formatMoney = (value) => `$${value}`;
 const allCollections = window.photosByElieData || {};
 window.photosByElieProductSettings?.applyPriceOverrides?.();
@@ -785,3 +787,7 @@ window.addEventListener("photosbyelie:languagechange", () => {
   renderBasket();
   syncCheckoutControls();
 });
+})().catch((error) => {
+  const status = document.querySelector("[data-basket-status]");
+  if (status) status.textContent = error?.message || "Could not load basket.";
+}));

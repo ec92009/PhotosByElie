@@ -30,6 +30,7 @@
       try {
         await loadScript("./catalog-sqlite.js");
         await loadScript("./photos-data.js");
+        await window.photosByElieCatalogReady;
         window.dispatchEvent(new CustomEvent("photosbyelie:catalogloaded", {
           detail: { collections: Object.keys(window.photosByElieData || {}).length },
         }));

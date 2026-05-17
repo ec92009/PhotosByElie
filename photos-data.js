@@ -1,34 +1,5 @@
-// Generated bootstrap: loads the public catalog from SQLite, with TSV fallback.
+// Generated bootstrap: attempts Brotli-compressed SQLite, then falls back to plain SQLite.
 (() => {
-  const parseCell = (value) => {
-    if (value == null || value === "") return "";
-    try { return JSON.parse(value); } catch { return value; }
-  };
-  const parseJsonCell = (value, fallback) => {
-    const parsed = parseCell(value);
-    if (!parsed) return fallback;
-    try { return JSON.parse(parsed); } catch { return fallback; }
-  };
-  const readTsv = (relativePath) => {
-    const script = document.currentScript;
-    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
-    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
-    const url = new URL(relativePath, scriptUrl || window.location.href);
-    if (version) url.searchParams.set("v", version);
-    const request = new XMLHttpRequest();
-    request.open("GET", url.href, false);
-    request.overrideMimeType?.("text/plain; charset=utf-8");
-    request.send(null);
-    if (request.status && (request.status < 200 || request.status >= 300)) {
-      throw new Error(`Could not load ${relativePath}: HTTP ${request.status}`);
-    }
-    const [headerLine, ...lines] = request.responseText.split(/\n/).filter((line) => line.length);
-    const columns = headerLine.split("\t");
-    return lines.map((line) => {
-      const values = line.split("\t");
-      return Object.fromEntries(columns.map((column, index) => [column, values[index] ?? ""]));
-    });
-  };
   const readBinary = (relativePath) => {
     const script = document.currentScript;
     const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
@@ -46,6 +17,28 @@
     const bytes = new Uint8Array(response.length);
     for (let index = 0; index < response.length; index += 1) bytes[index] = response.charCodeAt(index) & 0xff;
     return bytes;
+  };
+  const readBinaryAsync = async (relativePath) => {
+    const script = document.currentScript;
+    const scriptUrl = script?.src ? new URL(script.src, window.location.href) : null;
+    const version = scriptUrl?.searchParams.get("v") || document.querySelector(".brand")?.textContent?.match(/v([0-9.]+)/)?.[1] || "";
+    const url = new URL(relativePath, scriptUrl || window.location.href);
+    if (version) url.searchParams.set("v", version);
+    const response = await fetch(url.href, { cache: "default" });
+    if (!response.ok) throw new Error(`Could not load ${relativePath}: HTTP ${response.status}`);
+    return new Uint8Array(await response.arrayBuffer());
+  };
+  const brotliDecompress = async (bytes) => {
+    const sqliteHeader = [83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0];
+    if (sqliteHeader.every((value, index) => bytes[index] === value)) return bytes;
+    if (typeof DecompressionStream !== "function") throw new Error("Brotli decompression is not supported.");
+    let stream;
+    try {
+      stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("brotli"));
+    } catch {
+      throw new Error("Brotli decompression is not supported.");
+    }
+    return new Uint8Array(await new Response(stream).arrayBuffer());
   };
   const readJson = (relativePath, fallback = {}) => {
     try {
@@ -92,66 +85,38 @@
     window.photosByElieVideoPriceTiers = normalizeVideoPriceTiers(catalog.videoPriceTiers || {});
   };
 
-  if (window.photosByElieCatalogSqlite?.decodeCatalog) {
-    try {
-      const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
-      window.photosByElieData = bundle.data || {};
-      window.photosByElieOwnerData = bundle.owner || {};
-      applyProductCatalog(bundle.productCatalog || readJson("./assets/catalog/product-pricing.json"));
-      window.photosByElieCatalogSource = "sqlite";
-      return;
-    } catch (error) {
-      console.warn(error?.message || "SQLite catalog load failed; falling back to TSV.");
+  const finishCatalogLoad = (source, data, owner, productCatalog) => {
+    window.photosByElieData = data || {};
+    window.photosByElieOwnerData = owner || {};
+    applyProductCatalog(productCatalog || readJson("./assets/catalog/product-pricing.json"));
+    window.photosByElieCatalogSource = source;
+    window.photosByElieApplyCollectionOrigins?.(window.photosByElieData);
+    window.photosByElieApplyCollectionOrigins?.(window.photosByElieOwnerData);
+    window.dispatchEvent?.(new CustomEvent("photosbyelie:catalogready", { detail: { source } }));
+    return window.photosByElieData;
+  };
+  window.photosByElieData = window.photosByElieData || {};
+  window.photosByElieOwnerData = window.photosByElieOwnerData || {};
+  window.photosByElieCatalogReady = (async () => {
+    if (window.photosByElieCatalogSqlite?.decodeCatalog) {
+      try {
+        const compressed = await readBinaryAsync("./assets/catalog/photosbyelie.sqlite.br");
+        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(await brotliDecompress(compressed));
+        return finishCatalogLoad("sqlite-br", bundle.data, bundle.owner, bundle.productCatalog);
+      } catch (error) {
+        if (!String(error?.message || "").includes("Brotli decompression is not supported")) {
+          console.warn(error?.message || "Brotli SQLite catalog load failed; trying plain SQLite.");
+        }
+      }
+      try {
+        const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
+        return finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
+      } catch (error) {
+        console.warn(error?.message || "SQLite catalog load failed.");
+      }
     }
-  }
-
-  const data = {};
-  const owner = {};
-  const targets = { public: data, owner };
-  for (const row of readTsv("./assets/catalog/collections.tsv")) {
-    const scope = parseCell(row.scope) || "public";
-    const key = parseCell(row.collection_key);
-    if (!key) continue;
-    const extra = parseJsonCell(row.extra_json, {});
-    targets[scope] = targets[scope] || {};
-    targets[scope][key] = {
-      ...extra,
-      number: parseJsonCell(row.number_json, ""),
-      title: parseCell(row.title),
-      description: parseCell(row.description),
-      accent: parseCell(row.accent),
-      photos: [],
-    };
-  }
-
-  for (const row of readTsv("./assets/catalog/photos.tsv")) {
-    const scope = parseCell(row.scope) || "public";
-    const key = parseCell(row.collection_key);
-    const target = targets[scope]?.[key];
-    if (!target) continue;
-    target.photos.push({
-      ...parseJsonCell(row.extra_json, {}),
-      id: parseCell(row.id),
-      className: parseCell(row.className),
-      title: parseCell(row.title),
-      caption: parseCell(row.caption),
-      full: parseCell(row.full),
-      megapixels: Number(parseCell(row.megapixels)) || 0,
-      sourceOrigin: parseCell(row.sourceOrigin),
-      pricingTier: parseCell(row.pricingTier),
-      gallerySrc: parseCell(row.gallerySrc),
-      imageSrc: parseCell(row.imageSrc),
-      metadata: parseJsonCell(row.metadata_json, []),
-      media: parseJsonCell(row.media_json, {}),
-      sourceFiles: parseJsonCell(row.sourceFiles_json, []),
-      keywords: parseJsonCell(row.keywords_json, []),
-    });
-  }
-
-  window.photosByElieData = data;
-  window.photosByElieOwnerData = owner;
-  applyProductCatalog(readJson("./assets/catalog/product-pricing.json"));
-  window.photosByElieCatalogSource = "tsv";
+    throw new Error("Could not load public SQLite catalog.");
+  })();
 })();
 window.photosByElieOriginTypes = {
   camera: { label: "Camera photo", shortLabel: "Camera" },

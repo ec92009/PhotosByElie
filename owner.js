@@ -1,4 +1,5 @@
-(() => {
+(async () => {
+  await window.photosByElieCatalogReady;
   const ownerAuth = window.photosByElieOwnerAuth;
   const hiddenActions = window.photosByElieHiddenActions;
   const reserveStore = window.photosByElieReserve;

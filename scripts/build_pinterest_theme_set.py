@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
-"""Build Pinterest-ready artifacts from catalog search terms.
-
-The script reads assets/catalog/photos.tsv, finds public catalog rows matching
-all query terms, downloads a still public preview image, and writes a dated
-artifact package under socials/Pinterest.
-"""
+"""Build Pinterest-ready artifacts from the public SQLite catalog."""
 
 from __future__ import annotations
 
 import argparse
-import csv
 import json
-import re
+import subprocess
 import textwrap
 import urllib.request
 from urllib.error import HTTPError, URLError
@@ -21,11 +15,6 @@ from PIL import Image, ImageDraw, ImageOps
 
 
 R2_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/"
-
-
-def rx(pattern: str, value: str) -> str:
-    match = re.search(pattern, value)
-    return match.group(1) if match else ""
 
 
 def crop_to_ratio(image: Image.Image, ratio: float) -> Image.Image:
@@ -79,50 +68,45 @@ def contact_sheet(paths: list[Path], output: Path, label_prefix: str) -> None:
     sheet.save(output, quality=90)
 
 
-def read_catalog(path: Path, terms: list[str]) -> list[dict[str, str]]:
-    results = []
-    with path.open(newline="") as file:
-        for row in csv.DictReader(file, delimiter="\t"):
-            blob = " ".join(
-                [
-                    row.get("title", ""),
-                    row.get("caption", ""),
-                    row.get("metadata_json", ""),
-                    row.get("sourceFiles_json", ""),
-                ]
-            ).lower()
-            if not all(term.lower() in blob for term in terms):
-                continue
-            media_json = row.get("media_json", "")
-            source_files_json = row.get("sourceFiles_json", "")
-            gallery_key = rx(r'galleryKey\\":\\"([^\\]+)', media_json)
-            detail_key = rx(r'detailKey\\":\\"([^\\]+)', media_json)
-            if not detail_key:
-                continue
-            is_video = detail_key.lower().endswith(".mp4") or bool(
-                re.search(r'\.(mov|mp4|m4v)(\\"|$)', source_files_json, re.IGNORECASE)
-                or re.search(r'type\\":\\"(MOV|MP4|M4V)', source_files_json, re.IGNORECASE)
-                or re.search(r'"type"\s*:\s*"(MOV|MP4|M4V)', source_files_json, re.IGNORECASE)
-            )
-            preview_key = gallery_key if is_video and gallery_key else detail_key
-            preview = rx(r'Preview file\\",\\"value\\":\\"([^\\]+)', row.get("metadata_json", ""))
-            captured = rx(r'Captured\\",\\"value\\":\\"([^\\]+)', row.get("metadata_json", ""))
-            source = rx(r'path\\":\\"([^\\]+)', source_files_json)
-            results.append(
-                {
-                    "id": row["id"],
-                    "title": row["title"],
-                    "caption": row["caption"],
-                    "media_type": "video" if is_video else "photo",
-                    "preview_key": preview_key,
-                    "gallery_key": gallery_key,
-                    "detail_key": detail_key,
-                    "preview": preview,
-                    "captured": captured,
-                    "source": source,
-                }
-            )
-    return results
+def read_catalog(root: Path, terms: list[str]) -> list[dict[str, str]]:
+    script = r"""
+const { loadCatalogWindow } = require("./scripts/catalog_tsv.cjs");
+const terms = JSON.parse(process.argv[1]).map((term) => String(term).toLowerCase());
+const data = loadCatalogWindow(process.cwd()).photosByElieData || {};
+const results = [];
+for (const collection of Object.values(data)) {
+  for (const photo of collection.photos || []) {
+    const blob = [
+      photo.title,
+      photo.caption,
+      JSON.stringify(photo.metadata || []),
+      JSON.stringify(photo.sourceFiles || []),
+    ].filter(Boolean).join(" ").toLowerCase();
+    if (!terms.every((term) => blob.includes(term))) continue;
+    const publicPreview = photo.media?.publicPreview || {};
+    const detailKey = publicPreview.detailKey || "";
+    if (!detailKey) continue;
+    const galleryKey = publicPreview.galleryKey || "";
+    const isVideo = String(photo.media?.type || "").toLowerCase() === "video" || detailKey.toLowerCase().endsWith(".mp4");
+    const metadata = new Map((photo.metadata || []).map((row) => [row.label, row.value]));
+    results.push({
+      id: photo.id,
+      title: photo.title || "",
+      caption: photo.caption || "",
+      media_type: isVideo ? "video" : "photo",
+      preview_key: isVideo && galleryKey ? galleryKey : detailKey,
+      gallery_key: galleryKey,
+      detail_key: detailKey,
+      preview: metadata.get("Preview file") || "",
+      captured: metadata.get("Captured") || "",
+      source: photo.sourceFiles?.[0]?.path || "",
+    });
+  }
+}
+process.stdout.write(JSON.stringify(results));
+"""
+    output = subprocess.check_output(["node", "-e", script, json.dumps(terms)], cwd=root, text=True)
+    return json.loads(output)
 
 
 def main() -> int:
@@ -145,7 +129,7 @@ def main() -> int:
     for directory in (source_dir, square_dir, portrait_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
-    matches = read_catalog(root / "assets/catalog/photos.tsv", args.terms)[: args.limit]
+    matches = read_catalog(root, args.terms)[: args.limit]
     if not matches:
         raise SystemExit("No matching catalog rows found.")
 

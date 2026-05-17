@@ -4,12 +4,12 @@ Last updated: 2026-05-17
 
 ## Current Facts
 
-- Current visible build: `v78.1`.
+- Current visible build: `v78.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
-- Public pages load `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback under `assets/catalog/`.
-- Product/pricing data is generated from `assets/catalog/product-pricing.json` into public SQLite product tables, with JSON used only as a TSV/runtime fallback.
+- Public pages attempt `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback.
+- Product/pricing data is generated from `assets/catalog/product-pricing.json` into public SQLite product tables.
 - Local Owner workflow state writes to ignored `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public previews are R2-backed and watermarked.
 - Private sellable assets are R2-backed and unwatermarked.
@@ -24,11 +24,11 @@ Last updated: 2026-05-17
 
 1. **Completed: Switch public runtime loading to SQLite.**
    - Public pages now load `assets/catalog/photosbyelie.sqlite` through `catalog-sqlite.js`.
-   - TSV remains as a compatibility fallback for GitHub Pages and current tooling.
+   - Brotli is the preferred transfer artifact where supported; plain SQLite remains the guaranteed fallback for GitHub Pages and current tooling.
 
 2. **Completed: Make SQLite generation repeatable.**
    - `scripts/build_public_catalog_db.py` rebuilds the public DB and validates integrity, foreign keys, duplicate media ids, keyword ids, and required asset rows.
-   - `node scripts/write_catalog_tsv.cjs` refreshes TSV compatibility exports, the SQLite bootstrap, and the public DB together.
+   - `node scripts/write_catalog_tsv.cjs` is a legacy-named compatibility command that refreshes the SQLite bootstrap, public DB, and Brotli artifact together.
 
 3. **Completed: Move active Owner workflow state into `Owner.sqlite`.**
    - Title/keyword queue, proposals, decisions, country assignments, keyword blacklist, and settings import into the local DB.
@@ -68,9 +68,9 @@ Last updated: 2026-05-17
     - Add buyer-facing order recovery before considering full buyer accounts.
 
 11. **Completed: Move product/pricing data out of generated JS constants.**
-    - `assets/catalog/product-pricing.json` is the generator/fallback source for photo products, print/frame prices, shipping/handling, and video tiers.
+    - `assets/catalog/product-pricing.json` is the generator source for photo products, print/frame prices, shipping/handling, and video tiers.
     - `assets/catalog/photosbyelie.sqlite` now contains `price_tiers`, `products`, `product_prices`, `frame_options`, `frame_prices`, `shipping_handling_prices`, and `video_price_tiers`.
-    - Public SQLite loading, TSV fallback tooling, and Worker catalog generation now reconstruct the same product price list.
+    - Public SQLite loading and Worker catalog generation now reconstruct the same product price list.
     - Videos use `video-original` delivery at flat `$20` across the current length tiers.
 
 12. **Keep physical products behind Owner review.**

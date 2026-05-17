@@ -13,7 +13,7 @@ The current project shape bends around GitHub limits because GitHub Pages used t
 
 The first job is a good fit. The second job is the source of the acrobatics and has moved to R2 for public previews and private delivery assets.
 
-GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Media binaries do not need to live in GitHub. The current public catalog is still TSV/bootstrap-backed, but the accepted migration target is a single public SQLite catalog file. Discarded/tombstoned media must leave the public catalog as soon as it is banned; public metadata must never point at R2 objects that cleanup intentionally deleted.
+GitHub Pages should remain the home for the static storefront: HTML, CSS, JavaScript, catalog metadata, and public gallery pages. Media binaries do not need to live in GitHub. The current public catalog is SQLite-backed, with a Brotli-compressed SQLite artifact preferred for transfer. Discarded/tombstoned media must leave the public catalog as soon as it is banned; public metadata must never point at R2 objects that cleanup intentionally deleted.
 
 ## Future Media States
 
@@ -37,7 +37,7 @@ Those states should be metadata and/or storage location concerns. They should no
 
 The durable direction is static-first, not necessarily static-only:
 
-- GitHub Pages hosts the public storefront and catalog metadata, moving from TSV compatibility files toward `assets/catalog/photosbyelie.sqlite`.
+- GitHub Pages hosts the public storefront and catalog metadata, using `assets/catalog/photosbyelie.sqlite.br` when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback.
 - A public media CDN or object store hosts public display derivatives.
 - Private/local storage keeps protected sales assets.
 - A tiny trusted service may eventually handle payment callbacks, delivery ZIPs, signed links, and print-on-demand order submission.

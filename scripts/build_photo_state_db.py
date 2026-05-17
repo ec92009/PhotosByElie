@@ -615,7 +615,7 @@ def write_db(repo_root: Path, output: Path) -> None:
 
     photos_data = load_window_data(repo_root, Path("photos-data.js"), "photosByElieData")
     home_data = load_window_data(repo_root, Path("home-data.js"), "photosByElieHomeData")
-    builder.absorb_collections(photos_data, "public_catalog", "assets/catalog/*.tsv via photos-data.js")
+    builder.absorb_collections(photos_data, "public_catalog", "assets/catalog/photosbyelie.sqlite via catalog loader")
     builder.absorb_collections(home_data, "home_data", "home-data.js")
     builder.absorb_import_cache(load_json(repo_root / IMPORT_CACHE_MANIFEST, {}))
     builder.absorb_expo_manifest(load_json(repo_root / "assets/expo-manifest.json", {}))

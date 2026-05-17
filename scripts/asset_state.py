@@ -571,7 +571,7 @@ def helper_lines() -> list[str]:
     ]
 
 
-def compact_catalog_tsv(repo_root: Path) -> None:
+def refresh_public_catalog_artifacts(repo_root: Path) -> None:
     subprocess.run(
         ["node", "scripts/write_catalog_tsv.cjs"],
         cwd=repo_root,
@@ -604,7 +604,7 @@ def write_photos_data_from_site(repo_root: Path, regular_groups: dict[str, list[
     ]
     lines += helper_lines()
     (repo_root / "photos-data.js").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    compact_catalog_tsv(repo_root)
+    refresh_public_catalog_artifacts(repo_root)
     write_home_data_from_collections(repo_root, home_collections)
 
 

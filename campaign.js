@@ -1,4 +1,5 @@
-(() => {
+(async () => {
+  await window.photosByElieCatalogReady;
   const $ = (selector) => document.querySelector(selector);
   const escapeHtml = (value) => window.photosByElieGalleryCard?.escapeHtml?.(value) || String(value || "");
   const collections = window.photosByElieData || {};

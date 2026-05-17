@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v78.1`
+- Current visible version: `v78.2`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -27,10 +27,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `hidden-page.js`: localhost-only Waste Basket review grid
 - `basket-rail.js`: compact wide-screen basket rail for browsing and photo detail pages
 - `home-data.js`: tiny homepage manifest with collection counts and representative preview candidates
-- `photos-data.js`: small generated browser bootstrap that loads the public catalog TSV shards and exposes shared collection, photo, product option, and mock price data
-- `assets/catalog/photosbyelie.sqlite`: compact SQLite catalog for the next public catalog source of truth
-- `assets/catalog/photos.tsv`: generated public catalog rows, with a compressed `.gz` copy for archival/deploy optimization work
-- `assets/catalog/collections.tsv`: generated collection metadata rows, with a compressed `.gz` copy
+- `photos-data.js`: small generated browser bootstrap that exposes shared collection, photo, product option, and price data
+- `assets/catalog/photosbyelie.sqlite`: compact SQLite catalog for the public catalog source of truth
 - `home-catalog-loader.js`: homepage-only background loader for the full catalog and basket rail
 - `home-discovery.js`: homepage-wide search, origin, collection, filter results, likes, keyboard selection, detail navigation, and localhost Owner shortcuts
 - `gallery-card.js`: shared gallery/review card renderer used by public galleries and Waste Basket review
@@ -46,10 +44,10 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photos.css`: photo-specific layout and carousel styles
 - `photos.js`: shared theme, translation dictionary, and language toggle behavior for public pages
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
-- `scripts/catalog_tsv.cjs`: shared Node loader/writer helpers for the TSV-backed compatibility public catalog
-- `scripts/write_catalog_tsv.cjs`: compacts generated catalog data into TSV shards and rewrites the browser bootstrap
+- `scripts/catalog_tsv.cjs`: legacy-named shared Node catalog loader that now reads the public SQLite catalog for tools and tests
+- `scripts/write_catalog_tsv.cjs`: legacy wrapper that rewrites the browser bootstrap and rebuilds the public SQLite catalog artifacts
 - `scripts/build_public_catalog_db.py`: rebuilds the compact public SQLite catalog at `assets/catalog/photosbyelie.sqlite`
-- `scripts/validate_publish.js`: pre-push TSV-backed catalog, asset-pair, resolution metadata, and publish-summary check
+- `scripts/validate_publish.js`: pre-push SQLite catalog, asset-pair, resolution metadata, and publish-summary check
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
 - `scripts/watch_photo_state_db.zsh`: optional local background refresher for the SQLite state database
 - `AGENTS.md`: repo-level working preferences and versioning SOP
@@ -73,10 +71,10 @@ Use the GitHub Pages URL above after pushing to `main`.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Featured on Pinterest section. These campaigns are durable first-party landing pages for Pinterest/social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
-- The full public catalog currently still runs through TSV shards under `assets/catalog/`. The next catalog direction is `assets/catalog/photosbyelie.sqlite`, with compact integer lookup ids for controlled vocabulary fields and TSV/JSON kept only as compatibility exports until the browser and tooling paths are switched. Current active public catalog count is `5,827` media rows.
+- The full public catalog attempts `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `5,827` media rows.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has the global discovery controls before Collections, including search, collection, camera/AI origin, orientation, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts. Collection galleries keep local refinement but no longer show the redundant camera/AI origin selector.
-- Gallery pages load the publishable Expo subset from `assets/catalog/*.tsv` through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
+- Gallery pages load the publishable Expo subset from the public SQLite catalog through the `photos-data.js` bootstrap; public GitHub Pages builds resolve preview media through `media-config.js` and each catalog row's `media.publicPreview` R2/CDN key instead of relying on committed media assets.
 - Public previews currently resolve directly through the public R2 `r2.dev` media endpoint backed by `photosbyelie-public`; move `publicBaseUrl` to a custom media domain when that is attached.
 - Local preview asset folders are retired. Public previews should resolve from R2/CDN keys; use `node scripts/validate_publish.js --external-media` for that publishing mode.
 - R2 media uploads should run through the lock-guarded sweep wrapper, `scripts/run_cloud_media_sweep.zsh`, or otherwise one lane at a time. The wrapper uses `.review-logs/cloud-media-sweep.lock` so the daily automation and manual runs do not race each other.
@@ -108,7 +106,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Homepage representative samples refresh after all public country cards have been active once in the carousel.
 - Any visible collection carousel card can be clicked to open its gallery, even when it is not the foreground card.
 - The Expo cap is retired. The exporter now publishes all eligible cloud-backed previews unless they are blocked/discarded or otherwise ineligible.
-- `scripts/export_photos_data.py --external-media` regenerates `home-data.js`, the catalog TSV shards, and the small `photos-data.js` compatibility bootstrap from the local import manifest and tracked owner state without committing preview media files. The SQLite migration keeps those files as exports while `photosbyelie.sqlite` becomes the intended public catalog source.
+- `scripts/export_photos_data.py --external-media` regenerates `home-data.js`, the public SQLite catalog artifacts, and the small `photos-data.js` bootstrap from the local import manifest and tracked owner state without committing preview media files.
 - The basket is the source of truth for selected product options.
 - Likes are stored separately from basket selections, so a photo can be liked before any resolution is chosen; adding a photo to the basket also keeps it liked.
 - Wide screens show a compact right-side basket rail while browsing photos and collections.

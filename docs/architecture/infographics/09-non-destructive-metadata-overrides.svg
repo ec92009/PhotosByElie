@@ -83,7 +83,7 @@
   <text x="1426" y="352" class="greenText">DERIVED OUTPUTS</text>
   <text x="1426" y="418" class="bodyBold">Regenerate small data, not media</text>
   <rect x="1426" y="455" width="330" height="54" rx="10" class="softBlue"/>
-  <text x="1449" y="491" class="body">catalog TSV + bootstrap</text>
+  <text x="1449" y="491" class="body">catalog SQLite + bootstrap</text>
   <rect x="1426" y="530" width="330" height="54" rx="10" class="softBlue"/>
   <text x="1449" y="566" class="body">manifest / sidecar JSON</text>
   <rect x="1426" y="605" width="330" height="54" rx="10" class="softOrange"/>

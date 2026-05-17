@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "*.sqlite.br": "sqlite"
+  },
+  "workbench.editorAssociations": {
+    "*.sqlite": "sqlite-viewer.view"
+  }
+}

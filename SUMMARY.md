@@ -5,11 +5,11 @@ Date: 2026-05-16
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Current visible build: `v77.3`
+- Current visible build: `v78.2`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local preview: `http://localhost:8000/`
-- Public catalog now loads `assets/catalog/photosbyelie.sqlite` first, with TSV compatibility fallback.
-- Product/pricing data now lives in `assets/catalog/product-pricing.json` as generator/fallback input and in public SQLite product tables at runtime.
+- Public catalog attempts `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain SQLite as the guaranteed fallback.
+- Product/pricing data starts in `assets/catalog/product-pricing.json` as generator input and is materialized into public SQLite product tables at runtime.
 - Owner-only workflow state now writes to the local ignored SQLite target at `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public preview media and private delivery media live in Cloudflare R2, not Git.
 - R2 private delivery has moved to the flat SQLite-era key convention for the active runtime:
@@ -27,13 +27,13 @@ Date: 2026-05-16
 
 ## Source Of Truth Direction
 
-We identified a major weakness in the current storage/retrieval approach: several TSV, JSON, generated JS, and manifest files can all appear authoritative at once.
+We identified a major weakness in the current storage/retrieval approach: several JSON, generated JS, and manifest files can all appear authoritative at once.
 
 Accepted direction:
 
 - `photosbyelie.sqlite`: public/deployable catalog truth.
 - `Owner.sqlite`: local/private Owner workflow truth.
-- TSV and JSON files remain compatibility exports until the browser, Worker, and Owner tools move to the database-backed path.
+- JSON compatibility exports remain until the browser, Worker, and Owner tools move fully to database-backed paths.
 
 The public catalog keeps `media_id` as the stable text identity because it drives URLs and R2 key conventions. Controlled values use short integer lookup ids. `media_items.keyword_ids` stores a comma-separated list of keyword integers.
 
@@ -100,8 +100,8 @@ Total:     5,827
 The first SQLite migration pass is now in place:
 
 - `catalog-sqlite.js` decodes the public SQLite catalog in the browser and reconstructs the existing `window.photosByElieData` contract.
-- `photos-data.js` loads SQLite synchronously first and falls back to TSV if needed.
-- `scripts/write_catalog_tsv.cjs` now refreshes TSV compatibility exports, the SQLite bootstrap, and `assets/catalog/photosbyelie.sqlite` together.
+- `photos-data.js` loads Brotli-compressed SQLite asynchronously first and falls back to plain SQLite if needed.
+- `scripts/write_catalog_tsv.cjs` is now only a legacy-named compatibility wrapper; it refreshes the SQLite bootstrap, `assets/catalog/photosbyelie.sqlite`, and `assets/catalog/photosbyelie.sqlite.br` together.
 - `scripts/build_public_catalog_db.py` validates duplicate media ids, keyword ids, required asset rows, foreign keys, and SQLite integrity.
 - `scripts/owner_state_db.py` now targets `assets/owner-actions/Owner.sqlite` and imports/writes keyword blacklist, country assignments, title/keyword batches, queue rows, proposals, and decisions.
 - Title/keyword queue generation syncs `Owner.sqlite` after writing compatibility JSON.
@@ -174,7 +174,7 @@ Videos are now first-class in the import model. The Cordoba Apple Photos album w
 
 ## Product Pricing
 
-Photo products, print/frame pricing, shipping/handling, and video tiers are no longer hand-authored in generated JS constants. `assets/catalog/product-pricing.json` feeds `scripts/build_public_catalog_db.py`, which materializes the public SQLite product tables. `catalog-sqlite.js`, TSV fallback tooling, and Worker catalog generation all reconstruct the existing public globals from that shared price catalog. Videos use `video-original` buyer delivery at flat `$20` for now, with length-tier rows preserved for future pricing.
+Photo products, print/frame pricing, shipping/handling, and video tiers are no longer hand-authored in generated JS constants. `assets/catalog/product-pricing.json` feeds `scripts/build_public_catalog_db.py`, which materializes the public SQLite product tables. `catalog-sqlite.js` and Worker catalog generation both reconstruct the existing public globals from that shared price catalog. Videos use `video-original` buyer delivery at flat `$20` for now, with length-tier rows preserved for future pricing.
 
 ## R2 And Tombstone Rules
 
@@ -186,7 +186,7 @@ The public preview incident showed the consequence of alternate truth sources: 1
 
 ## Public Site Fixes
 
-- Public site is now `v77.3`.
+- Public site is now `v78.2`.
 - The USA gallery missing-preview issue is fixed by removing tombstoned catalog rows rather than re-uploading banned media.
 - Liked and Basket pages now use the same fixed-header behavior as gallery/detail pages.
 - Header action buttons for liked, basket, checkout, language, and theme stay frozen during mobile scroll.

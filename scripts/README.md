@@ -69,9 +69,9 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into `assets/catalog/collections.tsv` and `assets/catalog/photos.tsv`, writes compressed `.gz` copies, and leaves `photos-data.js` as a small compatibility bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Waste Basket and discarded/tombstone ids are kept out of public metadata so the site never points at intentionally deleted R2 previews. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into the public SQLite catalog artifacts and leaves `photos-data.js` as a small bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Waste Basket and discarded/tombstone ids are kept out of public metadata so the site never points at intentionally deleted R2 previews. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
-Product and pricing data comes from `assets/catalog/product-pricing.json`. `scripts/build_public_catalog_db.py` materializes that file into the public SQLite product tables, and `scripts/write_catalog_tsv.cjs` uses the same JSON as the TSV fallback source. The browser and Worker still see the existing `photosByElieResolutions`, frame, shipping, and video-tier globals, but those values are reconstructed from shared catalog data instead of hand-authored generated JS constants.
+Product and pricing data comes from `assets/catalog/product-pricing.json`. `scripts/build_public_catalog_db.py` materializes that file into the public SQLite product tables. The browser and Worker still see the existing `photosByElieResolutions`, frame, shipping, and video-tier globals, but those values are reconstructed from shared catalog data instead of hand-authored generated JS constants.
 
 For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
 
@@ -123,7 +123,7 @@ python3 scripts/asset_state.py \
 
 That compatibility path applies country assignments and Waste Basket choices from the snapshot. It is not the normal Owner flow anymore.
 
-Because the local import cache and Waste Basket review data are ignored by Git, a fresh sync may have `assets/catalog/*.tsv`, the `photos-data.js` bootstrap, and `assets/expo-manifest.json` but no local import-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
+Because the local import cache and Waste Basket review data are ignored by Git, a fresh sync may have `assets/catalog/photosbyelie.sqlite`, the `photos-data.js` bootstrap, and `assets/expo-manifest.json` but no local import-cache manifest. In that case the compatibility cleaner applies the pass directly from the site data where it can. If the derivatives live in another checkout or worktree, add it as a search root:
 
 ```bash
 python3 scripts/asset_state.py \
@@ -148,9 +148,15 @@ open -a "DB Browser for SQLite" tmp/photo-state.sqlite
 
 Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `owner_country_assignment_events`, `owner_country_assignments`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
 
-The public site still exposes the same `window.photosByElieData` browser contract. Public pages now load the committed SQLite catalog at `assets/catalog/photosbyelie.sqlite` first, with TSV as a compatibility fallback. The ignored local Owner workflow database lives at `assets/owner-actions/Owner.sqlite`; tracked Owner JSON files remain compatibility exports for the current Owner UI and audit review.
+The public site still exposes the same `window.photosByElieData` browser contract. Public pages attempt the committed Brotli-compressed SQLite catalog at `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain SQLite as the guaranteed fallback. The ignored local Owner workflow database lives at `assets/owner-actions/Owner.sqlite`; tracked Owner JSON files remain compatibility exports for the current Owner UI and audit review.
 
-The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`; `node scripts/write_catalog_tsv.cjs` refreshes TSV compatibility exports, the SQLite bootstrap, and the public DB together. The current active public database has `5,827` `media_items` and `34,962` `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
+The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`; `node scripts/write_catalog_tsv.cjs` is a legacy-named compatibility command that refreshes the SQLite bootstrap, public DB, and Brotli artifact together. The current active public database has `5,827` `media_items` and `34,962` `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
+
+To inspect a committed `.sqlite.br` catalog in VS Code, open the compressed file and run the task `View Brotli SQLite in SQLite Viewer`. The task uses `scripts/view_sqlite_br.cjs` to Brotli-decompress the file into ignored `tmp/vscode-sqlite-br/*.sqlite`, validates it with `sqlite3 PRAGMA integrity_check`, and opens the decoded database so the SQLite Viewer extension can display it. The same bridge can be run directly:
+
+```bash
+node scripts/view_sqlite_br.cjs assets/catalog/photosbyelie.sqlite.br
+```
 
 The normal maintenance path is a daily Codex automation named "Photos By Elie state DB refresh". For an on-demand refresh, run:
 
@@ -168,9 +174,9 @@ Stop it with `Ctrl-C`. The database lives under `tmp/`, so it is disposable and 
 
 ## Publish Validation
 
-`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the catalog TSV/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, discarded/tombstone exclusions, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
+`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the SQLite catalog/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, discarded/tombstone exclusions, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
 
-The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` still carries the lightweight helper functions that infer the browser-locale measurement system and expose pricing helpers. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated catalog TSV/bootstrap files keep the public checkout model intact.
+The generated product list currently includes digital file options, physical print sizes, per-print framing choices, and mock shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` still carries the lightweight helper functions that infer the browser-locale measurement system and expose pricing helpers. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, or availability thresholds so regenerated catalog SQLite/bootstrap files keep the public checkout model intact.
 
 Run the validator before pushing public site changes:
 
@@ -232,7 +238,7 @@ Review on localhost:
 
 Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write/merge approvals, rejections, and blocked rows into an audit JSON under `assets/owner-actions/title-keyword-review-queue/`; saved rows are filtered out when the page is opened again. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through `assets/owner-actions/keyword-blacklist.json` before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections are also recorded in `proposed-state.json` for priority rework.
 
-The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/*.tsv`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite source-file embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
+The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/photosbyelie.sqlite`, `assets/catalog/photosbyelie.sqlite.br`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite source-file embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 
 ## R2 Media Sync
 

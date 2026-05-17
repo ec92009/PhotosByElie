@@ -350,6 +350,7 @@ export const createPhotosByElieWorker = ({
   successUrl = "https://photosbyelie.com/orders/{ORDER_ID}?checkout=success",
   cancelUrl = "https://photosbyelie.com/basket.html?checkout=cancelled",
   mockStripeEnabled = true,
+  realEstateOriginals = null,
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
@@ -496,6 +497,7 @@ export const createPhotosByElieWorker = ({
       await Promise.all(deliveryResult.files.map((file) => store.putDownload({
         token: file.token,
         orderId: ready.id,
+        bucket: file.bucket,
         objectKey: file.objectKey,
         filename: file.name,
         contentType: file.contentType,
@@ -614,6 +616,15 @@ export const createPhotosByElieWorker = ({
     });
   };
 
+  const createRealEstateOriginalsSession = async (request) => {
+    if (!realEstateOriginals || typeof realEstateOriginals.createSession !== "function") {
+      return errorJson(503, "real_estate_originals_unavailable", "Real-estate originals delivery is not configured.");
+    }
+    const payload = await parseJson(request);
+    const originals = await realEstateOriginals.createSession(payload);
+    return json({ originals }, 201);
+  };
+
   const fetch = async (request) => {
     if (request.method === "OPTIONS") return json({ ok: true });
     const url = new URL(request.url);
@@ -627,6 +638,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/checkout/account") return await createCheckout(request, "account");
       if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
+      if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
       if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);

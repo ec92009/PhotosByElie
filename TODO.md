@@ -4,7 +4,7 @@ Last updated: 2026-05-17
 
 ## Current Facts
 
-- Current visible build: `v78.21`.
+- Current visible build: `v78.22`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
@@ -13,6 +13,7 @@ Last updated: 2026-05-17
 - Local Owner workflow state writes to ignored `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
 - Public previews are R2-backed and watermarked.
 - Private sellable assets are R2-backed and unwatermarked.
+- Real Estate selected-original ZIPs are browser-built from Worker-created private download tokens; the Worker does not assemble the archive.
 - Waste Basket/discard tombstones are durable. A banned photo stays banned.
 - The public catalog validator now rejects discarded/tombstoned ids in public catalog data and `assets/expo-manifest.json`.
 - Photos sell four digital delivery flavors: full, JPG 6 MP, JPG 3 MP, and JPG 1 MP.

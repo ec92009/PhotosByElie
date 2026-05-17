@@ -75,6 +75,9 @@
     pointerDraftActive: false,
     unlocked: false,
     pdfBusy: false,
+    originalsBusy: false,
+    username: "",
+    accessCode: "",
   };
 
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -101,6 +104,25 @@
     const cleanKey = String(key || "").replace(/^\/+/, "");
     const baseUrl = String(window.photosByElieMediaConfig?.publicBaseUrl || "").replace(/\/+$/, "");
     return cleanKey && baseUrl ? `${baseUrl}/${cleanKey}` : "";
+  };
+
+  const normalizedWorkerBase = (value) => {
+    const raw = String(value || "").trim().replace(/\/+$/, "");
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, window.location.href);
+      return /^https?:$/.test(url.protocol) ? url.href.replace(/\/+$/, "") : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const workerBaseUrl = () => {
+    const override = normalizedWorkerBase(pageParams.get("workerBase"));
+    if (override) return override;
+    const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
+    if (configured) return configured;
+    return isLocalHost ? "http://localhost:8787" : "";
   };
 
   const loadScript = (src) => new Promise((resolve, reject) => {
@@ -147,7 +169,36 @@
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
   const projectStoreKey = () => workflow().projectStoreKey || `photosbyelie-real-estate-projects-${state.gallery?.key || "default"}`;
   const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
+  const credentialSessionKey = () => `photosbyelie-real-estate-credentials-${state.gallery?.key || "default"}`;
   const helpDismissedKey = () => `photosbyelie-real-estate-help-dismissed-${state.gallery?.key || "default"}`;
+
+  const readSessionCredentials = () => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(credentialSessionKey()) || "null");
+      return saved && typeof saved === "object" ? saved : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const writeSessionCredentials = (username, accessCode) => {
+    state.username = String(username || "");
+    state.accessCode = String(accessCode || "");
+    try {
+      sessionStorage.setItem(credentialSessionKey(), JSON.stringify({
+        username: state.username,
+        accessCode: state.accessCode,
+      }));
+    } catch {}
+  };
+
+  const clearSessionCredentials = () => {
+    state.username = "";
+    state.accessCode = "";
+    try {
+      sessionStorage.removeItem(credentialSessionKey());
+    } catch {}
+  };
 
   const openDialog = (dialog) => {
     if (!dialog) return;
@@ -363,6 +414,11 @@
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = "Share selection table";
       button.title = "Open or share an HTML table that can be loaded back later";
+    });
+    document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
+      button.textContent = state.originalsBusy ? "Building originals ZIP..." : "Share originals ZIP";
+      button.title = "Prepare a ZIP of selected original JPG files from private delivery storage";
+      button.disabled = state.originalsBusy;
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
       button.textContent = "Load selection file...";
@@ -726,7 +782,7 @@
     return { filename, pickedLocation: false, bytes: Number(blob.size) || 0 };
   };
 
-  const shareOrOpenBlob = async ({ blob, filename, title, text }) => {
+  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true }) => {
     const canCreateFile = typeof File === "function";
     const file = canCreateFile ? new File([blob], filename, { type: blob.type || "text/html" }) : null;
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -742,13 +798,15 @@
       }
     }
 
-    const url = URL.createObjectURL(blob);
-    const opened = window.open(url, "_blank", "noopener");
-    if (opened) {
-      window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
-      return { method: "open", filename, bytes: Number(blob.size) || 0 };
+    if (openFallback) {
+      const url = URL.createObjectURL(blob);
+      const opened = window.open(url, "_blank", "noopener");
+      if (opened) {
+        window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+        return { method: "open", filename, bytes: Number(blob.size) || 0 };
+      }
+      URL.revokeObjectURL(url);
     }
-    URL.revokeObjectURL(url);
     return { method: "download", ...(await downloadBlob(blob, filename)) };
   };
 
@@ -773,6 +831,257 @@
       }
     } catch (error) {
       setStatus(error?.name === "AbortError" ? "Share canceled" : "Selection table could not be shared");
+    }
+  };
+
+  let crcTable = null;
+  const crc32Table = () => {
+    if (crcTable) return crcTable;
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n += 1) {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      crcTable[n] = c >>> 0;
+    }
+    return crcTable;
+  };
+
+  const crc32 = (bytes) => {
+    const table = crc32Table();
+    let crc = 0xffffffff;
+    for (let index = 0; index < bytes.length; index += 1) {
+      crc = table[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  };
+
+  const dosDateTime = (date = new Date()) => {
+    const year = Math.max(1980, date.getFullYear());
+    return {
+      time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+      date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+    };
+  };
+
+  const assertZip32 = (value) => {
+    if (value > 0xffffffff) {
+      throw new Error("This ZIP is too large for the browser path. Split the selection into smaller batches.");
+    }
+    return value >>> 0;
+  };
+
+  const localZipHeader = (entry) => {
+    const header = new Uint8Array(30 + entry.nameBytes.length);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0x0800, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, entry.time, true);
+    view.setUint16(12, entry.date, true);
+    view.setUint32(14, entry.crc, true);
+    view.setUint32(18, assertZip32(entry.size), true);
+    view.setUint32(22, assertZip32(entry.size), true);
+    view.setUint16(26, entry.nameBytes.length, true);
+    view.setUint16(28, 0, true);
+    header.set(entry.nameBytes, 30);
+    return header;
+  };
+
+  const centralZipHeader = (entry) => {
+    const header = new Uint8Array(46 + entry.nameBytes.length);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x02014b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 20, true);
+    view.setUint16(8, 0x0800, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, entry.time, true);
+    view.setUint16(14, entry.date, true);
+    view.setUint32(16, entry.crc, true);
+    view.setUint32(20, assertZip32(entry.size), true);
+    view.setUint32(24, assertZip32(entry.size), true);
+    view.setUint16(28, entry.nameBytes.length, true);
+    view.setUint16(30, 0, true);
+    view.setUint16(32, 0, true);
+    view.setUint16(34, 0, true);
+    view.setUint16(36, 0, true);
+    view.setUint32(38, 0, true);
+    view.setUint32(42, assertZip32(entry.offset), true);
+    header.set(entry.nameBytes, 46);
+    return header;
+  };
+
+  const endOfCentralZipDirectory = ({ fileCount, centralSize, centralOffset }) => {
+    if (fileCount > 0xffff) throw new Error("Too many files for this ZIP.");
+    const header = new Uint8Array(22);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x06054b50, true);
+    view.setUint16(8, fileCount, true);
+    view.setUint16(10, fileCount, true);
+    view.setUint32(12, assertZip32(centralSize), true);
+    view.setUint32(16, assertZip32(centralOffset), true);
+    return header;
+  };
+
+  const uniqueZipEntryName = (baseName, usedNames) => {
+    const clean = String(baseName || "original.jpg")
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 150) || "original.jpg";
+    const normalized = clean.toLowerCase();
+    if (!usedNames.has(normalized)) {
+      usedNames.add(normalized);
+      return clean;
+    }
+    const match = clean.match(/^(.*?)(\.[^.]+)?$/);
+    const stem = match?.[1] || clean;
+    const extension = match?.[2] || "";
+    let counter = 2;
+    while (usedNames.has(`${stem}-${counter}${extension}`.toLowerCase())) counter += 1;
+    const next = `${stem}-${counter}${extension}`;
+    usedNames.add(next.toLowerCase());
+    return next;
+  };
+
+  const buildStoredZipBlob = async (files, onProgress) => {
+    const encoder = new TextEncoder();
+    const parts = [];
+    const centralEntries = [];
+    const { time, date } = dosDateTime();
+    let offset = 0;
+
+    for (const [index, file] of files.entries()) {
+      onProgress?.({ index, file, phase: "fetch" });
+      const response = await fetch(file.url);
+      if (!response.ok) throw new Error(`Could not fetch ${file.name || file.entryName}`);
+      const blob = await response.blob();
+      onProgress?.({ index, file, phase: "zip" });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const nameBytes = encoder.encode(file.entryName || file.name);
+      if (nameBytes.byteLength > 0xffff) throw new Error(`Filename is too long for ZIP: ${file.entryName || file.name}`);
+      const entry = {
+        nameBytes,
+        crc: crc32(bytes),
+        size: blob.size,
+        offset,
+        time,
+        date,
+      };
+      const header = localZipHeader(entry);
+      assertZip32(offset + header.byteLength + blob.size);
+      parts.push(header, blob);
+      offset += header.byteLength + blob.size;
+      centralEntries.push(entry);
+      onProgress?.({ index, file, phase: "done" });
+    }
+
+    const centralOffset = offset;
+    centralEntries.forEach((entry) => {
+      const header = centralZipHeader(entry);
+      parts.push(header);
+      offset += header.byteLength;
+    });
+    parts.push(endOfCentralZipDirectory({
+      fileCount: centralEntries.length,
+      centralSize: offset - centralOffset,
+      centralOffset,
+    }));
+    return new Blob(parts, { type: "application/zip" });
+  };
+
+  const originalRequestItemsFor = (photos) => photos.map((photo, index) => ({
+    photoId: photo.id,
+    albumSlug: photo.albumSlug,
+    sourceFile: photo.full || "",
+    title: titleFor(photo),
+    sortIndex: index + 1,
+  }));
+
+  const credentialsForOriginals = () => {
+    const saved = readSessionCredentials();
+    const username = state.username || saved.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
+    let accessCode = state.accessCode || saved.accessCode || "";
+    if (!accessCode) {
+      accessCode = window.prompt("Password for originals ZIP") || "";
+      if (!accessCode) {
+        throw Object.assign(new Error("Originals ZIP canceled"), { name: "AbortError" });
+      }
+    }
+    writeSessionCredentials(username, accessCode);
+    return { username, accessCode };
+  };
+
+  const requestOriginalsSession = async (photos) => {
+    const baseUrl = workerBaseUrl();
+    if (!baseUrl) throw new Error("Originals ZIP needs the Photos By Elie Worker.");
+    const credentials = credentialsForOriginals();
+    const response = await fetch(`${baseUrl}/real-estate/originals/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        accessCode: credentials.accessCode,
+        items: originalRequestItemsFor(photos),
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = body?.error?.message || "Originals ZIP could not be prepared.";
+      throw new Error(message);
+    }
+    return body.originals;
+  };
+
+  const originalZipFilesFor = (session) => {
+    const baseUrl = workerBaseUrl();
+    const usedNames = new Set();
+    return (session.files || []).map((file) => ({
+      ...file,
+      url: `${baseUrl}${file.downloadUrl}`,
+      entryName: uniqueZipEntryName(file.name || `${file.photoId || "real-estate-original"}.jpg`, usedNames),
+    }));
+  };
+
+  const shareOriginalsZip = async () => {
+    if (!requireUnlocked() || state.originalsBusy) return;
+    const photos = selectedPhotos();
+    if (!photos.length) {
+      setStatus("Select photos before preparing originals ZIP");
+      return;
+    }
+    state.originalsBusy = true;
+    syncFileActionLabels();
+    try {
+      setStatus(`Preparing private original links for ${photos.length} selected photo${photos.length === 1 ? "" : "s"}...`);
+      const session = await requestOriginalsSession(photos);
+      const files = originalZipFilesFor(session);
+      const totalBytes = Number(session.totalBytes) || files.reduce((sum, file) => sum + (Number(file.bytes) || 0), 0);
+      setStatus(`Building originals ZIP from ${files.length} file${files.length === 1 ? "" : "s"}${totalBytes ? ` (${formatBytes(totalBytes)})` : ""}...`);
+      const blob = await buildStoredZipBlob(files, ({ index, file, phase }) => {
+        const number = index + 1;
+        if (phase === "fetch") setStatus(`Fetching original ${number}/${files.length}: ${file.name}`);
+        if (phase === "zip") setStatus(`Adding original ${number}/${files.length} to ZIP: ${file.name}`);
+      });
+      const filename = session.zipFilename || `${state.gallery?.key || "real-estate"}-originals-${timestampId()}.zip`;
+      const saved = await shareOrOpenBlob({
+        blob,
+        filename,
+        title: "Photos By Elie originals",
+        text: `${state.payload?.customer?.name || "Client"} selected original photos`,
+        openFallback: false,
+      });
+      if (saved.method === "share") {
+        setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
+      } else {
+        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+      }
+    } catch (error) {
+      setStatus(error?.name === "AbortError" ? "Originals ZIP canceled" : (error?.message || "Originals ZIP failed"));
+    } finally {
+      state.originalsBusy = false;
+      syncFileActionLabels();
     }
   };
 
@@ -1304,6 +1613,7 @@
         return;
       }
       state.unlocked = true;
+      writeSessionCredentials(elements.loginName?.value || "", elements.loginCode?.value || "");
       writeSession(elements.loginName?.value || "");
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} photos`);
@@ -1461,6 +1771,9 @@
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
       shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
     }));
+    document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
+      shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));
+    }));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
       openBatchFile().catch(() => setStatus("Selection file could not be loaded"));
@@ -1470,6 +1783,7 @@
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
     document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
       localStorage.removeItem(authStoreKey());
+      clearSessionCredentials();
       state.unlocked = false;
       syncAuthUi();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1518,8 +1832,15 @@
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});
     state.projectAssignments = readJson(projectStoreKey(), {});
-    if (pageParams.has("logout")) localStorage.removeItem(authStoreKey());
+    if (pageParams.has("logout")) {
+      localStorage.removeItem(authStoreKey());
+      clearSessionCredentials();
+    }
     state.unlocked = hasUnlockedSession();
+    const savedCredentials = readSessionCredentials();
+    const savedSession = readJson(authStoreKey(), {});
+    state.username = savedCredentials.username || savedSession.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
+    state.accessCode = savedCredentials.accessCode || "";
     if (elements.density) elements.density.value = state.density;
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;

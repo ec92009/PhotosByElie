@@ -1,6 +1,7 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 import { collections, frameOptions, resolutions, videoPriceTiers } from "./photos-catalog.generated.mjs";
@@ -67,16 +68,28 @@ export default {
         checkoutBaseUrl: env.MOCK_STRIPE_CHECKOUT_BASE_URL || `${publicSiteUrl}/order.html?mockStripeSession=`,
         webhookSecret: env.MOCK_STRIPE_WEBHOOK_SECRET || "mock_whsec_photosbyelie",
       });
+    const store = createKvStore({
+      namespace: requiredBinding(env, "ORDERS_KV"),
+      prefix: env.KV_PREFIX || "pbe",
+    });
+    const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
     const worker = createPhotosByElieWorker({
       catalog,
-      store: createKvStore({
-        namespace: requiredBinding(env, "ORDERS_KV"),
-        prefix: env.KV_PREFIX || "pbe",
-      }),
+      store,
       stripe,
       delivery: createR2ZipDelivery({
-        privateBucket: requiredBinding(env, "PRIVATE_MEDIA"),
-        deliveryBucket: env.DELIVERY_MEDIA || env.PRIVATE_MEDIA,
+        privateBucket,
+        deliveryBucket: env.DELIVERY_MEDIA || privateBucket,
+      }),
+      realEstateOriginals: createRealEstateOriginals({
+        privateBucket,
+        store,
+        galleries: [{
+          key: "corine-real-estate",
+          username: env.REAL_ESTATE_CORINE_USERNAME || "Corine",
+          accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "LaConcha",
+          privateMasterPrefix: "real-estate/corine-real-estate/masters",
+        }],
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,

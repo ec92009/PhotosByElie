@@ -8,6 +8,7 @@ import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient, createStripeWebhookSignature } from "./stripe-client.mjs";
 
@@ -502,6 +503,104 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
   assert.equal(downloadResponse.headers.get("content-type"), "image/jpeg");
   const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
   assert.ok(fileBytes.includes(Buffer.from("private developed master bytes")));
+});
+
+test("real-estate originals endpoint creates private download tokens", async () => {
+  const photoId = "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043";
+  const albumSlug = "re-2026-la-concha-1-apt-8ab1";
+  const privateKey = `real-estate/corine-real-estate/masters/${albumSlug}/${photoId}.jpg`;
+  const privateR2 = createFakeR2({
+    [privateKey]: {
+      body: new TextEncoder().encode("real estate original bytes"),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store,
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => new Date("2026-05-17T12:00:00.000Z"),
+    randomUUID,
+    delivery: createR2ZipDelivery({
+      privateBucket: privateR2,
+      deliveryBucket: createFakeR2(),
+      randomUUID,
+    }),
+    realEstateOriginals: createRealEstateOriginals({
+      privateBucket: privateR2,
+      store,
+      randomUUID,
+      now: () => new Date("2026-05-17T12:00:00.000Z"),
+      galleries: [{
+        key: "corine-real-estate",
+        username: "Corine",
+        accessCode: "LaConcha",
+        privateMasterPrefix: "real-estate/corine-real-estate/masters",
+      }],
+    }),
+  });
+
+  const sessionResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/originals/session", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    items: [{
+      photoId,
+      albumSlug,
+      sourceFile: "D5H_3043.JPG",
+      title: "La Concha 1 Apt 8AB1 - 01",
+      sortIndex: 1,
+    }],
+  }));
+  assert.equal(sessionResponse.status, 201);
+  const session = await sessionResponse.json();
+  assert.equal(session.originals.fileCount, 1);
+  assert.equal(session.originals.files[0].photoId, photoId);
+  assert.match(session.originals.files[0].downloadUrl, /^\/download\/re_/);
+
+  const token = session.originals.files[0].downloadUrl.split("/").pop();
+  const downloadResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
+  assert.equal(downloadResponse.status, 200);
+  assert.equal(downloadResponse.headers.get("content-type"), "image/jpeg");
+  const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
+  assert.ok(fileBytes.includes(Buffer.from("real estate original bytes")));
+});
+
+test("real-estate originals endpoint rejects the wrong client password", async () => {
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store,
+    stripe: createMockStripeClient({ randomUUID }),
+    randomUUID,
+    realEstateOriginals: createRealEstateOriginals({
+      privateBucket: createFakeR2(),
+      store,
+      randomUUID,
+      galleries: [{
+        key: "corine-real-estate",
+        username: "Corine",
+        accessCode: "LaConcha",
+      }],
+    }),
+  });
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/real-estate/originals/session", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "Wrong",
+    items: [{
+      photoId: "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043",
+      albumSlug: "re-2026-la-concha-1-apt-8ab1",
+      sourceFile: "D5H_3043.JPG",
+    }],
+  }));
+  assert.equal(response.status, 403);
+  const body = await response.json();
+  assert.equal(body.error.code, "real_estate_auth_required");
 });
 
 test("deployed Worker blocks checkout when private delivery files are missing", async () => {

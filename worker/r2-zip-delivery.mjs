@@ -247,6 +247,7 @@ export const createR2ZipDelivery = ({
             });
           }
           file = {
+            bucket: "private",
             objectKey: found.key,
             renderKey: "",
             cacheHit: false,
@@ -255,6 +256,7 @@ export const createR2ZipDelivery = ({
           };
         } else {
           file = await getOrCreateRenderedJpg({ item, product, readSourceBytes });
+          file.bucket = "delivery";
         }
 
         files.push({
@@ -265,6 +267,7 @@ export const createR2ZipDelivery = ({
           productId: product.id,
           productLabel: product.label,
           sourceKey: file.renderKey ? item.source.privateMasterKey : file.objectKey,
+          bucket: file.bucket,
           objectKey: file.objectKey,
           name,
           downloadUrl: `/download/${token}`,
@@ -295,7 +298,8 @@ export const createR2ZipDelivery = ({
 
   const getDownloadResponse = async (downloadRecord) => {
     const objectKey = downloadRecord.objectKey || downloadRecord.zipKey;
-    const object = await deliveryBucket.get(objectKey);
+    const bucket = downloadRecord.bucket === "private" ? privateBucket : deliveryBucket;
+    const object = await bucket.get(objectKey);
     if (!object) {
       return new Response(JSON.stringify({
         error: {

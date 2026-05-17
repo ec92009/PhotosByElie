@@ -18,6 +18,7 @@ browser basket -> Worker availability check -> Stripe Checkout -> signed paid we
 - Stripe webhook verification from the raw request body and `Stripe-Signature` header.
 - Order status transitions.
 - Per-file delivery metadata, local mock ZIP generation, and signed-link-style download tokens.
+- Real Estate originals sessions that mint private download tokens for browser-built ZIPs.
 
 Stripe owns only the payment track. The browser proposes a basket, but the Worker recalculates price and availability before creating the checkout session.
 
@@ -32,6 +33,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |
 | `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
+| `POST /real-estate/originals/session` | Real Estate client requests selected originals | Validates the client password, checks private R2 originals, and returns per-file private download tokens |
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
 | `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
@@ -46,7 +48,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 - `PRIVATE_MEDIA` reads private developed masters from R2.
 - `DELIVERY_MEDIA` serves private buyer downloads. It can point at the same private R2 bucket for the mock phase.
 
-The public static site points checkout to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged from `masters/<photo-id>.<format>`, and reads JPG 6 MP, 3 MP, and 1 MP products from flat private R2 keys like `renders/<photo-id>_6mp.jpg`. During the migration window it can still fall back to the old nested master/render keys. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later per-file downloads. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file gets its own download token and repeat downloads are allowed.
+The public static site points checkout and Real Estate originals delivery to the deployed Worker through `window.photosByElieMediaConfig.checkoutWorkerBaseUrl` and points public preview media directly to the public R2 media base through `window.photosByElieMediaConfig.publicBaseUrl`. Use `?workerBase=https://...` for alternate cloud Workers, `?workerBase=http://localhost:8787` while testing locally, and `?mediaBase=https://...` for alternate public media bases. The R2 delivery adapter validates selected private files before creating Stripe Checkout, passes full-resolution masters through unchanged from `masters/<photo-id>.<format>`, and reads JPG 6 MP, 3 MP, and 1 MP products from flat private R2 keys like `renders/<photo-id>_6mp.jpg`. During the migration window it can still fall back to the old nested master/render keys. Real Estate originals use keys under `real-estate/<gallery-key>/masters/<album-slug>/<photo-id>.jpg`. Those generated JPG buyer files are unwatermarked, generated/uploaded by the media pipeline on the machine with developed masters, and reused by later per-file downloads. Public cloud delivery intentionally avoids assembling one large ZIP in the Worker; each purchased file or Real Estate original gets its own download token and repeat downloads are allowed.
 
 The current checkout Worker is live at:
 

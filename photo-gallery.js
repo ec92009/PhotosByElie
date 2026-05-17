@@ -44,9 +44,11 @@ const defaultFilterState = {
   minSize: "all",
   mood: "all",
   subject: "all",
-  sort: "newest"
+  sort: "newest",
+  dateFrom: "",
+  dateTo: ""
 };
-const persistedFilterKeys = ["orientation", "minSize", "mood", "subject"];
+const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "dateFrom", "dateTo"];
 let filterBar = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
@@ -139,6 +141,7 @@ const writeDetailSequenceContext = (photos) => {
       collectionTitle: gallery?.title || "",
       photoIds: photos.map((photo) => photo.id),
       filterState,
+      visibleLimit: visibleLimit >= photos.length ? "all" : visibleLimit,
       createdAt: Date.now()
     }));
   } catch {
@@ -265,11 +268,42 @@ const photoSubjectTags = (photo) => {
   return tags.size ? tags : new Set(["other"]);
 };
 
+const parseCaptureTime = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return 0;
+  const capturedMatch = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
+  if (capturedMatch) {
+    return Date.parse(`${capturedMatch[1]}-${capturedMatch[2]}-${capturedMatch[3]}T${capturedMatch[4]}`) || 0;
+  }
+  const dateMatch = raw.match(/\b(\d{4})[:/-]?(\d{2})[:/-]?(\d{2})(?:[ T:_-]+(\d{2}):?(\d{2})(?::?(\d{2}))?)?/);
+  if (!dateMatch) return 0;
+  const hour = dateMatch[4] || "00";
+  const minute = dateMatch[5] || "00";
+  const second = dateMatch[6] || "00";
+  return Date.parse(`${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T${hour}:${minute}:${second}`) || 0;
+};
+
 const captureTime = (photo) => {
-  const raw = metadataValue(photo, "Captured");
-  const match = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
-  if (!match) return 0;
-  return Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}`) || 0;
+  const values = [
+    metadataValue(photo, "Captured"),
+    photo?.id,
+    photo?.title,
+    photo?.caption,
+    photo?.full
+  ];
+  return values.map(parseCaptureTime).find(Boolean) || 0;
+};
+
+const dateFilterValue = (value) => {
+  const normalized = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : "";
+};
+
+const dateRangeBoundary = (value, edge) => {
+  const normalized = dateFilterValue(value);
+  if (!normalized) return 0;
+  const suffix = edge === "end" ? "T23:59:59.999" : "T00:00:00.000";
+  return Date.parse(`${normalized}${suffix}`) || 0;
 };
 
 const verifiedMegapixels = (photo) => (
@@ -291,6 +325,8 @@ const searchTerms = () => String(filterState.query || "")
 
 const activeFilterCount = () => (
   ["orientation", "minSize", "mood", "subject"].filter((key) => filterState[key] && filterState[key] !== "all").length
+  + (dateFilterValue(filterState.dateFrom) ? 1 : 0)
+  + (dateFilterValue(filterState.dateTo) ? 1 : 0)
   + (searchTerms().length ? 1 : 0)
 );
 
@@ -309,6 +345,14 @@ const matchesFilterState = (photo) => {
   if (minSizeThreshold() && verifiedMegapixels(photo) < minSizeThreshold()) return false;
   if (filterState.mood !== "all" && !photoMoodTags(photo).has(filterState.mood)) return false;
   if (filterState.subject !== "all" && !photoSubjectTags(photo).has(filterState.subject)) return false;
+  const fromDate = dateRangeBoundary(filterState.dateFrom, "start");
+  const toDate = dateRangeBoundary(filterState.dateTo, "end");
+  if (fromDate || toDate) {
+    const captured = captureTime(photo);
+    if (!captured) return false;
+    if (fromDate && captured < fromDate) return false;
+    if (toDate && captured > toDate) return false;
+  }
   return true;
 };
 
@@ -329,7 +373,8 @@ const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.fi
 const syncFilterControls = () => {
   if (!filterBar) return;
   filterBar.querySelectorAll("[data-gallery-filter]").forEach((control) => {
-    control.value = filterState[control.dataset.galleryFilter] || "all";
+    const key = control.dataset.galleryFilter;
+    control.value = filterState[key] || (control instanceof HTMLSelectElement ? "all" : "");
   });
   const searchInput = filterBar.querySelector("[data-gallery-search]");
   if (searchInput) searchInput.value = filterState.query || "";
@@ -344,6 +389,8 @@ const ensureGalleryFilterControls = () => {
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
+    <label><span data-i18n="gallery.date_from">Date from</span><input type="date" data-gallery-filter="dateFrom"/></label>
+    <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-gallery-filter="dateTo"/></label>
     <label><span data-i18n="gallery.orientation">Orientation</span><select data-gallery-filter="orientation">
       <option value="all" data-i18n="gallery.all">All</option>
       <option value="pano" data-i18n="gallery.pano">Pano</option>
@@ -395,8 +442,11 @@ const ensureGalleryFilterControls = () => {
   });
   filterBar.addEventListener("change", (event) => {
     const control = event.target;
-    if (!(control instanceof HTMLSelectElement) || !control.dataset.galleryFilter) return;
-    filterState = { ...filterState, [control.dataset.galleryFilter]: control.value };
+    if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement) || !control.dataset.galleryFilter) return;
+    const value = control instanceof HTMLInputElement && control.type === "date"
+      ? dateFilterValue(control.value)
+      : control.value;
+    filterState = { ...filterState, [control.dataset.galleryFilter]: value };
     writeFilterState();
     visibleLimit = pageSize;
     selectedIndex = 0;
@@ -826,6 +876,12 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
   const likedIds = likedPhotoIds();
+  if (pendingGalleryReturnState?.visibleLimit === "all") {
+    visibleLimit = photos.length;
+  } else if (pendingGalleryReturnState?.visibleLimit) {
+    const savedLimit = Number(pendingGalleryReturnState.visibleLimit);
+    if (Number.isFinite(savedLimit) && savedLimit > 0) visibleLimit = Math.max(pageSize, savedLimit);
+  }
   writeDetailSequenceContext(photos);
   const returnPhotoId = pendingGalleryReturnState?.photoId || "";
   const returnIndex = returnPhotoId ? photos.findIndex((photo) => photo.id === returnPhotoId) : -1;

@@ -361,6 +361,7 @@ const writeGalleryReturnState = () => {
       photoId: photo.id,
       photoIds: payload?.photoIds || [photo.id],
       filterState: payload?.filterState || null,
+      visibleLimit: payload?.visibleLimit || null,
       createdAt: Date.now()
     }));
   } catch {

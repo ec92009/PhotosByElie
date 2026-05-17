@@ -2008,6 +2008,20 @@ body[data-real-estate] main.shell{
   text-transform:uppercase;
   white-space:nowrap;
 }
+.real-estate-media-type-badge{
+  position:absolute;
+  top:8px;
+  right:8px;
+  border:1px solid rgba(255,255,255,.38);
+  background:rgba(0,0,0,.64);
+  color:#fff;
+  padding:4px 7px;
+  font-size:.62rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  line-height:1;
+  text-transform:uppercase;
+}
 .real-estate-photo-select{
   position:absolute;
   right:8px;

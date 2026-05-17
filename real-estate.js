@@ -361,12 +361,12 @@
       button.title = "Browser will save project PDFs to your Downloads folder";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
-      button.textContent = "Download selection file";
-      button.title = "Browser will save the selection JSON file to your Downloads folder";
+      button.textContent = "Share selection table";
+      button.title = "Open or share an HTML table that can be loaded back later";
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => {
       button.textContent = "Load selection file...";
-      button.title = "Open a saved selection JSON file";
+      button.title = "Open a saved selection table or legacy JSON file";
     });
   };
 
@@ -583,15 +583,128 @@
     };
   };
 
+  const selectionRowsFor = (manifest) => {
+    const projectRows = Array.isArray(manifest.projects)
+      ? manifest.projects.flatMap((project) => (Array.isArray(project.items) ? project.items : []).map((item) => ({
+        projectTitle: project.projectTitle || item.projectTitle || "",
+        projectSortIndex: Number(project.sortIndex) || 0,
+        item,
+      })))
+      : [];
+    const rows = projectRows.length
+      ? projectRows
+      : (Array.isArray(manifest.items) ? manifest.items.map((item) => ({
+        projectTitle: item.projectTitle || "",
+        projectSortIndex: 0,
+        item,
+      })) : []);
+    return rows.sort((a, b) => (
+      Number(a.projectSortIndex) - Number(b.projectSortIndex)
+      || Number(a.item?.sortIndex) - Number(b.item?.sortIndex)
+      || String(a.projectTitle).localeCompare(String(b.projectTitle))
+    ));
+  };
+
+  const selectionPlainTextFor = (manifest) => {
+    const rows = selectionRowsFor(manifest);
+    return [
+      `Photos By Elie selection - ${manifest.customer || state.payload?.customer?.name || "Client"}`,
+      `Batch: ${manifest.batchId || ""}`,
+      `Created: ${manifest.createdAt || ""}`,
+      "",
+      ["Project", "Order", "Title", "Photo ID"].join("\t"),
+      ...rows.map(({ projectTitle, item }) => [
+        projectTitle || item.projectTitle || "",
+        item.sortIndex || "",
+        item.title || "",
+        item.photoId || "",
+      ].map((value) => String(value || "").replace(/\s+/g, " ").trim()).join("\t")),
+      "",
+    ].join("\n");
+  };
+
+  const selectionHtmlFor = (manifest) => {
+    const rows = selectionRowsFor(manifest);
+    const selectedCount = new Set(rows.map(({ item }) => item.photoId).filter(Boolean)).size;
+    const projectCount = Array.isArray(manifest.projects) && manifest.projects.length
+      ? manifest.projects.length
+      : new Set(rows.map(({ projectTitle, item }) => projectTitle || item.projectTitle).filter(Boolean)).size;
+    const safeJson = JSON.stringify(manifest, null, 2)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const dateLabel = manifest.createdAt ? new Date(manifest.createdAt).toLocaleString() : "";
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie Selection ${escapeHtml(manifest.batchId || "")}</title>
+  <style>
+    :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4}
+    body{margin:0;background:Canvas;color:CanvasText}
+    main{max-width:980px;margin:0 auto;padding:24px 16px 40px}
+    h1{margin:0 0 6px;font-size:clamp(1.6rem,5vw,2.4rem)}
+    p{margin:0 0 14px}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0}
+    .meta div{border:1px solid color-mix(in srgb,CanvasText 18%,transparent);padding:10px}
+    .meta dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
+    .meta dd{margin:4px 0 0;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.95rem}
+    th,td{border:1px solid color-mix(in srgb,CanvasText 16%,transparent);padding:9px;text-align:left;vertical-align:top}
+    th{position:sticky;top:0;background:Canvas;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
+    tbody tr:nth-child(even){background:color-mix(in srgb,CanvasText 4%,transparent)}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
+    .note{margin-top:20px;font-size:.9rem;opacity:.72}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Photos By Elie selection</h1>
+    <p>${escapeHtml(manifest.customer || state.payload?.customer?.name || "Client")} real-estate PDF draft</p>
+    <dl class="meta">
+      <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
+      <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
+      <div><dt>Photos</dt><dd>${selectedCount}</dd></div>
+      <div><dt>Projects</dt><dd>${projectCount}</dd></div>
+      <div><dt>Paper</dt><dd>${escapeHtml(manifest.pdfSettings?.paperLabel || manifest.pdfSettings?.paperFormat || "")}</dd></div>
+    </dl>
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Order</th>
+          <th>Title</th>
+          <th>Photo ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(({ projectTitle, item }) => `
+        <tr>
+          <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
+          <td>${escapeHtml(item.sortIndex || "")}</td>
+          <td>${escapeHtml(item.title || "")}</td>
+          <td><code>${escapeHtml(item.photoId || "")}</code></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="note">This table file can be opened in a browser for review and loaded back into the Photos By Elie Real Estate page to continue editing the selection.</p>
+    <script type="application/json" data-re-selection-batch>${safeJson}</script>
+  </main>
+</body>
+</html>
+`;
+  };
+
   const copyBatch = async () => {
     if (!requireUnlocked()) return;
     const manifest = buildBatchManifest();
-    const batch = JSON.stringify(manifest, null, 2);
+    const batch = selectionPlainTextFor(manifest);
     try {
       await navigator.clipboard.writeText(batch);
       setStatus(`Copied ${manifest.projects.length} project selection list${manifest.projects.length === 1 ? "" : "s"}`);
     } catch {
-      setStatus("Clipboard unavailable; use Download selection file");
+      setStatus("Clipboard unavailable; use Share selection table");
     }
   };
 
@@ -610,16 +723,53 @@
     return { filename, pickedLocation: false, bytes: Number(blob.size) || 0 };
   };
 
-  const downloadBatch = async () => {
+  const shareOrOpenBlob = async ({ blob, filename, title, text }) => {
+    const canCreateFile = typeof File === "function";
+    const file = canCreateFile ? new File([blob], filename, { type: blob.type || "text/html" }) : null;
+    if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          title,
+          text,
+          files: [file],
+        });
+        return { method: "share", filename, bytes: Number(blob.size) || 0 };
+      } catch (error) {
+        if (error?.name === "AbortError") throw error;
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, "_blank", "noopener");
+    if (opened) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return { method: "open", filename, bytes: Number(blob.size) || 0 };
+    }
+    URL.revokeObjectURL(url);
+    return { method: "download", ...(await downloadBlob(blob, filename)) };
+  };
+
+  const shareSelectionTable = async () => {
     if (!requireUnlocked()) return;
     const batch = buildBatchManifest();
-    const blob = new Blob([JSON.stringify(batch, null, 2) + "\n"], { type: "application/json" });
-    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}.json`;
+    const blob = new Blob([selectionHtmlFor(batch)], { type: "text/html" });
+    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
     try {
-      const saved = await downloadBlob(blob, filename);
-      setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+      const saved = await shareOrOpenBlob({
+        blob,
+        filename,
+        title: "Photos By Elie selection",
+        text: `${batch.customer || "Client"} selection table`,
+      });
+      if (saved.method === "share") {
+        setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
+      } else if (saved.method === "open") {
+        setStatus(`Opened ${saved.filename}; use the browser share or save controls`);
+      } else {
+        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+      }
     } catch (error) {
-      setStatus(error?.name === "AbortError" ? "Download canceled" : "Selection file could not be downloaded");
+      setStatus(error?.name === "AbortError" ? "Share canceled" : "Selection table could not be shared");
     }
   };
 
@@ -1036,10 +1186,20 @@
     showPhoto(next.id);
   };
 
+  const parseBatchFileText = (text) => {
+    const raw = String(text || "").trim();
+    if (!raw) throw new Error("Selection file is empty.");
+    if (raw.startsWith("{")) return JSON.parse(raw);
+    const doc = new DOMParser().parseFromString(raw, "text/html");
+    const embedded = doc.querySelector("[data-re-selection-batch]");
+    if (!embedded?.textContent) throw new Error("Selection table is missing its embedded data.");
+    return JSON.parse(embedded.textContent);
+  };
+
   const loadBatchFile = async (file) => {
     if (!file) return;
     const text = await file.text();
-    const batch = JSON.parse(text);
+    const batch = parseBatchFileText(text);
     if (batch?.pdfSettings?.paperFormat) {
       state.pdfFormat = paperFormatFor(batch.pdfSettings.paperFormat).key;
       localStorage.setItem(pdfFormatKey, state.pdfFormat);
@@ -1090,7 +1250,10 @@
           multiple: false,
           types: [{
             description: "Photos By Elie selection file",
-            accept: { "application/json": [".json"] },
+            accept: {
+              "text/html": [".html", ".htm"],
+              "application/json": [".json"],
+            },
           }],
         });
         if (handle) await loadBatchFile(await handle.getFile());
@@ -1276,7 +1439,7 @@
 
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
-      downloadBatch().catch(() => setStatus("Selection file could not be downloaded"));
+      shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
     }));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {

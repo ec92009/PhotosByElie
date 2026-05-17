@@ -16,6 +16,21 @@ David should append automation results here. Keep newest entries near the top, b
 - Notes:
 ```
 
+## 2026-05-17 David Instruction Poller Install
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `4717d590`
+- Result: Installed and verified the David instruction poller LaunchAgent.
+- Changes made:
+  - Ran `zsh scripts/install_david_instruction_poll.zsh` on David after reading `docs/sops/MAX_DAVID_SYNC_SOP.md` and `HANDOFF.md`.
+  - Installed user LaunchAgent at `/Users/ecohen/Library/LaunchAgents/com.photosbyelie.max-instruction-poll.plist`.
+  - Verified the plist with `plutil -lint`.
+  - Verified launchd registration for `gui/501/com.photosbyelie.max-instruction-poll`; `StartCalendarInterval` contains minute entries `0` through `59`, so David will poll GitHub/`MAX2DAVID.md` at the top of every minute.
+  - Confirmed the poll log exists at `.review-logs/max-instruction-poll.log`, and the first poll wrote `.review-logs/MAX2DAVID.latest.md`.
+- Commit pushed: yes, this acknowledgement commit.
+- Notes: `assets/owner-actions/Owner.sqlite` was not changed during this acknowledgement.
+
 ## 2026-05-15 Handoff for Max
 
 - Machine: David (`David-5.local`)

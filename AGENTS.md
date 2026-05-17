@@ -42,6 +42,12 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - Also bump CSS and JS cache-bust query strings (`?v=X.Y`) on `shared.css`, `styles.css`, `photos.css`, and `photos.js` in every HTML file.
 - Keep `VERSION` as the source of the current visible version number without the leading `v`.
 
+## Catalog Artifact Retention
+
+- Keep both `assets/catalog/photosbyelie.sqlite` and `assets/catalog/photosbyelie.sqlite.br`.
+- Treat the plain `.sqlite` file as the reliable fallback/proxy for the compressed `.sqlite.br` catalog, not as cleanup clutter.
+- If cleanup work proposes deleting `photosbyelie.sqlite`, remind the user that they explicitly chose to keep it.
+
 ## Workspace Structure
 
 - Repo root: `/Users/ecohen/Dev/PhotosByElie`

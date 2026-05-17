@@ -9,6 +9,7 @@
   const contextParam = pageParams.get("context");
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : "");
   const densityKey = "photosbyelie-real-estate-card-density";
+  const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
 
   const elements = {
     login: app.querySelector("[data-re-login]"),
@@ -31,6 +32,7 @@
     sort: app.querySelector("[data-re-sort]"),
     density: app.querySelector("[data-re-density]"),
     selectedOnly: app.querySelector("[data-re-selected-only]"),
+    pdfFormat: app.querySelector("[data-re-pdf-format]"),
     status: app.querySelector("[data-re-status]"),
     draftCount: app.querySelector("[data-re-draft-count]"),
     draftList: app.querySelector("[data-re-draft-list]"),
@@ -44,6 +46,7 @@
     dialogTitleInput: document.querySelector("[data-re-dialog-title-input]"),
     dialogSelected: document.querySelector("[data-re-dialog-selected]"),
     dialogDetails: document.querySelector("[data-re-dialog-details]"),
+    helpDialog: document.querySelector("[data-re-help-dialog]"),
     actionBar: document.querySelector("[data-re-action-bar]"),
   };
 
@@ -57,6 +60,7 @@
     query: "",
     sort: "album",
     density: localStorage.getItem(densityKey) || "balanced",
+    pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
     selectedOnly: false,
     selectedOrder: [],
     selectedIds: new Set(),
@@ -131,6 +135,37 @@
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
   const projectStoreKey = () => workflow().projectStoreKey || `photosbyelie-real-estate-projects-${state.gallery?.key || "default"}`;
   const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
+  const helpDismissedKey = () => `photosbyelie-real-estate-help-dismissed-${state.gallery?.key || "default"}`;
+
+  const openDialog = (dialog) => {
+    if (!dialog) return;
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+  };
+
+  const closeDialog = (dialog) => {
+    if (!dialog) return;
+    if (typeof dialog.close === "function") {
+      dialog.close();
+    } else {
+      dialog.removeAttribute("open");
+    }
+  };
+
+  const showHelp = ({ force = false } = {}) => {
+    if (!elements.helpDialog || !state.unlocked) return;
+    const alreadyDismissed = readJson(helpDismissedKey(), false);
+    if (!force && (alreadyDismissed || state.selectedOrder.length > 0)) return;
+    openDialog(elements.helpDialog);
+  };
+
+  const dismissHelp = () => {
+    writeJson(helpDismissedKey(), true);
+    closeDialog(elements.helpDialog);
+  };
 
   const normalizeCredential = (value) => String(value || "").trim().toLowerCase();
   const expectedUsername = () => normalizeCredential(
@@ -230,6 +265,12 @@
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "project";
+  const paperFormats = {
+    a4: { key: "a4", label: "A4", width: 595.28, height: 841.89 },
+    letter: { key: "letter", label: "Letter", width: 612, height: 792 },
+  };
+  const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
+  const pdfPhotoWatermarkText = "\u00a9 2026 Photos By Elie";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -397,6 +438,7 @@
 
   const render = () => {
     document.body.dataset.realEstateDensity = state.density;
+    if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
     syncAuthUi();
     renderAlbums();
     renderGrid();
@@ -489,6 +531,15 @@
       galleryKey: template.galleryKey || state.gallery?.key || "",
       sourceBatchId: template.sourceBatchId || "",
       pdfMode: "one-pdf-per-project",
+      pdfSettings: {
+        paperFormat: paperFormatFor().key,
+        paperLabel: paperFormatFor().label,
+        pageOrientation: "portrait",
+        layout: "landscape-two-per-page-portrait-one-per-page",
+        fitMode: "contain",
+        photoWatermark: pdfPhotoWatermarkText,
+        photoWatermarkPlacement: "bottom-center",
+      },
       projects: projects.map((project) => ({
         projectId: project.projectId,
         projectTitle: project.projectTitle,
@@ -555,7 +606,8 @@
   const pdfEscape = (value) => String(value || "")
     .replace(/\\/g, "\\\\")
     .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
+    .replace(/\)/g, "\\)")
+    .replace(/\u00a9/g, "\\251");
 
   const pdfDimensionsFor = (photo) => {
     const dimensions = photo?.cloudPdfSource?.dimensions
@@ -587,6 +639,46 @@
     return images;
   };
 
+  const isLandscapePdfImage = (item) => item.dimensions.width >= item.dimensions.height;
+
+  const paginatePdfImages = (images) => {
+    const pages = [];
+    let pendingLandscape = null;
+    images.forEach((item) => {
+      if (isLandscapePdfImage(item)) {
+        if (pendingLandscape) {
+          pages.push({ layout: "two-up-landscape", items: [pendingLandscape, item] });
+          pendingLandscape = null;
+        } else {
+          pendingLandscape = item;
+        }
+        return;
+      }
+      if (pendingLandscape) {
+        pages.push({ layout: "single-landscape", items: [pendingLandscape] });
+        pendingLandscape = null;
+      }
+      pages.push({ layout: "single-portrait", items: [item] });
+    });
+    if (pendingLandscape) pages.push({ layout: "single-landscape", items: [pendingLandscape] });
+    return pages;
+  };
+
+  const imagePlacement = (dimensions, box) => {
+    const scale = Math.min(box.width / dimensions.width, box.height / dimensions.height);
+    const width = dimensions.width * scale;
+    const height = dimensions.height * scale;
+    return {
+      width,
+      height,
+      x: box.x + ((box.width - width) / 2),
+      y: box.y + ((box.height - height) / 2),
+    };
+  };
+  const pdfTextCenterX = (text, centerX, fontSize = 8) => (
+    centerX - (String(text || "").length * fontSize * 0.23)
+  );
+
   const buildPdfBlob = (images) => {
     const encoder = new TextEncoder();
     const objects = [];
@@ -595,59 +687,89 @@
       return id;
     };
     const toBytes = (part) => part instanceof Uint8Array ? part : encoder.encode(String(part));
-    const objectCount = 3 + images.length * 3;
     const pageIds = [];
     let nextId = 4;
+    const pages = paginatePdfImages(images);
+    const paper = paperFormatFor();
+    const pageWidth = paper.width;
+    const pageHeight = paper.height;
+    const margin = 30;
+    const titleArea = 24;
+    const rowGap = 18;
 
     setObject(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
-    setObject(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]);
+    setObject(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);
 
     images.forEach((item, index) => {
-      const imageId = nextId++;
-      const contentId = nextId++;
-      const pageId = nextId++;
-      const { width: imageWidth, height: imageHeight } = item.dimensions;
-      const landscape = imageWidth >= imageHeight;
-      const pageWidth = landscape ? 842 : 595;
-      const pageHeight = landscape ? 595 : 842;
-      const maxWidth = pageWidth - 60;
-      const maxHeight = pageHeight - 96;
-      const scale = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
-      const drawWidth = imageWidth * scale;
-      const drawHeight = imageHeight * scale;
-      const drawX = (pageWidth - drawWidth) / 2;
-      const drawY = 30 + ((maxHeight - drawHeight) / 2);
-      const imageName = `Im${index + 1}`;
-      const title = pdfEscape(truncatePdfTitle(titleFor(item.photo)));
-      const content = [
-        "q\n",
-        `${drawWidth.toFixed(2)} 0 0 ${drawHeight.toFixed(2)} ${drawX.toFixed(2)} ${drawY.toFixed(2)} cm\n`,
-        `/${imageName} Do\n`,
-        "Q\n",
-        "BT\n",
-        "/F1 14 Tf\n",
-        `30 ${Math.round(pageHeight - 34)} Td\n`,
-        `(${title}) Tj\n`,
-        "ET\n",
-      ].join("");
-
-      setObject(imageId, [
-        `<< /Type /XObject /Subtype /Image /Width ${Math.round(imageWidth)} /Height ${Math.round(imageHeight)} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${item.bytes.byteLength} >>\nstream\n`,
+      item.imageId = nextId++;
+      item.imageName = `Im${index + 1}`;
+      setObject(item.imageId, [
+        `<< /Type /XObject /Subtype /Image /Width ${Math.round(item.dimensions.width)} /Height ${Math.round(item.dimensions.height)} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${item.bytes.byteLength} >>\nstream\n`,
         item.bytes,
         "\nendstream",
       ]);
+    });
+
+    pages.forEach((page) => {
+      const contentId = nextId++;
+      const pageId = nextId++;
+      const slotHeight = page.layout === "two-up-landscape"
+        ? ((pageHeight - (margin * 2) - rowGap) / 2)
+        : (pageHeight - (margin * 2));
+      const slots = page.layout === "two-up-landscape"
+        ? [
+          { x: margin, y: margin + slotHeight + rowGap, width: pageWidth - (margin * 2), height: slotHeight },
+          { x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight },
+        ]
+        : [{ x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight }];
+      const itemContent = page.items.map((item, index) => {
+        const slot = slots[index];
+        const box = {
+          x: slot.x,
+          y: slot.y,
+          width: slot.width,
+          height: Math.max(1, slot.height - titleArea),
+        };
+        const placement = imagePlacement(item.dimensions, box);
+        const title = pdfEscape(truncatePdfTitle(titleFor(item.photo)));
+        const watermark = pdfEscape(pdfPhotoWatermarkText);
+        const watermarkX = pdfTextCenterX(pdfPhotoWatermarkText, placement.x + (placement.width / 2), 8);
+        return [
+          "BT\n",
+          "/F1 14 Tf\n",
+          `${slot.x.toFixed(2)} ${(slot.y + slot.height - 16).toFixed(2)} Td\n`,
+          `(${title}) Tj\n`,
+          "ET\n",
+          "q\n",
+          `${placement.width.toFixed(2)} 0 0 ${placement.height.toFixed(2)} ${placement.x.toFixed(2)} ${placement.y.toFixed(2)} cm\n`,
+          `/${item.imageName} Do\n`,
+          "Q\n",
+          "q\n",
+          "0.74 g\n",
+          "BT\n",
+          "/F1 8 Tf\n",
+          `${watermarkX.toFixed(2)} ${(placement.y + 9).toFixed(2)} Td\n`,
+          `(${watermark}) Tj\n`,
+          "ET\n",
+          "Q\n",
+        ].join("");
+      }).join("");
+      const content = itemContent;
+      const xObjects = page.items.map((item) => `/${item.imageName} ${item.imageId} 0 R`).join(" ");
+
       setObject(contentId, [
         `<< /Length ${encoder.encode(content).byteLength} >>\nstream\n`,
         content,
         "endstream",
       ]);
       setObject(pageId, [
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R >> /XObject << /${imageName} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(2)} ${pageHeight.toFixed(2)}] /Resources << /Font << /F1 3 0 R >> /XObject << ${xObjects} >> >> /Contents ${contentId} 0 R >>`,
       ]);
       pageIds.push(pageId);
     });
 
     setObject(2, [`<< /Type /Pages /Count ${pageIds.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`]);
+    const objectCount = nextId - 1;
 
     const chunks = [];
     const offsets = [];
@@ -684,17 +806,18 @@
     }
     const projects = projectGroupsFor(photos);
     const batchId = timestampId();
+    const paper = paperFormatFor();
     state.pdfBusy = true;
-    setStatus(`Building ${projects.length} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} photos...`);
+    setStatus(`Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} photos...`);
     try {
       for (const project of projects) {
         const blob = buildPdfBlob(await fetchPdfImages(project.photos));
         triggerDownload(
           blob,
-          `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${batchId}.pdf`
+          `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`
         );
       }
-      setStatus(`Downloaded ${projects.length} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
+      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} photos`);
     } catch (error) {
       setStatus(error?.message || "PDF download failed");
     } finally {
@@ -752,11 +875,7 @@
         </div>
       `).join("");
     }
-    if (typeof elements.dialog.showModal === "function") {
-      if (!elements.dialog.open) elements.dialog.showModal();
-    } else {
-      elements.dialog.setAttribute("open", "");
-    }
+    openDialog(elements.dialog);
   };
 
   const stepDialog = (direction) => {
@@ -771,6 +890,10 @@
     if (!file) return;
     const text = await file.text();
     const batch = JSON.parse(text);
+    if (batch?.pdfSettings?.paperFormat) {
+      state.pdfFormat = paperFormatFor(batch.pdfSettings.paperFormat).key;
+      localStorage.setItem(pdfFormatKey, state.pdfFormat);
+    }
     const projectItems = Array.isArray(batch.projects)
       ? batch.projects.flatMap((project) => (Array.isArray(project.items) ? project.items : [])
         .map((item) => ({
@@ -852,6 +975,7 @@
       writeSession(elements.loginName?.value || "");
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} photos`);
+      window.setTimeout(() => showHelp(), 120);
     });
 
     elements.albums?.addEventListener("click", (event) => {
@@ -875,6 +999,11 @@
       state.density = event.target.value;
       localStorage.setItem(densityKey, state.density);
       renderGrid();
+    });
+    elements.pdfFormat?.addEventListener("change", (event) => {
+      state.pdfFormat = paperFormatFor(event.target.value).key;
+      localStorage.setItem(pdfFormatKey, state.pdfFormat);
+      event.target.value = state.pdfFormat;
     });
     elements.selectedOnly?.addEventListener("change", (event) => {
       state.selectedOnly = event.target.checked;
@@ -930,6 +1059,8 @@
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
       openBatchFile().catch(() => setStatus("Selection file could not be loaded"));
     }));
+    document.querySelectorAll("[data-re-help-open]").forEach((button) => button.addEventListener("click", () => showHelp({ force: true })));
+    document.querySelector("[data-re-help-dismiss]")?.addEventListener("click", dismissHelp);
     document.querySelectorAll("[data-re-clear-selection]").forEach((button) => button.addEventListener("click", clearSelection));
     document.querySelectorAll("[data-re-logout]").forEach((button) => button.addEventListener("click", () => {
       localStorage.removeItem(authStoreKey());
@@ -948,6 +1079,12 @@
     document.querySelector("[data-re-dialog-next]")?.addEventListener("click", () => stepDialog(1));
     elements.dialog?.addEventListener("click", (event) => {
       if (event.target === elements.dialog) elements.dialog.close?.();
+    });
+    elements.helpDialog?.addEventListener("click", (event) => {
+      if (event.target === elements.helpDialog) dismissHelp();
+    });
+    elements.helpDialog?.addEventListener("close", () => {
+      writeJson(helpDismissedKey(), true);
     });
     document.addEventListener("keydown", (event) => {
       if (!elements.dialog?.open) return;
@@ -978,15 +1115,19 @@
     if (pageParams.has("logout")) localStorage.removeItem(authStoreKey());
     state.unlocked = hasUnlockedSession();
     if (elements.density) elements.density.value = state.density;
+    state.pdfFormat = paperFormatFor(state.pdfFormat).key;
+    if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;
     renderHero();
     render();
   };
 
   const initialize = async () => {
+    let initialized = false;
     try {
       if (!window.photosByElieRealEstateImport) await loadScript(contextUrl);
       if (!window.photosByElieRealEstateImport) throw new Error("No real-estate context loaded.");
       initializeFromPayload(window.photosByElieRealEstateImport);
+      initialized = true;
     } catch (error) {
       elements.grid.innerHTML = `
         <div class="real-estate-empty-state">
@@ -997,6 +1138,7 @@
       setStatus(error.message || "Real-estate gallery is not loaded");
     }
     bindEvents();
+    if (initialized) window.setTimeout(() => showHelp(), 160);
   };
 
   initialize();

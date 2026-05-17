@@ -1884,6 +1884,7 @@ body[data-real-estate] main.shell{
   text-transform:uppercase;
 }
 .real-estate-filter-form label,
+.real-estate-pdf-setting,
 .real-estate-lightbox label{
   display:grid;
   gap:6px;
@@ -1895,6 +1896,7 @@ body[data-real-estate] main.shell{
 }
 .real-estate-filter-form input,
 .real-estate-filter-form select,
+.real-estate-pdf-setting select,
 .real-estate-title-field input,
 .real-estate-lightbox input{
   width:100%;
@@ -1985,11 +1987,10 @@ body[data-real-estate] main.shell{
   display:block;
   width:100%;
   height:100%;
-  object-fit:cover;
-  transition:transform .18s ease;
+  object-fit:contain;
 }
 .real-estate-photo-media:hover img{
-  transform:scale(1.025);
+  transform:none;
 }
 .real-estate-photo-media span{
   position:absolute;
@@ -2113,7 +2114,7 @@ body[data-real-estate] main.shell{
 .real-estate-draft-item img{
   width:54px;
   aspect-ratio:1;
-  object-fit:cover;
+  object-fit:contain;
   background:var(--surface-2);
 }
 .real-estate-draft-item strong,
@@ -2218,6 +2219,14 @@ body[data-real-estate] main.shell{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.real-estate-help-button{
+  width:42px;
+  min-width:42px;
+  padding-inline:0;
+  border-radius:50%;
+  font-size:1rem;
+  line-height:1;
+}
 .real-estate-lightbox{
   width:min(1180px,calc(100dvw - 30px));
   max-height:calc(100dvh - 30px);
@@ -2231,6 +2240,47 @@ body[data-real-estate] main.shell{
 }
 .real-estate-lightbox::backdrop{
   background:rgba(0,0,0,.7);
+}
+.real-estate-help{
+  width:min(640px,calc(100dvw - 30px));
+  max-height:calc(100dvh - 30px);
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  padding:0;
+  box-shadow:0 30px 90px rgba(0,0,0,.42);
+}
+.real-estate-help::backdrop{
+  background:rgba(0,0,0,.58);
+}
+.real-estate-help-panel{
+  display:grid;
+  gap:15px;
+  max-height:calc(100dvh - 30px);
+  overflow:auto;
+  padding:clamp(24px,5vw,40px);
+}
+.real-estate-help-panel h2{
+  max-width:13ch;
+  margin:0;
+  font-size:clamp(1.9rem,5vw,3rem);
+  line-height:.95;
+}
+.real-estate-help-list{
+  display:grid;
+  gap:10px;
+  margin:0;
+  padding-left:1.35rem;
+  color:var(--text);
+  font-size:1rem;
+  font-weight:650;
+  line-height:1.35;
+}
+.real-estate-help-list li::marker{
+  color:var(--re-accent);
+  font-weight:850;
 }
 .real-estate-lightbox-close-form{
   position:absolute;

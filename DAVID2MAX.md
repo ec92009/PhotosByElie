@@ -843,3 +843,13 @@ _No David automation results recorded yet._
 - Pruned ghosts: private render 0; public preview 12
 - Remaining missing: public previews 10 (also missing masters 26; missing renders 12)
 - Notes: 12 missing renders were video sources (`.MOV`) where `sips` cannot read pixel dimensions; script now records these as skipped instead of aborting.
+
+## 2026-05-18 - Daily Health Check
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- Commit checked: `934745d4474434e6e81d7e0290ef80893ad59b14`
+- `git pull --ff-only`: PASSED (`Already up to date.`)
+- `npm test`: PASSED (18/18)
+- `npm run validate`: PASSED (`Validation OK`)
+- Notes: Working tree clean after run; no generated changes detected.

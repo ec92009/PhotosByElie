@@ -269,17 +269,18 @@ def fill_one_photo(args: argparse.Namespace, manifest: dict[str, Any], item: dic
 def main() -> int:
     args = parse_args()
     args.output_root.mkdir(parents=True, exist_ok=True)
+    print("SWEEP_PHASE gap-fill Fill in gaps", flush=True)
+    emit_import_event("SCAN_PROGRESS", seen=0, inspected=0, queued=0, processed=0, active=0, queueDepth=0)
     for tool in ("sips", "ffmpeg", "ffprobe"):
         if not shutil.which(tool):
             raise SystemExit(f"Missing required tool: {tool}")
     font = choose_font()
     repo_root = Path.cwd()
-    coverage = _r2_coverage_summary(repo_root)
+    coverage = _r2_coverage_summary(repo_root, private_missing_limit=0, import_missing_limit=0)
     items = list(coverage.get("missingImportPhotos") or [])
     if args.limit:
         items = items[:args.limit]
     emit_import_event("PLAN", total=len(items))
-    print("SWEEP_PHASE gap-fill Fill in gaps", flush=True)
     manifest_path = args.manifest if args.manifest.is_absolute() else repo_root / args.manifest
     manifest = read_json(manifest_path, {})
     completed = 0
@@ -290,6 +291,8 @@ def main() -> int:
             if fill_one_photo(args, manifest, item, font):
                 completed += 1
                 save_manifest(manifest_path, manifest)
+            else:
+                failed += 1
         except Exception as error:  # noqa: BLE001 - keep going and surface per-photo failures.
             failed += 1
             emit_import_event(

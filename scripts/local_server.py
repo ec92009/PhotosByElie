@@ -1973,9 +1973,9 @@ def _private_delivery_missing_details(
                     "sourceFile": source_file,
                     "repair": "render_from_source" if source_file else source_repair_state,
                 })
-                if len(missing) >= limit:
+                if limit > 0 and len(missing) >= limit:
                     return missing
-        if len(missing) >= limit:
+        if limit > 0 and len(missing) >= limit:
             return missing
     return missing
 
@@ -2029,12 +2029,17 @@ def _missing_import_photo_details(
                 "previews": previews_missing,
             },
         })
-        if len(missing) >= limit:
+        if limit > 0 and len(missing) >= limit:
             break
     return missing
 
 
-def _r2_coverage_summary(repo_root: Path, resolve_sources: bool = True) -> dict:
+def _r2_coverage_summary(
+    repo_root: Path,
+    resolve_sources: bool = True,
+    private_missing_limit: int = 50,
+    import_missing_limit: int = 80,
+) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
     hidden_blacklist = _read_json_file(repo_root / "assets/hidden/hidden-blacklist.json", {})
@@ -2108,8 +2113,18 @@ def _r2_coverage_summary(repo_root: Path, resolve_sources: bool = True) -> dict:
         _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg", blocked_excluded, blocked_present["public"]),
     ]
     missing_rows = [row for row in rows if not row["ok"]]
-    missing_private_delivery = _private_delivery_missing_details(repo_root, active_records, resolve_sources=resolve_sources)
-    missing_import_photos = _missing_import_photo_details(repo_root, active_records, resolve_sources=resolve_sources)
+    missing_private_delivery = _private_delivery_missing_details(
+        repo_root,
+        active_records,
+        limit=private_missing_limit,
+        resolve_sources=resolve_sources,
+    )
+    missing_import_photos = _missing_import_photo_details(
+        repo_root,
+        active_records,
+        limit=import_missing_limit,
+        resolve_sources=resolve_sources,
+    )
     if missing_rows:
         recommendation = "Missing coverage. Run the lock-guarded cloud media sweep."
     else:
@@ -2140,7 +2155,7 @@ def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path, s
         command.extend(["--skip-phase", phase_key])
     with log_path.open("ab") as log:
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
-    coverage = _r2_coverage_summary(repo_root)
+    coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
     coverage_ok = bool(coverage.get("ok"))
     errors = []
     failed = process.returncode != 0 or not coverage_ok
@@ -2222,7 +2237,7 @@ def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: 
         command.extend(["--limit", str(limit)])
     with log_path.open("ab") as log:
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
-    coverage = _r2_coverage_summary(repo_root)
+    coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
     coverage_ok = bool(coverage.get("ok"))
     errors = []
     failed = process.returncode != 0 or not coverage_ok
@@ -2259,7 +2274,7 @@ def _start_r2_gap_fill(repo_root: Path, limit: int = 0) -> dict:
         )
     if existing:
         return existing
-    coverage = _r2_coverage_summary(repo_root)
+    coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
     missing_photos = coverage.get("missingImportPhotos") if isinstance(coverage, dict) else []
     total = len(missing_photos) if isinstance(missing_photos, list) else 0
     if limit:

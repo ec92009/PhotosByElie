@@ -1,10 +1,10 @@
 {
   "schema": "photosbyelie.private-delivery-manifest.v1",
-  "updatedAt": "2026-05-18T18:04:59.324Z",
+  "updatedAt": "2026-05-18T21:25:16Z",
   "privateBucket": "photosbyelie-private",
   "catalogPhotos": 2473,
-  "privateMasterPhotoIds": 6385,
-  "privateRenderTripletPhotoIds": 10557,
+  "privateMasterPhotoIds": 2473,
+  "privateRenderTripletPhotoIds": 2345,
   "records": {
     "20220506-160631-03403-51426edaac": {
       "id": "20220506-160631-03403-51426edaac",
@@ -3223,7 +3223,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180510-1513-00295-e0037dbfe1": {
@@ -4028,7 +4028,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180322-0915-00176-829cdd2881": {
@@ -4063,7 +4063,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180322-0915-00174-9960ccde3d": {
@@ -4098,7 +4098,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180322-0915-00173-e3b893dbea": {
@@ -4133,7 +4133,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180322-0914-00172-8ecac334b7": {
@@ -4168,7 +4168,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20160717-1424-03649-pano-c6d8818d93": {
@@ -5498,7 +5498,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110106-0600-28060-dda3f0107c": {
@@ -6863,7 +6863,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0710-16133-48f220d7ab": {
@@ -6898,7 +6898,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0710-16248-20ba8b8ac8": {
@@ -7213,7 +7213,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0705-15135-88467c3cfe": {
@@ -7248,7 +7248,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0705-15888-b69260204b": {
@@ -7318,7 +7318,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0704-15231-9f6ebf8849": {
@@ -7353,7 +7353,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0703-28121-a54c5b7be3": {
@@ -7388,7 +7388,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0701-28116-3085ed7eb5": {
@@ -7493,7 +7493,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0700-15911-46c67d50b8": {
@@ -7528,7 +7528,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0659-28097-14e6a11fc8": {
@@ -7563,7 +7563,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0657-15007-fbe795399d": {
@@ -7948,7 +7948,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0651-28077-bd1d78c52a": {
@@ -7983,7 +7983,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0647-15378-f6cc4dcb73": {
@@ -8123,7 +8123,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0644-16655-957b486fce": {
@@ -8158,7 +8158,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0642-15332-cb5885a2b9": {
@@ -8193,7 +8193,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0642-15984-1dbad727a0": {
@@ -8228,7 +8228,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0640-16546-9af8666d1e": {
@@ -8333,7 +8333,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0639-16472-0d0f8c2260": {
@@ -8368,7 +8368,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0639-16206-903f159ce4": {
@@ -8403,7 +8403,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0638-28095-03bff9a26d": {
@@ -8438,7 +8438,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0637-28093-13b10d2416": {
@@ -8683,7 +8683,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0635-16417-4eb9eb77b4": {
@@ -8858,7 +8858,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0632-15137-8e71a1030c": {
@@ -8998,7 +8998,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110104-0631-16428-d7b3a84272": {
@@ -10713,7 +10713,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110103-0617-27993-1dd9c8bbe5": {
@@ -10748,7 +10748,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110103-0617-27992-905a2e12fb": {
@@ -10783,7 +10783,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110103-0617-15824-b5b45b29da": {
@@ -10818,7 +10818,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20110103-0616-15770-639b853c2d": {
@@ -10853,7 +10853,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0226-69593449e4": {
@@ -10888,7 +10888,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0225-6bcf02e3f5": {
@@ -10923,7 +10923,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0155-14d70afbec": {
@@ -10939,7 +10939,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0150-bdc5d3d952": {
@@ -10974,7 +10974,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0149-250b7e4307": {
@@ -11009,7 +11009,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0129-fe142b6197": {
@@ -11025,7 +11025,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "dji-20241024-161503-942-video-5a83f65bad": {
@@ -11041,7 +11041,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "dji-20241023-173111-129-slowmotion-f0c5ba9459": {
@@ -11057,7 +11057,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "dji-20241023-173030-299-slowmotion-a430719dec": {
@@ -11073,7 +11073,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0065-3f4e988a75": {
@@ -11108,7 +11108,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0064-741d90ed68": {
@@ -11143,7 +11143,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0063-020de02191": {
@@ -11178,7 +11178,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0062-b234ed6a44": {
@@ -11213,7 +11213,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0061-e9e8cc7704": {
@@ -11248,7 +11248,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0060-1d27a287b1": {
@@ -11283,7 +11283,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0035-61b9d29514": {
@@ -11318,7 +11318,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0034-c4a46b1958": {
@@ -11353,7 +11353,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0033-01c001fd5e": {
@@ -11388,7 +11388,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0032-015b172a1c": {
@@ -11423,7 +11423,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0031-c6a2f4747d": {
@@ -11458,7 +11458,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0030-cc5739f870": {
@@ -11493,7 +11493,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0028-1a92da1863": {
@@ -11528,7 +11528,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-0021-de03ba9bd9": {
@@ -11563,7 +11563,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-6598-66bfa401b3": {
@@ -11579,7 +11579,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20190723-1419-16523-3d4da421c4": {
@@ -11754,7 +11754,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180813-0936-18935-ff4ebcc12a": {
@@ -11824,7 +11824,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180731-1513-42013-b83b1de3dc": {
@@ -11859,7 +11859,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180731-1512-42012-13330ca3c7": {
@@ -11894,7 +11894,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180712-1827-16605-457c78af75": {
@@ -12489,7 +12489,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180427-1527-00227-56a6126792": {
@@ -12524,7 +12524,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180421-1537-12617-c2d492125d": {
@@ -14519,7 +14519,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180302-1936-00107-40a8e4a3f3": {
@@ -17125,7 +17125,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "8fed5841-07c8-4274-a395-5a077ffcc184-b0566eaeb5": {
@@ -17160,7 +17160,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2939-68cb5ce5b2": {
@@ -17195,7 +17195,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2938-cc0cb9487b": {
@@ -17230,7 +17230,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2937-dade9e30bf": {
@@ -17265,7 +17265,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2933-5320e9f76b": {
@@ -17300,7 +17300,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2924-7782398889": {
@@ -17335,7 +17335,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2923-5cdb3a529c": {
@@ -17370,7 +17370,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2922-7182f55a97": {
@@ -17405,7 +17405,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2921-3d36843cce": {
@@ -17440,7 +17440,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2920-d22069f714": {
@@ -17475,7 +17475,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2919-d8345af59f": {
@@ -17510,7 +17510,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2918-4dcbac658d": {
@@ -17545,7 +17545,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2917-b11b38fda5": {
@@ -17580,7 +17580,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2916-7f8afd8bba": {
@@ -17615,7 +17615,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2915-e8ae08ef29": {
@@ -17650,7 +17650,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2914-e9104a0966": {
@@ -17685,7 +17685,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2913-a27b0c4843": {
@@ -17720,7 +17720,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2912-b706c88607": {
@@ -17755,7 +17755,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2911-260e7f559e": {
@@ -17790,7 +17790,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2910-df1827c235": {
@@ -17825,7 +17825,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2909-b8eed5920d": {
@@ -17860,7 +17860,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2908-b30840b1cb": {
@@ -17895,7 +17895,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2907-fb9bf81957": {
@@ -17930,7 +17930,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2906-c2c1af6c22": {
@@ -17965,7 +17965,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2905-d58855992a": {
@@ -18000,7 +18000,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2904-e0d9300c72": {
@@ -18035,7 +18035,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "d5h-2903-4d39c0652d": {
@@ -18070,7 +18070,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-3520-bfa02905e5": {
@@ -23106,7 +23106,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1566-4571418d2f": {
@@ -23141,7 +23141,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1565-76c631a44a": {
@@ -23176,7 +23176,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1622-3a2e29b876": {
@@ -23227,7 +23227,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1563-4cd913d144": {
@@ -23262,7 +23262,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1562-dd0da6eba6": {
@@ -23297,7 +23297,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1561-1ddef65695": {
@@ -23332,7 +23332,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1560-bc652b01c9": {
@@ -23367,7 +23367,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1559-4cca552aaf": {
@@ -23402,7 +23402,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1558-54e7de1c27": {
@@ -23437,7 +23437,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-1621-2da76b4c71": {
@@ -30420,7 +30420,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-5360-066b15e68d": {
@@ -30455,7 +30455,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "img-5359-e553067408": {
@@ -30490,7 +30490,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20220705-164431-00139-pano-92425313d3": {
@@ -31225,7 +31225,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20220511-101037-04339-de0f00382f": {
@@ -31820,7 +31820,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180523-1253-00923-9853f3d6a1": {
@@ -32065,7 +32065,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180523-1210-00914-2cdae156c4": {
@@ -36491,7 +36491,7 @@
       },
       "privateRenders": {},
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717": {
@@ -77756,7 +77756,7 @@
         }
       },
       "publicPreviews": {
-        "present": false
+        "present": true
       }
     },
     "20180520-1536-00717-f1d52929b5": {

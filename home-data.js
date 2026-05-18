@@ -74,12 +74,12 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 158,
+    "count": 184,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
-        "id": "20190723-1419-16523-3d4da421c4",
-        "title": "20190723 1419 16523",
+        "id": "img-0226-69593449e4",
+        "title": "IMG 0226",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -87,14 +87,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20190723-1419-16523-3d4da421c4_900.jpg",
-            "detailKey": "expo/20190723-1419-16523-3d4da421c4_1800.jpg"
+            "galleryKey": "expo/img-0226-69593449e4_900.jpg",
+            "detailKey": "expo/img-0226-69593449e4_1800.jpg"
           }
         }
       },
       {
-        "id": "20181113-1748-16886-f468becf95",
-        "title": "20181113 1748 16886",
+        "id": "img-0225-6bcf02e3f5",
+        "title": "IMG 0225",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -102,29 +102,32 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20181113-1748-16886-f468becf95_900.jpg",
-            "detailKey": "expo/20181113-1748-16886-f468becf95_1800.jpg"
+            "galleryKey": "expo/img-0225-6bcf02e3f5_900.jpg",
+            "detailKey": "expo/img-0225-6bcf02e3f5_1800.jpg"
           }
         }
       },
       {
-        "id": "20181113-1729-19714-e408f3becb",
-        "title": "20181113 1729 19714",
+        "id": "img-0155-14d70afbec",
+        "title": "IMG 0155",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
-          "type": "photo",
+          "type": "video",
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20181113-1729-19714-e408f3becb_900.jpg",
-            "detailKey": "expo/20181113-1729-19714-e408f3becb_1800.jpg"
+            "galleryKey": "expo/img-0155-14d70afbec_900.jpg",
+            "detailKey": "expo/img-0155-14d70afbec_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 32.0
           }
         }
       },
       {
-        "id": "20181020-1143-19559-d29e8bb4b8",
-        "title": "20181020 1143 19559",
+        "id": "img-0150-bdc5d3d952",
+        "title": "IMG 0150",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -132,8 +135,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20181020-1143-19559-d29e8bb4b8_900.jpg",
-            "detailKey": "expo/20181020-1143-19559-d29e8bb4b8_1800.jpg"
+            "galleryKey": "expo/img-0150-bdc5d3d952_900.jpg",
+            "detailKey": "expo/img-0150-bdc5d3d952_1800.jpg"
           }
         }
       }
@@ -144,7 +147,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 277,
+    "count": 615,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -254,7 +257,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 81,
+    "count": 1143,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
@@ -268,11 +271,7 @@ window.photosByElieHomeData = {
           "publicPreview": {
             "allowed": true,
             "galleryKey": "expo/beyrouth-630240f1ea_900.jpg",
-            "detailKey": "expo/beyrouth-630240f1ea_short_5s_720p.mp4",
-            "dimensions": {
-              "width": 1280,
-              "height": 720
-            }
+            "detailKey": "expo/beyrouth-630240f1ea_short_5s_720p.mp4"
           },
           "video": {
             "duration": 43.0
@@ -280,8 +279,8 @@ window.photosByElieHomeData = {
         }
       },
       {
-        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-19f8818a-cf96-4121-9812-2baa1f7175d4-b731a67d69",
-        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "id": "road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717",
+        "title": "Road Trips - Adventure, car rental, scenic highways, landscapes, gas stations, motels, pit-stops, route maps, vintage ve",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -289,14 +288,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-19f8818a-cf96-4121-9812-2baa1f7175d4-b731a67d69_900.jpg",
-            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-19f8818a-cf96-4121-9812-2baa1f7175d4-b731a67d69_1800.jpg"
+            "galleryKey": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717_900.jpg",
+            "detailKey": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717_1800.jpg"
           }
         }
       },
       {
-        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1",
-        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "id": "city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37",
+        "title": "City Breaks - Skyscrapers, street signs, public transport, local attractions, shopping, dining, parks, historical landma",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -304,14 +303,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1_900.jpg",
-            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1_1800.jpg"
+            "galleryKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37_900.jpg",
+            "detailKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37_1800.jpg"
           }
         }
       },
       {
-        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d",
-        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "id": "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96",
+        "title": "City Breaks - Skyscrapers, street signs, public transport, local attractions, shopping, dining, parks, historical landma",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -319,8 +318,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d_900.jpg",
-            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d_1800.jpg"
+            "galleryKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96_900.jpg",
+            "detailKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96_1800.jpg"
           }
         }
       }

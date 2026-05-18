@@ -6,7 +6,7 @@ Date: 2026-05-18
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v79.17`
+- Current visible build: `v79.21`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Public catalog count: `904` active media rows.
@@ -38,12 +38,13 @@ The prior main thread was the Real Estate import and client review workflow, wit
 15. Detail pages show video duration when available, both in the top summary line and metadata section.
 16. The Real Estate footer/action bar was adjusted so it no longer hides the page footer on short/wide screens.
 17. Owner Real Estate client management was refined: localhost Owner can store ignored client config, import available property folders with live count/total progress, publish sanitized contexts, upload media, and prepare Worker secret payloads.
+18. The Real Estate client review was reorganized into a focused wizard: multi-property clients get a step 0 property picker, then agents select media from the full shared pool with click/Shift-click, clean up titles and accidental duplicates, drag one-line order rows, and open PDF and/or browser video preview outputs.
 
 ## Current Real Estate Delivery Model
 
 - `real-estate.html` defaults to the Elie client bundle on bare `real-estate.html?logout=1`, can load Corine or another tracked client with `?client=<client>`, and can still load a same-origin bundle with `?context=<path>`.
 - The client gate accepts configured client identifiers and password credentials; public contexts keep a salted password hash, while plaintext local passwords remain in ignored Owner settings and Worker secrets.
-- Selected media can belong to one or more project assignments. PDF and slideshow manifests split outputs by project.
+- Selected media can belong to one or more project assignments. The current agent-facing wizard scopes review and outputs to the active property.
 - Browser PDFs remain a draft/local capability. The longer-term target is cloud generation from the saved manifest.
 - Videos selected for a PDF are represented by a still frame from 10% into the source video.
 - Videos selected for a slideshow keep their source duration; still photos use the configured seconds-per-photo value.

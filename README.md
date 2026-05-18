@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v79.17`
+- Current visible version: `v79.21`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -18,7 +18,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
 - `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
-- `real-estate.html`: private real-estate review workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, supports mixed photo/video filtering, project assignment, title edits, draggable PDF/slideshow draft ordering, browser/share-sheet-friendly selection table export, masked password entry, and selected-original ZIP delivery through the Worker
+- `real-estate.html`: private real-estate review wizard that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, conditionally starts with property selection, supports click and Shift-click media selection from the full shared pool, selected-title cleanup, one-line drag ordering, browser-open PDF/video outputs, selection-table resume, masked password entry, and selected-original ZIP delivery through the Worker
 - `owner.html`: tabbed localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, Real Estate client credential/import/publish/upload actions, commerce settings, and R2 maintenance
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
@@ -38,7 +38,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo-detail.js`: shared detail page, real-image/video preview support, duration metadata, and automatic basket sync
 - `basket.js`: basket rendering, item removal, resolution reselection, delivery availability pruning, and sticky total updates
 - `liked.js`: liked page rendering, unlike actions, and resolution selection into the basket
-- `real-estate.js`: private client-gallery controller for Real Estate media filters, project assignment, selected-media draft state and drag ordering, editable PDF titles, PDF/slideshow manifests, selection table loading/export, browser-built originals ZIP delivery, and legacy batch JSON loading
+- `real-estate.js`: private client-gallery controller for the Real Estate conditional property step plus four focused review pages, shared-pool media selection with range selection, property-scoped title/order state, browser-open PDF/slideshow outputs, selection table loading/export, browser-built originals ZIP delivery, and legacy batch JSON loading
 - `media-config.js`: public-media base URL configuration for GitHub Pages/R2 preview delivery
 - `worker/`: mockable Cloudflare Worker-track checkout and fulfillment prototype
 - `shared.css`: copied from the By Elie visual system

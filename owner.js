@@ -178,6 +178,8 @@
     ["previews_created", "Previews made"],
     ["previews_uploaded", "Previews up"],
   ];
+  const IMPORT_MATRIX_QUEUE_PREVIEW_LIMIT = 5;
+  const IMPORT_MATRIX_RECENT_DONE_LIMIT = 1;
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
     ["gap-fill", "Fill in coverage gaps"],
@@ -1673,7 +1675,7 @@
     const scannedFiles = Number(scanPayload.seen ?? queuePayload.seen ?? numberFromLog(logSummary?.scan?.match?.[1]) ?? 0);
     const inspectedFiles = Number(scanPayload.inspected ?? queuePayload.inspected ?? numberFromLog(logSummary?.scan?.match?.[2]) ?? 0);
     const scanDone = Boolean(logSummary?.importScanDonePayload);
-    const selected = Math.max(queued, selectedFromScan, rows.length);
+    const selected = Math.max(queued, processed + queueDepth + activeItemCount, selectedFromScan, rows.length);
     const completed = Math.max(rows.length ? finishedRows : 0, processed, numberFromLog(logSummary?.imported?.match?.[1]));
     const startedIndex = rows.length
       ? completed + (runningRow ? 1 : 0)
@@ -2011,14 +2013,47 @@
     return IMPORT_MATRIX_STEPS.every(([stepKey]) => importMatrixStepSettled(photo.steps?.[stepKey] || {}));
   };
 
-  const importMatrixVisibleRows = (photos = []) => {
-    const activeRows = photos.filter((photo) => !importMatrixRowComplete(photo));
-    return activeRows
+  const importMatrixVisibleInfo = (photos = []) => {
+    const incompleteRows = photos.filter((photo) => !importMatrixRowComplete(photo));
+    const sortByQueueIndex = (left, right) => Number(left.index || 0) - Number(right.index || 0);
+    const runningRows = incompleteRows.filter((photo) => photo.status === "running").sort(sortByQueueIndex);
+    const errorRows = incompleteRows.filter((photo) => photo.status === "error").sort(sortByQueueIndex);
+    const queuedRows = incompleteRows
+      .filter((photo) => photo.status !== "running" && photo.status !== "error")
+      .sort(sortByQueueIndex);
+    const visibleQueuedRows = queuedRows.slice(0, IMPORT_MATRIX_QUEUE_PREVIEW_LIMIT);
+    const incompleteIds = new Set(incompleteRows.map((photo) => photo.id));
+    const recentDoneRows = photos
+      .filter((photo) => !incompleteIds.has(photo.id) && photo.status === "done")
+      .sort((left, right) => Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0))
+      .slice(0, IMPORT_MATRIX_RECENT_DONE_LIMIT);
+
+    const visibleMap = new Map();
+    [...runningRows, ...visibleQueuedRows, ...recentDoneRows, ...errorRows].forEach((photo) => {
+      if (!visibleMap.has(photo.id)) visibleMap.set(photo.id, photo);
+    });
+    const rows = [...visibleMap.values()]
       .sort((left, right) => {
-        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "error" ? 2 : 1;
+        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "done" ? 2 : photo.status === "error" ? 3 : 1;
         return rank(left) - rank(right)
-          || Number(left.index || 0) - Number(right.index || 0);
+          || (rank(left) === 2
+            ? Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0)
+            : Number(left.index || 0) - Number(right.index || 0));
       });
+    return {
+      rows,
+      runningCount: runningRows.length,
+      queuedCount: queuedRows.length,
+      visibleQueuedCount: visibleQueuedRows.length,
+      hiddenQueuedCount: Math.max(0, queuedRows.length - visibleQueuedRows.length),
+      doneCount: recentDoneRows.length,
+      errorCount: errorRows.length,
+    };
+  };
+
+  const importMatrixVisibleRows = (photos = []) => {
+    const info = importMatrixVisibleInfo(photos);
+    return info.rows;
   };
 
   const importMatrixCellHtml = (photo, stepKey, stepLabel) => {
@@ -2029,8 +2064,12 @@
     const completed = Number(step.completed || 0);
     const count = total > 1 && !skipped ? `<span>${formatCount(Math.min(completed, total))}/${formatCount(total)}</span>` : "";
     const label = `${stepLabel}: ${photo.id}`;
+    const classes = [
+      checked ? "is-checked" : "is-pending",
+      skipped ? "is-skipped" : "",
+    ].filter(Boolean).join(" ");
     return `
-      <td class="${checked ? "is-checked" : skipped ? "is-skipped" : ""}">
+      <td class="${classes}">
         <input type="checkbox" disabled ${checked ? "checked" : ""} aria-label="${escapeHtml(label)}">
         ${skipped ? "<span>n/a</span>" : count}
       </td>
@@ -2039,13 +2078,15 @@
 
   const importMatrixHtml = (photos = []) => {
     if (!photos.length) return "";
-    const visibleRows = importMatrixVisibleRows(photos);
+    const visibleInfo = importMatrixVisibleInfo(photos);
+    const visibleRows = visibleInfo.rows;
     if (!visibleRows.length) return "";
-    const activeCount = visibleRows.filter((photo) => photo.status !== "error").length;
-    const errorCount = visibleRows.filter((photo) => photo.status === "error").length;
     const meta = [
-      activeCount ? `${formatCount(activeCount)} active` : "",
-      errorCount ? `${formatCount(errorCount)} needs attention` : "",
+      visibleInfo.runningCount ? `${formatCount(visibleInfo.runningCount)} working` : "",
+      visibleInfo.visibleQueuedCount ? `${formatCount(visibleInfo.visibleQueuedCount)} next queued` : "",
+      visibleInfo.doneCount ? `${formatCount(visibleInfo.doneCount)} just finished` : "",
+      visibleInfo.hiddenQueuedCount ? `${formatCount(visibleInfo.hiddenQueuedCount)} more queued hidden` : "",
+      visibleInfo.errorCount ? `${formatCount(visibleInfo.errorCount)} needs attention` : "",
     ].filter(Boolean).join(" · ");
     return `
       <div class="owner-import-matrix-wrap" aria-label="Per-photo import progress">
@@ -2066,7 +2107,7 @@
                 </th>
               </tr>
               <tr class="owner-import-matrix-step-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
-                <th scope="row">${escapeHtml(photo.status === "queued" ? "Waiting" : photo.status === "running" ? "Working" : photo.status === "done" ? "Finished" : photo.status === "error" ? "Needs attention" : "Steps")}</th>
+                <th scope="row">${escapeHtml(photo.status === "queued" ? "Next up" : photo.status === "running" ? "Working" : photo.status === "done" ? "Finished" : photo.status === "error" ? "Needs attention" : "Steps")}</th>
                 ${IMPORT_MATRIX_STEPS.map(([stepKey, label]) => importMatrixCellHtml(photo, stepKey, label)).join("")}
               </tr>
             `).join("")}
@@ -2232,7 +2273,8 @@
     let lastPhotoId = "";
     if (latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
     if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
-      const visibleMatrixRows = importMatrixVisibleRows(logSummary.importPhotoRows);
+      const visibleMatrixInfo = importMatrixVisibleInfo(logSummary.importPhotoRows);
+      const visibleMatrixRows = visibleMatrixInfo.rows;
       const sourceProgress = PHOTO_IMPORT_PHASES.has(activePhaseKey)
         ? sourceLaneProgress(activePhaseKey, logSummary, latest)
         : null;
@@ -2240,8 +2282,10 @@
       addPhaseRow(
         activePhaseKey,
         "Upload matrix",
-        visibleMatrixRows.length
-          ? `${formatCount(visibleMatrixRows.length)} active/incomplete rows shown`
+        visibleMatrixInfo.runningCount || visibleMatrixInfo.visibleQueuedCount
+          ? `${formatCount(visibleMatrixInfo.runningCount)} working, ${formatCount(visibleMatrixInfo.visibleQueuedCount)} next queued shown${visibleMatrixInfo.hiddenQueuedCount ? `, ${formatCount(visibleMatrixInfo.hiddenQueuedCount)} more queued hidden` : ""}${visibleMatrixInfo.doneCount ? `, ${formatCount(visibleMatrixInfo.doneCount)} just finished` : ""}`
+          : visibleMatrixInfo.doneCount
+          ? `${formatCount(visibleMatrixInfo.doneCount)} just finished`
           : sourceProgress?.scanningForMore
           ? `No active rows right now; scanning for more ${importSourceLabel(activePhaseKey)} work`
           : "No active rows",
@@ -2252,6 +2296,13 @@
       addPhaseRow("gap-fill", "Progress summary", `${formatCount(progress.finishedRows)} / ${formatCount(progress.total)} incomplete photos finished`);
       if (progress.failed) addPhaseRow("gap-fill", "Needs attention", `${formatCount(progress.failed)} photos failed`);
       addPhaseRow("gap-fill", "What happens", "For each incomplete photo: upload the master, create private JPG triplets, upload triplets, create previews, then upload previews before moving to the next photo.");
+    }
+    if (logMatchesActivePhase && activePhaseKey === "private") {
+      const progress = privateBackfillProgress(logSummary);
+      addPhaseRow("private", "Progress bar counts", `${progress.detail} catalog photos with complete private delivery JPG triplets.`);
+      addPhaseRow("private", "What happens", "Builds missing private delivery JPGs in the 6MP, 3MP, and 1MP sizes, uploads them to private R2, and refreshes the private delivery manifest for checkout ZIPs.");
+      addPhaseRow("private", "Notes", "This is not importing new photos or public previews. It runs after the catalog is written so existing still photos have private customer-download JPGs available.");
+      if (logSummary?.upload) addPhaseRow("private", "Last upload", `${logSummary.upload.match[2]} uploaded ${formatCount(Number(logSummary.upload.match[3] || 0))} private files`);
     }
     if (logMatchesActivePhase && (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted)) {
       const progress = deleteObjectProgress(logSummary);
@@ -2828,7 +2879,7 @@
   const startR2Polling = () => {
     if (r2PollTimer || !hiddenActions?.enabled) return;
     loadR2Progress();
-    r2PollTimer = window.setInterval(loadR2Progress, 3000);
+    r2PollTimer = window.setInterval(loadR2Progress, 900);
   };
 
   if (!hiddenActions?.enabled) {

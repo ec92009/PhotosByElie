@@ -17,6 +17,19 @@
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
   const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
 
+  const clearLogoutFromHistory = () => {
+    if (!pageParams.has("logout")) return;
+    pageParams.delete("logout");
+    if (!window.history?.replaceState) return;
+    try {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("logout");
+      window.history.replaceState(window.history.state, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+    } catch {
+      // The current session is valid even if a browser blocks history cleanup.
+    }
+  };
+
   const elements = {
     login: app.querySelector("[data-re-login]"),
     loginForm: app.querySelector("[data-re-login-form]"),
@@ -75,7 +88,7 @@
     photosById: new Map(),
     albums: [],
     album: "all",
-    wizardStep: 1,
+    wizardStep: 0,
     query: "",
     mediaType: "all",
     sort: "album",
@@ -88,6 +101,7 @@
     editedTitles: {},
     projectAssignments: {},
     activePhotoId: "",
+    lastRangePhotoId: "",
     dragDraftId: "",
     pointerDraftId: "",
     pointerDraftStartX: 0,
@@ -521,9 +535,9 @@
     const selectedRank = new Map(state.selectedOrder.map((id, index) => [id, index]));
     const selectedOnly = state.selectedOnly || state.wizardStep === 2;
     const photos = state.photos.filter((photo) => {
-      if (state.album && state.album !== "all" && photo.albumSlug !== state.album) return false;
+      if (state.wizardStep !== 1 && state.album && state.album !== "all" && photo.albumSlug !== state.album && !assignedProjectIdsFor(photo).includes(state.album)) return false;
       if (state.mediaType !== "all" && mediaTypeFor(photo) !== state.mediaType) return false;
-      if (selectedOnly && !state.selectedIds.has(photo.id)) return false;
+      if (selectedOnly && !isSelectedForActiveProject(photo)) return false;
       if (query && !photoSearchText(photo).includes(query)) return false;
       return true;
     });
@@ -577,6 +591,41 @@
     });
   };
 
+  const isActiveProjectPhoto = (photo) => {
+    if (!photo) return false;
+    if (!state.album || state.album === "all") return true;
+    return photo.albumSlug === state.album || assignedProjectIdsFor(photo).includes(state.album);
+  };
+
+  const explicitProjectIdsFor = (photoId) => (
+    Array.isArray(state.projectAssignments[photoId])
+      ? state.projectAssignments[photoId].filter(Boolean)
+      : []
+  );
+
+  const selectedProjectIdsFor = (photo) => {
+    if (!photo || !state.selectedIds.has(photo.id)) return [];
+    const explicit = explicitProjectIdsFor(photo.id);
+    return explicit.length ? explicit : [projectIdFor(photo)];
+  };
+
+  const isSelectedForActiveProject = (photo) => (
+    state.selectedIds.has(photo?.id)
+    && selectedProjectIdsFor(photo).includes(activeProjectId())
+  );
+
+  const activeSelectedPhotos = () => selectedPhotos().filter(isSelectedForActiveProject);
+
+  const defaultAlbumSlug = () => state.albums[0]?.slug || "all";
+
+  const hasPropertyPicker = () => state.albums.length > 1;
+
+  const firstWizardStep = () => hasPropertyPicker() ? 0 : 1;
+
+  const normalizeWizardStep = (step) => Math.max(firstWizardStep(), Math.min(4, Number(step) || firstWizardStep()));
+
+  const activeProjectId = () => (state.album && state.album !== "all" ? state.album : defaultAlbumSlug());
+
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
@@ -589,8 +638,8 @@
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
   };
 
-  const albumSelectedCount = (slug) => state.photos
-    .filter((photo) => photo.albumSlug === slug && state.selectedIds.has(photo.id))
+  const albumSelectedCount = (slug) => selectedPhotos()
+    .filter((photo) => selectedProjectIdsFor(photo).includes(slug))
     .length;
 
   const renderAlbums = () => {
@@ -598,7 +647,8 @@
     elements.albums.innerHTML = state.albums.length ? state.albums.map((album) => `
         <button class="real-estate-album-filter ${state.album === album.slug ? "is-active" : ""}" type="button" data-album-filter="${escapeHtml(album.slug)}" aria-pressed="${state.album === album.slug}">
           <span>${escapeHtml(album.displayTitle || album.title)}</span>
-          <small>${Number(album.photoCount) || 0} media / ${albumSelectedCount(album.slug)} selected</small>
+          <small>${Number(album.photoCount) || 0} property media / ${albumSelectedCount(album.slug)} selected</small>
+          <b>Choose property</b>
         </button>
       `).join("") : `<p class="real-estate-muted">No properties are available yet.</p>`;
   };
@@ -608,22 +658,24 @@
     const photos = filteredPhotos();
     elements.grid.dataset.density = state.density;
     elements.grid.innerHTML = photos.length ? photos.map((photo) => {
-      const selected = state.selectedIds.has(photo.id);
+      const selected = isSelectedForActiveProject(photo);
       const assignedProjects = new Set(assignedProjectIdsFor(photo));
       const video = isVideo(photo);
       const mediaLabel = mediaLabelFor(photo);
       const duration = formatDuration(durationSecondsFor(photo));
+      const originalProperty = photo.albumSlug === activeProjectId() ? "" : albumTitleFor(photo);
       return `
         <article class="real-estate-photo-card ${selected ? "is-selected" : ""} ${video ? "is-video" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
             <button class="real-estate-photo-media" type="button" data-open-photo="${escapeHtml(photo.id)}" aria-label="Open ${escapeHtml(titleFor(photo))}">
               <img loading="lazy" src="${escapeHtml(imageFor(photo))}" alt="${escapeHtml(titleFor(photo))}"/>
-              <span>${escapeHtml(albumTitleFor(photo))}</span>
+              <span>${escapeHtml(originalProperty ? `${originalProperty} / shared` : albumTitleFor(photo))}</span>
               ${video ? `<b class="real-estate-media-type-badge">${escapeHtml(duration ? `${mediaLabel} ${duration}` : mediaLabel)}</b>` : ""}
             </button>
-            <label class="real-estate-check real-estate-photo-select">
+            <label class="real-estate-check real-estate-photo-select" title="Selected">
               <input type="checkbox" data-select-photo="${escapeHtml(photo.id)}" aria-label="Select ${escapeHtml(titleFor(photo))}" ${selected ? "checked" : ""}/>
             </label>
+            <button class="real-estate-title-remove" type="button" data-remove-title-photo="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(titleFor(photo))} from ${escapeHtml(selectedPropertyTitle())}">&times;</button>
           </div>
           <div class="real-estate-photo-card-body">
             <label class="real-estate-title-field">
@@ -650,7 +702,7 @@
   };
 
   const renderDraft = () => {
-    const selectedPhotos = state.selectedOrder.map((id) => state.photosById.get(id)).filter(Boolean);
+    const selectedPhotos = activeSelectedPhotos();
     if (elements.selectedTotal) elements.selectedTotal.textContent = String(selectedPhotos.length);
     if (elements.actionBarSelected) elements.actionBarSelected.textContent = String(selectedPhotos.length);
     if (elements.draftCount) elements.draftCount.textContent = String(selectedPhotos.length);
@@ -660,24 +712,25 @@
         <span class="real-estate-draft-handle" data-draft-drag-handle aria-hidden="true" title="Drag to reorder">
           <span aria-hidden="true"></span>
         </span>
+        <strong class="real-estate-draft-position">${index + 1}</strong>
         <img src="${escapeHtml(imageFor(photo))}" alt="" draggable="false"/>
         <div>
           <strong>${escapeHtml(titleFor(photo))}</strong>
-          <small>${escapeHtml([mediaLabelFor(photo), assignedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + ")].filter(Boolean).join(" / "))}</small>
+          <small>${escapeHtml([mediaLabelFor(photo), selectedProjectIdsFor(photo).map((projectId) => projectOptionFor(projectId, photo).projectTitle).join(" + ")].filter(Boolean).join(" / "))}</small>
         </div>
         <div class="real-estate-draft-actions">
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="-1" aria-label="Move ${escapeHtml(titleFor(photo))} up">&uarr;</button>
           <button type="button" data-move-draft="${escapeHtml(photo.id)}" data-direction="1" aria-label="Move ${escapeHtml(titleFor(photo))} down">&darr;</button>
           <button type="button" data-remove-draft="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(titleFor(photo))}">&times;</button>
         </div>
-        <span class="real-estate-draft-index">${index + 1}</span>
       </article>
     `).join("") : `<p class="real-estate-muted">No selected media yet.</p>`;
   };
 
   const stepCopy = () => {
-    const selected = state.selectedOrder.length;
-    if (state.wizardStep === 1) return `Choose ${selectedPropertyTitle()}, then check the media you want in the final product.`;
+    const selected = activeSelectedPhotos().length;
+    if (state.wizardStep === 0) return "Choose the property you want to prepare.";
+    if (state.wizardStep === 1) return `Click media to select it for ${selectedPropertyTitle()}. Shift-click selects a range.`;
     if (state.wizardStep === 2) return selected
       ? `Only the ${selected} selected media items are shown. Change titles only where needed.`
       : "Select at least one photo or video before editing titles.";
@@ -690,26 +743,30 @@
   };
 
   const renderWizard = () => {
+    const selected = activeSelectedPhotos().length;
+    const firstStep = firstWizardStep();
     app.dataset.reStep = String(state.wizardStep);
     if (elements.wizardStatus) elements.wizardStatus.textContent = stepCopy();
     document.querySelectorAll("[data-re-step-jump]").forEach((button) => {
-      const step = Number(button.dataset.reStepJump) || 1;
+      const parsed = Number(button.dataset.reStepJump);
+      const step = Number.isFinite(parsed) ? parsed : firstStep;
+      button.hidden = step === 0 && !hasPropertyPicker();
       button.classList.toggle("is-active", step === state.wizardStep);
       button.setAttribute("aria-current", step === state.wizardStep ? "step" : "false");
-      button.disabled = step > 1 && state.selectedOrder.length === 0;
+      button.disabled = step >= 2 && selected === 0;
     });
     document.querySelectorAll("[data-re-step-back]").forEach((button) => {
-      button.disabled = state.wizardStep <= 1;
-      button.hidden = state.wizardStep <= 1;
+      button.disabled = state.wizardStep <= firstStep;
+      button.hidden = state.wizardStep <= firstStep;
     });
     document.querySelectorAll("[data-re-step-next]").forEach((button) => {
       button.hidden = state.wizardStep >= 4;
-      button.disabled = state.wizardStep < 4 && state.selectedOrder.length === 0;
-      button.textContent = state.wizardStep === 3 ? "Choose output" : "Next";
+      button.disabled = state.wizardStep >= 1 && state.wizardStep < 4 && selected === 0;
+      button.textContent = state.wizardStep === 0 ? "Pick photos" : (state.wizardStep === 3 ? "Choose output" : "Next");
     });
     document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
       button.hidden = state.wizardStep !== 4;
-      button.disabled = state.selectedOrder.length === 0;
+      button.disabled = selected === 0;
     });
   };
 
@@ -728,8 +785,8 @@
   };
 
   const setWizardStep = (step) => {
-    const next = Math.max(1, Math.min(4, Number(step) || 1));
-    if (next > 1 && state.selectedOrder.length === 0) {
+    const next = normalizeWizardStep(step);
+    if (next >= 2 && activeSelectedPhotos().length === 0) {
       setStatus("Select at least one photo or video before continuing");
       state.wizardStep = 1;
     } else {
@@ -739,7 +796,7 @@
       state.selectedOnly = true;
       if (elements.selectedOnly) elements.selectedOnly.checked = true;
     }
-    if (state.wizardStep === 1) {
+    if (state.wizardStep <= 1) {
       state.selectedOnly = false;
       if (elements.selectedOnly) elements.selectedOnly.checked = false;
     }
@@ -747,12 +804,52 @@
     document.getElementById("real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const setSelected = (photoId, selected) => {
-    if (!state.photosById.has(photoId)) return;
-    if (selected && !state.selectedIds.has(photoId)) state.selectedOrder.push(photoId);
-    if (!selected) state.selectedOrder = state.selectedOrder.filter((id) => id !== photoId);
+  const projectListForSelectionChange = (photoId, photo) => {
+    const explicit = explicitProjectIdsFor(photoId);
+    return state.selectedIds.has(photoId) ? selectedProjectIdsFor(photo) : explicit;
+  };
+
+  const applySelectionForPhotoIds = (photoIds, selected) => {
+    const projectId = activeProjectId();
+    photoIds.forEach((photoId) => {
+      if (!state.photosById.has(photoId)) return;
+      const photo = state.photosById.get(photoId);
+      const current = projectListForSelectionChange(photoId, photo);
+      if (selected && projectId) {
+        state.projectAssignments[photoId] = [...current, projectId]
+          .filter((id, index, items) => id && items.indexOf(id) === index);
+        if (!state.selectedOrder.includes(photoId)) state.selectedOrder.push(photoId);
+        return;
+      }
+      if (!selected && projectId) {
+        const nextProjects = current.filter((id) => id !== projectId);
+        if (nextProjects.length) {
+          state.projectAssignments[photoId] = nextProjects;
+        } else {
+          delete state.projectAssignments[photoId];
+          state.selectedOrder = state.selectedOrder.filter((id) => id !== photoId);
+        }
+      }
+    });
+    persistProjectAssignments();
     persistSelection();
     render();
+  };
+
+  const setSelected = (photoId, selected) => {
+    applySelectionForPhotoIds([photoId], selected);
+  };
+
+  const setSelectedRange = (fromId, toId, selected) => {
+    const visible = filteredPhotos().map((photo) => photo.id);
+    const fromIndex = visible.indexOf(fromId);
+    const toIndex = visible.indexOf(toId);
+    if (fromIndex < 0 || toIndex < 0) {
+      setSelected(toId, selected);
+      return;
+    }
+    const [start, end] = fromIndex < toIndex ? [fromIndex, toIndex] : [toIndex, fromIndex];
+    applySelectionForPhotoIds(visible.slice(start, end + 1), selected);
   };
 
   const setTitle = (photoId, value) => {
@@ -790,10 +887,15 @@
     photos: photos.filter((photo) => !isVideo(photo)).length,
     videos: photos.filter(isVideo).length,
   });
-  const projectGroupsFor = (photos) => {
+  const outputProjectIdsFor = (photo, activeOnly = false) => {
+    if (activeOnly && state.album && state.album !== "all" && isSelectedForActiveProject(photo)) return [state.album];
+    return assignedProjectIdsFor(photo);
+  };
+
+  const projectGroupsFor = (photos, activeOnly = false) => {
     const groups = new Map();
     photos.forEach((photo) => {
-      assignedProjectIdsFor(photo).forEach((projectId) => {
+      outputProjectIdsFor(photo, activeOnly).forEach((projectId) => {
         const project = projectOptionFor(projectId, photo);
         if (!groups.has(projectId)) {
           groups.set(projectId, {
@@ -832,11 +934,11 @@
     projectIds: project ? [project.projectId] : assignedProjectIdsFor(photo),
   }));
 
-  const buildBatchManifest = () => {
+  const buildBatchManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
     const template = workflow().batchManifest?.template || {};
     const batchId = timestampId();
-    const photos = selectedPhotos();
-    const projects = projectGroupsFor(photos);
+    const photos = photosOverride;
+    const projects = projectGroupsFor(photos, activeOnly);
     const mediaSummary = selectedMediaSummary(photos);
     return {
       ...template,
@@ -999,8 +1101,8 @@
 `;
   };
 
-  const buildSlideshowManifest = () => {
-    const base = buildBatchManifest();
+  const buildSlideshowManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
+    const base = buildBatchManifest(photosOverride, activeOnly);
     return {
       ...base,
       schema: "photosbyelie.realEstateSlideshowBatch.v1",
@@ -1030,7 +1132,26 @@
 
   const slideshowHtmlFor = (manifest) => {
     const rows = selectionRowsFor(manifest);
+    const slides = rows.map(({ projectTitle, item }) => {
+      const photo = state.photosById.get(item.photoId);
+      if (!photo) return null;
+      const video = item.mediaType === "video" || isVideo(photo);
+      return {
+        projectTitle: projectTitle || item.projectTitle || "",
+        title: item.title || titleFor(photo),
+        mediaType: video ? "video" : "photo",
+        imageUrl: imageFor(photo, "detail"),
+        videoUrl: video ? videoPreviewFor(photo) : "",
+        durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
+        durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
+        source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
+      };
+    }).filter(Boolean);
     const safeJson = JSON.stringify(manifest, null, 2)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const safeSlidesJson = JSON.stringify(slides)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
@@ -1042,26 +1163,49 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie Slideshow ${escapeHtml(manifest.batchId || "")}</title>
   <style>
-    :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4}
-    body{margin:0;background:Canvas;color:CanvasText}
-    main{max-width:980px;margin:0 auto;padding:24px 16px 40px}
-    h1{margin:0 0 6px;font-size:clamp(1.6rem,5vw,2.4rem)}
-    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:18px 0}
-    .meta div{border:1px solid color-mix(in srgb,CanvasText 18%,transparent);padding:10px}
-    .meta dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
-    .meta dd{margin:4px 0 0;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.95rem}
-    th,td{border:1px solid color-mix(in srgb,CanvasText 16%,transparent);padding:9px;text-align:left;vertical-align:top}
-    th{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
-    tbody tr:nth-child(even){background:color-mix(in srgb,CanvasText 4%,transparent)}
+    :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4;background:#0d0d0d;color:#f7f7f7}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0d0d0d;color:#f7f7f7}
+    main{min-height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) auto}
+    .stage{position:relative;display:grid;min-height:70dvh;background:#050505;place-items:center;overflow:hidden}
+    .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505}
+    .frame img,.frame video{width:100%;height:100%;object-fit:contain;background:#050505}
+    .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(14px,4vw,38px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
+    .caption h1{max-width:820px;margin:0;font-size:clamp(1.8rem,5vw,4.8rem);line-height:.98}
+    .caption p{margin:8px 0 0;color:#d7d7d7;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
+    .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(255,255,255,.14);background:#171717;padding:14px}
+    button{min-height:42px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#242424;color:#fff;padding:8px 18px;font:inherit;font-weight:800;cursor:pointer}
+    button:hover{background:#303030}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;width:min(1120px,100%);margin:0 auto;padding:16px}
+    .meta div{border:1px solid rgba(255,255,255,.14);background:#141414;padding:10px}
+    .meta dt{color:#aaa;font-size:.72rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+    .meta dd{margin:4px 0 0;font-weight:850}
+    table{width:min(1120px,calc(100% - 32px));border-collapse:collapse;margin:0 auto 22px;font-size:.9rem;color:#e8e8e8}
+    th,td{border:1px solid rgba(255,255,255,.14);padding:8px;text-align:left;vertical-align:top}
+    th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#aaa}
     code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
-    .note{margin-top:20px;font-size:.9rem;opacity:.72}
+    .note{width:min(1120px,calc(100% - 32px));margin:0 auto 22px;color:#aaa;font-size:.9rem}
   </style>
 </head>
 <body>
   <main>
-    <h1>Photos By Elie slideshow plan</h1>
-    <p>${escapeHtml(manifest.customer || state.payload?.customer?.name || "Client")} project slideshow draft</p>
+    <section class="stage" aria-label="Browser video preview">
+      <div class="frame" data-frame></div>
+      <div class="caption">
+        <div>
+          <p data-project>${escapeHtml(slides[0]?.projectTitle || manifest.customer || "Client")}</p>
+          <h1 data-title>${escapeHtml(slides[0]?.title || "Photos By Elie slideshow")}</h1>
+        </div>
+        <strong data-counter>${slides.length ? `1 / ${slides.length}` : "0 / 0"}</strong>
+      </div>
+      <div class="watermark">${escapeHtml(pdfWatermarkText)}</div>
+    </section>
+    <div class="controls">
+      <button type="button" data-prev>Previous</button>
+      <button type="button" data-play>Pause</button>
+      <button type="button" data-next>Next</button>
+    </div>
     <dl class="meta">
       <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
       <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
@@ -1092,8 +1236,72 @@
         </tr>`).join("")}
       </tbody>
     </table>
-    <p class="note">Cloud assembly should use the full source duration for videos, ${escapeHtml(state.slideshowPhotoSeconds)} seconds for still photos, and a basic carousel transition between items.</p>
+    <p class="note">This browser preview preserves source duration for videos when the browser can play them. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with a basic carousel transition.</p>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
+    <script>
+      const slides = ${safeSlidesJson};
+      const frame = document.querySelector("[data-frame]");
+      const title = document.querySelector("[data-title]");
+      const project = document.querySelector("[data-project]");
+      const counter = document.querySelector("[data-counter]");
+      const playButton = document.querySelector("[data-play]");
+      let index = 0;
+      let timer = 0;
+      let playing = true;
+
+      const clearTimer = () => {
+        if (timer) window.clearTimeout(timer);
+        timer = 0;
+      };
+      const render = () => {
+        clearTimer();
+        const slide = slides[index];
+        if (!slide) {
+          frame.innerHTML = "";
+          title.textContent = "No media selected";
+          project.textContent = "";
+          counter.textContent = "0 / 0";
+          return;
+        }
+        title.textContent = slide.title || "Untitled";
+        project.textContent = slide.projectTitle || slide.mediaType || "";
+        counter.textContent = (index + 1) + " / " + slides.length;
+        if (slide.mediaType === "video" && slide.videoUrl) {
+          frame.innerHTML = '<video controls playsinline autoplay poster="' + slide.imageUrl.replace(/"/g, "&quot;") + '" src="' + slide.videoUrl.replace(/"/g, "&quot;") + '"></video>';
+          const video = frame.querySelector("video");
+          video.addEventListener("ended", () => playing && next());
+          video.addEventListener("error", () => {
+            frame.innerHTML = '<img alt="" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
+            if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
+          });
+          if (playing) video.play().catch(() => {});
+        } else {
+          frame.innerHTML = '<img alt="" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
+          if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
+        }
+      };
+      const next = () => {
+        index = slides.length ? (index + 1) % slides.length : 0;
+        render();
+      };
+      const prev = () => {
+        index = slides.length ? (index - 1 + slides.length) % slides.length : 0;
+        render();
+      };
+      document.querySelector("[data-next]")?.addEventListener("click", next);
+      document.querySelector("[data-prev]")?.addEventListener("click", prev);
+      playButton?.addEventListener("click", () => {
+        playing = !playing;
+        playButton.textContent = playing ? "Pause" : "Play";
+        const video = frame.querySelector("video");
+        if (video) {
+          if (playing) video.play().catch(() => {});
+          else video.pause();
+        }
+        render();
+      });
+      render();
+    </script>
   </main>
 </body>
 </html>
@@ -1102,7 +1310,7 @@
 
   const copyBatch = async () => {
     if (!requireUnlocked()) return;
-    const manifest = buildBatchManifest();
+    const manifest = buildBatchManifest(activeSelectedPhotos(), true);
     const batch = selectionPlainTextFor(manifest);
     try {
       await navigator.clipboard.writeText(batch);
@@ -1125,6 +1333,44 @@
   const downloadBlob = async (blob, filename) => {
     triggerDownload(blob, filename);
     return { filename, pickedLocation: false, bytes: Number(blob.size) || 0 };
+  };
+
+  const reserveOutputWindow = (label) => {
+    const popup = window.open("about:blank", "_blank", "noopener");
+    if (!popup) return null;
+    try {
+      popup.document.title = label || "Preparing output";
+      popup.document.body.style.margin = "0";
+      popup.document.body.style.fontFamily = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+      popup.document.body.style.display = "grid";
+      popup.document.body.style.minHeight = "100vh";
+      popup.document.body.style.placeItems = "center";
+      popup.document.body.innerHTML = `<main style="padding:24px;text-align:center"><h1 style="margin:0 0 8px">${escapeHtml(label || "Preparing output")}</h1><p style="margin:0;color:#666">Photos By Elie is building the browser view.</p></main>`;
+    } catch {
+      // Some browsers restrict about:blank writes; the reserved tab can still be navigated.
+    }
+    return popup;
+  };
+
+  const openBlobInBrowser = async (blob, filename, reservedWindow = null) => {
+    const url = URL.createObjectURL(blob);
+    if (reservedWindow && !reservedWindow.closed) {
+      reservedWindow.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return { method: "open", filename, bytes: Number(blob.size) || 0 };
+    }
+    const opened = window.open(url, "_blank", "noopener");
+    if (opened) {
+      window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return { method: "open", filename, bytes: Number(blob.size) || 0 };
+    }
+    try {
+      window.location.assign(url);
+      return { method: "open-current", filename, bytes: Number(blob.size) || 0 };
+    } catch {
+      URL.revokeObjectURL(url);
+    }
+    return { method: "download", ...(await downloadBlob(blob, filename)) };
   };
 
   const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true }) => {
@@ -1157,7 +1403,7 @@
 
   const shareSelectionTable = async () => {
     if (!requireUnlocked()) return;
-    const batch = buildBatchManifest();
+    const batch = buildBatchManifest(activeSelectedPhotos(), true);
     const blob = new Blob([selectionHtmlFor(batch)], { type: "text/html" });
     const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
     try {
@@ -1179,27 +1425,20 @@
     }
   };
 
-  const shareSlideshowPlan = async () => {
+  const shareSlideshowPlan = async (reservedWindow = null) => {
     if (!requireUnlocked()) return;
-    const selected = selectedPhotos();
+    const selected = activeSelectedPhotos();
     if (!selected.length) {
       setStatus("Select media before sharing a slideshow plan");
       return;
     }
-    const batch = buildSlideshowManifest();
+    const batch = buildSlideshowManifest(selected, true);
     const blob = new Blob([slideshowHtmlFor(batch)], { type: "text/html" });
     const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
     try {
-      const saved = await shareOrOpenBlob({
-        blob,
-        filename,
-        title: "Photos By Elie slideshow plan",
-        text: `${batch.customer || "Client"} slideshow plan`,
-      });
-      if (saved.method === "share") {
-        setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
-      } else if (saved.method === "open") {
-        setStatus(`Opened ${saved.filename}; videos keep their full source duration`);
+      const saved = await openBlobInBrowser(blob, filename, reservedWindow || reserveOutputWindow("Building video preview"));
+      if (saved.method === "open" || saved.method === "open-current") {
+        setStatus(`Opened ${saved.filename}; use the browser save or share controls`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
@@ -1735,14 +1974,16 @@
     return new Blob(chunks, { type: "application/pdf" });
   };
 
-  const downloadPdf = async () => {
+  const downloadPdf = async (reservedWindows = []) => {
     if (!requireUnlocked() || state.pdfBusy) return;
-    const photos = selectedPhotos();
+    const photos = activeSelectedPhotos();
     if (!photos.length) {
-      setStatus("Select media before downloading project PDFs");
+      setStatus("Select media before opening project PDFs");
       return;
     }
-    const projects = projectGroupsFor(photos);
+    const projects = projectGroupsFor(photos, true);
+    const outputWindows = [...reservedWindows];
+    while (outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
     const batchId = timestampId();
     const paper = paperFormatFor();
     const summary = selectedMediaSummary(photos);
@@ -1751,53 +1992,84 @@
     setStatus(`Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} selected media${videoNote}...`);
     let savedProjectCount = 0;
     try {
-      for (const project of projects) {
+      for (const [index, project] of projects.entries()) {
         const blob = await buildPdfBlob(await fetchPdfImages(project.photos));
         const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
-        const saved = await downloadBlob(blob, filename);
+        const saved = await openBlobInBrowser(blob, filename, outputWindows[index] || null);
         savedProjectCount += 1;
-        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+        if (saved.method === "open" || saved.method === "open-current") {
+          setStatus(`Opened ${saved.filename}; use the browser save or share controls`);
+        } else {
+          setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+        }
       }
-      setStatus(`Downloaded ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} to Downloads with ${photos.length} media${videoNote}`);
+      setStatus(`Opened ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} in the browser with ${photos.length} media${videoNote}`);
     } catch (error) {
       if (error?.name === "AbortError") {
         setStatus(savedProjectCount
-          ? `Download canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
-          : "PDF download canceled");
+          ? `PDF output canceled after ${savedProjectCount} project PDF${savedProjectCount === 1 ? "" : "s"}`
+          : "PDF output canceled");
       } else {
-        setStatus(error?.message || "PDF download failed");
+        setStatus(error?.message || "PDF output failed");
       }
     } finally {
       state.pdfBusy = false;
     }
   };
 
+  const openSelectedOutputs = async () => {
+    if (!requireUnlocked()) return;
+    const selected = activeSelectedPhotos();
+    if (!selected.length) {
+      setStatus("Select at least one photo or video before opening outputs");
+      return;
+    }
+    const wantsPdf = elements.outputPdf?.checked !== false;
+    const wantsVideo = Boolean(elements.outputVideo?.checked);
+    if (!wantsPdf && !wantsVideo) {
+      setStatus("Choose PDF, video, or both");
+      return;
+    }
+    const pdfWindow = wantsPdf ? reserveOutputWindow("Building PDF") : null;
+    const videoWindow = wantsVideo ? reserveOutputWindow("Building video preview") : null;
+    if (wantsPdf) await downloadPdf(pdfWindow ? [pdfWindow] : []);
+    if (wantsVideo) await shareSlideshowPlan(videoWindow);
+  };
+
   const selectVisible = () => {
     if (!requireUnlocked()) return;
     const visible = filteredPhotos().map((photo) => photo.id);
-    visible.forEach((id) => {
-      if (!state.selectedIds.has(id)) state.selectedOrder.push(id);
+    applySelectionForPhotoIds(visible, true);
+  };
+
+  const clearSelection = () => {
+    if (!requireUnlocked()) return;
+    applySelectionForPhotoIds(activeSelectedPhotos().map((photo) => photo.id), false);
+  };
+
+  const activeSelectionIds = () => activeSelectedPhotos().map((photo) => photo.id);
+
+  const reorderActiveSelection = (nextActiveIds) => {
+    const activeSet = new Set(nextActiveIds);
+    const queue = [...nextActiveIds];
+    state.selectedOrder = state.selectedOrder.map((id) => (
+      activeSet.has(id) ? queue.shift() : id
+    ));
+    queue.forEach((id) => {
+      if (!state.selectedOrder.includes(id)) state.selectedOrder.push(id);
     });
     persistSelection();
     render();
   };
 
-  const clearSelection = () => {
-    if (!requireUnlocked()) return;
-    state.selectedOrder = [];
-    persistSelection();
-    render();
-  };
-
   const moveDraftItem = (photoId, direction) => {
-    const index = state.selectedOrder.indexOf(photoId);
+    const activeIds = activeSelectionIds();
+    const index = activeIds.indexOf(photoId);
     const nextIndex = index + Number(direction);
-    if (index < 0 || nextIndex < 0 || nextIndex >= state.selectedOrder.length) return;
-    const next = [...state.selectedOrder];
+    if (index < 0 || nextIndex < 0 || nextIndex >= activeIds.length) return;
+    const next = [...activeIds];
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    state.selectedOrder = next;
-    persistSelection();
-    render();
+    reorderActiveSelection(next);
     setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${nextIndex + 1}`);
   };
 
@@ -1860,14 +2132,12 @@
   const moveDraftItemTo = (photoId, targetPhotoId, position) => {
     if (!photoId || !targetPhotoId || photoId === targetPhotoId) return;
     if (!state.selectedIds.has(photoId) || !state.selectedIds.has(targetPhotoId)) return;
-    const next = state.selectedOrder.filter((id) => id !== photoId);
+    const next = activeSelectionIds().filter((id) => id !== photoId);
     const targetIndex = next.indexOf(targetPhotoId);
     if (targetIndex < 0) return;
     next.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, photoId);
-    state.selectedOrder = next;
-    persistSelection();
-    render();
-    setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${state.selectedOrder.indexOf(photoId) + 1}`);
+    reorderActiveSelection(next);
+    setStatus(`Moved ${titleFor(state.photosById.get(photoId))} to position ${next.indexOf(photoId) + 1}`);
   };
 
   const dialogPhotos = () => filteredPhotos();
@@ -1963,11 +2233,13 @@
       ...state.projectAssignments,
       ...projectAssignments,
     };
+    const firstProjectId = items.find((item) => item.projectId && state.albums.some((album) => album.slug === item.projectId))?.projectId;
+    if (firstProjectId) state.album = firstProjectId;
     persistSelection();
     persistTitles();
     persistProjectAssignments();
     render();
-    setStatus(`Loaded ${state.selectedOrder.length} selected media across ${projectGroupsFor(selectedPhotos()).length} projects`);
+    setStatus(`Loaded ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}`);
   };
 
   const openBatchFile = async () => {
@@ -2015,6 +2287,7 @@
       state.unlocked = true;
       writeSessionCredentials(elements.loginName?.value || "", elements.loginCode?.value || "");
       writeSession(elements.loginName?.value || "");
+      clearLogoutFromHistory();
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
       window.setTimeout(() => showHelp(), 120);
@@ -2025,6 +2298,9 @@
       if (!button) return;
       if (!requireUnlocked()) return;
       state.album = button.dataset.albumFilter || "all";
+      state.wizardStep = 1;
+      state.selectedOnly = false;
+      if (elements.selectedOnly) elements.selectedOnly.checked = false;
       render();
     });
 
@@ -2064,10 +2340,23 @@
 
     app.addEventListener("click", (event) => {
       const openButton = event.target.closest("[data-open-photo]");
-      if (openButton && requireUnlocked()) showPhoto(openButton.dataset.openPhoto);
+      if (openButton && requireUnlocked()) {
+        const photoId = openButton.dataset.openPhoto;
+        if (state.wizardStep === 1) {
+          const photo = state.photosById.get(photoId);
+          const selected = !isSelectedForActiveProject(photo);
+          if (event.shiftKey && state.lastRangePhotoId) {
+            setSelectedRange(state.lastRangePhotoId, photoId, selected);
+          } else {
+            setSelected(photoId, selected);
+          }
+          state.lastRangePhotoId = photoId;
+          return;
+        }
+        showPhoto(photoId);
+      }
 
       if (event.target.closest("[data-re-clear-filters]")) {
-        state.album = "all";
         state.query = "";
         state.mediaType = "all";
         state.sort = "album";
@@ -2083,7 +2372,14 @@
 
     elements.grid?.addEventListener("change", (event) => {
       const checkbox = event.target.closest("[data-select-photo]");
-      if (checkbox) setSelected(checkbox.dataset.selectPhoto, checkbox.checked);
+      if (checkbox) {
+        if (event.shiftKey && state.lastRangePhotoId) {
+          setSelectedRange(state.lastRangePhotoId, checkbox.dataset.selectPhoto, checkbox.checked);
+        } else {
+          setSelected(checkbox.dataset.selectPhoto, checkbox.checked);
+        }
+        state.lastRangePhotoId = checkbox.dataset.selectPhoto;
+      }
       const projectCheckbox = event.target.closest("[data-project-photo][data-project-id]");
       if (projectCheckbox) {
         setPhotoProject(
@@ -2096,6 +2392,12 @@
     elements.grid?.addEventListener("input", (event) => {
       const input = event.target.closest("[data-title-photo]");
       if (input) setTitle(input.dataset.titlePhoto, input.value);
+    });
+    elements.grid?.addEventListener("click", (event) => {
+      const removeButton = event.target.closest("[data-remove-title-photo]");
+      if (removeButton) {
+        setSelected(removeButton.dataset.removeTitlePhoto, false);
+      }
     });
 
     elements.draftList?.addEventListener("click", (event) => {
@@ -2179,6 +2481,18 @@
     });
     elements.draftList?.addEventListener("pointercancel", resetPointerDraftDrag);
 
+    document.querySelectorAll("[data-re-step-jump]").forEach((button) => button.addEventListener("click", () => {
+      setWizardStep(button.dataset.reStepJump);
+    }));
+    document.querySelectorAll("[data-re-step-back]").forEach((button) => button.addEventListener("click", () => {
+      setWizardStep(state.wizardStep - 1);
+    }));
+    document.querySelectorAll("[data-re-step-next]").forEach((button) => button.addEventListener("click", () => {
+      setWizardStep(state.wizardStep + 1);
+    }));
+    document.querySelectorAll("[data-re-open-outputs]").forEach((button) => button.addEventListener("click", () => {
+      openSelectedOutputs().catch(() => setStatus("Outputs could not be opened"));
+    }));
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
       shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
@@ -2189,7 +2503,7 @@
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
       shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));
     }));
-    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", downloadPdf));
+    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf()));
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
       openBatchFile().catch(() => setStatus("Selection file could not be loaded"));
     }));
@@ -2251,6 +2565,10 @@
         displayTitle: albumTitleFor(photo),
         photoCount: photos.filter((candidate) => candidate.albumSlug === photo.albumSlug).length,
       }])).values()];
+    if (!state.album || state.album === "all" || !state.albums.some((album) => album.slug === state.album)) {
+      state.album = defaultAlbumSlug();
+    }
+    state.wizardStep = firstWizardStep();
     state.selectedOrder = normalizeSelectedOrder(readJson(selectionStoreKey(), []));
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});

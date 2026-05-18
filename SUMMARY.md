@@ -6,7 +6,7 @@ Date: 2026-05-18
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v78.34`
+- Current visible build: `v78.35`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Public catalog count: `5,827` active media rows.
@@ -33,7 +33,7 @@ The main thread was the Real Estate import and client review workflow, with a st
 14. Gallery navigation now preserves `Show all` when returning from detail instead of falling back to `Show 24`.
 15. Detail pages show video duration when available, both in the top summary line and metadata section.
 16. The Real Estate footer/action bar was adjusted so it no longer hides the page footer on short/wide screens.
-17. Owner Real Estate client management was refined: localhost Owner can store ignored client config, import property folders, publish sanitized contexts, upload media, and prepare Worker secret payloads.
+17. Owner Real Estate client management was refined: localhost Owner can store ignored client config, import available property folders with live count/total progress, publish sanitized contexts, upload media, and prepare Worker secret payloads.
 
 ## Current Real Estate Delivery Model
 

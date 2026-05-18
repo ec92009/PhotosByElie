@@ -188,6 +188,15 @@ def access_code_hash(access_code: str, salt: str) -> str:
     return hashlib.sha256(f"{salt}:{normalized}".encode("utf-8")).hexdigest()
 
 
+def emit_progress(enabled: bool, event: str, **payload: Any) -> None:
+    if not enabled:
+        return
+    print(
+        "PBE_IMPORT_PROGRESS " + json.dumps({"event": event, **payload}, sort_keys=True),
+        flush=True,
+    )
+
+
 def scan_album_files(album_dir: Path) -> list[Path]:
     return sorted(
         path
@@ -207,16 +216,20 @@ def raw_files(root: Path) -> list[Path]:
 def album_dirs(source_root: Path, requested_albums: list[str]) -> list[Path]:
     if requested_albums:
         album_paths = [source_root / album for album in requested_albums]
-        missing = [path.name for path in album_paths if not path.is_dir()]
+        missing = [album for album, path in zip(requested_albums, album_paths) if not path.is_dir()]
+        existing = [path for path in album_paths if path.is_dir()]
         if missing:
             available = sorted(path.name for path in source_root.iterdir() if path.is_dir())
             available_text = ", ".join(available) if available else "none"
             missing_text = ", ".join(missing)
-            raise FileNotFoundError(
-                f"Missing property folder(s) under {source_root}: {missing_text}. "
-                f"Available property folders: {available_text}."
+            print(
+                f"Skipping missing property folder(s) under {source_root}: {missing_text}. "
+                f"Available property folders: {available_text}.",
+                file=sys.stderr,
             )
-        return album_paths
+        if not existing:
+            raise FileNotFoundError(f"No requested property folders were found under {source_root}.")
+        return existing
     return sorted(path for path in source_root.iterdir() if path.is_dir())
 
 
@@ -352,6 +365,7 @@ def build_manifest(
     preview_900_quality: int,
     preview_1800_quality: int,
     force: bool,
+    progress_json: bool = False,
 ) -> dict[str, Any]:
     photos: list[dict[str, Any]] = []
     album_entries: list[dict[str, Any]] = []
@@ -360,15 +374,37 @@ def build_manifest(
     total_preview_1800_bytes = 0
     rendered_preview_900 = 0
     rendered_preview_1800 = 0
+    album_sources: list[tuple[int, Path, list[Path]]] = []
 
     for album_index, album_dir in enumerate(albums, start=1):
         if not album_dir.exists() or not album_dir.is_dir():
             raise FileNotFoundError(f"Album folder not found: {album_dir}")
+        album_sources.append((album_index, album_dir, scan_album_files(album_dir)))
 
+    total_media_count = sum(len(sources) for _album_index, _album_dir, sources in album_sources)
+    completed_media_count = 0
+    emit_progress(
+        progress_json,
+        "start",
+        total=total_media_count,
+        completed=0,
+        albumCount=len(album_sources),
+    )
+
+    for album_index, album_dir, sources in album_sources:
         album_name = album_dir.name
         album_slug = slugify(album_name)
         album_title = display_album_title(album_name)
-        sources = scan_album_files(album_dir)
+        emit_progress(
+            progress_json,
+            "album",
+            total=total_media_count,
+            completed=completed_media_count,
+            album=album_name,
+            albumIndex=album_index,
+            albumTotal=len(album_sources),
+            albumMediaCount=len(sources),
+        )
         album_entries.append({
             "title": album_name,
             "displayTitle": album_title,
@@ -516,6 +552,16 @@ def build_manifest(
                     },
                 },
             })
+            completed_media_count += 1
+            emit_progress(
+                progress_json,
+                "media",
+                total=total_media_count,
+                completed=completed_media_count,
+                album=album_name,
+                file=source.name,
+                mediaType=media_type,
+            )
 
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     credential_hash = access_code_hash(access_code, access_code_salt)
@@ -532,7 +578,7 @@ def build_manifest(
             "accessCodeAlgorithm": ACCESS_CODE_HASH_ALGORITHM,
         })
 
-    return {
+    manifest = {
         "schema": "photosbyelie.realEstateImport.v1",
         "generatedAt": generated_at,
         "customer": customer_payload,
@@ -592,6 +638,8 @@ def build_manifest(
             "preview1800MaxEdge": preview_1800_max_edge,
         },
     }
+    emit_progress(progress_json, "done", total=total_media_count, completed=completed_media_count)
+    return manifest
 
 
 def parse_args() -> argparse.Namespace:
@@ -611,6 +659,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--public-key-prefix", default="", help="R2 public preview key prefix. Default: real-estate/<gallery-key>/previews.")
     parser.add_argument("--private-key-prefix", default="", help="R2 private master key prefix. Default: real-estate/<gallery-key>/masters.")
     parser.add_argument("--album", action="append", default=[], help="Album folder name to import. Repeatable.")
+    parser.add_argument("--progress-json", action="store_true", help="Emit machine-readable import progress lines.")
     parser.add_argument("--preview-900-max-edge", "--gallery-max-edge", dest="preview_900_max_edge", type=int, default=900)
     parser.add_argument("--preview-1800-max-edge", "--pdf-source-max-edge", "--pdf-max-edge", dest="preview_1800_max_edge", type=int, default=1800)
     parser.add_argument("--preview-900-quality", "--gallery-quality", dest="preview_900_quality", type=int, default=84)
@@ -673,6 +722,7 @@ def main() -> int:
             preview_900_quality=args.preview_900_quality,
             preview_1800_quality=args.preview_1800_quality,
             force=args.force,
+            progress_json=args.progress_json,
         )
     except (FileNotFoundError, ValueError, OSError) as error:
         print(str(error), file=sys.stderr)

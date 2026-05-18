@@ -86,6 +86,7 @@
   let realEstateClients = [];
   let selectedRealEstateClientId = "";
   let realEstateBusy = false;
+  let realEstateProgressTimer = null;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -766,7 +767,7 @@
         const missingProperties = client.missingProperties || [];
         const statusBits = [
           missingProperties.length
-            ? `missing: ${missingProperties.join(", ")}`
+            ? `skipping: ${missingProperties.join(", ")}`
             : (client.sourceRootExists ? "source ok" : "source missing"),
           client.publicContextExists ? "published" : "not published",
         ];
@@ -831,6 +832,44 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Real estate action failed.");
     return payload;
+  };
+
+  const realEstateImportProgressMessage = (clientName, progress = {}) => {
+    const total = Number(progress.total || 0);
+    const completed = Number(progress.completed || 0);
+    const skipped = Array.isArray(progress.skippedProperties) ? progress.skippedProperties : [];
+    const currentAlbum = progress.album ? ` (${progress.album})` : "";
+    const skippedText = skipped.length ? ` Skipping missing: ${skipped.join(", ")}.` : "";
+    if (total > 0) {
+      return `Importing ${clientName}: ${formatCount(completed)} / ${formatCount(total)} media${currentAlbum}.${skippedText}`;
+    }
+    return `Importing ${clientName}: scanning available media.${skippedText}`;
+  };
+
+  const stopRealEstateImportProgress = () => {
+    if (realEstateProgressTimer) {
+      window.clearInterval(realEstateProgressTimer);
+      realEstateProgressTimer = null;
+    }
+  };
+
+  const startRealEstateImportProgress = (operationId, clientName) => {
+    stopRealEstateImportProgress();
+    if (!operationId) return;
+    const refresh = async () => {
+      try {
+        const response = await fetch(`/__photosbyelie/real-estate-import-progress?operation_id=${encodeURIComponent(operationId)}`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        const progress = payload?.progress;
+        if (!response.ok || !progress) return;
+        setRealEstateStatus(realEstateImportProgressMessage(clientName, progress));
+        if (progress.state === "done" || progress.state === "failed") stopRealEstateImportProgress();
+      } catch {
+        // The import request itself will report any hard failure.
+      }
+    };
+    refresh();
+    realEstateProgressTimer = window.setInterval(refresh, 700);
   };
 
   const saveRealEstateClient = async () => {
@@ -915,10 +954,15 @@
       "worker-secret": "Preparing Worker secret...",
     };
     setRealEstateStatus(labels[action] || "Running real estate action...");
+    const operationId = action === "import-client"
+      ? `re-import-${selected.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`
+      : "";
+    if (operationId) startRealEstateImportProgress(operationId, selected.customer || selected.id);
     try {
       const payload = await postRealEstateOwnerAction({
         action,
         id: selected.id,
+        operationId,
       });
       if (payload.client) {
         const byId = new Map(realEstateClients.map((client) => [client.id, client]));
@@ -935,8 +979,12 @@
       } else {
         renderRealEstateOutput(payload.summary || payload.command?.output || payload, true);
         const clientName = payload.client?.customer || selected.customer;
+        const importProgress = payload.importProgress || null;
+        const skipped = Array.isArray(importProgress?.skippedProperties) ? importProgress.skippedProperties : [];
         const doneLabels = {
-          "import-client": `${clientName} previews imported.`,
+          "import-client": importProgress
+            ? `${clientName} previews imported: ${formatCount(importProgress.completed || 0)} / ${formatCount(importProgress.total || 0)} media.${skipped.length ? ` Skipped missing: ${skipped.join(", ")}.` : ""}`
+            : `${clientName} previews imported.`,
           "publish-client": `${clientName} context published.`,
           "upload-dry-run": `${clientName} upload dry run complete.`,
           "upload-client": `${clientName} upload complete.`,
@@ -946,6 +994,7 @@
     } catch (error) {
       setRealEstateStatus(error?.message || "Real estate action failed.");
     } finally {
+      if (operationId) stopRealEstateImportProgress();
       setRealEstateBusy(false);
     }
   };

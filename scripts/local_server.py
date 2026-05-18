@@ -28,6 +28,7 @@ R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
+REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
@@ -53,6 +54,8 @@ TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"
 TITLE_KEYWORD_PARKED_FLAG = "Title_Keywords_Parked"
 ACTION_PROGRESS: dict[str, dict] = {}
+REAL_ESTATE_IMPORT_PROGRESS: dict[str, dict] = {}
+REAL_ESTATE_IMPORT_PROGRESS_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
 
@@ -142,6 +145,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
+        if path == REAL_ESTATE_IMPORT_PROGRESS_PATH:
+            self._handle_real_estate_import_progress()
+            return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -230,6 +236,14 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         self._send_json(HTTPStatus.OK, result)
+
+    def _handle_real_estate_import_progress(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        query = parse_qs(urlparse(self.path).query)
+        operation_id = (query.get("operation_id") or [""])[0]
+        self._send_json(HTTPStatus.OK, {"ok": True, "progress": _real_estate_import_progress(operation_id)})
 
     def _handle_owner_session(self) -> None:
         if not self._is_loopback_request():
@@ -2124,6 +2138,18 @@ def _real_estate_child_directories(source_root: str) -> list[str]:
     return sorted(path.name for path in root.iterdir() if path.is_dir())
 
 
+def _real_estate_media_count(path: Path) -> int:
+    if not path.is_dir():
+        return 0
+    return sum(
+        1
+        for child in path.rglob("*")
+        if child.is_file()
+        and child.name != ".DS_Store"
+        and child.suffix.lower() in REAL_ESTATE_MEDIA_EXTENSIONS
+    )
+
+
 def _real_estate_client_missing_properties(client: dict) -> list[str]:
     source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
     if not source_root.is_dir():
@@ -2338,6 +2364,102 @@ def _run_real_estate_command(repo_root: Path, command: list[str], env: dict[str,
     }
 
 
+def _real_estate_import_progress(operation_id: str) -> dict | None:
+    if not operation_id:
+        return None
+    with REAL_ESTATE_IMPORT_PROGRESS_LOCK:
+        progress = REAL_ESTATE_IMPORT_PROGRESS.get(operation_id)
+        return dict(progress) if progress else None
+
+
+def _set_real_estate_import_progress(operation_id: object, **updates: object) -> None:
+    if not isinstance(operation_id, str) or not operation_id:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    with REAL_ESTATE_IMPORT_PROGRESS_LOCK:
+        progress = dict(REAL_ESTATE_IMPORT_PROGRESS.get(operation_id) or {})
+        progress.update(updates)
+        total = int(progress.get("total") or 0)
+        completed = int(progress.get("completed") or 0)
+        progress["remaining"] = max(0, total - completed)
+        progress["updatedAt"] = now
+        REAL_ESTATE_IMPORT_PROGRESS[operation_id] = progress
+
+
+def _import_progress_from_line(line: str) -> dict | None:
+    prefix = "PBE_IMPORT_PROGRESS "
+    if not line.startswith(prefix):
+        return None
+    try:
+        data = json.loads(line[len(prefix):])
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _run_real_estate_import_command(
+    repo_root: Path,
+    command: list[str],
+    operation_id: str,
+    env: dict[str, str] | None = None,
+) -> dict:
+    process = subprocess.Popen(
+        command,
+        cwd=repo_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env={**os.environ, **(env or {})},
+    )
+    output_lines: list[str] = []
+    if process.stdout:
+        for raw_line in process.stdout:
+            line = raw_line.rstrip("\n")
+            progress = _import_progress_from_line(line)
+            if progress:
+                event = str(progress.get("event") or "")
+                state = "running"
+                if event == "done":
+                    state = "finalizing"
+                updates: dict[str, object] = {
+                    "state": state,
+                    "event": event,
+                    "total": int(progress.get("total") or 0),
+                    "completed": int(progress.get("completed") or 0),
+                }
+                for text_key in ("album", "file", "mediaType"):
+                    if text_key in progress:
+                        updates[text_key] = str(progress.get(text_key) or "")
+                for number_key in ("albumIndex", "albumTotal", "albumMediaCount"):
+                    if number_key in progress:
+                        updates[number_key] = int(progress.get(number_key) or 0)
+                _set_real_estate_import_progress(operation_id, **updates)
+                continue
+            output_lines.append(line)
+    return_code = process.wait()
+    output = "\n".join(output_lines).strip()
+    if return_code == 0:
+        current = _real_estate_import_progress(operation_id) or {}
+        _set_real_estate_import_progress(
+            operation_id,
+            state="done",
+            completed=int(current.get("completed") or 0),
+            total=int(current.get("total") or 0),
+        )
+    else:
+        _set_real_estate_import_progress(
+            operation_id,
+            state="failed",
+            error=output_lines[-1] if output_lines else "real-estate import failed",
+        )
+    return {
+        "exitCode": return_code,
+        "ok": return_code == 0,
+        "output": output[-12000:],
+    }
+
+
 def _strip_public_real_estate_photo(photo: dict) -> dict:
     public_photo = json.loads(json.dumps(photo))
     public_photo.pop("realEstate", None)
@@ -2447,17 +2569,36 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
     access_code = str(client.get("accessCode") or "").strip()
     if not access_code:
         raise ValueError("client password is required before import")
+    operation_id = str(payload.get("operationId") or payload.get("operation_id") or "").strip()
+    configured_properties = _real_estate_client_properties(client)
     missing_properties = _real_estate_client_missing_properties(client)
-    if missing_properties:
-        available_properties = _real_estate_child_directories(str(source_root))
-        available_text = ", ".join(available_properties) if available_properties else "none"
-        missing_text = ", ".join(missing_properties)
+    available_properties = [
+        property_name
+        for property_name in configured_properties
+        if (source_root / property_name).is_dir()
+    ]
+    if configured_properties and not available_properties:
+        available_text = ", ".join(_real_estate_child_directories(str(source_root))) or "none"
         raise ValueError(
-            f"Missing property folder(s) for {client.get('customer')}: {missing_text}. "
+            f"No configured property folders were found for {client.get('customer')}. "
             f"Expected under {source_root}. Available property folders: {available_text}."
         )
+    import_properties = available_properties or []
+    if not configured_properties:
+        import_properties = _real_estate_discovered_properties(str(source_root))
+    total_media = sum(_real_estate_media_count(source_root / property_name) for property_name in import_properties)
+    _set_real_estate_import_progress(
+        operation_id,
+        state="queued",
+        client=str(client.get("customer") or ""),
+        total=total_media,
+        completed=0,
+        skippedProperties=missing_properties,
+        properties=import_properties,
+    )
     command = [
         sys.executable,
+        "-u",
         "scripts/import_real_estate_gallery.py",
         "--source-root",
         str(source_root),
@@ -2481,21 +2622,29 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         str(client.get("publicKeyPrefix") or ""),
         "--private-key-prefix",
         str(client.get("privateKeyPrefix") or ""),
+        "--progress-json",
     ]
-    for property_name in _real_estate_client_properties(client):
+    for property_name in import_properties:
         command.extend(["--album", str(property_name)])
     if payload.get("force") is True:
         command.append("--force")
-    result = _run_real_estate_command(repo_root, command, {"PBE_REAL_ESTATE_ACCESS_CODE": access_code})
+    result = _run_real_estate_import_command(repo_root, command, operation_id, {"PBE_REAL_ESTATE_ACCESS_CODE": access_code})
     if not result["ok"]:
         raise OSError(result["output"] or "real-estate import failed")
     client["lastImportedAt"] = datetime.now(timezone.utc).isoformat()
     _persist_real_estate_client_update(repo_root, state, client)
+    import_progress = _real_estate_import_progress(operation_id) or {
+        "total": total_media,
+        "completed": total_media,
+        "skippedProperties": missing_properties,
+        "properties": import_properties,
+    }
     return {
         "ok": True,
         "action": "import-client",
         "client": _safe_real_estate_client(repo_root, client),
         "command": result,
+        "importProgress": import_progress,
     }
 
 

@@ -37,7 +37,7 @@ The main thread was the Real Estate import and client review workflow, with a st
 
 ## Current Real Estate Delivery Model
 
-- `real-estate.html` loads the public-safe Corine context on GitHub Pages and the ignored local import context on localhost.
+- `real-estate.html` loads the public-safe Corine context on GitHub Pages by default, can load the tracked Elie context with `?context=assets/real-estate/elie/app-context.js`, and uses ignored local import contexts on localhost.
 - The client gate accepts configured client identifiers and password credentials; public contexts keep a salted password hash, while plaintext local passwords remain in ignored Owner settings and Worker secrets.
 - Selected media can belong to one or more project assignments. PDF and slideshow manifests split outputs by project.
 - Browser PDFs remain a draft/local capability. The longer-term target is cloud generation from the saved manifest.

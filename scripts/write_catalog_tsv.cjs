@@ -96,7 +96,8 @@ const runtimeParser = `(() => {
   };
 
   const finishCatalogLoad = (source, data, owner, productCatalog) => {
-    window.photosByElieData = data || {};
+    const existingData = window.photosByElieData || {};
+    window.photosByElieData = { ...(data || {}), ...existingData };
     window.photosByElieOwnerData = owner || {};
     applyProductCatalog(productCatalog || readJson("./assets/catalog/product-pricing.json"));
     window.photosByElieCatalogSource = source;

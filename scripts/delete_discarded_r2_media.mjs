@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -18,9 +19,12 @@ const tombstonePath = valueFor(
   valueFor("--hidden-blacklist", "assets/discarded/discarded-photo-ids.json")
 );
 const outputPath = valueFor("--output", "assets/discarded-media-manifest.json");
+const ownerDbPath = valueFor("--owner-db", "assets/owner-actions/Owner.sqlite");
 const privateInventoryPath = valueFor("--private-inventory", ".review-logs/r2-private-inventory.json");
 const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-public-preview-ids.json");
 const dryRun = !hasFlag("--delete");
+const ignoreOwnerDb = hasFlag("--ignore-owner-db");
+const deepInventory = hasFlag("--deep-inventory") || ignoreOwnerDb;
 const requestTimeoutMs = Number(valueFor("--request-timeout-ms", "180000")) || 180000;
 const retries = Number(valueFor("--retries", "4")) || 0;
 
@@ -51,6 +55,42 @@ const writeJson = async (filePath, payload) => {
   const target = fullPath(filePath);
   await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.writeFile(target, `${JSON.stringify(payload, null, 2)}\n`);
+};
+
+const ownerDbEnabled = () => !ignoreOwnerDb;
+
+const runOwnerDb = (args, options = {}) => {
+  if (!ownerDbEnabled()) return { ok: false, skipped: true };
+  const result = spawnSync("python3", ["scripts/owner_state_db.py", "--db", ownerDbPath, ...args], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    ...options,
+  });
+  if (result.status !== 0) {
+    console.warn(`Owner DB update skipped: ${(result.stderr || result.stdout || "unknown error").trim()}`);
+    return { ok: false, skipped: false };
+  }
+  return { ok: true, stdout: result.stdout || "" };
+};
+
+const readOwnerDbDeletedKeys = () => {
+  if (!ownerDbEnabled()) return new Set();
+  runOwnerDb(["--import-discarded-r2-manifest"]);
+  const db = fullPath(ownerDbPath);
+  const query = "SELECT bucket || char(9) || object_key FROM r2_objects WHERE lifecycle_state = 'deleted_confirmed';";
+  const result = spawnSync("sqlite3", [db, query], { cwd: repoRoot, encoding: "utf8" });
+  if (result.status !== 0) {
+    console.warn(`Owner DB read skipped: ${(result.stderr || result.stdout || "unknown error").trim()}`);
+    return new Set();
+  }
+  return new Set(result.stdout.split(/\r?\n/).filter(Boolean));
+};
+
+const writeOwnerDbState = async (entries, state) => {
+  if (!ownerDbEnabled() || !entries.length) return;
+  const statePath = `.review-logs/r2-object-state-${state}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`;
+  await writeJson(statePath, { generatedAt: new Date().toISOString(), objects: entries });
+  runOwnerDb(["--r2-state-file", statePath, "--r2-state", state]);
 };
 
 const quoteS3Path = (value) => `/${String(value).split("/").map((part) => encodeURIComponent(part).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)).join("/")}`;
@@ -160,7 +200,7 @@ const deleteKeys = async (bucket, keys, progress, scope) => {
     progress.completed += 1;
     if (scope === "public") progress.publicCompleted += 1;
     if (scope === "private") progress.privateCompleted += 1;
-    console.log(`${dryRun ? "would delete" : "deleted"} ${bucket}/${key}`);
+    console.log(`${dryRun ? "would check" : "checked"} ${bucket}/${key}`);
     if (progress.completed === 1 || progress.completed % 25 === 0 || progress.completed === progress.total) {
       deleteProgressLine(progress);
     }
@@ -170,8 +210,15 @@ const deleteKeys = async (bucket, keys, progress, scope) => {
 
 const tombstone = await readJson(tombstonePath, {});
 const previousManifest = await readJson(outputPath, {});
-const discardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : [])
+const currentDiscardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : [])
   .filter((id) => typeof id === "string" && id));
+(Array.isArray(tombstone.photos) ? tombstone.photos : [])
+  .map((photo) => photo?.id)
+  .filter((id) => typeof id === "string" && id)
+  .forEach((id) => currentDiscardedIds.add(id));
+const historicalDiscardedIds = new Set((Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
+  .filter((id) => typeof id === "string" && id));
+const discardedIds = new Set(currentDiscardedIds);
 (Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => discardedIds.add(id));
@@ -215,10 +262,20 @@ const keyPhotoId = (key) => {
   return value.split("/")[1] || "";
 };
 
-const [masterKeys, renderKeys] = await Promise.all([
-  listPrefix(privateBucket, "masters/"),
-  listPrefix(privateBucket, "renders/"),
-]);
+const [currentPublicKeys, masterKeys, renderKeys] = deepInventory
+  ? await Promise.all([
+      listPrefix(publicBucket, "expo/"),
+      listPrefix(privateBucket, "masters/"),
+      listPrefix(privateBucket, "renders/"),
+    ])
+  : [[], [], []];
+if (deepInventory) {
+  await writeOwnerDbState([
+    ...currentPublicKeys.map((key) => ({ bucket: publicBucket, key, photo_id: keyPhotoId(key), kind: key.endsWith(".mp4") ? "public-preview-video" : "public-preview" })),
+    ...masterKeys.map((key) => ({ bucket: privateBucket, key, photo_id: keyPhotoId(key), kind: "private-master" })),
+    ...renderKeys.map((key) => ({ bucket: privateBucket, key, photo_id: keyPhotoId(key), kind: "private-render" })),
+  ], "current");
+}
 const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => discardedIds.has(keyPhotoId(key))));
 (Array.isArray(tombstone.private_keys) ? tombstone.private_keys : [])
   .filter((key) => typeof key === "string" && key)
@@ -228,10 +285,18 @@ const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => disca
   .filter((key) => discardedIds.has(keyPhotoId(key)))
   .forEach((key) => privateKeys.add(key));
 
+const deletedConfirmedKeys = readOwnerDbDeletedKeys();
+const alreadyDeleted = (bucket, key) => deletedConfirmedKeys.has(`${bucket}\t${key}`);
+const recordedPublicKeys = new Set((Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : []).filter((key) => typeof key === "string" && key));
+const recordedPrivateKeys = new Set((Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : []).filter((key) => typeof key === "string" && key));
+const publicDeleteCandidates = [...publicKeys].sort().filter((key) => !alreadyDeleted(publicBucket, key));
+const privateDeleteCandidates = [...privateKeys].sort().filter((key) => !alreadyDeleted(privateBucket, key));
+const ownerDbConfirmedCount = (publicKeys.size + privateKeys.size) - (publicDeleteCandidates.length + privateDeleteCandidates.length);
+
 const deleteProgress = {
-  total: publicKeys.size + privateKeys.size,
-  publicTotal: publicKeys.size,
-  privateTotal: privateKeys.size,
+  total: publicDeleteCandidates.length + privateDeleteCandidates.length,
+  publicTotal: publicDeleteCandidates.length,
+  privateTotal: privateDeleteCandidates.length,
   publicCompleted: 0,
   privateCompleted: 0,
   completed: 0,
@@ -245,11 +310,29 @@ console.log([
   deleteProgress.privateTotal,
   deleteProgress.discardedCount,
 ].join(" "));
+console.log(`DELETE_CONTEXT ${JSON.stringify({
+  mode: "double-check",
+  deepInventory,
+  currentDiscardedPhotos: currentDiscardedIds.size,
+  historicalDiscardedPhotos: historicalDiscardedIds.size,
+  ownerDbDeletedConfirmed: ownerDbConfirmedCount,
+  note: "This phase rechecks historical banned-photo R2 keys. S3 delete is idempotent, so a checked key usually means it was already gone.",
+})}`);
 deleteProgressLine(deleteProgress);
 
-const deletedPublic = await deleteKeys(publicBucket, [...publicKeys].sort(), deleteProgress, "public");
-const deletedPrivate = await deleteKeys(privateBucket, [...privateKeys].sort(), deleteProgress, "private");
+await writeOwnerDbState([
+  ...publicDeleteCandidates.map((key) => ({ bucket: publicBucket, key, photo_id: keyPhotoId(key), kind: key.endsWith(".mp4") ? "public-preview-video" : "public-preview" })),
+  ...privateDeleteCandidates.map((key) => ({ bucket: privateBucket, key, photo_id: keyPhotoId(key), kind: key.startsWith("masters/") ? "private-master" : "private-render" })),
+], "marked_for_delete");
+
+const deletedPublic = await deleteKeys(publicBucket, publicDeleteCandidates, deleteProgress, "public");
+const deletedPrivate = await deleteKeys(privateBucket, privateDeleteCandidates, deleteProgress, "private");
 if (deleteProgress.total === 0) deleteProgressLine(deleteProgress);
+
+await writeOwnerDbState([
+  ...deletedPublic.map((key) => ({ bucket: publicBucket, key, photo_id: keyPhotoId(key), kind: key.endsWith(".mp4") ? "public-preview-video" : "public-preview" })),
+  ...deletedPrivate.map((key) => ({ bucket: privateBucket, key, photo_id: keyPhotoId(key), kind: key.startsWith("masters/") ? "private-master" : "private-render" })),
+], "deleted_confirmed");
 
 if (!dryRun) {
   const privateInventory = await readJson(privateInventoryPath, null);
@@ -276,8 +359,8 @@ await writeJson(outputPath, {
   publicBucket,
   privateBucket,
   discardedPhotoIds: [...discardedIds].sort(),
-  publicKeys: deletedPublic,
-  privateKeys: deletedPrivate,
+  publicKeys: [...new Set([...recordedPublicKeys, ...deletedPublic])].sort(),
+  privateKeys: [...new Set([...recordedPrivateKeys, ...deletedPrivate])].sort(),
 });
 
-console.log(`Done. ${dryRun ? "Would delete" : "Deleted"} ${deletedPublic.length} public and ${deletedPrivate.length} private object references for ${discardedIds.size} discarded photos.`);
+console.log(`Done. ${dryRun ? "Would check" : "Checked"} ${deletedPublic.length} public and ${deletedPrivate.length} private banned-photo R2 key checks for ${discardedIds.size} discarded photos; ${ownerDbConfirmedCount} already trusted from Owner DB.`);

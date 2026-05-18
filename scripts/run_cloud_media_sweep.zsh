@@ -143,7 +143,7 @@ run_skippable_phase() {
   "$@" &
   local child_pid=$!
   print -r -- "$child_pid" > "$(current_child_file)"
-  local status=0
+  local child_status=0
   local skipped=0
   while kill -0 "$child_pid" 2>/dev/null; do
     if should_skip_phase "$key"; then
@@ -156,9 +156,9 @@ run_skippable_phase() {
   done
   set +e
   wait "$child_pid"
-  status=$?
+  child_status=$?
   set -e
-  if [[ "$skipped" == "0" && "$status" != "0" ]] && should_skip_phase "$key"; then
+  if [[ "$skipped" == "0" && "$child_status" != "0" ]] && should_skip_phase "$key"; then
     skipped=1
   fi
   clear_current_phase
@@ -166,8 +166,8 @@ run_skippable_phase() {
     echo "SWEEP_SKIP $key $label"
     return 0
   fi
-  if [[ "$status" != "0" ]]; then
-    return "$status"
+  if [[ "$child_status" != "0" ]]; then
+    return "$child_status"
   fi
   done_phase "$key"
 }
@@ -188,7 +188,7 @@ if [[ ! -d node_modules ]]; then
 fi
 done_phase prepare
 
-run_skippable_phase discard-start "Delete R2 objects for banned photos" \
+run_skippable_phase discard-start "Double-check banned R2 cleanup" \
   node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 
 phase import-cache "Prepare import cache"
@@ -253,7 +253,7 @@ fi
 run_skippable_phase private "Backfill private JPGs" \
   node scripts/sync_private_deliverables.mjs "${SYNC_ARGS[@]}"
 
-run_skippable_phase discard-final "Final banned R2 cleanup" \
+run_skippable_phase discard-final "Final banned R2 cleanup double-check" \
   node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 phase storage "Refresh storage estimate"
 node scripts/write_storage_estimate.mjs

@@ -401,7 +401,7 @@ For owner-discard cleanup:
 node scripts/delete_discarded_r2_media.mjs --delete
 ```
 
-That command deletes matching public previews, private masters, and private JPG render objects from R2, then writes `assets/discarded-media-manifest.json` as the durable do-not-resurrect record.
+That command double-checks matching public previews, private masters, and private JPG render objects in R2. It imports historical cleanup keys into ignored `assets/owner-actions/Owner.sqlite` as `deleted_confirmed`, marks newly targeted keys as `marked_for_delete`, records successful idempotent delete calls back as `deleted_confirmed`, and keeps `assets/discarded-media-manifest.json` as the durable do-not-resurrect compatibility record. Routine runs trust Owner.sqlite; use `--deep-inventory` to refresh `current` R2 object state when storage volume looks suspicious, or `--ignore-owner-db` for a deliberate full legacy-style cleanup pass.
 
 For an already-published photo, render/upload just its private JPG deliverables:
 

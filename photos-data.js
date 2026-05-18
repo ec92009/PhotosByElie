@@ -163,6 +163,9 @@ window.photosByElieShippingHandlingPrices = window.photosByElieShippingHandlingP
 window.photosByEliePricingTier = (photo) => window.photosByEliePhotoOrigin(photo) === "ai" ? "ai" : "original";
 window.photosByEliePricingTierLabel = (photo) => window.photosByEliePriceTiers?.[window.photosByEliePricingTier(photo)]?.label || "Camera photo";
 window.photosByElieOptionPrice = (photo, option) => Number(option?.prices?.[window.photosByEliePricingTier(photo)] ?? option?.price ?? 0);
+
+window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
+window.photosByElieIsVideo = (photo) => window.photosByElieMediaType(photo) === "video";
 window.photosByElieVideoPriceTiers = window.photosByElieVideoPriceTiers || {};
 window.photosByElieVideoTier = (photo) => {
   const duration = Number(photo?.media?.video?.duration || photo?.duration || 0);
@@ -175,14 +178,7 @@ window.photosByElieVideoTier = (photo) => {
 window.photosByElieVideoDownloadOption = (photo) => {
   const tier = window.photosByElieVideoTier(photo);
   const priceTier = window.photosByElieVideoPriceTiers?.[tier] || { price: 20 };
-  return {
-    id: "video-original",
-    type: "video",
-    label: "Original video download",
-    detail: "Private original video file after purchase",
-    price: Number(priceTier.price) || 0,
-    priceKey: tier,
-  };
+  return { id: "video-original", type: "video", label: "Original video download", detail: "Private original video file after purchase", price: Number(priceTier.price) || 0, priceKey: tier };
 };
 
 window.photosByEliePreviewMegapixels = (photo) => {
@@ -213,6 +209,8 @@ window.photosByElieFormatLabel = (source) => {
   const checks = [
     { label: "JPG", pattern: /\b(JPG|JPEG)\b/i },
     { label: "TIFF", pattern: /\b(TIF|TIFF)\b/i },
+    { label: "MOV", pattern: /\b(MOV|QUICKTIME)\b/i },
+    { label: "MP4", pattern: /\b(MP4|M4V)\b/i },
     { label: "PSD", pattern: /\bPSD\b/i },
   ];
   const formats = checks.filter((item) => item.pattern.test(value)).map((item) => item.label);

@@ -19,6 +19,7 @@ COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
 TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
+DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
 
 
 def now_iso() -> str:
@@ -149,6 +150,23 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY (media_id, attempt) REFERENCES title_keyword_proposals(media_id, attempt) ON DELETE CASCADE
         ) WITHOUT ROWID;
 
+        CREATE TABLE IF NOT EXISTS r2_objects (
+          bucket                TEXT NOT NULL,
+          object_key            TEXT NOT NULL,
+          photo_id              TEXT,
+          object_kind           TEXT,
+          lifecycle_state       TEXT NOT NULL CHECK (lifecycle_state IN ('current', 'marked_for_delete', 'deleted_confirmed')),
+          first_seen_at         TEXT,
+          last_seen_at          TEXT,
+          marked_for_delete_at  TEXT,
+          deleted_confirmed_at  TEXT,
+          last_checked_at       TEXT,
+          source                TEXT,
+          bytes                 INTEGER CHECK (bytes IS NULL OR bytes >= 0),
+          updated_at            TEXT,
+          PRIMARY KEY (bucket, object_key)
+        ) WITHOUT ROWID;
+
         CREATE INDEX IF NOT EXISTS idx_title_keyword_batches_generated_at ON title_keyword_batches(generated_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_state_priority ON title_keyword_queue(review_state, rework_priority, latest_proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_queue_latest_batch ON title_keyword_queue(latest_proposed_batch_id, review_state);
@@ -163,6 +181,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_country_assignments_country ON country_assignments(country_slug, media_id);
         CREATE INDEX IF NOT EXISTS idx_country_assignments_batch ON country_assignments(batch_id);
         CREATE INDEX IF NOT EXISTS idx_keyword_blacklist_updated_at ON keyword_blacklist(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_r2_objects_state_bucket ON r2_objects(lifecycle_state, bucket);
+        CREATE INDEX IF NOT EXISTS idx_r2_objects_photo ON r2_objects(photo_id, lifecycle_state);
         """
     )
 
@@ -189,6 +209,32 @@ def _normalized_keywords(value: Any) -> list[str]:
 
 def _truthy(value: Any) -> int:
     return 1 if value is True or str(value).strip().lower() in {"1", "true", "yes"} else 0
+
+
+def _photo_id_from_r2_key(object_key: str) -> str:
+    value = str(object_key or "")
+    if value.startswith("expo/"):
+        return value.split("/", 1)[1].rsplit("_", 1)[0]
+    if value.startswith("masters/"):
+        rest = value.removeprefix("masters/")
+        return rest.split("/", 1)[0] if "/" in rest else rest.rsplit(".", 1)[0]
+    if value.startswith("renders/"):
+        rest = value.removeprefix("renders/")
+        return rest.split("/", 1)[0] if "/" in rest else rest.rsplit("_", 1)[0]
+    return ""
+
+
+def _r2_object_kind(bucket: str, object_key: str) -> str:
+    key = str(object_key or "")
+    if key.startswith("expo/") and key.endswith(".mp4"):
+        return "public-preview-video"
+    if key.startswith("expo/"):
+        return "public-preview"
+    if key.startswith("masters/"):
+        return "private-master"
+    if key.startswith("renders/"):
+        return "private-render"
+    return "unknown"
 
 
 def _set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
@@ -829,6 +875,173 @@ def title_keyword_review_counts(repo_root: Path, db_path: Path | None = None) ->
         conn.close()
 
 
+def _r2_entries_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for bucket, keys in (
+        ("photosbyelie-public", payload.get("publicKeys") or []),
+        ("photosbyelie-private", payload.get("privateKeys") or []),
+    ):
+        for key in keys:
+            clean_key = str(key or "").strip()
+            if not clean_key:
+                continue
+            entries.append({
+                "bucket": bucket,
+                "key": clean_key,
+                "photo_id": _photo_id_from_r2_key(clean_key),
+                "kind": _r2_object_kind(bucket, clean_key),
+            })
+    return entries
+
+
+def _read_r2_entries_file(path: Path) -> list[dict[str, Any]]:
+    payload = _read_json(path, {})
+    source = payload.get("objects") if isinstance(payload, dict) else payload
+    entries: list[dict[str, Any]] = []
+    for item in source or []:
+        if not isinstance(item, dict):
+            continue
+        bucket = str(item.get("bucket") or "").strip()
+        key = str(item.get("key") or item.get("object_key") or "").strip()
+        if not bucket or not key:
+            continue
+        entries.append({
+            "bucket": bucket,
+            "key": key,
+            "photo_id": str(item.get("photo_id") or _photo_id_from_r2_key(key)),
+            "kind": str(item.get("kind") or item.get("object_kind") or _r2_object_kind(bucket, key)),
+            "bytes": item.get("bytes"),
+        })
+    return entries
+
+
+def upsert_r2_object_state(
+    conn: sqlite3.Connection,
+    *,
+    bucket: str,
+    object_key: str,
+    lifecycle_state: str,
+    photo_id: str = "",
+    object_kind: str = "",
+    source: str = "",
+    bytes_value: int | None = None,
+    timestamp: str = "",
+) -> None:
+    timestamp = timestamp or now_iso()
+    existing = conn.execute(
+        "SELECT lifecycle_state, first_seen_at FROM r2_objects WHERE bucket = ? AND object_key = ?",
+        (bucket, object_key),
+    ).fetchone()
+    first_seen_at = existing["first_seen_at"] if existing else (timestamp if lifecycle_state == "current" else None)
+    if lifecycle_state == "current":
+        marked_for_delete_at = None
+        deleted_confirmed_at = None
+        last_seen_at = timestamp
+        last_checked_at = timestamp
+    elif lifecycle_state == "marked_for_delete":
+        marked_for_delete_at = timestamp
+        deleted_confirmed_at = None
+        last_seen_at = first_seen_at
+        last_checked_at = timestamp
+    else:
+        marked_for_delete_at = timestamp
+        deleted_confirmed_at = timestamp
+        last_seen_at = first_seen_at
+        last_checked_at = timestamp
+    conn.execute(
+        """
+        INSERT INTO r2_objects (
+          bucket, object_key, photo_id, object_kind, lifecycle_state,
+          first_seen_at, last_seen_at, marked_for_delete_at, deleted_confirmed_at,
+          last_checked_at, source, bytes, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(bucket, object_key) DO UPDATE SET
+          photo_id = COALESCE(NULLIF(excluded.photo_id, ''), r2_objects.photo_id),
+          object_kind = COALESCE(NULLIF(excluded.object_kind, ''), r2_objects.object_kind),
+          lifecycle_state = excluded.lifecycle_state,
+          first_seen_at = COALESCE(r2_objects.first_seen_at, excluded.first_seen_at),
+          last_seen_at = COALESCE(excluded.last_seen_at, r2_objects.last_seen_at),
+          marked_for_delete_at = COALESCE(excluded.marked_for_delete_at, r2_objects.marked_for_delete_at),
+          deleted_confirmed_at = COALESCE(excluded.deleted_confirmed_at, r2_objects.deleted_confirmed_at),
+          last_checked_at = excluded.last_checked_at,
+          source = COALESCE(NULLIF(excluded.source, ''), r2_objects.source),
+          bytes = COALESCE(excluded.bytes, r2_objects.bytes),
+          updated_at = excluded.updated_at
+        """,
+        (
+            bucket,
+            object_key,
+            photo_id,
+            object_kind,
+            lifecycle_state,
+            first_seen_at,
+            last_seen_at,
+            marked_for_delete_at,
+            deleted_confirmed_at,
+            last_checked_at,
+            source,
+            bytes_value,
+            timestamp,
+        ),
+    )
+
+
+def record_r2_object_state_file(
+    repo_root: Path,
+    state_file: Path,
+    lifecycle_state: str,
+    db_path: Path | None = None,
+    source: str = "r2-cleanup",
+) -> dict[str, Any]:
+    if lifecycle_state not in {"current", "marked_for_delete", "deleted_confirmed"}:
+        raise ValueError(f"unsupported R2 object lifecycle state: {lifecycle_state}")
+    entries = _read_r2_entries_file(state_file if state_file.is_absolute() else repo_root / state_file)
+    conn = connect(repo_root, db_path)
+    try:
+        timestamp = now_iso()
+        for entry in entries:
+            upsert_r2_object_state(
+                conn,
+                bucket=entry["bucket"],
+                object_key=entry["key"],
+                lifecycle_state=lifecycle_state,
+                photo_id=str(entry.get("photo_id") or ""),
+                object_kind=str(entry.get("kind") or ""),
+                source=source,
+                bytes_value=entry.get("bytes") if isinstance(entry.get("bytes"), int) else None,
+                timestamp=timestamp,
+            )
+        _set_setting(conn, f"r2_objects_last_{lifecycle_state}", timestamp)
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), "state": lifecycle_state, "objects": len(entries)}
+    finally:
+        conn.close()
+
+
+def import_discarded_r2_manifest(repo_root: Path, db_path: Path | None = None) -> dict[str, Any]:
+    payload = _read_json(repo_root / DISCARDED_MEDIA_MANIFEST_PATH, {})
+    entries = _r2_entries_from_payload(payload if isinstance(payload, dict) else {})
+    conn = connect(repo_root, db_path)
+    try:
+        timestamp = str(payload.get("updatedAt") or now_iso()) if isinstance(payload, dict) else now_iso()
+        for entry in entries:
+            upsert_r2_object_state(
+                conn,
+                bucket=entry["bucket"],
+                object_key=entry["key"],
+                lifecycle_state="deleted_confirmed",
+                photo_id=str(entry.get("photo_id") or ""),
+                object_kind=str(entry.get("kind") or ""),
+                source=DISCARDED_MEDIA_MANIFEST_PATH.as_posix(),
+                timestamp=timestamp,
+            )
+        _set_setting(conn, "discarded_media_manifest_json", DISCARDED_MEDIA_MANIFEST_PATH.as_posix())
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), "deleted_confirmed": len(entries)}
+    finally:
+        conn.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -838,6 +1051,9 @@ def main() -> None:
     parser.add_argument("--export-country-assignments", action="store_true")
     parser.add_argument("--import-title-keyword-review", action="store_true")
     parser.add_argument("--import-keyword-blacklist", action="store_true")
+    parser.add_argument("--import-discarded-r2-manifest", action="store_true")
+    parser.add_argument("--r2-state-file", type=Path)
+    parser.add_argument("--r2-state", choices=("current", "marked_for_delete", "deleted_confirmed"))
     parser.add_argument("--review-counts", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
@@ -856,6 +1072,16 @@ def main() -> None:
                 export_country_assignments(repo_root, conn)
             if args.import_title_keyword_review:
                 import_title_keyword_review(repo_root, conn, force=args.force)
+            if args.import_discarded_r2_manifest:
+                conn.close()
+                result = import_discarded_r2_manifest(repo_root, args.db)
+                print(f"r2_objects deleted_confirmed={result['deleted_confirmed']}")
+                conn = connect(repo_root, args.db)
+            if args.r2_state_file and args.r2_state:
+                conn.close()
+                result = record_r2_object_state_file(repo_root, args.r2_state_file, args.r2_state, args.db)
+                print(f"r2_objects {result['state']}={result['objects']}")
+                conn = connect(repo_root, args.db)
         finally:
             conn.close()
 
@@ -871,7 +1097,7 @@ def main() -> None:
     else:
         conn = connect(repo_root, args.db)
         try:
-            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions"]
+            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects"]
             print(", ".join(f"{table}={conn.execute(f'SELECT count(*) FROM {table}').fetchone()[0]}" for table in tables))
         finally:
             conn.close()

@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 237,
+    "count": 630,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -324,9 +324,39 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 24,
+    "count": 63,
     "href": "./gallery.html?gallery=italy",
     "photos": [
+      {
+        "id": "img-1221-6d39ae64d8",
+        "title": "IMG 1221",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1221-6d39ae64d8_900.jpg",
+            "detailKey": "expo/img-1221-6d39ae64d8_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1220-75c863ef2a",
+        "title": "IMG 1220",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1220-75c863ef2a_900.jpg",
+            "detailKey": "expo/img-1220-75c863ef2a_1800.jpg"
+          }
+        }
+      },
       {
         "id": "img-1219-570b09bebb",
         "title": "IMG 1219",
@@ -343,8 +373,8 @@ window.photosByElieHomeData = {
         }
       },
       {
-        "id": "img-1218-fe487846d6",
-        "title": "IMG 1218",
+        "id": "img-1219-13240aafb0",
+        "title": "IMG 1219",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -352,38 +382,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1218-fe487846d6_900.jpg",
-            "detailKey": "expo/img-1218-fe487846d6_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1217-fba9ecc01d",
-        "title": "IMG 1217",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1217-fba9ecc01d_900.jpg",
-            "detailKey": "expo/img-1217-fba9ecc01d_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1216-601dd6c052",
-        "title": "IMG 1216",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1216-601dd6c052_900.jpg",
-            "detailKey": "expo/img-1216-601dd6c052_1800.jpg"
+            "galleryKey": "expo/img-1219-13240aafb0_900.jpg",
+            "detailKey": "expo/img-1219-13240aafb0_1800.jpg"
           }
         }
       }

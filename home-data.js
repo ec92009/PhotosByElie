@@ -121,7 +121,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-0155-14d70afbec_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 32.0
+            "duration": 32
           }
         }
       },
@@ -147,7 +147,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 615,
+    "count": 643,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -257,7 +257,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 1143,
+    "count": 4921,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
@@ -274,7 +274,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/beyrouth-630240f1ea_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 43.0
+            "duration": 43
           }
         }
       },
@@ -330,9 +330,70 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 0,
+    "count": 63,
     "href": "./gallery.html?gallery=italy",
-    "photos": []
+    "photos": [
+      {
+        "id": "img-1221-6d39ae64d8",
+        "title": "IMG 1221",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1221-6d39ae64d8_900.jpg",
+            "detailKey": "expo/img-1221-6d39ae64d8_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1220-75c863ef2a",
+        "title": "IMG 1220",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1220-75c863ef2a_900.jpg",
+            "detailKey": "expo/img-1220-75c863ef2a_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1219-570b09bebb",
+        "title": "IMG 1219",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1219-570b09bebb_900.jpg",
+            "detailKey": "expo/img-1219-570b09bebb_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1219-13240aafb0",
+        "title": "IMG 1219",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1219-13240aafb0_900.jpg",
+            "detailKey": "expo/img-1219-13240aafb0_1800.jpg"
+          }
+        }
+      }
+    ]
   },
   "portugal": {
     "number": "07",

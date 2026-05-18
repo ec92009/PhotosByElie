@@ -2511,14 +2511,15 @@ def main() -> int:
                     prior_status = prior.get("status")
                     if prior_status == "skipped":
                         continue
-                    if prior_status in {"rendered", "selected"} and relative_path in manifest:
-                        coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
-                        if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)) or coverage_plan.get("complete"):
-                            add_counter("alreadySelected")
-                            if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
-                                break
-                            continue
-                        # Metadata is known, but a derivative is missing. Re-render from the original.
+                    if prior_status in {"rendered", "selected"}:
+                        if relative_path in manifest:
+                            coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
+                            if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)) or coverage_plan.get("complete"):
+                                add_counter("alreadySelected")
+                                if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
+                                    break
+                                continue
+                        # Metadata is known, but the manifest row or a derivative is missing. Rebuild from the original.
                     elif prior_status == "error":
                         pass
                     else:

@@ -7,6 +7,7 @@ LOG_ROOT="$REPO_ROOT/.review-logs"
 IMPORT_CACHE_ROOT="${PBE_IMPORT_CACHE_ROOT:-tmp/import-cache}"
 PUSH=0
 SKIP_PHASES=()
+SKIPPED_PHASES=()
 
 append_skip_phase() {
   local key="$1"
@@ -164,12 +165,35 @@ run_skippable_phase() {
   clear_current_phase
   if [[ "$skipped" == "1" ]]; then
     echo "SWEEP_SKIP $key $label"
+    SKIPPED_PHASES+=("$key")
     return 0
   fi
   if [[ "$child_status" != "0" ]]; then
     return "$child_status"
   fi
   done_phase "$key"
+}
+
+catalog_source_phase_was_skipped() {
+  local key
+  for key in "${SKIPPED_PHASES[@]}"; do
+    case "$key" in
+      camera|apple-photo-albums|leonardo|real-estate)
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
+abort_if_catalog_sources_incomplete() {
+  if catalog_source_phase_was_skipped && [[ "${PBE_ALLOW_PARTIAL_CATALOG:-0}" != "1" ]]; then
+    phase catalog-blocked "Catalog export blocked"
+    echo "Catalog export blocked because one or more source import phases were skipped or interrupted."
+    echo "Skipped phases: ${SKIPPED_PHASES[*]}"
+    echo "Set PBE_ALLOW_PARTIAL_CATALOG=1 only when intentionally publishing a partial catalog."
+    return 2
+  fi
 }
 
 echo "$$" > "$LOCK_DIR/pid"
@@ -230,6 +254,8 @@ run_skippable_phase leonardo "Import Leonardo sources" \
 
 run_skippable_phase real-estate "Import Real Estate sources" \
   python3 scripts/sync_real_estate_clients.py --publish --upload --scope both
+
+abort_if_catalog_sources_incomplete
 
 phase catalog "Export catalog"
 python3 scripts/export_photos_data.py \

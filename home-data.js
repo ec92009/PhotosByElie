@@ -8,8 +8,8 @@ window.photosByElieHomeData = {
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
-        "id": "20110106-0631-28051-9a10700cfd",
-        "title": "20110106 0631 28051",
+        "id": "20220506-160631-03403-51426edaac",
+        "title": "Les Invalides, Paris",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -17,14 +17,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20110106-0631-28051-9a10700cfd_900.jpg",
-            "detailKey": "expo/20110106-0631-28051-9a10700cfd_1800.jpg"
+            "galleryKey": "expo/20220506-160631-03403-51426edaac_900.jpg",
+            "detailKey": "expo/20220506-160631-03403-51426edaac_1800.jpg"
           }
         }
       },
       {
-        "id": "20180510-1510-00292-1757d7ee70",
-        "title": "20180510 1510 00292",
+        "id": "20220506-154558-03388-a887904b4b",
+        "title": "Eglise des Invalides, Paris",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -32,14 +32,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180510-1510-00292-1757d7ee70_900.jpg",
-            "detailKey": "expo/20180510-1510-00292-1757d7ee70_1800.jpg"
+            "galleryKey": "expo/20220506-154558-03388-a887904b4b_900.jpg",
+            "detailKey": "expo/20220506-154558-03388-a887904b4b_1800.jpg"
           }
         }
       },
       {
-        "id": "20110106-0538-14959-855495beec",
-        "title": "20110106 0538 14959",
+        "id": "20220506-151024-03375-3e4d581417",
+        "title": "Les Invalides",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -47,14 +47,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20110106-0538-14959-855495beec_900.jpg",
-            "detailKey": "expo/20110106-0538-14959-855495beec_1800.jpg"
+            "galleryKey": "expo/20220506-151024-03375-3e4d581417_900.jpg",
+            "detailKey": "expo/20220506-151024-03375-3e4d581417_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-141127-03238-6a809a3d2d",
-        "title": "20220506 141127 03238",
+        "id": "20220506-145942-03357-6183b42671",
+        "title": "20220506 145942 03357",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -62,8 +62,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-141127-03238-6a809a3d2d_900.jpg",
-            "detailKey": "expo/20220506-141127-03238-6a809a3d2d_1800.jpg"
+            "galleryKey": "expo/20220506-145942-03357-6183b42671_900.jpg",
+            "detailKey": "expo/20220506-145942-03357-6183b42671_1800.jpg"
           }
         }
       }
@@ -78,8 +78,8 @@ window.photosByElieHomeData = {
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
-        "id": "20180731-1513-42016-e8e7d025df",
-        "title": "20180731 1513 42016",
+        "id": "20190723-1419-16523-3d4da421c4",
+        "title": "20190723 1419 16523",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -87,14 +87,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180731-1513-42016-e8e7d025df_900.jpg",
-            "detailKey": "expo/20180731-1513-42016-e8e7d025df_1800.jpg"
+            "galleryKey": "expo/20190723-1419-16523-3d4da421c4_900.jpg",
+            "detailKey": "expo/20190723-1419-16523-3d4da421c4_1800.jpg"
           }
         }
       },
       {
-        "id": "20171210-1536-16046-enhanced-sr-7b190fdf6f",
-        "title": "Horse Mom and Child, Pauma Valley, California, USA",
+        "id": "20181113-1748-16886-f468becf95",
+        "title": "20181113 1748 16886",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -102,14 +102,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20171210-1536-16046-enhanced-sr-7b190fdf6f_900.jpg",
-            "detailKey": "expo/20171210-1536-16046-enhanced-sr-7b190fdf6f_1800.jpg"
+            "galleryKey": "expo/20181113-1748-16886-f468becf95_900.jpg",
+            "detailKey": "expo/20181113-1748-16886-f468becf95_1800.jpg"
           }
         }
       },
       {
-        "id": "20161106-1622-03567-edit-eb43eef3fa",
-        "title": "Wild Animals at the zoo",
+        "id": "20181113-1729-19714-e408f3becb",
+        "title": "20181113 1729 19714",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -117,14 +117,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20161106-1622-03567-edit-eb43eef3fa_900.jpg",
-            "detailKey": "expo/20161106-1622-03567-edit-eb43eef3fa_1800.jpg"
+            "galleryKey": "expo/20181113-1729-19714-e408f3becb_900.jpg",
+            "detailKey": "expo/20181113-1729-19714-e408f3becb_1800.jpg"
           }
         }
       },
       {
-        "id": "20180302-1936-00107-40a8e4a3f3",
-        "title": "Oceanside Pier from the Strand. Night.",
+        "id": "20181020-1143-19559-d29e8bb4b8",
+        "title": "20181020 1143 19559",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -132,8 +132,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180302-1936-00107-40a8e4a3f3_900.jpg",
-            "detailKey": "expo/20180302-1936-00107-40a8e4a3f3_1800.jpg"
+            "galleryKey": "expo/20181020-1143-19559-d29e8bb4b8_900.jpg",
+            "detailKey": "expo/20181020-1143-19559-d29e8bb4b8_1800.jpg"
           }
         }
       }
@@ -144,12 +144,12 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 215,
+    "count": 277,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
-        "id": "20220511-101210-04342-d9757c336f",
-        "title": "20220511 101210 04342",
+        "id": "d5h-2939-68cb5ce5b2",
+        "title": "D5H 2939",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -157,14 +157,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220511-101210-04342-d9757c336f_900.jpg",
-            "detailKey": "expo/20220511-101210-04342-d9757c336f_1800.jpg"
+            "galleryKey": "expo/d5h-2939-68cb5ce5b2_900.jpg",
+            "detailKey": "expo/d5h-2939-68cb5ce5b2_1800.jpg"
           }
         }
       },
       {
-        "id": "20180522-1008-00786-2e4afd4a78",
-        "title": "20180522 1008 00786",
+        "id": "d5h-2938-cc0cb9487b",
+        "title": "D5H 2938",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -172,14 +172,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180522-1008-00786-2e4afd4a78_900.jpg",
-            "detailKey": "expo/20180522-1008-00786-2e4afd4a78_1800.jpg"
+            "galleryKey": "expo/d5h-2938-cc0cb9487b_900.jpg",
+            "detailKey": "expo/d5h-2938-cc0cb9487b_1800.jpg"
           }
         }
       },
       {
-        "id": "20220510-113828-00196-ce33a9710c",
-        "title": "20220510 113828 00196",
+        "id": "d5h-2937-dade9e30bf",
+        "title": "D5H 2937",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -187,14 +187,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220510-113828-00196-ce33a9710c_900.jpg",
-            "detailKey": "expo/20220510-113828-00196-ce33a9710c_1800.jpg"
+            "galleryKey": "expo/d5h-2937-dade9e30bf_900.jpg",
+            "detailKey": "expo/d5h-2937-dade9e30bf_1800.jpg"
           }
         }
       },
       {
-        "id": "20220509-205254-03573-fd98e07ecc",
-        "title": "20220509 205254 03573",
+        "id": "d5h-2933-5320e9f76b",
+        "title": "D5H 2933",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -202,8 +202,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220509-205254-03573-fd98e07ecc_900.jpg",
-            "detailKey": "expo/20220509-205254-03573-fd98e07ecc_1800.jpg"
+            "galleryKey": "expo/d5h-2933-5320e9f76b_900.jpg",
+            "detailKey": "expo/d5h-2933-5320e9f76b_1800.jpg"
           }
         }
       }
@@ -254,9 +254,77 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 0,
+    "count": 81,
     "href": "./gallery.html?gallery=ai",
-    "photos": []
+    "photos": [
+      {
+        "id": "beyrouth-630240f1ea",
+        "title": "Beyrouth",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/beyrouth-630240f1ea_900.jpg",
+            "detailKey": "expo/beyrouth-630240f1ea_short_5s_720p.mp4",
+            "dimensions": {
+              "width": 1280,
+              "height": 720
+            }
+          },
+          "video": {
+            "duration": 43.0
+          }
+        }
+      },
+      {
+        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-19f8818a-cf96-4121-9812-2baa1f7175d4-b731a67d69",
+        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-19f8818a-cf96-4121-9812-2baa1f7175d4-b731a67d69_900.jpg",
+            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-3-upscale-19f8818a-cf96-4121-9812-2baa1f7175d4-b731a67d69_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1",
+        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1_900.jpg",
+            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d",
+        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d_900.jpg",
+            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d_1800.jpg"
+          }
+        }
+      }
+    ]
   },
   "italy": {
     "number": "06",
@@ -276,8 +344,8 @@ window.photosByElieHomeData = {
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
-        "id": "20180518-1359-00513-759c490e7d",
-        "title": "20180518 1359 00513",
+        "id": "20220802-130003-00136-pano-052608ca90",
+        "title": "20220802 130003 00136 Pano",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -285,14 +353,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180518-1359-00513-759c490e7d_900.jpg",
-            "detailKey": "expo/20180518-1359-00513-759c490e7d_1800.jpg"
+            "galleryKey": "expo/20220802-130003-00136-pano-052608ca90_900.jpg",
+            "detailKey": "expo/20220802-130003-00136-pano-052608ca90_1800.jpg"
           }
         }
       },
       {
-        "id": "20180519-1357-00624-c81f59de01",
-        "title": "20180519 1357 00624",
+        "id": "20220521-145332-04573-0742e2b77c",
+        "title": "20220521 145332 04573",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -300,14 +368,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180519-1357-00624-c81f59de01_900.jpg",
-            "detailKey": "expo/20180519-1357-00624-c81f59de01_1800.jpg"
+            "galleryKey": "expo/20220521-145332-04573-0742e2b77c_900.jpg",
+            "detailKey": "expo/20220521-145332-04573-0742e2b77c_1800.jpg"
           }
         }
       },
       {
-        "id": "20180517-2126-00483-f23ed1e1e2",
-        "title": "20180517 2126 00483",
+        "id": "20220521-145324-04568-1c242c532c",
+        "title": "20220521 145324 04568",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -315,14 +383,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180517-2126-00483-f23ed1e1e2_900.jpg",
-            "detailKey": "expo/20180517-2126-00483-f23ed1e1e2_1800.jpg"
+            "galleryKey": "expo/20220521-145324-04568-1c242c532c_900.jpg",
+            "detailKey": "expo/20220521-145324-04568-1c242c532c_1800.jpg"
           }
         }
       },
       {
-        "id": "20180520-1617-00730-5ef53e0579",
-        "title": "20180520 1617 00730",
+        "id": "20220521-144639-04546-3394e60cbe",
+        "title": "20220521 144639 04546",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -330,8 +398,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20180520-1617-00730-5ef53e0579_900.jpg",
-            "detailKey": "expo/20180520-1617-00730-5ef53e0579_1800.jpg"
+            "galleryKey": "expo/20220521-144639-04546-3394e60cbe_900.jpg",
+            "detailKey": "expo/20220521-144639-04546-3394e60cbe_1800.jpg"
           }
         }
       }

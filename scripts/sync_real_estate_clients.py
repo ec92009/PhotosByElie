@@ -236,6 +236,7 @@ def upload_client(client: dict[str, Any], manifest_path: Path, scope: str, worke
         "--backend",
         backend,
         "--upload",
+        "--progress-json",
     ]
     def emit_upload_progress(line: str) -> None:
         match = re.match(r"progress\s+([0-9,]+)/([0-9,]+)\s+failed=([0-9,]+)\s+uploaded=([0-9.]+)\s+MiB", line)

@@ -170,7 +170,7 @@
 
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
-    ["discard-start", "Delete banned R2 objects"],
+    ["discard-start", "Double-check banned R2 cleanup"],
     ["camera", "Import Camera sources"],
     ["apple-photo-albums", "Import Apple Photos"],
     ["leonardo", "Import AI sources"],
@@ -179,7 +179,7 @@
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
     ["private", "Backfill private JPGs"],
-    ["discard-final", "Final banned R2 cleanup"],
+    ["discard-final", "Final banned R2 cleanup double-check"],
     ["storage", "Refresh storage estimate"],
     ["test", "Run tests"],
     ["validate", "Validate publish"],
@@ -1331,9 +1331,12 @@
         return null;
       }
     };
-    const deleted = lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
+    const deleted = lastMatch(/^Done\. (?:Would check|Checked) ([0-9,]+) public and ([0-9,]+) private banned-photo R2 key checks for ([0-9,]+) discarded photos(?:; ([0-9,]+) already trusted from Owner DB)?\./)
+      || lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
     const deleteStart = lastMatch(/^DELETE_START\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
     const deleteProgress = lastMatch(/^DELETE_PROGRESS\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
+    const deleteContext = lastMatch(/^DELETE_CONTEXT\s+({.+})$/);
+    const deleteContextPayload = parsePayloadMatch(deleteContext);
     const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
     const importPhaseKey = phaseMarker?.match?.[1] || "";
     const scopedImport = PHOTO_IMPORT_PHASES.has(importPhaseKey);
@@ -1355,16 +1358,18 @@
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
     const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
-    const error = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
+    const rawError = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
     const doneKeys = new Set(lines
       .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
       .filter(Boolean));
     const skippedKeys = new Set(lines
       .map((line) => line.match(/^SWEEP_SKIP\s+(\S+)/)?.[1])
       .filter(Boolean));
+    const skipTerminatedError = rawError && skippedKeys.size && /\bSIGTERM\b|Signals\.SIGTERM/i.test(rawError.line);
+    const error = skipTerminatedError ? null : rawError;
     let phase = "Starting cloud media sweep";
-    if (deleteProgress || deleteStart) phase = "Deleting R2 objects for banned photos";
-    if (deleted) phase = "Deleted R2 objects for banned photos";
+    if (deleteProgress || deleteStart) phase = "Double-checking banned-photo R2 cleanup";
+    if (deleted) phase = "Banned-photo R2 cleanup double-check finished";
     if (scan) phase = "Scanning and importing Saturn sources";
     if (started) phase = "Rendering and uploading selected photo";
     if (imported) phase = "Rendering and uploading selected previews";
@@ -1393,6 +1398,8 @@
       deleted,
       deleteStart,
       deleteProgress,
+      deleteContext,
+      deleteContextPayload,
       scan,
       started,
       imported,
@@ -1478,9 +1485,12 @@
       ? ((total - completed) / completed) * elapsedSeconds
       : 0;
     const countdown = secondsLeft ? `${formatDuration(secondsLeft)} left` : (total && completed >= total ? "0s left" : "Calculating time left");
+    const ownerDbConfirmed = Number(logSummary?.deleteContextPayload?.ownerDbDeletedConfirmed || 0);
     const detail = total
-      ? `${formatCount(completed)} / ${formatCount(total)} objects, ${countdown}`
-      : "Finding banned R2 objects";
+      ? `Double-checking cleanup: ${formatCount(completed)} / ${formatCount(total)} R2 key checks, ${countdown}. Already purged; this pass only verifies leftovers are gone.`
+      : ownerDbConfirmed
+        ? `Owner DB already confirms ${formatCount(ownerDbConfirmed)} banned-photo R2 keys cleaned; no live checks needed.`
+        : "Finding historical banned-photo R2 keys to double-check";
     return {
       percent,
       detail,
@@ -1492,6 +1502,7 @@
       privateTotal,
       discardedPhotos,
       countdown,
+      ownerDbConfirmed,
     };
   };
 
@@ -1574,7 +1585,7 @@
     if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
     if ((phase.key === "discard-start" || phase.key === "discard-final") && (logSummary?.deleteProgress || logSummary?.deleteStart || logSummary?.deleted)) {
       if (logSummary?.deleted) {
-        return { percent: 100, detail: `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private` };
+        return { percent: 100, detail: `Double-check complete: ${logSummary.deleted.match[1]} public and ${logSummary.deleted.match[2]} private key checks` };
       }
       return deleteObjectProgress(logSummary);
     }
@@ -1596,7 +1607,7 @@
 
   const completedPhaseDetail = (phase, logSummary) => {
     if ((phase.key === "discard-start" || phase.key === "discard-final") && logSummary?.deleted) {
-      return `${logSummary.deleted.match[1]} public, ${logSummary.deleted.match[2]} private`;
+      return `${logSummary.deleted.match[1]} public and ${logSummary.deleted.match[2]} private key checks`;
     }
     if (phase.key === "coverage") return "Satisfied";
     return "Done";
@@ -1613,7 +1624,7 @@
     if (state === "done") return "Done";
     if (state === "running") return "Running";
     if (state === "failed") return "Needs attention";
-    if (state === "skipped") return "Skipped";
+    if (state === "skipped") return "Unfinished";
     return "Waiting";
   };
 
@@ -1651,7 +1662,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Client", "Current file", "Current source", "Progress summary", "Upload progress", "Coverage gaps", "Skipped properties", "Gap meaning", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Client", "Current phase", "Current file", "Current source", "Owner DB trusted", "Progress summary", "Upload progress", "Coverage gaps", "Skipped properties", "Gap meaning", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -1661,14 +1672,14 @@
       const inferredDone = (active || coverageIncomplete) && index < activeIndex && (!phase.optional || explicitDone);
       const completeDone = complete && (!phase.optional || explicitDone);
       const isSkipped = explicitSkipped || (phase.optional && !explicitDone && !isActive && (complete || index < activeIndex));
-      const state = isFailed ? "failed" : completeDone || explicitDone || inferredDone ? "done" : isActive ? "running" : isSkipped ? "skipped" : "pending";
+      const state = isFailed ? "failed" : isActive ? "running" : isSkipped ? "skipped" : completeDone || explicitDone || inferredDone ? "done" : "pending";
       const progress = state === "done"
         ? { percent: 100, detail: completedPhaseDetail(phase, logSummary) }
         : state === "running"
           ? phaseProgress(phase, logSummary, false, task)
           : state === "failed"
             ? phaseProgress(phase, logSummary, true, task)
-            : { percent: 0, detail: state === "skipped" ? "Skipped" : "Waiting" };
+            : { percent: 0, detail: state === "skipped" ? "Unfinished" : "Waiting" };
       const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
       const hasProgressNote = Boolean(progress.detail && !genericProgressDetails.has(progress.detail));
       const canExpand = (state === "done" || state === "failed") && (phaseRows.length || hasProgressNote);
@@ -1681,7 +1692,7 @@
         : "";
       const canSkipCurrent = state === "running" && SWEEP_SKIPPABLE_KEYS.has(phase.key);
       const skipButton = canSkipCurrent
-        ? `<button class="owner-sweep-phase-skip" type="button" data-owner-sweep-skip="${escapeHtml(phase.key)}">Skip current</button>`
+        ? `<button class="owner-sweep-phase-skip" type="button" data-owner-sweep-skip="${escapeHtml(phase.key)}">Skip to next phase</button>`
         : "";
       const toggleAttrs = canExpand
         ? ` data-owner-sweep-phase-toggle="${escapeHtml(phase.key)}" role="button" tabindex="0" aria-expanded="${showPhaseDetails ? "true" : "false"}" aria-label="${escapeHtml(`${phase.label}: ${showPhaseDetails ? "collapse" : "expand"} details`)}"`
@@ -1740,7 +1751,8 @@
     if (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted) {
       const progress = deleteObjectProgress(logSummary);
       const deletePhaseKey = logSummary?.phaseKey === "discard-final" ? "discard-final" : "discard-start";
-      if (progress.total) addPhaseRow(deletePhaseKey, "Progress summary", `${formatCount(progress.completed)} of ${formatCount(progress.total)} banned-photo R2 objects processed`);
+      if (progress.total) addPhaseRow(deletePhaseKey, "Progress summary", `${formatCount(progress.completed)} of ${formatCount(progress.total)} banned-photo R2 key checks complete`);
+      addPhaseRow(deletePhaseKey, "Already done", "Historical cleanup is recorded. This phase is a safe double-check for leftover R2 objects at old banned-photo keys.");
       if (active && progress.countdown && progress.total > progress.completed) addPhaseRow(deletePhaseKey, "Time left estimate", progress.countdown);
       if (progress.publicTotal || progress.privateTotal) {
         addPhaseRow(
@@ -1750,6 +1762,17 @@
         );
       }
       if (progress.discardedPhotos) addPhaseRow(deletePhaseKey, "Banned photos", formatCount(progress.discardedPhotos));
+      if (logSummary?.deleteContextPayload) {
+        const currentDiscarded = Number(logSummary.deleteContextPayload.currentDiscardedPhotos || 0);
+        const historicalDiscarded = Number(logSummary.deleteContextPayload.historicalDiscardedPhotos || 0);
+        const ownerDbConfirmed = Number(logSummary.deleteContextPayload.ownerDbDeletedConfirmed || 0);
+        addPhaseRow(
+          deletePhaseKey,
+          "Cleanup record",
+          `${formatCount(historicalDiscarded)} historical IDs recorded${currentDiscarded ? `, ${formatCount(currentDiscarded)} current tombstones` : ""}`,
+        );
+        if (ownerDbConfirmed) addPhaseRow(deletePhaseKey, "Owner DB trusted", `${formatCount(ownerDbConfirmed)} key checks already confirmed deleted`);
+      }
     }
     const importPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey) ? activePhaseKey : "camera";
     let importSourceRowAdded = false;
@@ -1827,6 +1850,18 @@
     if (Array.isArray(latest.errors) && latest.errors.length) addPhaseRow(activePhaseKey, "Latest error", latest.errors.at(-1));
     if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) addPhaseRow(activePhaseKey, "Latest error", logSummary.error.line);
     else if (logSummary?.latest && !active) addPhaseRow(activePhaseKey, "Latest log", logSummary.latest);
+    if (active) {
+      const activeRows = detailRowsByPhase.get(activePhaseKey) || [];
+      const activeLabel = SWEEP_PHASES.find((phase) => phase.key === activePhaseKey)?.label || logSummary?.phase || "Current phase";
+      if (!activeRows.length) {
+        addPhaseRow(activePhaseKey, "Current phase", logSummary?.phase || activeLabel);
+      }
+      if (SWEEP_SKIPPABLE_KEYS.has(activePhaseKey)) {
+        addPhaseRow(activePhaseKey, "Safe skip", "Stops this phase command, keeps completed work, and lets the sweep continue with the next phase.");
+      } else {
+        addPhaseRow(activePhaseKey, "Skip", "Not shown for this short handoff phase.");
+      }
+    }
     if (!active) addPhaseRow(activePhaseKey, "Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete");
     if (!detailRowsByPhase.size) addPhaseRow(activePhaseKey, "State", latest.state || "queued");
     renderSweepPhases(latest, logSummary, detailRowsByPhase);
@@ -2110,7 +2145,7 @@
       ? basketCatalogPhotos
         ? "Active catalog coverage is satisfied; Waste Basket media is excluded from repair targets."
         : "Policy is satisfied for the current catalog."
-      : "Missing coverage. Start background work runs the sweep below and keeps manifests in sync.";
+      : "Missing coverage. Start background work runs the R2 background sweep and keeps manifests in sync.";
     r2CoverageOk = coverage.ok;
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
     if (latestR2ProgressTasks.length) renderWasteBasketProgress(latestR2ProgressTasks);
@@ -2359,7 +2394,7 @@
   r2FixButton?.addEventListener("click", async () => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to run R2 background work.");
     if (ownerAuth?.enabled && !authorized) return;
-    const ok = window.confirm("Start the full lock-guarded cloud media background work now? This may upload/render missing objects, delete R2 objects for banned photos while keeping their ban records, validate, commit, and push manifest changes.");
+    const ok = window.confirm("Start the full lock-guarded cloud media background work now? This may upload/render missing objects, double-check banned-photo R2 cleanup, delete any leftovers while keeping ban records, validate, commit, and push manifest changes.");
     if (!ok) return;
     r2FixButton.disabled = true;
     setStatus("Starting R2 background work...");

@@ -149,7 +149,7 @@ The sweep:
 - `assets/media-sidecar.json`: provenance and public/private key mapping.
 - `assets/private-delivery-manifest.json`: private master/render coverage.
 - `assets/discarded/discarded-photo-ids.json`: durable owner discard tombstones.
-- `assets/discarded-media-manifest.json`: generated discarded-media R2 cleanup record.
+- `assets/discarded-media-manifest.json`: generated discarded-media R2 cleanup record; ignored `Owner.sqlite` keeps trusted R2 object lifecycle state (`current`, `marked_for_delete`, `deleted_confirmed`) for routine cleanup.
 - `assets/hidden/hidden-blacklist.json`: current blocked-photo blacklist.
 - `assets/owner-actions/keyword-blacklist.json`: metadata-only keyword blacklist applied during import/export; it removes useless keyword strings but does not filter photos or rewrite JPG/source metadata.
 - `assets/owner-actions/country-assignments.jsonl`: append-only Unknown-to-country move log.

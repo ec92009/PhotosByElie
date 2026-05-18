@@ -1,10 +1,10 @@
 {
   "schema": "photosbyelie.private-delivery-manifest.v1",
-  "updatedAt": "2026-05-18T08:07:49.343Z",
+  "updatedAt": "2026-05-18T08:08:04.407Z",
   "privateBucket": "photosbyelie-private",
   "catalogPhotos": 6273,
-  "privateMasterPhotoIds": 6131,
-  "privateRenderTripletPhotoIds": 10441,
+  "privateMasterPhotoIds": 6137,
+  "privateRenderTripletPhotoIds": 10447,
   "records": {
     "20220506-160631-03403-51426edaac": {
       "id": "20220506-160631-03403-51426edaac",
@@ -205509,27 +205509,27 @@
       "privateMaster": {
         "expectedKey": "masters/img-1141-e7e66ca045.jpg",
         "legacyKey": "masters/img-1141-e7e66ca045/IMG_1141.JPG",
-        "key": "",
-        "present": false
+        "key": "masters/img-1141-e7e66ca045.jpg",
+        "present": true
       },
       "privateRenders": {
         "jpg-6mp": {
           "expectedKey": "renders/img-1141-e7e66ca045_6mp.jpg",
           "legacyKey": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-6mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1141-e7e66ca045_6mp.jpg",
+          "present": true
         },
         "jpg-3mp": {
           "expectedKey": "renders/img-1141-e7e66ca045_3mp.jpg",
           "legacyKey": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-3mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1141-e7e66ca045_3mp.jpg",
+          "present": true
         },
         "jpg-1mp": {
           "expectedKey": "renders/img-1141-e7e66ca045_1mp.jpg",
           "legacyKey": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-1mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1141-e7e66ca045_1mp.jpg",
+          "present": true
         }
       },
       "publicPreviews": {
@@ -205543,27 +205543,27 @@
       "privateMaster": {
         "expectedKey": "masters/img-1140-5f0e42d7e3.jpg",
         "legacyKey": "masters/img-1140-5f0e42d7e3/IMG_1140.JPG",
-        "key": "",
-        "present": false
+        "key": "masters/img-1140-5f0e42d7e3.jpg",
+        "present": true
       },
       "privateRenders": {
         "jpg-6mp": {
           "expectedKey": "renders/img-1140-5f0e42d7e3_6mp.jpg",
           "legacyKey": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-6mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1140-5f0e42d7e3_6mp.jpg",
+          "present": true
         },
         "jpg-3mp": {
           "expectedKey": "renders/img-1140-5f0e42d7e3_3mp.jpg",
           "legacyKey": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-3mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1140-5f0e42d7e3_3mp.jpg",
+          "present": true
         },
         "jpg-1mp": {
           "expectedKey": "renders/img-1140-5f0e42d7e3_1mp.jpg",
           "legacyKey": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-1mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1140-5f0e42d7e3_1mp.jpg",
+          "present": true
         }
       },
       "publicPreviews": {
@@ -205611,27 +205611,27 @@
       "privateMaster": {
         "expectedKey": "masters/img-1125-dc58a482c6.jpg",
         "legacyKey": "masters/img-1125-dc58a482c6/IMG_1125.JPG",
-        "key": "",
-        "present": false
+        "key": "masters/img-1125-dc58a482c6.jpg",
+        "present": true
       },
       "privateRenders": {
         "jpg-6mp": {
           "expectedKey": "renders/img-1125-dc58a482c6_6mp.jpg",
           "legacyKey": "renders/img-1125-dc58a482c6/IMG_1125.JPG-jpg-6mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1125-dc58a482c6_6mp.jpg",
+          "present": true
         },
         "jpg-3mp": {
           "expectedKey": "renders/img-1125-dc58a482c6_3mp.jpg",
           "legacyKey": "renders/img-1125-dc58a482c6/IMG_1125.JPG-jpg-3mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1125-dc58a482c6_3mp.jpg",
+          "present": true
         },
         "jpg-1mp": {
           "expectedKey": "renders/img-1125-dc58a482c6_1mp.jpg",
           "legacyKey": "renders/img-1125-dc58a482c6/IMG_1125.JPG-jpg-1mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1125-dc58a482c6_1mp.jpg",
+          "present": true
         }
       },
       "publicPreviews": {
@@ -205645,27 +205645,27 @@
       "privateMaster": {
         "expectedKey": "masters/img-1124-a67a48ee91.jpg",
         "legacyKey": "masters/img-1124-a67a48ee91/IMG_1124.JPG",
-        "key": "",
-        "present": false
+        "key": "masters/img-1124-a67a48ee91.jpg",
+        "present": true
       },
       "privateRenders": {
         "jpg-6mp": {
           "expectedKey": "renders/img-1124-a67a48ee91_6mp.jpg",
           "legacyKey": "renders/img-1124-a67a48ee91/IMG_1124.JPG-jpg-6mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1124-a67a48ee91_6mp.jpg",
+          "present": true
         },
         "jpg-3mp": {
           "expectedKey": "renders/img-1124-a67a48ee91_3mp.jpg",
           "legacyKey": "renders/img-1124-a67a48ee91/IMG_1124.JPG-jpg-3mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1124-a67a48ee91_3mp.jpg",
+          "present": true
         },
         "jpg-1mp": {
           "expectedKey": "renders/img-1124-a67a48ee91_1mp.jpg",
           "legacyKey": "renders/img-1124-a67a48ee91/IMG_1124.JPG-jpg-1mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1124-a67a48ee91_1mp.jpg",
+          "present": true
         }
       },
       "publicPreviews": {
@@ -205679,27 +205679,27 @@
       "privateMaster": {
         "expectedKey": "masters/img-1123-807c7c6a80.jpg",
         "legacyKey": "masters/img-1123-807c7c6a80/IMG_1123.JPG",
-        "key": "",
-        "present": false
+        "key": "masters/img-1123-807c7c6a80.jpg",
+        "present": true
       },
       "privateRenders": {
         "jpg-6mp": {
           "expectedKey": "renders/img-1123-807c7c6a80_6mp.jpg",
           "legacyKey": "renders/img-1123-807c7c6a80/IMG_1123.JPG-jpg-6mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1123-807c7c6a80_6mp.jpg",
+          "present": true
         },
         "jpg-3mp": {
           "expectedKey": "renders/img-1123-807c7c6a80_3mp.jpg",
           "legacyKey": "renders/img-1123-807c7c6a80/IMG_1123.JPG-jpg-3mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1123-807c7c6a80_3mp.jpg",
+          "present": true
         },
         "jpg-1mp": {
           "expectedKey": "renders/img-1123-807c7c6a80_1mp.jpg",
           "legacyKey": "renders/img-1123-807c7c6a80/IMG_1123.JPG-jpg-1mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1123-807c7c6a80_1mp.jpg",
+          "present": true
         }
       },
       "publicPreviews": {
@@ -205713,27 +205713,27 @@
       "privateMaster": {
         "expectedKey": "masters/img-1122-38b4360e54.jpg",
         "legacyKey": "masters/img-1122-38b4360e54/IMG_1122.JPG",
-        "key": "",
-        "present": false
+        "key": "masters/img-1122-38b4360e54.jpg",
+        "present": true
       },
       "privateRenders": {
         "jpg-6mp": {
           "expectedKey": "renders/img-1122-38b4360e54_6mp.jpg",
           "legacyKey": "renders/img-1122-38b4360e54/IMG_1122.JPG-jpg-6mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1122-38b4360e54_6mp.jpg",
+          "present": true
         },
         "jpg-3mp": {
           "expectedKey": "renders/img-1122-38b4360e54_3mp.jpg",
           "legacyKey": "renders/img-1122-38b4360e54/IMG_1122.JPG-jpg-3mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1122-38b4360e54_3mp.jpg",
+          "present": true
         },
         "jpg-1mp": {
           "expectedKey": "renders/img-1122-38b4360e54_1mp.jpg",
           "legacyKey": "renders/img-1122-38b4360e54/IMG_1122.JPG-jpg-1mp.jpg",
-          "key": "",
-          "present": false
+          "key": "renders/img-1122-38b4360e54_1mp.jpg",
+          "present": true
         }
       },
       "publicPreviews": {

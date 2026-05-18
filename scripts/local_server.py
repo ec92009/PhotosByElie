@@ -252,24 +252,38 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
+        repo_root = Path.cwd()
         try:
             payload = self._read_json_body()
             requested_phase = str(payload.get("phaseKey") or "").strip()
-            skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases") or requested_phase)
-            _write_cloud_media_sweep_skip_phases(Path.cwd(), skip_phases)
-            current_phase = _read_cloud_media_sweep_current_phase(Path.cwd())
+            requested_skips = _normalize_r2_sweep_skip_phases(payload.get("skipPhases") or requested_phase)
+            skip_phases = _merge_r2_sweep_skip_phases(
+                _read_cloud_media_sweep_skip_phases(repo_root),
+                requested_skips,
+            )
+            _write_cloud_media_sweep_skip_phases(repo_root, skip_phases)
+            current_phase = _read_cloud_media_sweep_current_phase(repo_root)
+            interrupted = False
             if requested_phase and requested_phase == current_phase:
-                _terminate_process_tree(_read_cloud_media_sweep_current_child_pid(Path.cwd()))
+                interrupted = _terminate_process_tree(_read_cloud_media_sweep_current_child_pid(repo_root))
+                current_phase = _wait_for_cloud_media_sweep_phase_change(repo_root, current_phase)
+                skip_phases = _read_cloud_media_sweep_skip_phases(repo_root)
             with R2_BACKGROUND_LOCK:
                 for task in R2_BACKGROUND_TASKS.values():
                     if task.get("kind") == "cloud-media-sweep" and task.get("state") in {"queued", "running"}:
                         task["skipPhases"] = skip_phases
                         task["currentPhaseKey"] = current_phase
+                        task["currentChildPid"] = _read_cloud_media_sweep_current_child_pid(repo_root)
                         task["updated_at"] = datetime.now(timezone.utc).isoformat()
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "skipPhases": skip_phases, "currentPhaseKey": current_phase})
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "skipPhases": skip_phases,
+            "currentPhaseKey": current_phase,
+            "interrupted": interrupted,
+        })
 
     def _handle_real_estate_owner(self) -> None:
         if not self._is_loopback_request():
@@ -1619,6 +1633,7 @@ def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "h
 
 
 def _r2_task_snapshot() -> list[dict]:
+    repo_root = Path.cwd()
     cutoff = time.time() - 60 * 60
     active_states = {"queued", "running"}
     with R2_BACKGROUND_LOCK:
@@ -1632,12 +1647,18 @@ def _r2_task_snapshot() -> list[dict]:
         for task_id in stale:
             R2_BACKGROUND_TASKS.pop(task_id, None)
         tasks = [dict(task) for task in R2_BACKGROUND_TASKS.values()]
+    tasks = [
+        _hydrate_cloud_media_sweep_task(repo_root, task)
+        if task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
+        else task
+        for task in tasks
+    ]
     has_active_sweep = any(
         task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
         for task in tasks
     )
     if not has_active_sweep:
-        external = _external_cloud_media_sweep_task(Path.cwd())
+        external = _external_cloud_media_sweep_task(repo_root)
         if external:
             tasks.append(external)
     return sorted(
@@ -1721,6 +1742,18 @@ def _write_cloud_media_sweep_skip_phases(repo_root: Path, skip_phases: list[str]
     path.write_text("".join(f"{phase}\n" for phase in skip_phases), encoding="utf-8")
 
 
+def _merge_r2_sweep_skip_phases(*phase_lists: list[str]) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for phases in phase_lists:
+        for phase in phases:
+            if phase in seen:
+                continue
+            seen.add(phase)
+            merged.append(phase)
+    return merged
+
+
 def _read_cloud_media_sweep_current_phase(repo_root: Path) -> str:
     try:
         phase_key = _cloud_media_sweep_current_phase_path(repo_root).read_text(encoding="utf-8").strip()
@@ -1747,20 +1780,49 @@ def _child_pids(pid: int) -> list[int]:
     return children
 
 
-def _terminate_process_tree(pid: int | None) -> None:
+def _terminate_process_tree(pid: int | None) -> bool:
     if not pid:
-        return
+        return False
+    terminated = False
     for child in _child_pids(pid):
-        _terminate_process_tree(child)
+        terminated = _terminate_process_tree(child) or terminated
     try:
         os.kill(pid, signal.SIGTERM)
     except OSError:
-        return
+        return terminated
+    terminated = True
     time.sleep(0.5)
     try:
         os.kill(pid, signal.SIGKILL)
     except OSError:
         pass
+    return terminated
+
+
+def _wait_for_cloud_media_sweep_phase_change(repo_root: Path, previous_phase: str) -> str:
+    deadline = time.time() + 3
+    current_phase = previous_phase
+    while time.time() < deadline:
+        current_phase = _read_cloud_media_sweep_current_phase(repo_root)
+        if current_phase != previous_phase:
+            return current_phase
+        if not current_phase:
+            return ""
+        time.sleep(0.2)
+    return current_phase
+
+
+def _hydrate_cloud_media_sweep_task(repo_root: Path, task: dict) -> dict:
+    hydrated = dict(task)
+    live_pid = _live_cloud_media_sweep_pid(repo_root)
+    current_phase = _read_cloud_media_sweep_current_phase(repo_root)
+    if live_pid is not None:
+        hydrated["external_pid"] = live_pid
+    hydrated["skipPhases"] = _read_cloud_media_sweep_skip_phases(repo_root)
+    hydrated["currentPhaseKey"] = current_phase
+    hydrated["currentChildPid"] = _read_cloud_media_sweep_current_child_pid(repo_root)
+    hydrated["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return hydrated
 
 
 def _latest_cloud_media_sweep_log(repo_root: Path) -> Path | None:

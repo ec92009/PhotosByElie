@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 28,
+    "count": 54,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,21 +74,82 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 0,
+    "count": 11,
     "href": "./gallery.html?gallery=usa",
-    "photos": []
+    "photos": [
+      {
+        "id": "20190723-1419-16523-3d4da421c4",
+        "title": "20190723 1419 16523",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20190723-1419-16523-3d4da421c4_900.jpg",
+            "detailKey": "expo/20190723-1419-16523-3d4da421c4_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20181113-1748-16886-f468becf95",
+        "title": "20181113 1748 16886",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20181113-1748-16886-f468becf95_900.jpg",
+            "detailKey": "expo/20181113-1748-16886-f468becf95_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20181113-1729-19714-e408f3becb",
+        "title": "20181113 1729 19714",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20181113-1729-19714-e408f3becb_900.jpg",
+            "detailKey": "expo/20181113-1729-19714-e408f3becb_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20181020-1143-19559-d29e8bb4b8",
+        "title": "20181020 1143 19559",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20181020-1143-19559-d29e8bb4b8_900.jpg",
+            "detailKey": "expo/20181020-1143-19559-d29e8bb4b8_1800.jpg"
+          }
+        }
+      }
+    ]
   },
   "spain": {
     "number": "03",
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 30,
+    "count": 285,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
-        "id": "20220705-164431-00139-pano-92425313d3",
-        "title": "20220705 164431 00139 Pano",
+        "id": "d5h-2939-68cb5ce5b2",
+        "title": "D5H 2939",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -96,14 +157,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164431-00139-pano-92425313d3_900.jpg",
-            "detailKey": "expo/20220705-164431-00139-pano-92425313d3_1800.jpg"
+            "galleryKey": "expo/d5h-2939-68cb5ce5b2_900.jpg",
+            "detailKey": "expo/d5h-2939-68cb5ce5b2_1800.jpg"
           }
         }
       },
       {
-        "id": "20220705-164358-00121-pano-28e2885b71",
-        "title": "20220705 164358 00121 Pano",
+        "id": "d5h-2938-cc0cb9487b",
+        "title": "D5H 2938",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -111,14 +172,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164358-00121-pano-28e2885b71_900.jpg",
-            "detailKey": "expo/20220705-164358-00121-pano-28e2885b71_1800.jpg"
+            "galleryKey": "expo/d5h-2938-cc0cb9487b_900.jpg",
+            "detailKey": "expo/d5h-2938-cc0cb9487b_1800.jpg"
           }
         }
       },
       {
-        "id": "20220705-164409-00126-pano-75c4163f8e",
-        "title": "20220705 164409 00126 Pano",
+        "id": "d5h-2937-dade9e30bf",
+        "title": "D5H 2937",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -126,14 +187,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164409-00126-pano-75c4163f8e_900.jpg",
-            "detailKey": "expo/20220705-164409-00126-pano-75c4163f8e_1800.jpg"
+            "galleryKey": "expo/d5h-2937-dade9e30bf_900.jpg",
+            "detailKey": "expo/d5h-2937-dade9e30bf_1800.jpg"
           }
         }
       },
       {
-        "id": "20220705-164412-00127-pano-13a8791aa3",
-        "title": "20220705 164412 00127 Pano",
+        "id": "d5h-2933-5320e9f76b",
+        "title": "D5H 2933",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -141,8 +202,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220705-164412-00127-pano-13a8791aa3_900.jpg",
-            "detailKey": "expo/20220705-164412-00127-pano-13a8791aa3_1800.jpg"
+            "galleryKey": "expo/d5h-2933-5320e9f76b_900.jpg",
+            "detailKey": "expo/d5h-2933-5320e9f76b_1800.jpg"
           }
         }
       }
@@ -153,40 +214,49 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 0,
+    "count": 2,
     "href": "./gallery.html?gallery=mexico",
-    "photos": []
+    "photos": [
+      {
+        "id": "20191207-1718-19516-5bc74a12ce",
+        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20191207-1718-19516-5bc74a12ce_900.jpg",
+            "detailKey": "expo/20191207-1718-19516-5bc74a12ce_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20191206-0605-17192-85701a04f9",
+        "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20191206-0605-17192-85701a04f9_900.jpg",
+            "detailKey": "expo/20191206-0605-17192-85701a04f9_1800.jpg"
+          }
+        }
+      }
+    ]
   },
   "ai": {
     "number": "05",
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 71,
+    "count": 109,
     "href": "./gallery.html?gallery=ai",
     "photos": [
-      {
-        "id": "cabin-e09804f1d1",
-        "title": "Cabin",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "video",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/cabin-e09804f1d1_900.jpg",
-            "detailKey": "expo/cabin-e09804f1d1_short_5s_720p.mp4",
-            "dimensions": {
-              "width": 1280,
-              "height": 720
-            }
-          },
-          "video": {
-            "duration": 23.76
-          }
-        }
-      },
       {
         "id": "beyrouth-630240f1ea",
         "title": "Beyrouth",
@@ -238,6 +308,21 @@ window.photosByElieHomeData = {
             "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-e3b7f2b7-c7a5-4c49-a9ca-c5d0d004c373-e56426a7e1_1800.jpg"
           }
         }
+      },
+      {
+        "id": "wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d",
+        "title": "Wellness Retreats - Yoga, meditation, holistic treatments, healing springs, organic cuisine, detoxing, spiritual tourism",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d_900.jpg",
+            "detailKey": "expo/wellness-retreats-yoga-meditation-holistic-treatments-h-2-upscale-90853728-cf4b-4ddb-a8e0-67256422722f-cd5bcb533d_1800.jpg"
+          }
+        }
       }
     ]
   },
@@ -255,7 +340,7 @@ window.photosByElieHomeData = {
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 20,
+    "count": 24,
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
@@ -325,8 +410,39 @@ window.photosByElieHomeData = {
     "title": "Slovakia",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "slovakia-gallery",
-    "count": 0,
+    "count": 2,
     "href": "./gallery.html?gallery=slovakia",
-    "photos": []
+    "photos": [
+      {
+        "id": "20190624-1827-16232-feef5b78f4",
+        "title": "20190624 1827 16232",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20190624-1827-16232-feef5b78f4_900.jpg",
+            "detailKey": "expo/20190624-1827-16232-feef5b78f4_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "20190624-1826-16542-1eb5098247",
+        "title": "Bratislava, SK",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/20190624-1826-16542-1eb5098247_900.jpg",
+            "detailKey": "expo/20190624-1826-16542-1eb5098247_1800.jpg"
+          }
+        }
+      }
+    ]
   }
 };

@@ -831,3 +831,15 @@ _No David automation results recorded yet._
 - R2 public previews: 28/28 new Cordoba preview objects returned HTTP 200, including 4 `_short_5s_720p.mp4` video previews.
 - Private delivery: 14/14 private masters recorded; 10/10 photo render triplets recorded; videos intentionally have private masters only.
 - Validation: `npm test` PASSED (18/18); `npm run validate` PASSED (`Validation OK`) after updating the validator to accept video preview detail keys.
+
+## 2026-05-18 - R2 master-chain maintenance (daily audit)
+
+- Machine: David (`David-5.local`)
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
+- `git pull --ff-only`: PASSED (`Already up to date.`)
+- Command: `node scripts/repair_r2_master_chain.mjs --repair --prune --audit .review-logs/r2-master-chain-audit-daily.json`
+- Result summary: masters 11,627; renders 34,869; public previews 23,146
+- Repaired: masters 0; renders 6
+- Pruned ghosts: private render 0; public preview 12
+- Remaining missing: public previews 10 (also missing masters 26; missing renders 12)
+- Notes: 12 missing renders were video sources (`.MOV`) where `sips` cannot read pixel dimensions; script now records these as skipped instead of aborting.

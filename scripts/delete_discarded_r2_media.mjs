@@ -78,9 +78,13 @@ const readOwnerDbDeletedKeys = () => {
   runOwnerDb(["--import-discarded-r2-manifest"]);
   const db = fullPath(ownerDbPath);
   const query = "SELECT bucket || char(9) || object_key FROM r2_objects WHERE lifecycle_state = 'deleted_confirmed';";
-  const result = spawnSync("sqlite3", [db, query], { cwd: repoRoot, encoding: "utf8" });
+  const result = spawnSync("sqlite3", [db, query], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
   if (result.status !== 0) {
-    console.warn(`Owner DB read skipped: ${(result.stderr || result.stdout || "unknown error").trim()}`);
+    console.warn(`Owner DB read skipped: ${(result.stderr || result.error?.message || "unknown error").trim()}`);
     return new Set();
   }
   return new Set(result.stdout.split(/\r?\n/).filter(Boolean));
@@ -327,7 +331,6 @@ await writeOwnerDbState([
 
 const deletedPublic = await deleteKeys(publicBucket, publicDeleteCandidates, deleteProgress, "public");
 const deletedPrivate = await deleteKeys(privateBucket, privateDeleteCandidates, deleteProgress, "private");
-if (deleteProgress.total === 0) deleteProgressLine(deleteProgress);
 
 await writeOwnerDbState([
   ...deletedPublic.map((key) => ({ bucket: publicBucket, key, photo_id: keyPhotoId(key), kind: key.endsWith(".mp4") ? "public-preview-video" : "public-preview" })),

@@ -27,6 +27,7 @@ PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
+R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
@@ -58,6 +59,17 @@ REAL_ESTATE_IMPORT_PROGRESS: dict[str, dict] = {}
 REAL_ESTATE_IMPORT_PROGRESS_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
+R2_SWEEP_SKIPPABLE_PHASES = {
+    "discard-start",
+    "camera",
+    "apple-photo-albums",
+    "leonardo",
+    "real-estate",
+    "private",
+    "discard-final",
+    "test",
+    "validate",
+}
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
@@ -161,6 +173,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_FIX_PATH:
             self._handle_r2_fix()
             return
+        if path == R2_SKIP_PHASE_PATH:
+            self._handle_r2_skip_phase()
+            return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
             return
@@ -217,8 +232,32 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        task = _start_cloud_media_sweep(Path.cwd())
+        try:
+            payload = self._read_optional_json_body()
+            skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases"))
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        task = _start_cloud_media_sweep(Path.cwd(), skip_phases)
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_r2_skip_phase(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_json_body()
+            skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases") or payload.get("phaseKey"))
+            _write_cloud_media_sweep_skip_phases(Path.cwd(), skip_phases)
+            with R2_BACKGROUND_LOCK:
+                for task in R2_BACKGROUND_TASKS.values():
+                    if task.get("kind") == "cloud-media-sweep" and task.get("state") in {"queued", "running"}:
+                        task["skipPhases"] = skip_phases
+                        task["updated_at"] = datetime.now(timezone.utc).isoformat()
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "skipPhases": skip_phases})
 
     def _handle_real_estate_owner(self) -> None:
         if not self._is_loopback_request():
@@ -318,6 +357,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not isinstance(payload, dict):
             raise ValueError("request body must be a JSON object")
         return payload
+
+    def _read_optional_json_body(self) -> dict:
+        raw_length = self.headers.get("Content-Length")
+        if not raw_length or raw_length == "0":
+            return {}
+        return self._read_json_body()
 
     def _send_json(self, status: HTTPStatus, payload: dict, extra_headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
@@ -1541,7 +1586,7 @@ def _r2_task_snapshot() -> list[dict]:
 
 
 def _live_cloud_media_sweep_pid(repo_root: Path) -> int | None:
-    pid_path = repo_root / ".review-logs" / "cloud-media-sweep.lock" / "pid"
+    pid_path = _cloud_media_sweep_lock_dir(repo_root) / "pid"
     try:
         pid = int(pid_path.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
@@ -1551,6 +1596,57 @@ def _live_cloud_media_sweep_pid(repo_root: Path) -> int | None:
     except OSError:
         return None
     return pid
+
+
+def _cloud_media_sweep_lock_dir(repo_root: Path) -> Path:
+    return repo_root / ".review-logs" / "cloud-media-sweep.lock"
+
+
+def _cloud_media_sweep_skip_path(repo_root: Path) -> Path:
+    return _cloud_media_sweep_lock_dir(repo_root) / "skip-phases"
+
+
+def _normalize_r2_sweep_skip_phases(value: object) -> list[str]:
+    if value is None:
+        return []
+    values: list[object]
+    if isinstance(value, str):
+        values = re.split(r"[\s,]+", value)
+    elif isinstance(value, list):
+        values = value
+    else:
+        raise ValueError("skipPhases must be a string or list")
+    result: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        key = str(raw or "").strip()
+        if not key:
+            continue
+        if key not in R2_SWEEP_SKIPPABLE_PHASES:
+            raise ValueError(f"unsupported R2 sweep phase: {key}")
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(key)
+    return result
+
+
+def _read_cloud_media_sweep_skip_phases(repo_root: Path) -> list[str]:
+    try:
+        lines = _cloud_media_sweep_skip_path(repo_root).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    try:
+        return _normalize_r2_sweep_skip_phases(lines)
+    except ValueError:
+        return []
+
+
+def _write_cloud_media_sweep_skip_phases(repo_root: Path, skip_phases: list[str]) -> None:
+    path = _cloud_media_sweep_skip_path(repo_root)
+    if not path.parent.exists():
+        return
+    path.write_text("".join(f"{phase}\n" for phase in skip_phases), encoding="utf-8")
 
 
 def _latest_cloud_media_sweep_log(repo_root: Path) -> Path | None:
@@ -1568,7 +1664,7 @@ def _external_cloud_media_sweep_task(repo_root: Path) -> dict | None:
     pid = _live_cloud_media_sweep_pid(repo_root)
     if pid is None:
         return None
-    started_path = repo_root / ".review-logs" / "cloud-media-sweep.lock" / "started_at"
+    started_path = _cloud_media_sweep_lock_dir(repo_root) / "started_at"
     try:
         started_at = started_path.read_text(encoding="utf-8").strip()
     except OSError:
@@ -1591,6 +1687,7 @@ def _external_cloud_media_sweep_task(repo_root: Path) -> dict | None:
         "bytes_total": 0,
         "bytes_done": 0,
         "external_pid": pid,
+        "skipPhases": _read_cloud_media_sweep_skip_phases(repo_root),
         "items": [{"command": "existing lock-guarded cloud media sweep", "log": str(log_path) if log_path else ""}],
         "errors": [],
     }
@@ -1779,10 +1876,12 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     }
 
 
-def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path) -> None:
+def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path, skip_phases: list[str]) -> None:
     _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    command = ["zsh", "-lc", "./scripts/run_cloud_media_sweep.zsh --push"]
+    command = ["zsh", "scripts/run_cloud_media_sweep.zsh", "--push"]
+    for phase_key in skip_phases:
+        command.extend(["--skip-phase", phase_key])
     with log_path.open("ab") as log:
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
     coverage = _r2_coverage_summary(repo_root)
@@ -1809,10 +1908,11 @@ def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path) -
         task["updated_at"] = task["completed_at"]
 
 
-def _start_cloud_media_sweep(repo_root: Path) -> dict:
+def _start_cloud_media_sweep(repo_root: Path, skip_phases: list[str] | None = None) -> dict:
     external = _external_cloud_media_sweep_task(repo_root)
     if external:
         return external
+    skip_phases = list(skip_phases or [])
     active_states = {"queued", "running"}
     with R2_BACKGROUND_LOCK:
         existing = next(
@@ -1828,6 +1928,9 @@ def _start_cloud_media_sweep(repo_root: Path) -> dict:
     task_id = uuid.uuid4().hex
     queued_at = datetime.now(timezone.utc).isoformat()
     log_path = repo_root / ".review-logs" / f"owner-r2-fix-{task_id}.log"
+    command = ["zsh", "scripts/run_cloud_media_sweep.zsh", "--push"]
+    for phase_key in skip_phases:
+        command.extend(["--skip-phase", phase_key])
     task = {
         "id": task_id,
         "kind": "cloud-media-sweep",
@@ -1843,13 +1946,14 @@ def _start_cloud_media_sweep(repo_root: Path) -> dict:
         "failed": 0,
         "bytes_total": 0,
         "bytes_done": 0,
-        "items": [{"command": "zsh -lc './scripts/run_cloud_media_sweep.zsh --push'", "log": str(log_path)}],
+        "skipPhases": skip_phases,
+        "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],
         "log": str(log_path),
     }
     with R2_BACKGROUND_LOCK:
         R2_BACKGROUND_TASKS[task_id] = task
-    worker = threading.Thread(target=_run_cloud_media_sweep_task, args=(task_id, repo_root, log_path), daemon=True)
+    worker = threading.Thread(target=_run_cloud_media_sweep_task, args=(task_id, repo_root, log_path, skip_phases), daemon=True)
     worker.start()
     return dict(task)
 

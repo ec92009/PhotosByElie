@@ -2,6 +2,7 @@
   const ownerTabButtons = [...document.querySelectorAll("[data-owner-tab-button]")];
   const ownerTabCards = [...document.querySelectorAll("[data-owner-tab]")];
   const OWNER_TAB_STORAGE_KEY = "photosbyelie-owner-tab";
+  const R2_SWEEP_SKIP_STORAGE_KEY = "photosbyelie-owner-r2-sweep-skips";
 
   const ownerTabExists = (tab) => ownerTabButtons.some((button) => button.dataset.ownerTabButton === tab);
 
@@ -86,8 +87,10 @@
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
   const r2Card = document.querySelector("[data-owner-r2-card]");
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
+  const r2SkipControls = document.querySelector("[data-owner-r2-skip-controls]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
   const r2Counts = document.querySelector("[data-owner-r2-counts]");
+  const expandedSweepPhaseKeys = new Set();
   const priceListRoot = document.querySelector("[data-owner-price-list]");
   const costCard = document.querySelector("[data-owner-cost-card]");
   const costSummaryRoot = document.querySelector("[data-owner-cost-summary]");
@@ -126,6 +129,7 @@
   let r2CoverageOk = false;
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
+  let r2PhaseRenderSnapshot = null;
   let wasteDeleteActive = false;
   let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
@@ -184,6 +188,27 @@
     ["commit", "Commit and push"],
     ["coverage", "Recheck coverage"],
   ].map(([key, label, options]) => ({ key, label, ...(options || {}) }));
+  const SWEEP_SKIPPABLE_PHASES = [
+    ["discard-start", "Delete"],
+    ["camera", "Camera"],
+    ["apple-photo-albums", "Apple Photos"],
+    ["leonardo", "AI"],
+    ["real-estate", "RE"],
+    ["private", "JPGs"],
+    ["discard-final", "Cleanup"],
+    ["test", "Tests"],
+    ["validate", "Validate"],
+  ].map(([key, label]) => ({ key, label }));
+  const SWEEP_SKIPPABLE_KEYS = new Set(SWEEP_SKIPPABLE_PHASES.map((phase) => phase.key));
+  const storedSweepSkipPhases = () => {
+    try {
+      const values = JSON.parse(localStorage.getItem(R2_SWEEP_SKIP_STORAGE_KEY) || "[]");
+      return Array.isArray(values) ? values.filter((key) => SWEEP_SKIPPABLE_KEYS.has(key)) : [];
+    } catch {
+      return [];
+    }
+  };
+  const r2SweepSkipPhases = new Set(storedSweepSkipPhases());
 
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!ownerAuth?.enabled) return;
@@ -1346,6 +1371,9 @@
     const doneKeys = new Set(lines
       .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
       .filter(Boolean));
+    const skippedKeys = new Set(lines
+      .map((line) => line.match(/^SWEEP_SKIP\s+(\S+)/)?.[1])
+      .filter(Boolean));
     let phase = "Starting cloud media sweep";
     if (deleteProgress || deleteStart) phase = "Deleting R2 objects for banned photos";
     if (deleted) phase = "Deleted R2 objects for banned photos";
@@ -1373,6 +1401,7 @@
       phase,
       phaseKey,
       doneKeys,
+      skippedKeys,
       deleted,
       deleteStart,
       deleteProgress,
@@ -1600,12 +1629,60 @@
     return "Waiting";
   };
 
+  const activeR2RepairTask = () => latestR2ProgressTasks.find((task) =>
+    task?.operation === "repair" && (task.state === "queued" || task.state === "running")
+  ) || null;
+
+  const persistR2SweepSkips = () => {
+    try {
+      localStorage.setItem(R2_SWEEP_SKIP_STORAGE_KEY, JSON.stringify([...r2SweepSkipPhases]));
+    } catch {
+      // Local storage can be unavailable in embedded previews.
+    }
+  };
+
+  const pushR2SweepSkips = async () => {
+    const response = await fetch("/__photosbyelie/r2-skip-phase", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skipPhases: [...r2SweepSkipPhases] }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not update R2 skip list.");
+    return payload;
+  };
+
+  const renderR2SkipControls = () => {
+    if (!r2SkipControls) return;
+    const activeTask = activeR2RepairTask();
+    const activeSkips = new Set(Array.isArray(activeTask?.skipPhases) ? activeTask.skipPhases : []);
+    activeSkips.forEach((key) => {
+      if (SWEEP_SKIPPABLE_KEYS.has(key)) r2SweepSkipPhases.add(key);
+    });
+    persistR2SweepSkips();
+    setHtml(r2SkipControls, `
+      <span class="owner-sweep-skip-label">Skip</span>
+      ${SWEEP_SKIPPABLE_PHASES.map((phase) => {
+        const selected = r2SweepSkipPhases.has(phase.key);
+        return `
+          <button class="owner-sweep-skip-chip${selected ? " is-selected" : ""}" type="button"
+            data-owner-r2-skip-phase="${escapeHtml(phase.key)}"
+            aria-pressed="${selected ? "true" : "false"}">
+            ${escapeHtml(phase.label)}
+          </button>
+        `;
+      }).join("")}
+    `);
+  };
+
   const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map()) => {
     if (!r2Phases) return;
     if (!task || task.operation !== "repair") {
+      r2PhaseRenderSnapshot = null;
       setHtml(r2Phases, "");
       return;
     }
+    r2PhaseRenderSnapshot = { task, logSummary, detailRowsByPhase };
     const active = task.state === "queued" || task.state === "running";
     const coverageIncomplete = !active && task.state === "done" && r2CoverageOk === false;
     const failed = Number(task.failed || 0) > 0 || task.state === "failed" || coverageIncomplete;
@@ -1613,15 +1690,21 @@
     const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
     const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
+    const skippedKeys = new Set([
+      ...([...r2SweepSkipPhases].filter((key) => task?.state !== "done" && task?.state !== "failed")),
+      ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
+      ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).filter(Boolean)),
+    ]);
     const wideLabels = new Set(["Client", "Current file", "Current source", "Progress summary", "Upload progress", "Coverage gaps", "Skipped properties", "Gap meaning", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
+      const explicitSkipped = skippedKeys.has(phase.key);
       const isActive = phase.key === activeKey && active;
       const isFailed = phase.key === activeKey && failed;
       const inferredDone = (active || coverageIncomplete) && index < activeIndex && (!phase.optional || explicitDone);
       const completeDone = complete && (!phase.optional || explicitDone);
-      const isSkipped = phase.optional && !explicitDone && !isActive && (complete || index < activeIndex);
+      const isSkipped = explicitSkipped || (phase.optional && !explicitDone && !isActive && (complete || index < activeIndex));
       const state = isFailed ? "failed" : completeDone || explicitDone || inferredDone ? "done" : isActive ? "running" : isSkipped ? "skipped" : "pending";
       const progress = state === "done"
         ? { percent: 100, detail: completedPhaseDetail(phase, logSummary) }
@@ -1631,14 +1714,20 @@
             ? phaseProgress(phase, logSummary, true, task)
             : { percent: 0, detail: state === "skipped" ? "Skipped" : "Waiting" };
       const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
-      const detailHtml = phaseRows.length
+      const hasProgressNote = Boolean(progress.detail && !genericProgressDetails.has(progress.detail));
+      const canExpand = (state === "done" || state === "failed") && (phaseRows.length || hasProgressNote);
+      const showPhaseDetails = state === "running" || (canExpand && expandedSweepPhaseKeys.has(phase.key));
+      const detailHtml = showPhaseDetails && phaseRows.length
         ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
         : "";
-      const progressNote = (state === "running" || state === "failed") && progress.detail && !genericProgressDetails.has(progress.detail)
+      const progressNote = showPhaseDetails && hasProgressNote
         ? `<p class="owner-sweep-progress-note">${escapeHtml(progress.detail)}</p>`
         : "";
+      const toggleAttrs = canExpand
+        ? ` data-owner-sweep-phase-toggle="${escapeHtml(phase.key)}" role="button" tabindex="0" aria-expanded="${showPhaseDetails ? "true" : "false"}" aria-label="${escapeHtml(`${phase.label}: ${showPhaseDetails ? "collapse" : "expand"} details`)}"`
+        : "";
       return `
-        <div class="owner-sweep-phase is-${state}">
+        <div class="owner-sweep-phase is-${state}${canExpand ? " can-expand" : ""}${showPhaseDetails ? " is-expanded" : ""}"${toggleAttrs}>
           <div class="owner-sweep-phase-copy">
             <strong>${escapeHtml(phase.label)}</strong>
             <span>${escapeHtml(phaseStatusLabel(state))}</span>
@@ -1782,6 +1871,20 @@
     renderSweepPhases(latest, logSummary, detailRowsByPhase);
     setHtml(r2Counts, "");
     renderR2PhotoPreview(lastPhotoId);
+  };
+
+  const toggleSweepPhaseDetails = (phaseKey) => {
+    if (!phaseKey || !r2PhaseRenderSnapshot) return;
+    if (expandedSweepPhaseKeys.has(phaseKey)) {
+      expandedSweepPhaseKeys.delete(phaseKey);
+    } else {
+      expandedSweepPhaseKeys.add(phaseKey);
+    }
+    renderSweepPhases(
+      r2PhaseRenderSnapshot.task,
+      r2PhaseRenderSnapshot.logSummary,
+      r2PhaseRenderSnapshot.detailRowsByPhase,
+    );
   };
 
   const renderR2PhotoPreview = (photoId) => {
@@ -1933,12 +2036,18 @@
 
   const renderR2Progress = (tasks = []) => {
     latestR2ProgressTasks = tasks;
+    renderR2SkipControls();
     renderWasteBasketProgress(tasks);
     if (currentCostEstimate) renderCostEstimate(currentCostEstimate);
     if (!r2Card || !r2Summary || !r2Counts) return;
     const latest = tasks[0];
     if (!latest) {
-      if (!r2Card.hidden) r2Card.hidden = true;
+      if (r2CoverageOk) {
+        if (!r2Card.hidden) r2Card.hidden = true;
+      } else {
+        if (r2Card.hidden) r2Card.hidden = false;
+        setText(r2Summary, "No R2 repair is running. Selected skips will apply to the next Fix it run.");
+      }
       setHtml(r2Counts, "");
       renderSweepPhases(null);
       r2RepairActive = false;
@@ -2295,7 +2404,11 @@
     r2FixButton.disabled = true;
     setStatus("Starting cloud media sweep repair...");
     try {
-      const response = await fetch("/__photosbyelie/r2-fix", { method: "POST" });
+      const response = await fetch("/__photosbyelie/r2-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skipPhases: [...r2SweepSkipPhases] }),
+      });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start R2 repair.");
       r2RepairActive = true;
@@ -2308,6 +2421,49 @@
       syncR2FixButton();
       setStatus(error?.message || "Could not start R2 repair.");
       loadR2Coverage();
+    }
+  });
+
+  r2Phases?.addEventListener("click", (event) => {
+    const row = event.target instanceof Element ? event.target.closest("[data-owner-sweep-phase-toggle]") : null;
+    if (!row || !r2Phases.contains(row)) return;
+    toggleSweepPhaseDetails(row.dataset.ownerSweepPhaseToggle || "");
+  });
+
+  r2Phases?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target instanceof Element ? event.target.closest("[data-owner-sweep-phase-toggle]") : null;
+    if (!row || !r2Phases.contains(row)) return;
+    event.preventDefault();
+    toggleSweepPhaseDetails(row.dataset.ownerSweepPhaseToggle || "");
+  });
+
+  r2SkipControls?.addEventListener("click", async (event) => {
+    const button = event.target instanceof Element ? event.target.closest("[data-owner-r2-skip-phase]") : null;
+    if (!button || !r2SkipControls.contains(button)) return;
+    const phaseKey = button.dataset.ownerR2SkipPhase || "";
+    if (!SWEEP_SKIPPABLE_KEYS.has(phaseKey)) return;
+    if (r2SweepSkipPhases.has(phaseKey)) {
+      r2SweepSkipPhases.delete(phaseKey);
+    } else {
+      r2SweepSkipPhases.add(phaseKey);
+    }
+    persistR2SweepSkips();
+    renderR2SkipControls();
+    if (!activeR2RepairTask()) {
+      setStatus(r2SweepSkipPhases.size ? "R2 sweep skip list saved for the next Fix it run." : "R2 sweep skip list cleared.");
+      return;
+    }
+    button.disabled = true;
+    try {
+      await pushR2SweepSkips();
+      setStatus("R2 sweep skip list updated. The running command will finish its current phase, then pending matches will be skipped.");
+      loadR2Progress();
+    } catch (error) {
+      setStatus(error?.message || "Could not update R2 skip list.");
+    } finally {
+      button.disabled = false;
+      renderR2SkipControls();
     }
   });
 

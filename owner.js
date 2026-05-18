@@ -1378,6 +1378,26 @@
     return missing ? `${formatCount(missing)} missing` : "Still missing coverage";
   };
 
+  const coverageRepairGapSummary = () => {
+    const rows = Array.isArray(window.photosByElieR2Coverage?.rows)
+      ? window.photosByElieR2Coverage.rows
+      : [];
+    const missingFor = (matcher) => rows
+      .filter((row) => matcher(String(row.label || "").toLowerCase(), String(row.objectClass || "").toLowerCase()))
+      .map((row) => Number(row.missing || 0))
+      .filter((missing) => missing > 0);
+    const maxMissing = (values) => values.length ? Math.max(...values) : 0;
+    const publicPreviewPhotos = maxMissing(missingFor((label, objectClass) => label.includes("preview") || objectClass.includes("expo/")));
+    const privateMasters = maxMissing(missingFor((label, objectClass) => label.includes("private masters") || objectClass === "masters"));
+    const privateJpgSets = maxMissing(missingFor((label, objectClass) => label.includes("private jpg") || objectClass.startsWith("renders/")));
+    const parts = [
+      publicPreviewPhotos ? `${formatCount(publicPreviewPhotos)} public preview photos` : "",
+      privateMasters ? `${formatCount(privateMasters)} private masters` : "",
+      privateJpgSets ? `${formatCount(privateJpgSets)} private JPG sets` : "",
+    ].filter(Boolean);
+    return parts.join(", ");
+  };
+
   const deleteObjectProgress = (logSummary) => {
     const progress = logSummary?.deleteProgress;
     const started = logSummary?.deleteStart;
@@ -1435,6 +1455,7 @@
 
   const cameraImportProgressDetail = (progress, phaseKey = "camera") => {
     const sourceLabel = importSourceLabel(phaseKey);
+    const gapSummary = coverageRepairGapSummary();
     if (!progress.selected) return `${sourceLabel} resync: scanning source folders for selected photos.`;
     const selected = formatCount(progress.selected);
     const completed = formatCount(progress.completed);
@@ -1444,12 +1465,12 @@
       ? "time left estimate starts after a few renders complete"
       : `rough time left ${progress.countdown}`;
     if (progress.completed >= progress.selected) {
-      return `${sourceLabel} resync: ${completed} / ${selected} selected source items finished this run; ${timeLeft}.`;
+      return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. ${completed} / ${selected} source items checked this run; ${timeLeft}.`;
     }
     if (progress.startedIndex > progress.completed) {
-      return `${sourceLabel} resync: checking source item ${current} / ${selected}. These may already be published; this pass refreshes previews, private renders, and R2. ${completed} finished this run, ${remaining} left; ${timeLeft}.`;
+      return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. Checking source item ${current} / ${selected}; uploads to the current expected R2 keys. ${completed} finished this run, ${remaining} left; ${timeLeft}.`;
     }
-    return `${sourceLabel} resync: ${completed} / ${selected} selected source items finished this run; ${remaining} left; ${timeLeft}.`;
+    return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. ${completed} / ${selected} source items checked this run; ${remaining} left; ${timeLeft}.`;
   };
 
   const phaseProgress = (phase, logSummary, failed, task = null) => {
@@ -1508,7 +1529,7 @@
     const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
     const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
-    const wideLabels = new Set(["Current source", "Progress summary", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Current source", "Progress summary", "Coverage gaps", "Gap meaning", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -1611,12 +1632,15 @@
       const progress = cameraImportProgress(logSummary, latest);
       if (progress.selected) {
         addImportSourceRow();
+        const gapSummary = coverageRepairGapSummary();
+        if (gapSummary) addPhaseRow(importPhaseKey, "Coverage gaps", gapSummary);
         addPhaseRow(
           importPhaseKey,
           "Progress summary",
           `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} selected source photos checked this run`,
         );
         addPhaseRow(importPhaseKey, "Finished this run", `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left`);
+        addPhaseRow(importPhaseKey, "Gap meaning", "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.");
         addPhaseRow(importPhaseKey, "What happens", "Rebuilds previews and private renders, then pushes/refreshes R2 even when the photo was already published.");
       }
       if (active && progress.selected > progress.completed) addPhaseRow(importPhaseKey, "Time left estimate", progress.countdown);

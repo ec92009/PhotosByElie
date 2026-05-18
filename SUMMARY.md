@@ -6,7 +6,7 @@ Date: 2026-05-18
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v78.37`
+- Current visible build: `v78.38`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Public catalog count: `5,827` active media rows.
@@ -15,7 +15,9 @@ Date: 2026-05-18
 
 ## What This Conversation Covered
 
-The main thread was the Real Estate import and client review workflow, with a strong bias toward reuse and static-site constraints.
+The latest handoff sweep reconciled tracked Owner/dashboard changes after a period of user inactivity. The Owner dashboard now has section tabs for Review, Real Estate, Catalog, Cloud, and Commerce; cloud sweep progress details are shown inline by phase; and the generated discarded-media cleanup manifest was refreshed to include the latest tombstoned R2 media keys.
+
+The prior main thread was the Real Estate import and client review workflow, with a strong bias toward reuse and static-site constraints.
 
 1. The Real Estate UX started as a Corine-only private client gallery with login, media selection, editable PDF titles, and a selected/liked review flow.
 2. The import direction was clarified: upload masters privately and `_900` / `_1800` previews publicly, without watermarking Real Estate R2 preview files.
@@ -65,7 +67,7 @@ python3 -m py_compile scripts/local_server.py scripts/import_real_estate_gallery
 browser checks on homepage, gallery filters, Real Estate selection/PDF/slideshow, footer clearance, and video detail duration
 ```
 
-This docs-only refresh should not bump the visible UI version.
+The current sweep verified `node --check owner.js`, `npm test`, and `npm run validate`.
 
 ## Current Backlog
 

@@ -65,6 +65,8 @@
     [...document.querySelectorAll("[data-owner-re-computed]")]
       .map((field) => [field.dataset.ownerReComputed, field])
   );
+  const ownerTabButtons = [...document.querySelectorAll("[data-owner-tab-button]")];
+  const ownerTabCards = [...document.querySelectorAll("[data-owner-tab]")];
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -105,6 +107,51 @@
         button.classList.toggle("is-refreshing", busy);
       });
   };
+
+  const OWNER_TAB_STORAGE_KEY = "photosbyelie-owner-tab";
+
+  const ownerTabExists = (tab) => ownerTabButtons.some((button) => button.dataset.ownerTabButton === tab);
+
+  const storedOwnerTab = () => {
+    try {
+      const tab = localStorage.getItem(OWNER_TAB_STORAGE_KEY) || "";
+      return ownerTabExists(tab) ? tab : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const ownerTabFromLocation = () => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") || params.get("ownerTab") || window.location.hash.replace(/^#/, "");
+    return ownerTabExists(tab) ? tab : "";
+  };
+
+  const setOwnerTab = (tab, options = {}) => {
+    if (!ownerTabButtons.length || !ownerTabCards.length) return;
+    const next = ownerTabExists(tab) ? tab : ownerTabButtons[0].dataset.ownerTabButton;
+    ownerTabButtons.forEach((button) => {
+      const active = button.dataset.ownerTabButton === next;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    ownerTabCards.forEach((card) => {
+      if (card.dataset.ownerTab === next) {
+        delete card.dataset.ownerTabHidden;
+      } else {
+        card.dataset.ownerTabHidden = "true";
+      }
+    });
+    if (options.persist !== false) {
+      try {
+        localStorage.setItem(OWNER_TAB_STORAGE_KEY, next);
+      } catch {
+        // Local storage can be unavailable in embedded previews.
+      }
+    }
+  };
+
+  setOwnerTab(ownerTabFromLocation() || storedOwnerTab(), { persist: false });
 
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
@@ -248,6 +295,11 @@
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
   const numberFromLog = (value) => Number(String(value || "").replace(/,/g, "")) || 0;
+  const secondsSinceIso = (value) => {
+    const timestamp = Date.parse(value || "");
+    if (!Number.isFinite(timestamp)) return 0;
+    return Math.max(0, (Date.now() - timestamp) / 1000);
+  };
   const formatDuration = (seconds) => {
     const wholeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
     const hours = Math.floor(wholeSeconds / 3600);
@@ -1334,7 +1386,43 @@
     };
   };
 
-  const phaseProgress = (phase, logSummary, failed) => {
+  const cameraImportProgress = (logSummary, task = null) => {
+    const selected = numberFromLog(logSummary?.scan?.match?.[3]);
+    const completed = numberFromLog(logSummary?.imported?.match?.[1]);
+    const startedIndex = numberFromLog(logSummary?.started?.match?.[1]);
+    const current = Math.max(completed, startedIndex);
+    const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
+    const secondsLeft = completed > 0 && selected > completed && elapsedSeconds > 0
+      ? ((selected - completed) / completed) * elapsedSeconds
+      : 0;
+    const countdown = secondsLeft ? formatDuration(secondsLeft) : (selected && completed >= selected ? "0s" : "Estimating");
+    const percent = selected
+      ? Math.max(current ? 1 : 0, Math.min(current >= selected ? 100 : 96, Math.round((current / selected) * 100)))
+      : 25;
+    const photo = logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
+    const remaining = Math.max(0, selected - completed);
+    return { selected, completed, current, startedIndex, remaining, percent, countdown, photo };
+  };
+
+  const cameraImportProgressDetail = (progress) => {
+    if (!progress.selected) return "Scanning Camera source folders to find selected photos.";
+    const selected = formatCount(progress.selected);
+    const completed = formatCount(progress.completed);
+    const remaining = formatCount(progress.remaining);
+    const current = formatCount(Math.min(Math.max(progress.current, progress.completed), progress.selected));
+    const timeLeft = progress.countdown === "Estimating"
+      ? "time left estimate starts after a few renders complete"
+      : `rough time left ${progress.countdown}`;
+    if (progress.completed >= progress.selected) {
+      return `${completed} of ${selected} selected Camera source photos rendered; ${timeLeft}.`;
+    }
+    if (progress.startedIndex > progress.completed) {
+      return `Working on selected Camera source photo ${current} of ${selected}; ${completed} rendered, ${remaining} remaining; ${timeLeft}.`;
+    }
+    return `${completed} of ${selected} selected Camera source photos rendered; ${remaining} remaining; ${timeLeft}.`;
+  };
+
+  const phaseProgress = (phase, logSummary, failed, task = null) => {
     if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
     if ((phase.key === "discard-start" || phase.key === "discard-final") && (logSummary?.deleteProgress || logSummary?.deleteStart || logSummary?.deleted)) {
       if (logSummary?.deleted) {
@@ -1343,11 +1431,11 @@
       return deleteObjectProgress(logSummary);
     }
     if (phase.key === "camera" && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
-      const selected = Number(logSummary?.scan?.match?.[3] || 0);
-      const current = Number(logSummary?.imported?.match?.[1] || logSummary?.started?.match?.[1] || 0);
-      const percent = selected ? Math.max(4, Math.min(96, Math.round((current / selected) * 100))) : 25;
-      const photo = logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
-      return { percent, detail: selected ? `${current || 1} of ${selected}${photo ? `, ${photo}` : ""}` : "Scanning selected photos" };
+      const progress = cameraImportProgress(logSummary, task);
+      return {
+        percent: progress.percent,
+        detail: cameraImportProgressDetail(progress),
+      };
     }
     if (phase.key === "private" && logSummary?.upload) {
       return privateBackfillProgress(logSummary);
@@ -1363,7 +1451,21 @@
     return "Done";
   };
 
-  const renderSweepPhases = (task, logSummary = null) => {
+  const ownerCountRowsHtml = (rows, wideLabels = new Set()) => rows.map(([label, value]) => `
+    <div class="${wideLabels.has(label) ? "is-wide" : ""}">
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${escapeHtml(value)}</dd>
+    </div>
+  `).join("");
+
+  const phaseStatusLabel = (state) => {
+    if (state === "done") return "Done";
+    if (state === "running") return "Running";
+    if (state === "failed") return "Needs attention";
+    return "Waiting";
+  };
+
+  const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map()) => {
     if (!r2Phases) return;
     if (!task || task.operation !== "repair") {
       setHtml(r2Phases, "");
@@ -1376,6 +1478,8 @@
     const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
     const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
+    const wideLabels = new Set(["Current photo", "Progress summary", "Last photo", "Last rendered", "Latest error", "Latest log"]);
+    const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
       const inferredDone = (active || coverageIncomplete) && index < activeIndex;
@@ -1385,18 +1489,29 @@
       const progress = state === "done"
         ? { percent: 100, detail: completedPhaseDetail(phase, logSummary) }
         : state === "running"
-          ? phaseProgress(phase, logSummary, false)
+          ? phaseProgress(phase, logSummary, false, task)
           : state === "failed"
-            ? phaseProgress(phase, logSummary, true)
+            ? phaseProgress(phase, logSummary, true, task)
             : { percent: 0, detail: "Waiting" };
+      const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
+      const detailHtml = phaseRows.length
+        ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
+        : "";
+      const progressNote = progress.detail && !genericProgressDetails.has(progress.detail)
+        ? `<p class="owner-sweep-progress-note">${escapeHtml(progress.detail)}</p>`
+        : "";
       return `
         <div class="owner-sweep-phase is-${state}">
           <div class="owner-sweep-phase-copy">
             <strong>${escapeHtml(phase.label)}</strong>
-            <span>${escapeHtml(progress.detail)}</span>
+            <span>${escapeHtml(phaseStatusLabel(state))}</span>
           </div>
-          <div class="owner-sweep-bar" aria-label="${escapeHtml(phase.label)} progress">
-            <span style="width:${progress.percent}%"></span>
+          <div class="owner-sweep-phase-progress">
+            <div class="owner-sweep-bar" aria-label="${escapeHtml(phase.label)} progress">
+              <span style="width:${progress.percent}%"></span>
+            </div>
+            ${progressNote}
+            ${detailHtml}
           </div>
         </div>
       `;
@@ -1408,7 +1523,6 @@
     const coverageIncomplete = !active && latest.state === "done" && r2CoverageOk === false;
     const failureCount = Number(latest.failed || 0);
     const failed = failureCount > 0 || latest.state === "failed" || coverageIncomplete;
-    renderSweepPhases(latest, logSummary);
     if (active) {
       if (latest.external_pid) {
         setText(r2Summary, logSummary?.phase
@@ -1428,51 +1542,63 @@
     } else {
       setText(r2Summary, "Last R2 coverage repair finished.");
     }
-    const rows = [];
+    const detailRowsByPhase = new Map();
+    const addPhaseRow = (phaseKey, label, value) => {
+      if (!detailRowsByPhase.has(phaseKey)) detailRowsByPhase.set(phaseKey, []);
+      detailRowsByPhase.get(phaseKey).push([label, value]);
+    };
     let lastPhotoId = "";
-    if (latest.external_pid) rows.push(["Sweep PID", latest.external_pid]);
+    const activePhaseKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
+    if (latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
     if (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted) {
       const progress = deleteObjectProgress(logSummary);
-      if (progress.total) rows.push(["R2 objects", `${formatCount(progress.completed)} / ${formatCount(progress.total)}`]);
-      if (active && progress.countdown) rows.push(["Countdown", progress.countdown]);
+      const deletePhaseKey = logSummary?.phaseKey === "discard-final" ? "discard-final" : "discard-start";
+      if (progress.total) addPhaseRow(deletePhaseKey, "Progress summary", `${formatCount(progress.completed)} of ${formatCount(progress.total)} banned-photo R2 objects processed`);
+      if (active && progress.countdown && progress.total > progress.completed) addPhaseRow(deletePhaseKey, "Time left estimate", progress.countdown);
       if (progress.publicTotal || progress.privateTotal) {
-        rows.push([
+        addPhaseRow(
+          deletePhaseKey,
           "Public/private",
           `${formatCount(progress.publicCompleted)} / ${formatCount(progress.publicTotal)} public, ${formatCount(progress.privateCompleted)} / ${formatCount(progress.privateTotal)} private`,
-        ]);
+        );
       }
-      if (progress.discardedPhotos) rows.push(["Banned photos", formatCount(progress.discardedPhotos)]);
+      if (progress.discardedPhotos) addPhaseRow(deletePhaseKey, "Banned photos", formatCount(progress.discardedPhotos));
     }
     if (logSummary?.started && !logSummary?.upload) {
-      rows.push(["Current photo", logSummary.started.match[2]]);
-      rows.push(["Collection", logSummary.started.match[3]]);
+      addPhaseRow("camera", "Current photo", logSummary.started.match[2]);
+      addPhaseRow("camera", "Collection", logSummary.started.match[3]);
     }
-    if (logSummary?.imported && !logSummary?.upload) {
-      rows.push(["Rendered photos", logSummary.imported.match[1]]);
-      rows.push(["Last rendered", logSummary.imported.match[2]]);
-      rows.push(["Collection", logSummary.imported.match[3]]);
-      rows.push(["Private renders", logSummary.imported.match[5]]);
+    if ((logSummary?.scan || logSummary?.started || logSummary?.imported) && !logSummary?.upload) {
+      const progress = cameraImportProgress(logSummary, latest);
+      if (progress.selected) {
+        addPhaseRow(
+          "camera",
+          "Progress summary",
+          `${formatCount(Math.min(progress.current, progress.selected))} of ${formatCount(progress.selected)} selected Camera source photos reached`,
+        );
+        addPhaseRow("camera", "Rendered complete", `${formatCount(progress.completed)} rendered, ${formatCount(progress.remaining)} remaining`);
+      }
+      if (active && progress.selected > progress.completed) addPhaseRow("camera", "Time left estimate", progress.countdown);
+      if (logSummary?.imported) {
+        addPhaseRow("camera", "Last rendered", logSummary.imported.match[2]);
+        addPhaseRow("camera", "Private renders", logSummary.imported.match[5]);
+      }
     }
     if (logSummary?.upload) {
       lastPhotoId = logSummary.upload.match[2];
-      rows.push(["Last photo", lastPhotoId]);
-      rows.push(["Collection", collectionLabelForPhoto(lastPhotoId) || "unknown"]);
+      addPhaseRow("private", "Last photo", lastPhotoId);
+      addPhaseRow("private", "Collection", collectionLabelForPhoto(lastPhotoId) || "unknown");
     }
-    if (logSummary?.manifest) rows.push(["Render triplets", logSummary.manifest.match[1]]);
-    if (logSummary?.processed) rows.push(["Processed", logSummary.processed.match[1]]);
-    if (coverageIncomplete) rows.push(["Coverage", coverageMissingDetail()]);
-    if (Array.isArray(latest.errors) && latest.errors.length) rows.push(["Latest error", latest.errors.at(-1)]);
-    if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) rows.push(["Latest error", logSummary.error.line]);
-    else if (logSummary?.latest && !active) rows.push(["Latest log", logSummary.latest]);
-    if (!active) rows.push(["Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete"]);
-    if (!rows.length) rows.push(["State", latest.state || "queued"]);
-    const wideLabels = new Set(["Current photo", "Last photo", "Last rendered", "Latest error", "Latest log"]);
-    setHtml(r2Counts, rows.map(([label, value]) => `
-      <div class="${wideLabels.has(label) ? "is-wide" : ""}">
-        <dt>${escapeHtml(label)}</dt>
-        <dd>${escapeHtml(value)}</dd>
-      </div>
-    `).join(""));
+    if (logSummary?.manifest) addPhaseRow("sidecar", "Render triplets", logSummary.manifest.match[1]);
+    if (logSummary?.processed) addPhaseRow(activePhaseKey, "Processed", logSummary.processed.match[1]);
+    if (coverageIncomplete) addPhaseRow("coverage", "Coverage", coverageMissingDetail());
+    if (Array.isArray(latest.errors) && latest.errors.length) addPhaseRow(activePhaseKey, "Latest error", latest.errors.at(-1));
+    if (logSummary?.error && (!active || logSummary.error.line === logSummary.latest)) addPhaseRow(activePhaseKey, "Latest error", logSummary.error.line);
+    else if (logSummary?.latest && !active) addPhaseRow(activePhaseKey, "Latest log", logSummary.latest);
+    if (!active) addPhaseRow(activePhaseKey, "Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete");
+    if (!detailRowsByPhase.size) addPhaseRow(activePhaseKey, "State", latest.state || "queued");
+    renderSweepPhases(latest, logSummary, detailRowsByPhase);
+    setHtml(r2Counts, "");
     renderR2PhotoPreview(lastPhotoId);
   };
 
@@ -1669,12 +1795,7 @@
       ["Failed", failed],
       ["Uploaded", `${formatBytes(latest.bytes_done)} / ${formatBytes(latest.bytes_total)}`],
     ];
-    setHtml(r2Counts, rows.map(([label, value]) => `
-      <div>
-        <dt>${escapeHtml(label)}</dt>
-        <dd>${escapeHtml(value)}</dd>
-      </div>
-    `).join(""));
+    setHtml(r2Counts, ownerCountRowsHtml(rows));
   };
 
   const renderR2Coverage = (coverage = null) => {
@@ -1831,11 +1952,17 @@
   renderPriceList();
   renderCostEstimate();
 
-  window.addEventListener("photosbyelie:ownerauthchange", (event) => {
-    renderOwnerAvailability(event.detail || ownerAuth?.state);
-  });
+    window.addEventListener("photosbyelie:ownerauthchange", (event) => {
+      renderOwnerAvailability(event.detail || ownerAuth?.state);
+    });
 
-  ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
+    ownerTabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setOwnerTab(button.dataset.ownerTabButton || "");
+      });
+    });
+
+    ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
 
   if (physicalProductsToggle) {
     const physicalAvailable = productSettings?.physicalProductsAvailable?.() === true;

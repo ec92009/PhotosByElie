@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v74.38`
+- Current visible build: `v78.38`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`, and `ca0bd349 photosbyelie: gate basket by delivery coverage`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
@@ -33,7 +33,7 @@ for remote execution.
 - Waste Basket is the Owner-facing model for unwanted photos. Basketed photos are live-blacklisted and can be put back; emptying the basket deletes public previews, private masters, and private render triplets, then leaves durable tombstones so those masters do not return.
 - Waste Basket purge was intentionally paused during catalog migration. Resume only when ready to monitor the `Cloud media left` progress.
 - Tombstoned/Waste Basket photos are not buyer inventory. Basket checkout now prunes stale browser selections for tombstoned photos and validates selected private master/render availability before Stripe.
-- Owner R2 coverage excludes Waste Basket tombstones from active repair targets and can list missing private masters/triplets for active photos, preferring Saturn/source-file repair when the source path resolves.
+- Owner R2 coverage excludes Waste Basket tombstones from active repair targets and can list missing private masters/triplets for active photos, preferring Saturn/source-file repair when the source path resolves. The Owner dashboard is grouped into Review, Real Estate, Catalog, Cloud, and Commerce tabs, with cloud sweep progress details shown inline by phase.
 - Local Owner actions are unlocked by `scripts/local_server.py` on localhost without a password. Add `--bind 0.0.0.0 --allow-lan-owner` only when a private-LAN owner review session is intentional.
 - Public previews are watermarked and public in R2 under flat `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg` keys.
 - Public browsing now loads previews directly from the public R2 `r2.dev` endpoint: `https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev`.
@@ -75,9 +75,9 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 ## Current Priority
 
-1. **Reconcile remaining dirty Owner/generated state.**
-   - Review local approval/proposal/discard/catalog state before the next generated-data commit.
-   - Decide what belongs in Git and what is disposable test/live-state residue.
+1. **Keep Owner/generated state handoff-ready.**
+   - Review local approval/proposal/discard/catalog state before each generated-data commit.
+   - Commit tracked manifest changes only when they represent durable R2/catalog state.
    - Keep unrelated local edits out of feature commits.
 
 2. **Prove Stripe checkout in test mode.**

@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v78.37`
+- Current visible version: `v78.38`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -19,7 +19,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
 - `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
 - `real-estate.html`: private real-estate review workspace that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, supports mixed photo/video filtering, project assignment, title edits, draggable PDF/slideshow draft ordering, browser/share-sheet-friendly selection table export, masked password entry, and selected-original ZIP delivery through the Worker
-- `owner.html`: localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, Real Estate client credential/import/publish/upload actions, and R2 maintenance
+- `owner.html`: tabbed localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, Real Estate client credential/import/publish/upload actions, commerce settings, and R2 maintenance
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
 - `basket-store.js`: shared basket source-of-truth helpers for detail and basket pages
 - `liked-store.js`: shared liked-photo source-of-truth helpers for detail and liked pages

@@ -4,7 +4,7 @@ Last updated: 2026-05-18
 
 ## Current Facts
 
-- Current visible build: `v78.33`.
+- Current visible build: `v78.38`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.

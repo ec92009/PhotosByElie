@@ -1,9 +1,9 @@
 {
   "schema": "photosbyelie.private-delivery-manifest.v1",
-  "updatedAt": "2026-05-18T08:21:13.414Z",
+  "updatedAt": "2026-05-18T08:23:29.210Z",
   "privateBucket": "photosbyelie-private",
   "catalogPhotos": 6273,
-  "privateMasterPhotoIds": 6237,
+  "privateMasterPhotoIds": 6263,
   "privateRenderTripletPhotoIds": 10447,
   "records": {
     "20220506-160631-03403-51426edaac": {
@@ -22929,8 +22929,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1574-42b6bb23dd.mov",
         "legacyKey": "masters/img-1574-42b6bb23dd/IMG_1574.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1574-42b6bb23dd.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -22945,8 +22945,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1573-04db82aea0.mov",
         "legacyKey": "masters/img-1573-04db82aea0/IMG_1573.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1573-04db82aea0.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25020,8 +25020,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1324-2a214f3c49.mov",
         "legacyKey": "masters/img-1324-2a214f3c49/IMG_1324.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1324-2a214f3c49.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25036,8 +25036,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1323-dc4ffe3842.mov",
         "legacyKey": "masters/img-1323-dc4ffe3842/IMG_1323.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1323-dc4ffe3842.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25052,8 +25052,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1304-dbb036a0a8.mov",
         "legacyKey": "masters/img-1304-dbb036a0a8/IMG_1304.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1304-dbb036a0a8.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25068,8 +25068,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1298-3036cfca45.mov",
         "legacyKey": "masters/img-1298-3036cfca45/IMG_1298.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1298-3036cfca45.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25084,8 +25084,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1293-a6ef9548d3.mov",
         "legacyKey": "masters/img-1293-a6ef9548d3/IMG_1293.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1293-a6ef9548d3.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25100,8 +25100,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1292-3b723d82be.mov",
         "legacyKey": "masters/img-1292-3b723d82be/IMG_1292.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1292-3b723d82be.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25571,8 +25571,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1060-9e7b7af75d.mov",
         "legacyKey": "masters/img-1060-9e7b7af75d/IMG_1060.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1060-9e7b7af75d.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25587,8 +25587,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1059-af6442e4d6.mov",
         "legacyKey": "masters/img-1059-af6442e4d6/IMG_1059.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1059-af6442e4d6.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25603,8 +25603,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1058-8d294fe8e8.mov",
         "legacyKey": "masters/img-1058-8d294fe8e8/IMG_1058.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1058-8d294fe8e8.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25619,8 +25619,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1057-bb454434b8.mov",
         "legacyKey": "masters/img-1057-bb454434b8/IMG_1057.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1057-bb454434b8.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25635,8 +25635,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1056-d435404ae1.mov",
         "legacyKey": "masters/img-1056-d435404ae1/IMG_1056.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1056-d435404ae1.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25651,8 +25651,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1055-41b73643cf.mov",
         "legacyKey": "masters/img-1055-41b73643cf/IMG_1055.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1055-41b73643cf.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -25667,8 +25667,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1054-bbd7e90a80.mov",
         "legacyKey": "masters/img-1054-bbd7e90a80/IMG_1054.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1054-bbd7e90a80.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -29253,8 +29253,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-0258-571157fd74.mov",
         "legacyKey": "masters/img-0258-571157fd74/IMG_0258.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-0258-571157fd74.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -208994,8 +208994,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1166-5254d26291.mov",
         "legacyKey": "masters/img-1166-5254d26291/IMG_1166.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1166-5254d26291.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209010,8 +209010,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1165-7f280d668b.mov",
         "legacyKey": "masters/img-1165-7f280d668b/IMG_1165.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1165-7f280d668b.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209026,8 +209026,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1164-ff3aa85aa6.mov",
         "legacyKey": "masters/img-1164-ff3aa85aa6/IMG_1164.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1164-ff3aa85aa6.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209042,8 +209042,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1163-865c215612.mov",
         "legacyKey": "masters/img-1163-865c215612/IMG_1163.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1163-865c215612.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209058,8 +209058,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1162-8d5f189d84.mov",
         "legacyKey": "masters/img-1162-8d5f189d84/IMG_1162.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1162-8d5f189d84.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209249,8 +209249,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1142-7b199b33ad.mov",
         "legacyKey": "masters/img-1142-7b199b33ad/IMG_1142.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1142-7b199b33ad.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209405,8 +209405,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1112-482e0b08e3.mov",
         "legacyKey": "masters/img-1112-482e0b08e3/IMG_1112.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1112-482e0b08e3.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209421,8 +209421,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1111-3e8483bc6f.mov",
         "legacyKey": "masters/img-1111-3e8483bc6f/IMG_1111.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1111-3e8483bc6f.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209437,8 +209437,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1110-d9679b1131.mov",
         "legacyKey": "masters/img-1110-d9679b1131/IMG_1110.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1110-d9679b1131.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {
@@ -209453,8 +209453,8 @@
       "privateMaster": {
         "expectedKey": "masters/img-1109-cb8d636b93.mov",
         "legacyKey": "masters/img-1109-cb8d636b93/IMG_1109.MOV",
-        "key": "",
-        "present": false
+        "key": "masters/img-1109-cb8d636b93.mov",
+        "present": true
       },
       "privateRenders": {},
       "publicPreviews": {

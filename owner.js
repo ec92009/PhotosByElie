@@ -61,10 +61,6 @@
   const realEstateAlbumCountRoot = document.querySelector("[data-owner-re-album-count]");
   const realEstateLocalLink = document.querySelector("[data-owner-re-local-link]");
   const realEstatePublicLink = document.querySelector("[data-owner-re-public-link]");
-  const realEstateFields = Object.fromEntries(
-    [...document.querySelectorAll("[data-owner-re-field]")]
-      .map((field) => [field.dataset.ownerReField, field])
-  );
   const realEstateComputed = Object.fromEntries(
     [...document.querySelectorAll("[data-owner-re-computed]")]
       .map((field) => [field.dataset.ownerReComputed, field])
@@ -87,6 +83,7 @@
   let selectedRealEstateClientId = "";
   let realEstateBusy = false;
   let realEstateProgressTimer = null;
+  let realEstateDraftSerial = 0;
 
   const setStatus = (message) => {
     if (status) status.textContent = message;
@@ -696,6 +693,36 @@
     client?.properties?.length ? client.properties : (client?.effectiveProperties || client?.availableProperties || client?.albums || [])
   );
 
+  const parseRealEstateProperties = (value) => String(value || "")
+    .split(/\r?\n|,/)
+    .map((property) => property.trim())
+    .filter(Boolean);
+
+  const realEstateRowByClientId = (clientId) => (
+    [...(realEstateClientList?.querySelectorAll("[data-owner-re-client]") || [])]
+      .find((row) => row.dataset.ownerReClient === clientId) || null
+  );
+
+  const focusRealEstateClientField = (clientId, field = "customer") => {
+    window.requestAnimationFrame(() => {
+      const row = realEstateRowByClientId(clientId);
+      const control = row?.querySelector(`[data-owner-re-inline-field="${field}"]`);
+      control?.focus();
+      if (typeof control?.select === "function" && control.tagName !== "TEXTAREA") control.select();
+    });
+  };
+
+  const markRealEstateRowSelected = (clientId) => {
+    selectedRealEstateClientId = clientId || "";
+    realEstateClientList?.querySelectorAll("[data-owner-re-client]").forEach((row) => {
+      row.classList.toggle("is-active", row.dataset.ownerReClient === selectedRealEstateClientId);
+    });
+    const selected = selectedRealEstateClient();
+    updateRealEstateComputed(selected || blankRealEstateClient());
+    updateRealEstateLinks(selected && !selected.isDraft ? selected : null);
+    return selected;
+  };
+
   const realEstateConventionsFor = (clientName) => {
     const name = String(clientName || "").trim();
     return {
@@ -732,30 +759,51 @@
   const fillRealEstateForm = (client) => {
     if (!client || !realEstateForm) return;
     selectedRealEstateClientId = client.id || "";
-    const values = {
-      id: client.id || "",
-      customer: client.customer || "",
-      email: client.email || "",
-      accessCode: client.accessCode || "",
-      properties: realEstatePropertiesFor(client).join("\n"),
-      maxItems: client.maxItems || 300,
-    };
-    Object.entries(values).forEach(([key, value]) => {
-      if (realEstateFields[key]) realEstateFields[key].value = value ?? "";
-    });
     updateRealEstateComputed(client);
-    updateRealEstateLinks(client);
+    updateRealEstateLinks(client && !client.isDraft ? client : null);
+  };
+
+  const realEstateCellInput = (client, field, value, options = {}) => {
+    const attrs = [
+      `class="owner-real-estate-cell-input"`,
+      `type="${escapeHtml(options.type || "text")}"`,
+      `value="${escapeHtml(value)}"`,
+      `data-owner-re-inline-field="${escapeHtml(field)}"`,
+      `data-owner-re-client-id="${escapeHtml(client.id || "")}"`,
+      `autocomplete="${escapeHtml(options.autocomplete || "off")}"`,
+    ];
+    if (options.required) attrs.push("required");
+    if (options.placeholder) attrs.push(`placeholder="${escapeHtml(options.placeholder)}"`);
+    if (options.min) attrs.push(`min="${escapeHtml(options.min)}"`);
+    if (options.step) attrs.push(`step="${escapeHtml(options.step)}"`);
+    if (options.inputmode) attrs.push(`inputmode="${escapeHtml(options.inputmode)}"`);
+    return `<input ${attrs.join(" ")}/>`;
+  };
+
+  const realEstatePropertiesCell = (client, properties) => `
+    <textarea class="owner-real-estate-cell-input owner-real-estate-cell-properties" rows="2"
+      data-owner-re-inline-field="properties"
+      data-owner-re-client-id="${escapeHtml(client.id || "")}"
+      placeholder="Property folders">${escapeHtml(properties.join("\n"))}</textarea>
+  `;
+
+  const realEstateRowIcon = (name) => {
+    if (name === "trash") {
+      return `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>`;
+    }
+    return `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`;
   };
 
   const renderRealEstateClients = () => {
     if (!realEstateCard) return;
     const selected = selectedRealEstateClient();
-    if (realEstateClientCountRoot) realEstateClientCountRoot.textContent = formatCount(realEstateClients.length);
+    const savedClients = realEstateClients.filter((client) => !client.isDraft);
+    if (realEstateClientCountRoot) realEstateClientCountRoot.textContent = formatCount(savedClients.length);
     if (realEstatePhotoCountRoot) {
-      realEstatePhotoCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Number(client.stats?.photoCount || 0), 0));
+      realEstatePhotoCountRoot.textContent = formatCount(savedClients.reduce((sum, client) => sum + Number(client.stats?.photoCount || 0), 0));
     }
     if (realEstateAlbumCountRoot) {
-      realEstateAlbumCountRoot.textContent = formatCount(realEstateClients.reduce((sum, client) => sum + Math.max(
+      realEstateAlbumCountRoot.textContent = formatCount(savedClients.reduce((sum, client) => sum + Math.max(
         Number(client.stats?.albumCount || 0),
         realEstatePropertiesFor(client).length
       ), 0));
@@ -765,29 +813,33 @@
         const active = client.id === selected?.id;
         const properties = realEstatePropertiesFor(client);
         const missingProperties = client.missingProperties || [];
-        const statusBits = [
-          missingProperties.length
-            ? `skipping: ${missingProperties.join(", ")}`
-            : (client.sourceRootExists ? "source ok" : "source missing"),
-          client.publicContextExists ? "published" : "not published",
-        ];
+        const statusBits = client.isDraft
+          ? ["draft", "not saved"]
+          : [
+              missingProperties.length
+                ? `skipping: ${missingProperties.join(", ")}`
+                : (client.sourceRootExists ? "source ok" : "source missing"),
+              client.publicContextExists ? "published" : "not published",
+            ];
+        const rowLabel = client.customer || client.id || "new client";
         return `
           <tr class="${active ? "is-active" : ""}" data-owner-re-client="${escapeHtml(client.id)}">
-            <td><strong>${escapeHtml(client.customer || client.id)}</strong></td>
-            <td>${escapeHtml(client.email || "")}</td>
-            <td><code>${escapeHtml(client.accessCode || "")}</code></td>
-            <td>${escapeHtml(properties.join(", ") || "All folders")}</td>
+            <td>${realEstateCellInput(client, "customer", client.customer || "", { required: true, placeholder: "Client" })}</td>
+            <td>${realEstateCellInput(client, "email", client.email || "", { type: "email", placeholder: "email@example.com" })}</td>
+            <td>${realEstateCellInput(client, "accessCode", client.accessCode || "", { required: true, placeholder: "Password" })}</td>
+            <td>${realEstateCellInput(client, "maxItems", client.maxItems || 300, { type: "number", min: "1", step: "1", inputmode: "numeric" })}</td>
+            <td>${realEstatePropertiesCell(client, properties)}</td>
             <td>${escapeHtml(formatCount(client.stats?.photoCount || 0))}</td>
             <td>${escapeHtml(statusBits.join(" / "))}</td>
             <td>
               <div class="owner-real-estate-row-actions">
-                <button class="btn secondary" type="button" data-owner-re-row-action="edit" data-owner-re-client-id="${escapeHtml(client.id)}">Edit</button>
-                <button class="btn secondary danger" type="button" data-owner-re-row-action="delete" data-owner-re-client-id="${escapeHtml(client.id)}">Delete</button>
+                <button class="owner-real-estate-icon-button" type="button" data-owner-re-row-action="edit" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Edit ${escapeHtml(rowLabel)}" title="Edit client">${realEstateRowIcon("pen")}</button>
+                <button class="owner-real-estate-icon-button is-danger" type="button" data-owner-re-row-action="delete" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Delete ${escapeHtml(rowLabel)}" title="Delete client">${realEstateRowIcon("trash")}</button>
               </div>
             </td>
           </tr>
         `;
-      }).join("") : `<tr><td colspan="7">No real estate clients yet. Create one below.</td></tr>`;
+      }).join("") : `<tr><td colspan="8">No real estate clients yet. Use New client to add one.</td></tr>`;
     }
     fillRealEstateForm(selected || blankRealEstateClient());
   };
@@ -814,14 +866,33 @@
     }
   };
 
-  const realEstateFormPayload = () => ({
-    id: realEstateFields.id?.value || "",
-    customer: realEstateFields.customer?.value || "",
-    email: realEstateFields.email?.value || "",
-    accessCode: realEstateFields.accessCode?.value || "",
-    properties: realEstateFields.properties?.value || "",
-    maxItems: realEstateFields.maxItems?.value || 300,
+  const realEstateClientPayload = (client) => ({
+    id: client?.isDraft ? "" : (client?.id || ""),
+    customer: client?.customer || "",
+    email: client?.email || "",
+    accessCode: client?.accessCode || "",
+    properties: realEstatePropertiesFor(client).join("\n"),
+    maxItems: client?.maxItems || 300,
   });
+
+  const updateRealEstateClientFromControl = (control) => {
+    const clientId = control?.dataset?.ownerReClientId || control?.closest("[data-owner-re-client]")?.dataset.ownerReClient || "";
+    const field = control?.dataset?.ownerReInlineField || "";
+    const client = realEstateClients.find((item) => item.id === clientId);
+    if (!client || !field) return null;
+    if (field === "properties") {
+      client.properties = parseRealEstateProperties(control.value || "");
+      client.effectiveProperties = client.properties;
+    } else if (field === "maxItems") {
+      const maxItems = Math.max(1, Math.round(Number(control.value || 300)));
+      client.maxItems = Number.isFinite(maxItems) ? maxItems : 300;
+      control.value = String(client.maxItems);
+    } else {
+      client[field] = control.value || "";
+    }
+    markRealEstateRowSelected(client.id);
+    return client;
+  };
 
   const postRealEstateOwnerAction = async (body) => {
     const response = await fetch("/__photosbyelie/real-estate-owner", {
@@ -872,37 +943,70 @@
     realEstateProgressTimer = window.setInterval(refresh, 700);
   };
 
-  const saveRealEstateClient = async () => {
-    setRealEstateBusy(true);
-    setRealEstateStatus("Saving real estate client...");
+  const saveRealEstateInlineClient = async (clientId) => {
+    const client = realEstateClients.find((item) => item.id === clientId);
+    if (!client) return;
+    const clientName = String(client.customer || "").trim();
+    const password = String(client.accessCode || "").trim();
+    if (!clientName) {
+      setRealEstateStatus("Client name is required before autosave.");
+      return;
+    }
+    if (!password) {
+      setRealEstateStatus(`${clientName}: enter a password to save this client.`);
+      return;
+    }
+    setRealEstateStatus(`Saving ${clientName}...`);
     try {
       const payload = await postRealEstateOwnerAction({
         action: "save-client",
-        client: realEstateFormPayload(),
+        client: realEstateClientPayload(client),
       });
       realEstateClients = Array.isArray(payload.clients) ? payload.clients : realEstateClients;
       selectedRealEstateClientId = payload.client?.id || selectedRealEstateClientId;
       renderRealEstateClients();
       renderRealEstateOutput("");
-      setRealEstateStatus(`${payload.client?.customer || "Client"} saved.`);
+      setRealEstateStatus(`${payload.client?.customer || clientName} saved.`);
     } catch (error) {
       setRealEstateStatus(error?.message || "Could not save real estate client.");
-    } finally {
-      setRealEstateBusy(false);
     }
   };
 
   const startNewRealEstateClient = () => {
-    selectedRealEstateClientId = "";
-    fillRealEstateForm(blankRealEstateClient());
+    const existingDraft = realEstateClients.find((client) => client.isDraft);
+    if (existingDraft) {
+      selectedRealEstateClientId = existingDraft.id;
+      renderRealEstateClients();
+      focusRealEstateClientField(existingDraft.id, "customer");
+      setRealEstateStatus("Finish the draft client. It saves automatically after client and password are filled.");
+      return;
+    }
+    realEstateDraftSerial += 1;
+    const draft = {
+      ...blankRealEstateClient(),
+      id: `__draft-real-estate-${Date.now()}-${realEstateDraftSerial}`,
+      isDraft: true,
+    };
+    realEstateClients = [draft, ...realEstateClients];
+    selectedRealEstateClientId = draft.id;
+    renderRealEstateClients();
     renderRealEstateOutput("");
-    setRealEstateStatus("Enter a client name, email, password, and property folders.");
+    focusRealEstateClientField(draft.id, "customer");
+    setRealEstateStatus("New client draft. Fill client and password; each field saves when you leave it.");
   };
 
   const deleteRealEstateClient = async (clientId = selectedRealEstateClientId) => {
     const client = realEstateClients.find((item) => item.id === clientId);
     if (!client) {
       setRealEstateStatus("Select a real estate client to delete.");
+      return;
+    }
+    if (client.isDraft) {
+      realEstateClients = realEstateClients.filter((item) => item.id !== client.id);
+      selectedRealEstateClientId = realEstateClients[0]?.id || "";
+      renderRealEstateClients();
+      renderRealEstateOutput("");
+      setRealEstateStatus("Draft client discarded.");
       return;
     }
     const ok = window.confirm(`Delete ${client.customer} from the local Real Estate client list? Imported media and published contexts are left on disk.`);
@@ -938,7 +1042,11 @@
     }
     const selected = selectedRealEstateClient();
     if (!selected) {
-      setRealEstateStatus("Save a real estate client first.");
+      setRealEstateStatus("Select a real estate client first.");
+      return;
+    }
+    if (selected.isDraft) {
+      setRealEstateStatus("Finish the draft client before running imports, publishing, or uploads.");
       return;
     }
     if (action === "upload-client") {
@@ -1797,27 +1905,52 @@
         deleteRealEstateClient(clientId);
         return;
       }
-      selectedRealEstateClientId = clientId;
+      markRealEstateRowSelected(clientId);
       renderRealEstateClients();
       const selected = selectedRealEstateClient();
       setRealEstateStatus(selected ? `${selected.customer} selected.` : "No real estate client selected.");
+      focusRealEstateClientField(clientId, "customer");
+      return;
+    }
+    const inlineControl = event.target.closest("[data-owner-re-inline-field]");
+    if (inlineControl) {
+      const clientId = inlineControl.dataset.ownerReClientId || inlineControl.closest("[data-owner-re-client]")?.dataset.ownerReClient || "";
+      const selected = markRealEstateRowSelected(clientId);
+      if (selected) setRealEstateStatus(selected.isDraft ? "Editing new client draft." : `${selected.customer || selected.id} selected.`);
       return;
     }
     const row = event.target.closest("[data-owner-re-client]");
     if (!row) return;
-    selectedRealEstateClientId = row.dataset.ownerReClient || "";
+    markRealEstateRowSelected(row.dataset.ownerReClient || "");
     renderRealEstateClients();
     const selected = selectedRealEstateClient();
     setRealEstateStatus(selected ? `${selected.customer} selected.` : "No real estate client selected.");
   });
 
-  realEstateFields.customer?.addEventListener("input", (event) => {
-    updateRealEstateComputed(event.target.value || "");
+  realEstateClientList?.addEventListener("input", (event) => {
+    const control = event.target.closest("[data-owner-re-inline-field]");
+    if (!control) return;
+    const client = updateRealEstateClientFromControl(control);
+    if (!client) return;
+    if (control.dataset.ownerReInlineField === "customer") updateRealEstateComputed(client.customer || "");
+    const label = client.customer || "New client";
+    setRealEstateStatus(client.isDraft
+      ? `${label}: fill client and password; it saves automatically when both are present.`
+      : `${label}: change will save when you leave the field.`);
   });
 
-  realEstateForm?.addEventListener("submit", (event) => {
+  realEstateClientList?.addEventListener("change", (event) => {
+    const control = event.target.closest("[data-owner-re-inline-field]");
+    if (!control) return;
+    const client = updateRealEstateClientFromControl(control);
+    if (client) saveRealEstateInlineClient(client.id);
+  });
+
+  realEstateClientList?.addEventListener("keydown", (event) => {
+    const control = event.target.closest("[data-owner-re-inline-field]");
+    if (!control || control.tagName === "TEXTAREA" || event.key !== "Enter") return;
     event.preventDefault();
-    saveRealEstateClient();
+    control.blur();
   });
 
   realEstateForm?.addEventListener("click", (event) => {

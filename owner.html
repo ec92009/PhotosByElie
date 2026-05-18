@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=78.35"/>
-  <link rel="stylesheet" href="./styles.css?v=78.35"/>
-  <link rel="stylesheet" href="./photos.css?v=78.35"/>
+  <link rel="stylesheet" href="./shared.css?v=78.36"/>
+  <link rel="stylesheet" href="./styles.css?v=78.36"/>
+  <link rel="stylesheet" href="./photos.css?v=78.36"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <span class="site-version-badge">v78.35</span>
+    <span class="site-version-badge">v78.36</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -100,6 +100,7 @@
                   <th>Client</th>
                   <th>Email</th>
                   <th>Password</th>
+                  <th>Max ZIP</th>
                   <th>Properties</th>
                   <th>Media</th>
                   <th>Status</th>
@@ -107,33 +108,12 @@
                 </tr>
               </thead>
               <tbody data-owner-re-client-list>
-                <tr><td colspan="7">Loading real estate clients...</td></tr>
+                <tr><td colspan="8">Loading real estate clients...</td></tr>
               </tbody>
             </table>
           </div>
-          <form class="owner-real-estate-form" data-owner-re-form>
-            <input type="hidden" data-owner-re-field="id"/>
-            <label>
-              <span>Client</span>
-              <input type="text" data-owner-re-field="customer" autocomplete="off" required/>
-            </label>
-            <label>
-              <span>Email</span>
-              <input type="email" data-owner-re-field="email" autocomplete="off" placeholder="client@example.com"/>
-            </label>
-            <label>
-              <span>Password</span>
-              <input type="text" data-owner-re-field="accessCode" autocomplete="off" required/>
-            </label>
-            <label>
-              <span>Max ZIP items</span>
-              <input type="number" min="1" step="1" data-owner-re-field="maxItems"/>
-            </label>
-            <label class="is-wide">
-              <span>Properties</span>
-              <textarea rows="3" data-owner-re-field="properties" placeholder="Property folder names, one per line"></textarea>
-            </label>
-            <dl class="owner-real-estate-computed is-wide" aria-label="Real estate naming conventions">
+          <div class="owner-real-estate-context" data-owner-re-form>
+            <dl class="owner-real-estate-computed" aria-label="Real estate naming conventions">
               <div class="is-path">
                 <dt>Source</dt>
                 <dd data-owner-re-computed="sourceRoot">/Volumes/Saturn/Pictures/RE/&lt;Client&gt;</dd>
@@ -163,21 +143,19 @@
                 <dd data-owner-re-computed="privateKeyPrefix">RE/&lt;Client&gt;/masters</dd>
               </div>
             </dl>
-            <div class="owner-real-estate-links is-wide">
+            <div class="owner-real-estate-links">
               <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-local-link>Open local review</a>
               <a class="btn secondary" href="./real-estate.html?logout=1" data-owner-re-public-link>Open public review</a>
             </div>
-            <div class="owner-real-estate-actions is-wide">
+            <div class="owner-real-estate-actions">
               <button class="btn secondary" type="button" data-owner-re-action="new-client">New client</button>
-              <button class="btn secondary" type="submit">Save client</button>
-              <button class="btn secondary danger" type="button" data-owner-re-action="delete-client">Delete client</button>
               <button class="btn secondary" type="button" data-owner-re-action="import-client">Import media</button>
               <button class="btn secondary" type="button" data-owner-re-action="publish-client">Publish context</button>
               <button class="btn secondary" type="button" data-owner-re-action="upload-dry-run">Upload dry run</button>
               <button class="btn secondary danger" type="button" data-owner-re-action="upload-client">Upload masters/previews</button>
               <button class="btn secondary" type="button" data-owner-re-action="worker-secret">Copy Worker secret</button>
             </div>
-          </form>
+          </div>
           <p class="owner-card-note" data-owner-re-status>Loading real estate clients...</p>
           <pre class="owner-real-estate-output" data-owner-re-output hidden></pre>
         </article>
@@ -355,15 +333,15 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=78.35"></script>
-  <script src="./photos.js?v=78.35"></script>
-  <script src="./owner-auth.js?v=78.35"></script>
-  <script src="./owner-tools.js?v=78.35"></script>
-  <script src="./site-version.js?v=78.35"></script>
-  <script src="./catalog-sqlite.js?v=78.35"></script>
-  <script src="./photos-data.js?v=78.35"></script>
-  <script src="./hidden-actions.js?v=78.35"></script>
-  <script src="./reserve-store.js?v=78.35"></script>
-  <script src="./owner.js?v=78.35"></script>
+  <script src="./media-config.js?v=78.36"></script>
+  <script src="./photos.js?v=78.36"></script>
+  <script src="./owner-auth.js?v=78.36"></script>
+  <script src="./owner-tools.js?v=78.36"></script>
+  <script src="./site-version.js?v=78.36"></script>
+  <script src="./catalog-sqlite.js?v=78.36"></script>
+  <script src="./photos-data.js?v=78.36"></script>
+  <script src="./hidden-actions.js?v=78.36"></script>
+  <script src="./reserve-store.js?v=78.36"></script>
+  <script src="./owner.js?v=78.36"></script>
 </body>
 </html>

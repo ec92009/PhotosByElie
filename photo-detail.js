@@ -270,6 +270,16 @@ const navigateAfterHide = () => {
   return true;
 };
 
+const navigateAwayFromBlockedPhoto = () => {
+  if (navigateAfterHide()) return true;
+  const fallbackPhoto = collection.photos
+    .slice(photoIndex + 1)
+    .concat(collection.photos.slice(0, photoIndex))
+    .find((item) => item.id !== photo.id);
+  window.location.replace(versionedHref(fallbackPhoto ? `./photo.html?id=${fallbackPhoto.id}` : galleryHrefForKey(collectionKey)));
+  return true;
+};
+
 const frameOptions = () => window.photosByElieFrameOptions || [];
 const defaultFrame = () => frameOptions()[0] || { id: "none", label: "No frame", price: 0 };
 const frameFor = (frameId) => frameOptions().find((frame) => frame.id === frameId) || defaultFrame();
@@ -804,19 +814,23 @@ if (localModerationEnabled) {
       return;
     }
     if (key === "x" || key === "b" || key === "h") {
+      event.preventDefault();
       if (hiddenActions.has(photo.id)) {
         status.textContent = `${photo.title} is already in the Waste Basket.`;
+        hiddenActions.mark(photo.id);
+        navigateAwayFromBlockedPhoto();
         return;
       }
       try {
         await hiddenActions.mark(photo.id);
-        navigateAfterHide();
+        navigateAwayFromBlockedPhoto();
       } catch (error) {
         status.textContent = error?.message || "Could not move photo to Waste Basket.";
       }
       return;
     }
     if (key !== "u") return;
+    event.preventDefault();
     let undoneId = null;
     try {
       undoneId = await hiddenActions.undo(photo.id);
@@ -830,7 +844,7 @@ if (localModerationEnabled) {
   });
 
   window.addEventListener("photosbyelie:hiddenchange", () => {
-    navigateAfterHide();
+    if (hiddenActions.has(photo.id)) navigateAwayFromBlockedPhoto();
   });
 }
 

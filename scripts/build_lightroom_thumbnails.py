@@ -956,6 +956,12 @@ def ffmpeg_escape(value: str) -> str:
 
 
 def orientation_rotation_degrees(value: Any) -> int:
+    if value in {3, "3"}:
+        return 180
+    if value in {6, "6"}:
+        return -90
+    if value in {8, "8"}:
+        return 90
     text = str(value or "").casefold()
     if "90" in text and "270" not in text:
         return -90

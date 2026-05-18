@@ -365,21 +365,27 @@
   const mark = async (photoId) => {
     if (!enabled || !photoId) return read();
     const current = read();
-    if (current.includes(photoId)) return current;
+    const queueHideAction = (options = {}) => {
+      enqueuePhotoAction("hide", photoId).then(() => {
+        pendingHiddenIds.delete(photoId);
+      }).catch((error) => {
+        pendingHiddenIds.delete(photoId);
+        const latest = read();
+        if (options.revertOnError && latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
+        window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
+          detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
+        }));
+      });
+    };
+    if (current.includes(photoId)) {
+      queueHideAction();
+      return current;
+    }
     forgetReserveOnly([photoId]);
     pendingHiddenIds.add(photoId);
     const nextItems = write([...current, photoId]);
     writeHistory([...readHistory(), photoId]);
-    enqueuePhotoAction("hide", photoId).then(() => {
-      pendingHiddenIds.delete(photoId);
-    }).catch((error) => {
-      pendingHiddenIds.delete(photoId);
-      const latest = read();
-      if (latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
-      window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
-        detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
-      }));
-    });
+    queueHideAction({ revertOnError: true });
     return nextItems;
   };
 

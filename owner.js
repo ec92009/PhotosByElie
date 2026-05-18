@@ -2435,7 +2435,7 @@
       ? basketCatalogPhotos
         ? "Active catalog coverage is satisfied; Waste Basket media is excluded from repair targets."
         : "Policy is satisfied for the current catalog."
-      : "Missing coverage. Fill in gaps only completes the listed upload work; Start background work runs the full R2 sweep.";
+      : "Missing coverage. Fill in gaps completes the listed upload work and opens Imports; the Imports tab can also run the full R2 sweep.";
     r2CoverageOk = coverage.ok;
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
     if (latestR2ProgressTasks.length) renderWasteBasketProgress(latestR2ProgressTasks);
@@ -2492,8 +2492,8 @@
         await withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh");
         setStatus("R2 catalog coverage refreshed.");
       } else if (kind === "progress") {
-        await withTimeout(loadR2Progress(), 12000, "R2 progress refresh");
-        setStatus("R2 background work refreshed.");
+        await withTimeout(loadR2Progress(), 12000, "Import dashboard refresh");
+        setStatus("Import dashboard refreshed.");
       } else if (kind === "cost") {
         await withTimeout(loadCostEstimate(), 12000, "Cloud cost refresh");
         setStatus("Cloud bill forecast refreshed.");
@@ -2698,6 +2698,7 @@
       r2RepairActive = true;
       syncR2ActionButtons();
       setStatus("R2 background work started.");
+      setOwnerTab("imports");
       renderR2Progress([payload.task]);
       loadR2Progress();
     } catch (error) {
@@ -2731,6 +2732,7 @@
       r2GapFillActive = true;
       syncR2ActionButtons();
       setStatus("R2 upload gap fill started.");
+      setOwnerTab("imports");
       renderR2Progress([payload.task]);
       loadR2Progress();
     } catch (error) {

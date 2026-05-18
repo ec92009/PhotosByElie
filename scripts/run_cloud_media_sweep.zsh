@@ -192,7 +192,6 @@ run_skippable_phase discard-start "Double-check banned R2 cleanup" \
   node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
 
 phase import-cache "Prepare import cache"
-rm -rf "$IMPORT_CACHE_ROOT"
 mkdir -p "$IMPORT_CACHE_ROOT"
 done_phase import-cache
 
@@ -289,6 +288,6 @@ if ! git diff --cached --quiet; then
 fi
 done_phase commit
 
-phase cleanup-cache "Clean import cache"
-rm -rf "$IMPORT_CACHE_ROOT"
+phase cleanup-cache "Keep import cache"
+mkdir -p "$IMPORT_CACHE_ROOT"
 done_phase cleanup-cache

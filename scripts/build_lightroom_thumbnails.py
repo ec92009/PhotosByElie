@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key_for_reference
+from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
 from owner_state_db import connect as owner_db_connect, upsert_r2_object_state
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, append_upload_state, first_env, s3_put, wrangler_command
@@ -64,6 +64,8 @@ DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_R2_UPLOAD_STATE = Path(".review-logs/r2-upload-state.jsonl")
 DEFAULT_PRIVATE_DELIVERY_STATE = Path(".review-logs/private-deliverable-sync-state.jsonl")
 DEFAULT_PRIVATE_DELIVERY_MANIFEST = Path("assets/private-delivery-manifest.json")
+DEFAULT_PUBLIC_PREVIEW_IDS = Path(".review-logs/r2-public-preview-ids.json")
+DEFAULT_PRIVATE_INVENTORY = Path(".review-logs/r2-private-inventory.json")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
 PRIVATE_RENDER_PRODUCTS = {
     "jpg-6mp": 6,
@@ -252,6 +254,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--r2-public-prefix", default=DEFAULT_PUBLIC_PREFIX)
     parser.add_argument("--r2-private-prefix", default=DEFAULT_PRIVATE_PREFIX)
     parser.add_argument("--r2-retries", type=int, default=2)
+    parser.add_argument("--r2-force-upload", action="store_true", help="Ignore local R2 coverage records and upload every planned object.")
     default_r2_backend = os.environ.get("PBE_R2_BACKEND") or (
         "s3"
         if first_env("R2_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID")
@@ -1417,8 +1420,166 @@ def r2_covered_keys() -> set[str]:
                         if isinstance(render, dict) and render.get("present") and render.get("key"):
                             covered.add(f"{private_bucket}/{render['key']}")
 
+    if DEFAULT_PUBLIC_PREVIEW_IDS.exists():
+        try:
+            payload = json.loads(DEFAULT_PUBLIC_PREVIEW_IDS.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            payload = {}
+        public_bucket = str(payload.get("bucket") or DEFAULT_PUBLIC_BUCKET)
+        for photo_id in payload.get("complete_pairs") or []:
+            if not photo_id:
+                continue
+            covered.add(f"{public_bucket}/{public_preview_key(DEFAULT_PUBLIC_PREFIX, str(photo_id), 'gallery')}")
+            covered.add(f"{public_bucket}/{public_preview_key(DEFAULT_PUBLIC_PREFIX, str(photo_id), 'detail')}")
+            covered.add(f"{public_bucket}/{public_preview_key(DEFAULT_PUBLIC_PREFIX, str(photo_id), 'detail', 'video')}")
+
+    if DEFAULT_PRIVATE_INVENTORY.exists():
+        try:
+            payload = json.loads(DEFAULT_PRIVATE_INVENTORY.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            payload = {}
+        private_bucket = str(payload.get("bucket") or DEFAULT_PRIVATE_BUCKET)
+        for key in (payload.get("masterKeys") or []) + (payload.get("renderKeys") or []):
+            if key:
+                covered.add(f"{private_bucket}/{key}")
+
+    try:
+        conn = owner_db_connect(Path.cwd())
+        try:
+            for row in conn.execute(
+                "SELECT bucket, object_key FROM r2_objects WHERE lifecycle_state = 'current'"
+            ):
+                if row["bucket"] and row["object_key"]:
+                    covered.add(f"{row['bucket']}/{row['object_key']}")
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
     R2_COVERED_KEYS_CACHE = covered
     return covered
+
+
+def r2_key_covered(args: argparse.Namespace, bucket: str, key: str) -> bool:
+    return not getattr(args, "r2_force_upload", False) and f"{bucket}/{key}" in r2_covered_keys()
+
+
+def artifact_plan_for_source(args: argparse.Namespace, photo_id: str, source_path: Path) -> dict[str, Any]:
+    media_type = "video" if is_video(source_path) else "photo"
+    plan: dict[str, Any] = {
+        "photoId": photo_id,
+        "mediaType": media_type,
+        "privateMaster": None,
+        "privateRenders": [],
+        "publicPreviews": [],
+    }
+    if r2_upload_enabled(args, "private"):
+        master_key = private_master_key(args.r2_private_prefix, photo_id, source_path)
+        plan["privateMaster"] = {
+            "bucket": args.r2_private_bucket,
+            "key": master_key,
+            "covered": r2_key_covered(args, args.r2_private_bucket, master_key),
+        }
+        if args.r2_private_renders and source_path.suffix.lower() in {".jpg", ".jpeg"}:
+            for product_id in PRIVATE_RENDER_PRODUCTS:
+                key = private_render_key(photo_id, product_id)
+                plan["privateRenders"].append({
+                    "productId": product_id,
+                    "bucket": args.r2_private_bucket,
+                    "key": key,
+                    "covered": r2_key_covered(args, args.r2_private_bucket, key),
+                })
+        elif args.r2_private_renders:
+            plan["privateRendersSkippedReason"] = "not a JPEG source"
+        else:
+            plan["privateRendersSkippedReason"] = "private renders disabled"
+    if r2_upload_enabled(args, "public"):
+        for derivative in ("gallery", "detail"):
+            key = public_preview_key(args.r2_public_prefix, photo_id, derivative, media_type)
+            plan["publicPreviews"].append({
+                "derivative": derivative,
+                "bucket": args.r2_public_bucket,
+                "key": key,
+                "covered": r2_key_covered(args, args.r2_public_bucket, key),
+            })
+    plan["needsMaster"] = bool(plan["privateMaster"] and not plan["privateMaster"]["covered"])
+    plan["needsRenders"] = [item for item in plan["privateRenders"] if not item["covered"]]
+    plan["needsPreviews"] = [item for item in plan["publicPreviews"] if not item["covered"]]
+    plan["complete"] = not plan["needsMaster"] and not plan["needsRenders"] and not plan["needsPreviews"]
+    return plan
+
+
+def plan_asset(bucket: str, key: str, path: Path | None = None, content_type: str = "") -> dict[str, Any]:
+    asset = {"bucket": bucket, "key": key}
+    if path is not None:
+        asset["path"] = str(path)
+        if path.exists():
+            asset["bytes"] = path.stat().st_size
+    if content_type:
+        asset["content_type"] = content_type
+    return asset
+
+
+def plan_r2_assets(plan: dict[str, Any], source_path: Path, preview_paths: dict[str, Path] | None = None) -> dict[str, Any]:
+    assets: dict[str, Any] = {}
+    master = plan.get("privateMaster")
+    if master:
+        assets["private_master"] = plan_asset(
+            str(master["bucket"]),
+            str(master["key"]),
+            source_path,
+            mimetypes.guess_type(source_path.name)[0] or "application/octet-stream",
+        )
+    renders = []
+    for render in plan.get("privateRenders") or []:
+        renders.append(plan_asset(str(render["bucket"]), str(render["key"]), None, "image/jpeg"))
+    if renders:
+        assets["private_renders"] = renders
+    previews = []
+    preview_paths = preview_paths or {}
+    for preview in plan.get("publicPreviews") or []:
+        derivative = str(preview.get("derivative") or "")
+        path = preview_paths.get(derivative)
+        content_type = "video/mp4" if derivative == "detail" and plan.get("mediaType") == "video" else "image/jpeg"
+        previews.append(plan_asset(str(preview["bucket"]), str(preview["key"]), path, content_type))
+    if previews:
+        assets["public_previews"] = previews
+    return assets
+
+
+def emit_import_plan_steps(row: dict[str, Any], plan: dict[str, Any]) -> None:
+    master = plan.get("privateMaster")
+    if master:
+        emit_import_step(
+            row,
+            "master_uploaded",
+            status="done" if master.get("covered") else "pending",
+            total=1,
+            completed=1 if master.get("covered") else 0,
+        )
+    else:
+        emit_import_step(row, "master_uploaded", status="skipped", reason="private upload disabled")
+
+    renders = plan.get("privateRenders") or []
+    if renders:
+        covered = sum(1 for item in renders if item.get("covered"))
+        status = "done" if covered >= len(renders) else "pending"
+        emit_import_step(row, "triplets_created", status=status, total=len(renders), completed=covered)
+        emit_import_step(row, "triplets_uploaded", status=status, total=len(renders), completed=covered)
+    else:
+        reason = str(plan.get("privateRendersSkippedReason") or "private renders disabled")
+        emit_import_step(row, "triplets_created", status="skipped", reason=reason)
+        emit_import_step(row, "triplets_uploaded", status="skipped", reason=reason)
+
+    previews = plan.get("publicPreviews") or []
+    if previews:
+        covered = sum(1 for item in previews if item.get("covered"))
+        status = "done" if covered >= len(previews) else "pending"
+        emit_import_step(row, "previews_created", status=status, total=len(previews), completed=covered)
+        emit_import_step(row, "previews_uploaded", status=status, total=len(previews), completed=covered)
+    else:
+        emit_import_step(row, "previews_created", status="skipped", reason="public upload disabled")
+        emit_import_step(row, "previews_uploaded", status="skipped", reason="public upload disabled")
 
 
 def r2_put_file(
@@ -1557,80 +1718,113 @@ def render_private_deliverable(source_path: Path, output_path: Path, long_edge: 
     return True
 
 
-def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path: Path, detail_path: Path, source_path: Path) -> dict[str, Any]:
-    uploaded: dict[str, Any] = {}
-    if r2_upload_enabled(args, "private"):
+def upload_r2_assets(
+    args: argparse.Namespace,
+    row: dict[str, Any],
+    gallery_path: Path,
+    detail_path: Path,
+    source_path: Path,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    preview_paths = {"gallery": gallery_path, "detail": detail_path}
+    uploaded = plan_r2_assets(plan, source_path, preview_paths)
+
+    master = plan.get("privateMaster")
+    if master and not master.get("covered"):
         uploaded["private_master"] = r2_put_file(
             args,
-            args.r2_private_bucket,
-            r2_private_key(args, row, source_path),
+            str(master["bucket"]),
+            str(master["key"]),
             source_path,
             mimetypes.guess_type(source_path.name)[0] or "application/octet-stream",
             args.r2_retries,
         )
-        emit_import_step(row, "master_uploaded", total=1, completed=1)
-        if args.r2_private_renders and source_path.suffix.lower() in {".jpg", ".jpeg"}:
-            source_size = image_size(source_path)
-            render_root = Path(tempfile.gettempdir()) / "photosbyelie-private-renders" / str(row.get("id") or source_path.stem)
-            private_renders = []
-            private_rendered = 0
-            for product_id, megapixels in PRIVATE_RENDER_PRODUCTS.items():
-                long_edge = long_edge_for_megapixels(source_size, megapixels)
+        master["covered"] = True
+        emit_import_step(row, "master_uploaded", status="done", total=1, completed=1)
+
+    render_specs = plan.get("privateRenders") or []
+    missing_renders = [item for item in render_specs if not item.get("covered")]
+    if missing_renders:
+        source_size = image_size(source_path)
+        render_root = Path(tempfile.gettempdir()) / "photosbyelie-private-renders" / str(row.get("id") or source_path.stem)
+        covered_count = len(render_specs) - len(missing_renders)
+        rendered_count = 0
+        uploaded_renders = [item for item in uploaded.get("private_renders") or [] if item.get("key") not in {spec["key"] for spec in missing_renders}]
+        try:
+            for spec in missing_renders:
+                product_id = str(spec["productId"])
+                long_edge = long_edge_for_megapixels(source_size, PRIVATE_RENDER_PRODUCTS[product_id])
                 if not long_edge:
                     continue
                 render_path = render_root / f"{product_id}.jpg"
                 render_private_deliverable(source_path, render_path, long_edge, args.force)
-                private_rendered += 1
-            emit_import_step(row, "triplets_created", total=len(PRIVATE_RENDER_PRODUCTS), completed=private_rendered)
-            for product_id, _megapixels in PRIVATE_RENDER_PRODUCTS.items():
-                render_path = render_root / f"{product_id}.jpg"
+                rendered_count += 1
+                emit_import_step(row, "triplets_created", total=len(render_specs), completed=covered_count + rendered_count)
+            uploaded_count = 0
+            for spec in missing_renders:
+                render_path = render_root / f"{spec['productId']}.jpg"
                 if not render_path.exists():
                     continue
-                private_renders.append(
+                uploaded_renders.append(
                     r2_put_file(
                         args,
-                        args.r2_private_bucket,
-                        r2_private_render_key(row, source_path, product_id),
+                        str(spec["bucket"]),
+                        str(spec["key"]),
                         render_path,
                         "image/jpeg",
                         args.r2_retries,
                     )
                 )
-                emit_import_step(row, "triplets_uploaded", total=len(PRIVATE_RENDER_PRODUCTS), completed=len(private_renders))
-            if private_renders:
-                uploaded["private_renders"] = private_renders
+                spec["covered"] = True
+                uploaded_count += 1
+                emit_import_step(row, "triplets_uploaded", total=len(render_specs), completed=covered_count + uploaded_count)
+            if uploaded_renders:
+                uploaded["private_renders"] = uploaded_renders
+        finally:
             shutil.rmtree(render_root, ignore_errors=True)
-        elif args.r2_private_renders:
-            emit_import_step(row, "triplets_created", status="skipped", reason="not a JPEG source")
-            emit_import_step(row, "triplets_uploaded", status="skipped", reason="not a JPEG source")
-    if r2_upload_enabled(args, "public"):
-        detail_content_type = "video/mp4" if (row.get("media_type") == "video" or detail_path.suffix.lower() in VIDEO_EXTENSIONS) else "image/jpeg"
-        public_previews = []
-        public_previews.append(
-            r2_put_file(
-                args,
-                args.r2_public_bucket,
-                r2_public_key(args, row, gallery_path),
-                gallery_path,
-                "image/jpeg",
-                args.r2_retries,
-                cache_control="public, max-age=31536000, immutable",
+
+    preview_specs = plan.get("publicPreviews") or []
+    missing_previews = [item for item in preview_specs if not item.get("covered")]
+    if missing_previews:
+        covered_count = len(preview_specs) - len(missing_previews)
+        created_count = 0
+        source_orientation = row.get("_source_orientation")
+        for spec in missing_previews:
+            derivative = str(spec["derivative"])
+            output = preview_paths[derivative]
+            if row.get("media_type") == "video":
+                if derivative == "gallery":
+                    render_video_poster(source_path, output, args.watermark, row["_font"], args.force)
+                else:
+                    render_video_preview(source_path, output, args.watermark, row["_font"], args.force)
+            else:
+                max_px = args.gallery_max if derivative == "gallery" else args.detail_max
+                render_derivative(source_path, output, max_px, args.watermark, row["_font"], args.force, source_orientation)
+            created_count += 1
+            emit_import_step(row, "previews_created", total=len(preview_specs), completed=covered_count + created_count)
+
+        public_previews = [item for item in uploaded.get("public_previews") or [] if item.get("key") not in {spec["key"] for spec in missing_previews}]
+        uploaded_count = 0
+        for spec in missing_previews:
+            derivative = str(spec["derivative"])
+            path = preview_paths[derivative]
+            content_type = "video/mp4" if (row.get("media_type") == "video" and derivative == "detail") else "image/jpeg"
+            public_previews.append(
+                r2_put_file(
+                    args,
+                    str(spec["bucket"]),
+                    str(spec["key"]),
+                    path,
+                    content_type,
+                    args.r2_retries,
+                    cache_control="public, max-age=31536000, immutable",
+                )
             )
-        )
-        emit_import_step(row, "previews_uploaded", total=2, completed=len(public_previews))
-        public_previews.append(
-            r2_put_file(
-                args,
-                args.r2_public_bucket,
-                r2_public_key(args, row, detail_path),
-                detail_path,
-                detail_content_type,
-                args.r2_retries,
-                cache_control="public, max-age=31536000, immutable",
-            )
-        )
-        emit_import_step(row, "previews_uploaded", total=2, completed=len(public_previews))
-        uploaded["public_previews"] = public_previews
+            spec["covered"] = True
+            uploaded_count += 1
+            emit_import_step(row, "previews_uploaded", total=len(preview_specs), completed=covered_count + uploaded_count)
+        if public_previews:
+            uploaded["public_previews"] = public_previews
     return uploaded
 
 
@@ -1964,6 +2158,7 @@ def process_batch(
             gallery_country = selected_metadata["gallery_country"]
             media_type = "video" if is_video(source) else "photo"
             gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug, media_type)
+            artifact_plan = item.get("artifact_plan") if isinstance(item.get("artifact_plan"), dict) else artifact_plan_for_source(args, slug, source)
             row = {
                 "id": slug,
                 "relative_path": relative_path,
@@ -1997,6 +2192,7 @@ def process_batch(
                 mediaType=media_type,
                 status="running",
             )
+            emit_import_plan_steps(row, artifact_plan)
             if selected_metadata["gps"]:
                 gps_manifest[relative_path] = {
                     "id": slug,
@@ -2005,28 +2201,15 @@ def process_batch(
                     "gps": selected_metadata["gps"],
             }
             if not args.dry_run:
-                with tempfile.TemporaryDirectory(prefix="photosbyelie-source-") as source_temp:
-                    gallery_source, detail_source, developed_files, orientation_override = render_sources_for(
-                        source,
-                        args,
-                        Path(source_temp),
-                    )
-                    source_orientation = orientation_override or selected_metadata["raw"].get("Orientation")
-                    if media_type == "video":
-                        render_video_poster(source, gallery_path, args.watermark, font, args.force)
-                        render_video_preview(source, detail_path, args.watermark, font, args.force)
-                    else:
-                        render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
-                        render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
-                    emit_import_step(row, "previews_created", total=2, completed=2)
-                if developed_files:
-                    row["developed_files"] = developed_files
+                source_orientation = selected_metadata["raw"].get("Orientation")
+                row["_font"] = font
+                row["_source_orientation"] = source_orientation
                 row["derivative_files"] = {
                     "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
                     "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
                     "generated_at": now_iso(),
                 }
-                r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source)
+                r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source, artifact_plan)
                 if r2_assets:
                     removed_tmp = cleanup_uploaded_tmp_previews(args, r2_assets, [gallery_path, detail_path])
                     row["r2"] = {
@@ -2035,6 +2218,13 @@ def process_batch(
                     }
                     if removed_tmp:
                         row["tmp_removed_after_upload"] = removed_tmp
+                row.pop("_font", None)
+                row.pop("_source_orientation", None)
+                row["derivative_files"] = {
+                    "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
+                    "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
+                    "generated_at": now_iso(),
+                }
             manifest[relative_path] = row
             failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
@@ -2172,8 +2362,9 @@ def main() -> int:
             if all((args.output_root / path).exists() for path in row.get("derivatives", {}).values())
         }
 
+    plan_queue: queue.Queue[list[dict[str, Any]] | None] = queue.Queue()
     work_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
-    counters = {"seen": 0, "inspected": 0, "queued": 0, "alreadySelected": 0, "processed": 0, "active": 0}
+    counters = {"seen": 0, "inspected": 0, "queued": 0, "alreadySelected": 0, "processed": 0, "active": 0, "plannerActive": 0}
     counters_lock = threading.Lock()
     data_lock = threading.Lock()
     scan_errors: list[BaseException] = []
@@ -2187,18 +2378,33 @@ def main() -> int:
             counters[name] += amount
             return counters[name]
 
+    def selected_limit_reached() -> bool:
+        if not args.limit:
+            return False
+        snapshot = counter_snapshot()
+        return snapshot["alreadySelected"] + snapshot["queued"] >= args.limit
+
+    def wait_for_planner_limit() -> None:
+        while args.limit and not selected_limit_reached() and (plan_queue.qsize() > 0 or counter_snapshot()["plannerActive"]):
+            time.sleep(0.1)
+
     def emit_queue_event(kind: str) -> None:
         payload = counter_snapshot()
         payload["queueDepth"] = max(0, payload["queued"] - payload["processed"] - payload["active"])
+        payload["planQueueDepth"] = plan_queue.qsize()
         emit_import_event(kind, **payload)
 
-    def queue_selected_batch(batch_items: list[dict[str, Any]]) -> None:
+    def queue_scan_batch(batch_items: list[dict[str, Any]]) -> None:
         if not batch_items:
             return
+        plan_queue.put(list(batch_items))
+        emit_queue_event("SCAN_PROGRESS")
+
+    def plan_selected_batch(batch_items: list[dict[str, Any]]) -> None:
         add_counter("inspected", len(batch_items))
         snapshot = counter_snapshot()
         print(
-            f"Scanning batch after {snapshot['seen']} files; "
+            f"Planning batch after {snapshot['seen']} files; "
             f"inspected {snapshot['inspected']}, queued {snapshot['queued']}",
             flush=True,
         )
@@ -2219,24 +2425,55 @@ def main() -> int:
             data_lock,
         )
         for selected_item in selected_items:
-            work_queue.put(selected_item)
-            queued_index = add_counter("queued")
             relative_path = str(selected_item.get("relative_path") or "")
             source_path = selected_item.get("source_path")
+            if not isinstance(source_path, Path):
+                continue
+            photo_id = slug_for(relative_path)
+            plan = artifact_plan_for_source(args, photo_id, source_path)
+            selected_item["artifact_plan"] = plan
+            queued_index = add_counter("queued")
+            work_queue.put(selected_item)
+            plan_row = {
+                "id": photo_id,
+                "relative_path": relative_path,
+                "media_type": plan.get("mediaType") or ("video" if is_video(source_path) else "photo"),
+            }
             emit_import_event(
                 "PHOTO",
                 index=queued_index,
-                photoId=slug_for(relative_path),
+                photoId=photo_id,
                 relativePath=relative_path,
-                mediaType="video" if isinstance(source_path, Path) and is_video(source_path) else "photo",
+                mediaType=plan_row["media_type"],
                 status="queued",
             )
+            emit_import_plan_steps(plan_row, plan)
         emit_queue_event("SCAN_PROGRESS")
+
+    def plan_sources() -> None:
+        try:
+            while True:
+                batch_items = plan_queue.get()
+                if batch_items is None:
+                    break
+                add_counter("plannerActive")
+                try:
+                    plan_selected_batch(batch_items)
+                finally:
+                    add_counter("plannerActive", -1)
+                    emit_queue_event("SCAN_PROGRESS")
+        except BaseException as error:  # noqa: BLE001 - report planner failure to the consumer.
+            scan_errors.append(error)
+            print(f"ERROR planner: {error}", file=sys.stderr, flush=True)
+        finally:
+            work_queue.put(None)
 
     def scan_sources() -> None:
         batch: list[dict[str, Any]] = []
         try:
             for source in discover_images(source_root, year_filter):
+                if selected_limit_reached():
+                    break
                 relative_path = rel_key(source, source_root)
                 if not matches_year_filter(relative_path, year_filter):
                     continue
@@ -2257,13 +2494,21 @@ def main() -> int:
                         },
                     )
                     continue
+                if not args.force and relative_path in manifest:
+                    coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
+                    if coverage_plan.get("complete"):
+                        add_counter("alreadySelected")
+                        if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
+                            break
+                        continue
                 prior = state.get(relative_path)
                 if should_skip_metadata(prior, stamp, args.force):
                     prior_status = prior.get("status")
                     if prior_status == "skipped":
                         continue
                     if prior_status in {"rendered", "selected"} and relative_path in manifest:
-                        if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)):
+                        coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
+                        if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)) or coverage_plan.get("complete"):
                             add_counter("alreadySelected")
                             if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
                                 break
@@ -2282,14 +2527,16 @@ def main() -> int:
                     }
                 )
                 if len(batch) >= args.batch_size:
-                    queue_selected_batch(batch)
+                    queue_scan_batch(batch)
                     batch = []
                     if args.limit:
-                        snapshot = counter_snapshot()
-                        if snapshot["alreadySelected"] + snapshot["queued"] >= args.limit:
+                        wait_for_planner_limit()
+                        if selected_limit_reached():
                             break
-            if batch and (not args.limit or counter_snapshot()["alreadySelected"] + counter_snapshot()["queued"] < args.limit):
-                queue_selected_batch(batch)
+            if batch and (not args.limit or not selected_limit_reached()):
+                queue_scan_batch(batch)
+                if args.limit:
+                    wait_for_planner_limit()
             emit_queue_event("SCAN_DONE")
             snapshot = counter_snapshot()
             print(
@@ -2301,11 +2548,13 @@ def main() -> int:
             scan_errors.append(error)
             print(f"ERROR scanner: {error}", file=sys.stderr, flush=True)
         finally:
-            work_queue.put(None)
+            plan_queue.put(None)
 
     scanner = threading.Thread(target=scan_sources, name="source-scan", daemon=True)
+    planner = threading.Thread(target=plan_sources, name="source-plan", daemon=True)
     scanner.start()
-    print("Queue worker started; scanner keeps feeding oldest-first import work.", flush=True)
+    planner.start()
+    print("Pipeline started: scanner feeds planner; planner feeds oldest-first render/upload work.", flush=True)
     emit_queue_event("QUEUE_START")
     while True:
         item = work_queue.get()
@@ -2349,6 +2598,7 @@ def main() -> int:
             emit_queue_event("QUEUE_PROGRESS")
 
     scanner.join()
+    planner.join()
     if scan_errors:
         raise scan_errors[0]
 

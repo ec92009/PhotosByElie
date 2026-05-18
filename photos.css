@@ -1544,7 +1544,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-import-matrix{
   width:100%;
-  min-width:640px;
+  min-width:520px;
   border-collapse:collapse;
   font-size:.76rem;
 }
@@ -1567,21 +1567,36 @@ html[data-theme="light"] .photo-art.has-photo::after{
   text-transform:uppercase;
 }
 .owner-import-matrix tbody th{
-  width:34%;
   text-align:left;
 }
-.owner-import-matrix tbody th strong,
-.owner-import-matrix tbody th span{
-  display:block;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.owner-import-matrix-photo-row th{
+  padding-bottom:4px;
+  background:color-mix(in srgb,var(--surface) 84%,var(--bg));
 }
-.owner-import-matrix tbody th span{
+.owner-import-matrix-step-row th{
+  width:86px;
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-import-matrix-photo-row th strong,
+.owner-import-matrix-photo-row th span{
+  display:block;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+.owner-import-matrix-photo-row th span{
   margin-top:2px;
   color:var(--muted);
   font-size:.68rem;
   font-weight:650;
+}
+.owner-import-matrix-step-row td{
+  padding-top:5px;
+  padding-bottom:10px;
 }
 .owner-import-matrix input{
   width:16px;

@@ -178,6 +178,7 @@
     ["previews_created", "Previews made"],
     ["previews_uploaded", "Previews up"],
   ];
+  const IMPORT_MATRIX_RECENT_DONE_LIMIT = 3;
 
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
@@ -1450,11 +1451,15 @@
         importPhotoRows.push(row);
       }
       const row = importPhotoMap.get(id);
+      if (payload.eventIndex !== undefined) row.lastEventIndex = Number(payload.eventIndex) || row.lastEventIndex || 0;
       if (payload.index) row.index = Number(payload.index) || row.index;
       if (payload.relativePath) row.relativePath = String(payload.relativePath);
       if (payload.country) row.country = String(payload.country);
       if (payload.mediaType) row.mediaType = String(payload.mediaType);
-      if (payload.status) row.status = String(payload.status);
+      if (payload.status) {
+        row.status = String(payload.status);
+        if (row.status === "done") row.doneEventIndex = row.lastEventIndex || row.doneEventIndex || 0;
+      }
       return row;
     };
     const importEventStart = scopedImport ? importStartIndex : 0;
@@ -1465,6 +1470,7 @@
       if (!payload) continue;
       const row = ensureImportPhoto(payload);
       if (!row) continue;
+      row.lastEventIndex = index;
       if (event[1] === "STEP") {
         const step = String(payload.step || "");
         if (step) {
@@ -1476,7 +1482,10 @@
           };
         }
       }
-      if (event[1] === "PHOTO_DONE") row.status = String(payload.status || "done");
+      if (event[1] === "PHOTO_DONE") {
+        row.status = String(payload.status || "done");
+        row.doneEventIndex = index;
+      }
     }
     const doneKeys = new Set(lines
       .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
@@ -1660,6 +1669,8 @@
     const processed = Number(queuePayload.processed ?? scanPayload.processed ?? 0);
     const activeItemCount = Number(queuePayload.active ?? scanPayload.active ?? (runningRow ? 1 : 0));
     const queueDepth = Number(queuePayload.queueDepth ?? scanPayload.queueDepth ?? Math.max(0, queued - processed - activeItemCount));
+    const planQueueDepth = Number(queuePayload.planQueueDepth ?? scanPayload.planQueueDepth ?? 0);
+    const plannerActive = Number(queuePayload.plannerActive ?? scanPayload.plannerActive ?? 0);
     const alreadySelected = Number(scanPayload.alreadySelected ?? queuePayload.alreadySelected ?? 0);
     const scannedFiles = Number(scanPayload.seen ?? queuePayload.seen ?? numberFromLog(logSummary?.scan?.match?.[1]) ?? 0);
     const inspectedFiles = Number(scanPayload.inspected ?? queuePayload.inspected ?? numberFromLog(logSummary?.scan?.match?.[2]) ?? 0);
@@ -1693,6 +1704,8 @@
       found: rows.length,
       queued,
       queueDepth,
+      planQueueDepth,
+      plannerActive,
       alreadySelected,
       scannedFiles,
       inspectedFiles,
@@ -1716,7 +1729,7 @@
   const sourceLaneAction = (phaseKey) => (
     phaseKey === "real-estate"
       ? "Checks configured client property folders, rebuilds public review context, and uploads expected RE preview/master keys."
-      : "Checks this source lane against current R2 gaps, rebuilds previews/private renders, and uploads the expected current keys."
+      : "Pipeline: scanner finds source files, planner checks metadata and trusted R2 coverage, worker only creates/uploads missing boxes."
   );
 
   const sourceLaneDetailRows = (phaseKey, details = {}) => {
@@ -1731,6 +1744,7 @@
     add("Current file", details.currentFile);
     add("Current photo", details.currentPhoto);
     add("Scanner", details.scanner);
+    add("Planner", details.planner);
     add("Queue", details.queue);
     add("Progress bar counts", details.progressCounts);
     add("Coverage gaps", details.coverageGaps);
@@ -1761,8 +1775,11 @@
       : `rough time left ${progress.countdown}`;
     if (progress.scanningForMore) {
       const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
-      const queue = `${formatCount(progress.queueDepth)} waiting`;
-      return `${sourceLabel} queue: ${completed} / ${selected} photos processed, ${queue}; scanner is still adding any newly discovered work.${inspected}`;
+      const queue = `${formatCount(progress.queueDepth)} waiting to render/upload`;
+      const planner = progress.plannerActive || progress.planQueueDepth
+        ? ` Planner has ${formatCount(progress.planQueueDepth)} scan batches waiting.`
+        : "";
+      return `${sourceLabel} queue: ${completed} / ${selected} photos processed, ${queue}; scanner is still adding any newly discovered work.${inspected}${planner}`;
     }
     if (progress.scanDraining) {
       return `${sourceLabel} scan is complete; draining the queue oldest-first: ${completed} / ${selected} photos processed, ${formatCount(progress.queueDepth)} waiting; ${timeLeft}.`;
@@ -1996,14 +2013,22 @@
     return IMPORT_MATRIX_STEPS.every(([stepKey]) => importMatrixStepSettled(photo.steps?.[stepKey] || {}));
   };
 
-  const importMatrixVisibleRows = (photos = []) => (
-    photos
-      .filter((photo) => !importMatrixRowComplete(photo))
+  const importMatrixVisibleRows = (photos = []) => {
+    const activeRows = photos.filter((photo) => !importMatrixRowComplete(photo));
+    const activeIds = new Set(activeRows.map((photo) => photo.id));
+    const recentDoneRows = photos
+      .filter((photo) => !activeIds.has(photo.id) && photo.status === "done")
+      .sort((left, right) => Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0))
+      .slice(0, IMPORT_MATRIX_RECENT_DONE_LIMIT);
+    return [...activeRows, ...recentDoneRows]
       .sort((left, right) => {
-        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "error" ? 2 : 1;
-        return rank(left) - rank(right) || Number(left.index || 0) - Number(right.index || 0);
-      })
-  );
+        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "done" ? 1 : photo.status === "error" ? 3 : 2;
+        return rank(left) - rank(right)
+          || (rank(left) === 1
+            ? Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0)
+            : Number(left.index || 0) - Number(right.index || 0));
+      });
+  };
 
   const importMatrixCellHtml = (photo, stepKey, stepLabel) => {
     const step = photo.steps?.[stepKey] || {};
@@ -2026,10 +2051,12 @@
     const visibleRows = importMatrixVisibleRows(photos);
     if (!visibleRows.length) return "";
     const hiddenComplete = photos.length - visibleRows.length;
-    const activeCount = visibleRows.filter((photo) => photo.status !== "error").length;
+    const visibleDone = visibleRows.filter((photo) => photo.status === "done").length;
+    const activeCount = visibleRows.filter((photo) => photo.status !== "error" && photo.status !== "done").length;
     const errorCount = visibleRows.filter((photo) => photo.status === "error").length;
     const meta = [
       activeCount ? `${formatCount(activeCount)} active` : "",
+      visibleDone ? `${formatCount(visibleDone)} recent finished shown` : "",
       errorCount ? `${formatCount(errorCount)} needs attention` : "",
       hiddenComplete ? `${formatCount(hiddenComplete)} finished hidden` : "",
     ].filter(Boolean).join(" · ");
@@ -2039,17 +2066,20 @@
         <table class="owner-import-matrix">
           <thead>
             <tr>
-              <th>Photo</th>
+              <th>Step</th>
               ${IMPORT_MATRIX_STEPS.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
             ${visibleRows.map((photo) => `
-              <tr class="${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
-                <th scope="row">
+              <tr class="owner-import-matrix-photo-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
+                <th scope="rowgroup" colspan="${IMPORT_MATRIX_STEPS.length + 1}">
                   <strong>${escapeHtml(photo.id)}</strong>
                   <span>${escapeHtml(photo.relativePath || photo.country || "")}</span>
                 </th>
+              </tr>
+              <tr class="owner-import-matrix-step-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
+                <th scope="row">${escapeHtml(photo.status === "queued" ? "Waiting" : photo.status === "running" ? "Working" : photo.status === "done" ? "Finished" : photo.status === "error" ? "Needs attention" : "Steps")}</th>
                 ${IMPORT_MATRIX_STEPS.map(([stepKey, label]) => importMatrixCellHtml(photo, stepKey, label)).join("")}
               </tr>
             `).join("")}
@@ -2330,11 +2360,15 @@
         const scanner = progress.scanDone
           ? `Scan complete: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected.`
           : `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`;
+        const planner = progress.plannerActive || progress.planQueueDepth
+          ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
+          : "Planner is caught up.";
         const queue = `${formatCount(progress.completed)} processed, ${formatCount(progress.queueDepth)} waiting${progress.activeItemCount ? ", 1 active" : ""}, ${formatCount(progress.selected)} queued so far.`;
         mergeSourceLaneDetails({
           coverageGaps: gapSummary,
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
           scanner,
+          planner,
           queue,
           progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
           progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} queued photos processed this run`,
@@ -2345,6 +2379,9 @@
         mergeSourceLaneDetails({
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
           scanner: `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`,
+          planner: progress.plannerActive || progress.planQueueDepth
+            ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
+            : "Planner is waiting for source batches.",
           queue: "No needed photos queued yet.",
           progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
         });

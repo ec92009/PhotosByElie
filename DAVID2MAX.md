@@ -853,3 +853,87 @@ _No David automation results recorded yet._
 - `npm test`: PASSED (18/18)
 - `npm run validate`: PASSED (`Validation OK`)
 - Notes: Working tree clean after run; no generated changes detected.
+
+## 2026-05-18 - Weekly Social Candidates (Instagram/Facebook)
+
+Source: public catalog metadata (`assets/catalog/photosbyelie.sqlite`). Target base URL: `https://ec92009.github.io/PhotosByElie/`.
+
+1) Photo ID: `20220506-160631-03403-51426edaac`
+   - Collection: `france` (France)
+   - Title: `Les Invalides, Paris`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20220506-160631-03403-51426edaac`
+   - Suggested platform: Instagram (feed)
+   - Suggested caption: Paris architecture hits different when the light catches the dome. 🇫🇷✨ #Paris #LesInvalides #ArchitecturePhotography #TravelPhotography
+   - Why this one: Iconic landmark + strong symmetry/architecture; easy travel hook and broad appeal.
+
+2) Photo ID: `20180511-1443-00382-346dfde4a7`
+   - Collection: `france` (France)
+   - Title: `Notre Dame de Paris from Pont Neuf`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20180511-1443-00382-346dfde4a7`
+   - Suggested platform: Facebook (feed)
+   - Suggested caption: Notre-Dame from Pont Neuf — a Paris view that always feels timeless. Which Paris corner is your favorite? #Paris #NotreDame #PontNeuf #Travel
+   - Why this one: Strong location story + “timeless Paris” mood; FB engagement prompt works well.
+
+3) Photo ID: `20180509-2308-00253-0eeaef9d8e`
+   - Collection: `france` (France)
+   - Title: `Eiffel Tower, Paris`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20180509-2308-00253-0eeaef9d8e`
+   - Suggested platform: Instagram (feed)
+   - Suggested caption: Eiffel Tower at night — the city’s heartbeat in lights. ✨ #Paris #EiffelTower #NightPhotography #TravelPhotography
+   - Why this one: Highest-recognition subject; simple caption + strong scroll-stopper potential.
+
+4) Photo ID: `20120829-0319-20179-6dd023c02f`
+   - Collection: `france` (France)
+   - Title: `Galeries Lafayette, Paris, France`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20120829-0319-20179-6dd023c02f`
+   - Suggested platform: Facebook (feed)
+   - Suggested caption: Archive pull: Galeries Lafayette — Paris shopping, but make it cathedral-level architecture. 🏛️ #Paris #Architecture #Archive
+   - Why this one: “Archive story” angle + interior architecture; older timestamp helps the throwback framing.
+
+5) Photo ID: `20180515-2054-00450-cffc1e95ed`
+   - Collection: `spain` (Spain)
+   - Title: `Bilbao Guggenheim Museum`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-2054-00450-cffc1e95ed`
+   - Suggested platform: Instagram (feed)
+   - Suggested caption: Bilbao’s Guggenheim — curves, steel, and a city built around art. 🇪🇸 #Bilbao #Guggenheim #ArchitecturePhotography #SpainTravel
+   - Why this one: Modern architecture + art/travel hook; strong for IG discoverability.
+
+6) Photo ID: `20160710-1444-38838-pano-5f0de8bfbe`
+   - Collection: `spain` (Spain)
+   - Title: `Figueras Dali Museum`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20160710-1444-38838-pano-5f0de8bfbe`
+   - Suggested platform: Facebook (feed)
+   - Suggested caption: Figueres, Dalí Museum — where the building itself feels a little surreal. 🎭 #Dali #Museum #Catalonia #Travel
+   - Why this one: Built-in “story” + cultural reference; FB audiences respond well to museum/travel context.
+
+7) Photo ID: `20180519-1718-00680-87e901dfa6`
+   - Collection: `portugal` (Portugal)
+   - Title: `20180519 1718 00680`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20180519-1718-00680-87e901dfa6`
+   - Suggested platform: Instagram (feed)
+   - Suggested caption: Lisbon light + palace details (Ajuda). 🇵🇹 If you’ve been, you know the glow. #Lisbon #Portugal #Architecture #TravelPhotography
+   - Why this one: Portugal architecture + location callout; good “travel memory” vibe even with timestamp title.
+
+8) Photo ID: `20160925-1524-00041-f21924756f`
+   - Collection: `usa` (USA)
+   - Title: `San Diego Balboa park Museums and Gardens`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20160925-1524-00041-f21924756f`
+   - Suggested platform: Facebook (feed)
+   - Suggested caption: Balboa Park — a full afternoon of museums, gardens, and that classic San Diego sun. 🌿 #SanDiego #BalboaPark #Travel
+   - Why this one: US location breadth + architecture/garden mix; friendly “day trip” framing for FB.
+
+9) Photo ID: `20180304-1746-00119-1-ca102fe00c`
+   - Collection: `usa` (USA)
+   - Title: `Solana Beach Sunset`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1746-00119-1-ca102fe00c`
+   - Suggested platform: Instagram (feed)
+   - Suggested caption: Solana Beach sunset — the kind that makes you stop mid-sentence. 🌅 #CaliforniaSunset #SolanaBeach #Color #TravelPhotography
+   - Why this one: Pure color + mood; sunset content consistently performs on IG.
+
+10) Photo ID: `20190624-1826-16542-1eb5098247`
+   - Collection: `slovakia` (Slovakia)
+   - Title: `Bratislava, SK`
+   - Site URL: `https://ec92009.github.io/PhotosByElie/photo.html?id=20190624-1826-16542-1eb5098247`
+   - Suggested platform: Instagram (feed)
+   - Suggested caption: Bratislava — small city, big charm. 🇸🇰 #Bratislava #Slovakia #EuropeTravel #StreetPhotography
+   - Why this one: Adds variety beyond the usual destinations; “underrated city” travel angle.

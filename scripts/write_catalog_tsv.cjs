@@ -143,6 +143,23 @@ const writeBootstrap = () => {
   );
 };
 
-writeBootstrap();
-childProcess.execFileSync("python3", ["scripts/build_public_catalog_db.py", "--quiet"], { cwd: repoRoot, stdio: "inherit" });
+const hasFullGeneratedCatalog = () => {
+  if (!fs.existsSync(dataPath)) return false;
+  const source = fs.readFileSync(dataPath, "utf8");
+  return source.includes("window.photosByElieData = {") && !source.startsWith("// Generated bootstrap:");
+};
+
+const buildSqlite = (source = "auto") => {
+  const args = ["scripts/build_public_catalog_db.py", "--quiet"];
+  if (source === "photos-data") args.push("--source", "photos-data");
+  childProcess.execFileSync("python3", args, { cwd: repoRoot, stdio: "inherit" });
+};
+
+if (hasFullGeneratedCatalog()) {
+  buildSqlite("photos-data");
+  writeBootstrap();
+} else {
+  buildSqlite();
+  writeBootstrap();
+}
 console.log("Wrote assets/catalog/photosbyelie.sqlite");

@@ -38,10 +38,27 @@
     root.querySelectorAll?.("a[href], [data-href]").forEach(versionElement);
   };
 
+  const isClientLoginHref = (href) => {
+    if (!href || href.startsWith("#")) return false;
+    try {
+      const url = new URL(href, window.location.href);
+      return url.origin === window.location.origin
+        && url.pathname.endsWith("/real-estate.html")
+        && url.searchParams.get("logout") === "1";
+    } catch {
+      return false;
+    }
+  };
+
   document.addEventListener("click", (event) => {
     const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
     if (!anchor || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const wasClientLogin = isClientLoginHref(anchor.getAttribute("href"));
     versionElement(anchor);
+    if (wasClientLogin || isClientLoginHref(anchor.getAttribute("href"))) {
+      event.preventDefault();
+      window.location.assign(anchor.href);
+    }
   }, true);
 
   window.photosByElieVersionedHref = versionedHref;

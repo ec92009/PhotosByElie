@@ -8,9 +8,9 @@
   <meta name="description" content="Private real-estate media review, project PDF, and slideshow selection workspace for Photos By Elie clients."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/byelie-logo.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=79.13"/>
-  <link rel="stylesheet" href="./styles.css?v=79.13"/>
-  <link rel="stylesheet" href="./photos.css?v=79.13"/>
+  <link rel="stylesheet" href="./shared.css?v=79.14"/>
+  <link rel="stylesheet" href="./styles.css?v=79.14"/>
+  <link rel="stylesheet" href="./photos.css?v=79.14"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a class="is-active" href="./real-estate.html">Real Estate</a>
     </nav>
-    <span class="site-version-badge">v79.13</span>
+    <span class="site-version-badge">v79.14</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -74,26 +74,37 @@
           </div>
         </dl>
         <div class="cta">
-          <a class="btn primary" href="#real-estate-gallery">Review media</a>
-          <button class="btn secondary" type="button" data-re-download-pdf>Download project PDFs</button>
-          <button class="btn secondary" type="button" data-re-download-slideshow>Share slideshow plan</button>
-          <button class="btn secondary" type="button" data-re-copy-batch>Copy selection list</button>
-          <button class="btn secondary" type="button" data-re-download-batch>Share selection table</button>
-          <button class="btn secondary" type="button" data-re-download-originals>Share originals ZIP</button>
+          <a class="btn primary" href="#real-estate-wizard">Start review</a>
           <button class="btn secondary" type="button" data-re-load-batch>Load selection file...</button>
           <button class="btn secondary" type="button" data-re-help-open>Help</button>
         </div>
       </div>
     </section>
 
+    <section class="panel real-estate-wizard" id="real-estate-wizard" data-re-wizard aria-label="Real estate review steps">
+      <div class="real-estate-wizard-head">
+        <ol class="real-estate-stepper" data-re-stepper aria-label="Review steps">
+          <li><button type="button" data-re-step-jump="1"><b>1</b><span>Pick photos</span></button></li>
+          <li><button type="button" data-re-step-jump="2"><b>2</b><span>Titles</span></button></li>
+          <li><button type="button" data-re-step-jump="3"><b>3</b><span>Order</span></button></li>
+          <li><button type="button" data-re-step-jump="4"><b>4</b><span>Output</span></button></li>
+        </ol>
+        <p class="gallery-status" data-re-wizard-status aria-live="polite">Choose a property, then select the media to use.</p>
+      </div>
+      <div class="real-estate-wizard-actions">
+        <button class="btn secondary" type="button" data-re-step-back>Back</button>
+        <button class="btn primary" type="button" data-re-step-next>Next</button>
+      </div>
+    </section>
+
     <section class="panel real-estate-workbench" aria-label="Real estate review workspace">
       <aside class="real-estate-sidebar" aria-label="Review controls">
-        <section class="real-estate-control-group" aria-labelledby="real-estate-albums-title">
-          <h2 id="real-estate-albums-title">Albums</h2>
+        <section class="real-estate-control-group" data-re-panel="properties" aria-labelledby="real-estate-albums-title">
+          <h2 id="real-estate-albums-title">Properties</h2>
           <div class="real-estate-album-list" data-re-albums></div>
         </section>
 
-        <section class="real-estate-control-group" aria-labelledby="real-estate-filters-title">
+        <section class="real-estate-control-group" data-re-panel="filters" aria-labelledby="real-estate-filters-title">
           <h2 id="real-estate-filters-title">Filters</h2>
           <form class="real-estate-filter-form" data-re-filter-form>
             <label>
@@ -133,22 +144,11 @@
           </form>
         </section>
 
-        <section class="real-estate-control-group" aria-labelledby="real-estate-draft-title">
+        <section class="real-estate-control-group" data-re-panel="draft" aria-labelledby="real-estate-draft-title">
           <div class="real-estate-group-head">
             <h2 id="real-estate-draft-title">Output draft</h2>
             <strong data-re-draft-count>0</strong>
           </div>
-          <label class="real-estate-pdf-setting" for="real-estate-pdf-format">
-            <span>Paper size</span>
-            <select id="real-estate-pdf-format" data-re-pdf-format>
-              <option value="a4">A4</option>
-              <option value="letter">Letter</option>
-            </select>
-          </label>
-          <label class="real-estate-pdf-setting" for="real-estate-slideshow-photo-seconds">
-            <span>Slideshow photos</span>
-            <input id="real-estate-slideshow-photo-seconds" type="number" min="1" max="30" step="1" value="4" data-re-slideshow-photo-seconds/>
-          </label>
           <div class="real-estate-draft-list" data-re-draft-list></div>
           <button class="btn secondary" type="button" data-re-load-batch>Load selection file...</button>
           <input class="real-estate-hidden-file" type="file" accept="text/html,.html,.htm,application/json,.json" data-re-load-batch-input/>
@@ -171,17 +171,58 @@
         </div>
         <div class="real-estate-grid" data-re-grid></div>
       </section>
+
+      <section class="real-estate-output-panel" data-re-output-panel aria-labelledby="real-estate-output-title">
+        <div class="real-estate-step-head">
+          <p class="eyebrow">Step 4</p>
+          <h2 id="real-estate-output-title">Choose the final product</h2>
+          <p class="real-estate-muted">Open the PDF, the video preview, or both in the browser. Use the browser's own save, print, or share controls from there.</p>
+        </div>
+        <div class="real-estate-output-options">
+          <label class="real-estate-output-choice">
+            <input type="checkbox" data-re-output-pdf checked/>
+            <span>
+              <strong>PDF</strong>
+              <small>One browser PDF per property. Videos appear as a still from 10% into the clip.</small>
+            </span>
+          </label>
+          <label class="real-estate-output-choice">
+            <input type="checkbox" data-re-output-video/>
+            <span>
+              <strong>Video</strong>
+              <small>Browser slideshow preview. Photos use the seconds below; source videos keep their duration.</small>
+            </span>
+          </label>
+        </div>
+        <div class="real-estate-output-settings">
+          <label class="real-estate-pdf-setting" for="real-estate-pdf-format">
+            <span>PDF paper size</span>
+            <select id="real-estate-pdf-format" data-re-pdf-format>
+              <option value="a4">A4</option>
+              <option value="letter">Letter</option>
+            </select>
+          </label>
+          <label class="real-estate-pdf-setting" for="real-estate-slideshow-photo-seconds">
+            <span>Photo seconds in video</span>
+            <input id="real-estate-slideshow-photo-seconds" type="number" min="1" max="30" step="1" value="4" data-re-slideshow-photo-seconds/>
+          </label>
+        </div>
+        <div class="real-estate-output-actions">
+          <button class="btn primary" type="button" data-re-open-outputs>Open selected outputs</button>
+          <button class="btn secondary" type="button" data-re-download-pdf>Open PDF</button>
+          <button class="btn secondary" type="button" data-re-download-slideshow>Open video preview</button>
+          <button class="btn secondary" type="button" data-re-download-batch>Share selection table</button>
+        </div>
+      </section>
     </section>
   </main>
 
   <div class="real-estate-action-bar" data-re-action-bar>
     <strong><span data-re-selected-bar>0</span> files selected</strong>
     <span data-re-action-status>Ready</span>
-    <button class="btn secondary" type="button" data-re-download-pdf>Download project PDFs</button>
-    <button class="btn secondary" type="button" data-re-download-slideshow>Share slideshow plan</button>
-    <button class="btn secondary" type="button" data-re-copy-batch>Copy selection list</button>
-    <button class="btn secondary" type="button" data-re-download-batch>Share selection table</button>
-    <button class="btn secondary" type="button" data-re-download-originals>Share originals ZIP</button>
+    <button class="btn secondary" type="button" data-re-step-back>Back</button>
+    <button class="btn primary" type="button" data-re-step-next>Next</button>
+    <button class="btn secondary" type="button" data-re-open-outputs>Open outputs</button>
     <button class="btn secondary" type="button" data-re-clear-selection>Clear selected</button>
     <button class="btn secondary real-estate-help-button" type="button" data-re-help-open aria-label="Help" title="Help">?</button>
     <button class="btn secondary" type="button" data-re-logout>Sign out</button>
@@ -222,14 +263,12 @@
       <p class="eyebrow">New selection</p>
       <h2 id="real-estate-help-title">How project outputs work</h2>
       <ol class="real-estate-help-list">
-        <li>Select photos or videos with the checkbox in the lower-right corner of each preview.</li>
-        <li>Edit the media title if the PDF or slideshow should use a different caption.</li>
-        <li>Choose one or more apartment projects below the title. Shared media can belong to multiple projects.</li>
-        <li>Choose A4 or Letter paper size, then download one PDF per project. Selected videos appear in PDFs as stills from 10% into the clip.</li>
-        <li>Set the slideshow seconds for still photos; selected videos keep their full original duration in the slideshow plan.</li>
-        <li>The browser can save or share project PDFs, slideshow plans, and selection tables.</li>
-        <li>Use originals ZIP when selected final source media should be saved or shared as one file.</li>
-        <li>Share a selection table to Notes or another app, open it in the browser for review, or load it later to continue from the same media/title/project choices.</li>
+        <li>Pick a property and select the photos or videos to use.</li>
+        <li>Go to Titles and change only the captions that should be different in the final product.</li>
+        <li>Go to Order and drag the selected media into the PDF or video sequence.</li>
+        <li>Go to Output, choose PDF, video, or both, then open the result in the browser.</li>
+        <li>Use the browser's own save, print, or share controls from the PDF or video preview.</li>
+        <li>Load a previous selection file if you want to resume from an older batch.</li>
       </ol>
       <div class="real-estate-dialog-actions">
         <button class="btn primary" type="button" data-re-help-dismiss>Start selecting</button>
@@ -266,9 +305,9 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=79.13"></script>
-  <script src="./photos.js?v=79.13"></script>
-  <script src="./site-version.js?v=79.13"></script>
-  <script src="./real-estate.js?v=79.13"></script>
+  <script src="./media-config.js?v=79.14"></script>
+  <script src="./photos.js?v=79.14"></script>
+  <script src="./site-version.js?v=79.14"></script>
+  <script src="./real-estate.js?v=79.14"></script>
 </body>
 </html>

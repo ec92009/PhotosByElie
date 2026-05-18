@@ -153,13 +153,38 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
 });
 
 test("AI collection digital products use the AI price tier", async () => {
-  const catalog = loadCatalog();
-  const { worker } = testWorker();
-  const photoId = firstDeliverablePhotoId(catalog, "ai");
+  const catalog = createCatalogIndex({
+    collections: {
+      ai: {
+        title: "AI",
+        photos: [{
+          id: "ai-gallery-test-image",
+          title: "AI gallery test image",
+          sourceOrigin: "ai",
+          megapixels: 12,
+          sourceFiles: [{ path: "ai-gallery-test.jpg", type: "JPG" }],
+          metadata: [{ label: "Original size", value: "JPEG / 4000 x 3000 / 12 MP" }],
+        }],
+      },
+    },
+    resolutions: [
+      { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
+    ],
+  });
+  const randomUUID = deterministicIds();
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => new Date("2026-05-07T12:00:00.000Z"),
+    randomUUID,
+    ordersUrl: "https://photosbyelie.test/orders",
+  });
 
   const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
-    items: [{ photoId, options: [{ id: "full" }, { id: "jpg-1mp" }] }],
+    items: [{ photoId: "ai-gallery-test-image", options: [{ id: "full" }, { id: "jpg-1mp" }] }],
   }));
   assert.equal(response.status, 201);
 

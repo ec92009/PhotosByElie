@@ -21,6 +21,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -1926,15 +1927,19 @@ def process_batch(
     failures: dict[str, dict[str, Any]],
     font: str,
     selection_limit: int | None = None,
+    index_offset: int = 0,
 ) -> int:
-    metadata_rows = run_exiftool([item["metadata_path"] for item in batch])
-    by_source = {Path(row.get("SourceFile", "")).resolve(): row for row in metadata_rows}
+    if all(isinstance(item.get("metadata"), dict) for item in batch):
+        by_source = {}
+    else:
+        metadata_rows = run_exiftool([item["metadata_path"] for item in batch])
+        by_source = {Path(row.get("SourceFile", "")).resolve(): row for row in metadata_rows}
     rendered_count = 0
     for item in batch:
         relative_path = item["relative_path"]
         source = item["source_path"]
         metadata_path = item["metadata_path"]
-        meta = by_source.get(metadata_path.resolve(), {})
+        meta = item.get("metadata") if isinstance(item.get("metadata"), dict) else by_source.get(metadata_path.resolve(), {})
         base_state = {
             "relative_path": relative_path,
             "checkpoint": item["checkpoint"],
@@ -1981,14 +1986,16 @@ def process_batch(
             row["metadata"] = selected_metadata["display"]
             row["raw_metadata"] = selected_metadata["raw"]
             row["selection_metadata"] = compact_metadata(meta)
-            print(f"START {rendered_count + 1}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
+            item_index = index_offset + rendered_count + 1
+            print(f"START {item_index}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
             emit_import_event(
                 "PHOTO",
-                index=rendered_count + 1,
+                index=item_index,
                 photoId=slug,
                 relativePath=relative_path,
                 country=gallery_country["slug"],
                 mediaType=media_type,
+                status="running",
             )
             if selected_metadata["gps"]:
                 gps_manifest[relative_path] = {
@@ -2058,6 +2065,71 @@ def process_batch(
     return rendered_count
 
 
+def select_batch(
+    batch: list[dict[str, Any]],
+    args: argparse.Namespace,
+    state_path: Path,
+    manifest: dict[str, dict[str, Any]],
+    gps_manifest: dict[str, dict[str, Any]],
+    failures: dict[str, dict[str, Any]],
+    selection_limit: int | None = None,
+    data_lock: threading.Lock | None = None,
+) -> list[dict[str, Any]]:
+    metadata_rows = run_exiftool([item["metadata_path"] for item in batch])
+    by_source = {Path(row.get("SourceFile", "")).resolve(): row for row in metadata_rows}
+    selected: list[dict[str, Any]] = []
+    for item in batch:
+        relative_path = item["relative_path"]
+        source = item["source_path"]
+        metadata_path = item["metadata_path"]
+        meta = by_source.get(metadata_path.resolve(), {})
+        base_state = {
+            "relative_path": relative_path,
+            "checkpoint": item["checkpoint"],
+            "source_path_hint": str(source),
+            "metadata_path_hint": str(metadata_path),
+        }
+        if not selected_by_args(meta, args):
+            append_state(state_path, {**base_state, "status": "skipped"})
+            continue
+        slug = slug_for(relative_path)
+        if slug in getattr(args, "discarded_photo_ids", set()):
+            if data_lock:
+                with data_lock:
+                    manifest.pop(relative_path, None)
+                    gps_manifest.pop(relative_path, None)
+                    failures.pop(relative_path, None)
+            else:
+                manifest.pop(relative_path, None)
+                gps_manifest.pop(relative_path, None)
+                failures.pop(relative_path, None)
+            append_state(state_path, {**base_state, "status": "discarded"})
+            continue
+        selected.append({**item, "metadata": meta})
+        if selection_limit and len(selected) >= selection_limit:
+            break
+    return selected
+
+
+def write_import_outputs(
+    args: argparse.Namespace,
+    manifest_path: Path,
+    keywords_path: Path,
+    collections_path: Path,
+    failures_path: Path,
+    gps_manifest_path: Path,
+    manifest: dict[str, dict[str, Any]],
+    gps_manifest: dict[str, dict[str, Any]],
+    failures: dict[str, dict[str, Any]],
+) -> None:
+    write_manifest(manifest_path, manifest, args)
+    write_keyword_index(keywords_path, manifest)
+    write_collection_index(collections_path, manifest)
+    write_failures(failures_path, failures, args)
+    if not args.redact_gps:
+        write_gps_manifest(gps_manifest_path, gps_manifest, args)
+
+
 def main() -> int:
     args = parse_args()
     source_root = resolve_source_root(args.source_root)
@@ -2100,87 +2172,199 @@ def main() -> int:
             if all((args.output_root / path).exists() for path in row.get("derivatives", {}).values())
         }
 
-    seen = selected = inspected = 0
-    batch: list[dict[str, Any]] = []
-    for source in discover_images(source_root, year_filter):
-        relative_path = rel_key(source, source_root)
-        if not matches_year_filter(relative_path, year_filter):
-            continue
-        seen += 1
-        sidecar = sidecar_for(source)
-        metadata_path = sidecar or source
-        stamp = checkpoint_key(source, sidecar)
-        if source.stat().st_size == 0:
-            append_state(
-                state_path,
-                {
-                    "relative_path": relative_path,
-                    "checkpoint": stamp,
-                    "source_path_hint": str(source),
-                    "metadata_path_hint": str(metadata_path),
-                    "status": "skipped",
-                    "reason": "empty source file",
-                },
-            )
-            continue
-        prior = state.get(relative_path)
-        if should_skip_metadata(prior, stamp, args.force):
-            prior_status = prior.get("status")
-            if prior_status == "skipped":
-                continue
-            if prior_status in {"rendered", "selected"} and relative_path in manifest:
-                if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)):
-                    selected += 1
-                    if args.limit and selected >= args.limit:
-                        break
-                    continue
-                # Metadata is known, but a derivative is missing. Re-render from the original.
-            elif prior_status == "error":
-                pass
-            else:
-                continue
-        batch.append(
-            {
-                "relative_path": relative_path,
-                "source_path": source,
-                "metadata_path": metadata_path,
-                "checkpoint": stamp,
-            }
-        )
-        if len(batch) >= args.batch_size:
-            inspected += len(batch)
-            print(f"Processing batch after scanning {seen} files; inspected {inspected}, selected {selected}", flush=True)
-            selection_limit = max(0, args.limit - selected) if args.limit else None
-            selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font, selection_limit)
-            write_manifest(manifest_path, manifest, args)
-            write_keyword_index(keywords_path, manifest)
-            write_collection_index(collections_path, manifest)
-            write_failures(failures_path, failures, args)
-            if not args.redact_gps:
-                write_gps_manifest(gps_manifest_path, gps_manifest, args)
-            batch = []
-            print(f"Scanned {seen} files, inspected {inspected}, selected {selected}", flush=True)
-            if args.limit and selected >= args.limit:
-                break
-    if batch and (not args.limit or selected < args.limit):
-        inspected += len(batch)
-        print(f"Processing final batch after scanning {seen} files; inspected {inspected}, selected {selected}", flush=True)
-        selection_limit = max(0, args.limit - selected) if args.limit else None
-        selected += process_batch(batch, args, state_path, manifest, gps_manifest, failures, font, selection_limit)
-        write_manifest(manifest_path, manifest, args)
-        write_keyword_index(keywords_path, manifest)
-        write_collection_index(collections_path, manifest)
-        write_failures(failures_path, failures, args)
-        if not args.redact_gps:
-            write_gps_manifest(gps_manifest_path, gps_manifest, args)
+    work_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
+    counters = {"seen": 0, "inspected": 0, "queued": 0, "alreadySelected": 0, "processed": 0, "active": 0}
+    counters_lock = threading.Lock()
+    data_lock = threading.Lock()
+    scan_errors: list[BaseException] = []
 
-    write_manifest(manifest_path, manifest, args)
-    write_keyword_index(keywords_path, manifest)
-    write_collection_index(collections_path, manifest)
-    write_failures(failures_path, failures, args)
-    if not args.redact_gps:
-        write_gps_manifest(gps_manifest_path, gps_manifest, args)
-    print(f"Done. Saw {seen} media files, inspected {inspected}, manifest contains {len(manifest)} selected rows.")
+    def counter_snapshot() -> dict[str, int]:
+        with counters_lock:
+            return dict(counters)
+
+    def add_counter(name: str, amount: int = 1) -> int:
+        with counters_lock:
+            counters[name] += amount
+            return counters[name]
+
+    def emit_queue_event(kind: str) -> None:
+        payload = counter_snapshot()
+        payload["queueDepth"] = max(0, payload["queued"] - payload["processed"] - payload["active"])
+        emit_import_event(kind, **payload)
+
+    def queue_selected_batch(batch_items: list[dict[str, Any]]) -> None:
+        if not batch_items:
+            return
+        add_counter("inspected", len(batch_items))
+        snapshot = counter_snapshot()
+        print(
+            f"Scanning batch after {snapshot['seen']} files; "
+            f"inspected {snapshot['inspected']}, queued {snapshot['queued']}",
+            flush=True,
+        )
+        remaining = None
+        if args.limit:
+            remaining = max(0, args.limit - snapshot["alreadySelected"] - snapshot["queued"])
+            if remaining <= 0:
+                emit_queue_event("SCAN_PROGRESS")
+                return
+        selected_items = select_batch(
+            batch_items,
+            args,
+            state_path,
+            manifest,
+            gps_manifest,
+            failures,
+            remaining,
+            data_lock,
+        )
+        for selected_item in selected_items:
+            work_queue.put(selected_item)
+            queued_index = add_counter("queued")
+            relative_path = str(selected_item.get("relative_path") or "")
+            source_path = selected_item.get("source_path")
+            emit_import_event(
+                "PHOTO",
+                index=queued_index,
+                photoId=slug_for(relative_path),
+                relativePath=relative_path,
+                mediaType="video" if isinstance(source_path, Path) and is_video(source_path) else "photo",
+                status="queued",
+            )
+        emit_queue_event("SCAN_PROGRESS")
+
+    def scan_sources() -> None:
+        batch: list[dict[str, Any]] = []
+        try:
+            for source in discover_images(source_root, year_filter):
+                relative_path = rel_key(source, source_root)
+                if not matches_year_filter(relative_path, year_filter):
+                    continue
+                add_counter("seen")
+                sidecar = sidecar_for(source)
+                metadata_path = sidecar or source
+                stamp = checkpoint_key(source, sidecar)
+                if source.stat().st_size == 0:
+                    append_state(
+                        state_path,
+                        {
+                            "relative_path": relative_path,
+                            "checkpoint": stamp,
+                            "source_path_hint": str(source),
+                            "metadata_path_hint": str(metadata_path),
+                            "status": "skipped",
+                            "reason": "empty source file",
+                        },
+                    )
+                    continue
+                prior = state.get(relative_path)
+                if should_skip_metadata(prior, stamp, args.force):
+                    prior_status = prior.get("status")
+                    if prior_status == "skipped":
+                        continue
+                    if prior_status in {"rendered", "selected"} and relative_path in manifest:
+                        if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)):
+                            add_counter("alreadySelected")
+                            if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
+                                break
+                            continue
+                        # Metadata is known, but a derivative is missing. Re-render from the original.
+                    elif prior_status == "error":
+                        pass
+                    else:
+                        continue
+                batch.append(
+                    {
+                        "relative_path": relative_path,
+                        "source_path": source,
+                        "metadata_path": metadata_path,
+                        "checkpoint": stamp,
+                    }
+                )
+                if len(batch) >= args.batch_size:
+                    queue_selected_batch(batch)
+                    batch = []
+                    if args.limit:
+                        snapshot = counter_snapshot()
+                        if snapshot["alreadySelected"] + snapshot["queued"] >= args.limit:
+                            break
+            if batch and (not args.limit or counter_snapshot()["alreadySelected"] + counter_snapshot()["queued"] < args.limit):
+                queue_selected_batch(batch)
+            emit_queue_event("SCAN_DONE")
+            snapshot = counter_snapshot()
+            print(
+                f"Scan done. Saw {snapshot['seen']} media files, inspected {snapshot['inspected']}, "
+                f"queued {snapshot['queued']} selected photos.",
+                flush=True,
+            )
+        except BaseException as error:  # noqa: BLE001 - report scanner failure to the consumer.
+            scan_errors.append(error)
+            print(f"ERROR scanner: {error}", file=sys.stderr, flush=True)
+        finally:
+            work_queue.put(None)
+
+    scanner = threading.Thread(target=scan_sources, name="source-scan", daemon=True)
+    scanner.start()
+    print("Queue worker started; scanner keeps feeding oldest-first import work.", flush=True)
+    emit_queue_event("QUEUE_START")
+    while True:
+        item = work_queue.get()
+        if item is None:
+            break
+        snapshot = counter_snapshot()
+        add_counter("active")
+        emit_queue_event("QUEUE_PROGRESS")
+        print(
+            f"Processing queued photo {snapshot['processed'] + 1}; "
+            f"queue depth {max(0, snapshot['queued'] - snapshot['processed'] - 1)}",
+            flush=True,
+        )
+        try:
+            with data_lock:
+                processed_now = process_batch(
+                    [item],
+                    args,
+                    state_path,
+                    manifest,
+                    gps_manifest,
+                    failures,
+                    font,
+                    1,
+                    index_offset=snapshot["processed"],
+                )
+                write_import_outputs(
+                    args,
+                    manifest_path,
+                    keywords_path,
+                    collections_path,
+                    failures_path,
+                    gps_manifest_path,
+                    manifest,
+                    gps_manifest,
+                    failures,
+                )
+            add_counter("processed", processed_now)
+        finally:
+            add_counter("active", -1)
+            emit_queue_event("QUEUE_PROGRESS")
+
+    scanner.join()
+    if scan_errors:
+        raise scan_errors[0]
+
+    write_import_outputs(
+        args,
+        manifest_path,
+        keywords_path,
+        collections_path,
+        failures_path,
+        gps_manifest_path,
+        manifest,
+        gps_manifest,
+        failures,
+    )
+    snapshot = counter_snapshot()
+    print(f"Done. Saw {snapshot['seen']} media files, inspected {snapshot['inspected']}, manifest contains {len(manifest)} selected rows.")
     print(f"Manifest: {manifest_path}")
     print(f"Keyword index: {keywords_path}")
     print(f"Collection index: {collections_path}")

@@ -1453,6 +1453,21 @@ html[data-theme="light"] .photo-art.has-photo::after{
   gap:8px;
   min-width:0;
 }
+.owner-sweep-phase.has-matrix{
+  grid-template-columns:minmax(170px,.32fr) minmax(0,1fr);
+}
+.owner-sweep-phase.has-matrix .owner-sweep-phase-progress{
+  display:contents;
+}
+.owner-sweep-phase.has-matrix .owner-sweep-bar,
+.owner-sweep-phase.has-matrix .owner-sweep-progress-note{
+  grid-column:2;
+}
+.owner-sweep-phase.has-matrix .owner-import-matrix-wrap,
+.owner-sweep-phase.has-matrix .owner-sweep-details{
+  grid-column:1 / -1;
+  margin-top:4px;
+}
 .owner-sweep-bar{
   height:12px;
   overflow:hidden;
@@ -1529,7 +1544,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-import-matrix{
   width:100%;
-  min-width:720px;
+  min-width:640px;
   border-collapse:collapse;
   font-size:.76rem;
 }
@@ -4666,6 +4681,13 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .owner-sweep-phase{
     grid-template-columns:1fr;
     gap:5px;
+  }
+  .owner-sweep-phase.has-matrix{
+    grid-template-columns:1fr;
+  }
+  .owner-sweep-phase.has-matrix .owner-sweep-bar,
+  .owner-sweep-phase.has-matrix .owner-sweep-progress-note{
+    grid-column:1;
   }
   .owner-sweep-phase-copy{
     grid-template-columns:1fr;

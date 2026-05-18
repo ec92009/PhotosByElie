@@ -56,12 +56,13 @@ def load_product_pricing(repo_root: Path, path: Path = DEFAULT_PRODUCT_PRICING) 
     return pricing
 
 
-def load_catalog(repo_root: Path) -> dict[str, Any]:
+def load_catalog(repo_root: Path, source: str = "auto") -> dict[str, Any]:
+    loader = "loadCatalogWindowFromPhotosData" if source == "photos-data" else "loadCatalogWindow"
     script = """
-const { loadCatalogWindow } = require("./scripts/catalog_tsv.cjs");
-const catalog = loadCatalogWindow(process.argv[1]).photosByElieData || {};
+const { %s: loadCatalog } = require("./scripts/catalog_tsv.cjs");
+const catalog = loadCatalog(process.argv[1]).photosByElieData || {};
 process.stdout.write(JSON.stringify(catalog));
-"""
+""" % loader
     output = subprocess.check_output(["node", "-e", script, str(repo_root)], cwd=repo_root, text=True)
     return json.loads(output)
 
@@ -537,8 +538,8 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
     return sorted(merged.items(), key=lambda item: (order.get(item[0], len(order)), item[0]))
 
 
-def write_db(repo_root: Path, output: Path) -> dict[str, int]:
-    catalog = load_catalog(repo_root)
+def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, int]:
+    catalog = load_catalog(repo_root, source=source)
     pricing = load_product_pricing(repo_root)
     collection_entries = ordered_collections(catalog)
     photos: list[tuple[str, dict[str, Any], str, int, dict[str, Any]]] = []
@@ -927,10 +928,11 @@ def main() -> None:
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--source", choices=("auto", "photos-data"), default="auto")
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     output = args.output if args.output.is_absolute() else repo_root / args.output
-    counts = write_db(repo_root, output)
+    counts = write_db(repo_root, output, source=args.source)
     if not args.quiet:
         print(f"Wrote {output}")
         print(", ".join(f"{table}={count}" for table, count in counts.items()))

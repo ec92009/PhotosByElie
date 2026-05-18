@@ -5,8 +5,12 @@
   const pageParams = new URLSearchParams(window.location.search);
   const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
   const pageVersion = pageParams.get("v");
-  const defaultLocalContext = `./tmp/real-estate-import/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
-  const defaultPublicContext = `./assets/real-estate/corine/app-context.js${pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : ""}`;
+  const contextVersion = pageVersion ? `?v=${encodeURIComponent(pageVersion)}` : "";
+  const knownClientContexts = new Set(["corine", "elie"]);
+  const requestedClientContext = String(pageParams.get("client") || "elie").trim().toLowerCase();
+  const defaultClientContext = knownClientContexts.has(requestedClientContext) ? requestedClientContext : "elie";
+  const defaultLocalContext = `./tmp/real-estate-import/${defaultClientContext}/app-context.js${contextVersion}`;
+  const defaultPublicContext = `./assets/real-estate/${defaultClientContext}/app-context.js${contextVersion}`;
   const contextParam = pageParams.get("context");
   const contextUrl = contextParam || (isLocalHost ? defaultLocalContext : defaultPublicContext);
   const densityKey = "photosbyelie-real-estate-card-density";
@@ -57,6 +61,11 @@
     originalsCode: document.querySelector("[data-re-originals-code]"),
     originalsStatus: document.querySelector("[data-re-originals-status]"),
     actionBar: document.querySelector("[data-re-action-bar]"),
+    wizard: app.querySelector("[data-re-wizard]"),
+    wizardStatus: app.querySelector("[data-re-wizard-status]"),
+    outputPanel: app.querySelector("[data-re-output-panel]"),
+    outputPdf: app.querySelector("[data-re-output-pdf]"),
+    outputVideo: app.querySelector("[data-re-output-video]"),
   };
 
   const state = {
@@ -66,6 +75,7 @@
     photosById: new Map(),
     albums: [],
     album: "all",
+    wizardStep: 1,
     query: "",
     mediaType: "all",
     sort: "album",
@@ -500,13 +510,20 @@
   const persistTitles = () => writeJson(titleStoreKey(), state.editedTitles);
   const persistProjectAssignments = () => writeJson(projectStoreKey(), state.projectAssignments);
 
+  const selectedPropertyTitle = () => (
+    state.albums.find((album) => album.slug === state.album)?.displayTitle
+    || state.albums.find((album) => album.slug === state.album)?.title
+    || "this property"
+  );
+
   const filteredPhotos = () => {
     const query = state.query.trim().toLowerCase();
     const selectedRank = new Map(state.selectedOrder.map((id, index) => [id, index]));
+    const selectedOnly = state.selectedOnly || state.wizardStep === 2;
     const photos = state.photos.filter((photo) => {
-      if (state.album !== "all" && photo.albumSlug !== state.album) return false;
+      if (state.album && state.album !== "all" && photo.albumSlug !== state.album) return false;
       if (state.mediaType !== "all" && mediaTypeFor(photo) !== state.mediaType) return false;
-      if (state.selectedOnly && !state.selectedIds.has(photo.id)) return false;
+      if (selectedOnly && !state.selectedIds.has(photo.id)) return false;
       if (query && !photoSearchText(photo).includes(query)) return false;
       return true;
     });
@@ -538,12 +555,12 @@
 
   const syncFileActionLabels = () => {
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = "Download project PDFs";
-      button.title = "Browser will save project PDFs to your Downloads folder; selected videos appear as stills from 10% in";
+      button.textContent = "Open PDF";
+      button.title = "Open project PDFs in the browser; selected videos appear as stills from 10% in";
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      button.textContent = "Share slideshow plan";
-      button.title = "Share a cloud-video slideshow plan; selected videos keep their full duration";
+      button.textContent = "Open video preview";
+      button.title = "Open a browser slideshow preview; selected videos keep their full duration";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = "Share selection table";
@@ -578,19 +595,12 @@
 
   const renderAlbums = () => {
     if (!elements.albums) return;
-    const allSelected = state.selectedOrder.length;
-    elements.albums.innerHTML = [
-      `<button class="real-estate-album-filter ${state.album === "all" ? "is-active" : ""}" type="button" data-album-filter="all" aria-pressed="${state.album === "all"}">
-        <span>All properties</span>
-        <small>${state.photos.length} media / ${allSelected} selected</small>
-      </button>`,
-      ...state.albums.map((album) => `
+    elements.albums.innerHTML = state.albums.length ? state.albums.map((album) => `
         <button class="real-estate-album-filter ${state.album === album.slug ? "is-active" : ""}" type="button" data-album-filter="${escapeHtml(album.slug)}" aria-pressed="${state.album === album.slug}">
           <span>${escapeHtml(album.displayTitle || album.title)}</span>
           <small>${Number(album.photoCount) || 0} media / ${albumSelectedCount(album.slug)} selected</small>
         </button>
-      `),
-    ].join("");
+      `).join("") : `<p class="real-estate-muted">No properties are available yet.</p>`;
   };
 
   const renderGrid = () => {
@@ -665,6 +675,44 @@
     `).join("") : `<p class="real-estate-muted">No selected media yet.</p>`;
   };
 
+  const stepCopy = () => {
+    const selected = state.selectedOrder.length;
+    if (state.wizardStep === 1) return `Choose ${selectedPropertyTitle()}, then check the media you want in the final product.`;
+    if (state.wizardStep === 2) return selected
+      ? `Only the ${selected} selected media items are shown. Change titles only where needed.`
+      : "Select at least one photo or video before editing titles.";
+    if (state.wizardStep === 3) return selected
+      ? `Drag the ${selected} selected media items into the order you want.`
+      : "Select at least one photo or video before ordering.";
+    return selected
+      ? "Choose PDF, video, or both, then open the selected outputs in the browser."
+      : "Select at least one photo or video before creating outputs.";
+  };
+
+  const renderWizard = () => {
+    app.dataset.reStep = String(state.wizardStep);
+    if (elements.wizardStatus) elements.wizardStatus.textContent = stepCopy();
+    document.querySelectorAll("[data-re-step-jump]").forEach((button) => {
+      const step = Number(button.dataset.reStepJump) || 1;
+      button.classList.toggle("is-active", step === state.wizardStep);
+      button.setAttribute("aria-current", step === state.wizardStep ? "step" : "false");
+      button.disabled = step > 1 && state.selectedOrder.length === 0;
+    });
+    document.querySelectorAll("[data-re-step-back]").forEach((button) => {
+      button.disabled = state.wizardStep <= 1;
+      button.hidden = state.wizardStep <= 1;
+    });
+    document.querySelectorAll("[data-re-step-next]").forEach((button) => {
+      button.hidden = state.wizardStep >= 4;
+      button.disabled = state.wizardStep < 4 && state.selectedOrder.length === 0;
+      button.textContent = state.wizardStep === 3 ? "Choose output" : "Next";
+    });
+    document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
+      button.hidden = state.wizardStep !== 4;
+      button.disabled = state.selectedOrder.length === 0;
+    });
+  };
+
   const render = () => {
     document.body.dataset.realEstateDensity = state.density;
     if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
@@ -674,8 +722,29 @@
     renderAlbums();
     renderGrid();
     renderDraft();
+    renderWizard();
     syncFileActionLabels();
     window.photosByElieVersionInternalLinks?.(app);
+  };
+
+  const setWizardStep = (step) => {
+    const next = Math.max(1, Math.min(4, Number(step) || 1));
+    if (next > 1 && state.selectedOrder.length === 0) {
+      setStatus("Select at least one photo or video before continuing");
+      state.wizardStep = 1;
+    } else {
+      state.wizardStep = next;
+    }
+    if (state.wizardStep === 2) {
+      state.selectedOnly = true;
+      if (elements.selectedOnly) elements.selectedOnly.checked = true;
+    }
+    if (state.wizardStep === 1) {
+      state.selectedOnly = false;
+      if (elements.selectedOnly) elements.selectedOnly.checked = false;
+    }
+    render();
+    document.getElementById("real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const setSelected = (photoId, selected) => {

@@ -58,6 +58,15 @@ const applyProductCatalog = (targetWindow, productCatalog) => {
   targetWindow.photosByElieVideoPriceTiers = { ...(productCatalog.videoPriceTiers || {}) };
 };
 
+const loadCatalogWindowFromPhotosData = (repoRoot) => {
+  const dataPath = path.join(repoRoot, "photos-data.js");
+  const sandbox = { window: {}, console, Intl };
+  applyProductCatalog(sandbox.window, loadProductCatalog(repoRoot));
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
+  return sandbox.window;
+};
+
 const helperTailFromPhotosData = (repoRoot) => {
   const dataPath = path.join(repoRoot, "photos-data.js");
   const source = fs.existsSync(dataPath) ? fs.readFileSync(dataPath, "utf8") : "";
@@ -85,12 +94,7 @@ const loadCatalogWindow = (repoRoot) => {
   const productCatalog = loadProductCatalog(repoRoot);
   const bundle = loadCatalogBundleFromSqlite(repoRoot);
   if (!bundle) {
-    const dataPath = path.join(repoRoot, "photos-data.js");
-    const sandbox = { window: {}, console, Intl };
-    applyProductCatalog(sandbox.window, productCatalog);
-    vm.createContext(sandbox);
-    vm.runInContext(fs.readFileSync(dataPath, "utf8"), sandbox, { filename: dataPath });
-    return sandbox.window;
+    return loadCatalogWindowFromPhotosData(repoRoot);
   }
   const sandbox = { window: { photosByElieData: bundle.data, photosByElieOwnerData: bundle.owner }, console, Intl };
   applyProductCatalog(sandbox.window, productCatalog);
@@ -103,6 +107,7 @@ module.exports = {
   PRODUCT_PRICING_JSON,
   helperTailFromPhotosData,
   loadCatalogBundleFromSqlite,
+  loadCatalogWindowFromPhotosData,
   loadCatalogWindow,
   loadProductCatalog,
 };

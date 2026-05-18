@@ -6,16 +6,18 @@ Date: 2026-05-18
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v79.13`
+- Current visible build: `v79.14`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Public catalog count: `5,827` active media rows.
+- Public catalog count: `904` active media rows.
 - Public previews are served from public R2 media. Private sellable files and Real Estate originals are delivered through Worker-created private download tokens.
 - The site remains static-first on GitHub Pages; localhost-only Owner and helper workflows provide mutation/import/cloud-maintenance endpoints.
 
 ## What This Conversation Covered
 
 The latest handoff sweep reconciled tracked Owner/dashboard changes after a period of user inactivity. The Owner dashboard now has section tabs for Review, Real Estate, Catalog, Cloud, and Commerce; cloud sweep progress details are shown inline by phase; and the generated discarded-media cleanup manifest was refreshed to include the latest tombstoned R2 media keys.
+
+The sweep also fixed the SQLite catalog handoff path so a fresh export builds `assets/catalog/photosbyelie.sqlite` from the just-generated full catalog before `photos-data.js` is replaced with the runtime SQLite bootstrap. Validation now accepts the generated `video-original` product used for video downloads, and the media sidecar / Worker catalog were regenerated from the current `904`-row public catalog.
 
 The prior main thread was the Real Estate import and client review workflow, with a strong bias toward reuse and static-site constraints.
 
@@ -39,7 +41,7 @@ The prior main thread was the Real Estate import and client review workflow, wit
 
 ## Current Real Estate Delivery Model
 
-- `real-estate.html` loads the public-safe Corine context on GitHub Pages by default, can load the tracked Elie context with `?context=assets/real-estate/elie/app-context.js`, and uses ignored local import contexts on localhost.
+- `real-estate.html` defaults to the Elie client bundle on bare `real-estate.html?logout=1`, can load Corine or another tracked client with `?client=<client>`, and can still load a same-origin bundle with `?context=<path>`.
 - The client gate accepts configured client identifiers and password credentials; public contexts keep a salted password hash, while plaintext local passwords remain in ignored Owner settings and Worker secrets.
 - Selected media can belong to one or more project assignments. PDF and slideshow manifests split outputs by project.
 - Browser PDFs remain a draft/local capability. The longer-term target is cloud generation from the saved manifest.
@@ -67,7 +69,7 @@ python3 -m py_compile scripts/local_server.py scripts/import_real_estate_gallery
 browser checks on homepage, gallery filters, Real Estate selection/PDF/slideshow, footer clearance, and video detail duration
 ```
 
-The current sweep verified `node --check owner.js`, `npm test`, and `npm run validate`.
+The current sweep verified `npm test`, `npm run validate`, and `git diff --check`.
 
 ## Current Backlog
 

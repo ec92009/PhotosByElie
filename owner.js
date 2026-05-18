@@ -1415,6 +1415,14 @@
     const realEstateUploadStartPayload = parsePayloadMatch(realEstateUploadStart);
     const realEstateUploadPayload = parsePayloadMatch(realEstateUpload);
     const realEstateDonePayload = parsePayloadMatch(realEstateDone);
+    const importScanProgress = scopedImport ? lastMatchAfter(/^PBE_IMPORT_SCAN_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const importScanDone = scopedImport ? lastMatchAfter(/^PBE_IMPORT_SCAN_DONE\s+({.+})$/, importStartIndex) : null;
+    const importQueueStart = scopedImport ? lastMatchAfter(/^PBE_IMPORT_QUEUE_START\s+({.*})$/, importStartIndex) : null;
+    const importQueueProgress = scopedImport ? lastMatchAfter(/^PBE_IMPORT_QUEUE_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const importScanProgressPayload = parsePayloadMatch(importScanProgress);
+    const importScanDonePayload = parsePayloadMatch(importScanDone);
+    const importQueueStartPayload = parsePayloadMatch(importQueueStart);
+    const importQueueProgressPayload = parsePayloadMatch(importQueueProgress);
     const importPlan = lastMatch(/^PBE_IMPORT_PLAN\s+({.+})$/);
     const importDone = lastMatch(/^PBE_IMPORT_DONE\s+({.+})$/);
     const importPlanPayload = parsePayloadMatch(importPlan);
@@ -1527,6 +1535,14 @@
       realEstateUploadPayload,
       realEstateDone,
       realEstateDonePayload,
+      importScanProgress,
+      importScanProgressPayload,
+      importScanDone,
+      importScanDonePayload,
+      importQueueStart,
+      importQueueStartPayload,
+      importQueueProgress,
+      importQueueProgressPayload,
       importPlan,
       importPlanPayload,
       importDone,
@@ -1631,28 +1647,68 @@
     const rows = Array.isArray(logSummary?.importPhotoRows) ? logSummary.importPhotoRows : [];
     const finishedRows = rows.filter((row) => row.status === "done" || row.status === "error").length;
     const runningRow = rows.find((row) => row.status !== "done" && row.status !== "error") || null;
+    const scanPayload = logSummary?.importScanDonePayload || logSummary?.importScanProgressPayload || {};
+    const queuePayload = logSummary?.importQueueProgressPayload || logSummary?.importQueueStartPayload || {};
+    const hasQueueEvents = Boolean(
+      logSummary?.importScanProgressPayload
+      || logSummary?.importScanDonePayload
+      || logSummary?.importQueueStartPayload
+      || logSummary?.importQueueProgressPayload
+    );
     const selectedFromScan = numberFromLog(logSummary?.scan?.match?.[3]);
-    const scannedFiles = numberFromLog(logSummary?.scan?.match?.[1]);
-    const inspectedFiles = numberFromLog(logSummary?.scan?.match?.[2]);
-    const selected = Math.max(selectedFromScan, rows.length);
-    const completed = rows.length ? finishedRows : numberFromLog(logSummary?.imported?.match?.[1]);
+    const queued = Number(scanPayload.queued ?? queuePayload.queued ?? 0);
+    const processed = Number(queuePayload.processed ?? scanPayload.processed ?? 0);
+    const activeItemCount = Number(queuePayload.active ?? scanPayload.active ?? (runningRow ? 1 : 0));
+    const queueDepth = Number(queuePayload.queueDepth ?? scanPayload.queueDepth ?? Math.max(0, queued - processed - activeItemCount));
+    const alreadySelected = Number(scanPayload.alreadySelected ?? queuePayload.alreadySelected ?? 0);
+    const scannedFiles = Number(scanPayload.seen ?? queuePayload.seen ?? numberFromLog(logSummary?.scan?.match?.[1]) ?? 0);
+    const inspectedFiles = Number(scanPayload.inspected ?? queuePayload.inspected ?? numberFromLog(logSummary?.scan?.match?.[2]) ?? 0);
+    const scanDone = Boolean(logSummary?.importScanDonePayload);
+    const selected = Math.max(queued, selectedFromScan, rows.length);
+    const completed = Math.max(rows.length ? finishedRows : 0, processed, numberFromLog(logSummary?.imported?.match?.[1]));
     const startedIndex = rows.length
       ? completed + (runningRow ? 1 : 0)
       : numberFromLog(logSummary?.started?.match?.[1]);
-    const current = Math.max(completed, startedIndex);
+    const current = Math.max(completed + (activeItemCount ? 1 : 0), startedIndex);
     const active = task?.state === "queued" || task?.state === "running";
-    const scanningForMore = Boolean(active && selected && completed >= selected);
+    const scanningForMore = Boolean(active && (hasQueueEvents ? !scanDone : selected && completed >= selected));
+    const scanDraining = Boolean(active && scanDone && queueDepth > 0);
     const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
     const secondsLeft = completed >= 5 && selected > completed && elapsedSeconds > 0
       ? ((selected - completed) / completed) * elapsedSeconds
       : 0;
-    const countdown = scanningForMore ? "Scanning for more matches" : secondsLeft ? formatDuration(secondsLeft) : (selected && completed >= selected ? "0s" : "Estimating");
+    const countdown = scanningForMore
+      ? (secondsLeft ? `${formatDuration(secondsLeft)} for the current queue` : "Scanner is still building the queue")
+      : secondsLeft
+      ? formatDuration(secondsLeft)
+      : (selected && completed >= selected ? "0s" : "Estimating");
     const percent = selected
       ? Math.max(current ? 1 : 0, Math.min(scanningForMore ? 96 : current >= selected ? 100 : 96, Math.round((current / selected) * 100)))
-      : 25;
+      : (scanningForMore ? 18 : 25);
     const photo = runningRow?.id || logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
     const remaining = Math.max(0, selected - completed);
-    return { selected, selectedFromScan, found: rows.length, scannedFiles, inspectedFiles, completed, current, startedIndex, remaining, percent, countdown, photo, scanningForMore };
+    return {
+      selected,
+      selectedFromScan,
+      found: rows.length,
+      queued,
+      queueDepth,
+      alreadySelected,
+      scannedFiles,
+      inspectedFiles,
+      completed,
+      processed,
+      activeItemCount,
+      current,
+      startedIndex,
+      remaining,
+      percent,
+      countdown,
+      photo,
+      scanningForMore,
+      scanDone,
+      scanDraining,
+    };
   };
 
   const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
@@ -1674,6 +1730,8 @@
     add("Source group", details.sourceGroup);
     add("Current file", details.currentFile);
     add("Current photo", details.currentPhoto);
+    add("Scanner", details.scanner);
+    add("Queue", details.queue);
     add("Progress bar counts", details.progressCounts);
     add("Coverage gaps", details.coverageGaps);
     add("Progress summary", details.progressSummary);
@@ -1688,7 +1746,10 @@
   const cameraImportProgressDetail = (progress, phaseKey = "camera") => {
     const sourceLabel = importSourceLabel(phaseKey);
     const gapSummary = coverageRepairGapSummary();
-    if (!progress.selected) return `${sourceLabel} resync: scanning source folders for selected photos.`;
+    if (!progress.selected) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `${sourceLabel} scanner is filling the import queue; processing starts as soon as a needed photo is found.${inspected}`;
+    }
     const selected = formatCount(progress.selected);
     const completed = formatCount(progress.completed);
     const remaining = formatCount(progress.remaining);
@@ -1696,19 +1757,23 @@
     const timeLeft = progress.countdown === "Estimating"
       ? "time left estimate starts after a few renders complete"
       : progress.scanningForMore
-      ? "scanner is still looking for more matching source photos"
+      ? progress.countdown
       : `rough time left ${progress.countdown}`;
     if (progress.scanningForMore) {
       const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
-      return `${sourceLabel} resync: finished the ${completed} selected source photos found so far; still scanning before moving to the next phase.${inspected}`;
+      const queue = `${formatCount(progress.queueDepth)} waiting`;
+      return `${sourceLabel} queue: ${completed} / ${selected} photos processed, ${queue}; scanner is still adding any newly discovered work.${inspected}`;
+    }
+    if (progress.scanDraining) {
+      return `${sourceLabel} scan is complete; draining the queue oldest-first: ${completed} / ${selected} photos processed, ${formatCount(progress.queueDepth)} waiting; ${timeLeft}.`;
     }
     if (progress.completed >= progress.selected) {
-      return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. ${completed} / ${selected} source items checked this run; ${timeLeft}.`;
+      return `${sourceLabel} queue finished: ${completed} / ${selected} photos processed for the current expected R2 keys; ${timeLeft}.`;
     }
     if (progress.startedIndex > progress.completed) {
-      return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. Checking source item ${current} / ${selected}; uploads to the current expected R2 keys. ${completed} finished this run, ${remaining} left; ${timeLeft}.`;
+      return `${sourceLabel} queue: processing photo ${current} / ${selected}; uploads to the current expected R2 keys. ${completed} finished, ${remaining} left; ${timeLeft}.`;
     }
-    return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. ${completed} / ${selected} source items checked this run; ${remaining} left; ${timeLeft}.`;
+    return `${sourceLabel} queue: ${completed} / ${selected} photos processed; ${remaining} left; ${gapSummary || "checking R2"}.`;
   };
 
   const realEstateImportProgress = (logSummary, task = null) => {
@@ -1785,38 +1850,59 @@
     };
   };
 
+  const sourceLaneHasQueueProgress = (logSummary = null) => Boolean(
+    logSummary?.importScanProgressPayload
+    || logSummary?.importScanDonePayload
+    || logSummary?.importQueueStartPayload
+    || logSummary?.importQueueProgressPayload
+    || logSummary?.scan
+    || logSummary?.started
+    || logSummary?.imported
+  );
+
   const sourceLaneHasLogProgress = (phaseKey, logSummary = null) => (
     phaseKey === "real-estate"
-      ? Boolean(logSummary?.realEstateImportPayload || logSummary?.realEstateUploadStartPayload || logSummary?.realEstateUploadPayload)
-      : Boolean(logSummary?.scan || logSummary?.started || logSummary?.imported)
+      ? Boolean(
+        sourceLaneHasQueueProgress(logSummary)
+        || logSummary?.realEstateImportPayload
+        || logSummary?.realEstateUploadStartPayload
+        || logSummary?.realEstateUploadPayload
+      )
+      : sourceLaneHasQueueProgress(logSummary)
   );
 
   const sourceLaneProgress = (phaseKey, logSummary = null, task = null) => (
-    phaseKey === "real-estate"
+    phaseKey === "real-estate" && !sourceLaneHasQueueProgress(logSummary)
       ? realEstateImportProgress(logSummary, task)
       : cameraImportProgress(logSummary, task)
   );
 
   const sourceLaneProgressDetail = (phaseKey, progress) => (
-    phaseKey === "real-estate"
+    phaseKey === "real-estate" && progress.selected === undefined
       ? progress.detail
       : cameraImportProgressDetail(progress, phaseKey)
   );
 
   const sourceLaneProgressCountText = (phaseKey, progress = {}) => {
     const sourceLabel = importSourceLabel(phaseKey);
-    if (phaseKey === "real-estate") {
+    if (phaseKey === "real-estate" && progress.selected === undefined) {
       if (!progress.total) return `Waiting for ${sourceLabel} media totals.`;
       const current = Math.min(Number(progress.current || progress.completed || 0), Number(progress.total || 0));
       return `${progress.countLabel || "Items"}: ${formatCount(current)} / ${formatCount(progress.total)}.`;
     }
-    if (!progress.selected) return `Scanning ${sourceLabel} source folders until selected photos are found.`;
+    if (!progress.selected) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `${sourceLabel} scanner is filling the queue; no needed photos queued yet.${inspected}`;
+    }
     if (progress.scanningForMore) {
       const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
-      return `Selected ${sourceLabel} source photos found so far: ${formatCount(progress.completed)} finished; scanner is still looking for more matches before the next phase.${inspected}`;
+      return `${sourceLabel} queue: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed so far, ${formatCount(progress.queueDepth)} waiting; scanner is still looking for more work.${inspected}`;
+    }
+    if (progress.scanDraining) {
+      return `${sourceLabel} scan complete; queue drain: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed, ${formatCount(progress.queueDepth)} waiting.`;
     }
     const current = Math.min(Math.max(Number(progress.current || 0), Number(progress.completed || 0)), Number(progress.selected || 0));
-    return `Selected ${sourceLabel} source photos found so far: ${formatCount(current)} / ${formatCount(progress.selected)}; ${formatCount(progress.completed)} finished.`;
+    return `${sourceLabel} queue: ${formatCount(current)} / ${formatCount(progress.selected)} photos processed; ${formatCount(progress.completed)} finished.`;
   };
 
   const gapFillProgress = (logSummary, task = null) => {
@@ -1914,9 +2000,8 @@
     photos
       .filter((photo) => !importMatrixRowComplete(photo))
       .sort((left, right) => {
-        const leftRunning = left.status !== "error" ? 0 : 1;
-        const rightRunning = right.status !== "error" ? 0 : 1;
-        return leftRunning - rightRunning || Number(left.index || 0) - Number(right.index || 0);
+        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "error" ? 2 : 1;
+        return rank(left) - rank(right) || Number(left.index || 0) - Number(right.index || 0);
       })
   );
 
@@ -2055,6 +2140,7 @@
       const canExpand = (state === "done" || state === "failed") && (phaseRows.length || matrixRows.length || hasProgressNote);
       const showPhaseDetails = state === "running" || (canExpand && expandedSweepPhaseKeys.has(phase.key));
       const matrixHtml = showPhaseDetails && matrixRows.length ? importMatrixHtml(matrixRows) : "";
+      const hasMatrix = Boolean(matrixHtml);
       const detailHtml = showPhaseDetails && phaseRows.length
         ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
         : "";
@@ -2069,7 +2155,7 @@
         ? ` data-owner-sweep-phase-toggle="${escapeHtml(phase.key)}" role="button" tabindex="0" aria-expanded="${showPhaseDetails ? "true" : "false"}" aria-label="${escapeHtml(`${phase.label}: ${showPhaseDetails ? "collapse" : "expand"} details`)}"`
         : "";
       return `
-        <div class="owner-sweep-phase is-${state}${canExpand ? " can-expand" : ""}${showPhaseDetails ? " is-expanded" : ""}"${toggleAttrs}>
+        <div class="owner-sweep-phase is-${state}${canExpand ? " can-expand" : ""}${showPhaseDetails ? " is-expanded" : ""}${hasMatrix ? " has-matrix" : ""}"${toggleAttrs}>
           <div class="owner-sweep-phase-copy">
             <strong>${escapeHtml(phase.label)}</strong>
             <span>${escapeHtml(task.operation === "imports-idle" && state === "pending" ? "Idle" : phaseStatusLabel(state))}</span>
@@ -2141,7 +2227,7 @@
         visibleMatrixRows.length
           ? `${formatCount(visibleMatrixRows.length)} active/incomplete rows shown${hiddenCompleteRows ? `; ${formatCount(hiddenCompleteRows)} finished hidden` : ""}`
           : sourceProgress?.scanningForMore
-          ? `${formatCount(hiddenCompleteRows)} finished photos hidden; scanning for more Camera matches`
+          ? `${formatCount(hiddenCompleteRows)} finished photos hidden; scanning for more ${importSourceLabel(activePhaseKey)} work`
           : `${formatCount(hiddenCompleteRows)} finished photos hidden; no active rows`,
       );
     }
@@ -2237,21 +2323,29 @@
         });
       }
     }
-    if (logMatchesActivePhase && (logSummary?.scan || logSummary?.started || logSummary?.imported) && !logSummary?.upload) {
+    if (logMatchesActivePhase && sourceLaneHasQueueProgress(logSummary) && !logSummary?.upload) {
       const progress = sourceLaneProgress(activePhaseKey, logSummary, latest);
       if (progress.selected) {
         const gapSummary = coverageRepairGapSummary();
+        const scanner = progress.scanDone
+          ? `Scan complete: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected.`
+          : `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`;
+        const queue = `${formatCount(progress.completed)} processed, ${formatCount(progress.queueDepth)} waiting${progress.activeItemCount ? ", 1 active" : ""}, ${formatCount(progress.selected)} queued so far.`;
         mergeSourceLaneDetails({
           coverageGaps: gapSummary,
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
+          scanner,
+          queue,
           progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
-          progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} selected source photos checked this run`,
-          finishedSummary: `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left`,
+          progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} queued photos processed this run`,
+          finishedSummary: `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left in the known queue`,
           notes: "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.",
         });
       } else {
         mergeSourceLaneDetails({
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
+          scanner: `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`,
+          queue: "No needed photos queued yet.",
           progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
         });
       }

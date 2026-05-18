@@ -326,7 +326,7 @@ renders/<photo-id>_1mp.jpg
 
 using R2's S3-compatible `CopyObject`, then verifies the destination with `HEAD`. It keeps old keys unless `--delete-old` is explicitly supplied. Do not use `--delete-old` until checkout/Worker delivery and manifests no longer reference the old keys.
 
-The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera and Leonardo developed sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
+The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera, Apple Photos, Leonardo, and configured Real Estate sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
 
 The Owner dashboard Fix it button starts this same wrapper through the local helper server when the tracked R2 coverage counts do not match policy.
 

@@ -163,6 +163,7 @@
     ["camera", "Camera"],
     ["apple-photo-albums", "Apple Photos"],
     ["leonardo", "AI"],
+    ["real-estate", "RE"],
   ]);
 
   const SWEEP_PHASES = [
@@ -171,6 +172,7 @@
     ["camera", "Import Camera sources"],
     ["apple-photo-albums", "Import Apple Photos"],
     ["leonardo", "Import AI sources"],
+    ["real-estate", "Import RE sources", { optional: true }],
     ["catalog", "Export catalog"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
@@ -181,7 +183,7 @@
     ["validate", "Validate publish"],
     ["commit", "Commit and push"],
     ["coverage", "Recheck coverage"],
-  ].map(([key, label]) => ({ key, label }));
+  ].map(([key, label, options]) => ({ key, label, ...(options || {}) }));
 
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!ownerAuth?.enabled) return;
@@ -1308,6 +1310,14 @@
       }
       return null;
     };
+    const parsePayloadMatch = (row) => {
+      if (!row?.match?.[1]) return null;
+      try {
+        return JSON.parse(row.match[1]);
+      } catch {
+        return null;
+      }
+    };
     const deleted = lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
     const deleteStart = lastMatch(/^DELETE_START\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
     const deleteProgress = lastMatch(/^DELETE_PROGRESS\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
@@ -1321,6 +1331,14 @@
     const scan = scopedImport ? lastMatchAfter(scanPattern, importStartIndex) : (phaseMarker ? null : lastMatch(scanPattern));
     const started = scopedImport ? lastMatchAfter(startedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(startedPattern));
     const imported = scopedImport ? lastMatchAfter(importedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(importedPattern));
+    const realEstateClient = scopedImport ? lastMatchAfter(/^PBE_RE_CLIENT_START\s+({.+})$/, importStartIndex) : null;
+    const realEstateImport = scopedImport ? lastMatchAfter(/^PBE_IMPORT_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const realEstateUpload = scopedImport ? lastMatchAfter(/^PBE_RE_UPLOAD_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const realEstateDone = lastMatch(/^PBE_RE_DONE\s+({.+})$/);
+    const realEstateClientPayload = parsePayloadMatch(realEstateClient);
+    const realEstateImportPayload = parsePayloadMatch(realEstateImport);
+    const realEstateUploadPayload = parsePayloadMatch(realEstateUpload);
+    const realEstateDonePayload = parsePayloadMatch(realEstateDone);
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
     const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
@@ -1334,6 +1352,9 @@
     if (scan) phase = "Scanning and importing Saturn sources";
     if (started) phase = "Rendering and uploading selected photo";
     if (imported) phase = "Rendering and uploading selected previews";
+    if (realEstateImportPayload) phase = "Importing Real Estate sources";
+    if (realEstateUploadPayload) phase = "Uploading Real Estate media";
+    if (realEstateDonePayload) phase = "Real Estate sync finished";
     if (upload) phase = "Creating and uploading missing private JPGs";
     if (processed) phase = "Private JPG backfill pass finished";
     if (manifest) phase = "Refreshing private delivery manifest";
@@ -1342,11 +1363,35 @@
     let phaseKey = phaseMarker?.match?.[1] || "";
     if (!phaseKey) {
       if (upload || processed || manifest) phaseKey = "private";
+      else if (realEstateImportPayload || realEstateUploadPayload || realEstateDonePayload) phaseKey = "real-estate";
       else if (scan || started || imported) phaseKey = "camera";
       else if (deleted || deleteProgress || deleteStart) phaseKey = "discard-start";
       else phaseKey = "prepare";
     }
-    return { latest, phase, phaseKey, doneKeys, deleted, deleteStart, deleteProgress, scan, started, imported, upload, processed, manifest, error };
+    return {
+      latest,
+      phase,
+      phaseKey,
+      doneKeys,
+      deleted,
+      deleteStart,
+      deleteProgress,
+      scan,
+      started,
+      imported,
+      realEstateClient,
+      realEstateClientPayload,
+      realEstateImport,
+      realEstateImportPayload,
+      realEstateUpload,
+      realEstateUploadPayload,
+      realEstateDone,
+      realEstateDonePayload,
+      upload,
+      processed,
+      manifest,
+      error,
+    };
   };
 
   const privateBackfillProgress = (logSummary) => {
@@ -1473,6 +1518,41 @@
     return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. ${completed} / ${selected} source items checked this run; ${remaining} left; ${timeLeft}.`;
   };
 
+  const realEstateImportProgress = (logSummary, task = null) => {
+    const uploadPayload = logSummary?.realEstateUploadPayload || null;
+    const importPayload = logSummary?.realEstateImportPayload || null;
+    const clientPayload = logSummary?.realEstateClientPayload || null;
+    const payload = uploadPayload || importPayload || {};
+    const total = Number(payload.total || clientPayload?.media || 0);
+    const completed = Number(payload.completed || 0);
+    const percent = total
+      ? Math.max(completed ? 1 : 0, Math.min(completed >= total ? 100 : 96, Math.round((completed / total) * 100)))
+      : 24;
+    const client = String(payload.client || clientPayload?.client || "client");
+    const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
+    const secondsLeft = completed >= 5 && total > completed && elapsedSeconds > 0
+      ? ((total - completed) / completed) * elapsedSeconds
+      : 0;
+    const countdown = secondsLeft ? `, rough time left ${formatDuration(secondsLeft)}` : "";
+    if (uploadPayload) {
+      const failed = Number(uploadPayload.failed || 0);
+      return {
+        percent,
+        detail: `RE upload: ${client} ${formatCount(completed)} / ${formatCount(total)} R2 files uploaded${failed ? `, ${formatCount(failed)} failed` : ""}${countdown}.`,
+      };
+    }
+    if (importPayload) {
+      const album = String(importPayload.album || "");
+      const file = String(importPayload.file || "");
+      const current = [album, file].filter(Boolean).join(" / ");
+      return {
+        percent,
+        detail: `RE import: ${client} ${formatCount(completed)} / ${formatCount(total)} media checked${current ? `, ${current}` : ""}${countdown}.`,
+      };
+    }
+    return { percent: 18, detail: "RE sync running" };
+  };
+
   const phaseProgress = (phase, logSummary, failed, task = null) => {
     if (failed) return { percent: 100, detail: phase.key === "coverage" ? coverageMissingDetail() : "Needs attention" };
     if ((phase.key === "discard-start" || phase.key === "discard-final") && (logSummary?.deleteProgress || logSummary?.deleteStart || logSummary?.deleted)) {
@@ -1487,6 +1567,9 @@
         percent: progress.percent,
         detail: cameraImportProgressDetail(progress, phase.key),
       };
+    }
+    if (phase.key === "real-estate" && (logSummary?.realEstateImportPayload || logSummary?.realEstateUploadPayload)) {
+      return realEstateImportProgress(logSummary, task);
     }
     if (phase.key === "private" && logSummary?.upload) {
       return privateBackfillProgress(logSummary);
@@ -1513,6 +1596,7 @@
     if (state === "done") return "Done";
     if (state === "running") return "Running";
     if (state === "failed") return "Needs attention";
+    if (state === "skipped") return "Skipped";
     return "Waiting";
   };
 
@@ -1529,21 +1613,23 @@
     const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
     const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
-    const wideLabels = new Set(["Current source", "Progress summary", "Coverage gaps", "Gap meaning", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Client", "Current file", "Current source", "Progress summary", "Upload progress", "Coverage gaps", "Skipped properties", "Gap meaning", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
-      const inferredDone = (active || coverageIncomplete) && index < activeIndex;
       const isActive = phase.key === activeKey && active;
       const isFailed = phase.key === activeKey && failed;
-      const state = isFailed ? "failed" : (complete || explicitDone || inferredDone) ? "done" : isActive ? "running" : "pending";
+      const inferredDone = (active || coverageIncomplete) && index < activeIndex && (!phase.optional || explicitDone);
+      const completeDone = complete && (!phase.optional || explicitDone);
+      const isSkipped = phase.optional && !explicitDone && !isActive && (complete || index < activeIndex);
+      const state = isFailed ? "failed" : completeDone || explicitDone || inferredDone ? "done" : isActive ? "running" : isSkipped ? "skipped" : "pending";
       const progress = state === "done"
         ? { percent: 100, detail: completedPhaseDetail(phase, logSummary) }
         : state === "running"
           ? phaseProgress(phase, logSummary, false, task)
           : state === "failed"
             ? phaseProgress(phase, logSummary, true, task)
-            : { percent: 0, detail: "Waiting" };
+            : { percent: 0, detail: state === "skipped" ? "Skipped" : "Waiting" };
       const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
       const detailHtml = phaseRows.length
         ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
@@ -1623,6 +1709,37 @@
       importSourceRowAdded = true;
     };
     if (PHOTO_IMPORT_PHASES.has(activePhaseKey) && !logSummary?.upload) addImportSourceRow();
+    if (activePhaseKey === "real-estate") {
+      addImportSourceRow();
+      const clientPayload = logSummary?.realEstateClientPayload || {};
+      const importPayload = logSummary?.realEstateImportPayload || {};
+      const uploadPayload = logSummary?.realEstateUploadPayload || {};
+      const donePayload = logSummary?.realEstateDonePayload || {};
+      const client = String(uploadPayload.client || importPayload.client || clientPayload.client || "");
+      if (client) addPhaseRow(importPhaseKey, "Client", client);
+      if (clientPayload.properties) addPhaseRow(importPhaseKey, "Properties", formatCount(Number(clientPayload.properties || 0)));
+      if (Array.isArray(clientPayload.missingProperties) && clientPayload.missingProperties.length) {
+        addPhaseRow(importPhaseKey, "Skipped properties", clientPayload.missingProperties.join(", "));
+      }
+      if (importPayload.album) addPhaseRow(importPhaseKey, "Property", importPayload.album);
+      if (importPayload.file) addPhaseRow(importPhaseKey, "Current file", importPayload.file);
+      if (importPayload.total) {
+        addPhaseRow(
+          importPhaseKey,
+          "Progress summary",
+          `${formatCount(Number(importPayload.completed || 0))} / ${formatCount(Number(importPayload.total || 0))} property media checked`,
+        );
+      }
+      if (uploadPayload.total) {
+        addPhaseRow(
+          importPhaseKey,
+          "Upload progress",
+          `${formatCount(Number(uploadPayload.completed || 0))} / ${formatCount(Number(uploadPayload.total || 0))} R2 files uploaded`,
+        );
+      }
+      if (donePayload.clients) addPhaseRow(importPhaseKey, "Clients synced", formatCount(Number(donePayload.clients || 0)));
+      addPhaseRow(importPhaseKey, "What happens", "Imports configured RE property folders, refreshes the public review context, and uploads public previews plus private masters.");
+    }
     if (logSummary?.started && !logSummary?.upload) {
       addImportSourceRow();
       addPhaseRow(importPhaseKey, "Current source", logSummary.started.match[2]);

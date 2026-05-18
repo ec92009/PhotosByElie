@@ -97,6 +97,10 @@ python3 scripts/build_lightroom_thumbnails.py \
   --discarded-tombstone assets/discarded/discarded-photo-ids.json
 done_phase leonardo
 
+phase real-estate "Import Real Estate sources"
+python3 scripts/sync_real_estate_clients.py --publish --upload --scope both
+done_phase real-estate
+
 phase catalog "Export catalog"
 python3 scripts/export_photos_data.py \
   --selection newest \
@@ -147,6 +151,7 @@ git add \
   scripts/build_lightroom_thumbnails.py \
   scripts/delete_discarded_r2_media.mjs \
   scripts/run_cloud_media_sweep.zsh \
+  scripts/sync_real_estate_clients.py \
   scripts/sync_private_deliverables.mjs \
   scripts/write_storage_estimate.mjs \
   scripts/write_worker_catalog.mjs

@@ -1423,6 +1423,9 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-sweep-phase.is-pending{
   opacity:.48;
 }
+.owner-sweep-phase.is-skipped{
+  opacity:.58;
+}
 .owner-sweep-phase.is-running .owner-sweep-bar span{
   background:
     linear-gradient(90deg,transparent 0 34%,color-mix(in srgb,var(--surface) 26%,transparent) 34% 66%,transparent 66% 100%),

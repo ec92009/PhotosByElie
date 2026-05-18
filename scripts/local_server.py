@@ -1715,11 +1715,23 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     blocked_records = [(photo_id, record) for photo_id, record in record_items if photo_id in excluded_photo_ids]
     active_expected = len(active_records) or expected
     blocked_excluded = len(blocked_records)
+    active_render_records = [
+        (photo_id, record)
+        for photo_id, record in active_records
+        if isinstance(record.get("privateRenders"), dict) and record.get("privateRenders")
+    ]
+    blocked_render_records = [
+        (photo_id, record)
+        for photo_id, record in blocked_records
+        if isinstance(record.get("privateRenders"), dict) and record.get("privateRenders")
+    ]
+    render_expected = len(active_render_records) or active_expected
+    blocked_render_excluded = len(blocked_render_records)
 
     master_present_for_catalog = sum(1 for _photo_id, record in active_records if record.get("privateMaster", {}).get("present") is True)
     master_present = int(private_manifest.get("privateMasterPhotoIds") or master_present_for_catalog) if isinstance(private_manifest, dict) else master_present_for_catalog
     render_present = {
-        product: sum(1 for _photo_id, record in active_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
+        product: sum(1 for _photo_id, record in active_render_records if record.get("privateRenders", {}).get(product, {}).get("present") is True)
         for product in ("jpg-6mp", "jpg-3mp", "jpg-1mp")
     }
     blocked_present = {
@@ -1738,9 +1750,9 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
 
     rows = [
         _coverage_row("Private masters", master_present_for_catalog, active_expected, private_bucket, "masters", blocked_excluded, blocked_present["master"]),
-        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], active_expected, private_bucket, "renders/jpg-6mp", blocked_excluded, blocked_present["jpg-6mp"]),
-        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], active_expected, private_bucket, "renders/jpg-3mp", blocked_excluded, blocked_present["jpg-3mp"]),
-        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], active_expected, private_bucket, "renders/jpg-1mp", blocked_excluded, blocked_present["jpg-1mp"]),
+        _coverage_row("Private JPG 6 MP", render_present["jpg-6mp"], render_expected, private_bucket, "renders/jpg-6mp", blocked_render_excluded, blocked_present["jpg-6mp"]),
+        _coverage_row("Private JPG 3 MP", render_present["jpg-3mp"], render_expected, private_bucket, "renders/jpg-3mp", blocked_render_excluded, blocked_present["jpg-3mp"]),
+        _coverage_row("Private JPG 1 MP", render_present["jpg-1mp"], render_expected, private_bucket, "renders/jpg-1mp", blocked_render_excluded, blocked_present["jpg-1mp"]),
         _coverage_row("Preview low 900px", min(public_present, gallery_expected), gallery_expected, public_bucket, "expo/*_900.jpg", blocked_excluded, blocked_present["public"]),
         _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg", blocked_excluded, blocked_present["public"]),
     ]

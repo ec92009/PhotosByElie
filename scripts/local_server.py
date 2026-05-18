@@ -2117,6 +2117,24 @@ def _real_estate_client_properties(client: dict) -> list[str]:
     return _normalize_album_list(raw)
 
 
+def _real_estate_child_directories(source_root: str) -> list[str]:
+    root = Path(str(source_root or "")).expanduser()
+    if not root.is_dir():
+        return []
+    return sorted(path.name for path in root.iterdir() if path.is_dir())
+
+
+def _real_estate_client_missing_properties(client: dict) -> list[str]:
+    source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
+    if not source_root.is_dir():
+        return _real_estate_client_properties(client)
+    return [
+        property_name
+        for property_name in _real_estate_client_properties(client)
+        if not (source_root / property_name).is_dir()
+    ]
+
+
 def _real_estate_discovered_properties(source_root: str) -> list[str]:
     root = Path(str(source_root or "")).expanduser()
     if not root.is_dir():
@@ -2127,8 +2145,10 @@ def _real_estate_discovered_properties(source_root: str) -> list[str]:
             continue
         try:
             has_media = any(
-                child.is_file() and child.suffix.lower() in REAL_ESTATE_MEDIA_EXTENSIONS
-                for child in path.iterdir()
+                child.is_file()
+                and child.name != ".DS_Store"
+                and child.suffix.lower() in REAL_ESTATE_MEDIA_EXTENSIONS
+                for child in path.rglob("*")
             )
         except OSError:
             has_media = False
@@ -2151,6 +2171,7 @@ def _safe_real_estate_client(repo_root: Path, client: dict) -> dict:
     source_root = str(client.get("sourceRoot") or "")
     properties = _real_estate_client_properties(client)
     available_properties = _real_estate_discovered_properties(source_root)
+    missing_properties = _real_estate_client_missing_properties(client)
     return {
         "id": str(client.get("id") or output_slug),
         "customer": str(client.get("customer") or ""),
@@ -2169,6 +2190,7 @@ def _safe_real_estate_client(repo_root: Path, client: dict) -> dict:
         "properties": properties,
         "availableProperties": available_properties,
         "effectiveProperties": properties or available_properties,
+        "missingProperties": missing_properties,
         "albums": properties,
         "maxItems": int(client.get("maxItems") or 300),
         "lastImportedAt": str(client.get("lastImportedAt") or ""),
@@ -2425,6 +2447,15 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
     access_code = str(client.get("accessCode") or "").strip()
     if not access_code:
         raise ValueError("client password is required before import")
+    missing_properties = _real_estate_client_missing_properties(client)
+    if missing_properties:
+        available_properties = _real_estate_child_directories(str(source_root))
+        available_text = ", ".join(available_properties) if available_properties else "none"
+        missing_text = ", ".join(missing_properties)
+        raise ValueError(
+            f"Missing property folder(s) for {client.get('customer')}: {missing_text}. "
+            f"Expected under {source_root}. Available property folders: {available_text}."
+        )
     command = [
         sys.executable,
         "scripts/import_real_estate_gallery.py",

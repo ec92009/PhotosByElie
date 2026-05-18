@@ -191,7 +191,7 @@ def access_code_hash(access_code: str, salt: str) -> str:
 def scan_album_files(album_dir: Path) -> list[Path]:
     return sorted(
         path
-        for path in album_dir.iterdir()
+        for path in album_dir.rglob("*")
         if path.is_file() and path.name != ".DS_Store" and path.suffix.lower() in MEDIA_EXTENSIONS
     )
 
@@ -206,7 +206,17 @@ def raw_files(root: Path) -> list[Path]:
 
 def album_dirs(source_root: Path, requested_albums: list[str]) -> list[Path]:
     if requested_albums:
-        return [source_root / album for album in requested_albums]
+        album_paths = [source_root / album for album in requested_albums]
+        missing = [path.name for path in album_paths if not path.is_dir()]
+        if missing:
+            available = sorted(path.name for path in source_root.iterdir() if path.is_dir())
+            available_text = ", ".join(available) if available else "none"
+            missing_text = ", ".join(missing)
+            raise FileNotFoundError(
+                f"Missing property folder(s) under {source_root}: {missing_text}. "
+                f"Available property folders: {available_text}."
+            )
+        return album_paths
     return sorted(path for path in source_root.iterdir() if path.is_dir())
 
 
@@ -638,31 +648,35 @@ def main() -> int:
     output_dir = args.output_root / customer_slug
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    albums = album_dirs(source_root, args.album)
-    if not albums:
-        print(f"No album folders found in {source_root}", file=sys.stderr)
-        return 1
+    try:
+        albums = album_dirs(source_root, args.album)
+        if not albums:
+            print(f"No album folders found in {source_root}", file=sys.stderr)
+            return 1
 
-    manifest = build_manifest(
-        repo_root=repo_root,
-        source_root=source_root,
-        output_dir=output_dir,
-        customer=args.customer,
-        username=username,
-        email=args.email.strip(),
-        access_code=access_code,
-        access_code_salt=access_code_salt,
-        gallery_key=gallery_key,
-        gallery_title=gallery_title,
-        public_key_prefix=public_key_prefix,
-        private_key_prefix=private_key_prefix,
-        albums=albums,
-        preview_900_max_edge=args.preview_900_max_edge,
-        preview_1800_max_edge=args.preview_1800_max_edge,
-        preview_900_quality=args.preview_900_quality,
-        preview_1800_quality=args.preview_1800_quality,
-        force=args.force,
-    )
+        manifest = build_manifest(
+            repo_root=repo_root,
+            source_root=source_root,
+            output_dir=output_dir,
+            customer=args.customer,
+            username=username,
+            email=args.email.strip(),
+            access_code=access_code,
+            access_code_salt=access_code_salt,
+            gallery_key=gallery_key,
+            gallery_title=gallery_title,
+            public_key_prefix=public_key_prefix,
+            private_key_prefix=private_key_prefix,
+            albums=albums,
+            preview_900_max_edge=args.preview_900_max_edge,
+            preview_1800_max_edge=args.preview_1800_max_edge,
+            preview_900_quality=args.preview_900_quality,
+            preview_1800_quality=args.preview_1800_quality,
+            force=args.force,
+        )
+    except (FileNotFoundError, ValueError, OSError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
 
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

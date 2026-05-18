@@ -763,8 +763,11 @@
       realEstateClientList.innerHTML = realEstateClients.length ? realEstateClients.map((client) => {
         const active = client.id === selected?.id;
         const properties = realEstatePropertiesFor(client);
+        const missingProperties = client.missingProperties || [];
         const statusBits = [
-          client.sourceRootExists ? "source ok" : "source missing",
+          missingProperties.length
+            ? `missing: ${missingProperties.join(", ")}`
+            : (client.sourceRootExists ? "source ok" : "source missing"),
           client.publicContextExists ? "published" : "not published",
         ];
         return `

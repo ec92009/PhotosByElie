@@ -5,7 +5,7 @@
   "publish_scope": "all-eligible",
   "selection_mode": "catalog-recovery",
   "seed": null,
-  "photos_count": 6342,
+  "photos_count": 6324,
   "reserve_counts": {
     "france": 0,
     "usa": 0,
@@ -17,7 +17,7 @@
     "slovakia": 0
   },
   "hidden_counts": {
-    "france": 3,
+    "france": 0,
     "usa": 0,
     "spain": 0,
     "mexico": 0,
@@ -1484,34 +1484,6 @@
       }
     },
     {
-      "id": "20180509-2325-00265-4dc009e089",
-      "relative_path": "2015-2019/20180509 2325 00265.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180509-2325-00265-4dc009e089_900.jpg",
-        "detail": "expo/20180509-2325-00265-4dc009e089_1800.jpg"
-      }
-    },
-    {
-      "id": "20180509-2324-00264-a4318288f3",
-      "relative_path": "2015-2019/20180509 2324 00264.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180509-2324-00264-a4318288f3_900.jpg",
-        "detail": "expo/20180509-2324-00264-a4318288f3_1800.jpg"
-      }
-    },
-    {
       "id": "20180509-2319-00263-ada5a380a3",
       "relative_path": "2015-2019/20180509 2319 00263.jpg",
       "gallery_country": {
@@ -1540,34 +1512,6 @@
       }
     },
     {
-      "id": "20180509-2318-00261-d448c0abb3",
-      "relative_path": "2015-2019/20180509 2318 00261.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180509-2318-00261-d448c0abb3_900.jpg",
-        "detail": "expo/20180509-2318-00261-d448c0abb3_1800.jpg"
-      }
-    },
-    {
-      "id": "20180509-2316-00257-6b450296a4",
-      "relative_path": "2015-2019/20180509 2316 00257.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180509-2316-00257-6b450296a4_900.jpg",
-        "detail": "expo/20180509-2316-00257-6b450296a4_1800.jpg"
-      }
-    },
-    {
       "id": "20180509-2316-00256-fe59b63a1a",
       "relative_path": "2015-2019/20180509 2316 00256.jpg",
       "gallery_country": {
@@ -1593,104 +1537,6 @@
       "derivatives": {
         "gallery": "expo/20180509-2311-00255-7474968431_900.jpg",
         "detail": "expo/20180509-2311-00255-7474968431_1800.jpg"
-      }
-    },
-    {
-      "id": "20180509-2308-00254-317cd9850f",
-      "relative_path": "2015-2019/20180509 2308 00254.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180509-2308-00254-317cd9850f_900.jpg",
-        "detail": "expo/20180509-2308-00254-317cd9850f_1800.jpg"
-      }
-    },
-    {
-      "id": "20180509-2308-00253-0eeaef9d8e",
-      "relative_path": "2015-2019/20180509 2308 00253.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180509-2308-00253-0eeaef9d8e_900.jpg",
-        "detail": "expo/20180509-2308-00253-0eeaef9d8e_1800.jpg"
-      }
-    },
-    {
-      "id": "20180322-0915-00177-2e8ae321f3",
-      "relative_path": "2015-2019/20180322 0915 00177.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180322-0915-00177-2e8ae321f3_900.jpg",
-        "detail": "expo/20180322-0915-00177-2e8ae321f3_1800.jpg"
-      }
-    },
-    {
-      "id": "20180322-0915-00176-829cdd2881",
-      "relative_path": "2015-2019/20180322 0915 00176.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180322-0915-00176-829cdd2881_900.jpg",
-        "detail": "expo/20180322-0915-00176-829cdd2881_1800.jpg"
-      }
-    },
-    {
-      "id": "20180322-0915-00174-9960ccde3d",
-      "relative_path": "2015-2019/20180322 0915 00174.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180322-0915-00174-9960ccde3d_900.jpg",
-        "detail": "expo/20180322-0915-00174-9960ccde3d_1800.jpg"
-      }
-    },
-    {
-      "id": "20180322-0915-00173-e3b893dbea",
-      "relative_path": "2015-2019/20180322 0915 00173.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180322-0915-00173-e3b893dbea_900.jpg",
-        "detail": "expo/20180322-0915-00173-e3b893dbea_1800.jpg"
-      }
-    },
-    {
-      "id": "20180322-0914-00172-8ecac334b7",
-      "relative_path": "2015-2019/20180322 0914 00172.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20180322-0914-00172-8ecac334b7_900.jpg",
-        "detail": "expo/20180322-0914-00172-8ecac334b7_1800.jpg"
       }
     },
     {
@@ -2940,20 +2786,6 @@
       }
     },
     {
-      "id": "20110104-0704-15543-2aa2290667",
-      "relative_path": "2010-2014/20110104 0704 15543.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0704-15543-2aa2290667_900.jpg",
-        "detail": "expo/20110104-0704-15543-2aa2290667_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0704-15231-9f6ebf8849",
       "relative_path": "2010-2014/20110104 0704 15231.jpg",
       "gallery_country": {
@@ -3010,20 +2842,6 @@
       }
     },
     {
-      "id": "20110104-0700-28101-ef24c31300",
-      "relative_path": "2010-2014/20110104 0700 28101.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0700-28101-ef24c31300_900.jpg",
-        "detail": "expo/20110104-0700-28101-ef24c31300_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0700-15911-46c67d50b8",
       "relative_path": "2010-2014/20110104 0700 15911.jpg",
       "gallery_country": {
@@ -3035,34 +2853,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0700-15911-46c67d50b8_900.jpg",
         "detail": "expo/20110104-0700-15911-46c67d50b8_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0659-28097-14e6a11fc8",
-      "relative_path": "2010-2014/20110104 0659 28097.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0659-28097-14e6a11fc8_900.jpg",
-        "detail": "expo/20110104-0659-28097-14e6a11fc8_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0657-15007-fbe795399d",
-      "relative_path": "2010-2014/20110104 0657 15007.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0657-15007-fbe795399d_900.jpg",
-        "detail": "expo/20110104-0657-15007-fbe795399d_1800.jpg"
       }
     },
     {
@@ -3091,20 +2881,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0654-15524-e8f0162301_900.jpg",
         "detail": "expo/20110104-0654-15524-e8f0162301_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0654-28103-ea0632488c",
-      "relative_path": "2010-2014/20110104 0654 28103.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0654-28103-ea0632488c_900.jpg",
-        "detail": "expo/20110104-0654-28103-ea0632488c_1800.jpg"
       }
     },
     {
@@ -3850,20 +3626,6 @@
       }
     },
     {
-      "id": "20110104-0624-15283-19dc8f8e97",
-      "relative_path": "2010-2014/20110104 0624 15283.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0624-15283-19dc8f8e97_900.jpg",
-        "detail": "expo/20110104-0624-15283-19dc8f8e97_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0623-16746-7278119f3e",
       "relative_path": "2010-2014/20110104 0623 16746.jpg",
       "gallery_country": {
@@ -4127,20 +3889,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0612-28118-79cde9baa5_900.jpg",
         "detail": "expo/20110104-0612-28118-79cde9baa5_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0612-16113-397239b83b",
-      "relative_path": "2010-2014/20110104 0612 16113.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "catalog-recovery"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0612-16113-397239b83b_900.jpg",
-        "detail": "expo/20110104-0612-16113-397239b83b_1800.jpg"
       }
     },
     {

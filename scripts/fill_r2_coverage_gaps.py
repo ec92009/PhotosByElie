@@ -132,6 +132,20 @@ def completed_or_total(item: dict[str, Any], step: str, default_total: int) -> t
     return completed, total
 
 
+def emit_initial_steps(row: dict[str, Any], item: dict[str, Any]) -> None:
+    for step, default_total in (
+        ("master_uploaded", 1),
+        ("triplets_created", 3),
+        ("triplets_uploaded", 3),
+        ("previews_created", 2),
+        ("previews_uploaded", 2),
+    ):
+        payload = item.get("steps", {}).get(step, {})
+        status = str(payload.get("status") or "pending")
+        completed, total = completed_or_total(item, step, default_total)
+        emit_import_step(row, step, status=status, total=total, completed=completed)
+
+
 def upload_args(args: argparse.Namespace) -> SimpleNamespace:
     return SimpleNamespace(
         r2_backend=args.r2_backend,
@@ -141,7 +155,7 @@ def upload_args(args: argparse.Namespace) -> SimpleNamespace:
         r2_s3_endpoint=args.r2_s3_endpoint,
         r2_request_min_interval=args.r2_request_min_interval,
         r2_retry_max_delay=args.r2_retry_max_delay,
-        r2_force_upload=True,
+        r2_force_upload=False,
     )
 
 
@@ -180,6 +194,7 @@ def fill_one_photo(args: argparse.Namespace, manifest: dict[str, Any], item: dic
         country=collection_key,
         mediaType=media_type,
     )
+    emit_initial_steps(row, item)
     if not source_file.is_file():
         emit_import_event("PHOTO_DONE", photoId=photo_id, relativePath=relative_path, status="error", error="source file not found")
         return False

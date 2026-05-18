@@ -183,6 +183,7 @@
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
     ["discard-start", "Double-check banned R2 cleanup"],
+    ["import-cache", "Prepare import cache"],
     ["camera", "Import Camera sources"],
     ["apple-photo-albums", "Import Apple Photos"],
     ["leonardo", "Import AI sources"],

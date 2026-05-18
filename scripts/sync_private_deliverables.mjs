@@ -31,6 +31,7 @@ const statePath = valueFor("--state-file", ".review-logs/private-deliverable-syn
 const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-public-preview-ids.json");
 const privateInventoryPath = valueFor("--private-inventory", ".review-logs/r2-private-inventory.json");
 const hiddenBlacklistPath = valueFor("--hidden-blacklist", "assets/hidden/hidden-blacklist.json");
+const ownerDbPath = valueFor("--owner-db", "assets/owner-actions/Owner.sqlite");
 const sourceRootArgs = args.flatMap((arg, index) => arg === "--source-root" ? [args[index + 1]] : []).filter(Boolean);
 
 const firstEnv = (...names) => names.map((name) => process.env[name]).find(Boolean) || "";
@@ -189,6 +190,27 @@ const run = (command, commandArgs, options = {}) => new Promise((resolve, reject
     else reject(new Error(`${command} exited ${code}: ${stderr || stdout}`));
   });
 });
+
+const readOwnerDbCurrentKeys = (targetBucket) => {
+  const db = fullPath(ownerDbPath);
+  const bucketSql = String(targetBucket).replaceAll("'", "''");
+  const result = spawn("sqlite3", [
+    db,
+    `SELECT object_key FROM r2_objects WHERE lifecycle_state = 'current' AND bucket = '${bucketSql}';`,
+  ], { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"] });
+  return new Promise((resolve) => {
+    let stdout = "";
+    result.stdout.on("data", (chunk) => { stdout += chunk; });
+    result.on("error", () => resolve(new Set()));
+    result.on("close", (code) => {
+      if (code !== 0) {
+        resolve(new Set());
+        return;
+      }
+      resolve(new Set(stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)));
+    });
+  });
+};
 
 const defaultRoots = [
   "/Volumes/Saturn/Pictures/LR/Camera",
@@ -361,7 +383,14 @@ const hydrateInventoryFromState = async (inventory, hiddenIds) => {
   }
 };
 
-const buildManifest = async (inventory, publicIdsPayload) => {
+const hydrateInventoryFromOwnerDb = (inventory, hiddenIds, privateCurrentKeys) => {
+  for (const key of privateCurrentKeys) {
+    if (String(key).startsWith("masters/")) rememberInventoryKey(inventory, hiddenIds, "master", key);
+    if (String(key).startsWith("renders/")) rememberInventoryKey(inventory, hiddenIds, "render", key);
+  }
+};
+
+const buildManifest = async (inventory, publicIdsPayload, publicCurrentKeys) => {
   const masterKeysById = new Map();
   for (const key of inventory.masterKeys || []) {
     const id = keyPhotoId(key);
@@ -385,6 +414,12 @@ const buildManifest = async (inventory, publicIdsPayload) => {
     const source = (photo.sourceFiles || [])[0] || {};
     const products = renderProductsById.get(photoId) || new Set();
     const renderProducts = isVideoPhoto(photo) ? [] : [...PRODUCTS.keys()];
+    const publicGalleryKey = `expo/${photoId}_900.jpg`;
+    const publicDetailKey = mediaTypeFor(photo) === "video"
+      ? `expo/${photoId}_short_5s_720p.mp4`
+      : `expo/${photoId}_1800.jpg`;
+    const publicPreviewsPresent = publicPreviewIds.has(photoId)
+      || (publicCurrentKeys.has(publicGalleryKey) && publicCurrentKeys.has(publicDetailKey));
     records[photoId] = {
       id: photoId,
       collectionKey: photo.collectionKey,
@@ -406,17 +441,21 @@ const buildManifest = async (inventory, publicIdsPayload) => {
         },
       ])),
       publicPreviews: {
-        present: publicPreviewIds.has(photoId),
+        present: publicPreviewsPresent,
       },
     };
   }
+  const recordValues = Object.values(records);
   return {
     schema: "photosbyelie.private-delivery-manifest.v1",
     updatedAt: new Date().toISOString(),
     privateBucket: bucket,
     catalogPhotos: catalogById.size,
-    privateMasterPhotoIds: masterKeysById.size,
-    privateRenderTripletPhotoIds: [...renderProductsById.values()].filter((set) => [...PRODUCTS.keys()].every((productId) => set.has(productId))).length,
+    privateMasterPhotoIds: recordValues.filter((record) => record.privateMaster.present).length,
+    privateRenderTripletPhotoIds: recordValues.filter((record) => (
+      Object.values(record.privateRenders || {}).length > 0
+      && Object.values(record.privateRenders || {}).every((item) => item.present)
+    )).length,
     records,
   };
 };
@@ -439,11 +478,13 @@ filterHiddenInventoryKeys(inventory, hiddenIds);
 const previousManifest = await readJson(manifestPath, null);
 hydrateInventoryFromManifest(inventory, hiddenIds, previousManifest);
 await hydrateInventoryFromState(inventory, hiddenIds);
+hydrateInventoryFromOwnerDb(inventory, hiddenIds, await readOwnerDbCurrentKeys(bucket));
 filterHiddenInventoryKeys(inventory, hiddenIds);
 inventory.generatedAt = new Date().toISOString();
 await writeJson(privateInventoryPath, inventory);
 const publicIdsPayload = await readJson(publicPreviewIdsPath, {});
-let manifest = await buildManifest(inventory, publicIdsPayload);
+let publicCurrentKeys = await readOwnerDbCurrentKeys("photosbyelie-public");
+let manifest = await buildManifest(inventory, publicIdsPayload, publicCurrentKeys);
 await writeJson(manifestPath, manifest);
 if (refreshOnly) {
   console.log(`Refreshed ${manifestPath}: ${manifest.privateRenderTripletPhotoIds} complete private render triplets.`);
@@ -482,7 +523,7 @@ for (const record of Object.values(manifest.records)) {
       if (!dryRun) {
         inventory.generatedAt = new Date().toISOString();
         await writeJson(privateInventoryPath, inventory);
-        manifest = await buildManifest(inventory, publicIdsPayload);
+        manifest = await buildManifest(inventory, publicIdsPayload, publicCurrentKeys);
         await writeJson(manifestPath, manifest);
         await maybeCommit(processed.length);
       }
@@ -510,7 +551,7 @@ for (const record of Object.values(manifest.records)) {
     if (!dryRun) {
       inventory.generatedAt = new Date().toISOString();
       await writeJson(privateInventoryPath, inventory);
-      manifest = await buildManifest(inventory, publicIdsPayload);
+      manifest = await buildManifest(inventory, publicIdsPayload, publicCurrentKeys);
       await writeJson(manifestPath, manifest);
       await maybeCommit(processed.length);
     }
@@ -526,7 +567,7 @@ for (const record of Object.values(manifest.records)) {
   }
 }
 
-manifest = await buildManifest(inventory, publicIdsPayload);
+manifest = await buildManifest(inventory, publicIdsPayload, publicCurrentKeys);
 await writeJson(manifestPath, manifest);
 if (!dryRun) await maybeCommit(processed.length, true);
 console.log(`Done. Processed ${processed.length} photo${processed.length === 1 ? "" : "s"}.`);

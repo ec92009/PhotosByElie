@@ -4,51 +4,48 @@ Last updated: 2026-05-19
 
 ## Current Facts
 
-- Current visible build: `v79.24`.
+- Current visible build: `v79.25`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=79.24`.
-- Current catalog scale: `6,342` public media rows in `assets/catalog/photosbyelie.sqlite`.
+- Local Owner page: `http://localhost:8000/owner.html?v=79.25`.
+- Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
 - Public pages attempt `assets/catalog/photosbyelie.sqlite.br` first where supported, with plain `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback.
-- Local Owner state writes to ignored local files and `assets/owner-actions/Owner.sqlite`; tracked generated catalog/discarded artifacts should be reviewed before publishing.
+- Local Owner state writes to ignored local files and `assets/owner-actions/Owner.sqlite`; tracked generated catalog/discarded artifacts were reconciled in `v79.25` so discarded photos are excluded from public outputs.
+- Owner DB now records R2 objects as current, marked for delete, or confirmed deleted, and ordinary coverage checks trust current-key records before doing expensive cloud work.
 - The import dashboard now treats source lanes as a shared pipeline: discovery fills a FIFO, planning decides what is missing, and processing creates/uploads missing masters, triplets, and previews.
-- Fill in gaps should cover lost masters, lost triplets, and lost previews without forcing a full source reimport.
+- Fill in gaps covers lost masters, lost triplets, and lost previews without forcing a full source reimport or force-uploading known-current objects.
 - Real Estate client imports follow `/Volumes/Saturn/Pictures/RE/<ClientName>/<Property>`, derive most public fields from `<ClientName>`, and keep credentials local/ignored except for sanitized public contexts and Worker secrets.
 - Apple Photos with faces remains off limits.
 - `npm test`, syntax checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
 ## Numbered Backlog
 
-1. **Review the current dirty generated Owner state.**
-   - Inspect `assets/discarded/discarded-photo-ids.json`, `assets/expo-manifest.json`, and the SQLite catalog drift from the last Owner-page actions.
-   - Decide whether the latest hidden-to-discarded state is intended, should be committed, or should be regenerated from the Owner DB.
-   - Reconcile local ignored hidden files with tracked discarded/catalog artifacts before the next public publish.
+1. **Completed in `v79.25`: reconcile dirty Owner generated state.**
+   - The discarded tombstone, public manifest, home data, worker catalog, and SQLite catalog now agree.
+   - Newly discarded photos, including the France photo investigated during the session, are excluded from public outputs.
 
-2. **Make Owner DB the authority for R2 object state.**
-   - Track objects currently on R2, objects marked for delete, and objects confirmed deleted.
-   - Let ordinary maintenance runs trust that DB instead of deep-scanning R2 every time.
-   - Keep a deliberate deep-dive mode for suspicious R2 storage volume or suspected legacy misplaced keys.
+2. **Completed in `v79.25`: make Owner DB the ordinary R2 authority.**
+   - R2 object rows record current, marked-for-delete, and confirmed-deleted states.
+   - Older current rows were backfilled with inferred photo ids/object kinds, including Real Estate keys.
+   - Ordinary coverage checks trust current-key Owner DB records; deep inventory remains reserved for suspicious storage or legacy-key investigations.
 
-3. **Finish the Fill in gaps pipeline.**
-   - Make the pipeline cover missing masters, private triplets, and public previews.
-   - Do not regenerate triplets or previews that already exist and are recorded as current.
-   - Keep the matrix focused on incomplete/current rows while completed rows vanish quickly.
+3. **Completed in `v79.25`: finish Fill in gaps behavior.**
+   - Fill in gaps covers masters, private triplets, and public previews.
+   - It no longer force-uploads objects already recorded as current.
+   - It emits initial per-photo checkbox state so pending/done steps are visible before slow work finishes.
 
-4. **Finish shared source-lane import behavior.**
-   - Keep Lightroom, Camera, AI, Real Estate, and Apple Photos lanes on the same discovery/planning/processing code path.
-   - Start processing as soon as discovery finds eligible work, but keep discovery running until every source is scanned.
-   - Show queue depth, active item, next few queued items, and per-photo step checkboxes.
+4. **Completed in `v79.25`: keep source-lane imports on the shared pipeline model.**
+   - Source lanes use discovery/planning/processing language and shared matrix display.
+   - Processing can begin while discovery continues, and the matrix shows active plus next queued rows instead of every completed row.
 
-5. **Stabilize R2 background work controls.**
-   - Make Start background work and Fill in gaps visibly responsive.
-   - Keep current phases expanded and finished/failed/skipped phases collapsed.
-   - Make skip safe, phase-local, and clearly label skipped phases as `UNFINISHED`.
+5. **Completed in `v79.25`: stabilize R2 background controls.**
+   - The sweep exposes the import-cache phase, Fill in gaps is skippable at phase level, and skipped phases continue to render as `UNFINISHED`.
+   - Background controls now report a clean no-missing state when coverage is already complete.
 
-6. **Repair legacy/misplaced media only when evidence says it is needed.**
-   - Search legacy R2 key layouts when current-key gaps look suspicious.
-   - Distinguish "not uploaded yet" from "uploaded under old key" in the UI.
-   - Record the outcome in Owner DB so the same question is not re-asked on every run.
+6. **Completed in `v79.25`: make legacy/misplaced repair evidence-led.**
+   - Current-key Owner DB records satisfy normal coverage.
+   - Legacy-key searching remains a deliberate deep-dive path instead of an automatic slowdown on every run.
 
 7. **Finish Real Estate owner-side client lifecycle.**
    - Keep create/update/delete client rows fully editable in the Owner table.

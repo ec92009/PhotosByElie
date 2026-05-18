@@ -213,6 +213,9 @@ def _truthy(value: Any) -> int:
 
 def _photo_id_from_r2_key(object_key: str) -> str:
     value = str(object_key or "")
+    if value.startswith("RE/"):
+        name = Path(value).stem
+        return name.removesuffix("_900").removesuffix("_1800")
     if value.startswith("expo/"):
         return value.split("/", 1)[1].rsplit("_", 1)[0]
     if value.startswith("masters/"):
@@ -226,6 +229,10 @@ def _photo_id_from_r2_key(object_key: str) -> str:
 
 def _r2_object_kind(bucket: str, object_key: str) -> str:
     key = str(object_key or "")
+    if key.startswith("RE/") and "/masters/" in key:
+        return "real-estate-master"
+    if key.startswith("RE/") and "/previews/" in key:
+        return "real-estate-preview"
     if key.startswith("expo/") and key.endswith(".mp4"):
         return "public-preview-video"
     if key.startswith("expo/"):
@@ -235,6 +242,42 @@ def _r2_object_kind(bucket: str, object_key: str) -> str:
     if key.startswith("renders/"):
         return "private-render"
     return "unknown"
+
+
+def backfill_r2_object_metadata(conn: sqlite3.Connection) -> int:
+    """Infer photo id/object kind for older R2 rows that were recorded before metadata existed."""
+    rows = conn.execute(
+        """
+        SELECT bucket, object_key, photo_id, object_kind
+        FROM r2_objects
+        WHERE COALESCE(photo_id, '') = ''
+           OR COALESCE(object_kind, '') = ''
+           OR object_kind = 'unknown'
+        """
+    ).fetchall()
+    updated = 0
+    for row in rows:
+        photo_id = str(row["photo_id"] or "") or _photo_id_from_r2_key(str(row["object_key"] or ""))
+        existing_kind = str(row["object_kind"] or "")
+        object_kind = "" if existing_kind == "unknown" else existing_kind
+        object_kind = object_kind or _r2_object_kind(str(row["bucket"] or ""), str(row["object_key"] or ""))
+        if not photo_id and not object_kind:
+            continue
+        conn.execute(
+            """
+            UPDATE r2_objects
+            SET photo_id = COALESCE(NULLIF(?, ''), photo_id),
+                object_kind = CASE
+                  WHEN COALESCE(NULLIF(?, ''), '') <> '' AND COALESCE(object_kind, '') IN ('', 'unknown') THEN ?
+                  ELSE object_kind
+                END,
+                updated_at = ?
+            WHERE bucket = ? AND object_key = ?
+            """,
+            (photo_id, object_kind, object_kind, now_iso(), row["bucket"], row["object_key"]),
+        )
+        updated += 1
+    return updated
 
 
 def _set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
@@ -928,6 +971,8 @@ def upsert_r2_object_state(
     timestamp: str = "",
 ) -> None:
     timestamp = timestamp or now_iso()
+    photo_id = str(photo_id or "") or _photo_id_from_r2_key(object_key)
+    object_kind = str(object_kind or "") or _r2_object_kind(bucket, object_key)
     existing = conn.execute(
         "SELECT lifecycle_state, first_seen_at FROM r2_objects WHERE bucket = ? AND object_key = ?",
         (bucket, object_key),
@@ -961,8 +1006,14 @@ def upsert_r2_object_state(
           lifecycle_state = excluded.lifecycle_state,
           first_seen_at = COALESCE(r2_objects.first_seen_at, excluded.first_seen_at),
           last_seen_at = COALESCE(excluded.last_seen_at, r2_objects.last_seen_at),
-          marked_for_delete_at = COALESCE(excluded.marked_for_delete_at, r2_objects.marked_for_delete_at),
-          deleted_confirmed_at = COALESCE(excluded.deleted_confirmed_at, r2_objects.deleted_confirmed_at),
+          marked_for_delete_at = CASE
+            WHEN excluded.lifecycle_state = 'current' THEN NULL
+            ELSE COALESCE(excluded.marked_for_delete_at, r2_objects.marked_for_delete_at)
+          END,
+          deleted_confirmed_at = CASE
+            WHEN excluded.lifecycle_state = 'current' THEN NULL
+            ELSE COALESCE(excluded.deleted_confirmed_at, r2_objects.deleted_confirmed_at)
+          END,
           last_checked_at = excluded.last_checked_at,
           source = COALESCE(NULLIF(excluded.source, ''), r2_objects.source),
           bytes = COALESCE(excluded.bytes, r2_objects.bytes),
@@ -1054,6 +1105,7 @@ def main() -> None:
     parser.add_argument("--import-discarded-r2-manifest", action="store_true")
     parser.add_argument("--r2-state-file", type=Path)
     parser.add_argument("--r2-state", choices=("current", "marked_for_delete", "deleted_confirmed"))
+    parser.add_argument("--backfill-r2-metadata", action="store_true")
     parser.add_argument("--review-counts", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
@@ -1082,6 +1134,10 @@ def main() -> None:
                 result = record_r2_object_state_file(repo_root, args.r2_state_file, args.r2_state, args.db)
                 print(f"r2_objects {result['state']}={result['objects']}")
                 conn = connect(repo_root, args.db)
+            if args.backfill_r2_metadata:
+                updated = backfill_r2_object_metadata(conn)
+                conn.commit()
+                print(f"r2_objects metadata_backfilled={updated}")
         finally:
             conn.close()
 

@@ -67,6 +67,7 @@ R2_SWEEP_SKIPPABLE_PHASES = {
     "apple-photo-albums",
     "leonardo",
     "real-estate",
+    "gap-fill",
     "private",
     "discard-final",
     "test",
@@ -93,7 +94,7 @@ from asset_state import (  # noqa: E402
     write_regular_manifest_from_site,
     write_reserve_data_from_site,
 )
-from media_keys import legacy_private_master_key, private_master_key, private_render_key  # noqa: E402
+from media_keys import legacy_private_master_key, private_master_key, private_render_key, public_preview_key  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
     DEFAULT_PRIVATE_BUCKET,
@@ -108,6 +109,7 @@ from sync_r2_media import (  # noqa: E402
     wrangler_delete,
     wrangler_put,
 )
+from owner_state_db import backfill_r2_object_metadata, connect as owner_db_connect, upsert_r2_object_state  # noqa: E402
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
@@ -1002,8 +1004,25 @@ def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = N
     return _write_discarded_tombstones(repo_root, [discarded_photo] if discarded_photo else [])
 
 
+def _groups_without_photo_ids(groups: dict[str, list[dict]], photo_ids: set[str]) -> dict[str, list[dict]]:
+    if not photo_ids:
+        return groups
+    return {
+        slug: [
+            photo
+            for photo in photos
+            if str(photo.get("id") or "") not in photo_ids
+        ]
+        for slug, photos in groups.items()
+    }
+
+
 def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+    discarded_ids = _discarded_photo_ids(repo_root)
+    expo_groups = _groups_without_photo_ids(expo_groups, discarded_ids)
+    reserve_groups = _groups_without_photo_ids(reserve_groups, discarded_ids)
+    hidden_groups = _groups_without_photo_ids(hidden_groups, discarded_ids)
     hidden_ids = {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
     write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
     write_reserve_data_from_site(repo_root, reserve_groups)
@@ -1571,6 +1590,8 @@ def _update_r2_task(task_id: str, **updates: object) -> None:
 def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
     _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
     for item in items:
+        if operation == "delete":
+            _record_r2_item_lifecycle(item, "marked_for_delete", "owner-r2-delete")
         try:
             if operation == "delete":
                 _processed_item, ok, output = wrangler_delete(item, retries=2)
@@ -1587,6 +1608,9 @@ def _run_r2_task(task_id: str, items: list[UploadItem], operation: str) -> None:
             if ok:
                 if operation == "upload" and item.path.exists():
                     task["bytes_done"] = int(task.get("bytes_done") or 0) + item.path.stat().st_size
+                    _record_r2_item_lifecycle(item, "current", "owner-r2-upload")
+                elif operation == "delete":
+                    _record_r2_item_lifecycle(item, "deleted_confirmed", "owner-r2-delete")
             else:
                 task["failed"] = int(task.get("failed") or 0) + 1
                 errors = list(task.get("errors") or [])
@@ -1647,6 +1671,25 @@ def _start_r2_upload_task(photo_id: str, items: list[UploadItem], kind: str = "m
 
 def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "hidden-public-wipe") -> dict | None:
     return _start_r2_task(photo_id, items, kind, "delete")
+
+
+def _record_r2_item_lifecycle(item: UploadItem, lifecycle_state: str, source: str) -> None:
+    try:
+        conn = owner_db_connect(Path.cwd())
+        try:
+            upsert_r2_object_state(
+                conn,
+                bucket=item.bucket,
+                object_key=item.key,
+                lifecycle_state=lifecycle_state,
+                source=source,
+                bytes_value=item.path.stat().st_size if lifecycle_state == "current" and item.path.exists() else None,
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return
 
 
 def _r2_task_snapshot() -> list[dict]:
@@ -1917,6 +1960,75 @@ def _coverage_row(
     }
 
 
+def _owner_db_current_r2_keys(repo_root: Path) -> set[str]:
+    try:
+        conn = owner_db_connect(repo_root)
+        try:
+            backfill_r2_object_metadata(conn)
+            conn.commit()
+            return {
+                f"{row['bucket']}/{row['object_key']}"
+                for row in conn.execute(
+                    "SELECT bucket, object_key FROM r2_objects WHERE lifecycle_state = 'current'"
+                )
+                if row["bucket"] and row["object_key"]
+            }
+        finally:
+            conn.close()
+    except Exception:
+        return set()
+
+
+def _r2_key_known_current(current_keys: set[str], bucket: str, key: object) -> bool:
+    clean_key = str(key or "").strip()
+    return bool(clean_key and f"{bucket}/{clean_key}" in current_keys)
+
+
+def _apply_owner_db_r2_coverage(
+    record: dict,
+    photo_id: str,
+    private_bucket: str,
+    public_bucket: str,
+    current_keys: set[str],
+) -> set[str]:
+    trusted: set[str] = set()
+    master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
+    master_key = master.get("expectedKey") or master.get("key")
+    if master.get("present") is not True and _r2_key_known_current(current_keys, private_bucket, master_key):
+        master["present"] = True
+        master["key"] = str(master_key)
+        master["trustedBy"] = "owner-db"
+        record["privateMaster"] = master
+        trusted.add("master")
+
+    renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
+    for product_id, render in renders.items():
+        if not isinstance(render, dict):
+            continue
+        render_key = render.get("expectedKey") or render.get("key")
+        if render.get("present") is not True and _r2_key_known_current(current_keys, private_bucket, render_key):
+            render["present"] = True
+            render["key"] = str(render_key)
+            render["trustedBy"] = "owner-db"
+            trusted.add(f"render:{product_id}")
+
+    previews = record.get("publicPreviews") if isinstance(record.get("publicPreviews"), dict) else {}
+    media_type = str(record.get("mediaType") or "photo")
+    gallery_key = public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "gallery", media_type)
+    detail_key = public_preview_key(DEFAULT_PUBLIC_PREFIX, photo_id, "detail", media_type)
+    if previews.get("present") is not True and all(
+        _r2_key_known_current(current_keys, public_bucket, key)
+        for key in (gallery_key, detail_key)
+    ):
+        previews["present"] = True
+        previews["galleryKey"] = gallery_key
+        previews["detailKey"] = detail_key
+        previews["trustedBy"] = "owner-db"
+        record["publicPreviews"] = previews
+        trusted.add("public-previews")
+    return trusted
+
+
 def _resolve_source_path(repo_root: Path, source_path: str) -> str:
     if not source_path:
         return ""
@@ -2066,7 +2178,14 @@ def _r2_coverage_summary(
     )
     private_bucket = str(private_manifest.get("privateBucket") or "photosbyelie-private") if isinstance(private_manifest, dict) else "photosbyelie-private"
     public_bucket = "photosbyelie-public"
+    owner_current_r2_keys = _owner_db_current_r2_keys(repo_root)
     record_items = [(str(photo_id), record) for photo_id, record in records.items() if isinstance(record, dict)]
+    trusted_by_owner_db: dict[str, list[str]] = {}
+    if owner_current_r2_keys:
+        for photo_id, record in record_items:
+            trusted = _apply_owner_db_r2_coverage(record, photo_id, private_bucket, public_bucket, owner_current_r2_keys)
+            if trusted:
+                trusted_by_owner_db[photo_id] = sorted(trusted)
     active_records = [(photo_id, record) for photo_id, record in record_items if photo_id not in excluded_photo_ids]
     blocked_records = [(photo_id, record) for photo_id, record in record_items if photo_id in excluded_photo_ids]
     active_expected = len(active_records) or expected
@@ -2135,6 +2254,8 @@ def _r2_coverage_summary(
         "activeCatalogPhotos": active_expected,
         "blockedCatalogPhotos": blocked_excluded,
         "discardedCatalogPhotos": len([photo_id for photo_id, _record in record_items if photo_id in discarded_photo_ids]),
+        "ownerDbCurrentObjects": len(owner_current_r2_keys),
+        "ownerDbTrustedPhotos": len(trusted_by_owner_db),
         "sidecarPhotos": len(photos),
         "rows": rows,
         "missingPrivateDelivery": missing_private_delivery,

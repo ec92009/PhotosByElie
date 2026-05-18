@@ -6,11 +6,11 @@ Date: 2026-05-19
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v79.24`
-- Local Owner page: `http://localhost:8000/owner.html?v=79.24`
+- Current visible build: `v79.25`
+- Local Owner page: `http://localhost:8000/owner.html?v=79.25`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `6,342` public media rows in the SQLite catalog.
+- Current catalog scale: `6,324` public media rows in the SQLite catalog.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
 - Localhost Owner/helper workflows remain the mutation path for catalog edits, hidden/discarded state, imports, R2 maintenance, and Real Estate client management.
 
@@ -35,10 +35,13 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 
 ## Current Operational Notes
 
-- `v79.24` is committed and pushed.
+- `v79.25` reconciles the dirty Owner-generated state: discarded photos are now excluded from public manifest/catalog outputs, including `20180322-0915-00173-e3b893dbea`.
+- Owner DB R2 rows now infer photo id/object kind for older records, including Real Estate keys, and current-key DB records are trusted by ordinary coverage checks.
+- Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
+- Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.
-- After the last Owner-page activity, tracked generated artifacts are dirty again: `assets/catalog/photosbyelie.sqlite`, `assets/catalog/photosbyelie.sqlite.br`, `assets/expo-manifest.json`, and `assets/discarded/discarded-photo-ids.json`. They appear to reflect a local hidden-to-discarded state change and should be reviewed before being published.
+- The tracked generated artifacts are expected to change when Owner actions discard photos or regenerate catalogs; commit them only after the public manifest, worker catalog, and SQLite catalog agree.
 - Remote R2 was verified for the corrected `20180322-0915-00173-e3b893dbea_1800.jpg` preview, and the remote hidden blacklist contained that id at verification time.
 
 ## Recent Relevant Commits
@@ -70,4 +73,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The near-term shape is: resolve the local Owner generated-state drift, make Owner DB/R2 truth authoritative, finish the fill-in-gaps pipeline for missing masters/triplets/previews, stabilize Real Estate owner/client delivery, and then return to commerce hardening.
+`TODO.md` is the numbered backlog source of truth. Items 1-6 from the prior backlog were completed in `v79.25`; the next major work is Real Estate owner/client delivery, durable hidden/discarded lifecycle hardening, Owner state-table browsing, and commerce hardening.

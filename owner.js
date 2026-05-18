@@ -1632,23 +1632,27 @@
     const finishedRows = rows.filter((row) => row.status === "done" || row.status === "error").length;
     const runningRow = rows.find((row) => row.status !== "done" && row.status !== "error") || null;
     const selectedFromScan = numberFromLog(logSummary?.scan?.match?.[3]);
+    const scannedFiles = numberFromLog(logSummary?.scan?.match?.[1]);
+    const inspectedFiles = numberFromLog(logSummary?.scan?.match?.[2]);
     const selected = Math.max(selectedFromScan, rows.length);
     const completed = rows.length ? finishedRows : numberFromLog(logSummary?.imported?.match?.[1]);
     const startedIndex = rows.length
       ? completed + (runningRow ? 1 : 0)
       : numberFromLog(logSummary?.started?.match?.[1]);
     const current = Math.max(completed, startedIndex);
+    const active = task?.state === "queued" || task?.state === "running";
+    const scanningForMore = Boolean(active && selected && completed >= selected);
     const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
     const secondsLeft = completed >= 5 && selected > completed && elapsedSeconds > 0
       ? ((selected - completed) / completed) * elapsedSeconds
       : 0;
-    const countdown = secondsLeft ? formatDuration(secondsLeft) : (selected && completed >= selected ? "0s" : "Estimating");
+    const countdown = scanningForMore ? "Scanning for more matches" : secondsLeft ? formatDuration(secondsLeft) : (selected && completed >= selected ? "0s" : "Estimating");
     const percent = selected
-      ? Math.max(current ? 1 : 0, Math.min(current >= selected ? 100 : 96, Math.round((current / selected) * 100)))
+      ? Math.max(current ? 1 : 0, Math.min(scanningForMore ? 96 : current >= selected ? 100 : 96, Math.round((current / selected) * 100)))
       : 25;
     const photo = runningRow?.id || logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
     const remaining = Math.max(0, selected - completed);
-    return { selected, selectedFromScan, found: rows.length, completed, current, startedIndex, remaining, percent, countdown, photo };
+    return { selected, selectedFromScan, found: rows.length, scannedFiles, inspectedFiles, completed, current, startedIndex, remaining, percent, countdown, photo, scanningForMore };
   };
 
   const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
@@ -1691,7 +1695,13 @@
     const current = formatCount(Math.min(Math.max(progress.current, progress.completed), progress.selected));
     const timeLeft = progress.countdown === "Estimating"
       ? "time left estimate starts after a few renders complete"
+      : progress.scanningForMore
+      ? "scanner is still looking for more matching source photos"
       : `rough time left ${progress.countdown}`;
+    if (progress.scanningForMore) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `${sourceLabel} resync: finished the ${completed} selected source photos found so far; still scanning before moving to the next phase.${inspected}`;
+    }
     if (progress.completed >= progress.selected) {
       return `${sourceLabel} resync: current-key gaps: ${gapSummary || "checking R2"}. ${completed} / ${selected} source items checked this run; ${timeLeft}.`;
     }
@@ -1801,6 +1811,10 @@
       return `${progress.countLabel || "Items"}: ${formatCount(current)} / ${formatCount(progress.total)}.`;
     }
     if (!progress.selected) return `Scanning ${sourceLabel} source folders until selected photos are found.`;
+    if (progress.scanningForMore) {
+      const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
+      return `Selected ${sourceLabel} source photos found so far: ${formatCount(progress.completed)} finished; scanner is still looking for more matches before the next phase.${inspected}`;
+    }
     const current = Math.min(Math.max(Number(progress.current || 0), Number(progress.completed || 0)), Number(progress.selected || 0));
     return `Selected ${sourceLabel} source photos found so far: ${formatCount(current)} / ${formatCount(progress.selected)}; ${formatCount(progress.completed)} finished.`;
   };
@@ -2117,12 +2131,17 @@
     if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
       const visibleMatrixRows = importMatrixVisibleRows(logSummary.importPhotoRows);
       const hiddenCompleteRows = logSummary.importPhotoRows.length - visibleMatrixRows.length;
+      const sourceProgress = PHOTO_IMPORT_PHASES.has(activePhaseKey)
+        ? sourceLaneProgress(activePhaseKey, logSummary, latest)
+        : null;
       if (visibleMatrixRows.length) matrixRowsByPhase.set(activePhaseKey, logSummary.importPhotoRows);
       addPhaseRow(
         activePhaseKey,
         "Upload matrix",
         visibleMatrixRows.length
           ? `${formatCount(visibleMatrixRows.length)} active/incomplete rows shown${hiddenCompleteRows ? `; ${formatCount(hiddenCompleteRows)} finished hidden` : ""}`
+          : sourceProgress?.scanningForMore
+          ? `${formatCount(hiddenCompleteRows)} finished photos hidden; scanning for more Camera matches`
           : `${formatCount(hiddenCompleteRows)} finished photos hidden; no active rows`,
       );
     }

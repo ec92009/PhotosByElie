@@ -1,175 +1,133 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## Current Facts
 
-- Current visible build: `v78.23`.
+- Current visible build: `v78.33`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
 - Public catalog count: `5,827` active media rows.
-- Public collection counts: France `289`, USA `151`, Spain `223`, Mexico `2`, AI `4,920`, Italy `24`, Portugal `216`, Slovakia `2`.
-- Public pages attempt `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback.
-- Product/pricing data is generated from `assets/catalog/product-pricing.json` into public SQLite product tables.
-- Local Owner workflow state writes to ignored `assets/owner-actions/Owner.sqlite`, with JSON compatibility exports where the current UI still needs them.
-- Public previews are R2-backed and watermarked.
-- Private sellable assets are R2-backed and unwatermarked.
-- Real Estate selected-original ZIPs are browser-built from Worker-created private download tokens; the Worker does not assemble the archive.
-- Real Estate client and originals-ZIP password entries use masked in-page fields, with a retry dialog when the ZIP password is rejected.
-- Waste Basket/discard tombstones are durable. A banned photo stays banned.
-- The public catalog validator now rejects discarded/tombstoned ids in public catalog data and `assets/expo-manifest.json`.
-- Photos sell four digital delivery flavors: full, JPG 6 MP, JPG 3 MP, and JPG 1 MP.
-- Videos use a `still_900` gallery poster, a `short_5s_720p` detail preview, and full-original buyer delivery only.
-- Liked and Basket now use fixed commerce headers, so the liked/basket/checkout/language/theme buttons stay frozen on mobile scroll.
-- `npm run validate` and `npm test` are mandatory before publishing public-site changes.
+- Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
+- Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
+- Public pages attempt `assets/catalog/photosbyelie.sqlite.br` first where supported, with plain `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback.
+- Home and gallery search/filter/sort share the `photosByEliePhotoFilter` helpers. Filters include media type, date from/to, orientation, size/duration, color mood, subject, collection/origin where relevant, and sort.
+- Video detail pages show duration when catalog metadata provides it. Video products remain full-original delivery only for mainline commerce.
+- Real Estate client review supports mixed photo/video selection, editable titles, project assignment, drag ordering, A4/Letter PDF drafts, selection table save/load/share, slideshow-plan sharing, and selected-original ZIP delivery.
+- Real Estate outputs are scoped one project at a time. A single media item may be assigned to multiple projects, but generated PDFs/slideshows should be separated per project.
+- In Real Estate PDFs, videos become stills from 10% into the source video. In Real Estate slideshow plans, videos preserve source duration and still photos use the configured seconds-per-photo value.
+- Local Owner workflow state writes to ignored `assets/owner-actions/Owner.sqlite` and ignored Real Estate client settings. Public contexts must stay sanitized.
+- `npm run validate` and `npm test` remain mandatory before publishing public-site changes.
 
 ## Numbered Backlog
 
-1. **Completed: Switch public runtime loading to SQLite.**
-   - Public pages now load `assets/catalog/photosbyelie.sqlite` through `catalog-sqlite.js`.
-   - Brotli is the preferred transfer artifact where supported; plain SQLite remains the guaranteed fallback for GitHub Pages and current tooling.
-
-2. **Completed: Make SQLite generation repeatable.**
-   - `scripts/build_public_catalog_db.py` rebuilds the public DB and validates integrity, foreign keys, duplicate media ids, keyword ids, and required asset rows.
-   - `node scripts/write_catalog_tsv.cjs` is a legacy-named compatibility command that refreshes the SQLite bootstrap, public DB, and Brotli artifact together.
-
-3. **Completed: Move active Owner workflow state into `Owner.sqlite`.**
-   - Title/keyword queue, proposals, decisions, country assignments, keyword blacklist, and settings import into the local DB.
-   - Localhost actions now write blacklist, country assignment, and title/keyword decision changes into `Owner.sqlite`, then export compatibility JSON.
-
-4. **Completed: Add parked title/keyword state.**
-   - The generator parks rows it cannot title defensibly and keeps filling ordinary-new slots.
-   - Parked rows are excluded from accepted/rejected scoring and future ordinary batches until manually reset.
-
-5. **Completed: Rework Owner review scoring/reporting.**
-   - `python3 scripts/owner_state_db.py --review-counts` reports accepted/applied, submitted-unchecked, rejected/rework, and parked counts from local DB state.
-
-6. **Completed: Enforce title/keyword proposal quality.**
-   - Queue generation refuses empty/placeholder proposed titles, parks weak rows, and derives rework titles from keyword/source context where possible.
-
-7. **Completed: Finish video import hardening.**
-   - Apple Photos mixed-album import remains video-aware.
-   - Face albums remain off limits by SOP.
-   - The portable Pillow overlay path uses an explicit `-t 5` on the ffmpeg overlay pass.
-
-8. **Completed: Migrate R2 keys to the flat SQLite-era conventions.**
-   - Worker checkout/delivery now prefers `masters/<media_id>.<format>` and `renders/<media_id>_<1|3|6>mp.jpg`.
-   - Legacy nested master/render keys remain as delivery fallbacks during the cleanup window.
-   - R2 server-side copy/verify moved the copyable private masters and photo render triplets to the flat target keys.
-   - Latest live coverage: `5,801 / 5,827` catalog photos have private masters and `5,799 / 5,827` have complete private render triplets.
-   - Residual repair queue: `26` missing masters, `6` flat render target gaps covered by legacy fallback, and `10` public preview gaps.
-   - Do not delete old keys until a later audit confirms no runtime path needs them.
-
-9. **Add browser-side ZIP assembly for paid delivery files.**
-   - Keep the Worker on per-file private download tokens; do not make the Worker assemble large archives.
-   - Add an order-page action that fetches ready purchased files and creates a single ZIP in the browser.
-   - Use a streaming-capable browser ZIP library, preferably `zip.js`, with stored entries rather than recompressing JPG/video assets.
-   - Keep per-file downloads as the fallback for embedded browsers, failed ZIP assembly, and large mobile/cellular orders.
-   - Show total size, per-file progress, overall progress, and clear failure recovery.
-
-10. **Open generated Real Estate PDFs in the browser viewer.**
-   - After the client selects photos and generates project PDFs, show the PDF in a browser viewer tab or in-page preview using a Blob URL.
-   - Keep a direct Download button, but let the browser/OS provide native save, print, share, AirDrop, and mobile share-sheet behavior where available.
-   - Prefer `navigator.share` with a PDF `File` when supported; fall back to opening the Blob URL and to the existing download flow.
-   - Make embedded/social browser behavior explicit, since some in-app browsers block Blob downloads, new tabs, and share actions.
-
-11. **Rework the Real Estate selection page wide layout.**
-   - On wide screens, move the filters to a sticky top bar so the photo grid keeps the main horizontal space.
-   - Show photo previews in the main part of the window.
-   - Reserve roughly one sixth of the right side as a selected-photo basket, similar to the mainline basket rail.
-   - Let the selected-photo basket scroll vertically on its own while the preview grid remains usable.
-   - Let selected photos be dragged up and down in the basket to set the PDF/order sequence, with arrow buttons as a non-drag fallback.
-   - Keep the layout responsive so phones retain the current mobile-friendly selection flow.
-
-12. **Prove Stripe checkout in test mode.**
+1. **Prove Stripe checkout in test mode.**
    - Configure Stripe test keys and webhook secret in the Worker environment.
    - Test successful payment, declined payment, 3D Secure/authentication, webhook replay, and amount mismatch.
-   - Confirm paid orders expose per-file private downloads and unpaid orders do not.
+   - Confirm paid orders expose private download tokens and unpaid orders do not.
 
-13. **Make checkout/order storage production-durable.**
-   - Choose D1 or KV for durable order records.
-   - Store order id, buyer email, basket snapshot, amount, payment status, delivery keys, and download events.
-   - Add buyer-facing order recovery before considering full buyer accounts.
+2. **Make checkout and order storage production-durable.**
+   - Choose KV, D1, or a deliberate hybrid for order records.
+   - Persist order id, buyer email, basket snapshot, totals, payment status, delivery keys, token events, and recovery facts.
+   - Add buyer-facing order lookup/recovery before considering full buyer accounts.
 
-14. **Completed: Move product/pricing data out of generated JS constants.**
-   - `assets/catalog/product-pricing.json` is the generator source for photo products, print/frame prices, shipping/handling, and video tiers.
-   - `assets/catalog/photosbyelie.sqlite` now contains `price_tiers`, `products`, `product_prices`, `frame_options`, `frame_prices`, `shipping_handling_prices`, and `video_price_tiers`.
-   - Public SQLite loading and Worker catalog generation now reconstruct the same product price list.
-   - Videos use `video-original` delivery at flat `$20` across the current length tiers.
+3. **Add browser-side ZIP assembly for paid mainline delivery.**
+   - Keep the Worker on per-file private tokens; do not make the Worker assemble large archives.
+   - Add an order-page action that fetches ready purchased files and creates a single ZIP in the browser.
+   - Use a streaming-capable ZIP path with stored entries for JPG/video assets.
+   - Keep per-file downloads as fallback for embedded browsers, failed ZIP assembly, and large mobile orders.
 
-15. **Keep physical products behind Owner review.**
-   - Keep print/frame products off publicly until samples and fulfillment rules are settled.
-   - Compare POD vendors for US/EU quality, packaging, landed cost, API fit, and support.
-   - Re-enable only after pricing, shipping, refunds, and customer support are clear.
+4. **Move Real Estate output assembly to the cloud.**
+   - Treat the saved selection manifest as the contract: client, project, media id, title, order, paper size, PDF treatment, and slideshow treatment.
+   - Generate one PDF per project and one slideshow per project from that manifest.
+   - Keep browser-generated PDFs/slideshow plans as a useful draft/fallback, not the final production path.
 
-16. **Curate the first sellable storefront.**
-   - Apply title/keyword approvals to the strongest catalog rows.
-   - Block/discard photos that should not be sold.
-   - Pick featured collections and hero images that feel intentional.
-   - Put travel/editorial/buyer-friendly sets first.
+5. **Finish Real Estate slideshow generation.**
+   - Still photos should use the configured seconds-per-photo duration.
+   - Source videos should pass through untrimmed and keep their original duration.
+   - Use a basic carousel transition and make output timing visible in the manifest/review UI.
 
-17. **Add buyer-facing offer clarity.**
-   - Explain full vs 6 MP vs 3 MP vs 1 MP in buyer terms.
-   - Clarify personal, commercial, resale, and AI-training licensing.
-   - Add concise FAQ/help copy for delivery, refunds, custom licensing, and contact.
+6. **Harden Real Estate save/load/share flows.**
+   - Keep native browser save/open/share behavior where available.
+   - Make fallback Downloads behavior explicit in status text and help copy.
+   - Ensure selection tables and legacy JSON load cleanly across desktop, phone, GitHub Pages, and localhost.
 
-18. **Add conversion analytics.**
-   - Track privacy-conscious funnel events: collection view, search/filter, like, add to basket, checkout start, payment complete, download.
-   - Store enough paid-order facts to report revenue by photo, collection, origin, and product format.
-   - Keep Owner/local review activity out of buyer analytics.
+7. **Polish the Real Estate wide-screen selection workspace.**
+   - Keep filters compact and sticky.
+   - Preserve a strong preview grid while making selected media/order management easy.
+   - Continue improving the right-side or draft-basket ordering model without hurting the phone workflow.
 
-19. **Improve public search and SEO.**
-   - Add fuzzy search over title, keywords, places, and collections.
-   - Add page titles, descriptions, Open Graph images, canonical URLs, sitemap, and structured data where useful.
-   - Avoid exposing Owner-only metadata.
+8. **Finish Owner-managed Real Estate lifecycle.**
+   - Keep client config, property folder conventions, import, publish, upload, and Worker secret prep coherent.
+   - Document the safe path from Saturn property folders to public context, public previews, private masters, and Worker access.
+   - Keep ignored local credentials out of tracked assets.
 
-20. **Create more first-party campaign pages.**
-   - Add focused pages for travel/editorial licensing, wall art, AI imagery, and country sets.
-   - Keep Pinterest/social traffic on first-party pages with direct paths to galleries, liked, or basket.
-   - Use real images and concise copy.
+9. **Decide the production Real Estate access model.**
+   - Current public contexts use browser-side hashes and Worker secrets for originals.
+   - Decide whether final client auth should move to Worker/D1, Cloudflare Access, or another server-side gate.
+   - Keep static preview constraints explicit in the decision.
 
-21. **Replace temporary `r2.dev` preview URL with a custom media domain.**
-   - Attach a custom R2 domain such as `media.photosbyelie.com`.
-   - Update `media-config.js`.
-   - Retest GitHub Pages gallery/detail/basket/liked preview loading.
+10. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+    - Attach a domain such as `media.photosbyelie.com`.
+    - Update `media-config.js`.
+    - Retest GitHub Pages gallery, detail, basket, liked, and Real Estate preview loading.
 
-22. **Create private customer collections for Real Estate and Wedding/Events.**
-   - Add password-locked collection pages for customer-delivered Real Estate Photos and Wedding/Events Photos.
-   - Keep private collection access separate from public country/AI galleries and search.
-   - Decide where passwords and access metadata live, ideally Worker/D1 or another server-side store rather than public static files.
-   - Preserve buyer-facing commerce paths where appropriate while preventing unauthenticated preview or asset discovery.
+11. **Curate the first sellable storefront.**
+    - Apply title/keyword approvals to the strongest catalog rows.
+    - Block or discard photos that should not be sold.
+    - Pick featured collections and hero images that feel intentional.
 
-23. **Extend Owner operations dashboard.**
-   - Surface catalog counts, private delivery coverage, discarded tombstones, Waste Basket state, active sweep status, and latest automation result.
-   - Keep destructive R2 actions legible and confirmable.
-   - Show progress in terms of actual deletion/repair counts.
+12. **Clarify the buyer offer.**
+    - Explain full, 6 MP, 3 MP, and 1 MP downloads in buyer terms.
+    - Clarify personal, commercial, resale, and AI-training licensing.
+    - Add concise delivery, refund, custom-license, and contact help.
 
-24. **Add Owner state-table browser.**
-   - Browse public/Owner state tables in a localhost-only UI.
-   - Support table switching, filters, quick search, sorting, row counts, and copy/export.
-   - Add photo-aware jumps to public detail, Owner detail, collection, and R2 keys.
+13. **Add conversion analytics.**
+    - Track privacy-conscious funnel events: collection view, search/filter, like, add to basket, checkout start, payment complete, and download.
+    - Report revenue by photo, collection, source origin, and product format.
+    - Keep localhost Owner activity out of buyer analytics.
 
-25. **Make country collections open-ended.**
-   - Stop treating countries as a fixed list.
-   - Let Owner create new countries from Unknown assignment with `Other...`.
-   - Generate collection metadata, slug, translations, route data, and homepage entries safely.
+14. **Improve public discovery and SEO.**
+    - Add fuzzy search over title, keywords, places, and collections.
+    - Add page titles, descriptions, Open Graph images, canonical URLs, sitemap, and structured data where useful.
+    - Avoid exposing Owner-only metadata.
 
-26. **Add gallery multi-select Owner metadata edits.**
-   - Support shift range and command toggles.
-   - Batch-add keywords without replacing existing keywords.
-   - Design batch title behavior carefully before implementation.
-   - Persist through manifest/DB Owner metadata paths without rewriting media files.
+15. **Create more first-party campaign pages.**
+    - Add focused pages for travel/editorial licensing, wall art, AI imagery, and country sets.
+    - Keep Pinterest/social traffic on first-party pages with direct paths to galleries, liked, or basket.
+    - Use real images and concise copy.
 
-27. **Harden Owner identity and naming.**
-   - Keep localhost helper boundaries for now.
-   - Decide whether production Owner needs Cloudflare Access or Worker-backed login.
-   - Rename auth-like files if they are really helper-availability checks.
+16. **Extend the Owner operations dashboard.**
+    - Surface catalog counts, private delivery coverage, discarded tombstones, Waste Basket state, active sweep status, and latest automation result.
+    - Keep destructive R2 actions legible and confirmable.
+    - Show repair/deletion progress as actual object counts.
 
-28. **Add frontend smoke tests for buyer paths.**
-   - Cover search/filter, detail open, like, add to basket, basket view, checkout draft, and embedded-browser escape.
-   - Include mobile header behavior for gallery, detail, liked, and basket.
+17. **Add an Owner state-table browser.**
+    - Browse public and Owner state tables in a localhost-only UI.
+    - Support table switching, filters, quick search, sorting, row counts, and copy/export.
+    - Add photo-aware jumps to public detail, Owner detail, collection, and R2 keys.
 
-29. **Keep repo/media cleanup deliberate.**
-   - Do not use GitHub as a media vault.
-   - Keep source metadata edits non-destructive.
-   - Keep root HTML while GitHub Pages serves from repo root.
-   - Revisit bundling/minification and folder structure only after payment/media paths stabilize.
+18. **Make country collections open-ended.**
+    - Stop treating countries as a fixed list.
+    - Let Owner create new countries from Unknown assignment with `Other...`.
+    - Generate collection metadata, slug, translations, route data, and homepage entries safely.
+
+19. **Add gallery multi-select Owner metadata edits.**
+    - Support shift range and command toggles.
+    - Batch-add keywords without replacing existing keywords.
+    - Design batch title behavior carefully before implementation.
+
+20. **Add frontend smoke tests for buyer and client paths.**
+    - Cover search/filter, detail open, like, add to basket, checkout draft, and embedded-browser escape.
+    - Cover Real Estate login, selection, save/load, PDF draft, slideshow plan, originals ZIP, and footer/action-bar clearance.
+    - Include mobile header/action-bar behavior.
+
+21. **Keep physical products behind Owner review.**
+    - Keep print/frame products off publicly until samples and fulfillment rules are settled.
+    - Compare POD vendors for US/EU quality, packaging, landed cost, API fit, and support.
+    - Re-enable only after pricing, shipping, refunds, and customer support are clear.
+
+22. **Keep repo and media cleanup deliberate.**
+    - Do not use GitHub as a media vault.
+    - Keep source metadata edits non-destructive.
+    - Keep root HTML while GitHub Pages serves from repo root.
+    - Revisit bundling/minification and folder structure only after payment/media paths stabilize.

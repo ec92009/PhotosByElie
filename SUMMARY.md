@@ -1,78 +1,72 @@
 # Conversation Summary
 
-Date: 2026-05-17
+Date: 2026-05-18
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
+- Branch: `main`
 - Current visible build: `v78.33`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Public catalog count: `5,827` active media rows.
-- Public previews are served from public R2 media; private sellable and Real Estate originals are served through Worker-created private download tokens.
-- Current handoff work adds localhost Owner controls for Real Estate client config, import, publish, upload, and Worker secret preparation.
+- Public previews are served from public R2 media. Private sellable files and Real Estate originals are delivered through Worker-created private download tokens.
+- The site remains static-first on GitHub Pages; localhost-only Owner and helper workflows provide mutation/import/cloud-maintenance endpoints.
 
-## Conversation Context
+## What This Conversation Covered
 
-The phone and 5G workflow drove the latest Real Estate changes:
+The main thread was the Real Estate import and client review workflow, with a strong bias toward reuse and static-site constraints.
 
-- The public Real Estate page needed to work away from WiFi on a phone, through GitHub Pages rather than localhost.
-- Browser-native PDF viewing and sharing was useful, especially saving generated PDFs into Notes through the mobile share sheet.
-- JSON selection exports were too unfriendly on a phone, so the selection export moved toward a simple browser-presentable table that can also be opened back into the app.
-- A wide-screen backlog item was added for a Real Estate selection layout with sticky top filters, a main preview grid, and a right-side selected-photo basket.
-- Selected files in that basket should be draggable up/down to control PDF/order sequence. This has now been implemented for the existing selected-photo draft basket.
-- A Real Estate originals ZIP was requested so selected private R2 originals could be delivered as one shareable file.
-- After phone testing, the old ZIP password prompt was found to show typed text in plain view and to fail without a clear retry path. The UI now uses an in-page masked password dialog.
+1. The Real Estate UX started as a Corine-only private client gallery with login, media selection, editable PDF titles, and a selected/liked review flow.
+2. The import direction was clarified: upload masters privately and `_900` / `_1800` previews publicly, without watermarking Real Estate R2 preview files.
+3. The Real Estate page was simplified around the working task: credentials first, no hero photo collage, checkbox inside the image, compact card controls, and wording from the real-estate agent's point of view.
+4. Project scoping was tightened: no multiproject PDFs. Each output is one project at a time, though the same photo or video may be assigned to multiple projects.
+5. Selection persistence became a first-class feature: save/share/load a dated manifest or browser-friendly selection table, so a future batch can start from a previous one.
+6. Browser file behavior was made clearer: save/open/share operations use the browser and OS affordances where possible, with explicit messaging when files land in Downloads or a browser feature blocks direct writing.
+7. A newcomer help dialog and persistent help button were added so an empty selection explains the workflow instead of looking broken.
+8. PDF output rules were defined: A4 or Letter, horizontal photos two per page, portraits one per page, previews fit rather than fill, editable titles are printed, and the PDF output itself gets subtle copyright treatment.
+9. Watermarking was deliberately kept out of the import process. Real Estate public previews stay unwatermarked; the generated PDF adds the `© 2026 Photos By Elie` mark at the bottom of pages/photos.
+10. Real Estate was expanded back to media, not stills only: videos can be selected, included in PDFs as stills from 10% into the video, and preserved at full source duration in slideshow plans.
+11. A slideshow output concept was introduced: one slideshow per project, still photos for a configurable number of seconds, source videos untouched, and a basic carousel transition.
+12. Mainline gallery filters gained shared photo/video/date filtering. Home and gallery filtering/searching/sorting now use the shared `photosByEliePhotoFilter` helpers.
+13. Filter UI was made more compact and adaptive: min size becomes duration for videos, video color mood is disabled unless real video mood analysis is added, and status copy says photos/videos/media correctly.
+14. Gallery navigation now preserves `Show all` when returning from detail instead of falling back to `Show 24`.
+15. Detail pages show video duration when available, both in the top summary line and metadata section.
+16. The Real Estate footer/action bar was adjusted so it no longer hides the page footer on short/wide screens.
+17. Owner Real Estate client management was refined: localhost Owner can store ignored client config, import property folders, publish sanitized contexts, upload media, and prepare Worker secret payloads.
 
-## Real Estate Delivery State
+## Current Real Estate Delivery Model
 
-- `real-estate.html` loads the public-safe Corine client bundle on GitHub Pages and the ignored local import bundle on localhost.
-- The Real Estate page supports album filtering, selected-photo state, editable PDF titles, selected-photo drag ordering, browser-generated PDFs, browser/share-sheet-friendly selection table export, and legacy JSON batch loading.
-- The selection table export is intended to be phone-friendly: it is browser-presentable HTML with embedded machine-readable batch data, and can be shared through the OS where supported.
-- Project PDFs can be generated in the browser and opened/shared using browser and OS affordances.
-- Selected-original ZIP delivery is now browser-built:
-  - The page sends selected photo ids plus the client password to the Worker route `POST /real-estate/originals/session`.
-  - The Worker validates the client password, checks private R2 originals, and returns one private download token per selected file.
-  - The browser downloads those originals and writes a ZIP locally using stored entries, so the Worker does not assemble the archive.
-  - Private R2 originals are expected under `real-estate/<gallery-key>/masters/<album-slug>/<photo-id>.jpg`.
-  - Per-file token downloads remain the delivery primitive behind the ZIP.
-- The ZIP password flow now uses a masked in-page dialog rather than `window.prompt()`.
-- Wrong ZIP passwords clear the cached ZIP credential and reopen the masked dialog with a retry message.
-- The main Real Estate login password field has an eye toggle next to the field.
-- Localhost Owner now has a Real Estate client table/editor that stores email/password/config in ignored local JSON, derives naming conventions from the client name, imports configured property folders through the helper server, publishes public-safe context bundles, runs upload dry-runs or uploads, and can emit the Worker secret payload.
-- The public Corine context now stores a salted password hash instead of the previous plaintext access code.
+- `real-estate.html` loads the public-safe Corine context on GitHub Pages and the ignored local import context on localhost.
+- The client gate accepts configured client identifiers and password credentials; public contexts keep a salted password hash, while plaintext local passwords remain in ignored Owner settings and Worker secrets.
+- Selected media can belong to one or more project assignments. PDF and slideshow manifests split outputs by project.
+- Browser PDFs remain a draft/local capability. The longer-term target is cloud generation from the saved manifest.
+- Videos selected for a PDF are represented by a still frame from 10% into the source video.
+- Videos selected for a slideshow keep their source duration; still photos use the configured seconds-per-photo value.
+- Selected originals ZIP delivery uses Worker-created private download tokens and browser-side ZIP assembly; the Worker does not build the archive.
 
-## Recent Commits
+## Recent Relevant Commits
 
-- `fbd6fad2 photosbyelie: drag reorder real estate selections`
-- `9e244748 photosbyelie: add real estate originals zip delivery`
-- `e1012ca3 photosbyelie: mask real estate zip password`
+- `aa6c4273 photosbyelie: preserve real estate video outputs`
+- `7eda3fed photosbyelie: keep real estate footer visible`
+- `257365d3 photosbyelie: show video duration on detail`
+- `76f73a53 photosbyelie: refine real estate owner clients`
+- `934745d4 photosbyelie: tidy real estate owner form`
 
-## Verification
+## Verification Notes
 
-Recent verification before this handoff:
+Recent implementation cycles ran the normal public-site checks:
 
 ```text
-node --check owner.js: pass
-node --check real-estate.js: pass
-node --check assets/real-estate/corine/app-context.js: pass
-python3 -m py_compile scripts/local_server.py: pass
-python3 -m py_compile scripts/import_real_estate_gallery.py: pass
-npm test: pass, 18 tests
-npm run validate: pass
-git diff --check: pass
-Previous GitHub Pages served visible build: v78.23
-Previous live one-file Real Estate originals ZIP download: pass, 5.3 MB zip
+npm test
+npm run validate
+node --check photos.js photo-gallery.js photo-detail.js real-estate.js owner.js
+python3 -m py_compile scripts/local_server.py scripts/import_real_estate_gallery.py
+browser checks on homepage, gallery filters, Real Estate selection/PDF/slideshow, footer clearance, and video detail duration
 ```
 
-## Current Backlog Priorities
+This docs-only refresh should not bump the visible UI version.
 
-The high-priority open work remains:
+## Current Backlog
 
-1. Add browser-side ZIP assembly for paid mainline delivery files, using Worker-created per-file private download tokens.
-2. Open generated Real Estate PDFs in the browser viewer/share flow, preserving direct download as a fallback.
-3. Rework the Real Estate selection page wide layout with sticky top filters, a preview grid, and a right-side selected-photo basket.
-4. Prove Stripe checkout in test mode.
-5. Make checkout/order storage production-durable.
-
-`TODO.md` remains the numbered backlog source of truth.
+`TODO.md` is the fresh numbered backlog source of truth. The short version: prove paid checkout, make order storage durable, add browser ZIP assembly for buyer downloads, move Real Estate PDF/slideshow assembly to the cloud using saved manifests, and keep polishing the Owner/Real Estate workflow without giving up the static-site architecture.

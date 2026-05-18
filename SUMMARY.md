@@ -1,77 +1,73 @@
 # Conversation Summary
 
-Date: 2026-05-18
+Date: 2026-05-19
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v79.22`
+- Current visible build: `v79.24`
+- Local Owner page: `http://localhost:8000/owner.html?v=79.24`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Public catalog count: `904` active media rows.
-- Public previews are served from public R2 media. Private sellable files and Real Estate originals are delivered through Worker-created private download tokens.
-- The site remains static-first on GitHub Pages; localhost-only Owner and helper workflows provide mutation/import/cloud-maintenance endpoints.
+- Current catalog scale: `6,342` public media rows in the SQLite catalog.
+- Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
+- Localhost Owner/helper workflows remain the mutation path for catalog edits, hidden/discarded state, imports, R2 maintenance, and Real Estate client management.
 
 ## What This Conversation Covered
 
-The latest handoff sweep reconciled tracked Owner/dashboard changes after a period of user inactivity. The Owner dashboard now has section tabs for Review, Real Estate, Catalog, Cloud, and Commerce; cloud sweep progress details are shown inline by phase; and the generated discarded-media cleanup manifest was refreshed to include the latest tombstoned R2 media keys.
+This conversation focused on getting the Owner side of Photos By Elie usable as an operations console instead of a long, fragile page. The work started with the Real Estate owner extension and grew into a broader pass over imports, R2 coverage, hidden/discarded state, and local catalog rebuild safety.
 
-The sweep also fixed the SQLite catalog handoff path so a fresh export builds `assets/catalog/photosbyelie.sqlite` from the just-generated full catalog before `photos-data.js` is replaced with the runtime SQLite bootstrap. Validation now accepts the generated `video-original` product used for video downloads, and the media sidecar / Worker catalog were regenerated from the current `904`-row public catalog.
+1. The Owner Real Estate side gained client management: create/update/delete clients, show plaintext local passwords for now, edit rows directly, derive usernames/slugs/gallery keys/titles/prefixes from the client name, and use `/Volumes/Saturn/Pictures/RE/<ClientName>/<Property>` as the source convention.
+2. Real Estate import now proceeds with available property folders instead of failing the whole import on a missing folder, and progress reports count/total while it imports.
+3. The Owner page was reorganized into tabs to reduce the scroll marathon. The import dashboard was restored as its own tab.
+4. R2 background work was made more understandable: phase details moved under their progress bars, finished and failed phases collapse, active phases stay expanded, skipped phases show `UNFINISHED`, and phase-level skip controls were added.
+5. The R2 background work copy was repeatedly clarified so the progress bar says what it is counting and whether a phase is doing new work or double-checking idempotent work.
+6. The Cloud Coverage / Fill in gaps concept became distinct from full imports. Fill in gaps should repair missing masters, triplets, and previews without reimporting everything.
+7. The import dashboard evolved toward a pipeline model: source discovery fills a FIFO queue, planning decides what is already covered versus what needs work, and a slower worker creates/uploads missing masters, triplets, and previews.
+8. The matrix UI was tuned for long filenames and real progress: finished rows disappear, active/current rows stay near the top, the matrix uses more width, and the two-row-per-photo shape keeps names separate from checkboxes.
+9. Camera, AI, Real Estate, Lightroom, and Apple Photos imports were aligned around the same shared source-lane detail and pipeline language. Apple Photos with faces remains off limits.
+10. The conversation dug into possible misplaced R2 previews/triplets from older key conventions and confirmed the need for Owner DB truth: track current R2 objects, marked-for-delete objects, and confirmed-deleted objects so ordinary runs can trust the DB instead of doing expensive deep scans.
+11. The local helper/catalog rebuild path was fixed so H/X changes survive SQLite regeneration and do not collapse the public catalog into partial exports.
+12. The AI catalog was recovered after a bad export path dropped many AI rows. The active catalog was restored to the expected full scale.
+13. The France gallery/detail H/X behavior was repaired. Detail-page H/X now navigates away assertively and repairs cases where local hidden state exists but the catalog state needs to be republished.
+14. Photo `20180322-0915-00173-e3b893dbea` was investigated for both H/X and orientation. It had an EXIF rotate-180 source flag, and the public preview had been regenerated upside down. The importer now recognizes numeric EXIF orientation values, and corrected 900/1800 previews were uploaded to remote R2.
 
-The prior main thread was the Real Estate import and client review workflow, with a strong bias toward reuse and static-site constraints.
+## Current Operational Notes
 
-1. The Real Estate UX started as a Corine-only private client gallery with login, media selection, editable PDF titles, and a selected/liked review flow.
-2. The import direction was clarified: upload masters privately and `_900` / `_1800` previews publicly, without watermarking Real Estate R2 preview files.
-3. The Real Estate page was simplified around the working task: credentials first, no hero photo collage, checkbox inside the image, compact card controls, and wording from the real-estate agent's point of view.
-4. Project scoping was tightened: no multiproject PDFs. Each output is one project at a time, though the same photo or video may be assigned to multiple projects.
-5. Selection persistence became a first-class feature: save/share/load a dated manifest or browser-friendly selection table, so a future batch can start from a previous one.
-6. Browser file behavior was made clearer: save/open/share operations use the browser and OS affordances where possible, with explicit messaging when files land in Downloads or a browser feature blocks direct writing.
-7. A newcomer help dialog and persistent help button were added so an empty selection explains the workflow instead of looking broken.
-8. PDF output rules were defined: A4 or Letter, horizontal photos two per page, portraits one per page, previews fit rather than fill, editable titles are printed, and the PDF output itself gets subtle copyright treatment.
-9. Watermarking was deliberately kept out of the import process. Real Estate public previews stay unwatermarked; the generated PDF adds the `© 2026 Photos By Elie` mark at the bottom of pages/photos.
-10. Real Estate was expanded back to media, not stills only: videos can be selected, included in PDFs as stills from 10% into the video, and preserved at full source duration in slideshow plans.
-11. A slideshow output concept was introduced: one slideshow per project, still photos for a configurable number of seconds, source videos untouched, and a basic carousel transition.
-12. Mainline gallery filters gained shared photo/video/date filtering. Home and gallery filtering/searching/sorting now use the shared `photosByEliePhotoFilter` helpers.
-13. Filter UI was made more compact and adaptive: min size becomes duration for videos, video color mood is disabled unless real video mood analysis is added, and status copy says photos/videos/media correctly.
-14. Gallery navigation now preserves `Show all` when returning from detail instead of falling back to `Show 24`.
-15. Detail pages show video duration when available, both in the top summary line and metadata section.
-16. The Real Estate footer/action bar was adjusted so it no longer hides the page footer on short/wide screens.
-17. Owner Real Estate client management was refined: localhost Owner can store ignored client config, import available property folders with live count/total progress, publish sanitized contexts, upload media, and prepare Worker secret payloads.
-18. The Real Estate client review was reorganized into a focused wizard: multi-property clients get a step 0 property picker, then agents select media from the full shared pool with click/Shift-click, clean up titles and accidental duplicates, drag one-line order rows, and open PDF and/or browser video preview outputs.
-
-## Current Real Estate Delivery Model
-
-- `real-estate.html` defaults to the Elie client bundle on bare `real-estate.html?logout=1`, can load Corine or another tracked client with `?client=<client>`, and can still load a same-origin bundle with `?context=<path>`.
-- The client gate accepts configured client identifiers and password credentials; public contexts keep a salted password hash, while plaintext local passwords remain in ignored Owner settings and Worker secrets.
-- Selected media can belong to one or more project assignments. The current agent-facing wizard scopes review and outputs to the active property.
-- Browser PDFs remain a draft/local capability. The longer-term target is cloud generation from the saved manifest.
-- Videos selected for a PDF are represented by a still frame from 10% into the source video.
-- Videos selected for a slideshow keep their source duration; still photos use the configured seconds-per-photo value.
-- Selected originals ZIP delivery uses Worker-created private download tokens and browser-side ZIP assembly; the Worker does not build the archive.
+- `v79.24` is committed and pushed.
+- The local helper is serving port `8000`.
+- The ignored local hidden files can change during Owner actions and are not tracked by git.
+- After the last Owner-page activity, tracked generated artifacts are dirty again: `assets/catalog/photosbyelie.sqlite`, `assets/catalog/photosbyelie.sqlite.br`, `assets/expo-manifest.json`, and `assets/discarded/discarded-photo-ids.json`. They appear to reflect a local hidden-to-discarded state change and should be reviewed before being published.
+- Remote R2 was verified for the corrected `20180322-0915-00173-e3b893dbea_1800.jpg` preview, and the remote hidden blacklist contained that id at verification time.
 
 ## Recent Relevant Commits
 
-- `aa6c4273 photosbyelie: preserve real estate video outputs`
-- `7eda3fed photosbyelie: keep real estate footer visible`
-- `257365d3 photosbyelie: show video duration on detail`
+- `5178700d photosbyelie: repair hidden detail shortcut`
+- `0ae220d8 photosbyelie: repair local hide catalog rebuild`
+- `05964532 photosbyelie: restore recovered ai catalog`
+- `76bd2321 photosbyelie: block partial catalog exports`
+- `d8e23954 photosbyelie: make gap fill eager`
+- `2a312e22 photosbyelie: fold triplet repair into gap fill`
+- `34df827e photosbyelie: clarify lost triplets phase`
+- `80484d76 photosbyelie: add import pipeline planner`
 - `76f73a53 photosbyelie: refine real estate owner clients`
-- `934745d4 photosbyelie: tidy real estate owner form`
 
 ## Verification Notes
 
-Recent implementation cycles ran the normal public-site checks:
+Recent implementation cycles ran:
 
 ```text
+node --check hidden-actions.js
+node --check photo-detail.js
+node --check owner.js
+python3 -m py_compile scripts/local_server.py
+python3 -m py_compile scripts/build_lightroom_thumbnails.py
 npm test
-npm run validate
-node --check photos.js photo-gallery.js photo-detail.js real-estate.js owner.js
-python3 -m py_compile scripts/local_server.py scripts/import_real_estate_gallery.py
-browser checks on homepage, gallery filters, Real Estate selection/PDF/slideshow, footer clearance, and video detail duration
+git diff --check
+browser checks on Owner tabs, import dashboard, detail H/X redirect, and corrected remote preview bytes
 ```
-
-The current sweep verified `npm test`, `npm run validate`, and `git diff --check`.
 
 ## Current Backlog
 
-`TODO.md` is the fresh numbered backlog source of truth. The short version: prove paid checkout, make order storage durable, add browser ZIP assembly for buyer downloads, move Real Estate PDF/slideshow assembly to the cloud using saved manifests, and keep polishing the Owner/Real Estate workflow without giving up the static-site architecture.
+`TODO.md` is the numbered backlog source of truth. The near-term shape is: resolve the local Owner generated-state drift, make Owner DB/R2 truth authoritative, finish the fill-in-gaps pipeline for missing masters/triplets/previews, stabilize Real Estate owner/client delivery, and then return to commerce hardening.

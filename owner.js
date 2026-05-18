@@ -191,7 +191,7 @@
     ["catalog", "Export catalog"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
-    ["private", "Prepare buyer JPG downloads"],
+    ["private", "Backfill Lost Triplets"],
     ["discard-final", "Final banned R2 cleanup double-check"],
     ["storage", "Refresh storage estimate"],
     ["test", "Run tests"],

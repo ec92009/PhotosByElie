@@ -249,7 +249,7 @@ SYNC_ARGS=(--commit-every 100 --request-timeout-ms 45000 --retries 1)
 if [[ "$PUSH" == "1" ]]; then
   SYNC_ARGS+=(--push)
 fi
-run_skippable_phase private "Backfill private JPGs" \
+run_skippable_phase private "Backfill Lost Triplets" \
   node scripts/sync_private_deliverables.mjs "${SYNC_ARGS[@]}"
 
 run_skippable_phase discard-final "Final banned R2 cleanup double-check" \

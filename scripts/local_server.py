@@ -28,6 +28,7 @@ PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
+R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
 R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
@@ -180,6 +181,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_FIX_PATH:
             self._handle_r2_fix()
             return
+        if path == R2_FILL_GAPS_PATH:
+            self._handle_r2_fill_gaps()
+            return
         if path == R2_SKIP_PHASE_PATH:
             self._handle_r2_skip_phase()
             return
@@ -246,6 +250,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
         task = _start_cloud_media_sweep(Path.cwd(), skip_phases)
+        self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_r2_fill_gaps(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = self._read_optional_json_body()
+            limit = int(payload.get("limit") or 0)
+        except (TypeError, ValueError) as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        task = _start_r2_gap_fill(Path.cwd(), max(0, limit))
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
 
     def _handle_r2_skip_phase(self) -> None:
@@ -1957,6 +1974,55 @@ def _private_delivery_missing_details(repo_root: Path, active_records: list[tupl
     return missing
 
 
+def _missing_import_photo_details(repo_root: Path, active_records: list[tuple[str, dict]], limit: int = 80) -> list[dict]:
+    missing: list[dict] = []
+    for photo_id, record in active_records:
+        master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
+        renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
+        previews = record.get("publicPreviews") if isinstance(record.get("publicPreviews"), dict) else {}
+        master_missing = master.get("present") is not True
+        render_missing = any(
+            isinstance(render, dict) and render.get("present") is not True
+            for render in renders.values()
+        )
+        previews_missing = previews.get("present") is not True
+        if not master_missing and not render_missing and not previews_missing:
+            continue
+        source_path = str(record.get("sourcePath") or "")
+        source_file = _resolve_source_path(repo_root, source_path)
+        media_type = str(record.get("mediaType") or "")
+        missing.append({
+            "photoId": photo_id,
+            "relativePath": source_path,
+            "sourceFile": source_file,
+            "collectionKey": str(record.get("collectionKey") or ""),
+            "mediaType": media_type,
+            "steps": {
+                "master_uploaded": {"status": "pending" if master_missing else "done", "total": 1, "completed": 0 if master_missing else 1},
+                "triplets_created": {
+                    "status": "pending" if render_missing else ("skipped" if not renders else "done"),
+                    "total": len(renders),
+                    "completed": sum(1 for render in renders.values() if isinstance(render, dict) and render.get("present") is True),
+                },
+                "triplets_uploaded": {
+                    "status": "pending" if render_missing else ("skipped" if not renders else "done"),
+                    "total": len(renders),
+                    "completed": sum(1 for render in renders.values() if isinstance(render, dict) and render.get("present") is True),
+                },
+                "previews_created": {"status": "pending" if previews_missing else "done", "total": 2, "completed": 0 if previews_missing else 2},
+                "previews_uploaded": {"status": "pending" if previews_missing else "done", "total": 2, "completed": 0 if previews_missing else 2},
+            },
+            "missing": {
+                "master": master_missing,
+                "renders": render_missing,
+                "previews": previews_missing,
+            },
+        })
+        if len(missing) >= limit:
+            break
+    return missing
+
+
 def _r2_coverage_summary(repo_root: Path) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
@@ -2032,6 +2098,7 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
     ]
     missing_rows = [row for row in rows if not row["ok"]]
     missing_private_delivery = _private_delivery_missing_details(repo_root, active_records)
+    missing_import_photos = _missing_import_photo_details(repo_root, active_records)
     if missing_rows:
         recommendation = "Missing coverage. Run the lock-guarded cloud media sweep."
     else:
@@ -2045,6 +2112,7 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
         "sidecarPhotos": len(photos),
         "rows": rows,
         "missingPrivateDelivery": missing_private_delivery,
+        "missingImportPhotos": missing_import_photos,
         "ok": not missing_rows,
         "recommendation": recommendation,
         "fixAvailable": True,
@@ -2096,7 +2164,7 @@ def _start_cloud_media_sweep(repo_root: Path, skip_phases: list[str] | None = No
             (
                 dict(task)
                 for task in R2_BACKGROUND_TASKS.values()
-                if task.get("kind") == "cloud-media-sweep" and task.get("state") in active_states
+                if task.get("operation") in {"repair", "gap-fill"} and task.get("state") in active_states
             ),
             None,
         )
@@ -2131,6 +2199,89 @@ def _start_cloud_media_sweep(repo_root: Path, skip_phases: list[str] | None = No
     with R2_BACKGROUND_LOCK:
         R2_BACKGROUND_TASKS[task_id] = task
     worker = threading.Thread(target=_run_cloud_media_sweep_task, args=(task_id, repo_root, log_path, skip_phases), daemon=True)
+    worker.start()
+    return dict(task)
+
+
+def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: int) -> None:
+    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat(), currentPhaseKey="gap-fill")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    command = ["python3", "scripts/fill_r2_coverage_gaps.py"]
+    if limit:
+        command.extend(["--limit", str(limit)])
+    with log_path.open("ab") as log:
+        process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
+    coverage = _r2_coverage_summary(repo_root)
+    coverage_ok = bool(coverage.get("ok"))
+    errors = []
+    failed = process.returncode != 0 or not coverage_ok
+    if process.returncode != 0:
+        errors.append(f"gap fill exited {process.returncode}")
+    if not coverage_ok:
+        rows = coverage.get("rows") if isinstance(coverage, dict) else []
+        missing = max((int(row.get("missing") or 0) for row in rows if isinstance(row, dict)), default=0)
+        errors.append(f"coverage still missing {missing:,} catalog photos")
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["completed"] = int(task.get("total") or 1)
+        task["state"] = "failed" if failed else "done"
+        task["failed"] = 1 if failed else 0
+        task["return_code"] = process.returncode
+        task["coverage_ok"] = coverage_ok
+        task["errors"] = errors
+        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+        task["updated_at"] = task["completed_at"]
+
+
+def _start_r2_gap_fill(repo_root: Path, limit: int = 0) -> dict:
+    active_states = {"queued", "running"}
+    with R2_BACKGROUND_LOCK:
+        existing = next(
+            (
+                dict(task)
+                for task in R2_BACKGROUND_TASKS.values()
+                if task.get("operation") in {"repair", "gap-fill"} and task.get("state") in active_states
+            ),
+            None,
+        )
+    if existing:
+        return existing
+    coverage = _r2_coverage_summary(repo_root)
+    missing_photos = coverage.get("missingImportPhotos") if isinstance(coverage, dict) else []
+    total = len(missing_photos) if isinstance(missing_photos, list) else 0
+    if limit:
+        total = min(total, limit)
+    task_id = uuid.uuid4().hex
+    queued_at = datetime.now(timezone.utc).isoformat()
+    log_path = repo_root / ".review-logs" / f"owner-r2-gap-fill-{task_id}.log"
+    command = ["python3", "scripts/fill_r2_coverage_gaps.py"]
+    if limit:
+        command.extend(["--limit", str(limit)])
+    task = {
+        "id": task_id,
+        "kind": "r2-gap-fill",
+        "operation": "gap-fill",
+        "photo_id": "catalog",
+        "state": "queued",
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "total": total,
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "currentPhaseKey": "gap-fill",
+        "items": [{"command": " ".join(command), "log": str(log_path)}],
+        "errors": [],
+        "log": str(log_path),
+    }
+    with R2_BACKGROUND_LOCK:
+        R2_BACKGROUND_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_r2_gap_fill_task, args=(task_id, repo_root, log_path, limit), daemon=True)
     worker.start()
     return dict(task)
 

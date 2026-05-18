@@ -1006,7 +1006,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-card-cloud-coverage{
   grid-column:1 / -1;
-  order:-2;
+  order:-4;
 }
 .owner-card-cloud-progress{
   grid-column:1 / -1;
@@ -1014,7 +1014,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
   order:-3;
 }
 .owner-card-cost{
-  order:-1;
+  order:-2;
 }
 .owner-card-real-estate{
   grid-column:1 / -1;
@@ -1507,6 +1507,74 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-sweep-details.owner-counts dd{
   font-size:clamp(.9rem,1.22vw,1.08rem);
   line-height:1.16;
+}
+.owner-import-matrix-wrap{
+  overflow:auto;
+  max-height:360px;
+  border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface) 74%,var(--bg));
+}
+.owner-import-matrix{
+  width:100%;
+  min-width:720px;
+  border-collapse:collapse;
+  font-size:.76rem;
+}
+.owner-import-matrix th,
+.owner-import-matrix td{
+  padding:7px 8px;
+  border-bottom:1px solid var(--line);
+  text-align:center;
+  vertical-align:middle;
+}
+.owner-import-matrix thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--surface);
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-import-matrix tbody th{
+  width:34%;
+  text-align:left;
+}
+.owner-import-matrix tbody th strong,
+.owner-import-matrix tbody th span{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.owner-import-matrix tbody th span{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:650;
+}
+.owner-import-matrix input{
+  width:16px;
+  height:16px;
+  accent-color:color-mix(in srgb,#2f8f5b 78%,var(--text));
+}
+.owner-import-matrix td span{
+  display:block;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:760;
+}
+.owner-import-matrix tr.is-done{
+  background:color-mix(in srgb,#2f8f5b 8%,transparent);
+}
+.owner-import-matrix tr.is-error{
+  background:color-mix(in srgb,#b23b3b 10%,transparent);
+}
+.owner-import-matrix td.is-skipped{
+  opacity:.54;
 }
 .owner-card-cloud-progress .owner-counts{
   grid-template-columns:repeat(3,minmax(0,1fr));

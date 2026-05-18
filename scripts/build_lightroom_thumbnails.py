@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,7 +34,8 @@ from typing import Any
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
-from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, first_env, s3_put, wrangler_command
+from owner_state_db import connect as owner_db_connect, upsert_r2_object_state
+from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, append_upload_state, first_env, s3_put, wrangler_command
 
 
 IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS
@@ -68,6 +70,7 @@ PRIVATE_RENDER_PRODUCTS = {
     "jpg-1mp": 1,
 }
 R2_COVERED_KEYS_CACHE: set[str] | None = None
+R2_UPLOAD_STATE_LOCK = threading.Lock()
 COUNTRY_ALIASES = {
     "fr": ("france", "France"),
     "france": ("france", "France"),
@@ -477,6 +480,44 @@ def append_state(path: Path, row: dict[str, Any]) -> None:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def emit_import_event(kind: str, **payload: Any) -> None:
+    print(f"PBE_IMPORT_{kind} {json.dumps(payload, sort_keys=True)}", flush=True)
+
+
+def emit_import_step(row: dict[str, Any], step: str, status: str = "done", **payload: Any) -> None:
+    emit_import_event(
+        "STEP",
+        photoId=str(row.get("id") or ""),
+        relativePath=str(row.get("relative_path") or ""),
+        mediaType=str(row.get("media_type") or ""),
+        step=step,
+        status=status,
+        **payload,
+    )
+
+
+def record_r2_object_current(item: UploadItem, source: str) -> None:
+    repo_root = Path.cwd()
+    conn = owner_db_connect(repo_root)
+    try:
+        upsert_r2_object_state(
+            conn,
+            bucket=item.bucket,
+            object_key=item.key,
+            lifecycle_state="current",
+            source=source,
+            bytes_value=item.path.stat().st_size if item.path.exists() else None,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def record_r2_upload_success(item: UploadItem, source: str) -> None:
+    append_upload_state(DEFAULT_R2_UPLOAD_STATE, item, R2_UPLOAD_STATE_LOCK)
+    record_r2_object_current(item, source)
 
 
 def slug_for(relative_path: str) -> str:
@@ -1388,7 +1429,9 @@ def r2_put_file(
     retries: int,
     cache_control: str | None = None,
 ) -> dict[str, Any]:
-    if f"{bucket}/{key}" in r2_covered_keys():
+    item = UploadItem(bucket=bucket, key=key, path=path, content_type=content_type, cache_control=cache_control or "")
+    if not getattr(args, "r2_force_upload", False) and f"{bucket}/{key}" in r2_covered_keys():
+        record_r2_object_current(item, "build_lightroom_thumbnails-covered")
         return {
             "bucket": bucket,
             "key": key,
@@ -1409,7 +1452,6 @@ def r2_put_file(
         ]
         if missing:
             raise RuntimeError(f"Missing S3 backend credential(s): {', '.join(missing)}")
-        item = UploadItem(bucket=bucket, key=key, path=path, content_type=content_type, cache_control=cache_control or "")
         _, ok, output = s3_put(
             item,
             retries,
@@ -1423,6 +1465,7 @@ def r2_put_file(
         )
         if not ok:
             raise RuntimeError(f"R2 upload failed for {bucket}/{key}: {output}")
+        record_r2_upload_success(item, "build_lightroom_thumbnails")
         return {
             "bucket": bucket,
             "key": key,
@@ -1450,6 +1493,7 @@ def r2_put_file(
         result = subprocess.run(command, text=True, capture_output=True, check=False)
         output = (result.stdout or result.stderr).strip()
         if result.returncode == 0:
+            record_r2_upload_success(item, "build_lightroom_thumbnails")
             return {
                 "bucket": bucket,
                 "key": key,
@@ -1523,16 +1567,24 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
             mimetypes.guess_type(source_path.name)[0] or "application/octet-stream",
             args.r2_retries,
         )
+        emit_import_step(row, "master_uploaded", total=1, completed=1)
         if args.r2_private_renders and source_path.suffix.lower() in {".jpg", ".jpeg"}:
             source_size = image_size(source_path)
             render_root = Path(tempfile.gettempdir()) / "photosbyelie-private-renders" / str(row.get("id") or source_path.stem)
             private_renders = []
+            private_rendered = 0
             for product_id, megapixels in PRIVATE_RENDER_PRODUCTS.items():
                 long_edge = long_edge_for_megapixels(source_size, megapixels)
                 if not long_edge:
                     continue
                 render_path = render_root / f"{product_id}.jpg"
                 render_private_deliverable(source_path, render_path, long_edge, args.force)
+                private_rendered += 1
+            emit_import_step(row, "triplets_created", total=len(PRIVATE_RENDER_PRODUCTS), completed=private_rendered)
+            for product_id, _megapixels in PRIVATE_RENDER_PRODUCTS.items():
+                render_path = render_root / f"{product_id}.jpg"
+                if not render_path.exists():
+                    continue
                 private_renders.append(
                     r2_put_file(
                         args,
@@ -1543,12 +1595,17 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                         args.r2_retries,
                     )
                 )
+                emit_import_step(row, "triplets_uploaded", total=len(PRIVATE_RENDER_PRODUCTS), completed=len(private_renders))
             if private_renders:
                 uploaded["private_renders"] = private_renders
             shutil.rmtree(render_root, ignore_errors=True)
+        elif args.r2_private_renders:
+            emit_import_step(row, "triplets_created", status="skipped", reason="not a JPEG source")
+            emit_import_step(row, "triplets_uploaded", status="skipped", reason="not a JPEG source")
     if r2_upload_enabled(args, "public"):
         detail_content_type = "video/mp4" if (row.get("media_type") == "video" or detail_path.suffix.lower() in VIDEO_EXTENSIONS) else "image/jpeg"
-        uploaded["public_previews"] = [
+        public_previews = []
+        public_previews.append(
             r2_put_file(
                 args,
                 args.r2_public_bucket,
@@ -1557,7 +1614,10 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 "image/jpeg",
                 args.r2_retries,
                 cache_control="public, max-age=31536000, immutable",
-            ),
+            )
+        )
+        emit_import_step(row, "previews_uploaded", total=2, completed=len(public_previews))
+        public_previews.append(
             r2_put_file(
                 args,
                 args.r2_public_bucket,
@@ -1566,8 +1626,10 @@ def upload_r2_assets(args: argparse.Namespace, row: dict[str, Any], gallery_path
                 detail_content_type,
                 args.r2_retries,
                 cache_control="public, max-age=31536000, immutable",
-            ),
-        ]
+            )
+        )
+        emit_import_step(row, "previews_uploaded", total=2, completed=len(public_previews))
+        uploaded["public_previews"] = public_previews
     return uploaded
 
 
@@ -1883,8 +1945,10 @@ def process_batch(
             append_state(state_path, {**base_state, "status": "skipped"})
             continue
 
+        photo_slug = ""
         try:
             slug = slug_for(relative_path)
+            photo_slug = slug
             if slug in getattr(args, "discarded_photo_ids", set()):
                 manifest.pop(relative_path, None)
                 gps_manifest.pop(relative_path, None)
@@ -1918,6 +1982,14 @@ def process_batch(
             row["raw_metadata"] = selected_metadata["raw"]
             row["selection_metadata"] = compact_metadata(meta)
             print(f"START {rendered_count + 1}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
+            emit_import_event(
+                "PHOTO",
+                index=rendered_count + 1,
+                photoId=slug,
+                relativePath=relative_path,
+                country=gallery_country["slug"],
+                mediaType=media_type,
+            )
             if selected_metadata["gps"]:
                 gps_manifest[relative_path] = {
                     "id": slug,
@@ -1939,6 +2011,7 @@ def process_batch(
                     else:
                         render_derivative(gallery_source, gallery_path, args.gallery_max, args.watermark, font, args.force, source_orientation)
                         render_derivative(detail_source, detail_path, args.detail_max, args.watermark, font, args.force, source_orientation)
+                    emit_import_step(row, "previews_created", total=2, completed=2)
                 if developed_files:
                     row["developed_files"] = developed_files
                 row["derivative_files"] = {
@@ -1969,6 +2042,7 @@ def process_batch(
                     f"public {public_count} private-renders {private_render_count}",
                     flush=True,
                 )
+                emit_import_event("PHOTO_DONE", photoId=slug, status="done")
             if selection_limit and rendered_count >= selection_limit:
                 break
         except Exception as exc:
@@ -1979,6 +2053,7 @@ def process_batch(
                 "failed_at": now_iso(),
             }
             append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
+            emit_import_event("PHOTO_DONE", photoId=photo_slug, relativePath=relative_path, status="error", error=str(exc))
             print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
     return rendered_count
 

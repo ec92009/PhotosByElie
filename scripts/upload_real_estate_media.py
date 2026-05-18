@@ -37,6 +37,11 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def emit_import_event(enabled: bool, kind: str, **payload: Any) -> None:
+    if enabled:
+        print(f"PBE_IMPORT_{kind} {json.dumps(payload, sort_keys=True)}", flush=True)
+
+
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -64,16 +69,31 @@ def item_for(
     )
 
 
-def build_items(root: Path, manifest: dict[str, Any], scope: str, public_bucket: str, private_bucket: str) -> tuple[list[UploadItem], list[str]]:
+def build_photo_upload_groups(root: Path, manifest: dict[str, Any], scope: str, public_bucket: str, private_bucket: str) -> tuple[list[dict[str, Any]], list[str]]:
     output_root = Path(str(manifest.get("outputRoot") or ""))
     photos = [photo for photo in manifest.get("photos", []) if isinstance(photo, dict)]
-    items: list[UploadItem] = []
+    groups: list[dict[str, Any]] = []
     errors: list[str] = []
+    seen: set[str] = set()
+
+    def add_group_item(group: dict[str, Any], step: str, item: UploadItem) -> None:
+        identifier = upload_id(item)
+        if identifier in seen:
+            return
+        seen.add(identifier)
+        group[step].append(item)
 
     for photo in photos:
         photo_id = str(photo.get("id") or "")
         real_estate = photo.get("realEstate") if isinstance(photo.get("realEstate"), dict) else {}
         public_preview = ((photo.get("media") or {}).get("publicPreview") or {}) if isinstance(photo.get("media"), dict) else {}
+        group = {
+            "photoId": photo_id,
+            "relativePath": "/".join(part for part in [str(photo.get("album") or ""), str(photo.get("full") or "")] if part),
+            "mediaType": str((photo.get("media") or {}).get("type") or "photo") if isinstance(photo.get("media"), dict) else "photo",
+            "master": [],
+            "previews": [],
+        }
 
         if scope in {"private", "both"}:
             source_path = Path(str(real_estate.get("sourcePath") or ""))
@@ -83,7 +103,7 @@ def build_items(root: Path, manifest: dict[str, Any], scope: str, public_bucket:
             elif not private_key:
                 errors.append(f"{photo_id}: missing private master key")
             else:
-                items.append(item_for(bucket=private_bucket, key=private_key, path=source_path, public=False))
+                add_group_item(group, "master", item_for(bucket=private_bucket, key=private_key, path=source_path, public=False))
 
         if scope in {"public", "both"}:
             for size, src_field, key_field in (
@@ -97,17 +117,17 @@ def build_items(root: Path, manifest: dict[str, Any], scope: str, public_bucket:
                 elif not key:
                     errors.append(f"{photo_id}: missing public preview {size} key")
                 else:
-                    items.append(item_for(bucket=public_bucket, key=key, path=path, public=True))
+                    add_group_item(group, "previews", item_for(bucket=public_bucket, key=key, path=path, public=True))
 
-    seen: set[str] = set()
-    deduped: list[UploadItem] = []
-    for item in items:
-        identifier = upload_id(item)
-        if identifier in seen:
-            continue
-        seen.add(identifier)
-        deduped.append(item)
-    return deduped, errors
+        if group["master"] or group["previews"]:
+            groups.append(group)
+
+    return groups, errors
+
+
+def build_items(root: Path, manifest: dict[str, Any], scope: str, public_bucket: str, private_bucket: str) -> tuple[list[UploadItem], list[str]]:
+    groups, errors = build_photo_upload_groups(root, manifest, scope, public_bucket, private_bucket)
+    return [item for group in groups for item in [*group["master"], *group["previews"]]], errors
 
 
 def summarize(items: list[UploadItem]) -> dict[str, Any]:

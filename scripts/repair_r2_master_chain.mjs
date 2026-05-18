@@ -356,7 +356,21 @@ for (const photo of catalog.values()) {
       const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-render-"));
       try {
         const outputPath = path.join(tempDir, `${productId}.jpg`);
-        const longEdge = longEdgeForMegapixels(await dimensionsFor(sourceForRendering), megapixels);
+        let dimensions;
+        try {
+          dimensions = await dimensionsFor(sourceForRendering);
+        } catch (error) {
+          missing.renders.push({
+            photoId: photo.id,
+            productId,
+            key: renderKey,
+            sourcePath: photo.source.path,
+            error: String(error?.message || error),
+          });
+          console.warn(`render skipped (dimensions) ${renderKey}: ${String(error?.message || error)}`);
+          continue;
+        }
+        const longEdge = longEdgeForMegapixels(dimensions, megapixels);
         await run("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "90", "-Z", String(longEdge), sourceForRendering, "--out", outputPath]);
         await putObject(privateBucket, renderKey, await fs.readFile(outputPath), "image/jpeg");
         renderKeys.add(renderKey);

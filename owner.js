@@ -1,4 +1,57 @@
 (async () => {
+  const ownerTabButtons = [...document.querySelectorAll("[data-owner-tab-button]")];
+  const ownerTabCards = [...document.querySelectorAll("[data-owner-tab]")];
+  const OWNER_TAB_STORAGE_KEY = "photosbyelie-owner-tab";
+
+  const ownerTabExists = (tab) => ownerTabButtons.some((button) => button.dataset.ownerTabButton === tab);
+
+  const storedOwnerTab = () => {
+    try {
+      const tab = localStorage.getItem(OWNER_TAB_STORAGE_KEY) || "";
+      return ownerTabExists(tab) ? tab : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const ownerTabFromLocation = () => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") || params.get("ownerTab") || window.location.hash.replace(/^#/, "");
+    return ownerTabExists(tab) ? tab : "";
+  };
+
+  const setOwnerTab = (tab, options = {}) => {
+    if (!ownerTabButtons.length || !ownerTabCards.length) return;
+    const next = ownerTabExists(tab) ? tab : ownerTabButtons[0].dataset.ownerTabButton;
+    ownerTabButtons.forEach((button) => {
+      const active = button.dataset.ownerTabButton === next;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    ownerTabCards.forEach((card) => {
+      if (card.dataset.ownerTab === next) {
+        delete card.dataset.ownerTabHidden;
+      } else {
+        card.dataset.ownerTabHidden = "true";
+      }
+    });
+    if (options.persist !== false) {
+      try {
+        localStorage.setItem(OWNER_TAB_STORAGE_KEY, next);
+      } catch {
+        // Local storage can be unavailable in embedded previews.
+      }
+    }
+  };
+
+  setOwnerTab(ownerTabFromLocation() || storedOwnerTab(), { persist: false });
+
+  ownerTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setOwnerTab(button.dataset.ownerTabButton || "");
+    });
+  });
+
   await window.photosByElieCatalogReady;
   const ownerAuth = window.photosByElieOwnerAuth;
   const hiddenActions = window.photosByElieHiddenActions;
@@ -65,8 +118,6 @@
     [...document.querySelectorAll("[data-owner-re-computed]")]
       .map((field) => [field.dataset.ownerReComputed, field])
   );
-  const ownerTabButtons = [...document.querySelectorAll("[data-owner-tab-button]")];
-  const ownerTabCards = [...document.querySelectorAll("[data-owner-tab]")];
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
   let r2PollTimer = null;
@@ -108,56 +159,18 @@
       });
   };
 
-  const OWNER_TAB_STORAGE_KEY = "photosbyelie-owner-tab";
-
-  const ownerTabExists = (tab) => ownerTabButtons.some((button) => button.dataset.ownerTabButton === tab);
-
-  const storedOwnerTab = () => {
-    try {
-      const tab = localStorage.getItem(OWNER_TAB_STORAGE_KEY) || "";
-      return ownerTabExists(tab) ? tab : "";
-    } catch {
-      return "";
-    }
-  };
-
-  const ownerTabFromLocation = () => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get("tab") || params.get("ownerTab") || window.location.hash.replace(/^#/, "");
-    return ownerTabExists(tab) ? tab : "";
-  };
-
-  const setOwnerTab = (tab, options = {}) => {
-    if (!ownerTabButtons.length || !ownerTabCards.length) return;
-    const next = ownerTabExists(tab) ? tab : ownerTabButtons[0].dataset.ownerTabButton;
-    ownerTabButtons.forEach((button) => {
-      const active = button.dataset.ownerTabButton === next;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", active ? "true" : "false");
-    });
-    ownerTabCards.forEach((card) => {
-      if (card.dataset.ownerTab === next) {
-        delete card.dataset.ownerTabHidden;
-      } else {
-        card.dataset.ownerTabHidden = "true";
-      }
-    });
-    if (options.persist !== false) {
-      try {
-        localStorage.setItem(OWNER_TAB_STORAGE_KEY, next);
-      } catch {
-        // Local storage can be unavailable in embedded previews.
-      }
-    }
-  };
-
-  setOwnerTab(ownerTabFromLocation() || storedOwnerTab(), { persist: false });
+  const PHOTO_IMPORT_PHASES = new Map([
+    ["camera", "Camera"],
+    ["apple-photo-albums", "Apple Photos"],
+    ["leonardo", "AI"],
+  ]);
 
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
     ["discard-start", "Delete banned R2 objects"],
     ["camera", "Import Camera sources"],
-    ["leonardo", "Import Leonardo sources"],
+    ["apple-photo-albums", "Import Apple Photos"],
+    ["leonardo", "Import AI sources"],
     ["catalog", "Export catalog"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
@@ -963,10 +976,11 @@
     const skipped = Array.isArray(progress.skippedProperties) ? progress.skippedProperties : [];
     const currentAlbum = progress.album ? ` (${progress.album})` : "";
     const skippedText = skipped.length ? ` Skipping missing: ${skipped.join(", ")}.` : "";
+    const sourceRoot = `/Volumes/Saturn/Pictures/RE/${clientName}`;
     if (total > 0) {
-      return `Importing ${clientName}: ${formatCount(completed)} / ${formatCount(total)} media${currentAlbum}.${skippedText}`;
+      return `Real Estate import from ${sourceRoot}: ${formatCount(completed)} / ${formatCount(total)} media${currentAlbum}.${skippedText}`;
     }
-    return `Importing ${clientName}: scanning available media.${skippedText}`;
+    return `Real Estate import from ${sourceRoot}: scanning available media.${skippedText}`;
   };
 
   const stopRealEstateImportProgress = () => {
@@ -1283,21 +1297,34 @@
     const lastMatch = (pattern) => {
       for (let index = lines.length - 1; index >= 0; index -= 1) {
         const match = lines[index].match(pattern);
-        if (match) return { line: lines[index], match };
+        if (match) return { line: lines[index], match, index };
+      }
+      return null;
+    };
+    const lastMatchAfter = (pattern, startIndex) => {
+      for (let index = lines.length - 1; index >= Math.max(0, startIndex); index -= 1) {
+        const match = lines[index].match(pattern);
+        if (match) return { line: lines[index], match, index };
       }
       return null;
     };
     const deleted = lastMatch(/^Done\. (?:Would delete|Deleted) ([0-9,]+) public and ([0-9,]+) private object references for ([0-9,]+) discarded photos\./);
     const deleteStart = lastMatch(/^DELETE_START\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
     const deleteProgress = lastMatch(/^DELETE_PROGRESS\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)\s+([0-9,]+)/);
-    const scan = lastMatch(/^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/);
-    const started = lastMatch(/^START\s+([0-9,]+):\s+(\S+)\s+(\S+)\s+(.+)/);
-    const imported = lastMatch(/^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/);
+    const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
+    const importPhaseKey = phaseMarker?.match?.[1] || "";
+    const scopedImport = PHOTO_IMPORT_PHASES.has(importPhaseKey);
+    const importStartIndex = scopedImport ? phaseMarker.index + 1 : 0;
+    const scanPattern = /^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/;
+    const startedPattern = /^START\s+([0-9,]+):\s+(\S+)\s+(\S+)\s+(.+)/;
+    const importedPattern = /^([0-9,]+):\s+(\S+)\s+rendered\s+(\S+)\s+public\s+([0-9,]+)\s+private-renders\s+([0-9,]+)/;
+    const scan = scopedImport ? lastMatchAfter(scanPattern, importStartIndex) : (phaseMarker ? null : lastMatch(scanPattern));
+    const started = scopedImport ? lastMatchAfter(startedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(startedPattern));
+    const imported = scopedImport ? lastMatchAfter(importedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(importedPattern));
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
     const processed = lastMatch(/^Done\. Processed ([0-9,]+) photos?\./);
     const manifest = lastMatch(/^Refreshed .*?: ([0-9,]+) complete private render triplets\./);
     const error = lastMatch(/^(ERROR\b|.*\berror: ).*/i);
-    const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
     const doneKeys = new Set(lines
       .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
       .filter(Boolean));
@@ -1392,7 +1419,7 @@
     const startedIndex = numberFromLog(logSummary?.started?.match?.[1]);
     const current = Math.max(completed, startedIndex);
     const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
-    const secondsLeft = completed > 0 && selected > completed && elapsedSeconds > 0
+    const secondsLeft = completed >= 5 && selected > completed && elapsedSeconds > 0
       ? ((selected - completed) / completed) * elapsedSeconds
       : 0;
     const countdown = secondsLeft ? formatDuration(secondsLeft) : (selected && completed >= selected ? "0s" : "Estimating");
@@ -1404,8 +1431,11 @@
     return { selected, completed, current, startedIndex, remaining, percent, countdown, photo };
   };
 
-  const cameraImportProgressDetail = (progress) => {
-    if (!progress.selected) return "Scanning Camera source folders to find selected photos.";
+  const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
+
+  const cameraImportProgressDetail = (progress, phaseKey = "camera") => {
+    const sourceLabel = importSourceLabel(phaseKey);
+    if (!progress.selected) return `${sourceLabel} resync: scanning source folders for selected photos.`;
     const selected = formatCount(progress.selected);
     const completed = formatCount(progress.completed);
     const remaining = formatCount(progress.remaining);
@@ -1414,12 +1444,12 @@
       ? "time left estimate starts after a few renders complete"
       : `rough time left ${progress.countdown}`;
     if (progress.completed >= progress.selected) {
-      return `${completed} of ${selected} selected Camera source photos rendered; ${timeLeft}.`;
+      return `${sourceLabel} resync: ${completed} / ${selected} selected source items finished this run; ${timeLeft}.`;
     }
     if (progress.startedIndex > progress.completed) {
-      return `Working on selected Camera source photo ${current} of ${selected}; ${completed} rendered, ${remaining} remaining; ${timeLeft}.`;
+      return `${sourceLabel} resync: checking source item ${current} / ${selected}. These may already be published; this pass refreshes previews, private renders, and R2. ${completed} finished this run, ${remaining} left; ${timeLeft}.`;
     }
-    return `${completed} of ${selected} selected Camera source photos rendered; ${remaining} remaining; ${timeLeft}.`;
+    return `${sourceLabel} resync: ${completed} / ${selected} selected source items finished this run; ${remaining} left; ${timeLeft}.`;
   };
 
   const phaseProgress = (phase, logSummary, failed, task = null) => {
@@ -1430,11 +1460,11 @@
       }
       return deleteObjectProgress(logSummary);
     }
-    if (phase.key === "camera" && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
+    if (PHOTO_IMPORT_PHASES.has(phase.key) && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
       const progress = cameraImportProgress(logSummary, task);
       return {
         percent: progress.percent,
-        detail: cameraImportProgressDetail(progress),
+        detail: cameraImportProgressDetail(progress, phase.key),
       };
     }
     if (phase.key === "private" && logSummary?.upload) {
@@ -1478,7 +1508,7 @@
     const activeKey = coverageIncomplete ? "coverage" : logSummary?.phaseKey || "prepare";
     const activeIndex = Math.max(0, SWEEP_PHASES.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
-    const wideLabels = new Set(["Current photo", "Progress summary", "Last photo", "Last rendered", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Current source", "Progress summary", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -1497,7 +1527,7 @@
       const detailHtml = phaseRows.length
         ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
         : "";
-      const progressNote = progress.detail && !genericProgressDetails.has(progress.detail)
+      const progressNote = (state === "running" || state === "failed") && progress.detail && !genericProgressDetails.has(progress.detail)
         ? `<p class="owner-sweep-progress-note">${escapeHtml(progress.detail)}</p>`
         : "";
       return `
@@ -1564,24 +1594,35 @@
       }
       if (progress.discardedPhotos) addPhaseRow(deletePhaseKey, "Banned photos", formatCount(progress.discardedPhotos));
     }
+    const importPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey) ? activePhaseKey : "camera";
+    let importSourceRowAdded = false;
+    const addImportSourceRow = () => {
+      if (importSourceRowAdded) return;
+      addPhaseRow(importPhaseKey, "Source lane", importSourceLabel(importPhaseKey));
+      importSourceRowAdded = true;
+    };
+    if (PHOTO_IMPORT_PHASES.has(activePhaseKey) && !logSummary?.upload) addImportSourceRow();
     if (logSummary?.started && !logSummary?.upload) {
-      addPhaseRow("camera", "Current photo", logSummary.started.match[2]);
-      addPhaseRow("camera", "Collection", logSummary.started.match[3]);
+      addImportSourceRow();
+      addPhaseRow(importPhaseKey, "Current source", logSummary.started.match[2]);
+      addPhaseRow(importPhaseKey, "Collection", logSummary.started.match[3]);
     }
     if ((logSummary?.scan || logSummary?.started || logSummary?.imported) && !logSummary?.upload) {
       const progress = cameraImportProgress(logSummary, latest);
       if (progress.selected) {
+        addImportSourceRow();
         addPhaseRow(
-          "camera",
+          importPhaseKey,
           "Progress summary",
-          `${formatCount(Math.min(progress.current, progress.selected))} of ${formatCount(progress.selected)} selected Camera source photos reached`,
+          `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} selected source photos checked this run`,
         );
-        addPhaseRow("camera", "Rendered complete", `${formatCount(progress.completed)} rendered, ${formatCount(progress.remaining)} remaining`);
+        addPhaseRow(importPhaseKey, "Finished this run", `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left`);
+        addPhaseRow(importPhaseKey, "What happens", "Rebuilds previews and private renders, then pushes/refreshes R2 even when the photo was already published.");
       }
-      if (active && progress.selected > progress.completed) addPhaseRow("camera", "Time left estimate", progress.countdown);
+      if (active && progress.selected > progress.completed) addPhaseRow(importPhaseKey, "Time left estimate", progress.countdown);
       if (logSummary?.imported) {
-        addPhaseRow("camera", "Last rendered", logSummary.imported.match[2]);
-        addPhaseRow("camera", "Private renders", logSummary.imported.match[5]);
+        addPhaseRow(importPhaseKey, "Last synced", logSummary.imported.match[2]);
+        addPhaseRow(importPhaseKey, "Private renders", logSummary.imported.match[5]);
       }
     }
     if (logSummary?.upload) {
@@ -1956,13 +1997,7 @@
       renderOwnerAvailability(event.detail || ownerAuth?.state);
     });
 
-    ownerTabButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        setOwnerTab(button.dataset.ownerTabButton || "");
-      });
-    });
-
-    ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
+  ownerAuth?.refresh?.().then((state) => renderOwnerAvailability(state, { scrollToControls: true }));
 
   if (physicalProductsToggle) {
     const physicalAvailable = productSettings?.physicalProductsAvailable?.() === true;

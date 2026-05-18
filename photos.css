@@ -993,10 +993,15 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-card-cloud-coverage{
   grid-column:1 / -1;
+  order:-2;
 }
 .owner-card-cloud-progress{
   grid-column:1 / -1;
   min-height:0;
+  order:-3;
+}
+.owner-card-cost{
+  order:-1;
 }
 .owner-card-real-estate{
   grid-column:1 / -1;

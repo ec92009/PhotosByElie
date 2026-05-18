@@ -178,8 +178,6 @@
     ["previews_created", "Previews made"],
     ["previews_uploaded", "Previews up"],
   ];
-  const IMPORT_MATRIX_RECENT_DONE_LIMIT = 3;
-
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
     ["gap-fill", "Fill in coverage gaps"],
@@ -2015,18 +2013,11 @@
 
   const importMatrixVisibleRows = (photos = []) => {
     const activeRows = photos.filter((photo) => !importMatrixRowComplete(photo));
-    const activeIds = new Set(activeRows.map((photo) => photo.id));
-    const recentDoneRows = photos
-      .filter((photo) => !activeIds.has(photo.id) && photo.status === "done")
-      .sort((left, right) => Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0))
-      .slice(0, IMPORT_MATRIX_RECENT_DONE_LIMIT);
-    return [...activeRows, ...recentDoneRows]
+    return activeRows
       .sort((left, right) => {
-        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "done" ? 1 : photo.status === "error" ? 3 : 2;
+        const rank = (photo) => photo.status === "running" ? 0 : photo.status === "error" ? 2 : 1;
         return rank(left) - rank(right)
-          || (rank(left) === 1
-            ? Number(right.doneEventIndex || right.lastEventIndex || 0) - Number(left.doneEventIndex || left.lastEventIndex || 0)
-            : Number(left.index || 0) - Number(right.index || 0));
+          || Number(left.index || 0) - Number(right.index || 0);
       });
   };
 
@@ -2050,15 +2041,11 @@
     if (!photos.length) return "";
     const visibleRows = importMatrixVisibleRows(photos);
     if (!visibleRows.length) return "";
-    const hiddenComplete = photos.length - visibleRows.length;
-    const visibleDone = visibleRows.filter((photo) => photo.status === "done").length;
-    const activeCount = visibleRows.filter((photo) => photo.status !== "error" && photo.status !== "done").length;
+    const activeCount = visibleRows.filter((photo) => photo.status !== "error").length;
     const errorCount = visibleRows.filter((photo) => photo.status === "error").length;
     const meta = [
       activeCount ? `${formatCount(activeCount)} active` : "",
-      visibleDone ? `${formatCount(visibleDone)} recent finished shown` : "",
       errorCount ? `${formatCount(errorCount)} needs attention` : "",
-      hiddenComplete ? `${formatCount(hiddenComplete)} finished hidden` : "",
     ].filter(Boolean).join(" · ");
     return `
       <div class="owner-import-matrix-wrap" aria-label="Per-photo import progress">
@@ -2246,7 +2233,6 @@
     if (latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
     if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
       const visibleMatrixRows = importMatrixVisibleRows(logSummary.importPhotoRows);
-      const hiddenCompleteRows = logSummary.importPhotoRows.length - visibleMatrixRows.length;
       const sourceProgress = PHOTO_IMPORT_PHASES.has(activePhaseKey)
         ? sourceLaneProgress(activePhaseKey, logSummary, latest)
         : null;
@@ -2255,10 +2241,10 @@
         activePhaseKey,
         "Upload matrix",
         visibleMatrixRows.length
-          ? `${formatCount(visibleMatrixRows.length)} active/incomplete rows shown${hiddenCompleteRows ? `; ${formatCount(hiddenCompleteRows)} finished hidden` : ""}`
+          ? `${formatCount(visibleMatrixRows.length)} active/incomplete rows shown`
           : sourceProgress?.scanningForMore
-          ? `${formatCount(hiddenCompleteRows)} finished photos hidden; scanning for more ${importSourceLabel(activePhaseKey)} work`
-          : `${formatCount(hiddenCompleteRows)} finished photos hidden; no active rows`,
+          ? `No active rows right now; scanning for more ${importSourceLabel(activePhaseKey)} work`
+          : "No active rows",
       );
     }
     if (logMatchesActivePhase && activePhaseKey === "gap-fill") {

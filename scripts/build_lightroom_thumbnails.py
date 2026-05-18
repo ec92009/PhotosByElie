@@ -2433,7 +2433,6 @@ def main() -> int:
             plan = artifact_plan_for_source(args, photo_id, source_path)
             selected_item["artifact_plan"] = plan
             queued_index = add_counter("queued")
-            work_queue.put(selected_item)
             plan_row = {
                 "id": photo_id,
                 "relative_path": relative_path,
@@ -2448,6 +2447,12 @@ def main() -> int:
                 status="queued",
             )
             emit_import_plan_steps(plan_row, plan)
+            if plan.get("complete") and relative_path in manifest:
+                emit_import_event("PHOTO_DONE", photoId=photo_id, relativePath=relative_path, status="done")
+                add_counter("processed")
+                emit_queue_event("QUEUE_PROGRESS")
+                continue
+            work_queue.put(selected_item)
         emit_queue_event("SCAN_PROGRESS")
 
     def plan_sources() -> None:

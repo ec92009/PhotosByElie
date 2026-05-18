@@ -1,6 +1,6 @@
 # Max to David Automation Handoff
 
-Use this file for instructions prepared on Max for David, the always-on machine. David should treat these as automation prompts or recurring job specs, then report results in `DAVID2MAX.md`. Use `MAX_DAVID_CHAT.md` for quick acknowledgements and short coordination messages.
+Primary Max-to-David transport is Gmail self-email from `ec92009@gmail.com` to `ec92009@gmail.com` with exact subject `MAX2DAVID`. Use this file as durable reference/fallback for instructions prepared on Max for David, the always-on machine. David should report by Gmail self-email with exact subject `DAVID2MAX`; mirror durable summaries in `DAVID2MAX.md` only when useful or explicitly requested.
 
 ## Operating Rules
 
@@ -16,12 +16,12 @@ git pull --ff-only origin main
 - Do not rewrite image/JPG metadata.
 - Do not use the keyword blacklist to filter photos. It only removes useless keyword strings from generated metadata.
 - If an automation creates tracked changes, run validation before committing.
-- Acknowledge Max/David handoff messages as soon as they are received. For email handoff, send or queue the matching `DAVID2MAX` acknowledgement before starting substantial work.
-- Before starting a new Max task, append `David: starting <short task name>` to `MAX_DAVID_CHAT.md`, commit it, and push it so Max can see the task is in progress.
-- For jobs that take more than a few minutes, send progress reports at meaningful checkpoints and whenever blocked.
+- Acknowledge Max/David handoff messages as soon as they are received by sending or queuing the matching `DAVID2MAX` email before starting substantial work.
+- Before starting a new Max task, send `David: starting <short task name>` by `DAVID2MAX` email so Max can see the task is in progress.
+- For jobs that take more than a few minutes, send `DAVID2MAX` progress reports at meaningful checkpoints and whenever blocked.
 - Use commit prefix `photosbyelie:`.
 - Push successful commits to `main`.
-- Record what happened in `DAVID2MAX.md`.
+- Record what happened by `DAVID2MAX` email; mirror to `DAVID2MAX.md` only when useful or requested.
 
 ## 2026-05-17 Install Max Instruction Poller
 

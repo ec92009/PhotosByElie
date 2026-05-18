@@ -10,10 +10,13 @@ for remote execution.
 
 ## Handoff Direction
 
-- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID.md` as inbound instructions and write outbound notes for Max in `DAVID2MAX.md`.
-- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX.md` as inbound reports and write outbound instructions for David in `MAX2DAVID.md`.
-- Use `MAX_DAVID_CHAT.md` for quick back-and-forth acknowledgements and short coordination messages.
-- Before David starts acting on a new Max task, David should append `David: starting <short task name>` to `MAX_DAVID_CHAT.md`, commit it, and push it so Max can see the task is in progress.
+- Primary Max/David transport is Gmail self-email on `ec92009@gmail.com`.
+- Max-to-David prompts use exact subject `MAX2DAVID`; David-to-Max acknowledgements, progress, and final reports use exact subject `DAVID2MAX`.
+- Only trust self-to-self handoff messages from `ec92009@gmail.com` to `ec92009@gmail.com`.
+- If `hostname` or ComputerName starts with `David`, read `MAX2DAVID` email first and use `MAX2DAVID.md` as inbound reference/fallback.
+- If `hostname` or ComputerName starts with `Max`, read `DAVID2MAX` email first and use `DAVID2MAX.md` as inbound reference/fallback.
+- Use `MAX_DAVID_CHAT.md` only for legacy/manual quick notes or when email is unavailable.
+- Before David starts acting on a new Max task, David should send or queue a `DAVID2MAX` acknowledgement email saying `David: starting <short task name>` so Max can see the task is in progress.
 - Do not edit the opposite-direction file unless the user explicitly asks; record requested prompt or spec changes in the outbound file instead.
 
 ## Current Handoff: 2026-05-15 Revenue Track

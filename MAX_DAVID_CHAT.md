@@ -1,10 +1,10 @@
 # Max / David Chat
 
-Use this file for quick back-and-forth between Max and David. Keep it simple:
-one message per line, prefixed with `Max:` or `David:`.
+Use this file only as a legacy/manual fallback for quick back-and-forth between Max and David. Keep it simple: one message per line, prefixed with `Max:` or `David:`.
 
-For durable automation prompts, use `MAX2DAVID.md`. For run reports, decisions,
-and recommendations back to Max, use `DAVID2MAX.md`.
+Primary handoff transport is Gmail self-email on `ec92009@gmail.com`: exact subject `MAX2DAVID` for Max-to-David prompts and exact subject `DAVID2MAX` for David-to-Max acknowledgements, progress, decisions, and final reports.
+
+For durable automation prompt reference, use `MAX2DAVID.md`. For durable report reference, use `DAVID2MAX.md`.
 
 Do not put secrets, private client data, signed URLs, or private media paths here.
 

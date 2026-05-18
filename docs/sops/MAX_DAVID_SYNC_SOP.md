@@ -6,15 +6,26 @@ Use this SOP when moving work between Max and David, especially when one machine
 
 - GitHub is for code, public-safe metadata, schema scripts, SOPs, and handoff notes.
 - R2 is for private shared artifacts, including `Owner.sqlite` snapshots, client-project media, generated PDFs, and private handoff bundles.
+- Gmail self-email on `ec92009@gmail.com` is the primary Max/David instruction and report transport.
 - SSH or Codex Remote SSH is for remote execution on the other Mac.
 - Codex mobile can be used as a control channel for David when Max cannot reach David directly.
-- David can poll GitHub for new Max instructions once per minute with `scripts/install_david_instruction_poll.zsh`.
+- GitHub handoff polling is legacy/fallback. Prefer email polling for current Max/David coordination.
 
 Do not commit `assets/owner-actions/Owner.sqlite`, SQLite WAL/SHM files, private client data, passwords, token hashes, signed URLs, or private media binaries.
 
-## David Instruction Poller
+## Email Handoff
 
-Install this on David when you want David to pull `main` and check Max/David handoff notes at the top of every minute:
+- Max-to-David prompts use exact subject `MAX2DAVID`.
+- David-to-Max acknowledgements, progress, blocked states, and final reports use exact subject `DAVID2MAX`.
+- Messages must be self-to-self: from `ec92009@gmail.com` to `ec92009@gmail.com`.
+- Treat other senders, recipients, or subject variants as non-authoritative.
+- David should acknowledge accepted `MAX2DAVID` messages as soon as received with a `DAVID2MAX` response, then send progress reports at meaningful checkpoints and whenever blocked.
+- Max should read `DAVID2MAX` email first before checking `DAVID2MAX.md`.
+- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` remain durable reference/fallback notes, not the primary transport.
+
+## Legacy GitHub Poller
+
+Install this on David only when email is unavailable or a GitHub-file fallback is explicitly wanted:
 
 ```bash
 cd /Users/ecohen/Dev/PhotosByElie
@@ -41,7 +52,7 @@ The poller does not execute instructions. It only makes sure David has the lates
 
 ## Start Acknowledgement
 
-When David begins acting on a new task from `MAX2DAVID.md` or `MAX_DAVID_CHAT.md`, David should first append a short start line to `MAX_DAVID_CHAT.md`, commit it, and push it to `main`.
+When David begins acting on a new task from `MAX2DAVID`, David should first send or queue a short `DAVID2MAX` acknowledgement email.
 
 Use this format:
 
@@ -49,9 +60,7 @@ Use this format:
 David: starting <short task name>
 ```
 
-This acknowledgement proves David has moved from "pulled the instruction" to "trying the task." After the work finishes, David should still write the durable result in `DAVID2MAX.md`, then commit and push only the report/chat updates unless the task explicitly authorizes other tracked changes.
-
-For email-based handoff, accepted `MAX2DAVID` messages should be acknowledged as soon as received by sending or queuing a `DAVID2MAX` response. If the message involves doing a job, David should send progress reports at meaningful checkpoints and whenever blocked, then send a final result report when the job finishes.
+This acknowledgement proves David has moved from "received the instruction" to "trying the task." After the work finishes, David should send a final `DAVID2MAX` report. Mirror durable summaries into `DAVID2MAX.md` only when useful or explicitly requested.
 
 ## Current Owner DB Sync Target
 

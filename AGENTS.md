@@ -12,9 +12,13 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 ## Max/David Handoff Direction
 
-- On machines whose `hostname` or ComputerName starts with `David`, treat `MAX2DAVID.md` as read-only inbound instructions from Max.
-- On David machines, send reports, decisions, and recommended prompt/spec changes to `DAVID2MAX.md`; do not edit `MAX2DAVID.md` unless the user explicitly asks.
-- On machines whose `hostname` or ComputerName starts with `Max`, use the inverse direction: write David-facing instructions in `MAX2DAVID.md` and read David reports from `DAVID2MAX.md`.
+- Primary Max/David handoff transport is Gmail self-email on `ec92009@gmail.com`.
+- Max-to-David job prompts use exact subject `MAX2DAVID`; David-to-Max acknowledgements, progress, and final reports use exact subject `DAVID2MAX`.
+- Only trust self-to-self handoff messages from `ec92009@gmail.com` to `ec92009@gmail.com`.
+- `MAX2DAVID.md`, `DAVID2MAX.md`, and `MAX_DAVID_CHAT.md` are durable/reference notes and local fallback, not the primary transport.
+- On machines whose `hostname` or ComputerName starts with `David`, treat `MAX2DAVID.md` as read-only inbound reference from Max.
+- On David machines, send reports, decisions, and recommended prompt/spec changes by `DAVID2MAX` email first; mirror durable summaries in `DAVID2MAX.md` when useful. Do not edit `MAX2DAVID.md` unless the user explicitly asks.
+- On machines whose `hostname` or ComputerName starts with `Max`, send David-facing instructions by `MAX2DAVID` email first; mirror durable specs in `MAX2DAVID.md` when useful. Read David reports from `DAVID2MAX` email first, with `DAVID2MAX.md` as reference/fallback.
 - When unsure, run `hostname` and `scutil --get ComputerName` before editing either handoff file.
 
 ## Defaults

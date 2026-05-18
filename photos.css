@@ -1514,6 +1514,19 @@ html[data-theme="light"] .photo-art.has-photo::after{
   border:1px solid var(--line);
   background:color-mix(in srgb,var(--surface) 74%,var(--bg));
 }
+.owner-import-matrix-meta{
+  position:sticky;
+  top:0;
+  z-index:2;
+  padding:7px 8px;
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
 .owner-import-matrix{
   width:100%;
   min-width:720px;
@@ -1529,7 +1542,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
 }
 .owner-import-matrix thead th{
   position:sticky;
-  top:0;
+  top:31px;
   z-index:1;
   background:var(--surface);
   color:var(--muted);

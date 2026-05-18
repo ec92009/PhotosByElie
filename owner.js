@@ -84,7 +84,7 @@
   const r2CoverageMissing = document.querySelector("[data-owner-r2-coverage-missing]");
   const r2CoverageNote = document.querySelector("[data-owner-r2-coverage-note]");
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
-  const r2FillGapsButton = document.querySelector("[data-owner-r2-fill-gaps]");
+  const r2FillGapsButtons = [...document.querySelectorAll("[data-owner-r2-fill-gaps]")];
   const r2Card = document.querySelector("[data-owner-r2-card]");
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
@@ -133,6 +133,7 @@
   let wasteDeleteActive = false;
   let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
+  let lastImportCoverageRefreshAt = 0;
   let latestR2ProgressTasks = [];
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
@@ -169,6 +170,7 @@
     ["leonardo", "AI"],
     ["real-estate", "RE"],
   ]);
+  const IMPORT_DASHBOARD_PHASE_KEYS = ["camera", "apple-photo-albums", "leonardo", "real-estate"];
   const IMPORT_MATRIX_STEPS = [
     ["master_uploaded", "Master"],
     ["triplets_created", "Triplets made"],
@@ -1313,20 +1315,43 @@
       : 0
   );
 
+  const r2GapCounts = () => {
+    const photos = Array.isArray(window.photosByElieR2Coverage?.missingImportPhotos)
+      ? window.photosByElieR2Coverage.missingImportPhotos
+      : [];
+    return {
+      photos: photos.length,
+      masters: photos.filter((photo) => photo.steps?.master_uploaded?.status === "pending").length,
+      triplets: photos.filter((photo) => photo.steps?.triplets_uploaded?.status === "pending").length,
+      previews: photos.filter((photo) => photo.steps?.previews_uploaded?.status === "pending").length,
+    };
+  };
+
+  const r2GapStatusText = () => {
+    if (!window.photosByElieR2Coverage) return "Coverage is still loading.";
+    if (r2CoverageOk) return "Imports are up to date: no active catalog media gaps are listed.";
+    const gaps = r2GapCounts();
+    if (gaps.photos) {
+      return `${formatCount(gaps.photos)} incomplete photos: ${formatCount(gaps.masters)} need masters, ${formatCount(gaps.triplets)} need private JPG triplets, ${formatCount(gaps.previews)} need public previews.`;
+    }
+    const missing = coverageRepairGapSummary();
+    return missing ? `Coverage still has gaps: ${missing}.` : "Coverage still has gaps.";
+  };
+
   const syncR2ActionButtons = () => {
     const busy = r2RepairActive || r2GapFillActive;
     if (r2FixButton) {
       r2FixButton.disabled = r2CoverageOk || busy;
       r2FixButton.textContent = busy ? "Background work running" : "Start background work";
     }
-    if (r2FillGapsButton) {
-      const gapCount = r2GapPhotoCount();
-      r2FillGapsButton.disabled = r2CoverageOk || busy || gapCount === 0;
-      r2FillGapsButton.textContent = r2GapFillActive ? "Filling gaps..." : "Fill in gaps";
-      r2FillGapsButton.title = gapCount
+    const gapCount = r2GapPhotoCount();
+    r2FillGapsButtons.forEach((button) => {
+      button.disabled = r2CoverageOk || busy || gapCount === 0;
+      button.textContent = r2GapFillActive ? "Filling gaps..." : "Fill in gaps";
+      button.title = gapCount
         ? `Render and upload missing media for ${formatCount(gapCount)} incomplete photos`
         : "No incomplete upload photos are listed";
-    }
+    });
     if (r2CoverageNote && r2RepairActive) {
       setText(r2CoverageNote, "Background work is running. Banned photos stay banned; this only removes their old R2 objects.");
     }
@@ -1603,9 +1628,15 @@
   };
 
   const cameraImportProgress = (logSummary, task = null) => {
-    const selected = numberFromLog(logSummary?.scan?.match?.[3]);
-    const completed = numberFromLog(logSummary?.imported?.match?.[1]);
-    const startedIndex = numberFromLog(logSummary?.started?.match?.[1]);
+    const rows = Array.isArray(logSummary?.importPhotoRows) ? logSummary.importPhotoRows : [];
+    const finishedRows = rows.filter((row) => row.status === "done" || row.status === "error").length;
+    const runningRow = rows.find((row) => row.status !== "done" && row.status !== "error") || null;
+    const selectedFromScan = numberFromLog(logSummary?.scan?.match?.[3]);
+    const selected = Math.max(selectedFromScan, rows.length);
+    const completed = rows.length ? finishedRows : numberFromLog(logSummary?.imported?.match?.[1]);
+    const startedIndex = rows.length
+      ? completed + (runningRow ? 1 : 0)
+      : numberFromLog(logSummary?.started?.match?.[1]);
     const current = Math.max(completed, startedIndex);
     const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
     const secondsLeft = completed >= 5 && selected > completed && elapsedSeconds > 0
@@ -1615,9 +1646,9 @@
     const percent = selected
       ? Math.max(current ? 1 : 0, Math.min(current >= selected ? 100 : 96, Math.round((current / selected) * 100)))
       : 25;
-    const photo = logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
+    const photo = runningRow?.id || logSummary?.started?.match?.[2] || logSummary?.imported?.match?.[2] || "";
     const remaining = Math.max(0, selected - completed);
-    return { selected, completed, current, startedIndex, remaining, percent, countdown, photo };
+    return { selected, selectedFromScan, found: rows.length, completed, current, startedIndex, remaining, percent, countdown, photo };
   };
 
   const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
@@ -1638,6 +1669,8 @@
     };
     add("Source group", details.sourceGroup);
     add("Current file", details.currentFile);
+    add("Current photo", details.currentPhoto);
+    add("Progress bar counts", details.progressCounts);
     add("Coverage gaps", details.coverageGaps);
     add("Progress summary", details.progressSummary);
     add("Finished this run", details.finishedSummary);
@@ -1690,12 +1723,27 @@
       return {
         percent,
         detail: `RE upload: ${client} ${formatCount(completed)} / ${formatCount(total)} R2 files uploaded${failed ? `, ${formatCount(failed)} failed` : ""}${countdown}.`,
+        completed,
+        current: completed,
+        total,
+        countLabel: "R2 files uploaded",
+        client,
+        sourceGroup: client,
+        failed,
+        timeLeft: secondsLeft ? formatDuration(secondsLeft) : "",
       };
     }
     if (uploadStartPayload) {
       return {
         percent,
         detail: `RE upload: ${client} 0 / ${formatCount(total)} R2 files queued${countdown}.`,
+        completed: 0,
+        current: 0,
+        total,
+        countLabel: "R2 files queued",
+        client,
+        sourceGroup: client,
+        timeLeft: secondsLeft ? formatDuration(secondsLeft) : "",
       };
     }
     if (importPayload) {
@@ -1705,9 +1753,56 @@
       return {
         percent,
         detail: `RE import: ${client} ${formatCount(completed)} / ${formatCount(total)} media checked${current ? `, ${current}` : ""}${countdown}.`,
+        completed,
+        current: completed,
+        total,
+        countLabel: "property media checked",
+        client,
+        sourceGroup: [client, album].filter(Boolean).join(" / "),
+        currentFile: file,
+        timeLeft: secondsLeft ? formatDuration(secondsLeft) : "",
       };
     }
-    return { percent: 18, detail: "RE sync running" };
+    return {
+      percent: 18,
+      detail: "RE sync running",
+      completed,
+      current: completed,
+      total,
+      countLabel: "property media checked",
+      client,
+      sourceGroup: client,
+    };
+  };
+
+  const sourceLaneHasLogProgress = (phaseKey, logSummary = null) => (
+    phaseKey === "real-estate"
+      ? Boolean(logSummary?.realEstateImportPayload || logSummary?.realEstateUploadStartPayload || logSummary?.realEstateUploadPayload)
+      : Boolean(logSummary?.scan || logSummary?.started || logSummary?.imported)
+  );
+
+  const sourceLaneProgress = (phaseKey, logSummary = null, task = null) => (
+    phaseKey === "real-estate"
+      ? realEstateImportProgress(logSummary, task)
+      : cameraImportProgress(logSummary, task)
+  );
+
+  const sourceLaneProgressDetail = (phaseKey, progress) => (
+    phaseKey === "real-estate"
+      ? progress.detail
+      : cameraImportProgressDetail(progress, phaseKey)
+  );
+
+  const sourceLaneProgressCountText = (phaseKey, progress = {}) => {
+    const sourceLabel = importSourceLabel(phaseKey);
+    if (phaseKey === "real-estate") {
+      if (!progress.total) return `Waiting for ${sourceLabel} media totals.`;
+      const current = Math.min(Number(progress.current || progress.completed || 0), Number(progress.total || 0));
+      return `${progress.countLabel || "Items"}: ${formatCount(current)} / ${formatCount(progress.total)}.`;
+    }
+    if (!progress.selected) return `Scanning ${sourceLabel} source folders until selected photos are found.`;
+    const current = Math.min(Math.max(Number(progress.current || 0), Number(progress.completed || 0)), Number(progress.selected || 0));
+    return `Selected ${sourceLabel} source photos found so far: ${formatCount(current)} / ${formatCount(progress.selected)}; ${formatCount(progress.completed)} finished.`;
   };
 
   const gapFillProgress = (logSummary, task = null) => {
@@ -1756,15 +1851,12 @@
       }
       return deleteObjectProgress(logSummary);
     }
-    if (PHOTO_IMPORT_PHASES.has(phase.key) && (logSummary?.scan || logSummary?.started || logSummary?.imported)) {
-      const progress = cameraImportProgress(logSummary, task);
+    if (PHOTO_IMPORT_PHASES.has(phase.key) && sourceLaneHasLogProgress(phase.key, logSummary)) {
+      const progress = sourceLaneProgress(phase.key, logSummary, task);
       return {
         percent: progress.percent,
-        detail: cameraImportProgressDetail(progress, phase.key),
+        detail: sourceLaneProgressDetail(phase.key, progress),
       };
-    }
-    if (phase.key === "real-estate" && (logSummary?.realEstateImportPayload || logSummary?.realEstateUploadPayload)) {
-      return realEstateImportProgress(logSummary, task);
     }
     if (phase.key === "private" && logSummary?.upload) {
       return privateBackfillProgress(logSummary);
@@ -1794,6 +1886,26 @@
     return total > 0 && Number(step.completed || 0) >= total;
   };
 
+  const importMatrixStepSettled = (step = {}) => (
+    step.status === "skipped" || importMatrixStepComplete(step)
+  );
+
+  const importMatrixRowComplete = (photo = {}) => {
+    if (photo.status === "error") return false;
+    if (photo.status === "done") return true;
+    return IMPORT_MATRIX_STEPS.every(([stepKey]) => importMatrixStepSettled(photo.steps?.[stepKey] || {}));
+  };
+
+  const importMatrixVisibleRows = (photos = []) => (
+    photos
+      .filter((photo) => !importMatrixRowComplete(photo))
+      .sort((left, right) => {
+        const leftRunning = left.status !== "error" ? 0 : 1;
+        const rightRunning = right.status !== "error" ? 0 : 1;
+        return leftRunning - rightRunning || Number(left.index || 0) - Number(right.index || 0);
+      })
+  );
+
   const importMatrixCellHtml = (photo, stepKey, stepLabel) => {
     const step = photo.steps?.[stepKey] || {};
     const skipped = step.status === "skipped";
@@ -1812,9 +1924,19 @@
 
   const importMatrixHtml = (photos = []) => {
     if (!photos.length) return "";
-    const sorted = [...photos].sort((left, right) => Number(left.index || 0) - Number(right.index || 0));
+    const visibleRows = importMatrixVisibleRows(photos);
+    if (!visibleRows.length) return "";
+    const hiddenComplete = photos.length - visibleRows.length;
+    const activeCount = visibleRows.filter((photo) => photo.status !== "error").length;
+    const errorCount = visibleRows.filter((photo) => photo.status === "error").length;
+    const meta = [
+      activeCount ? `${formatCount(activeCount)} active` : "",
+      errorCount ? `${formatCount(errorCount)} needs attention` : "",
+      hiddenComplete ? `${formatCount(hiddenComplete)} finished hidden` : "",
+    ].filter(Boolean).join(" · ");
     return `
       <div class="owner-import-matrix-wrap" aria-label="Per-photo import progress">
+        ${meta ? `<div class="owner-import-matrix-meta">${escapeHtml(meta)}</div>` : ""}
         <table class="owner-import-matrix">
           <thead>
             <tr>
@@ -1823,7 +1945,7 @@
             </tr>
           </thead>
           <tbody>
-            ${sorted.map((photo) => `
+            ${visibleRows.map((photo) => `
               <tr class="${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
                 <th scope="row">
                   <strong>${escapeHtml(photo.id)}</strong>
@@ -1861,11 +1983,13 @@
     return payload;
   };
 
-  const phaseListForTask = (task) => (
-    task?.operation === "gap-fill"
-      ? SWEEP_PHASES.filter((phase) => phase.key === "gap-fill")
-      : SWEEP_PHASES.filter((phase) => phase.key !== "gap-fill")
-  );
+  const phaseListForTask = (task) => {
+    if (task?.operation === "gap-fill") return SWEEP_PHASES.filter((phase) => phase.key === "gap-fill");
+    if (task?.operation === "imports-idle") {
+      return SWEEP_PHASES.filter((phase) => IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key));
+    }
+    return SWEEP_PHASES.filter((phase) => phase.key !== "gap-fill");
+  };
 
   const phaseLabelForKey = (phaseKey, task = null) => (
     phaseListForTask(task).find((phase) => phase.key === phaseKey)?.label
@@ -1875,7 +1999,7 @@
 
   const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map(), matrixRowsByPhase = new Map()) => {
     if (!r2Phases) return;
-    if (!task || !["repair", "gap-fill"].includes(task.operation)) {
+    if (!task || !["repair", "gap-fill", "imports-idle"].includes(task.operation)) {
       r2PhaseRenderSnapshot = null;
       setHtml(r2Phases, "");
       return;
@@ -1893,7 +2017,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Source group", "Owner DB trusted", "Progress summary", "Upload progress", "Upload matrix", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Progress bar counts", "Progress summary", "Upload progress", "Upload matrix", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, phaseList.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -1934,7 +2058,7 @@
         <div class="owner-sweep-phase is-${state}${canExpand ? " can-expand" : ""}${showPhaseDetails ? " is-expanded" : ""}"${toggleAttrs}>
           <div class="owner-sweep-phase-copy">
             <strong>${escapeHtml(phase.label)}</strong>
-            <span>${escapeHtml(phaseStatusLabel(state))}</span>
+            <span>${escapeHtml(task.operation === "imports-idle" && state === "pending" ? "Idle" : phaseStatusLabel(state))}</span>
             ${skipButton}
           </div>
           <div class="owner-sweep-phase-progress">
@@ -1991,11 +2115,15 @@
     let lastPhotoId = "";
     if (latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
     if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
-      matrixRowsByPhase.set(activePhaseKey, logSummary.importPhotoRows);
+      const visibleMatrixRows = importMatrixVisibleRows(logSummary.importPhotoRows);
+      const hiddenCompleteRows = logSummary.importPhotoRows.length - visibleMatrixRows.length;
+      if (visibleMatrixRows.length) matrixRowsByPhase.set(activePhaseKey, logSummary.importPhotoRows);
       addPhaseRow(
         activePhaseKey,
         "Upload matrix",
-        `${formatCount(logSummary.importPhotoRows.length)} photos with per-step upload state`,
+        visibleMatrixRows.length
+          ? `${formatCount(visibleMatrixRows.length)} active/incomplete rows shown${hiddenCompleteRows ? `; ${formatCount(hiddenCompleteRows)} finished hidden` : ""}`
+          : `${formatCount(hiddenCompleteRows)} finished photos hidden; no active rows`,
       );
     }
     if (logMatchesActivePhase && activePhaseKey === "gap-fill") {
@@ -2047,6 +2175,7 @@
       const uploadStartPayload = logSummary?.realEstateUploadStartPayload || {};
       const uploadPayload = logSummary?.realEstateUploadPayload || {};
       const donePayload = logSummary?.realEstateDonePayload || {};
+      const progress = sourceLaneProgress(activePhaseKey, logSummary, latest);
       const client = String(uploadPayload.client || uploadStartPayload.client || importPayload.client || clientPayload.client || "");
       const sourceGroup = [client, importPayload.album].filter(Boolean).join(" / ");
       const importTotal = Number(importPayload.total || clientPayload.media || 0);
@@ -2062,8 +2191,9 @@
         donePayload.clients ? `${formatCount(Number(donePayload.clients || 0))} clients synced.` : "",
       ];
       mergeSourceLaneDetails({
-        sourceGroup,
-        currentFile: importPayload.file,
+        sourceGroup: progress.sourceGroup || sourceGroup,
+        currentFile: progress.currentFile || importPayload.file,
+        progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
         progressSummary: importTotal
           ? `${formatCount(importCompleted)} / ${formatCount(importTotal)} property media checked`
           : "",
@@ -2073,24 +2203,37 @@
         uploadProgress: uploadTotal
           ? `${formatCount(uploadCompleted)} / ${formatCount(uploadTotal)} R2 files uploaded${failedUploads ? `, ${formatCount(failedUploads)} failed` : ""}`
           : "",
+        timeLeft: progress.timeLeft,
         notes,
       });
     }
     if (logMatchesActivePhase && logSummary?.started && !logSummary?.upload) {
-      mergeSourceLaneDetails({
-        sourceGroup: logSummary.started.match[3],
-        currentFile: logSummary.started.match[4],
-      });
+      const progress = PHOTO_IMPORT_PHASES.has(activePhaseKey)
+        ? sourceLaneProgress(activePhaseKey, logSummary, latest)
+        : null;
+      if (!progress?.selected || progress.completed < progress.selected) {
+        mergeSourceLaneDetails({
+          sourceGroup: logSummary.started.match[3],
+          currentFile: logSummary.started.match[4],
+        });
+      }
     }
     if (logMatchesActivePhase && (logSummary?.scan || logSummary?.started || logSummary?.imported) && !logSummary?.upload) {
-      const progress = cameraImportProgress(logSummary, latest);
+      const progress = sourceLaneProgress(activePhaseKey, logSummary, latest);
       if (progress.selected) {
         const gapSummary = coverageRepairGapSummary();
         mergeSourceLaneDetails({
           coverageGaps: gapSummary,
+          currentPhoto: progress.completed < progress.selected ? progress.photo : "",
+          progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
           progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} selected source photos checked this run`,
           finishedSummary: `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left`,
           notes: "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.",
+        });
+      } else {
+        mergeSourceLaneDetails({
+          currentPhoto: progress.completed < progress.selected ? progress.photo : "",
+          progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
         });
       }
       if (active && progress.selected > progress.completed) mergeSourceLaneDetails({ timeLeft: progress.countdown });
@@ -2186,6 +2329,31 @@
     else r2Counts.insertAdjacentHTML("afterend", html);
   };
 
+  const renderImportDashboardIdle = () => {
+    if (!r2Card || !r2Summary || !r2Counts) return;
+    if (r2Card.hidden) r2Card.hidden = false;
+    setText(r2Summary, r2CoverageOk
+      ? "No import job is running. Everything currently tracked is up to date."
+      : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
+    );
+    const gaps = r2GapCounts();
+    const rows = [
+      ["State", "Idle"],
+      ["Coverage", window.photosByElieR2Coverage ? (r2CoverageOk ? "Up to date" : "Needs work") : "Loading"],
+      ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
+      ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
+    ];
+    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work"])));
+    renderSweepPhases({
+      id: "imports-idle",
+      operation: "imports-idle",
+      state: "idle",
+      currentPhaseKey: "camera",
+      failed: 0,
+    });
+    renderR2PhotoPreview("");
+  };
+
   const loadR2RepairLog = async (task) => {
     if (!task?.id || !["repair", "gap-fill"].includes(task.operation)) return;
     const logUrl = logUrlForTask(task);
@@ -2199,8 +2367,19 @@
       if (r2RepairLogToken !== token) return;
       r2RepairLogTaskId = task.id;
       r2RepairLogSummary = summarizeR2RepairLog(text);
-      await loadR2Coverage();
       renderR2RepairProgress(task, r2RepairLogSummary);
+      const active = task.state === "queued" || task.state === "running";
+      const shouldRefreshCoverage = !active
+        || !window.photosByElieR2Coverage
+        || Date.now() - lastImportCoverageRefreshAt > 30000;
+      if (shouldRefreshCoverage) {
+        lastImportCoverageRefreshAt = Date.now();
+        withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh")
+          .then(() => {
+            if (r2RepairLogToken === token) renderR2RepairProgress(task, r2RepairLogSummary);
+          })
+          .catch(() => {});
+      }
     } catch {
       renderR2RepairProgress(task);
     }
@@ -2304,20 +2483,13 @@
     if (!r2Card || !r2Summary || !r2Counts) return;
     r2RepairActive = tasks.some((task) => task?.operation === "repair" && (task.state === "queued" || task.state === "running"));
     r2GapFillActive = tasks.some((task) => task?.operation === "gap-fill" && (task.state === "queued" || task.state === "running"));
-    const latest = tasks.find((task) => task?.operation === "repair" || task?.operation === "gap-fill") || tasks[0];
+    const latest = tasks.find((task) => task?.operation === "repair" || task?.operation === "gap-fill");
     if (!latest) {
-      if (r2CoverageOk) {
-        if (!r2Card.hidden) r2Card.hidden = true;
-      } else {
-        if (r2Card.hidden) r2Card.hidden = false;
-        setText(r2Summary, "No R2 background work is running. Use Fill in gaps for the listed upload matrix, or Start background work for the full sweep.");
-      }
-      setHtml(r2Counts, "");
-      renderSweepPhases(null);
       r2RepairActive = false;
       r2GapFillActive = false;
       r2RepairLogTaskId = "";
       r2RepairLogSummary = null;
+      renderImportDashboardIdle();
       syncR2ActionButtons();
       return;
     }
@@ -2367,7 +2539,10 @@
       }
       r2CoverageNote.textContent = "";
       if (r2FixButton) r2FixButton.disabled = true;
-      if (r2FillGapsButton) r2FillGapsButton.disabled = true;
+      r2FillGapsButtons.forEach((button) => {
+        button.disabled = true;
+      });
+      renderImportDashboardIdle();
       return;
     }
     const activeCatalogPhotos = Number(coverage.activeCatalogPhotos || coverage.catalogPhotos || 0);
@@ -2440,7 +2615,10 @@
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
     if (latestR2ProgressTasks.length) renderWasteBasketProgress(latestR2ProgressTasks);
     if (r2FixButton) r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
-    if (r2FixButton || r2FillGapsButton) {
+    if (!latestR2ProgressTasks.some((task) => task?.operation === "repair" || task?.operation === "gap-fill")) {
+      renderImportDashboardIdle();
+    }
+    if (r2FixButton || r2FillGapsButtons.length) {
       syncR2ActionButtons();
     }
   };
@@ -2709,7 +2887,7 @@
     }
   });
 
-  r2FillGapsButton?.addEventListener("click", async () => {
+  const startR2GapFill = async (triggerButton = null) => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to fill R2 upload gaps.");
     if (ownerAuth?.enabled && !authorized) return;
     const gapCount = r2GapPhotoCount();
@@ -2719,7 +2897,7 @@
     }
     const ok = window.confirm(`Fill upload gaps for ${formatCount(gapCount)} incomplete photos now? This uploads one photo at a time and updates the owner databases after each successful R2 object.`);
     if (!ok) return;
-    r2FillGapsButton.disabled = true;
+    if (triggerButton) triggerButton.disabled = true;
     setStatus("Starting R2 upload gap fill...");
     try {
       const response = await fetch("/__photosbyelie/r2-fill-gaps", {
@@ -2741,6 +2919,10 @@
       setStatus(error?.message || "Could not start R2 upload gap fill.");
       loadR2Coverage();
     }
+  };
+
+  r2FillGapsButtons.forEach((button) => {
+    button.addEventListener("click", () => startR2GapFill(button));
   });
 
   r2Phases?.addEventListener("click", async (event) => {

@@ -237,7 +237,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd())})
+        self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd(), resolve_sources=False)})
 
     def _handle_r2_fix(self) -> None:
         if not self._is_loopback_request():
@@ -1934,11 +1934,17 @@ def _resolve_source_path(repo_root: Path, source_path: str) -> str:
     return ""
 
 
-def _private_delivery_missing_details(repo_root: Path, active_records: list[tuple[str, dict]], limit: int = 50) -> list[dict]:
+def _private_delivery_missing_details(
+    repo_root: Path,
+    active_records: list[tuple[str, dict]],
+    limit: int = 50,
+    resolve_sources: bool = True,
+) -> list[dict]:
     missing: list[dict] = []
     for photo_id, record in active_records:
         source_path = str(record.get("sourcePath") or "")
-        source_file = _resolve_source_path(repo_root, source_path)
+        source_file = _resolve_source_path(repo_root, source_path) if resolve_sources else ""
+        source_repair_state = "source_missing" if resolve_sources else "source_not_checked"
         master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
         if master.get("present") is not True:
             missing.append({
@@ -1949,7 +1955,7 @@ def _private_delivery_missing_details(repo_root: Path, active_records: list[tupl
                 "objectKey": master.get("key") or master.get("expectedKey") or "",
                 "sourcePath": source_path,
                 "sourceFile": source_file,
-                "repair": "upload_source_master" if source_file else "source_missing",
+                "repair": "upload_source_master" if source_file else source_repair_state,
             })
         renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
         if renders:
@@ -1965,7 +1971,7 @@ def _private_delivery_missing_details(repo_root: Path, active_records: list[tupl
                     "objectKey": render.get("key") or render.get("expectedKey") or "",
                     "sourcePath": source_path,
                     "sourceFile": source_file,
-                    "repair": "render_from_source" if source_file else "source_missing",
+                    "repair": "render_from_source" if source_file else source_repair_state,
                 })
                 if len(missing) >= limit:
                     return missing
@@ -1974,7 +1980,12 @@ def _private_delivery_missing_details(repo_root: Path, active_records: list[tupl
     return missing
 
 
-def _missing_import_photo_details(repo_root: Path, active_records: list[tuple[str, dict]], limit: int = 80) -> list[dict]:
+def _missing_import_photo_details(
+    repo_root: Path,
+    active_records: list[tuple[str, dict]],
+    limit: int = 80,
+    resolve_sources: bool = True,
+) -> list[dict]:
     missing: list[dict] = []
     for photo_id, record in active_records:
         master = record.get("privateMaster") if isinstance(record.get("privateMaster"), dict) else {}
@@ -1989,7 +2000,7 @@ def _missing_import_photo_details(repo_root: Path, active_records: list[tuple[st
         if not master_missing and not render_missing and not previews_missing:
             continue
         source_path = str(record.get("sourcePath") or "")
-        source_file = _resolve_source_path(repo_root, source_path)
+        source_file = _resolve_source_path(repo_root, source_path) if resolve_sources else ""
         media_type = str(record.get("mediaType") or "")
         missing.append({
             "photoId": photo_id,
@@ -2023,7 +2034,7 @@ def _missing_import_photo_details(repo_root: Path, active_records: list[tuple[st
     return missing
 
 
-def _r2_coverage_summary(repo_root: Path) -> dict:
+def _r2_coverage_summary(repo_root: Path, resolve_sources: bool = True) -> dict:
     private_manifest = _read_json_file(repo_root / "assets/private-delivery-manifest.json", {})
     sidecar = _read_json_file(repo_root / "assets/media-sidecar.json", {})
     hidden_blacklist = _read_json_file(repo_root / "assets/hidden/hidden-blacklist.json", {})
@@ -2097,8 +2108,8 @@ def _r2_coverage_summary(repo_root: Path) -> dict:
         _coverage_row("Preview high 1800px", min(public_present, detail_expected), detail_expected, public_bucket, "expo/*_1800.jpg", blocked_excluded, blocked_present["public"]),
     ]
     missing_rows = [row for row in rows if not row["ok"]]
-    missing_private_delivery = _private_delivery_missing_details(repo_root, active_records)
-    missing_import_photos = _missing_import_photo_details(repo_root, active_records)
+    missing_private_delivery = _private_delivery_missing_details(repo_root, active_records, resolve_sources=resolve_sources)
+    missing_import_photos = _missing_import_photo_details(repo_root, active_records, resolve_sources=resolve_sources)
     if missing_rows:
         recommendation = "Missing coverage. Run the lock-guarded cloud media sweep."
     else:

@@ -279,7 +279,7 @@ def main() -> int:
     if args.limit:
         items = items[:args.limit]
     emit_import_event("PLAN", total=len(items))
-    print("SWEEP_PHASE gap-fill Fill in coverage gaps", flush=True)
+    print("SWEEP_PHASE gap-fill Fill in gaps", flush=True)
     manifest_path = args.manifest if args.manifest.is_absolute() else repo_root / args.manifest
     manifest = read_json(manifest_path, {})
     completed = 0

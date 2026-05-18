@@ -182,7 +182,6 @@
   const IMPORT_MATRIX_RECENT_DONE_LIMIT = 1;
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
-    ["gap-fill", "Fill in coverage gaps"],
     ["discard-start", "Double-check banned R2 cleanup"],
     ["camera", "Import Camera sources"],
     ["apple-photo-albums", "Import Apple Photos"],
@@ -191,7 +190,8 @@
     ["catalog", "Export catalog"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
-    ["private", "Backfill Lost Triplets"],
+    ["gap-fill", "Fill in gaps"],
+    ["private", "Fill in gaps", { optional: true }],
     ["discard-final", "Final banned R2 cleanup double-check"],
     ["storage", "Refresh storage estimate"],
     ["test", "Run tests"],
@@ -205,6 +205,7 @@
     "apple-photo-albums",
     "leonardo",
     "real-estate",
+    "gap-fill",
     "private",
     "discard-final",
     "test",
@@ -2145,7 +2146,7 @@
     if (task?.operation === "imports-idle") {
       return SWEEP_PHASES.filter((phase) => IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key));
     }
-    return SWEEP_PHASES.filter((phase) => phase.key !== "gap-fill");
+    return SWEEP_PHASES.filter((phase) => phase.key !== "private" || task?.currentPhaseKey === "private");
   };
 
   const phaseLabelForKey = (phaseKey, task = null) => (
@@ -2295,13 +2296,13 @@
       const progress = gapFillProgress(logSummary, latest);
       addPhaseRow("gap-fill", "Progress summary", `${formatCount(progress.finishedRows)} / ${formatCount(progress.total)} incomplete photos finished`);
       if (progress.failed) addPhaseRow("gap-fill", "Needs attention", `${formatCount(progress.failed)} photos failed`);
-      addPhaseRow("gap-fill", "What happens", "For each incomplete photo: upload the master, create private JPG triplets, upload triplets, create previews, then upload previews before moving to the next photo.");
+      addPhaseRow("gap-fill", "What happens", "For each already-cataloged incomplete photo: restore the private master if needed, recreate private JPG triplets if needed, recreate public previews if needed, and upload only the missing files.");
     }
     if (logMatchesActivePhase && activePhaseKey === "private") {
       const progress = privateBackfillProgress(logSummary);
       addPhaseRow("private", "Progress bar counts", `${progress.detail} catalog photos with complete private delivery JPG triplets.`);
       addPhaseRow("private", "What happens", "Builds missing private delivery JPGs in the 6MP, 3MP, and 1MP sizes, uploads them to private R2, and refreshes the private delivery manifest for checkout ZIPs.");
-      addPhaseRow("private", "Notes", "This is not importing new photos or public previews. It runs after the catalog is written so existing still photos have private customer-download JPGs available.");
+      addPhaseRow("private", "Notes", "This is the legacy triplet-only backfill that was already running. Future background sweeps use Fill in gaps for lost masters, triplets, and previews.");
       if (logSummary?.upload) addPhaseRow("private", "Last upload", `${logSummary.upload.match[2]} uploaded ${formatCount(Number(logSummary.upload.match[3] || 0))} private files`);
     }
     if (logMatchesActivePhase && (logSummary?.deleteStart || logSummary?.deleteProgress || logSummary?.deleted)) {

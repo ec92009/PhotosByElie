@@ -10,6 +10,7 @@ import ipaddress
 import json
 import mimetypes
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -247,17 +248,22 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-            skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases") or payload.get("phaseKey"))
+            requested_phase = str(payload.get("phaseKey") or "").strip()
+            skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases") or requested_phase)
             _write_cloud_media_sweep_skip_phases(Path.cwd(), skip_phases)
+            current_phase = _read_cloud_media_sweep_current_phase(Path.cwd())
+            if requested_phase and requested_phase == current_phase:
+                _terminate_process_tree(_read_cloud_media_sweep_current_child_pid(Path.cwd()))
             with R2_BACKGROUND_LOCK:
                 for task in R2_BACKGROUND_TASKS.values():
                     if task.get("kind") == "cloud-media-sweep" and task.get("state") in {"queued", "running"}:
                         task["skipPhases"] = skip_phases
+                        task["currentPhaseKey"] = current_phase
                         task["updated_at"] = datetime.now(timezone.utc).isoformat()
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "skipPhases": skip_phases})
+        self._send_json(HTTPStatus.OK, {"ok": True, "skipPhases": skip_phases, "currentPhaseKey": current_phase})
 
     def _handle_real_estate_owner(self) -> None:
         if not self._is_loopback_request():
@@ -1606,6 +1612,14 @@ def _cloud_media_sweep_skip_path(repo_root: Path) -> Path:
     return _cloud_media_sweep_lock_dir(repo_root) / "skip-phases"
 
 
+def _cloud_media_sweep_current_phase_path(repo_root: Path) -> Path:
+    return _cloud_media_sweep_lock_dir(repo_root) / "current-phase"
+
+
+def _cloud_media_sweep_current_child_path(repo_root: Path) -> Path:
+    return _cloud_media_sweep_lock_dir(repo_root) / "current-child-pid"
+
+
 def _normalize_r2_sweep_skip_phases(value: object) -> list[str]:
     if value is None:
         return []
@@ -1649,6 +1663,48 @@ def _write_cloud_media_sweep_skip_phases(repo_root: Path, skip_phases: list[str]
     path.write_text("".join(f"{phase}\n" for phase in skip_phases), encoding="utf-8")
 
 
+def _read_cloud_media_sweep_current_phase(repo_root: Path) -> str:
+    try:
+        phase_key = _cloud_media_sweep_current_phase_path(repo_root).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    return phase_key if phase_key in R2_SWEEP_SKIPPABLE_PHASES else ""
+
+
+def _read_cloud_media_sweep_current_child_pid(repo_root: Path) -> int | None:
+    try:
+        return int(_cloud_media_sweep_current_child_path(repo_root).read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def _child_pids(pid: int) -> list[int]:
+    result = subprocess.run(["pgrep", "-P", str(pid)], text=True, capture_output=True, check=False)
+    children: list[int] = []
+    for line in result.stdout.splitlines():
+        try:
+            children.append(int(line.strip()))
+        except ValueError:
+            continue
+    return children
+
+
+def _terminate_process_tree(pid: int | None) -> None:
+    if not pid:
+        return
+    for child in _child_pids(pid):
+        _terminate_process_tree(child)
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return
+    time.sleep(0.5)
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
 def _latest_cloud_media_sweep_log(repo_root: Path) -> Path | None:
     log_root = repo_root / ".review-logs"
     try:
@@ -1688,6 +1744,8 @@ def _external_cloud_media_sweep_task(repo_root: Path) -> dict | None:
         "bytes_done": 0,
         "external_pid": pid,
         "skipPhases": _read_cloud_media_sweep_skip_phases(repo_root),
+        "currentPhaseKey": _read_cloud_media_sweep_current_phase(repo_root),
+        "currentChildPid": _read_cloud_media_sweep_current_child_pid(repo_root),
         "items": [{"command": "existing lock-guarded cloud media sweep", "log": str(log_path) if log_path else ""}],
         "errors": [],
     }

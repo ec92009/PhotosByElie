@@ -56,7 +56,32 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   mkdir "$LOCK_DIR"
 fi
 
+current_phase_file() {
+  echo "$LOCK_DIR/current-phase"
+}
+
+current_child_file() {
+  echo "$LOCK_DIR/current-child-pid"
+}
+
+terminate_phase_pid() {
+  local pid="$1"
+  [[ -z "$pid" ]] && return
+  local child
+  local children
+  children=("${(@f)$(pgrep -P "$pid" 2>/dev/null || true)}")
+  for child in "${children[@]}"; do
+    [[ -n "$child" ]] && terminate_phase_pid "$child"
+  done
+  kill -TERM "$pid" 2>/dev/null || true
+  sleep 1
+  kill -KILL "$pid" 2>/dev/null || true
+}
+
 cleanup() {
+  if [[ -f "$(current_child_file)" ]]; then
+    terminate_phase_pid "$(cat "$(current_child_file)" 2>/dev/null || true)"
+  fi
   rm -rf "$LOCK_DIR"
 }
 trap cleanup EXIT INT TERM
@@ -102,6 +127,51 @@ begin_phase() {
   return 0
 }
 
+clear_current_phase() {
+  rm -f "$(current_phase_file)" "$(current_child_file)"
+}
+
+run_skippable_phase() {
+  local key="$1"
+  shift
+  local label="$1"
+  shift
+  if ! begin_phase "$key" "$label"; then
+    return 0
+  fi
+  print -r -- "$key" > "$(current_phase_file)"
+  "$@" &
+  local child_pid=$!
+  print -r -- "$child_pid" > "$(current_child_file)"
+  local status=0
+  local skipped=0
+  while kill -0 "$child_pid" 2>/dev/null; do
+    if should_skip_phase "$key"; then
+      echo "SWEEP_SKIP_REQUESTED $key $label"
+      terminate_phase_pid "$child_pid"
+      skipped=1
+      break
+    fi
+    sleep 1
+  done
+  set +e
+  wait "$child_pid"
+  status=$?
+  set -e
+  if [[ "$skipped" == "0" && "$status" != "0" ]] && should_skip_phase "$key"; then
+    skipped=1
+  fi
+  clear_current_phase
+  if [[ "$skipped" == "1" ]]; then
+    echo "SWEEP_SKIP $key $label"
+    return 0
+  fi
+  if [[ "$status" != "0" ]]; then
+    return "$status"
+  fi
+  done_phase "$key"
+}
+
 echo "$$" > "$LOCK_DIR/pid"
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$LOCK_DIR/started_at"
 write_initial_skips
@@ -118,59 +188,49 @@ if [[ ! -d node_modules ]]; then
 fi
 done_phase prepare
 
-if begin_phase discard-start "Delete R2 objects for banned photos"; then
+run_skippable_phase discard-start "Delete R2 objects for banned photos" \
   node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
-  done_phase discard-start
-fi
 
 phase import-cache "Prepare import cache"
 rm -rf "$IMPORT_CACHE_ROOT"
 mkdir -p "$IMPORT_CACHE_ROOT"
 done_phase import-cache
 
-if begin_phase camera "Import Camera sources"; then
+run_skippable_phase camera "Import Camera sources" \
   python3 scripts/build_lightroom_thumbnails.py \
-    --source-root /Volumes/Saturn/Pictures/LR/Camera \
-    --output-root "$IMPORT_CACHE_ROOT" \
-    --r2-upload both \
-    --r2-private-renders \
-    --hidden-blacklist assets/hidden/hidden-blacklist.json \
-    --discarded-tombstone assets/discarded/discarded-photo-ids.json
-  done_phase camera
-fi
+  --source-root /Volumes/Saturn/Pictures/LR/Camera \
+  --output-root "$IMPORT_CACHE_ROOT" \
+  --r2-upload both \
+  --r2-private-renders \
+  --hidden-blacklist assets/hidden/hidden-blacklist.json \
+  --discarded-tombstone assets/discarded/discarded-photo-ids.json
 
 APPLE_PHOTO_ALBUMS_ROOT="/Volumes/Saturn/Pictures/LR/Apple Photo Albums"
 if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
-  if begin_phase apple-photo-albums "Import Apple Photos album sources"; then
+  run_skippable_phase apple-photo-albums "Import Apple Photos album sources" \
     python3 scripts/build_lightroom_thumbnails.py \
-      --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
-      --output-root "$IMPORT_CACHE_ROOT" \
-      --select all \
-      --r2-upload both \
-      --r2-private-renders \
-      --hidden-blacklist assets/hidden/hidden-blacklist.json \
-      --discarded-tombstone assets/discarded/discarded-photo-ids.json
-    done_phase apple-photo-albums
-  fi
-fi
-
-if begin_phase leonardo "Import Leonardo sources"; then
-  python3 scripts/build_lightroom_thumbnails.py \
-    --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
+    --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
     --output-root "$IMPORT_CACHE_ROOT" \
     --select all \
-    --force-country ai \
     --r2-upload both \
     --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
-  done_phase leonardo
 fi
 
-if begin_phase real-estate "Import Real Estate sources"; then
+run_skippable_phase leonardo "Import Leonardo sources" \
+  python3 scripts/build_lightroom_thumbnails.py \
+  --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
+  --output-root "$IMPORT_CACHE_ROOT" \
+  --select all \
+  --force-country ai \
+  --r2-upload both \
+  --r2-private-renders \
+  --hidden-blacklist assets/hidden/hidden-blacklist.json \
+  --discarded-tombstone assets/discarded/discarded-photo-ids.json
+
+run_skippable_phase real-estate "Import Real Estate sources" \
   python3 scripts/sync_real_estate_clients.py --publish --upload --scope both
-  done_phase real-estate
-fi
 
 phase catalog "Export catalog"
 python3 scripts/export_photos_data.py \
@@ -186,30 +246,20 @@ phase sidecar "Write media sidecar"
 node scripts/write_media_sidecar.mjs
 done_phase sidecar
 
-if begin_phase private "Backfill private JPGs"; then
-  SYNC_ARGS=(--commit-every 100 --request-timeout-ms 45000 --retries 1)
-  if [[ "$PUSH" == "1" ]]; then
-    SYNC_ARGS+=(--push)
-  fi
+SYNC_ARGS=(--commit-every 100 --request-timeout-ms 45000 --retries 1)
+if [[ "$PUSH" == "1" ]]; then
+  SYNC_ARGS+=(--push)
+fi
+run_skippable_phase private "Backfill private JPGs" \
   node scripts/sync_private_deliverables.mjs "${SYNC_ARGS[@]}"
-  done_phase private
-fi
 
-if begin_phase discard-final "Final banned R2 cleanup"; then
+run_skippable_phase discard-final "Final banned R2 cleanup" \
   node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
-  done_phase discard-final
-fi
 phase storage "Refresh storage estimate"
 node scripts/write_storage_estimate.mjs
 done_phase storage
-if begin_phase test "Run tests"; then
-  npm test
-  done_phase test
-fi
-if begin_phase validate "Validate publish"; then
-  npm run validate
-  done_phase validate
-fi
+run_skippable_phase test "Run tests" npm test
+run_skippable_phase validate "Validate publish" npm run validate
 
 phase commit "Commit and push"
 git add \

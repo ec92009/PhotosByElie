@@ -82,6 +82,33 @@ fs.writeFileSync(output, compressed);
     subprocess.run(["node", "-e", script, str(path)], check=True)
 
 
+def load_existing_video_durations(path: Path) -> dict[str, float]:
+    if not path.exists():
+        return {}
+    try:
+        conn = sqlite3.connect(path)
+        rows = conn.execute(
+            """
+            SELECT media_items.media_id, media_assets.duration_seconds
+            FROM media_items
+            JOIN media_types USING (media_type_id)
+            JOIN media_assets USING (media_id)
+            JOIN asset_types USING (asset_type_id)
+            WHERE media_types.code = 'video'
+              AND asset_types.code = 'full'
+              AND media_assets.duration_seconds > 0
+            """
+        ).fetchall()
+    except sqlite3.Error:
+        return {}
+    finally:
+        try:
+            conn.close()
+        except UnboundLocalError:
+            pass
+    return {str(media_id): float(duration) for media_id, duration in rows}
+
+
 def metadata_value(photo: dict[str, Any], label: str) -> str:
     for item in photo.get("metadata") or []:
         if item.get("label") == label and item.get("value") not in (None, ""):
@@ -541,6 +568,7 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
 def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, int]:
     catalog = load_catalog(repo_root, source=source)
     pricing = load_product_pricing(repo_root)
+    existing_video_durations = load_existing_video_durations(output)
     collection_entries = ordered_collections(catalog)
     photos: list[tuple[str, dict[str, Any], str, int, dict[str, Any]]] = []
     seen_photo_ids: set[str] = set()
@@ -789,6 +817,8 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
                     duration_seconds = float(raw_duration)
                 except (TypeError, ValueError):
                     duration_seconds = None
+                if not duration_seconds or duration_seconds <= 0:
+                    duration_seconds = existing_video_durations.get(photo_id)
                 if not duration_seconds or duration_seconds <= 0:
                     errors.append(f"{photo_id}: video rows require positive duration_seconds")
                     continue

@@ -272,8 +272,13 @@ const contentTypeFor = (filePath) => {
   if ([".jpg", ".jpeg"].includes(extension)) return "image/jpeg";
   if ([".tif", ".tiff"].includes(extension)) return "image/tiff";
   if (extension === ".png") return "image/png";
+  if (extension === ".mov") return "video/quicktime";
+  if (extension === ".mp4") return "video/mp4";
+  if (extension === ".m4v") return "video/x-m4v";
   return "application/octet-stream";
 };
+const mediaTypeFor = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
+const isVideoPhoto = (photo) => mediaTypeFor(photo) === "video";
 
 const photos = Object.values(collections).flatMap((collection) => (
   (collection.photos || []).map((photo) => ({
@@ -379,17 +384,19 @@ const buildManifest = async (inventory, publicIdsPayload) => {
   for (const [photoId, photo] of catalogById) {
     const source = (photo.sourceFiles || [])[0] || {};
     const products = renderProductsById.get(photoId) || new Set();
+    const renderProducts = isVideoPhoto(photo) ? [] : [...PRODUCTS.keys()];
     records[photoId] = {
       id: photoId,
       collectionKey: photo.collectionKey,
       sourcePath: source.path || "",
+      mediaType: mediaTypeFor(photo),
       privateMaster: {
         expectedKey: masterKeyFor(photo, source),
         legacyKey: legacyMasterKeyFor(photo, source),
         key: masterKeysById.get(photoId) || "",
         present: masterKeysById.has(photoId),
       },
-      privateRenders: Object.fromEntries([...PRODUCTS.keys()].map((productId) => [
+      privateRenders: Object.fromEntries(renderProducts.map((productId) => [
         productId,
         {
           expectedKey: renderKeyFor(photo, source, productId),
@@ -446,18 +453,18 @@ const processed = [];
 const failed = [];
 for (const record of Object.values(manifest.records)) {
   if (hiddenIds.has(record.id)) continue;
-  if (record.privateMaster.present && Object.values(record.privateRenders).every((item) => item.present)) continue;
   const photo = catalogById.get(record.id);
+  const isVideo = isVideoPhoto(photo);
+  if (record.privateMaster.present && (isVideo || Object.values(record.privateRenders).every((item) => item.present))) continue;
   const source = (photo?.sourceFiles || [])[0] || {};
   const localSource = await findLocalSource(source);
   if (!localSource) {
     await appendJsonl(statePath, { at: new Date().toISOString(), id: record.id, status: "missing-local-source", sourcePath: source.path || "" });
     continue;
   }
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-private-renders-"));
+  const tempDir = isVideo ? "" : await fs.mkdtemp(path.join(os.tmpdir(), "pbe-private-renders-"));
   try {
     console.log(`START ${processed.length + failed.length + 1}: ${record.id}`);
-    const size = await dimensionsFor(localSource);
     const uploadedKeys = [];
     if (!record.privateMaster.present) {
       const key = masterKeyFor(photo, source);
@@ -469,6 +476,21 @@ for (const record of Object.values(manifest.records)) {
       }
       uploadedKeys.push(key);
     }
+    if (isVideo) {
+      processed.push(record.id);
+      await appendJsonl(statePath, { at: new Date().toISOString(), id: record.id, status: dryRun ? "dry-run" : "uploaded", keys: uploadedKeys });
+      if (!dryRun) {
+        inventory.generatedAt = new Date().toISOString();
+        await writeJson(privateInventoryPath, inventory);
+        manifest = await buildManifest(inventory, publicIdsPayload);
+        await writeJson(manifestPath, manifest);
+        await maybeCommit(processed.length);
+      }
+      console.log(`${processed.length}: ${record.id} ${dryRun ? "would upload" : "uploaded"} ${uploadedKeys.length}`);
+      if (limit && processed.length >= limit) break;
+      continue;
+    }
+    const size = await dimensionsFor(localSource);
     for (const [productId, megapixels] of PRODUCTS) {
       if (record.privateRenders[productId].present) continue;
       const outputPath = path.join(tempDir, `${productId}.jpg`);
@@ -500,7 +522,7 @@ for (const record of Object.values(manifest.records)) {
     await appendJsonl(statePath, { at: new Date().toISOString(), id: record.id, status: "error", error: message });
     console.log(`${processed.length + failed.length}: ${record.id} failed ${message}`);
   } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
+    if (tempDir) await fs.rm(tempDir, { recursive: true, force: true });
   }
 }
 

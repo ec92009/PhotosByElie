@@ -1349,10 +1349,12 @@
     const imported = scopedImport ? lastMatchAfter(importedPattern, importStartIndex) : (phaseMarker ? null : lastMatch(importedPattern));
     const realEstateClient = scopedImport ? lastMatchAfter(/^PBE_RE_CLIENT_START\s+({.+})$/, importStartIndex) : null;
     const realEstateImport = scopedImport ? lastMatchAfter(/^PBE_IMPORT_PROGRESS\s+({.+})$/, importStartIndex) : null;
+    const realEstateUploadStart = scopedImport ? lastMatchAfter(/^PBE_RE_UPLOAD_START\s+({.+})$/, importStartIndex) : null;
     const realEstateUpload = scopedImport ? lastMatchAfter(/^PBE_RE_UPLOAD_PROGRESS\s+({.+})$/, importStartIndex) : null;
     const realEstateDone = lastMatch(/^PBE_RE_DONE\s+({.+})$/);
     const realEstateClientPayload = parsePayloadMatch(realEstateClient);
     const realEstateImportPayload = parsePayloadMatch(realEstateImport);
+    const realEstateUploadStartPayload = parsePayloadMatch(realEstateUploadStart);
     const realEstateUploadPayload = parsePayloadMatch(realEstateUpload);
     const realEstateDonePayload = parsePayloadMatch(realEstateDone);
     const upload = lastMatch(/^([0-9,]+):\s+(\S+)\s+(?:uploaded|would upload)\s+([0-9,]+)/);
@@ -1374,7 +1376,7 @@
     if (started) phase = "Rendering and uploading selected photo";
     if (imported) phase = "Rendering and uploading selected previews";
     if (realEstateImportPayload) phase = "Importing Real Estate sources";
-    if (realEstateUploadPayload) phase = "Uploading Real Estate media";
+    if (realEstateUploadStartPayload || realEstateUploadPayload) phase = "Uploading Real Estate media";
     if (realEstateDonePayload) phase = "Real Estate sync finished";
     if (upload) phase = "Creating and uploading missing private JPGs";
     if (processed) phase = "Private JPG backfill pass finished";
@@ -1384,7 +1386,7 @@
     let phaseKey = phaseMarker?.match?.[1] || "";
     if (!phaseKey) {
       if (upload || processed || manifest) phaseKey = "private";
-      else if (realEstateImportPayload || realEstateUploadPayload || realEstateDonePayload) phaseKey = "real-estate";
+      else if (realEstateImportPayload || realEstateUploadStartPayload || realEstateUploadPayload || realEstateDonePayload) phaseKey = "real-estate";
       else if (scan || started || imported) phaseKey = "camera";
       else if (deleted || deleteProgress || deleteStart) phaseKey = "discard-start";
       else phaseKey = "prepare";
@@ -1407,6 +1409,8 @@
       realEstateClientPayload,
       realEstateImport,
       realEstateImportPayload,
+      realEstateUploadStart,
+      realEstateUploadStartPayload,
       realEstateUpload,
       realEstateUploadPayload,
       realEstateDone,
@@ -1526,6 +1530,33 @@
 
   const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
 
+  const sourceLaneAction = (phaseKey) => (
+    phaseKey === "real-estate"
+      ? "Checks configured client property folders, rebuilds public review context, and uploads expected RE preview/master keys."
+      : "Checks this source lane against current R2 gaps, rebuilds previews/private renders, and uploads the expected current keys."
+  );
+
+  const sourceLaneDetailRows = (phaseKey, details = {}) => {
+    const rows = [["Source lane", importSourceLabel(phaseKey)]];
+    const add = (label, value) => {
+      const text = Array.isArray(value)
+        ? value.map((item) => String(item || "").trim()).filter(Boolean).join(" ")
+        : String(value || "").trim();
+      if (text) rows.push([label, text]);
+    };
+    add("Source group", details.sourceGroup);
+    add("Current item", details.currentItem);
+    add("Current file", details.currentFile);
+    add("Coverage gaps", details.coverageGaps);
+    add("Progress summary", details.progressSummary);
+    add("Finished this run", details.finishedSummary);
+    add("Upload progress", details.uploadProgress);
+    add("Time left estimate", details.timeLeft);
+    add("Notes", details.notes);
+    add("What happens", details.whatHappens || sourceLaneAction(phaseKey));
+    return rows;
+  };
+
   const cameraImportProgressDetail = (progress, phaseKey = "camera") => {
     const sourceLabel = importSourceLabel(phaseKey);
     const gapSummary = coverageRepairGapSummary();
@@ -1548,9 +1579,10 @@
 
   const realEstateImportProgress = (logSummary, task = null) => {
     const uploadPayload = logSummary?.realEstateUploadPayload || null;
+    const uploadStartPayload = logSummary?.realEstateUploadStartPayload || null;
     const importPayload = logSummary?.realEstateImportPayload || null;
     const clientPayload = logSummary?.realEstateClientPayload || null;
-    const payload = uploadPayload || importPayload || {};
+    const payload = uploadPayload || uploadStartPayload || importPayload || {};
     const total = Number(payload.total || clientPayload?.media || 0);
     const completed = Number(payload.completed || 0);
     const percent = total
@@ -1567,6 +1599,12 @@
       return {
         percent,
         detail: `RE upload: ${client} ${formatCount(completed)} / ${formatCount(total)} R2 files uploaded${failed ? `, ${formatCount(failed)} failed` : ""}${countdown}.`,
+      };
+    }
+    if (uploadStartPayload) {
+      return {
+        percent,
+        detail: `RE upload: ${client} 0 / ${formatCount(total)} R2 files queued${countdown}.`,
       };
     }
     if (importPayload) {
@@ -1662,7 +1700,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Already done", "Cleanup record", "Client", "Current phase", "Current file", "Current source", "Owner DB trusted", "Progress summary", "Upload progress", "Coverage gaps", "Skipped properties", "Gap meaning", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current item", "Source group", "Owner DB trusted", "Progress summary", "Upload progress", "Coverage gaps", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -1775,69 +1813,82 @@
       }
     }
     const importPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey) ? activePhaseKey : "camera";
-    let importSourceRowAdded = false;
-    const addImportSourceRow = () => {
-      if (importSourceRowAdded) return;
-      addPhaseRow(importPhaseKey, "Source lane", importSourceLabel(importPhaseKey));
-      importSourceRowAdded = true;
+    let sourceLaneDetails = null;
+    const mergeSourceLaneDetails = (details = {}) => {
+      sourceLaneDetails = { ...(sourceLaneDetails || {}), ...Object.fromEntries(
+        Object.entries(details).filter(([, value]) => {
+          if (Array.isArray(value)) return value.length > 0;
+          return value !== undefined && value !== null && String(value).trim() !== "";
+        }),
+      ) };
     };
-    if (PHOTO_IMPORT_PHASES.has(activePhaseKey) && !logSummary?.upload) addImportSourceRow();
+    if (PHOTO_IMPORT_PHASES.has(activePhaseKey) && !logSummary?.upload) mergeSourceLaneDetails({});
     if (activePhaseKey === "real-estate") {
-      addImportSourceRow();
       const clientPayload = logSummary?.realEstateClientPayload || {};
       const importPayload = logSummary?.realEstateImportPayload || {};
+      const uploadStartPayload = logSummary?.realEstateUploadStartPayload || {};
       const uploadPayload = logSummary?.realEstateUploadPayload || {};
       const donePayload = logSummary?.realEstateDonePayload || {};
-      const client = String(uploadPayload.client || importPayload.client || clientPayload.client || "");
-      if (client) addPhaseRow(importPhaseKey, "Client", client);
-      if (clientPayload.properties) addPhaseRow(importPhaseKey, "Properties", formatCount(Number(clientPayload.properties || 0)));
-      if (Array.isArray(clientPayload.missingProperties) && clientPayload.missingProperties.length) {
-        addPhaseRow(importPhaseKey, "Skipped properties", clientPayload.missingProperties.join(", "));
-      }
-      if (importPayload.album) addPhaseRow(importPhaseKey, "Property", importPayload.album);
-      if (importPayload.file) addPhaseRow(importPhaseKey, "Current file", importPayload.file);
-      if (importPayload.total) {
-        addPhaseRow(
-          importPhaseKey,
-          "Progress summary",
-          `${formatCount(Number(importPayload.completed || 0))} / ${formatCount(Number(importPayload.total || 0))} property media checked`,
-        );
-      }
-      if (uploadPayload.total) {
-        addPhaseRow(
-          importPhaseKey,
-          "Upload progress",
-          `${formatCount(Number(uploadPayload.completed || 0))} / ${formatCount(Number(uploadPayload.total || 0))} R2 files uploaded`,
-        );
-      }
-      if (donePayload.clients) addPhaseRow(importPhaseKey, "Clients synced", formatCount(Number(donePayload.clients || 0)));
-      addPhaseRow(importPhaseKey, "What happens", "Imports configured RE property folders, refreshes the public review context, and uploads public previews plus private masters.");
+      const client = String(uploadPayload.client || uploadStartPayload.client || importPayload.client || clientPayload.client || "");
+      const sourceGroup = client;
+      const importTotal = Number(importPayload.total || clientPayload.media || 0);
+      const importCompleted = Number(importPayload.completed || 0);
+      const uploadTotal = Number(uploadPayload.total || uploadStartPayload.total || 0);
+      const uploadCompleted = Number(uploadPayload.completed || 0);
+      const failedUploads = Number(uploadPayload.failed || 0);
+      const notes = [
+        clientPayload.properties ? `${formatCount(Number(clientPayload.properties || 0))} properties available.` : "",
+        Array.isArray(clientPayload.missingProperties) && clientPayload.missingProperties.length
+          ? `Skipping missing properties: ${clientPayload.missingProperties.join(", ")}.`
+          : "",
+        donePayload.clients ? `${formatCount(Number(donePayload.clients || 0))} clients synced.` : "",
+      ];
+      mergeSourceLaneDetails({
+        sourceGroup,
+        currentItem: importPayload.album,
+        currentFile: importPayload.file,
+        progressSummary: importTotal
+          ? `${formatCount(importCompleted)} / ${formatCount(importTotal)} property media checked`
+          : "",
+        finishedSummary: importTotal
+          ? `${formatCount(importCompleted)} synced, ${formatCount(Math.max(0, importTotal - importCompleted))} left`
+          : "",
+        uploadProgress: uploadTotal
+          ? `${formatCount(uploadCompleted)} / ${formatCount(uploadTotal)} R2 files uploaded${failedUploads ? `, ${formatCount(failedUploads)} failed` : ""}`
+          : "",
+        notes,
+      });
     }
     if (logSummary?.started && !logSummary?.upload) {
-      addImportSourceRow();
-      addPhaseRow(importPhaseKey, "Current source", logSummary.started.match[2]);
-      addPhaseRow(importPhaseKey, "Collection", logSummary.started.match[3]);
+      mergeSourceLaneDetails({
+        sourceGroup: logSummary.started.match[3],
+        currentItem: logSummary.started.match[2],
+        currentFile: logSummary.started.match[4],
+      });
     }
     if ((logSummary?.scan || logSummary?.started || logSummary?.imported) && !logSummary?.upload) {
       const progress = cameraImportProgress(logSummary, latest);
       if (progress.selected) {
-        addImportSourceRow();
         const gapSummary = coverageRepairGapSummary();
-        if (gapSummary) addPhaseRow(importPhaseKey, "Coverage gaps", gapSummary);
-        addPhaseRow(
-          importPhaseKey,
-          "Progress summary",
-          `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} selected source photos checked this run`,
-        );
-        addPhaseRow(importPhaseKey, "Finished this run", `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left`);
-        addPhaseRow(importPhaseKey, "Gap meaning", "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.");
-        addPhaseRow(importPhaseKey, "What happens", "Rebuilds previews and private renders, then pushes/refreshes R2 even when the photo was already published.");
+        mergeSourceLaneDetails({
+          coverageGaps: gapSummary,
+          progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} selected source photos checked this run`,
+          finishedSummary: `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left`,
+          notes: "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.",
+        });
       }
-      if (active && progress.selected > progress.completed) addPhaseRow(importPhaseKey, "Time left estimate", progress.countdown);
+      if (active && progress.selected > progress.completed) mergeSourceLaneDetails({ timeLeft: progress.countdown });
       if (logSummary?.imported) {
-        addPhaseRow(importPhaseKey, "Last synced", logSummary.imported.match[2]);
-        addPhaseRow(importPhaseKey, "Private renders", logSummary.imported.match[5]);
+        mergeSourceLaneDetails({
+          currentItem: logSummary.imported.match[2],
+          uploadProgress: `${logSummary.imported.match[5]} private renders`,
+        });
       }
+    }
+    if (sourceLaneDetails) {
+      sourceLaneDetailRows(importPhaseKey, sourceLaneDetails).forEach(([label, value]) => {
+        addPhaseRow(importPhaseKey, label, value);
+      });
     }
     if (logSummary?.upload) {
       lastPhotoId = logSummary.upload.match[2];

@@ -1545,7 +1545,6 @@
       if (text) rows.push([label, text]);
     };
     add("Source group", details.sourceGroup);
-    add("Current item", details.currentItem);
     add("Current file", details.currentFile);
     add("Coverage gaps", details.coverageGaps);
     add("Progress summary", details.progressSummary);
@@ -1700,7 +1699,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current item", "Source group", "Owner DB trusted", "Progress summary", "Upload progress", "Coverage gaps", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Source group", "Owner DB trusted", "Progress summary", "Upload progress", "Coverage gaps", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, SWEEP_PHASES.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -1830,7 +1829,7 @@
       const uploadPayload = logSummary?.realEstateUploadPayload || {};
       const donePayload = logSummary?.realEstateDonePayload || {};
       const client = String(uploadPayload.client || uploadStartPayload.client || importPayload.client || clientPayload.client || "");
-      const sourceGroup = client;
+      const sourceGroup = [client, importPayload.album].filter(Boolean).join(" / ");
       const importTotal = Number(importPayload.total || clientPayload.media || 0);
       const importCompleted = Number(importPayload.completed || 0);
       const uploadTotal = Number(uploadPayload.total || uploadStartPayload.total || 0);
@@ -1845,7 +1844,6 @@
       ];
       mergeSourceLaneDetails({
         sourceGroup,
-        currentItem: importPayload.album,
         currentFile: importPayload.file,
         progressSummary: importTotal
           ? `${formatCount(importCompleted)} / ${formatCount(importTotal)} property media checked`
@@ -1862,7 +1860,6 @@
     if (logSummary?.started && !logSummary?.upload) {
       mergeSourceLaneDetails({
         sourceGroup: logSummary.started.match[3],
-        currentItem: logSummary.started.match[2],
         currentFile: logSummary.started.match[4],
       });
     }
@@ -1880,7 +1877,6 @@
       if (active && progress.selected > progress.completed) mergeSourceLaneDetails({ timeLeft: progress.countdown });
       if (logSummary?.imported) {
         mergeSourceLaneDetails({
-          currentItem: logSummary.imported.match[2],
           uploadProgress: `${logSummary.imported.match[5]} private renders`,
         });
       }
@@ -2179,7 +2175,7 @@
       r2CoverageMissing.hidden = missingPrivateDelivery.length === 0;
       r2CoverageMissing.innerHTML = missingPrivateDelivery.length ? `
         <h3>Missing private delivery files</h3>
-        <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start background work runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing JPG triplets.</p>
+        <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start background work runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
         <div class="owner-coverage-missing-list">
           ${missingPrivateDelivery.slice(0, 12).map((item) => `
             <div class="owner-coverage-missing-row">

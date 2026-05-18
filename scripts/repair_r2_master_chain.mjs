@@ -12,6 +12,7 @@ const PRODUCTS = new Map([
   ["jpg-1mp", 1],
 ]);
 const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
+const requiresPrivateRenders = (photo) => String(photo?.media?.type || "photo").toLowerCase() === "photo";
 
 const args = process.argv.slice(2);
 const hasFlag = (name) => args.includes(name);
@@ -222,14 +223,18 @@ const defaultRoots = [
   "/Volumes/Saturn/Pictures/LR/Camera",
   "/Volumes/Saturn/Pictures/LR/Apple Photo Albums",
   "/Volumes/Saturn/Pictures/LR/_All Leonardo",
+  "/Volumes/Saturn/Pictures/Phone Exports",
   "/Volumes/Saturn-1/Pictures/LR/Camera",
   "/Volumes/Saturn-1/Pictures/LR/Apple Photo Albums",
   "/Volumes/Saturn-1/Pictures/LR/_All Leonardo",
+  "/Volumes/Saturn-1/Pictures/Phone Exports",
   path.join(os.homedir(), "Pictures/LR/Camera"),
   path.join(os.homedir(), "Pictures/LR/Apple Photo Albums"),
   path.join(os.homedir(), "Pictures/LR/_All Leonardo"),
+  path.join(os.homedir(), "Pictures/Phone Exports"),
 ];
 const sourceRoots = [...sourceRootArgs, ...defaultRoots];
+const recursiveSourceRoots = sourceRoots.filter((root) => /(?:^|\/)Phone Exports$/i.test(root));
 
 const fileExists = async (filePath) => {
   try {
@@ -239,14 +244,61 @@ const fileExists = async (filePath) => {
   }
 };
 
+const isAllowedSourcePath = (filePath) => !String(filePath || "").split(path.sep).some((part) => part.toLowerCase() === "apple photo albums with faces");
+
+const findByBasename = async (root, names) => {
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch {
+    return "";
+  }
+  for (const entry of entries) {
+    const candidate = path.join(root, entry.name);
+    if (!isAllowedSourcePath(candidate)) continue;
+    if (entry.isFile() && names.has(entry.name.toLowerCase())) return candidate;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const found = await findByBasename(path.join(root, entry.name), names);
+    if (found) return found;
+  }
+  return "";
+};
+
 const findLocalSource = async (source) => {
   const sourcePath = String(source?.path || "");
   if (!sourcePath) return "";
-  if (path.isAbsolute(sourcePath) && await fileExists(sourcePath)) return sourcePath;
-  for (const root of sourceRoots) {
-    for (const candidate of [path.join(root, sourcePath), path.join(root, basename(sourcePath))]) {
-      if (await fileExists(candidate)) return candidate;
+  const pathVariants = (candidate) => {
+    const parsed = path.parse(candidate);
+    const extensions = new Set([parsed.ext]);
+    if (parsed.ext) {
+      extensions.add(parsed.ext.toLowerCase());
+      extensions.add(parsed.ext.toUpperCase());
     }
+    if ([".jpg", ".jpeg", ".jpe"].includes(parsed.ext.toLowerCase())) {
+      [".jpg", ".jpeg", ".JPG", ".JPEG"].forEach((extension) => extensions.add(extension));
+    }
+    return [...extensions].map((extension) => path.join(parsed.dir, `${parsed.name}${extension}`));
+  };
+  if (path.isAbsolute(sourcePath)) {
+    for (const candidate of pathVariants(sourcePath)) {
+      if (isAllowedSourcePath(candidate) && await fileExists(candidate)) return candidate;
+    }
+  }
+  const basenameVariants = new Set(pathVariants(basename(sourcePath)).map((candidate) => path.basename(candidate).toLowerCase()));
+  for (const root of sourceRoots) {
+    const candidates = [
+      path.join(root, sourcePath),
+      path.join(root, basename(sourcePath)),
+    ].flatMap(pathVariants);
+    for (const candidate of candidates) {
+      if (isAllowedSourcePath(candidate) && await fileExists(candidate)) return candidate;
+    }
+  }
+  for (const root of recursiveSourceRoots) {
+    const found = await findByBasename(root, basenameVariants);
+    if (found) return found;
   }
   return "";
 };
@@ -339,49 +391,51 @@ for (const photo of catalog.values()) {
     continue;
   }
 
-  for (const [productId, megapixels] of PRODUCTS) {
-    const renderKey = renderKeyFor(photo, photo.source, productId);
-    if (renderKeys.has(renderKey)) continue;
-    if (repair && (!limit || repairedPhotoCount < limit || repaired.masters.includes(masterKey))) {
-      if (!sourceForRendering) {
-        localSource = localSource || await findLocalSource(photo.source);
-        if (localSource) {
-          sourceForRendering = localSource;
-        } else {
-          const tempSource = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "pbe-master-chain-")), basename(photo.source.path));
-          await fs.writeFile(tempSource, await getObjectBytes(privateBucket, masterKey));
-          sourceForRendering = tempSource;
+  if (requiresPrivateRenders(photo)) {
+    for (const [productId, megapixels] of PRODUCTS) {
+      const renderKey = renderKeyFor(photo, photo.source, productId);
+      if (renderKeys.has(renderKey)) continue;
+      if (repair && (!limit || repairedPhotoCount < limit || repaired.masters.includes(masterKey))) {
+        if (!sourceForRendering) {
+          localSource = localSource || await findLocalSource(photo.source);
+          if (localSource) {
+            sourceForRendering = localSource;
+          } else {
+            const tempSource = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "pbe-master-chain-")), basename(photo.source.path));
+            await fs.writeFile(tempSource, await getObjectBytes(privateBucket, masterKey));
+            sourceForRendering = tempSource;
+          }
         }
-      }
-      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-render-"));
-      try {
-        const outputPath = path.join(tempDir, `${productId}.jpg`);
-        let dimensions;
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pbe-render-"));
         try {
-          dimensions = await dimensionsFor(sourceForRendering);
-        } catch (error) {
-          missing.renders.push({
-            photoId: photo.id,
-            productId,
-            key: renderKey,
-            sourcePath: photo.source.path,
-            error: String(error?.message || error),
-          });
-          console.warn(`render skipped (dimensions) ${renderKey}: ${String(error?.message || error)}`);
-          continue;
+          const outputPath = path.join(tempDir, `${productId}.jpg`);
+          let dimensions;
+          try {
+            dimensions = await dimensionsFor(sourceForRendering);
+          } catch (error) {
+            missing.renders.push({
+              photoId: photo.id,
+              productId,
+              key: renderKey,
+              sourcePath: photo.source.path,
+              error: String(error?.message || error),
+            });
+            console.warn(`render skipped (dimensions) ${renderKey}: ${String(error?.message || error)}`);
+            continue;
+          }
+          const longEdge = longEdgeForMegapixels(dimensions, megapixels);
+          await run("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "90", "-Z", String(longEdge), sourceForRendering, "--out", outputPath]);
+          await putObject(privateBucket, renderKey, await fs.readFile(outputPath), "image/jpeg");
+          renderKeys.add(renderKey);
+          repaired.renders.push(renderKey);
+          console.log(`repaired render ${renderKey}`);
+        } finally {
+          await fs.rm(tempDir, { recursive: true, force: true });
         }
-        const longEdge = longEdgeForMegapixels(dimensions, megapixels);
-        await run("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "90", "-Z", String(longEdge), sourceForRendering, "--out", outputPath]);
-        await putObject(privateBucket, renderKey, await fs.readFile(outputPath), "image/jpeg");
-        renderKeys.add(renderKey);
-        repaired.renders.push(renderKey);
-        console.log(`repaired render ${renderKey}`);
-      } finally {
-        await fs.rm(tempDir, { recursive: true, force: true });
+        continue;
       }
-      continue;
+      missing.renders.push({ photoId: photo.id, productId, key: renderKey });
     }
-    missing.renders.push({ photoId: photo.id, productId, key: renderKey });
   }
 
   for (const key of publicPreviewKeysFor(photo)) {
@@ -432,11 +486,13 @@ for (const photo of catalog.values()) {
   const presentMasterKey = masterKeysById.get(photo.id);
   const products = renderProductsById.get(photo.id) || new Set();
   if (presentMasterKey) catalogMasterPhotoIds += 1;
-  if ([...PRODUCTS.keys()].every((productId) => products.has(productId))) catalogRenderTripletPhotoIds += 1;
+  const needsPrivateRenders = requiresPrivateRenders(photo);
+  if (needsPrivateRenders && [...PRODUCTS.keys()].every((productId) => products.has(productId))) catalogRenderTripletPhotoIds += 1;
   records[photo.id] = {
     id: photo.id,
     collectionKey: photo.collectionKey,
     sourcePath: photo.source.path,
+    mediaType: String(photo.media?.type || "photo"),
     privateMaster: {
       expectedKey: masterKey,
       legacyKey: legacyMasterKeyFor(photo, photo.source),
@@ -444,7 +500,7 @@ for (const photo of catalog.values()) {
       present: Boolean(presentMasterKey),
       targetPresent: masterKeys.has(masterKey),
     },
-    privateRenders: Object.fromEntries([...PRODUCTS.keys()].map((productId) => {
+    privateRenders: needsPrivateRenders ? Object.fromEntries([...PRODUCTS.keys()].map((productId) => {
       const key = renderKeyFor(photo, photo.source, productId);
       return [productId, {
         expectedKey: key,
@@ -453,7 +509,7 @@ for (const photo of catalog.values()) {
         present: products.has(productId),
         targetPresent: renderKeys.has(key),
       }];
-    })),
+    })) : {},
     publicPreviews: {
       present: publicPreviewKeysFor(photo).every((key) => publicKeys.has(key)),
     },

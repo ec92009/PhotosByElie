@@ -121,11 +121,17 @@ SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn/Pictures/LR/Camera"),
     Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
     Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
+    Path("/Volumes/Saturn/Pictures/Phone Exports"),
     Path("/Volumes/Saturn/Pictures/LR"),
     Path("/Volumes/Saturn"),
     Path.home() / "Pictures/LR/Camera",
     Path.home() / "Pictures/LR/Apple Photo Albums",
     Path.home() / "Pictures/LR/_All Leonardo",
+]
+RECURSIVE_SOURCE_ROOT_CANDIDATES = [
+    Path("/Volumes/Saturn/Pictures/Phone Exports"),
+    Path("/Volumes/Saturn-1/Pictures/Phone Exports"),
+    Path.home() / "Pictures/Phone Exports",
 ]
 HIDDEN_BLACKLIST_PATH = HIDDEN_ASSET_ROOT / "hidden-blacklist.json"
 HIDDEN_BLACKLIST_R2_KEY = "hidden-blacklist.json"
@@ -1369,29 +1375,6 @@ def _asset_keywords(path: Path) -> list[str]:
     return _unique_keywords(_split_keyword_text(row.get("Keywords")) + _split_keyword_text(row.get("Subject")))
 
 
-def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
-    paths = []
-    for source in photo.get("sourceFiles") or []:
-        raw_path = source.get("path")
-        if not raw_path:
-            continue
-        rel = Path(str(raw_path))
-        candidates = []
-        if rel.is_absolute():
-            candidates.append(rel)
-        else:
-            candidates.append(repo_root / rel)
-            candidates.extend(root / rel for root in SOURCE_ROOT_CANDIDATES)
-        for candidate in candidates:
-            try:
-                resolved = candidate.resolve()
-            except OSError:
-                resolved = candidate
-            if candidate.exists() and resolved not in paths:
-                paths.append(resolved)
-    return paths
-
-
 def _append_unique_path(paths: list[Path], path: Path) -> None:
     try:
         resolved = path.resolve()
@@ -1399,6 +1382,81 @@ def _append_unique_path(paths: list[Path], path: Path) -> None:
         resolved = path
     if resolved not in paths:
         paths.append(resolved)
+
+
+def _is_allowed_source_path(path: Path) -> bool:
+    return "apple photo albums with faces" not in {part.lower() for part in path.parts}
+
+
+def _source_path_variants(candidate: Path) -> list[Path]:
+    variants: list[Path] = []
+    suffixes = {candidate.suffix}
+    if candidate.suffix:
+        suffixes.add(candidate.suffix.lower())
+        suffixes.add(candidate.suffix.upper())
+    if candidate.suffix.lower() in {".jpg", ".jpeg", ".jpe"}:
+        suffixes.update({".jpg", ".jpeg", ".JPG", ".JPEG"})
+    for suffix in suffixes:
+        _append_unique_path(variants, candidate.with_suffix(suffix))
+    return variants
+
+
+def _source_candidates(repo_root: Path, source_path: str) -> list[Path]:
+    raw = Path(source_path)
+    bases = [raw] if raw.is_absolute() else [repo_root / raw, *(root / raw for root in SOURCE_ROOT_CANDIDATES)]
+    if not raw.is_absolute() and raw.name:
+        bases.extend(root / raw.name for root in SOURCE_ROOT_CANDIDATES)
+    candidates: list[Path] = []
+    for base in bases:
+        for variant in _source_path_variants(base):
+            if _is_allowed_source_path(variant):
+                _append_unique_path(candidates, variant)
+    return candidates
+
+
+def _find_source_by_basename(root: Path, names: set[str]) -> Path | None:
+    if not root.exists() or not _is_allowed_source_path(root):
+        return None
+    try:
+        entries = list(root.iterdir())
+    except OSError:
+        return None
+    for entry in entries:
+        if not _is_allowed_source_path(entry):
+            continue
+        try:
+            if entry.is_file() and entry.name.lower() in names:
+                return entry
+        except OSError:
+            continue
+    for entry in entries:
+        try:
+            if entry.is_dir():
+                found = _find_source_by_basename(entry, names)
+                if found:
+                    return found
+        except OSError:
+            continue
+    return None
+
+
+def _source_paths(repo_root: Path, photo: dict) -> list[Path]:
+    paths = []
+    for source in photo.get("sourceFiles") or []:
+        raw_path = source.get("path")
+        if not raw_path:
+            continue
+        for candidate in _source_candidates(repo_root, str(raw_path)):
+            if candidate.exists():
+                _append_unique_path(paths, candidate)
+        if not paths:
+            names = {variant.name.lower() for variant in _source_path_variants(Path(str(raw_path)))}
+            for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
+                found = _find_source_by_basename(root, names)
+                if found:
+                    _append_unique_path(paths, found)
+                    break
+    return paths
 
 
 def _site_asset_paths(repo_root: Path, rel: str) -> list[Path]:
@@ -1783,19 +1841,17 @@ def _coverage_row(
 def _resolve_source_path(repo_root: Path, source_path: str) -> str:
     if not source_path:
         return ""
-    candidates = []
-    raw = Path(source_path)
-    if raw.is_absolute():
-        candidates.append(raw)
-    else:
-        candidates.append(repo_root / raw)
-        candidates.extend(root / raw for root in SOURCE_ROOT_CANDIDATES)
-    for candidate in candidates:
+    for candidate in _source_candidates(repo_root, source_path):
         try:
             if candidate.is_file():
                 return str(candidate)
         except OSError:
             continue
+    names = {variant.name.lower() for variant in _source_path_variants(Path(source_path))}
+    for root in RECURSIVE_SOURCE_ROOT_CANDIDATES:
+        found = _find_source_by_basename(root, names)
+        if found and found.is_file():
+            return str(found)
     return ""
 
 
@@ -1817,22 +1873,23 @@ def _private_delivery_missing_details(repo_root: Path, active_records: list[tupl
                 "repair": "upload_source_master" if source_file else "source_missing",
             })
         renders = record.get("privateRenders") if isinstance(record.get("privateRenders"), dict) else {}
-        for product_id, label in (("jpg-6mp", "JPG 6 MP"), ("jpg-3mp", "JPG 3 MP"), ("jpg-1mp", "JPG 1 MP")):
-            render = renders.get(product_id) if isinstance(renders.get(product_id), dict) else {}
-            if render.get("present") is True:
-                continue
-            missing.append({
-                "photoId": photo_id,
-                "kind": "render",
-                "productId": product_id,
-                "productLabel": label,
-                "objectKey": render.get("key") or render.get("expectedKey") or "",
-                "sourcePath": source_path,
-                "sourceFile": source_file,
-                "repair": "render_from_source" if source_file else "source_missing",
-            })
-            if len(missing) >= limit:
-                return missing
+        if renders:
+            for product_id, label in (("jpg-6mp", "JPG 6 MP"), ("jpg-3mp", "JPG 3 MP"), ("jpg-1mp", "JPG 1 MP")):
+                render = renders.get(product_id) if isinstance(renders.get(product_id), dict) else {}
+                if render.get("present") is True:
+                    continue
+                missing.append({
+                    "photoId": photo_id,
+                    "kind": "render",
+                    "productId": product_id,
+                    "productLabel": label,
+                    "objectKey": render.get("key") or render.get("expectedKey") or "",
+                    "sourcePath": source_path,
+                    "sourceFile": source_file,
+                    "repair": "render_from_source" if source_file else "source_missing",
+                })
+                if len(missing) >= limit:
+                    return missing
         if len(missing) >= limit:
             return missing
     return missing

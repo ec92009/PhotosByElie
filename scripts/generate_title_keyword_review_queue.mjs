@@ -871,12 +871,13 @@ const parseArgs = (argv) => {
   return args;
 };
 
-const localDateString = () => {
-  try {
-    return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  } catch {
-    return new Date().toISOString().slice(0, 10);
-  }
+const runBatchId = (date = new Date()) => {
+  const [datePart, timePart = ""] = date.toISOString().split("T");
+  const safeTime = timePart
+    .replace("Z", "")
+    .replace(/\./g, "-")
+    .replace(/:/g, "");
+  return `${datePart}-${safeTime}Z`;
 };
 
 const main = () => {
@@ -890,10 +891,11 @@ const main = () => {
   }
 
   const queueDir = path.join("assets", "owner-actions", "title-keyword-review-queue");
-  const batchId = localDateString();
+  const batchId = runBatchId();
   const batchFilename = `batch-${batchId}.json`;
   const batchPath = path.join(queueDir, batchFilename);
   const latestPath = path.join(queueDir, "latest.json");
+  const proposalStatePath = path.join("assets", "owner-actions", "Owner.sqlite");
 
   const ownerGeneratorState = loadOwnerGeneratorState();
   const proposedState = ownerGeneratorState.state;
@@ -1156,7 +1158,7 @@ const main = () => {
     proposal_state: {
       flag: PROPOSED_FLAG,
       parked_flag: PARKED_FLAG,
-      path: proposedStatePath,
+      path: proposalStatePath,
       include_already_proposed: args.includeAlreadyProposed,
     },
     proposal_files: {

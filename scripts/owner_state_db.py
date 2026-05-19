@@ -793,7 +793,11 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
         if not generator and isinstance(state.get("generator"), dict):
             generator = state.get("generator")
         generator_model = str(generator.get("model") or proposed.get("generator_model") or "").strip()
-        generator_model_level = _optional_int(generator.get("model_level") or proposed.get("generator_model_level"))
+        generator_model_level = _optional_int(
+            generator.get("model_level")
+            if generator.get("model_level") is not None
+            else proposed.get("generator_model_level")
+        )
         generator_model_maxed = _truthy(generator.get("model_maxed") or proposed.get("generator_model_maxed"))
         model_ladder = generator.get("model_ladder") or proposed.get("model_ladder") or []
         conn.execute(

@@ -54,7 +54,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220506-145942-03357-6183b42671",
-        "title": "20220506 145942 03357",
+        "title": "Church, Invalides",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -152,7 +152,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "d5h-2939-68cb5ce5b2",
-        "title": "D5H 2939",
+        "title": "Museo Ruso, Malaga",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -167,7 +167,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "d5h-2938-cc0cb9487b",
-        "title": "D5H 2938",
+        "title": "Museo Ruso, Malaga",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -182,7 +182,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "d5h-2937-dade9e30bf",
-        "title": "D5H 2937",
+        "title": "Museo Ruso, Malaga",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -197,7 +197,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "d5h-2933-5320e9f76b",
-        "title": "D5H 2933",
+        "title": "Museo Ruso, Malaga",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -405,7 +405,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20220802-130003-00136-pano-052608ca90",
-        "title": "20220802 130003 00136 Pano",
+        "title": "Bacalhoa Buddha Eden, Jardim Do Eden",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -420,7 +420,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-145332-04573-0742e2b77c",
-        "title": "20220521 145332 04573",
+        "title": "Castelo De Sao Jorge, Fortress",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -435,7 +435,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-145324-04568-1c242c532c",
-        "title": "20220521 145324 04568",
+        "title": "Castelo De Sao Jorge, Fortress",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -450,7 +450,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-144639-04546-3394e60cbe",
-        "title": "20220521 144639 04546",
+        "title": "Castelo De Sao Jorge, Fortress",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {

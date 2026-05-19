@@ -106,6 +106,7 @@
   const keywordBlacklistForm = document.querySelector("[data-owner-keyword-blacklist-form]");
   const keywordBlacklistInput = document.querySelector("[data-owner-keyword-blacklist-input]");
   const keywordBlacklistStatus = document.querySelector("[data-owner-keyword-blacklist-status]");
+  const titleKeywordReviewLink = document.querySelector("[data-owner-title-keyword-review-link]");
   const realEstateCard = document.querySelector("[data-owner-real-estate-card]");
   const realEstateClientList = document.querySelector("[data-owner-re-client-list]");
   const realEstateForm = document.querySelector("[data-owner-re-form]");
@@ -227,6 +228,7 @@
       loadR2Coverage();
       loadCostEstimate();
       loadKeywordBlacklist();
+      loadTitleKeywordReviewCount();
       loadRealEstateOwner();
       startR2Polling();
       if (options.scrollToControls && controls) {
@@ -339,6 +341,7 @@
   };
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
+  const reviewPhotoLabel = (count) => `${formatCount(count)} ${Number(count) === 1 ? "photo" : "photos"}`;
   const numberFromLog = (value) => Number(String(value || "").replace(/,/g, "")) || 0;
   const secondsSinceIso = (value) => {
     const timestamp = Date.parse(value || "");
@@ -741,6 +744,22 @@
     } catch (error) {
       renderKeywordBlacklist([]);
       setKeywordBlacklistStatus(error?.message || "Could not load blacklist.");
+    }
+  };
+
+  const loadTitleKeywordReviewCount = async () => {
+    if (!titleKeywordReviewLink) return;
+    titleKeywordReviewLink.textContent = "Review";
+    try {
+      const response = await fetch("/__photosbyelie/title-keyword-review-queue", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Title/keyword queue ${response.status}`);
+      const payload = await response.json();
+      const count = Number(payload?.selection?.sqlite_pending_count ?? payload?.photos?.length ?? 0);
+      titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
+      titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} for title and keyword cleanup` : "Review title and keyword proposals");
+    } catch {
+      titleKeywordReviewLink.textContent = "Review";
+      titleKeywordReviewLink.setAttribute("aria-label", "Review title and keyword proposals");
     }
   };
 
@@ -3203,6 +3222,7 @@
     loadR2Coverage();
     loadCostEstimate();
     loadKeywordBlacklist();
+    loadTitleKeywordReviewCount();
     loadRealEstateOwner();
     startR2Polling();
   }

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 from datetime import datetime, timezone
 import os
 import ipaddress
@@ -12,6 +13,7 @@ import mimetypes
 import re
 import signal
 import shutil
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -35,6 +37,7 @@ REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
+TITLE_KEYWORD_REVIEW_QUEUE_PATH = "/__photosbyelie/title-keyword-review-queue"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -58,6 +61,7 @@ TITLE_KEYWORD_PARKED_FLAG = "Title_Keywords_Parked"
 ACTION_PROGRESS: dict[str, dict] = {}
 REAL_ESTATE_IMPORT_PROGRESS: dict[str, dict] = {}
 REAL_ESTATE_IMPORT_PROGRESS_LOCK = threading.Lock()
+OWNER_ACTION_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
 R2_SWEEP_SKIPPABLE_PHASES = {
@@ -155,6 +159,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == OWNER_SESSION_PATH:
             self._handle_owner_session()
             return
+        if path == TITLE_KEYWORD_REVIEW_QUEUE_PATH:
+            self._handle_title_keyword_review_queue()
+            return
         if path == PHOTO_ACTION_PROGRESS_PATH:
             self._handle_photo_action_progress()
             return
@@ -211,9 +218,13 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
-            result = apply_photo_action(Path.cwd(), payload)
+            with OWNER_ACTION_LOCK:
+                result = apply_photo_action(Path.cwd(), payload)
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        except (sqlite3.Error, subprocess.CalledProcessError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
         except OSError as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
@@ -334,6 +345,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         self._send_json(HTTPStatus.OK, self._owner_session_payload())
+
+    def _handle_title_keyword_review_queue(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            payload = title_keyword_review_queue_payload(Path.cwd())
+        except (OSError, sqlite3.Error, ValueError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, payload)
 
     def _handle_owner_login(self) -> None:
         if not self._is_loopback_request():
@@ -656,6 +678,333 @@ def _review_keywords(repo_root: Path, value: object) -> list[str]:
     ]
 
 
+def _review_photo_id(item: dict) -> str:
+    return str(item.get("photo_id") or item.get("photoId") or "").strip()
+
+
+def _pending_title_keyword_batches(conn) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT COALESCE(latest_proposed_batch_id, '') AS batch_id,
+               COUNT(*) AS pending_count,
+               MIN(latest_proposed_at) AS first_proposed_at,
+               MAX(latest_proposed_at) AS last_proposed_at
+        FROM title_keyword_queue
+        WHERE review_state = 'proposed'
+        GROUP BY COALESCE(latest_proposed_batch_id, '')
+        HAVING batch_id <> ''
+        ORDER BY last_proposed_at DESC, batch_id DESC
+        """
+    ).fetchall()
+    return [
+        {
+            "batch_id": str(row["batch_id"] or ""),
+            "pending_count": int(row["pending_count"] or 0),
+            "first_proposed_at": row["first_proposed_at"] or "",
+            "last_proposed_at": row["last_proposed_at"] or "",
+        }
+        for row in rows
+    ]
+
+
+def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT q.media_id, q.latest_proposed_batch_id AS batch_id,
+               q.latest_attempt, q.latest_proposed_at, q.rejected_count,
+               q.owner_comment, p.previous_title, p.previous_keywords,
+               p.proposed_title, p.proposed_keywords, p.proposal_status,
+               p.confidence, p.needs_owner_context, p.proposal_reason,
+               p.removed_blacklisted, p.keyword_target, p.keyword_target_met,
+               p.generator_model, p.generator_model_level, p.generator_model_maxed,
+               p.model_ladder
+        FROM title_keyword_queue AS q
+        JOIN title_keyword_proposals AS p
+          ON p.media_id = q.media_id
+         AND p.attempt = q.latest_attempt
+        WHERE q.review_state = 'proposed'
+          AND q.latest_proposed_batch_id = ?
+        ORDER BY q.latest_proposed_at DESC, q.media_id
+        """,
+        (batch_id,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _capture_sort_value(item: dict) -> str:
+    capture = item.get("capture") if isinstance(item.get("capture"), dict) else {}
+    return str(capture.get("sort") or capture.get("date") or capture.get("raw") or "")
+
+
+def _title_keyword_payload_from_batch_file(repo_root: Path, batch_id: str, pending_rows: list[dict], pending_batches: list[dict]) -> dict | None:
+    batch_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"batch-{batch_id}.json"
+    payload = _read_json_file(batch_path, {})
+    if not isinstance(payload, dict):
+        return None
+    photos = payload.get("photos")
+    if not isinstance(photos, list):
+        return None
+    pending_ids = {str(row.get("media_id") or "") for row in pending_rows}
+    visible_photos = []
+    for item in photos:
+        if not isinstance(item, dict) or _review_photo_id(item) not in pending_ids:
+            continue
+        photo = copy.deepcopy(item)
+        photo["batch_id"] = batch_id
+        photo["proposal_batch_id"] = batch_id
+        visible_photos.append(photo)
+    if not visible_photos:
+        return None
+
+    next_payload = dict(payload)
+    next_payload["ok"] = True
+    next_payload["queue_source"] = "owner-sqlite-helper"
+    next_payload["source_of_truth"] = OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix()
+    next_payload["pending_batches"] = pending_batches
+    next_payload["photos"] = visible_photos
+    next_payload["proposal_files"] = {
+        **(payload.get("proposal_files") if isinstance(payload.get("proposal_files"), dict) else {}),
+        "batch": batch_path.relative_to(repo_root).as_posix(),
+    }
+    selection = dict(payload.get("selection") if isinstance(payload.get("selection"), dict) else {})
+    selection["visible_pending_count"] = len(visible_photos)
+    selection["sqlite_pending_count"] = len(pending_rows)
+    next_payload["selection"] = selection
+    sort_values = [value for value in (_capture_sort_value(item) for item in visible_photos) if value]
+    if sort_values:
+        range_info = dict(payload.get("range") if isinstance(payload.get("range"), dict) else {})
+        range_info["newest"] = max(sort_values)
+        range_info["oldest"] = min(sort_values)
+        next_payload["range"] = range_info
+    return next_payload
+
+
+def _catalog_keyword_lookup(catalog_conn: sqlite3.Connection) -> dict[int, str]:
+    return {
+        int(row["keyword_id"]): str(row["keyword"])
+        for row in catalog_conn.execute("SELECT keyword_id, keyword FROM keyword_terms")
+    }
+
+
+def _catalog_keywords(keyword_ids: object, keyword_lookup: dict[int, str]) -> list[str]:
+    keywords = []
+    for item in str(keyword_ids or "").split(","):
+        try:
+            keyword_id = int(item.strip())
+        except ValueError:
+            continue
+        keyword = keyword_lookup.get(keyword_id)
+        if keyword:
+            keywords.append(keyword)
+    return keywords
+
+
+def _catalog_rows_by_media_id(repo_root: Path, media_ids: list[str]) -> dict[str, dict]:
+    if not media_ids:
+        return {}
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        return {}
+    catalog_conn = sqlite3.connect(catalog_path)
+    catalog_conn.row_factory = sqlite3.Row
+    try:
+        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+        placeholders = ",".join("?" for _ in media_ids)
+        rows = catalog_conn.execute(
+            f"""
+            SELECT m.media_id, m.title, m.keyword_ids, m.captured_at,
+                   c.slug AS gallery_key, c.title AS gallery_label,
+                   sf.filename, folder.source_folder
+            FROM media_items AS m
+            JOIN collections AS c USING(collection_id)
+            JOIN source_files AS sf USING(source_file_id)
+            LEFT JOIN source_folders AS folder
+              ON folder.source_folder_id = sf.source_folder_id
+            WHERE m.media_id IN ({placeholders})
+            """,
+            media_ids,
+        ).fetchall()
+        return {
+            str(row["media_id"]): {
+                **dict(row),
+                "keywords": _catalog_keywords(row["keyword_ids"], keyword_lookup),
+            }
+            for row in rows
+        }
+    finally:
+        catalog_conn.close()
+
+
+def _json_text_list(value: object) -> list:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(str(value))
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_rows: list[dict], pending_batches: list[dict]) -> dict:
+    catalog_rows = _catalog_rows_by_media_id(repo_root, [str(row["media_id"]) for row in pending_rows])
+    photos = []
+    capture_values = []
+    for row in pending_rows:
+        media_id = str(row.get("media_id") or "")
+        catalog = catalog_rows.get(media_id, {})
+        gallery_key = str(catalog.get("gallery_key") or "")
+        gallery_label = str(catalog.get("gallery_label") or gallery_key or "Photo")
+        captured_at = str(catalog.get("captured_at") or "")
+        if captured_at:
+            capture_values.append(captured_at)
+        current_keywords = _split_keyword_text(row.get("previous_keywords")) or catalog.get("keywords") or []
+        proposed_keywords = _split_keyword_text(row.get("proposed_keywords"))
+        source_folder = str(catalog.get("source_folder") or "").strip("/")
+        filename = str(catalog.get("filename") or "").strip()
+        source_path = "/".join(part for part in [source_folder, filename] if part)
+        model_ladder = _json_text_list(row.get("model_ladder"))
+        photos.append({
+            "photo_id": media_id,
+            "batch_id": batch_id,
+            "proposal_batch_id": batch_id,
+            "gallery": {"key": gallery_key, "label": gallery_label},
+            "capture": {
+                "raw": captured_at,
+                "date": captured_at[:10] if captured_at else "",
+                "sort": captured_at,
+            },
+            "thumbs": {
+                "gallery_key": f"expo/{media_id}_900.jpg",
+                "detail_key": f"expo/{media_id}_1800.jpg",
+            },
+            "source": {
+                "file": {
+                    "path": source_path,
+                    "type": Path(filename).suffix.lstrip(".").upper(),
+                },
+            },
+            "state": {
+                "tags": [TITLE_KEYWORD_PROPOSED_FLAG],
+                "rework_requested": int(row.get("latest_attempt") or 1) > 1,
+                "rework_comment": str(row.get("owner_comment") or ""),
+                "proposal_attempt": int(row.get("latest_attempt") or 1),
+                "requested_generator": {
+                    "model": row.get("generator_model") or "",
+                    "model_level": row.get("generator_model_level"),
+                    "model_maxed": bool(row.get("generator_model_maxed")),
+                    "model_ladder": model_ladder,
+                },
+            },
+            "current": {
+                "title": str(row.get("previous_title") or catalog.get("title") or media_id),
+                "keywords_raw": ", ".join(current_keywords),
+                "keywords": current_keywords,
+            },
+            "proposed": {
+                "title": str(row.get("proposed_title") or row.get("previous_title") or catalog.get("title") or media_id),
+                "keywords": proposed_keywords,
+                "status": str(row.get("proposal_status") or ""),
+                "confidence": row.get("confidence"),
+                "reason": str(row.get("proposal_reason") or ""),
+                "generator": {
+                    "model": row.get("generator_model") or "",
+                    "model_level": row.get("generator_model_level"),
+                    "model_maxed": bool(row.get("generator_model_maxed")),
+                    "model_ladder": model_ladder,
+                },
+            },
+            "changes": {
+                "removed_blacklisted": _json_text_list(row.get("removed_blacklisted")),
+                "keyword_target": row.get("keyword_target"),
+                "keyword_target_met": bool(row.get("keyword_target_met")),
+            },
+        })
+    return {
+        "ok": True,
+        "format": "photosbyelie-title-keyword-review-queue",
+        "schema_version": 1,
+        "queue_source": "owner-sqlite-helper",
+        "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+        "batch_id": batch_id,
+        "pending_batches": pending_batches,
+        "selection": {
+            "total_count": len(photos),
+            "visible_pending_count": len(photos),
+            "sqlite_pending_count": len(pending_rows),
+        },
+        "range": {
+            "newest": max(capture_values) if capture_values else "",
+            "oldest": min(capture_values) if capture_values else "",
+        },
+        "photos": photos,
+    }
+
+
+def title_keyword_review_queue_payload(repo_root: Path) -> dict:
+    conn = owner_db_connect(repo_root)
+    try:
+        pending_batches = _pending_title_keyword_batches(conn)
+        all_photos = []
+        all_pending_rows = []
+        for batch in pending_batches:
+            batch_id = batch["batch_id"]
+            pending_rows = _pending_title_keyword_rows(conn, batch_id)
+            all_pending_rows.extend(pending_rows)
+            payload = _title_keyword_payload_from_batch_file(repo_root, batch_id, pending_rows, pending_batches)
+            if payload:
+                payload_photos = payload.get("photos") or []
+                all_photos.extend(payload_photos)
+                covered_ids = {_review_photo_id(item) for item in payload_photos if isinstance(item, dict)}
+                missing_rows = [row for row in pending_rows if str(row.get("media_id") or "") not in covered_ids]
+                if missing_rows:
+                    fallback_payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, missing_rows, pending_batches)
+                    all_photos.extend(fallback_payload.get("photos") or [])
+                continue
+            if pending_rows:
+                payload = _title_keyword_payload_from_sqlite(repo_root, batch_id, pending_rows, pending_batches)
+                all_photos.extend(payload.get("photos") or [])
+        if all_photos:
+            sort_values = [value for value in (_capture_sort_value(item) for item in all_photos) if value]
+            batch_ids = [batch["batch_id"] for batch in pending_batches if batch.get("pending_count")]
+            return {
+                "ok": True,
+                "format": "photosbyelie-title-keyword-review-queue",
+                "schema_version": 1,
+                "queue_source": "owner-sqlite-helper",
+                "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+                "review_scope": "all-pending",
+                "batch_id": "all-pending",
+                "batch_ids": batch_ids,
+                "pending_batches": pending_batches,
+                "proposal_files": {
+                    "queue": TITLE_KEYWORD_REVIEW_QUEUE_PATH,
+                },
+                "selection": {
+                    "total_count": len(all_photos),
+                    "visible_pending_count": len(all_photos),
+                    "sqlite_pending_count": len(all_pending_rows),
+                    "batch_count": len(batch_ids),
+                },
+                "range": {
+                    "newest": max(sort_values) if sort_values else "",
+                    "oldest": min(sort_values) if sort_values else "",
+                },
+                "photos": all_photos,
+            }
+        return {
+            "ok": True,
+            "format": "photosbyelie-title-keyword-review-queue",
+            "schema_version": 1,
+            "queue_source": "owner-sqlite-helper",
+            "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+            "batch_id": "",
+            "pending_batches": [],
+            "photos": [],
+        }
+    finally:
+        conn.close()
+
+
 def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_out: dict) -> tuple[Path, dict]:
     approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
     existing = _read_json_file(approvals_path, {})
@@ -705,13 +1054,17 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
         existing_not_found = []
     if not isinstance(payload_not_found, list):
         payload_not_found = []
-    not_found = list(dict.fromkeys(
-        [
-            str(item).strip()
-            for item in (existing_not_found + payload_not_found)
-            if str(item).strip()
-        ]
-    ))
+    not_found_by_id = {}
+    for item in existing_not_found + payload_not_found:
+        if isinstance(item, dict):
+            photo_id = str(item.get("photo_id") or "").strip()
+            if photo_id:
+                not_found_by_id[photo_id] = item
+            continue
+        photo_id = str(item or "").strip()
+        if photo_id:
+            not_found_by_id[photo_id] = photo_id
+    not_found = list(not_found_by_id.values())
     merged = {
         **existing,
         **payload_out,
@@ -1094,6 +1447,118 @@ def _record_title_keyword_rejections(repo_root: Path, batch_id: str, rejections:
         "path": "",
         "rejected": rejected,
         "role": "owner-sqlite",
+    }
+
+
+def _review_item_batch_id(item: dict, fallback_batch_id: str) -> str:
+    return str(item.get("batch_id") or item.get("proposal_batch_id") or fallback_batch_id or "").strip()
+
+
+def _group_review_items_by_batch(items: list[dict], fallback_batch_id: str) -> dict[str, list[dict]]:
+    groups: dict[str, list[dict]] = {}
+    for item in items:
+        batch_id = _review_item_batch_id(item, fallback_batch_id)
+        if not batch_id:
+            continue
+        grouped_item = {**item, "batch_id": batch_id}
+        groups.setdefault(batch_id, []).append(grouped_item)
+    return groups
+
+
+def _review_batch_ids_for_items(*groups: dict[str, list[dict]]) -> list[str]:
+    batch_ids = []
+    seen = set()
+    for group in groups:
+        for batch_id, items in group.items():
+            if batch_id in seen or not items:
+                continue
+            seen.add(batch_id)
+            batch_ids.append(batch_id)
+    return batch_ids
+
+
+def _review_record_not_found(not_found: list[str], approvals: list[dict], fallback_batch_id: str) -> list[dict]:
+    batch_by_id = {
+        str(item.get("photo_id") or "").strip(): _review_item_batch_id(item, fallback_batch_id)
+        for item in approvals
+        if str(item.get("photo_id") or "").strip()
+    }
+    records = []
+    for media_id in not_found:
+        media_id = str(media_id or "").strip()
+        if not media_id:
+            continue
+        records.append({"photo_id": media_id, "batch_id": batch_by_id.get(media_id, fallback_batch_id)})
+    return records
+
+
+def _save_title_keyword_review_records(
+    repo_root: Path,
+    *,
+    fallback_batch_id: str,
+    approvals: list[dict],
+    rejections: list[dict],
+    blocked: list[dict],
+    not_found: list[dict],
+    review_flag: str,
+    applied_at: str,
+    decided_at: str,
+) -> dict:
+    approval_groups = _group_review_items_by_batch(approvals, fallback_batch_id)
+    rejection_groups = _group_review_items_by_batch(rejections, fallback_batch_id)
+    blocked_groups = _group_review_items_by_batch(blocked, fallback_batch_id)
+    not_found_groups = _group_review_items_by_batch(not_found, fallback_batch_id)
+    paths = []
+    db_path = ""
+    approved_count = 0
+    rejected_count = 0
+    blocked_count = 0
+    not_found_count = 0
+    for batch_id in _review_batch_ids_for_items(approval_groups, rejection_groups, blocked_groups, not_found_groups):
+        batch_approvals = approval_groups.get(batch_id, [])
+        batch_rejections = rejection_groups.get(batch_id, [])
+        batch_blocked = blocked_groups.get(batch_id, [])
+        batch_not_found = not_found_groups.get(batch_id, [])
+        payload_out = {
+            "format": "photosbyelie-title-keyword-review-approvals",
+            "schema_version": 1,
+            "updated_at": decided_at,
+            "batch_id": batch_id,
+            "review_flag": review_flag,
+            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
+            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
+            "approvals": batch_approvals,
+            "rejections": batch_rejections,
+            "blocked": batch_blocked,
+            "not_found": batch_not_found,
+        }
+        if batch_approvals and applied_at:
+            payload_out["applied_at"] = applied_at
+        approvals_path, _merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
+        db_result = record_title_keyword_review_decisions_db(
+            repo_root,
+            batch_id,
+            batch_approvals,
+            batch_rejections,
+            batch_blocked,
+            batch_not_found,
+            applied_at=applied_at if batch_approvals else "",
+            decided_at=decided_at,
+        )
+        paths.append(approvals_path.relative_to(repo_root).as_posix())
+        db_path = db_result.get("db") or db_path
+        approved_count += int(db_result.get("accepted") or 0)
+        rejected_count += int(db_result.get("rejected") or 0)
+        blocked_count += int(db_result.get("blocked") or 0)
+        not_found_count += int(db_result.get("not_found") or 0)
+    return {
+        "db": db_path,
+        "paths": paths,
+        "path": paths[0] if paths else "",
+        "approved_count": approved_count,
+        "rejected_count": rejected_count,
+        "blocked_count": blocked_count,
+        "not_found_count": not_found_count,
     }
 
 
@@ -3272,6 +3737,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "approved": True,
                     "title": title,
                     "keywords": _review_keywords(repo_root, item.get("keywords")),
@@ -3287,6 +3753,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized_rejections.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "rejected": True,
                     "title": str(item.get("title") or "").strip(),
                     "keywords": _review_keywords(repo_root, item.get("keywords")),
@@ -3306,6 +3773,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized_blocked.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "blocked": True,
                     "blocked_at": now,
                 }
@@ -3327,43 +3795,30 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 hidden_groups,
                 normalized,
             )
-            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
-        payload_out = {
-            "format": "photosbyelie-title-keyword-review-approvals",
-            "schema_version": 1,
-            "updated_at": now,
-            "batch_id": batch_id,
-            "review_flag": review_flag,
-            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
-            "approvals": normalized,
-            "rejections": normalized_rejections,
-            "blocked": normalized_blocked,
-            "not_found": not_found,
-        }
-        if normalized:
-            payload_out["applied_at"] = now
-        approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
-        db_result = record_title_keyword_review_decisions_db(
+            if metadata_changed:
+                site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+        save_result = _save_title_keyword_review_records(
             repo_root,
-            batch_id,
-            normalized,
-            normalized_rejections,
-            normalized_blocked,
-            not_found,
-            applied_at=payload_out.get("applied_at", ""),
+            fallback_batch_id=batch_id,
+            approvals=normalized,
+            rejections=normalized_rejections,
+            blocked=normalized_blocked,
+            not_found=not_found_records,
+            review_flag=review_flag,
+            applied_at=now if normalized else "",
             decided_at=now,
         )
         return {
             "ok": True,
             "action": action,
             "batch_id": batch_id,
-            "path": approvals_path.relative_to(repo_root).as_posix(),
-            "db": db_result.get("db"),
-            "approved_count": len(merged_record.get("approvals", [])),
-            "rejected_count": len(merged_record.get("rejections", [])),
-            "blocked_count": len(merged_record.get("blocked", [])),
+            "path": save_result.get("path", ""),
+            "paths": save_result.get("paths", []),
+            "db": save_result.get("db", ""),
+            "approved_count": save_result.get("approved_count", 0),
+            "rejected_count": save_result.get("rejected_count", 0),
+            "blocked_count": save_result.get("blocked_count", 0),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
             "not_found": not_found,
@@ -3522,6 +3977,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "approved": True,
                     "title": title,
                     "keywords": keywords,
@@ -3537,6 +3993,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized_rejections.append(
                 {
                     "photo_id": current_photo_id,
+                    "batch_id": _review_item_batch_id(item, batch_id),
                     "rejected": True,
                     "title": str(item.get("title") or "").strip(),
                     "keywords": _review_keywords(repo_root, item.get("keywords")),
@@ -3556,21 +4013,19 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized,
         )
 
-        _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
-        payload_out = {
-            "format": "photosbyelie-title-keyword-review-approvals",
-            "schema_version": 1,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "batch_id": batch_id,
-            "applied_at": datetime.now(timezone.utc).isoformat(),
-            "review_flag": review_flag,
-            "proposal_state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-            "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
-            "approvals": normalized,
-            "rejections": normalized_rejections,
-            "not_found": not_found,
-        }
-        approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
+        decided_at = datetime.now(timezone.utc).isoformat()
+        not_found_records = _review_record_not_found(not_found, normalized, batch_id)
+        save_result = _save_title_keyword_review_records(
+            repo_root,
+            fallback_batch_id=batch_id,
+            approvals=normalized,
+            rejections=normalized_rejections,
+            blocked=[],
+            not_found=not_found_records,
+            review_flag=review_flag,
+            applied_at=decided_at if normalized else "",
+            decided_at=decided_at,
+        )
         site_state = {}
         worker_catalog = {}
         if normalized:
@@ -3579,10 +4034,12 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "ok": True,
             "action": action,
             "batch_id": batch_id,
-            "path": approvals_path.relative_to(repo_root).as_posix(),
-            "approved_count": len(merged_record.get("approvals", [])),
-            "rejected_count": len(merged_record.get("rejections", [])),
-            "blocked_count": len(merged_record.get("blocked", [])),
+            "path": save_result.get("path", ""),
+            "paths": save_result.get("paths", []),
+            "db": save_result.get("db", ""),
+            "approved_count": save_result.get("approved_count", 0),
+            "rejected_count": save_result.get("rejected_count", 0),
+            "blocked_count": save_result.get("blocked_count", 0),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
             "not_found": not_found,

@@ -1,9 +1,219 @@
 {
   "format": "photosbyelie-title-keyword-review-approvals",
   "schema_version": 1,
-  "updated_at": "2026-05-15T15:42:36.260202+00:00",
+  "updated_at": "2026-05-19T19:35:04.054484+00:00",
   "batch_id": "2026-05-14",
-  "approvals": [],
+  "approvals": [
+    {
+      "photo_id": "20180525-1419-00943-554228f741",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Albi Cathedral",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ]
+    },
+    {
+      "photo_id": "20180525-1420-00944-6079776b41",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Albi, Cathedral square",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ]
+    },
+    {
+      "photo_id": "20180525-1439-00945-c37d4fa644",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Le Tarn à Albi",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ]
+    },
+    {
+      "photo_id": "20180525-1439-00946-d866163437",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Le Tarn à Albi",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ]
+    },
+    {
+      "photo_id": "20180525-1443-00954-efcc015c68",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Le Tarn à Albi",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ]
+    },
+    {
+      "photo_id": "20180525-1443-00955-ec24232696",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Le Tarn à Albi",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ]
+    },
+    {
+      "photo_id": "20180529-1739-15441-c012616b8d",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Chateau de Monte Cristo, France",
+      "keywords": [
+        "Chateau",
+        "Chateau de Monte Cristo",
+        "France",
+        "Ile de France",
+        "Le-Port-Marly",
+        "Monte-Cristo",
+        "Paris"
+      ]
+    },
+    {
+      "photo_id": "20180529-1757-15382-4fb563774f",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Chateau de Monte Cristo, France",
+      "keywords": [
+        "Chateau",
+        "Chateau de Monte Cristo",
+        "France",
+        "Ile de France",
+        "Le-Port-Marly",
+        "Monte-Cristo",
+        "Paris"
+      ]
+    },
+    {
+      "photo_id": "20180530-1458-15730-b90327218e",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Jardin du Luxembourg,Paris, France",
+      "keywords": [
+        "France",
+        "Ile de France",
+        "Jardin Du Luxembourg",
+        "Palais du Luxembourg",
+        "Paris"
+      ]
+    },
+    {
+      "photo_id": "20180530-1508-14876-8349c69c56",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Jardin du Luxembourg,Paris, France",
+      "keywords": [
+        "France",
+        "Ile de France",
+        "Jardin Du Luxembourg",
+        "Palais du Luxembourg",
+        "Paris"
+      ]
+    },
+    {
+      "photo_id": "20180530-1523-15556-0aac5ec9cc",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Jardin du Luxembourg,Paris, France",
+      "keywords": [
+        "France",
+        "Ile de France",
+        "Jardin Du Luxembourg",
+        "Palais du Luxembourg",
+        "Paris"
+      ]
+    },
+    {
+      "photo_id": "20180712-1827-16407-476b03451a",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Carlsbad, garden",
+      "keywords": [
+        "CA",
+        "California",
+        "Carlsbad",
+        "USA",
+        "long exposure",
+        "stream"
+      ]
+    },
+    {
+      "photo_id": "20180712-1827-16605-457c78af75",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Carlsbad, garden",
+      "keywords": [
+        "USA"
+      ]
+    },
+    {
+      "photo_id": "20180813-0936-18935-ff4ebcc12a",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Carlsbad, garden",
+      "keywords": [
+        "USA"
+      ]
+    },
+    {
+      "photo_id": "20181020-1143-19559-d29e8bb4b8",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Pacific Ocean Coast viewed from Del Mar",
+      "keywords": [
+        "published Adobe",
+        "USA"
+      ]
+    },
+    {
+      "photo_id": "20181113-1729-19714-e408f3becb",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Del Mar Dog Beach",
+      "keywords": [
+        "USA"
+      ]
+    },
+    {
+      "photo_id": "20181113-1748-16886-f468becf95",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Encinitas Sunset",
+      "keywords": [
+        "published Adobe",
+        "USA"
+      ]
+    },
+    {
+      "photo_id": "20190624-1826-16542-1eb5098247",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Bratislava, SK",
+      "keywords": [
+        "Bratislava",
+        "SK",
+        "_Architecture",
+        "_Places",
+        "published Adobe"
+      ]
+    }
+  ],
   "rejections": [
     {
       "photo_id": "20180522-1053-00829-6b0491a51f",
@@ -1465,9 +1675,512 @@
         "Travel photography"
       ],
       "comment": "use the hints in the keywords to provide a decent title"
+    },
+    {
+      "photo_id": "20180522-1151-00835-e83ea8125d",
+      "rejected": true,
+      "title": "20180522 1151 00835",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1151-00837-3b90404c2a",
+      "rejected": true,
+      "title": "20180522 1151 00837",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1152-00839-0fd2439a9a",
+      "rejected": true,
+      "title": "20180522 1152 00839",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1152-00841-1290b7ad30",
+      "rejected": true,
+      "title": "20180522 1152 00841",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1153-00844-55c8d57db1",
+      "rejected": true,
+      "title": "20180522 1153 00844",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1153-00845-dfbb904491",
+      "rejected": true,
+      "title": "20180522 1153 00845",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1156-00849-97eb65fcd7",
+      "rejected": true,
+      "title": "20180522 1156 00849",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1243-00857-9016a8fb74",
+      "rejected": true,
+      "title": "20180522 1243 00857",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1243-00860-d80ba96fe3",
+      "rejected": true,
+      "title": "20180522 1243 00860",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1244-00861-1c8323b22f",
+      "rejected": true,
+      "title": "20180522 1244 00861",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1244-00862-d10dd36348",
+      "rejected": true,
+      "title": "20180522 1244 00862",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1245-00864-8e51015779",
+      "rejected": true,
+      "title": "20180522 1245 00864",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1246-00865-f227761feb",
+      "rejected": true,
+      "title": "20180522 1246 00865",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1246-00866-e54508e73b",
+      "rejected": true,
+      "title": "20180522 1246 00866",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1247-00867-20da9720f2",
+      "rejected": true,
+      "title": "20180522 1247 00867",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1251-00868-7319a58ddf",
+      "rejected": true,
+      "title": "20180522 1251 00868",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1252-00872-edb2ed6f2c",
+      "rejected": true,
+      "title": "20180522 1252 00872",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1252-00873-1e21d9efaa",
+      "rejected": true,
+      "title": "20180522 1252 00873",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1257-00875-b88ee8a0bc",
+      "rejected": true,
+      "title": "20180522 1257 00875",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1257-00876-8e04a7ee3e",
+      "rejected": true,
+      "title": "20180522 1257 00876",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1259-00877-3bb003eb2d",
+      "rejected": true,
+      "title": "20180522 1259 00877",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1259-00878-8f7fdbf73b",
+      "rejected": true,
+      "title": "20180522 1259 00878",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1300-00879-eea199db6c",
+      "rejected": true,
+      "title": "20180522 1300 00879",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1304-00881-db5009c014",
+      "rejected": true,
+      "title": "20180522 1304 00881",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1309-00886-84c424a432",
+      "rejected": true,
+      "title": "20180522 1309 00886",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1322-00888-08ac194d19",
+      "rejected": true,
+      "title": "20180522 1322 00888",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1322-00889-84c3a77b96",
+      "rejected": true,
+      "title": "20180522 1322 00889",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1323-00891-7930502b12",
+      "rejected": true,
+      "title": "20180522 1323 00891",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1325-00892-5b9c7eef8a",
+      "rejected": true,
+      "title": "20180522 1325 00892",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1326-00893-75d36d95eb",
+      "rejected": true,
+      "title": "20180522 1326 00893",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1326-00894-70f247c8bf",
+      "rejected": true,
+      "title": "20180522 1326 00894",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1333-00896-18f955bb6f",
+      "rejected": true,
+      "title": "20180522 1333 00896",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180522-1335-00897-e59231f9bd",
+      "rejected": true,
+      "title": "20180522 1335 00897",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1054-00904-0d99c36c72",
+      "rejected": true,
+      "title": "20180523 1054 00904",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1158-00905-cda4564627",
+      "rejected": true,
+      "title": "20180523 1158 00905",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1158-00906-0c7b4b1a4a",
+      "rejected": true,
+      "title": "20180523 1158 00906",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1158-00907-6ce2b12655",
+      "rejected": true,
+      "title": "20180523 1158 00907",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1158-00908-c83ee908b8",
+      "rejected": true,
+      "title": "20180523 1158 00908",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1158-00909-ae9141c3d6",
+      "rejected": true,
+      "title": "20180523 1158 00909",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1158-00910-5757c7b525",
+      "rejected": true,
+      "title": "20180523 1158 00910",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1201-00911-eafaa28f50",
+      "rejected": true,
+      "title": "20180523 1201 00911",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1202-00912-a00fe362d5",
+      "rejected": true,
+      "title": "20180523 1202 00912",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1202-00913-897a1ed221",
+      "rejected": true,
+      "title": "20180523 1202 00913",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1210-00914-2cdae156c4",
+      "rejected": true,
+      "title": "20180523 1210 00914",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1210-00915-fab64fb7c8",
+      "rejected": true,
+      "title": "20180523 1210 00915",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1210-00916-b8e0288d68",
+      "rejected": true,
+      "title": "20180523 1210 00916",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1210-00918-3e378ecfd5",
+      "rejected": true,
+      "title": "20180523 1210 00918",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1212-00919-6df8338b03",
+      "rejected": true,
+      "title": "20180523 1212 00919",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1227-00921-6e41710e47",
+      "rejected": true,
+      "title": "20180523 1227 00921",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1232-00922-a14269681d",
+      "rejected": true,
+      "title": "20180523 1232 00922",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1253-00923-9853f3d6a1",
+      "rejected": true,
+      "title": "20180523 1253 00923",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1430-00925-26fcc1b7fe",
+      "rejected": true,
+      "title": "20180523 1430 00925",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1430-00926-d172f5ecc6",
+      "rejected": true,
+      "title": "20180523 1430 00926",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1431-00927-5d8be4af92",
+      "rejected": true,
+      "title": "20180523 1431 00927",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1431-00928-2f28a3e130",
+      "rejected": true,
+      "title": "20180523 1431 00928",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1436-00930-629888625d",
+      "rejected": true,
+      "title": "20180523 1436 00930",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1436-00931-d244aba917",
+      "rejected": true,
+      "title": "20180523 1436 00931",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1505-00933-be91168496",
+      "rejected": true,
+      "title": "20180523 1505 00933",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180523-1842-00934-ac0d4c2359",
+      "rejected": true,
+      "title": "20180523 1842 00934",
+      "keywords": [],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180524-1746-00940-636b34659d",
+      "rejected": true,
+      "title": "Galeries Lafayette, Rue Bayard, Toulouse, France",
+      "keywords": [],
+      "comment": "keywords missing"
+    },
+    {
+      "photo_id": "20180524-1746-00941-72deedae61",
+      "rejected": true,
+      "title": "Galeries Lafayette, Rue Bayard, Toulouse, France",
+      "keywords": [],
+      "comment": "keywords missing"
+    },
+    {
+      "photo_id": "20180525-1440-00948-f9444792d1",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20180525 1440 00948",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180525-1440-00949-4323df4391",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20180525 1440 00949",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180525-1440-00951-9d8859c6b7",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20180525 1440 00951",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180525-1441-00952-0be82ccc8d",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20180525 1441 00952",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180525-1442-00953-93073461ca",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20180525 1442 00953",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20180525-1443-00956-a9e61b8dde",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20180525 1443 00956",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie"
+      ],
+      "comment": ""
     }
   ],
   "blocked": [],
   "proposal_state_path": "assets/owner-actions/title-keyword-review-queue/proposed-state.json",
-  "not_found": []
+  "not_found": [],
+  "review_flag": "Title_Keywords_Reviewed",
+  "proposal_state_flag": "Title_Keywords_Proposed",
+  "rejection_flag": "Title_Keywords_Rejected",
+  "applied_at": "2026-05-19T19:34:53.765393+00:00"
 }

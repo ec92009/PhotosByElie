@@ -8,8 +8,15 @@
   const root = document.querySelector("[data-title-keyword-review-root]");
 
   const queueUrl = "./assets/owner-actions/title-keyword-review-queue/latest.json";
+  const helperQueueUrl = "/__photosbyelie/title-keyword-review-queue";
   const blacklistUrl = "./assets/owner-actions/keyword-blacklist.json";
   const approvalsEndpoint = "/__photosbyelie/photo-action";
+  const stateKeywordFlags = new Set([
+    "title_keywords_reviewed",
+    "title_keywords_proposed",
+    "title_keywords_rejected",
+    "title_keywords_parked",
+  ]);
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/[&<>'\"]/g, (char) => ({
@@ -73,6 +80,26 @@
     return payload;
   };
 
+  const loadReviewQueue = async () => {
+    if (enabled) {
+      try {
+        const queue = await loadJson(helperQueueUrl);
+        if (queue?.ok !== false) {
+          return {
+            queue,
+            sourceHref: queue?.proposal_files?.batch || helperQueueUrl,
+          };
+        }
+      } catch {
+        // Plain static servers do not expose the Owner SQLite helper endpoint.
+      }
+    }
+    return {
+      queue: await loadJson(queueUrl),
+      sourceHref: queueUrl,
+    };
+  };
+
   const keywordBlacklistSet = (payload) => {
     const keywords = payload?.keywords;
     if (!Array.isArray(keywords)) return new Set();
@@ -80,7 +107,10 @@
   };
 
   const normalizeKeywords = (raw, blacklist) => uniqueKeywords(splitKeywordText(raw))
-    .filter((keyword) => !blacklist.has(keyword.toLowerCase()));
+    .filter((keyword) => {
+      const normalized = keyword.toLowerCase();
+      return !blacklist.has(normalized) && !stateKeywordFlags.has(normalized);
+    });
 
   const currentKeywordMarkup = (item) => {
     const keywords = Array.isArray(item?.current?.keywords)
@@ -161,12 +191,18 @@
     lockedPanel.hidden = true;
     summaryRoot.hidden = true;
 
-    const [queue, blacklistPayload] = await Promise.all([
-      loadJson(queueUrl),
+    const [queueResult, blacklistPayload] = await Promise.all([
+      loadReviewQueue(),
       loadJson(blacklistUrl).catch(() => ({ keywords: [] })),
     ]);
+    const queue = queueResult.queue;
+    const queueHref = queueResult.sourceHref || queueUrl;
 
     const batchId = String(queue?.batch_id || queue?.batchId || "").trim();
+    const reviewScope = String(queue?.review_scope || queue?.reviewScope || "").trim();
+    const pendingBatchCount = Array.isArray(queue?.pending_batches)
+      ? queue.pending_batches.filter((item) => Number(item?.pending_count || 0) > 0).length
+      : 0;
     const photos = Array.isArray(queue?.photos) ? queue.photos : [];
     const blacklist = keywordBlacklistSet(blacklistPayload);
     const shootWindowMs = 2 * 60 * 60 * 1000;
@@ -178,13 +214,31 @@
       return;
     }
 
-    const approvalRecord = await loadJson(`./assets/owner-actions/title-keyword-review-queue/approvals-${encodeURIComponent(batchId)}.json`)
-      .catch(() => ({}));
-    const savedIds = savedReviewIds(approvalRecord);
-    const visiblePhotos = photos.filter((item) => {
-      const photoId = String(item?.photo_id || item?.photoId || "");
-      return photoId && !savedIds.has(photoId);
-    });
+    const sqliteBackedQueue = queue?.queue_source === "owner-sqlite-helper";
+    const approvalRecord = sqliteBackedQueue
+      ? {}
+      : await loadJson(`./assets/owner-actions/title-keyword-review-queue/approvals-${encodeURIComponent(batchId)}.json`).catch(() => ({}));
+    const savedIds = sqliteBackedQueue ? new Set() : savedReviewIds(approvalRecord);
+    const captureTimeForPhoto = (item) => parseCaptureTime(
+      item?.capture?.raw || item?.capture?.date || item?.capture?.sort || "",
+    );
+    const visiblePhotos = photos
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => {
+        const photoId = String(item?.photo_id || item?.photoId || "");
+        return photoId && !savedIds.has(photoId);
+      })
+      .sort((left, right) => {
+        const leftTime = captureTimeForPhoto(left.item);
+        const rightTime = captureTimeForPhoto(right.item);
+        if (Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
+          return leftTime - rightTime || left.index - right.index;
+        }
+        if (Number.isFinite(leftTime)) return -1;
+        if (Number.isFinite(rightTime)) return 1;
+        return left.index - right.index;
+      })
+      .map(({ item }) => item);
     const newest = queue?.range?.newest || "";
     const oldest = queue?.range?.oldest || "";
     status.textContent = visiblePhotos.length
@@ -192,14 +246,18 @@
       : "All rows in this batch are already saved.";
 
     summaryRoot.hidden = false;
+    const summaryHeading = reviewScope === "all-pending"
+      ? `All pending proposals${pendingBatchCount ? ` (${pendingBatchCount} batches)` : ""}`
+      : `Batch ${batchId}`;
+
     summaryRoot.innerHTML = `
-      <h2>Batch ${escapeHtml(batchId)}</h2>
-      <p class="gallery-status">Newest: ${escapeHtml(newest || "—")} • Oldest: ${escapeHtml(oldest || "—")}</p>
+      <h2>${escapeHtml(summaryHeading)}</h2>
+      <p class="gallery-status">Oldest: ${escapeHtml(oldest || "—")} • Newest: ${escapeHtml(newest || "—")}</p>
       <div class="cta title-keyword-review-actions">
         <button class="btn secondary" type="button" data-title-keyword-review-approve-all>Approve visible</button>
         <button class="btn secondary" type="button" data-title-keyword-review-save>Apply selected</button>
         <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
-        <a class="btn secondary" href="${escapeHtml(queueUrl)}" target="_blank" rel="noreferrer">Open proposal JSON</a>
+        <a class="btn secondary" href="${escapeHtml(queueHref)}" target="_blank" rel="noreferrer">Open proposal source</a>
       </div>
       <p class="gallery-status">Rows autosave as soon as you approve, reject, block, or edit. Apply selected updates catalog metadata for checked approvals and queues checked rejections for rework.</p>
     `;
@@ -213,6 +271,7 @@
 
     list.innerHTML = visiblePhotos.map((item, index) => {
       const photoId = String(item?.photo_id || item?.photoId || "");
+      const photoBatchId = String(item?.batch_id || item?.proposal_batch_id || batchId || "");
       const title = String(item?.current?.title || "");
       const capture = String(item?.capture?.raw || item?.capture?.date || "");
       const galleryLabel = String(item?.gallery?.label || item?.gallery_label || item?.gallery_key || "");
@@ -221,15 +280,20 @@
       const thumb = reviewThumbUrl(item);
       const fetchPriority = index < 12 ? "high" : "low";
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
+      const currentKeywordList = normalizeKeywords(currentKeywords, blacklist);
       const currentKeywordsHtml = currentKeywordMarkup(item);
       const proposedTitle = String(item?.proposed?.title || title || "");
-      const proposedKeywords = normalizeKeywords(
+      const rawProposedKeywords = normalizeKeywords(
         Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords,
         blacklist,
-      ).join(", ");
+      );
+      const proposedKeywordList = rawProposedKeywords.length < currentKeywordList.length
+        ? uniqueKeywords([...currentKeywordList, ...rawProposedKeywords])
+        : rawProposedKeywords;
+      const proposedKeywords = proposedKeywordList.join(", ");
       const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
       return `
-        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" tabindex="0">
+        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" tabindex="0">
           <a class="title-keyword-review-preview ${thumb ? "has-image" : "is-missing-preview"}" href="${escapeHtml(href)}" aria-label="Open photo ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
           </a>
@@ -263,7 +327,7 @@
             </label>
             <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
             <div class="title-keyword-review-row-tools">
-              <button type="button" data-review-propagate title="Apply this row's approve/reject choice to the same two-hour shoot window">Propagate</button>
+              <button type="button" data-review-propagate title="Apply this row's approve/reject choice to current and following rows in the same two-hour shoot window">Propagate</button>
             </div>
           </div>
         </article>
@@ -286,7 +350,10 @@
     `;
     root.append(bottomActions);
 
+    const batchIdForCard = (card) => String(card?.dataset?.reviewBatchId || batchId || "").trim();
+
     const buildRowDecision = (photoId, card) => {
+      const rowBatchId = batchIdForCard(card);
       const title = String(card.querySelector("[data-review-title]")?.value || "").trim();
       const keywordsRaw = String(card.querySelector("[data-review-keywords]")?.value || "");
       const keywords = normalizeKeywords(keywordsRaw, blacklist);
@@ -294,8 +361,8 @@
       const rejected = Boolean(card.querySelector("[data-review-reject]")?.checked);
       const approved = Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
       return {
-        approval: approved ? { photo_id: photoId, approved: true, title, keywords } : null,
-        rejection: rejected ? { photo_id: photoId, rejected: true, title, keywords, comment } : null,
+        approval: approved ? { photo_id: photoId, batch_id: rowBatchId, approved: true, title, keywords } : null,
+        rejection: rejected ? { photo_id: photoId, batch_id: rowBatchId, rejected: true, title, keywords, comment } : null,
         approved,
         rejected,
       };
@@ -409,6 +476,12 @@
         setRowStatus(card, "Auth required", "error");
         return;
       }
+      const missing = new Set((result.not_found || []).map((item) => String(item || "")));
+      if (missing.has(photoId)) {
+        setRowStatus(card, "Not in catalog", "error", "Marked blocked in Owner state because the helper could not find this photo in the current catalog.");
+        if (status) status.textContent = `${photoId} was marked blocked because it is not in the current catalog.`;
+        return;
+      }
       const label = decision.rejection ? "Rejected and saved" : "Approved and applied";
       setRowStatus(card, label, "saved");
       if (status) {
@@ -430,11 +503,55 @@
       }, delay));
     };
 
+    const saveCardsDecisions = async (cards) => {
+      const approvals = [];
+      const rejections = [];
+      const targets = [];
+      cards.forEach((card) => {
+        const targetPhotoId = card.getAttribute("data-review-photo-id") || "";
+        if (!targetPhotoId) return;
+        window.clearTimeout(rowSaveTimers.get(targetPhotoId));
+        const decision = buildRowDecision(targetPhotoId, card);
+        if (!decision.approval && !decision.rejection) {
+          setRowStatus(card, "Not saved");
+          return;
+        }
+        if (decision.approval) approvals.push(decision.approval);
+        if (decision.rejection) rejections.push(decision.rejection);
+        targets.push({ card, decision, photoId: targetPhotoId });
+        setRowStatus(card, "Saving...", "saving");
+      });
+      if (!targets.length) return { count: 0 };
+      const result = await postApprovalsPayload({
+        action: "save-title-keyword-review-approvals",
+        batch_id: batchId,
+        approvals,
+        rejections,
+      });
+      if (!result) {
+        targets.forEach(({ card }) => setRowStatus(card, "Auth required", "error"));
+        return null;
+      }
+      const missing = new Set((result.not_found || []).map((item) => String(item || "")));
+      targets.forEach(({ card, decision, photoId }) => {
+        if (missing.has(photoId)) {
+          setRowStatus(card, "Not in catalog", "error", "Marked blocked in Owner state because the helper could not find this photo in the current catalog.");
+          return;
+        }
+        setRowStatus(card, decision.rejection ? "Rejected and saved" : "Approved and applied", "saved");
+      });
+      return { count: targets.length, result };
+    };
+
     const cardsInShootWindow = (sourceCard) => {
+      const cards = [...cardById.values()];
+      const sourceIndex = cards.indexOf(sourceCard);
+      if (sourceIndex === -1) return [sourceCard];
       const sourceTime = Number(sourceCard.dataset.reviewCaptureTime || "");
       const sourceGallery = String(sourceCard.dataset.reviewGalleryKey || "");
       if (!Number.isFinite(sourceTime)) return [sourceCard];
-      return [...cardById.values()].filter((card) => {
+      return cards.filter((card, index) => {
+        if (index < sourceIndex) return false;
         const cardTime = Number(card.dataset.reviewCaptureTime || "");
         if (!Number.isFinite(cardTime)) return false;
         const cardGallery = String(card.dataset.reviewGalleryKey || "");
@@ -445,7 +562,7 @@
 
     const propagateDecision = (photoId, card) => {
       const sourceDecision = buildRowDecision(photoId, card);
-      if (!sourceDecision.approved && !sourceDecision.rejected) {
+      if (!sourceDecision.approval && !sourceDecision.rejection) {
         window.alert?.("Choose Approve or Reject before propagating.");
         return;
       }
@@ -456,7 +573,7 @@
         const targetApprove = targetCard.querySelector("[data-review-approve]");
         const targetReject = targetCard.querySelector("[data-review-reject]");
         const targetComment = targetCard.querySelector("[data-review-reject-comment]");
-        if (sourceDecision.approved) {
+        if (sourceDecision.approval) {
           if (targetApprove) targetApprove.checked = true;
           if (targetReject) targetReject.checked = false;
         } else {
@@ -466,11 +583,17 @@
             targetComment.value = sourceComment;
           }
         }
-        targetComment?.closest("label")?.classList.toggle("is-disabled", sourceDecision.approved);
-        if (targetComment) targetComment.readOnly = sourceDecision.approved;
-        if (targetPhotoId) scheduleRowSave(targetPhotoId, targetCard, 150);
+        targetComment?.closest("label")?.classList.toggle("is-disabled", Boolean(sourceDecision.approval));
+        if (targetComment) targetComment.readOnly = Boolean(sourceDecision.approval);
       });
-      if (status) status.textContent = `Propagated ${sourceDecision.rejected ? "reject" : "approve"} to ${targets.length} same-shoot rows.`;
+      if (status) status.textContent = `Propagated ${sourceDecision.rejection ? "reject" : "approve"} to ${targets.length} current/following same-shoot rows; saving as one batch.`;
+      saveCardsDecisions(targets).then((result) => {
+        if (result && status) status.textContent = `Propagated and saved ${result.count} current/following same-shoot rows.`;
+      }).catch((error) => {
+        const message = error?.message || "Could not save propagated rows.";
+        targets.forEach((targetCard) => setRowStatus(targetCard, "Save failed", "error", message));
+        if (status) status.textContent = message;
+      });
     };
 
     const blockPhoto = (photoId, card) => {
@@ -485,7 +608,7 @@
           batch_id: batchId,
           approvals: [],
           rejections: [],
-          blocked: [{ photo_id: photoId, blocked: true }],
+          blocked: [{ photo_id: photoId, batch_id: batchIdForCard(card), blocked: true }],
         }).then(() => {
           card.classList.add("is-owner-actioned");
           setRowStatus(card, "Basketed", "saved");
@@ -504,9 +627,15 @@
         if (checkbox) checkbox.checked = true;
         const reject = card.querySelector("[data-review-reject]");
         if (reject) reject.checked = false;
-        if (photoId) scheduleRowSave(photoId, card, 150);
       });
-      if (status) status.textContent = `${cardById.size} visible photos selected for approval and queued for autosave.`;
+      if (status) status.textContent = `${cardById.size} visible photos selected for approval; saving as one batch.`;
+      saveCardsDecisions([...cardById.values()]).then((result) => {
+        if (result && status) status.textContent = `${result.count} visible approvals saved.`;
+      }).catch((error) => {
+        const message = error?.message || "Could not save visible approvals.";
+        cardById.forEach((card) => setRowStatus(card, "Save failed", "error", message));
+        if (status) status.textContent = message;
+      });
     };
 
     const saveApprovals = async () => {

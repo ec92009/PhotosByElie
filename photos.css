@@ -2160,6 +2160,21 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   padding-top:16px;
   border-top:1px solid var(--line);
 }
+@media (min-width:761px) and (max-width:980px){
+  .title-keyword-review-row{
+    grid-template-columns:minmax(150px,200px) minmax(160px,.8fr) minmax(260px,1.25fr);
+    gap:12px;
+  }
+  .title-keyword-review-approve{
+    grid-column:1 / -1;
+    grid-template-columns:auto auto;
+    justify-content:start;
+    place-items:center start;
+    border-left:0;
+    border-top:1px solid var(--line);
+    padding-top:10px;
+  }
+}
 .basket-total-band{
   position:sticky;
   top:67px;

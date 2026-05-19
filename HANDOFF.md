@@ -24,9 +24,9 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v80.0`
+- Current visible build: `v80.6`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
-- Recent baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`, and `ca0bd349 photosbyelie: gate basket by delivery coverage`.
+- Recent baseline commits include: `6ec82489 photosbyelie: tighten title keyword review workflow`, `681be32d photosbyelie: use run-scoped title keyword batches`, and `3bcc875c photosbyelie: add title keyword review batch 2026-05-19-170500`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `6,324` publishable media rows: France `292`, USA `184`, Spain `643`, Mexico `2`, AI/Leonardo `4,921`, Italy `63`, Portugal `217`, Slovakia `2`.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite.br` is the preferred payload, `assets/catalog/photosbyelie.sqlite` is the fallback, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract.
@@ -48,7 +48,7 @@ for remote execution.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
 - Waste Basket review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
 - Public collection pages use the shared `gallery.html?gallery=<slug>` route.
-- `v80.0` publishes the latest Owner title/keyword approvals into the public SQLite catalog and Worker catalog, including the approved Portugal, Bilbao, and Paris metadata updates from the `2026-05-16` review batch.
+- `v80.6` publishes the latest Owner title/keyword approvals into the public SQLite catalog and Worker catalog, including the latest `2026-05-19` review batches. The Owner title/keyword review page can load pending proposals from `Owner.sqlite`, split approval records by proposal batch, and the Owner dashboard shows the pending review count.
 
 ## First Commands On A Machine
 

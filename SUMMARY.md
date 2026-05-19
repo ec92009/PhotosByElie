@@ -6,8 +6,8 @@ Date: 2026-05-19
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v80.0`
-- Local Owner page: `http://localhost:8000/owner.html?v=80.0`
+- Current visible build: `v80.6`
+- Local Owner page: `http://localhost:8000/owner.html?v=80.6`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -40,6 +40,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
 - In `v79.30`, the Imports tab's Start Imports button stays clickable when coverage is already clean and reports that no import work was started because everything tracked is up to date.
 - In `v80.0`, the latest Owner title/keyword approvals are published into the public SQLite catalog and Worker catalog. The `2026-05-16` approval batch now contains 89 approved rows, with fresh Portugal, Bilbao, and Paris metadata carried into buyer-facing catalog data.
+- In `v80.6`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, and show the pending review count from the Owner dashboard. The current generated catalog artifacts include the latest `2026-05-19` title/keyword approval batches.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.
@@ -49,6 +50,9 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 ## Recent Relevant Commits
 
 - `5178700d photosbyelie: repair hidden detail shortcut`
+- `3bcc875c photosbyelie: add title keyword review batch 2026-05-19-170500`
+- `681be32d photosbyelie: use run-scoped title keyword batches`
+- `6ec82489 photosbyelie: tighten title keyword review workflow`
 - `be836a78 photosbyelie: add database schema excalidraw`
 - `eb2c1918 photosbyelie: enforce owner sqlite state`
 - `aa2438e1 photosbyelie: document owner sqlite source of truth`
@@ -69,7 +73,9 @@ Recent implementation cycles ran:
 node --check hidden-actions.js
 node --check photo-detail.js
 node --check owner.js
+node --check title-keyword-review.js
 python3 -m py_compile scripts/local_server.py
+python3 -m py_compile scripts/owner_state_db.py
 python3 -m py_compile scripts/build_lightroom_thumbnails.py
 npm test
 git diff --check

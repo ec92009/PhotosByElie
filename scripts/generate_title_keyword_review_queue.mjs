@@ -225,6 +225,13 @@ const STATE_KEYWORDS = new Set([REVIEW_FLAG, PROPOSED_FLAG, REJECTED_FLAG, PARKE
 const reviewableKeywords = (items, rules) => allowedKeywords(items, rules)
   .filter((keyword) => !STATE_KEYWORDS.has(keyword.toLowerCase()));
 
+const proposalKeywordsWithFloor = (proposed, currentNonBlacklisted, rules) => {
+  const proposedKeywords = reviewableKeywords(proposed, rules);
+  const floorKeywords = reviewableKeywords(currentNonBlacklisted, rules);
+  if (proposedKeywords.length >= floorKeywords.length) return proposedKeywords;
+  return reviewableKeywords([...floorKeywords, ...proposedKeywords], rules);
+};
+
 const keywordSetEquals = (left, right) => {
   const leftSet = new Set(uniqueKeywords(left).map((item) => item.toLowerCase()));
   const rightSet = new Set(uniqueKeywords(right).map((item) => item.toLowerCase()));
@@ -564,13 +571,14 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
     [...withoutBlacklisted, ...context.keywords, ...promptKeywords, ...expansionKeywords],
     blacklist,
   );
-  const hasUsefulKeywords = proposedKeywords.filter((keyword) => keyword.toLowerCase() !== galleryLabel.toLowerCase()).length > 0;
+  const safeProposedKeywords = proposalKeywordsWithFloor(proposedKeywords, withoutBlacklisted, blacklist);
+  const hasUsefulKeywords = safeProposedKeywords.filter((keyword) => keyword.toLowerCase() !== galleryLabel.toLowerCase()).length > 0;
   const weakTitle = !proposedTitle || isPlaceholderTitle(proposedTitle, sourceFile?.path || metadataValue(photo, "Original file"));
   const needsContext = weakTitle || !hasUsefulKeywords;
 
   return {
     title: weakTitle ? "" : proposedTitle,
-    keywords: needsContext && !proposedKeywords.length ? withoutBlacklisted : proposedKeywords,
+    keywords: safeProposedKeywords,
     status: needsContext ? "needs_owner_context" : (placeholder ? "source_context" : (promptTitle ? "metadata_cleanup" : "metadata_context")),
     confidence: needsContext ? "low" : (placeholder || promptTitle ? "medium" : "high"),
     reason: needsContext
@@ -581,7 +589,7 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
         ? "Derived from source folder/path context; owner should verify the specific image subject."
         : "Keeps useful existing catalog metadata and removes blacklisted keyword noise.")),
     removedBlacklisted,
-    keywordTargetMet: proposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
+    keywordTargetMet: safeProposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
     noChangeNeeded: false,
     blacklistOnlyCleanup: false,
   };

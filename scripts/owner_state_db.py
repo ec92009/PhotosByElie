@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import re
 import sqlite3
 import uuid
 from pathlib import Path
@@ -24,6 +25,12 @@ TITLE_KEYWORDS_REJECTED_FLAG = "Title_Keywords_Rejected"
 TITLE_KEYWORDS_PARKED_FLAG = "Title_Keywords_Parked"
 TITLE_KEYWORDS_REVIEWED_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PARK_REJECTED_COUNT = 10
+TITLE_KEYWORD_STATE_FLAGS = {
+    TITLE_KEYWORDS_PROPOSED_FLAG.casefold(),
+    TITLE_KEYWORDS_REJECTED_FLAG.casefold(),
+    TITLE_KEYWORDS_PARKED_FLAG.casefold(),
+    TITLE_KEYWORDS_REVIEWED_FLAG.casefold(),
+}
 
 
 def now_iso() -> str:
@@ -243,6 +250,64 @@ def _normalized_keywords(value: Any) -> list[str]:
         seen.add(key)
         keywords.append(keyword)
     return keywords
+
+
+def _keyword_tokens(value: Any) -> list[str]:
+    text = str(value or "").strip()
+    text = re.sub(r"\.[a-z0-9]{2,5}$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"[_-]+", " ", text)
+    return [token for token in re.split(r"[^a-z0-9]+", text.casefold()) if token]
+
+
+def _keyword_blacklist_rules(conn: sqlite3.Connection) -> list[tuple[str, list[str]]]:
+    rows = conn.execute("SELECT keyword FROM keyword_blacklist ORDER BY keyword COLLATE NOCASE").fetchall()
+    rules: list[tuple[str, list[str]]] = []
+    for row in rows:
+        keyword = str(row["keyword"] or "").strip()
+        tokens = _keyword_tokens(keyword)
+        if keyword and tokens:
+            rules.append((keyword, tokens))
+    return rules
+
+
+def _has_token_sequence(tokens: list[str], blocked_tokens: list[str]) -> bool:
+    if not blocked_tokens or len(blocked_tokens) > len(tokens):
+        return False
+    for index in range(0, len(tokens) - len(blocked_tokens) + 1):
+        if tokens[index:index + len(blocked_tokens)] == blocked_tokens:
+            return True
+    return False
+
+
+def _has_blacklisted_term(keyword: str, rules: list[tuple[str, list[str]]]) -> bool:
+    tokens = _keyword_tokens(keyword)
+    if not tokens:
+        return False
+    return any(_has_token_sequence(tokens, blocked_tokens) for _, blocked_tokens in rules)
+
+
+def _reviewable_keywords(value: Any, rules: list[tuple[str, list[str]]], removed: Any = ()) -> list[str]:
+    removed_set = {keyword.casefold() for keyword in _normalized_keywords(removed)}
+    return [
+        keyword
+        for keyword in _normalized_keywords(value)
+        if keyword.casefold() not in TITLE_KEYWORD_STATE_FLAGS
+        and keyword.casefold() not in removed_set
+        and not _has_blacklisted_term(keyword, rules)
+    ]
+
+
+def _proposal_keywords_with_floor(
+    previous: Any,
+    proposed: Any,
+    rules: list[tuple[str, list[str]]],
+    removed_blacklisted: Any = (),
+) -> list[str]:
+    proposed_keywords = _reviewable_keywords(proposed, rules, removed_blacklisted)
+    floor_keywords = _reviewable_keywords(previous, rules, removed_blacklisted)
+    if len(proposed_keywords) >= len(floor_keywords):
+        return proposed_keywords
+    return _reviewable_keywords([*floor_keywords, *proposed_keywords], rules, removed_blacklisted)
 
 
 def _truthy(value: Any) -> int:
@@ -775,6 +840,7 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
     if not batch_id:
         return
     proposed_at = str(payload.get("generated_at") or now_iso())
+    blacklist_rules = _keyword_blacklist_rules(conn)
     _upsert_batch(conn, payload, relative_path)
     for item in payload.get("photos") or []:
         if not isinstance(item, dict):
@@ -800,6 +866,22 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
         )
         generator_model_maxed = _truthy(generator.get("model_maxed") or proposed.get("generator_model_maxed"))
         model_ladder = generator.get("model_ladder") or proposed.get("model_ladder") or []
+        removed_blacklisted = changes.get("removed_blacklisted") or []
+        previous_keywords = _reviewable_keywords(
+            current.get("keywords") or current.get("keywords_raw") or "",
+            blacklist_rules,
+            removed_blacklisted,
+        )
+        proposed_keywords = _proposal_keywords_with_floor(
+            previous_keywords,
+            proposed.get("keywords") or "",
+            blacklist_rules,
+            removed_blacklisted,
+        )
+        keyword_target = _optional_int(changes.get("keyword_target"))
+        keyword_target_met = _truthy(changes.get("keyword_target_met"))
+        if keyword_target is not None and len(proposed_keywords) >= keyword_target:
+            keyword_target_met = 1
         conn.execute(
             """
             INSERT INTO title_keyword_proposals (
@@ -833,16 +915,16 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
                 attempt,
                 batch_id,
                 str(current.get("title") or ""),
-                _keywords_text(current.get("keywords") or current.get("keywords_raw") or ""),
+                _keywords_text(previous_keywords),
                 str(proposed.get("title") or ""),
-                _keywords_text(proposed.get("keywords") or ""),
+                _keywords_text(proposed_keywords),
                 str(proposed.get("status") or ""),
                 str(proposed.get("confidence") or "") or None,
                 1 if str(proposed.get("status") or "") == "needs_owner_context" else 0,
                 str(proposed.get("reason") or ""),
-                json.dumps(changes.get("removed_blacklisted") or [], ensure_ascii=False),
-                changes.get("keyword_target"),
-                _truthy(changes.get("keyword_target_met")),
+                json.dumps(removed_blacklisted, ensure_ascii=False),
+                keyword_target,
+                keyword_target_met,
                 generator_model or None,
                 generator_model_level,
                 generator_model_maxed,
@@ -878,6 +960,126 @@ def import_title_keyword_batch_file(repo_root: Path, batch_file: Path, db_path: 
             "db": (db_path or DEFAULT_DB).as_posix(),
             "batch_id": str(payload.get("batch_id") or ""),
             "photo_count": len(payload.get("photos") or []),
+        }
+    finally:
+        conn.close()
+
+
+def _catalog_keyword_lookup(catalog_conn: sqlite3.Connection) -> dict[int, str]:
+    return {
+        int(row["keyword_id"]): str(row["keyword"])
+        for row in catalog_conn.execute("SELECT keyword_id, keyword FROM keyword_terms")
+    }
+
+
+def _catalog_keywords(keyword_ids: Any, keyword_lookup: dict[int, str]) -> list[str]:
+    keywords: list[str] = []
+    for item in str(keyword_ids or "").split(","):
+        try:
+            keyword_id = int(item.strip())
+        except ValueError:
+            continue
+        keyword = keyword_lookup.get(keyword_id)
+        if keyword:
+            keywords.append(keyword)
+    return keywords
+
+
+def _catalog_keywords_by_media_id(repo_root: Path, media_ids: list[str]) -> dict[str, list[str]]:
+    clean_ids = [str(media_id or "").strip() for media_id in media_ids if str(media_id or "").strip()]
+    if not clean_ids:
+        return {}
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        return {}
+    catalog_conn = sqlite3.connect(catalog_path)
+    catalog_conn.row_factory = sqlite3.Row
+    try:
+        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+        result: dict[str, list[str]] = {}
+        for index in range(0, len(clean_ids), 500):
+            chunk = clean_ids[index:index + 500]
+            placeholders = ",".join("?" for _ in chunk)
+            rows = catalog_conn.execute(
+                f"SELECT media_id, keyword_ids FROM media_items WHERE media_id IN ({placeholders})",
+                chunk,
+            ).fetchall()
+            for row in rows:
+                result[str(row["media_id"])] = _catalog_keywords(row["keyword_ids"], keyword_lookup)
+        return result
+    finally:
+        catalog_conn.close()
+
+
+def repair_title_keyword_proposal_keywords(repo_root: Path, db_path: Path | None = None) -> dict[str, Any]:
+    """Ensure active proposals do not drop existing non-blacklisted catalog keywords."""
+    conn = connect(repo_root, db_path)
+    try:
+        rules = _keyword_blacklist_rules(conn)
+        rows = conn.execute(
+            """
+            SELECT q.media_id, q.latest_attempt,
+                   p.previous_keywords, p.proposed_keywords,
+                   p.removed_blacklisted, p.keyword_target, p.keyword_target_met
+            FROM title_keyword_queue AS q
+            JOIN title_keyword_proposals AS p
+              ON p.media_id = q.media_id
+             AND p.attempt = q.latest_attempt
+            WHERE q.review_state = 'proposed'
+            ORDER BY q.latest_proposed_at DESC, q.media_id
+            """
+        ).fetchall()
+        catalog_keywords = _catalog_keywords_by_media_id(repo_root, [str(row["media_id"] or "") for row in rows])
+        repaired = 0
+        previous_repaired = 0
+        proposed_repaired = 0
+        for row in rows:
+            media_id = str(row["media_id"] or "")
+            attempt = int(row["latest_attempt"] or 1)
+            removed_blacklisted = _read_json_text(str(row["removed_blacklisted"] or ""), [])
+            previous_sources = [
+                *_split_keyword_text(row["previous_keywords"] or ""),
+                *catalog_keywords.get(media_id, []),
+            ]
+            previous_keywords = _reviewable_keywords(previous_sources, rules, removed_blacklisted)
+            proposed_keywords = _proposal_keywords_with_floor(
+                previous_keywords,
+                row["proposed_keywords"] or "",
+                rules,
+                removed_blacklisted,
+            )
+            next_previous = _keywords_text(previous_keywords)
+            next_proposed = _keywords_text(proposed_keywords)
+            current_previous = _keywords_text(_reviewable_keywords(row["previous_keywords"] or "", rules, removed_blacklisted))
+            current_proposed = _keywords_text(_reviewable_keywords(row["proposed_keywords"] or "", rules, removed_blacklisted))
+            target = _optional_int(row["keyword_target"])
+            target_met = row["keyword_target_met"]
+            if target is not None:
+                target_met = 1 if len(proposed_keywords) >= target else 0
+            if next_previous == current_previous and next_proposed == current_proposed and target_met == row["keyword_target_met"]:
+                continue
+            conn.execute(
+                """
+                UPDATE title_keyword_proposals
+                SET previous_keywords = ?,
+                    proposed_keywords = ?,
+                    keyword_target_met = ?
+                WHERE media_id = ? AND attempt = ?
+                """,
+                (next_previous, next_proposed, target_met, media_id, attempt),
+            )
+            repaired += 1
+            if next_previous != current_previous:
+                previous_repaired += 1
+            if next_proposed != current_proposed:
+                proposed_repaired += 1
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "inspected": len(rows),
+            "repaired": repaired,
+            "previous_repaired": previous_repaired,
+            "proposed_repaired": proposed_repaired,
         }
     finally:
         conn.close()
@@ -1111,6 +1313,8 @@ def record_title_keyword_review_decisions(
             rejected_count = max(1, attempt) if state == "rejected" else 0
             if state == "rejected" and rejected_count >= TITLE_KEYWORD_PARK_REJECTED_COUNT:
                 queue_state = "parked"
+            elif state == "not_found":
+                queue_state = "blocked"
             else:
                 queue_state = "applied" if state == "accepted" and applied_at else ("approved" if state == "accepted" else state)
             _upsert_queue(
@@ -1120,7 +1324,7 @@ def record_title_keyword_review_decisions(
                 latest_attempt=attempt,
                 batch_id=batch_id,
                 reviewed_at=decided_at,
-                applied_at=applied_at,
+                applied_at=applied_at if state == "accepted" else "",
                 rework_priority=state == "rejected" and queue_state != "parked",
                 rejected_count=rejected_count,
                 owner_comment=comment,
@@ -1432,6 +1636,7 @@ def main() -> None:
     parser.add_argument("--import-title-keyword-batch-file", type=Path)
     parser.add_argument("--park-title-keyword-rows-file", type=Path)
     parser.add_argument("--mark-title-keyword-reviewed-file", type=Path)
+    parser.add_argument("--repair-title-keyword-proposal-keywords", action="store_true")
     parser.add_argument("--title-keyword-generator-state-json", action="store_true")
     parser.add_argument("--park-retry-exhausted", action="store_true")
     parser.add_argument("--park-twice-rejected", action="store_true", help=argparse.SUPPRESS)
@@ -1479,6 +1684,17 @@ def main() -> None:
                 conn.close()
                 result = mark_title_keyword_reviewed_file(repo_root, args.mark_title_keyword_reviewed_file, args.db)
                 print(f"title_keyword_rows_reviewed={result['reviewed']}")
+                conn = connect(repo_root, args.db)
+            if args.repair_title_keyword_proposal_keywords:
+                conn.close()
+                result = repair_title_keyword_proposal_keywords(repo_root, args.db)
+                print(
+                    "title_keyword_proposals "
+                    f"keywords_repaired={result['repaired']} "
+                    f"previous_repaired={result['previous_repaired']} "
+                    f"proposed_repaired={result['proposed_repaired']} "
+                    f"inspected={result['inspected']}"
+                )
                 conn = connect(repo_root, args.db)
             if park_retry_exhausted:
                 parked = park_retry_exhausted_title_keywords(conn)

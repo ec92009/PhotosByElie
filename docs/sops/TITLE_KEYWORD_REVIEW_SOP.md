@@ -36,6 +36,8 @@ Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, whi
    - Avoid filename-style titles as improved proposals.
    - Attempt at least 10 proposed keywords per photo.
    - Record the actual generator/model used for every proposal. Rework should escalate to the next stronger available model/generator level; park only after the model ladder is exhausted or the Owner explicitly parks/blocks the photo.
+   - The default ladder starts with local metadata rules, then Codex-backed model aliases. `PBE_TITLE_KEYWORD_MODEL_LADDER`, `PBE_TITLE_KEYWORD_GENERATOR_MODEL`, `PBE_TITLE_KEYWORD_MODEL_RETRIES`, `PBE_TITLE_KEYWORD_MODEL_TIMEOUT_MS`, and `PBE_TITLE_KEYWORD_CODEX_BIN` may tune the generator for a run.
+   - If a Codex-backed model attempt fails validation or times out, keep the photo out of the active batch, export a `model_blocked` row in `latest.json`, and leave durable state in `Owner.sqlite` so the next handoff can see which model was requested and why it blocked.
    - If the original title is acceptable and the original non-blacklisted keywords already meet the keyword target, mark the row reviewed/applied in `Owner.sqlite` without sending it through Owner approval again. These no-change-reviewed rows do not consume the 100 ordinary-new-photo quota.
    - If the only meaningful difference is removing blacklisted keywords, keep the row reviewable as a blacklist-only cleanup proposal and make the removed original keywords visible in the Owner review UI.
 4. The generator updates `Owner.sqlite`, then writes proposal batches and `latest.json` under `assets/owner-actions/title-keyword-review-queue/` as review-page views derived from SQLite state.

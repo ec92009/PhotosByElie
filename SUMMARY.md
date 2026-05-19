@@ -41,6 +41,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v79.30`, the Imports tab's Start Imports button stays clickable when coverage is already clean and reports that no import work was started because everything tracked is up to date.
 - In `v80.0`, the latest Owner title/keyword approvals are published into the public SQLite catalog and Worker catalog. The `2026-05-16` approval batch now contains 89 approved rows, with fresh Portugal, Bilbao, and Paris metadata carried into buyer-facing catalog data.
 - In `v80.8`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, and clear stale proposed rows that are already blocked or missing from the public catalog. The current generated catalog artifacts include the latest `2026-05-19` title/keyword approval batches.
+- The next handoff pass adds Codex-backed title/keyword rework escalation: rejected rows now carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.
@@ -78,6 +79,7 @@ python3 -m py_compile scripts/local_server.py
 python3 -m py_compile scripts/owner_state_db.py
 python3 -m py_compile scripts/build_lightroom_thumbnails.py
 npm test
+npm run validate
 git diff --check
 browser checks on Owner tabs, import dashboard, detail H/X redirect, and corrected remote preview bytes
 ```

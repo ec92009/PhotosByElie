@@ -1,21 +1,26 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 import { spawnSync } from "node:child_process";
 import catalogTsv from "./catalog_tsv.cjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 100;
+const LOCAL_GENERATOR_MODEL = "local-metadata-rules-v1";
 const REVIEW_FLAG = "Title_Keywords_Reviewed";
 const PROPOSED_FLAG = "Title_Keywords_Proposed";
 const REJECTED_FLAG = "Title_Keywords_Rejected";
 const PARKED_FLAG = "Title_Keywords_Parked";
 const MIN_PROPOSED_KEYWORDS = 10;
 const TITLE_KEYWORD_PARK_REJECTED_COUNT = 10;
+const DEFAULT_MODEL_RETRIES = 2;
+const DEFAULT_MODEL_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_MODEL_LADDER = [
-  "local-metadata-rules-v1",
+  LOCAL_GENERATOR_MODEL,
   "codex-gpt-5.4-mini",
   "codex-gpt-5.4",
   "codex-gpt-5.5",
@@ -26,6 +31,8 @@ const MODEL_LADDER = (process.env.PBE_TITLE_KEYWORD_MODEL_LADDER || DEFAULT_MODE
   .map((item) => item.trim())
   .filter(Boolean);
 const GENERATOR_MODEL = (process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0] || "local-metadata-rules-v1").trim();
+const MODEL_RETRIES = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_RETRIES || DEFAULT_MODEL_RETRIES));
+const MODEL_TIMEOUT_MS = Math.max(30_000, Number(process.env.PBE_TITLE_KEYWORD_MODEL_TIMEOUT_MS || DEFAULT_MODEL_TIMEOUT_MS));
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
 const { loadCatalogWindow } = catalogTsv;
@@ -120,31 +127,53 @@ const runOwnerStateDb = (args, options = {}) => {
   return result.stdout || "";
 };
 
+const isLocalGeneratorModel = (model) => String(model || "").trim() === LOCAL_GENERATOR_MODEL;
+
+const isAiGeneratorModel = (model) => {
+  const value = String(model || "").trim();
+  return Boolean(value && !isLocalGeneratorModel(value));
+};
+
 const modelLevel = (model) => {
   const value = String(model || "").trim();
   const index = MODEL_LADDER.findIndex((item) => item === value);
   return index >= 0 ? index : 0;
 };
 
-const generatorModelInfo = () => {
-  const level = modelLevel(GENERATOR_MODEL);
+const generatorModelInfo = (model = GENERATOR_MODEL) => {
+  const selected = String(model || GENERATOR_MODEL || LOCAL_GENERATOR_MODEL).trim();
+  const level = modelLevel(selected);
   return {
-    model: GENERATOR_MODEL,
+    model: selected,
     model_level: level,
     model_maxed: level >= MODEL_LADDER.length - 1,
     model_ladder: MODEL_LADDER,
   };
 };
 
+const generatorModelInfoAtLevel = (level) => {
+  const normalized = Math.min(Math.max(0, Number(level) || 0), MODEL_LADDER.length - 1);
+  return generatorModelInfo(MODEL_LADDER[normalized] || GENERATOR_MODEL);
+};
+
+const firstAiGeneratorInfo = () => {
+  const index = MODEL_LADDER.findIndex((model) => isAiGeneratorModel(model));
+  return generatorModelInfoAtLevel(index >= 0 ? index : 0);
+};
+
 const nextModelAfterLevel = (level) => {
-  const normalized = Number.isFinite(Number(level)) ? Number(level) : 0;
+  if (!Number.isFinite(Number(level))) return firstAiGeneratorInfo();
+  const normalized = Number(level);
   const next = Math.min(Math.max(0, normalized + 1), MODEL_LADDER.length - 1);
-  return {
-    model: MODEL_LADDER[next] || GENERATOR_MODEL,
-    model_level: next,
-    model_maxed: next >= MODEL_LADDER.length - 1,
-    model_ladder: MODEL_LADDER,
-  };
+  return generatorModelInfoAtLevel(next);
+};
+
+const selectedGeneratorForRow = (row) => {
+  if (!row?.reworkPriority) return generatorModelInfo();
+  if (row.previousGeneratorModelMaxed === true) {
+    return { ...generatorModelInfoAtLevel(MODEL_LADDER.length - 1), exhausted: true };
+  }
+  return nextModelAfterLevel(row.previousGeneratorModelLevel);
 };
 
 const loadOwnerGeneratorState = () => {
@@ -164,6 +193,10 @@ const loadOwnerGeneratorState = () => {
       latest_generator_model_level: item.latest_generator_model_level,
       latest_generator_model_maxed: item.latest_generator_model_maxed === true,
       latest_model_ladder: Array.isArray(item.latest_model_ladder) ? item.latest_model_ladder : [],
+      latest_proposal_title: item.latest_proposal_title || "",
+      latest_proposal_keywords: Array.isArray(item.latest_proposal_keywords) ? item.latest_proposal_keywords : [],
+      latest_proposal_status: item.latest_proposal_status || "",
+      latest_proposal_reason: item.latest_proposal_reason || "",
       state_tags: item.state_tags || [],
     });
   }
@@ -595,6 +628,292 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   };
 };
 
+const modelOutputSchema = () => ({
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "keywords", "confidence", "status", "reason", "needs_owner_context"],
+  properties: {
+    title: { type: "string", minLength: 1 },
+    keywords: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string", minLength: 1 },
+    },
+    confidence: { type: "string", enum: ["low", "medium", "high"] },
+    status: { type: "string" },
+    reason: { type: "string" },
+    needs_owner_context: { type: "boolean" },
+  },
+});
+
+const codexBinary = () => String(process.env.PBE_TITLE_KEYWORD_CODEX_BIN || "codex").trim() || "codex";
+
+const codexModelConfig = (modelInfo) => {
+  const rawModel = String(modelInfo?.model || "").trim();
+  if (!isAiGeneratorModel(rawModel)) return null;
+  const withoutPrefix = rawModel.replace(/^codex-/i, "");
+  const vision = /(?:^|-)vision$/i.test(withoutPrefix) || /-vision-/i.test(withoutPrefix);
+  const effortMatch = withoutPrefix.match(/-(xhigh|high|medium|low)(?:-vision)?$/i);
+  const model = withoutPrefix
+    .replace(/-(xhigh|high|medium|low)(?:-vision)?$/i, "")
+    .replace(/-vision$/i, "");
+  const reasoningEffort = effortMatch?.[1]?.toLowerCase() || (/mini$/i.test(model) ? "low" : "medium");
+  return {
+    model,
+    reasoningEffort,
+    vision,
+  };
+};
+
+const stripJsonFence = (value) => String(value || "")
+  .trim()
+  .replace(/^```(?:json)?\s*/i, "")
+  .replace(/\s*```$/i, "")
+  .trim();
+
+const parseModelProposalText = (value) => {
+  const text = stripJsonFence(value);
+  if (!text) throw new Error("Model returned an empty response.");
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(text.slice(start, end + 1));
+    throw error;
+  }
+};
+
+const existingLocalPath = (candidate) => {
+  const raw = String(candidate || "").trim();
+  if (!raw || /^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) return "";
+  const clean = raw.split(/[?#]/, 1)[0].replace(/^\/+/, "");
+  const candidates = [
+    clean,
+    path.join("assets", clean),
+    path.join("assets", "public", clean),
+  ];
+  for (const relative of candidates) {
+    const absolute = path.join(REPO_ROOT, relative);
+    if (fs.existsSync(absolute) && fs.statSync(absolute).isFile()) return absolute;
+  }
+  return "";
+};
+
+const localPreviewPathForPhoto = (photo) => {
+  const media = photo?.media || {};
+  const preview = media?.publicPreview || {};
+  return existingLocalPath(photo?.imageSrc)
+    || existingLocalPath(photo?.gallerySrc)
+    || existingLocalPath(preview?.detailKey)
+    || existingLocalPath(preview?.galleryKey)
+    || existingLocalPath(metadataValue(photo, "Preview file"));
+};
+
+const modelPromptForPhoto = ({
+  row,
+  photo,
+  galleryLabel,
+  currentTitle,
+  currentKeywords,
+  blacklist,
+  sourceFile,
+  meta,
+  localProposal,
+  requestedGenerator,
+  previewPath,
+  retryNote = "",
+}) => {
+  const media = photo?.media || {};
+  const preview = media?.publicPreview || {};
+  const context = {
+    photo_id: String(photo?.id || ""),
+    gallery: galleryLabel,
+    capture: row.capture || {},
+    current_title: currentTitle,
+    current_keywords: reviewableKeywords(currentKeywords, blacklist),
+    source_path: String(sourceFile?.path || ""),
+    source_origin: String(photo?.sourceOrigin || ""),
+    pricing_tier: String(photo?.pricingTier || ""),
+    location: metadataValue(photo, "Location"),
+    camera: meta.camera,
+    lens: meta.lens,
+    exposure: meta.exposure,
+    focal_length: meta.focal_length,
+    original_file: meta.original_file,
+    original_size: meta.original_size,
+    public_preview_keys: {
+      gallery: String(preview?.galleryKey || ""),
+      detail: String(preview?.detailKey || ""),
+    },
+    local_preview_path: previewPath || "",
+    owner_rework: {
+      requested: row.reworkPriority === true,
+      comment: row.reworkComment || "",
+      previous_title: row.previousProposalTitle || "",
+      previous_keywords: row.previousProposalKeywords || [],
+      previous_status: row.previousProposalStatus || "",
+      previous_reason: row.previousProposalReason || "",
+      previous_generator_model: row.previousGeneratorModel || "",
+      previous_generator_model_level: row.previousGeneratorModelLevel,
+    },
+    local_metadata_fallback: {
+      title: localProposal.title || "",
+      keywords: localProposal.keywords || [],
+      status: localProposal.status || "",
+      reason: localProposal.reason || "",
+    },
+    requested_generator: requestedGenerator,
+    retry_note: retryNote,
+  };
+  return [
+    "Generate one Photos By Elie Owner-review metadata proposal for the photo described below.",
+    "Return JSON only, matching this shape: {\"title\":\"...\",\"keywords\":[\"...\"],\"confidence\":\"low|medium|high\",\"status\":\"model_rework|model_context|needs_owner_context\",\"reason\":\"...\",\"needs_owner_context\":false}.",
+    "Rules:",
+    "- The title must be non-empty, human-readable, and photo-relevant.",
+    "- Do not use all-numeric, date-like, filename-style, camera-stem, or keyword-dump titles.",
+    "- Use visible pixels when an image is attached. If no pixels are attached, use only reliable context: current keywords, gallery, source path, capture time, location fields, and the local fallback.",
+    "- Existing keywords are clues, not proof. For example, Pisa may suggest the Leaning Tower, but only name it if the pixels or reliable context support it.",
+    "- For rework, materially improve on the previous rejected proposal and follow the Owner comment.",
+    "- Provide at least 10 concise searchable keywords when possible. Do not include workflow flags like Title_Keywords_Reviewed, Title_Keywords_Proposed, Title_Keywords_Rejected, or Title_Keywords_Parked.",
+    "- If uncertain, still provide a conservative working title and set needs_owner_context to true.",
+    "",
+    JSON.stringify(context, null, 2),
+  ].join("\n");
+};
+
+const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
+  const codexConfig = codexModelConfig(modelInfo);
+  if (!codexConfig?.model) throw new Error(`No Codex model mapping for ${modelInfo?.model || "unknown model"}.`);
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pbe-title-keyword-model-"));
+  const schemaPath = path.join(tempDir, "schema.json");
+  const outputPath = path.join(tempDir, "proposal.json");
+  fs.writeFileSync(schemaPath, JSON.stringify(modelOutputSchema(), null, 2) + "\n");
+  const args = [
+    "-a",
+    "never",
+    "exec",
+    "--ephemeral",
+    "--ignore-user-config",
+    "--sandbox",
+    "read-only",
+    "-C",
+    REPO_ROOT,
+    "--output-schema",
+    schemaPath,
+    "--output-last-message",
+    outputPath,
+    "-m",
+    codexConfig.model,
+  ];
+  if (codexConfig.reasoningEffort) {
+    args.push("-c", `model_reasoning_effort="${codexConfig.reasoningEffort}"`);
+  }
+  if (codexConfig.vision && imagePath) {
+    args.push("--image", imagePath);
+  }
+  args.push("-");
+  const result = spawnSync(codexBinary(), args, {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    input: prompt,
+    timeout: MODEL_TIMEOUT_MS,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || `Codex model invocation failed with status ${result.status}.`).trim());
+  }
+  const output = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : (result.stdout || "");
+  return parseModelProposalText(output);
+};
+
+const normalizeModelProposal = ({ payload, localProposal, currentKeywords, blacklist, sourcePath }) => {
+  const title = cleanText(payload?.title || "");
+  if (!title || isPlaceholderTitle(title, sourcePath)) {
+    throw new Error(`Model returned a placeholder or empty title: ${payload?.title || ""}`);
+  }
+  const proposedKeywords = reviewableKeywords([
+    ...(Array.isArray(payload?.keywords) ? payload.keywords : splitKeywordText(payload?.keywords || "")),
+    ...(localProposal?.keywords || []),
+    ...(currentKeywords || []),
+  ], blacklist);
+  const confidence = ["low", "medium", "high"].includes(String(payload?.confidence || ""))
+    ? String(payload.confidence)
+    : "medium";
+  const needsOwnerContext = payload?.needs_owner_context === true || String(payload?.status || "") === "needs_owner_context";
+  const rawStatus = String(payload?.status || "").trim();
+  const fallbackStatus = localProposal?.status === "rework_requested" ? "model_rework" : "model_context";
+  const allowedStatuses = new Set(["model_rework", "model_context", "needs_owner_context", "metadata_context", "metadata_cleanup", "source_context"]);
+  return {
+    title,
+    keywords: proposalKeywordsWithFloor(proposedKeywords, currentKeywords, blacklist),
+    status: needsOwnerContext ? "needs_owner_context" : (allowedStatuses.has(rawStatus) ? rawStatus : fallbackStatus),
+    confidence: needsOwnerContext ? "low" : confidence,
+    reason: String(payload?.reason || "Generated by the selected title/keyword model using local catalog context.").trim(),
+    removedBlacklisted: localProposal?.removedBlacklisted || [],
+    keywordTargetMet: proposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
+    noChangeNeeded: false,
+    blacklistOnlyCleanup: false,
+  };
+};
+
+const generateModelProposal = ({
+  row,
+  photo,
+  galleryLabel,
+  currentTitle,
+  currentKeywords,
+  blacklist,
+  sourceFile,
+  meta,
+  localProposal,
+  requestedGenerator,
+}) => {
+  const previewPath = localPreviewPathForPhoto(photo);
+  let lastError = "";
+  for (let attempt = 1; attempt <= MODEL_RETRIES; attempt += 1) {
+    const prompt = modelPromptForPhoto({
+      row,
+      photo,
+      galleryLabel,
+      currentTitle,
+      currentKeywords,
+      blacklist,
+      sourceFile,
+      meta,
+      localProposal,
+      requestedGenerator,
+      previewPath,
+      retryNote: lastError ? `Previous attempt failed validation: ${lastError}` : "",
+    });
+    try {
+      const payload = invokeCodexProposalModel({ modelInfo: requestedGenerator, prompt, imagePath: previewPath });
+      const proposal = normalizeModelProposal({
+        payload,
+        localProposal,
+        currentKeywords,
+        blacklist,
+        sourcePath: sourceFile?.path || meta.original_file || "",
+      });
+      return {
+        ok: true,
+        proposal,
+        previewPath,
+        attempts: attempt,
+      };
+    } catch (error) {
+      lastError = String(error?.message || error || "unknown model error").slice(0, 800);
+    }
+  }
+  return {
+    ok: false,
+    previewPath,
+    attempts: MODEL_RETRIES,
+    error: lastError || "Model invocation failed.",
+  };
+};
+
 const hasMetadataFlag = (photo, flag) => {
   const target = String(flag || "").trim();
   if (!target) return false;
@@ -712,6 +1031,10 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
   if (Number.isFinite(Number(detail.latest_generator_model_level))) existing.latest_generator_model_level = Number(detail.latest_generator_model_level);
   if (detail.latest_generator_model_maxed != null) existing.latest_generator_model_maxed = Boolean(detail.latest_generator_model_maxed);
   if (Array.isArray(detail.latest_model_ladder)) existing.latest_model_ladder = detail.latest_model_ladder;
+  if (detail.latest_proposal_title != null) existing.latest_proposal_title = String(detail.latest_proposal_title || "").trim();
+  if (detail.latest_proposal_keywords != null) existing.latest_proposal_keywords = uniqueKeywords(detail.latest_proposal_keywords || []);
+  if (detail.latest_proposal_status != null) existing.latest_proposal_status = String(detail.latest_proposal_status || "").trim();
+  if (detail.latest_proposal_reason != null) existing.latest_proposal_reason = String(detail.latest_proposal_reason || "").trim();
   if (rejectionComment) existing.rejection_comment = rejectionComment;
   if (detail.clear_rejection) {
     existing.review_state = "proposed";
@@ -960,6 +1283,10 @@ const main = () => {
         : null,
       previousGeneratorModelMaxed: stateEntry?.latest_generator_model_maxed === true,
       previousModelLadder: Array.isArray(stateEntry?.latest_model_ladder) ? stateEntry.latest_model_ladder : [],
+      previousProposalTitle: String(stateEntry?.latest_proposal_title || "").trim(),
+      previousProposalKeywords: Array.isArray(stateEntry?.latest_proposal_keywords) ? stateEntry.latest_proposal_keywords : [],
+      previousProposalStatus: String(stateEntry?.latest_proposal_status || "").trim(),
+      previousProposalReason: String(stateEntry?.latest_proposal_reason || "").trim(),
       proposalAttempt: Math.max(Number(stateEntry?.latest_attempt || 0), Number(stateEntry?.rejected_count || 0)) + 1,
       rejectedCount: Number(stateEntry?.rejected_count || 0),
     });
@@ -996,7 +1323,7 @@ const main = () => {
     const sourceFile = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length && typeof photo.sourceFiles[0] === "object"
       ? photo.sourceFiles[0]
       : {};
-    const proposal = proposalForPhoto({
+    const localProposal = proposalForPhoto({
       photo,
       galleryLabel: row.galleryLabel,
       currentTitle,
@@ -1005,10 +1332,12 @@ const main = () => {
       blacklist,
       sourceFile,
     });
-    const actualGenerator = generatorModelInfo();
-    const requestedGenerator = row.reworkPriority
-      ? nextModelAfterLevel(row.previousGeneratorModelLevel)
-      : actualGenerator;
+    const requestedGenerator = selectedGeneratorForRow(row);
+    let actualGenerator = isAiGeneratorModel(requestedGenerator.model) ? requestedGenerator : generatorModelInfo();
+    let proposal = { ...localProposal };
+    let modelBlocker = null;
+    let modelAttempts = 0;
+    let modelPreviewPath = "";
     if (row.reworkPriority) {
       const comment = row.reworkComment ? ` Owner note: ${row.reworkComment.slice(0, 240)}` : "";
       proposal.status = proposal.status === "needs_owner_context" ? proposal.status : "rework_requested";
@@ -1018,8 +1347,43 @@ const main = () => {
         : ` Requested rework generator: ${requestedGenerator.model}.`;
       proposal.reason = `Owner rejected a previous proposal; this photo was prioritized for a new title/keyword attempt.${comment}${escalation}`;
     }
+    if (requestedGenerator.exhausted === true) {
+      modelBlocker = {
+        kind: "model_ladder_exhausted",
+        requested_generator: requestedGenerator,
+        attempts: 0,
+        message: "Latest rejected proposal already used the strongest configured model.",
+      };
+    } else if (isAiGeneratorModel(requestedGenerator.model)) {
+      const modelResult = generateModelProposal({
+        row,
+        photo,
+        galleryLabel: row.galleryLabel,
+        currentTitle,
+        currentKeywords,
+        blacklist,
+        sourceFile,
+        meta,
+        localProposal: proposal,
+        requestedGenerator,
+      });
+      modelAttempts = modelResult.attempts || 0;
+      modelPreviewPath = modelResult.previewPath || "";
+      if (modelResult.ok) {
+        proposal = modelResult.proposal;
+        actualGenerator = requestedGenerator;
+      } else {
+        modelBlocker = {
+          kind: "model_escalation_blocker",
+          requested_generator: requestedGenerator,
+          attempts: modelResult.attempts || MODEL_RETRIES,
+          preview_path: modelResult.previewPath || "",
+          message: modelResult.error || "Selected model could not produce a valid proposal.",
+        };
+      }
+    }
 
-    return {
+    const record = {
       photo_id: String(photo?.id || ""),
       gallery: {
         key: row.galleryKey,
@@ -1056,7 +1420,15 @@ const main = () => {
           model_maxed: row.previousGeneratorModelMaxed,
           model_ladder: row.previousModelLadder,
         } : null,
+        previous_proposal: row.previousProposalTitle || row.previousProposalKeywords.length ? {
+          title: row.previousProposalTitle,
+          keywords: row.previousProposalKeywords,
+          status: row.previousProposalStatus,
+          reason: row.previousProposalReason,
+        } : null,
         requested_generator: requestedGenerator,
+        model_attempts: modelAttempts,
+        model_preview_path: modelPreviewPath,
       },
       current: {
         title: currentTitle,
@@ -1081,16 +1453,27 @@ const main = () => {
       },
       meta,
     };
+    return { record, modelBlocker };
   };
 
   const photos = [];
   const parkedRows = [];
   const noChangeRows = [];
   const unresolvedReworkRows = [];
+  const modelBlockedRows = [];
   let ordinaryNewCount = 0;
 
   const addCandidate = (row, ordinarySlot = false) => {
-    const record = buildPhotoRecord(row);
+    const built = buildPhotoRecord(row);
+    const record = built.record;
+    if (built.modelBlocker?.kind === "model_ladder_exhausted") {
+      parkedRows.push({ row, record, blocker: built.modelBlocker });
+      return false;
+    }
+    if (built.modelBlocker) {
+      modelBlockedRows.push({ row, record, blocker: built.modelBlocker });
+      return false;
+    }
     if (record?.changes?.no_change_needed === true && row.reworkPriority !== true) {
       noChangeRows.push({ row, record });
       return true;
@@ -1134,7 +1517,9 @@ const main = () => {
       rejection_comment: parked.row.reworkComment,
       latest_proposal_title: parked.record?.proposed?.title,
       latest_proposal_keywords: parked.record?.proposed?.keywords || [],
-      reason: parked.row.reworkPriority
+      reason: parked.blocker?.kind === "model_ladder_exhausted"
+        ? "Model ladder exhausted after Owner rejected the strongest configured model proposal."
+        : parked.row.reworkPriority
         ? "Rejected/rework photo still needs owner context; parked until a stronger title tool is available."
         : "Unable to generate a defensible non-placeholder title from current local metadata.",
       latest_attempt: Math.max(1, Number(parked.row.proposalAttempt || 1)),
@@ -1153,6 +1538,25 @@ const main = () => {
     keyword_target: MIN_PROPOSED_KEYWORDS,
     reason: "Original title and keywords were already acceptable; marked reviewed without queuing owner approval.",
     generator: record.proposed.generator,
+  }));
+  const generatorCounts = {};
+  for (const record of photos) {
+    const model = String(record?.proposed?.generator?.model || "unknown");
+    generatorCounts[model] = (generatorCounts[model] || 0) + 1;
+  }
+  const reworkGeneratorCounts = {};
+  for (const record of reworkBatch) {
+    const model = String(record?.proposed?.generator?.model || "unknown");
+    reworkGeneratorCounts[model] = (reworkGeneratorCounts[model] || 0) + 1;
+  }
+  const modelBlockedExportRows = modelBlockedRows.map(({ row, record, blocker }) => ({
+    photo_id: record.photo_id,
+    rework_requested: row.reworkPriority === true,
+    rejected_count: Number(row.rejectedCount || 0),
+    requested_generator: blocker.requested_generator,
+    attempts: blocker.attempts || 0,
+    message: blocker.message || "",
+    preview_path: blocker.preview_path || "",
   }));
 
   const payload = {
@@ -1189,7 +1593,12 @@ const main = () => {
       parked_ordinary_count: parkedRows.filter((item) => !item.row.reworkPriority).length,
       no_change_reviewed_count: noChangeRows.length,
       unresolved_rework_count: unresolvedReworkRows.length,
+      model_blocked_count: modelBlockedRows.length,
+      model_blocked_rework_count: modelBlockedRows.filter((item) => item.row.reworkPriority).length,
+      model_blocked_ordinary_count: modelBlockedRows.filter((item) => !item.row.reworkPriority).length,
       candidate_count: candidates.length,
+      generator_counts: generatorCounts,
+      rework_generator_counts: reworkGeneratorCounts,
     },
     skipped: {
       reviewed: skippedReviewed.filter(Boolean),
@@ -1198,6 +1607,7 @@ const main = () => {
       newly_parked: parkedRows.map((item) => item.record.photo_id).filter(Boolean),
       no_change_reviewed: noChangeRows.map((item) => item.record.photo_id).filter(Boolean),
       unresolved_rework: unresolvedReworkRows.map((item) => item.record.photo_id).filter(Boolean),
+      model_blocked: modelBlockedExportRows,
     },
     photos,
   };
@@ -1230,15 +1640,32 @@ const main = () => {
     `Parked retry-exhausted before selection: ${ownerGeneratorState.parkedRetryExhausted} (threshold ${ownerGeneratorState.parkRejectedCount})\n` +
     `Ordinary new: ${ordinaryBatch.length}/${args.limit}\n` +
     `Rework priority: ${reworkBatch.length}\n` +
+    `Generator counts: ${JSON.stringify(generatorCounts)}\n` +
+    `Rework generator counts: ${JSON.stringify(reworkGeneratorCounts)}\n` +
+    `Model escalation blockers: ${modelBlockedRows.length} (rework ${modelBlockedRows.filter((item) => item.row.reworkPriority).length}, ordinary ${modelBlockedRows.filter((item) => !item.row.reworkPriority).length})\n` +
     `Marked reviewed without changes: ${noChangeRows.length}\n` +
     `Unresolved rework kept rejected: ${unresolvedReworkRows.length}\n` +
     `Parked untitled: ${parkedRows.length}\n`,
   );
 };
 
-try {
-  main();
-} catch (error) {
-  process.stderr.write(`${error?.stack || error?.message || error}\n`);
-  process.exit(1);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    main();
+  } catch (error) {
+    process.stderr.write(`${error?.stack || error?.message || error}\n`);
+    process.exit(1);
+  }
 }
+
+export {
+  codexModelConfig,
+  firstAiGeneratorInfo,
+  generatorModelInfo,
+  invokeCodexProposalModel,
+  isAiGeneratorModel,
+  isLocalGeneratorModel,
+  nextModelAfterLevel,
+  parseModelProposalText,
+  selectedGeneratorForRow,
+};

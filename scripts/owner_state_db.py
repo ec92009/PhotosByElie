@@ -1409,7 +1409,11 @@ def title_keyword_generator_state(
                    p.generator_model AS latest_generator_model,
                    p.generator_model_level AS latest_generator_model_level,
                    p.generator_model_maxed AS latest_generator_model_maxed,
-                   p.model_ladder AS latest_model_ladder
+                   p.model_ladder AS latest_model_ladder,
+                   p.proposed_title AS latest_proposal_title,
+                   p.proposed_keywords AS latest_proposal_keywords,
+                   p.proposal_status AS latest_proposal_status,
+                   p.proposal_reason AS latest_proposal_reason
             FROM title_keyword_queue AS q
             LEFT JOIN title_keyword_proposals AS p
               ON p.media_id = q.media_id
@@ -1432,6 +1436,10 @@ def title_keyword_generator_state(
                 "latest_generator_model_level": row["latest_generator_model_level"],
                 "latest_generator_model_maxed": bool(row["latest_generator_model_maxed"]),
                 "latest_model_ladder": _read_json_text(row["latest_model_ladder"] or "", []),
+                "latest_proposal_title": row["latest_proposal_title"] or "",
+                "latest_proposal_keywords": _split_keyword_text(row["latest_proposal_keywords"] or ""),
+                "latest_proposal_status": row["latest_proposal_status"] or "",
+                "latest_proposal_reason": row["latest_proposal_reason"] or "",
                 "state_tags": _title_keyword_state_tags(str(row["review_state"] or ""), bool(row["rework_priority"])),
             })
         counts = title_keyword_review_counts(repo_root, db_path)

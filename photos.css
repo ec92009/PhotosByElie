@@ -2006,6 +2006,14 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   line-height:1.4;
   overflow-wrap:anywhere;
 }
+.title-keyword-review-removed-keyword{
+  color:var(--text);
+  text-decoration-line:underline;
+  text-decoration-style:wavy;
+  text-decoration-color:color-mix(in srgb,var(--brand) 72%,var(--text) 28%);
+  text-decoration-thickness:1.5px;
+  text-underline-offset:.18em;
+}
 .title-keyword-review-proposed{
   display:grid;
   gap:9px;

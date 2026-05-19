@@ -23,6 +23,7 @@ TITLE_KEYWORDS_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORDS_REJECTED_FLAG = "Title_Keywords_Rejected"
 TITLE_KEYWORDS_PARKED_FLAG = "Title_Keywords_Parked"
 TITLE_KEYWORDS_REVIEWED_FLAG = "Title_Keywords_Reviewed"
+TITLE_KEYWORD_PARK_REJECTED_COUNT = 10
 
 
 def now_iso() -> str:
@@ -34,6 +35,15 @@ def _read_json(path: Path, fallback: Any) -> Any:
         return fallback
     try:
         return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return fallback
+
+
+def _read_json_text(value: str, fallback: Any) -> Any:
+    if not value:
+        return fallback
+    try:
+        return json.loads(value)
     except json.JSONDecodeError:
         return fallback
 
@@ -144,6 +154,10 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           removed_blacklisted  TEXT,
           keyword_target       INTEGER CHECK (keyword_target IS NULL OR keyword_target >= 0),
           keyword_target_met   INTEGER CHECK (keyword_target_met IS NULL OR keyword_target_met IN (0, 1)),
+          generator_model      TEXT,
+          generator_model_level INTEGER,
+          generator_model_maxed INTEGER NOT NULL DEFAULT 0,
+          model_ladder         TEXT,
           proposed_at          TEXT NOT NULL,
           PRIMARY KEY (media_id, attempt),
           FOREIGN KEY (batch_id) REFERENCES title_keyword_batches(batch_id)
@@ -197,6 +211,18 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_r2_objects_photo ON r2_objects(photo_id, lifecycle_state);
         """
     )
+    for column, ddl in {
+        "generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model TEXT",
+        "generator_model_level": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model_level INTEGER",
+        "generator_model_maxed": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model_maxed INTEGER NOT NULL DEFAULT 0",
+        "model_ladder": "ALTER TABLE title_keyword_proposals ADD COLUMN model_ladder TEXT",
+    }.items():
+        existing = {row["name"] for row in conn.execute("PRAGMA table_info(title_keyword_proposals)")}
+        if column not in existing:
+            conn.execute(ddl)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_title_keyword_proposals_generator_model ON title_keyword_proposals(generator_model, generator_model_level)"
+    )
 
 
 def _keywords_text(value: Any) -> str:
@@ -221,6 +247,15 @@ def _normalized_keywords(value: Any) -> list[str]:
 
 def _truthy(value: Any) -> int:
     return 1 if value is True or str(value).strip().lower() in {"1", "true", "yes"} else 0
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _photo_id_from_r2_key(object_key: str) -> str:
@@ -632,8 +667,10 @@ def _ensure_placeholder_proposal(conn: sqlite3.Connection, media_id: str, attemp
           (media_id, attempt, batch_id, previous_title, previous_keywords, proposed_title,
            proposed_keywords, proposal_status, confidence, needs_owner_context,
            proposal_reason, removed_blacklisted, keyword_target, keyword_target_met,
+           generator_model, generator_model_level, generator_model_maxed, model_ladder,
            proposed_at)
-        VALUES (?, ?, ?, '', '', '', '', 'compatibility-placeholder', 'low', 1, '', '[]', NULL, NULL, ?)
+        VALUES (?, ?, ?, '', '', '', '', 'compatibility-placeholder', 'low', 1, '', '[]', NULL, NULL,
+                'legacy-json-import', NULL, 0, '[]', ?)
         """,
         (media_id, attempt, batch_id, proposed_at),
     )
@@ -700,8 +737,8 @@ def _upsert_queue(
     )
 
 
-def park_twice_rejected_title_keywords(conn: sqlite3.Connection) -> int:
-    """Move twice-rejected title/keyword rows out of the active rework queue."""
+def park_retry_exhausted_title_keywords(conn: sqlite3.Connection) -> int:
+    """Move retry-exhausted title/keyword rows out of the active rework queue."""
     result = conn.execute(
         """
         UPDATE title_keyword_queue
@@ -709,11 +746,16 @@ def park_twice_rejected_title_keywords(conn: sqlite3.Connection) -> int:
             rework_priority = 0,
             updated_at = ?
         WHERE review_state = 'rejected'
-          AND rejected_count >= 2
+          AND rejected_count >= ?
         """,
-        (now_iso(),),
+        (now_iso(), TITLE_KEYWORD_PARK_REJECTED_COUNT),
     )
     return int(result.rowcount or 0)
+
+
+def park_twice_rejected_title_keywords(conn: sqlite3.Connection) -> int:
+    """Compatibility wrapper for the older CLI flag name."""
+    return park_retry_exhausted_title_keywords(conn)
 
 
 def _title_keyword_state_tags(review_state: str, rework_priority: bool = False) -> list[str]:
@@ -745,14 +787,24 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
         current = item.get("current") if isinstance(item.get("current"), dict) else {}
         proposed = item.get("proposed") if isinstance(item.get("proposed"), dict) else {}
         changes = item.get("changes") if isinstance(item.get("changes"), dict) else {}
+        generator = proposed.get("generator") if isinstance(proposed.get("generator"), dict) else {}
+        if not generator and isinstance(item.get("generator"), dict):
+            generator = item.get("generator")
+        if not generator and isinstance(state.get("generator"), dict):
+            generator = state.get("generator")
+        generator_model = str(generator.get("model") or proposed.get("generator_model") or "").strip()
+        generator_model_level = _optional_int(generator.get("model_level") or proposed.get("generator_model_level"))
+        generator_model_maxed = _truthy(generator.get("model_maxed") or proposed.get("generator_model_maxed"))
+        model_ladder = generator.get("model_ladder") or proposed.get("model_ladder") or []
         conn.execute(
             """
             INSERT INTO title_keyword_proposals (
               media_id, attempt, batch_id, previous_title, previous_keywords,
               proposed_title, proposed_keywords, proposal_status, confidence,
               needs_owner_context, proposal_reason, removed_blacklisted,
-              keyword_target, keyword_target_met, proposed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              keyword_target, keyword_target_met, generator_model, generator_model_level,
+              generator_model_maxed, model_ladder, proposed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(media_id, attempt) DO UPDATE SET
               batch_id = excluded.batch_id,
               previous_title = excluded.previous_title,
@@ -766,6 +818,10 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
               removed_blacklisted = excluded.removed_blacklisted,
               keyword_target = excluded.keyword_target,
               keyword_target_met = excluded.keyword_target_met,
+              generator_model = excluded.generator_model,
+              generator_model_level = excluded.generator_model_level,
+              generator_model_maxed = excluded.generator_model_maxed,
+              model_ladder = excluded.model_ladder,
               proposed_at = excluded.proposed_at
             """,
             (
@@ -783,6 +839,10 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
                 json.dumps(changes.get("removed_blacklisted") or [], ensure_ascii=False),
                 changes.get("keyword_target"),
                 _truthy(changes.get("keyword_target_met")),
+                generator_model or None,
+                generator_model_level,
+                generator_model_maxed,
+                json.dumps(model_ladder, ensure_ascii=False) if isinstance(model_ladder, list) else str(model_ladder or ""),
                 proposed_at,
             ),
         )
@@ -854,6 +914,112 @@ def park_title_keyword_rows_file(repo_root: Path, rows_file: Path, db_path: Path
             parked += 1
         conn.commit()
         return {"db": (db_path or DEFAULT_DB).as_posix(), "parked": parked}
+    finally:
+        conn.close()
+
+
+def mark_title_keyword_reviewed_file(repo_root: Path, rows_file: Path, db_path: Path | None = None) -> dict[str, Any]:
+    absolute = rows_file if rows_file.is_absolute() else repo_root / rows_file
+    payload = _read_json(absolute, [])
+    if not isinstance(payload, list):
+        raise ValueError(f"invalid reviewed title/keyword rows JSON: {rows_file}")
+    conn = connect(repo_root, db_path)
+    reviewed = 0
+    try:
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            media_id = str(item.get("photo_id") or item.get("photoId") or "").strip()
+            if not media_id:
+                continue
+            batch_id = str(item.get("batch_id") or "").strip()
+            timestamp = str(item.get("reviewed_at") or item.get("applied_at") or now_iso())
+            if batch_id:
+                _upsert_batch(conn, {"batch_id": batch_id, "generated_at": timestamp, "selection": {"total_count": 0}}, "no-change-reviewed")
+            attempt = max(1, int(item.get("latest_attempt") or _latest_attempt(conn, media_id, batch_id) or 1))
+            title = str(item.get("title") or "").strip()
+            keywords = item.get("keywords") or ""
+            generator = item.get("generator") if isinstance(item.get("generator"), dict) else {}
+            model_ladder = generator.get("model_ladder") or []
+            _ensure_placeholder_proposal(conn, media_id, attempt, batch_id, timestamp)
+            conn.execute(
+                """
+                UPDATE title_keyword_proposals
+                SET batch_id = ?,
+                    previous_title = ?,
+                    previous_keywords = ?,
+                    proposed_title = ?,
+                    proposed_keywords = ?,
+                    proposal_status = 'no_change_needed',
+                    confidence = 'high',
+                    needs_owner_context = 0,
+                    proposal_reason = ?,
+                    removed_blacklisted = '[]',
+                    keyword_target = ?,
+                    keyword_target_met = 1,
+                    generator_model = ?,
+                    generator_model_level = ?,
+                    generator_model_maxed = ?,
+                    model_ladder = ?,
+                    proposed_at = ?
+                WHERE media_id = ? AND attempt = ?
+                """,
+                (
+                    batch_id,
+                    title,
+                    _keywords_text(keywords),
+                    title,
+                    _keywords_text(keywords),
+                    str(item.get("reason") or "Original title and keywords were already acceptable; marked reviewed without metadata changes."),
+                    item.get("keyword_target"),
+                    str(generator.get("model") or "existing-catalog-metadata"),
+                    _optional_int(generator.get("model_level")),
+                    _truthy(generator.get("model_maxed")),
+                    json.dumps(model_ladder, ensure_ascii=False) if isinstance(model_ladder, list) else str(model_ladder or ""),
+                    timestamp,
+                    media_id,
+                    attempt,
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO title_keyword_decisions
+                  (media_id, attempt, decision_state, decided_title, decided_keywords, owner_comment, decided_at, applied_at)
+                VALUES (?, ?, 'accepted', ?, ?, ?, ?, ?)
+                ON CONFLICT(media_id, attempt) DO UPDATE SET
+                  decision_state = excluded.decision_state,
+                  decided_title = excluded.decided_title,
+                  decided_keywords = excluded.decided_keywords,
+                  owner_comment = excluded.owner_comment,
+                  decided_at = excluded.decided_at,
+                  applied_at = excluded.applied_at
+                """,
+                (
+                    media_id,
+                    attempt,
+                    title,
+                    _keywords_text(keywords),
+                    str(item.get("reason") or "No title/keyword changes needed."),
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            _upsert_queue(
+                conn,
+                media_id=media_id,
+                review_state="applied",
+                latest_attempt=attempt,
+                batch_id=batch_id,
+                proposed_at=timestamp,
+                reviewed_at=timestamp,
+                applied_at=timestamp,
+                rework_priority=False,
+                rejected_count=0,
+                owner_comment=str(item.get("reason") or "No title/keyword changes needed."),
+            )
+            reviewed += 1
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), "reviewed": reviewed}
     finally:
         conn.close()
 
@@ -939,7 +1105,7 @@ def record_title_keyword_review_decisions(
                 (media_id, attempt, state, title, _keywords_text(keywords), comment, decided_at, applied_at or None),
             )
             rejected_count = max(1, attempt) if state == "rejected" else 0
-            if state == "rejected" and rejected_count >= 2:
+            if state == "rejected" and rejected_count >= TITLE_KEYWORD_PARK_REJECTED_COUNT:
                 queue_state = "parked"
             else:
                 queue_state = "applied" if state == "accepted" and applied_at else ("approved" if state == "accepted" else state)
@@ -1018,17 +1184,29 @@ def title_keyword_review_counts(repo_root: Path, db_path: Path | None = None) ->
         conn.close()
 
 
-def title_keyword_generator_state(repo_root: Path, db_path: Path | None = None, *, park_twice_rejected: bool = False) -> dict[str, Any]:
+def title_keyword_generator_state(
+    repo_root: Path,
+    db_path: Path | None = None,
+    *,
+    park_retry_exhausted: bool = False,
+) -> dict[str, Any]:
     conn = connect(repo_root, db_path)
     try:
-        parked_now = park_twice_rejected_title_keywords(conn) if park_twice_rejected else 0
+        parked_now = park_retry_exhausted_title_keywords(conn) if park_retry_exhausted else 0
         if parked_now:
             conn.commit()
         rows = conn.execute(
             """
-            SELECT *
-            FROM title_keyword_queue
-            ORDER BY media_id
+            SELECT q.*,
+                   p.generator_model AS latest_generator_model,
+                   p.generator_model_level AS latest_generator_model_level,
+                   p.generator_model_maxed AS latest_generator_model_maxed,
+                   p.model_ladder AS latest_model_ladder
+            FROM title_keyword_queue AS q
+            LEFT JOIN title_keyword_proposals AS p
+              ON p.media_id = q.media_id
+             AND p.attempt = q.latest_attempt
+            ORDER BY q.media_id
             """
         ).fetchall()
         queue = []
@@ -1042,6 +1220,10 @@ def title_keyword_generator_state(repo_root: Path, db_path: Path | None = None, 
                 "latest_attempt": int(row["latest_attempt"] or 1),
                 "latest_proposed_batch_id": row["latest_proposed_batch_id"] or "",
                 "latest_proposed_at": row["latest_proposed_at"] or "",
+                "latest_generator_model": row["latest_generator_model"] or "",
+                "latest_generator_model_level": row["latest_generator_model_level"],
+                "latest_generator_model_maxed": bool(row["latest_generator_model_maxed"]),
+                "latest_model_ladder": _read_json_text(row["latest_model_ladder"] or "", []),
                 "state_tags": _title_keyword_state_tags(str(row["review_state"] or ""), bool(row["rework_priority"])),
             })
         counts = title_keyword_review_counts(repo_root, db_path)
@@ -1049,6 +1231,8 @@ def title_keyword_generator_state(repo_root: Path, db_path: Path | None = None, 
             "format": "photosbyelie-title-keyword-generator-state",
             "schema_version": 1,
             "source_of_truth": (db_path or DEFAULT_DB).as_posix(),
+            "park_retry_rejected_count": TITLE_KEYWORD_PARK_REJECTED_COUNT,
+            "parked_retry_exhausted": parked_now,
             "parked_twice_rejected": parked_now,
             "keyword_blacklist": keyword_blacklist_terms(repo_root, db_path, conn),
             "counts": counts,
@@ -1243,8 +1427,10 @@ def main() -> None:
     parser.add_argument("--import-title-keyword-review", action="store_true")
     parser.add_argument("--import-title-keyword-batch-file", type=Path)
     parser.add_argument("--park-title-keyword-rows-file", type=Path)
+    parser.add_argument("--mark-title-keyword-reviewed-file", type=Path)
     parser.add_argument("--title-keyword-generator-state-json", action="store_true")
-    parser.add_argument("--park-twice-rejected", action="store_true")
+    parser.add_argument("--park-retry-exhausted", action="store_true")
+    parser.add_argument("--park-twice-rejected", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--import-keyword-blacklist", action="store_true")
     parser.add_argument("--export-keyword-blacklist", action="store_true")
     parser.add_argument("--import-discarded-r2-manifest", action="store_true")
@@ -1256,10 +1442,11 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = args.repo_root.resolve()
+    park_retry_exhausted = args.park_retry_exhausted or args.park_twice_rejected
     if args.import_owner_actions:
         import_owner_actions(repo_root, args.db, force=args.force)
     elif args.title_keyword_generator_state_json:
-        print(json.dumps(title_keyword_generator_state(repo_root, args.db, park_twice_rejected=args.park_twice_rejected), ensure_ascii=False))
+        print(json.dumps(title_keyword_generator_state(repo_root, args.db, park_retry_exhausted=park_retry_exhausted), ensure_ascii=False))
         return
     else:
         conn = connect(repo_root, args.db)
@@ -1284,10 +1471,15 @@ def main() -> None:
                 result = park_title_keyword_rows_file(repo_root, args.park_title_keyword_rows_file, args.db)
                 print(f"title_keyword_rows_parked={result['parked']}")
                 conn = connect(repo_root, args.db)
-            if args.park_twice_rejected:
-                parked = park_twice_rejected_title_keywords(conn)
+            if args.mark_title_keyword_reviewed_file:
+                conn.close()
+                result = mark_title_keyword_reviewed_file(repo_root, args.mark_title_keyword_reviewed_file, args.db)
+                print(f"title_keyword_rows_reviewed={result['reviewed']}")
+                conn = connect(repo_root, args.db)
+            if park_retry_exhausted:
+                parked = park_retry_exhausted_title_keywords(conn)
                 conn.commit()
-                print(f"title_keyword_queue parked_twice_rejected={parked}")
+                print(f"title_keyword_queue parked_retry_exhausted={parked}")
             if args.import_discarded_r2_manifest:
                 conn.close()
                 result = import_discarded_r2_manifest(repo_root, args.db)

@@ -13,6 +13,19 @@ const PROPOSED_FLAG = "Title_Keywords_Proposed";
 const REJECTED_FLAG = "Title_Keywords_Rejected";
 const PARKED_FLAG = "Title_Keywords_Parked";
 const MIN_PROPOSED_KEYWORDS = 10;
+const TITLE_KEYWORD_PARK_REJECTED_COUNT = 10;
+const DEFAULT_MODEL_LADDER = [
+  "local-metadata-rules-v1",
+  "codex-gpt-5.4-mini",
+  "codex-gpt-5.4",
+  "codex-gpt-5.5",
+  "codex-gpt-5.5-xhigh-vision",
+];
+const MODEL_LADDER = (process.env.PBE_TITLE_KEYWORD_MODEL_LADDER || DEFAULT_MODEL_LADDER.join(","))
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
+const GENERATOR_MODEL = (process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0] || "local-metadata-rules-v1").trim();
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
 const { loadCatalogWindow } = catalogTsv;
@@ -107,8 +120,35 @@ const runOwnerStateDb = (args, options = {}) => {
   return result.stdout || "";
 };
 
+const modelLevel = (model) => {
+  const value = String(model || "").trim();
+  const index = MODEL_LADDER.findIndex((item) => item === value);
+  return index >= 0 ? index : 0;
+};
+
+const generatorModelInfo = () => {
+  const level = modelLevel(GENERATOR_MODEL);
+  return {
+    model: GENERATOR_MODEL,
+    model_level: level,
+    model_maxed: level >= MODEL_LADDER.length - 1,
+    model_ladder: MODEL_LADDER,
+  };
+};
+
+const nextModelAfterLevel = (level) => {
+  const normalized = Number.isFinite(Number(level)) ? Number(level) : 0;
+  const next = Math.min(Math.max(0, normalized + 1), MODEL_LADDER.length - 1);
+  return {
+    model: MODEL_LADDER[next] || GENERATOR_MODEL,
+    model_level: next,
+    model_maxed: next >= MODEL_LADDER.length - 1,
+    model_ladder: MODEL_LADDER,
+  };
+};
+
 const loadOwnerGeneratorState = () => {
-  const stdout = runOwnerStateDb(["--title-keyword-generator-state-json", "--park-twice-rejected"]);
+  const stdout = runOwnerStateDb(["--title-keyword-generator-state-json", "--park-retry-exhausted"]);
   const payload = JSON.parse(stdout);
   const state = createProposalState();
   for (const item of payload.queue || []) {
@@ -120,6 +160,10 @@ const loadOwnerGeneratorState = () => {
       latest_attempt: Number(item.latest_attempt || 1),
       latest_proposed_batch_id: item.latest_proposed_batch_id || "",
       latest_proposed_at: item.latest_proposed_at || "",
+      latest_generator_model: item.latest_generator_model || "",
+      latest_generator_model_level: item.latest_generator_model_level,
+      latest_generator_model_maxed: item.latest_generator_model_maxed === true,
+      latest_model_ladder: Array.isArray(item.latest_model_ladder) ? item.latest_model_ladder : [],
       state_tags: item.state_tags || [],
     });
   }
@@ -127,7 +171,8 @@ const loadOwnerGeneratorState = () => {
     state,
     blacklist: blacklistRules(Array.isArray(payload.keyword_blacklist) ? payload.keyword_blacklist : []),
     counts: payload.counts || {},
-    parkedTwiceRejected: Number(payload.parked_twice_rejected || 0),
+    parkRejectedCount: Number(payload.park_retry_rejected_count || TITLE_KEYWORD_PARK_REJECTED_COUNT),
+    parkedRetryExhausted: Number(payload.parked_retry_exhausted || payload.parked_twice_rejected || 0),
   };
 };
 
@@ -175,6 +220,21 @@ const hasBlacklistedTerm = (keyword, rules) => {
 const allowedKeywords = (items, rules) => uniqueKeywords(items)
   .filter((keyword) => !hasBlacklistedTerm(keyword, rules));
 
+const STATE_KEYWORDS = new Set([REVIEW_FLAG, PROPOSED_FLAG, REJECTED_FLAG, PARKED_FLAG].map((value) => value.toLowerCase()));
+
+const reviewableKeywords = (items, rules) => allowedKeywords(items, rules)
+  .filter((keyword) => !STATE_KEYWORDS.has(keyword.toLowerCase()));
+
+const keywordSetEquals = (left, right) => {
+  const leftSet = new Set(uniqueKeywords(left).map((item) => item.toLowerCase()));
+  const rightSet = new Set(uniqueKeywords(right).map((item) => item.toLowerCase()));
+  if (leftSet.size !== rightSet.size) return false;
+  for (const item of leftSet) {
+    if (!rightSet.has(item)) return false;
+  }
+  return true;
+};
+
 const titleCase = (value) => cleanText(value)
   .split(" ")
   .map((word) => {
@@ -196,6 +256,12 @@ const isPlaceholderTitle = (title, originalFile = "") => {
   if (/^\d{3,}$/.test(value)) return true;
   const originalStem = cleanText(path.basename(String(originalFile || ""), path.extname(String(originalFile || ""))));
   return Boolean(originalStem && normalizedComparable(value) === normalizedComparable(originalStem));
+};
+
+const originalMetadataAcceptable = ({ currentTitle, currentKeywords, blacklist, sourceFile, photo }) => {
+  const sourcePath = sourceFile?.path || metadataValue(photo, "Original file");
+  if (!currentTitle || isPlaceholderTitle(currentTitle, sourcePath)) return false;
+  return reviewableKeywords(currentKeywords, blacklist).length >= MIN_PROPOSED_KEYWORDS;
 };
 
 const mythTitleName = (title) => {
@@ -471,6 +537,23 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   const withoutBlacklisted = currentKeywords.filter((keyword) => !hasBlacklistedTerm(keyword, blacklist));
   const removedBlacklisted = currentKeywords.filter((keyword) => hasBlacklistedTerm(keyword, blacklist));
   const placeholder = isPlaceholderTitle(currentTitle, sourceFile?.path || metadataValue(photo, "Original file"));
+  const originalAcceptable = originalMetadataAcceptable({ currentTitle, currentKeywords, blacklist, sourceFile, photo });
+  if (originalAcceptable) {
+    const cleanCurrentKeywords = allowedKeywords(currentKeywords, blacklist);
+    return {
+      title: currentTitle,
+      keywords: removedBlacklisted.length ? cleanCurrentKeywords : currentKeywords,
+      status: removedBlacklisted.length ? "blacklist_cleanup" : "no_change_needed",
+      confidence: "high",
+      reason: removedBlacklisted.length
+        ? "Original title and keywords are acceptable; proposal only removes blacklisted keyword noise."
+        : "Original title and keywords are acceptable; no owner review change is needed.",
+      removedBlacklisted,
+      keywordTargetMet: reviewableKeywords(cleanCurrentKeywords, blacklist).length >= MIN_PROPOSED_KEYWORDS,
+      noChangeNeeded: removedBlacklisted.length === 0,
+      blacklistOnlyCleanup: removedBlacklisted.length > 0 && keywordSetEquals(cleanCurrentKeywords, withoutBlacklisted),
+    };
+  }
   const promptTitle = compactPromptTitle(currentTitle, currentKeywords);
   const descriptiveTitle = compactDescriptiveTitle(currentTitle);
   const keywordTitle = titleFromKeywordHints({ keywords: withoutBlacklisted, galleryLabel, context });
@@ -499,6 +582,8 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
         : "Keeps useful existing catalog metadata and removes blacklisted keyword noise.")),
     removedBlacklisted,
     keywordTargetMet: proposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
+    noChangeNeeded: false,
+    blacklistOnlyCleanup: false,
   };
 };
 
@@ -536,7 +621,7 @@ const isParkedProposal = (entry) => {
 const isRejectedForRework = (photo, proposedState) => {
   const entry = proposalStateEntry(photo, proposedState);
   if (isParkedProposal(entry)) return false;
-  if (Number(entry?.rejected_count || 0) >= 2) return false;
+  if (Number(entry?.rejected_count || 0) >= TITLE_KEYWORD_PARK_REJECTED_COUNT) return false;
   const tags = Array.isArray(entry?.state_tags) ? entry.state_tags : [];
   return hasMetadataFlag(photo, REJECTED_FLAG)
     || tags.includes(REJECTED_FLAG)
@@ -615,6 +700,10 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
   }
   if (Number.isFinite(Number(detail.rejected_count))) existing.rejected_count = Number(detail.rejected_count);
   if (Number.isFinite(Number(detail.latest_attempt))) existing.latest_attempt = Math.max(1, Number(detail.latest_attempt));
+  if (detail.latest_generator_model != null) existing.latest_generator_model = String(detail.latest_generator_model || "").trim();
+  if (Number.isFinite(Number(detail.latest_generator_model_level))) existing.latest_generator_model_level = Number(detail.latest_generator_model_level);
+  if (detail.latest_generator_model_maxed != null) existing.latest_generator_model_maxed = Boolean(detail.latest_generator_model_maxed);
+  if (Array.isArray(detail.latest_model_ladder)) existing.latest_model_ladder = detail.latest_model_ladder;
   if (rejectionComment) existing.rejection_comment = rejectionComment;
   if (detail.clear_rejection) {
     existing.review_state = "proposed";
@@ -855,6 +944,12 @@ const main = () => {
       id: String(photo?.id || ""),
       reworkPriority,
       reworkComment: String(stateEntry?.rejection_comment || stateEntry?.latest_rejection_comment || "").trim(),
+      previousGeneratorModel: String(stateEntry?.latest_generator_model || "").trim(),
+      previousGeneratorModelLevel: Number.isFinite(Number(stateEntry?.latest_generator_model_level))
+        ? Number(stateEntry.latest_generator_model_level)
+        : null,
+      previousGeneratorModelMaxed: stateEntry?.latest_generator_model_maxed === true,
+      previousModelLadder: Array.isArray(stateEntry?.latest_model_ladder) ? stateEntry.latest_model_ladder : [],
       proposalAttempt: Math.max(Number(stateEntry?.latest_attempt || 0), Number(stateEntry?.rejected_count || 0)) + 1,
       rejectedCount: Number(stateEntry?.rejected_count || 0),
     });
@@ -900,11 +995,18 @@ const main = () => {
       blacklist,
       sourceFile,
     });
+    const actualGenerator = generatorModelInfo();
+    const requestedGenerator = row.reworkPriority
+      ? nextModelAfterLevel(row.previousGeneratorModelLevel)
+      : actualGenerator;
     if (row.reworkPriority) {
       const comment = row.reworkComment ? ` Owner note: ${row.reworkComment.slice(0, 240)}` : "";
       proposal.status = proposal.status === "needs_owner_context" ? proposal.status : "rework_requested";
       proposal.confidence = proposal.confidence === "low" ? "low" : "medium";
-      proposal.reason = `Owner rejected a previous proposal; this photo was prioritized for a new title/keyword attempt.${comment}`;
+      const escalation = row.previousGeneratorModel
+        ? ` Previous generator: ${row.previousGeneratorModel}; requested next generator: ${requestedGenerator.model}.`
+        : ` Requested rework generator: ${requestedGenerator.model}.`;
+      proposal.reason = `Owner rejected a previous proposal; this photo was prioritized for a new title/keyword attempt.${comment}${escalation}`;
     }
 
     return {
@@ -938,6 +1040,13 @@ const main = () => {
         rework_requested: row.reworkPriority,
         rework_comment: row.reworkComment,
         proposal_attempt: row.proposalAttempt,
+        previous_generator: row.previousGeneratorModel ? {
+          model: row.previousGeneratorModel,
+          model_level: row.previousGeneratorModelLevel,
+          model_maxed: row.previousGeneratorModelMaxed,
+          model_ladder: row.previousModelLadder,
+        } : null,
+        requested_generator: requestedGenerator,
       },
       current: {
         title: currentTitle,
@@ -950,10 +1059,13 @@ const main = () => {
         status: proposal.status,
         confidence: proposal.confidence,
         reason: proposal.reason,
+        generator: actualGenerator,
       },
       changes: {
         removed_blacklisted: proposal.removedBlacklisted,
         blacklisted_keyword_count: proposal.removedBlacklisted.length,
+        blacklist_only_cleanup: proposal.blacklistOnlyCleanup === true,
+        no_change_needed: proposal.noChangeNeeded === true,
         keyword_target: MIN_PROPOSED_KEYWORDS,
         keyword_target_met: proposal.keywordTargetMet,
       },
@@ -963,13 +1075,23 @@ const main = () => {
 
   const photos = [];
   const parkedRows = [];
+  const noChangeRows = [];
+  const unresolvedReworkRows = [];
   let ordinaryNewCount = 0;
 
   const addCandidate = (row, ordinarySlot = false) => {
     const record = buildPhotoRecord(row);
+    if (record?.changes?.no_change_needed === true && row.reworkPriority !== true) {
+      noChangeRows.push({ row, record });
+      return true;
+    }
     const title = String(record?.proposed?.title || "").trim();
     const sourcePath = record?.source?.file?.path || record?.meta?.original_file || "";
     if (!title || isPlaceholderTitle(title, sourcePath)) {
+      if (row.reworkPriority === true && Number(row.rejectedCount || 0) < TITLE_KEYWORD_PARK_REJECTED_COUNT) {
+        unresolvedReworkRows.push({ row, record });
+        return false;
+      }
       parkedRows.push({ row, record });
       return false;
     }
@@ -1010,6 +1132,18 @@ const main = () => {
     };
     parkedExportRows.push({ photo_id: parked.record.photo_id, ...parkedDetail });
   }
+  const reviewedAt = new Date().toISOString();
+  const noChangeExportRows = noChangeRows.map(({ row, record }) => ({
+    photo_id: record.photo_id,
+    batch_id: batchId,
+    reviewed_at: reviewedAt,
+    latest_attempt: Math.max(1, Number(row.proposalAttempt || 1)),
+    title: record.current.title,
+    keywords: record.current.keywords,
+    keyword_target: MIN_PROPOSED_KEYWORDS,
+    reason: "Original title and keywords were already acceptable; marked reviewed without queuing owner approval.",
+    generator: record.proposed.generator,
+  }));
 
   const payload = {
     format: "photosbyelie-title-keyword-review-queue",
@@ -1043,6 +1177,8 @@ const main = () => {
       parked_count: parkedRows.length,
       parked_rework_count: parkedRows.filter((item) => item.row.reworkPriority).length,
       parked_ordinary_count: parkedRows.filter((item) => !item.row.reworkPriority).length,
+      no_change_reviewed_count: noChangeRows.length,
+      unresolved_rework_count: unresolvedReworkRows.length,
       candidate_count: candidates.length,
     },
     skipped: {
@@ -1050,6 +1186,8 @@ const main = () => {
       proposed: skippedProposed.filter(Boolean),
       parked: skippedParked.filter(Boolean),
       newly_parked: parkedRows.map((item) => item.record.photo_id).filter(Boolean),
+      no_change_reviewed: noChangeRows.map((item) => item.record.photo_id).filter(Boolean),
+      unresolved_rework: unresolvedReworkRows.map((item) => item.record.photo_id).filter(Boolean),
     },
     photos,
   };
@@ -1064,6 +1202,12 @@ const main = () => {
     fs.writeFileSync(path.join(REPO_ROOT, parkedTmpPath), JSON.stringify(parkedExportRows, null, 2) + "\n");
     runOwnerStateDb(["--park-title-keyword-rows-file", parkedTmpPath]);
   }
+  if (noChangeExportRows.length) {
+    const noChangeTmpPath = path.join("tmp", `title-keyword-reviewed-no-change-${batchId}-${Date.now()}.json`);
+    fs.mkdirSync(path.join(REPO_ROOT, "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(REPO_ROOT, noChangeTmpPath), JSON.stringify(noChangeExportRows, null, 2) + "\n");
+    runOwnerStateDb(["--mark-title-keyword-reviewed-file", noChangeTmpPath]);
+  }
 
   process.stdout.write(
     `Wrote ${photos.length} proposals -> ${batchPath}\n` +
@@ -1073,9 +1217,11 @@ const main = () => {
     `Skipped reviewed: ${skippedReviewed.length}\n` +
     `Skipped proposed: ${skippedProposed.length}\n` +
     `Skipped parked: ${skippedParked.length}\n` +
-    `Parked twice-rejected before selection: ${ownerGeneratorState.parkedTwiceRejected}\n` +
+    `Parked retry-exhausted before selection: ${ownerGeneratorState.parkedRetryExhausted} (threshold ${ownerGeneratorState.parkRejectedCount})\n` +
     `Ordinary new: ${ordinaryBatch.length}/${args.limit}\n` +
     `Rework priority: ${reworkBatch.length}\n` +
+    `Marked reviewed without changes: ${noChangeRows.length}\n` +
+    `Unresolved rework kept rejected: ${unresolvedReworkRows.length}\n` +
     `Parked untitled: ${parkedRows.length}\n`,
   );
 };

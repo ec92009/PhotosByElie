@@ -82,6 +82,24 @@
   const normalizeKeywords = (raw, blacklist) => uniqueKeywords(splitKeywordText(raw))
     .filter((keyword) => !blacklist.has(keyword.toLowerCase()));
 
+  const currentKeywordMarkup = (item) => {
+    const keywords = Array.isArray(item?.current?.keywords)
+      ? item.current.keywords
+      : splitKeywordText(item?.current?.keywords_raw || "");
+    const removed = new Set((item?.changes?.removed_blacklisted || [])
+      .map((keyword) => String(keyword || "").trim().toLowerCase())
+      .filter(Boolean));
+    if (!keywords.length) return escapeHtml("No current keywords");
+    return keywords.map((keyword) => {
+      const value = String(keyword || "").trim();
+      if (!value) return "";
+      const escaped = escapeHtml(value);
+      return removed.has(value.toLowerCase())
+        ? `<span class="title-keyword-review-removed-keyword" title="Blacklisted keyword removed from proposal">${escaped}</span>`
+        : escaped;
+    }).filter(Boolean).join(", ");
+  };
+
   const publicMediaUrl = (key) => {
     const base = String(window.photosByEliePublicMediaBase || "").replace(/\/+$/, "");
     const cleanKey = String(key || "").replace(/^\/+/, "");
@@ -203,6 +221,7 @@
       const thumb = reviewThumbUrl(item);
       const fetchPriority = index < 12 ? "high" : "low";
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
+      const currentKeywordsHtml = currentKeywordMarkup(item);
       const proposedTitle = String(item?.proposed?.title || title || "");
       const proposedKeywords = normalizeKeywords(
         Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords,
@@ -217,7 +236,7 @@
           <div class="title-keyword-review-current">
             <p class="eyebrow">${escapeHtml(galleryLabel || "Photo")}${capture ? ` / ${escapeHtml(capture)}` : ""}</p>
             <h2>${escapeHtml(title || photoId)}</h2>
-            <p>${escapeHtml(currentKeywords || "No current keywords")}</p>
+            <p>${currentKeywordsHtml}</p>
           </div>
           <form class="title-keyword-review-proposed" data-review-editor>
               <label>

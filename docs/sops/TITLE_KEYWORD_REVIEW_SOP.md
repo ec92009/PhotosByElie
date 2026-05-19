@@ -35,6 +35,9 @@ Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, whi
    - Use catalog/source path metadata only as fallback, and mark uncertain rows `needs_owner_context`.
    - Avoid filename-style titles as improved proposals.
    - Attempt at least 10 proposed keywords per photo.
+   - Record the actual generator/model used for every proposal. Rework should escalate to the next stronger available model/generator level; park only after the model ladder is exhausted or the Owner explicitly parks/blocks the photo.
+   - If the original title is acceptable and the original non-blacklisted keywords already meet the keyword target, mark the row reviewed/applied in `Owner.sqlite` without sending it through Owner approval again. These no-change-reviewed rows do not consume the 100 ordinary-new-photo quota.
+   - If the only meaningful difference is removing blacklisted keywords, keep the row reviewable as a blacklist-only cleanup proposal and make the removed original keywords visible in the Owner review UI.
 4. The generator updates `Owner.sqlite`, then writes proposal batches and `latest.json` under `assets/owner-actions/title-keyword-review-queue/` as review-page views derived from SQLite state.
 
 Use JSON backfill/sync commands only for migration or recovery. Normal nightly review work must not rebuild or score authoritative state from JSON when `Owner.sqlite` is available.
@@ -53,6 +56,8 @@ Columns:
 Decision controls include side-by-side Approve and Reject checkboxes plus an optional vertical reject comment. Approve and Reject are mutually exclusive. Typing in the reject comment checks Reject and unchecks Approve. Clicking Approve does not erase the comment; it greys/read-onlys the comment until the Owner interacts with the comment again, which reactivates Reject.
 
 Rows autosave as soon as the Owner approves, rejects, comments, or manually edits a proposed title/keyword. Editing proposed title/keywords automatically checks Approve. Save approvals at the top/bottom remains as a retry/manual batch-save control. Keep the header back-to-top control.
+
+For blacklist-only cleanup rows, the current/original keyword field should visually mark removed blacklisted terms so the Owner can see that the proposed change is only keyword cleanup.
 
 The page supports row selection. Single-click selects a row without opening detail. Double-click opens detail. Keyboard shortcuts apply to the selected row:
 

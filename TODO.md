@@ -4,16 +4,17 @@ Last updated: 2026-05-19
 
 ## Current Facts
 
-- Current visible build: `v79.25`.
+- Current visible build: `v79.29`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=79.25`.
+- Local Owner page: `http://localhost:8000/owner.html?v=79.29`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
 - Public pages attempt `assets/catalog/photosbyelie.sqlite.br` first where supported, with plain `assets/catalog/photosbyelie.sqlite` as the guaranteed fallback.
-- Local Owner state writes to ignored local files and `assets/owner-actions/Owner.sqlite`; tracked generated catalog/discarded artifacts were reconciled in `v79.25` so discarded photos are excluded from public outputs.
+- Local Owner state writes to ignored local files and `assets/owner-actions/Owner.sqlite`; tracked generated catalog/discarded artifacts were reconciled in `v79.29` so discarded photos are excluded from public outputs.
 - Owner DB now records R2 objects as current, marked for delete, or confirmed deleted, and ordinary coverage checks trust current-key records before doing expensive cloud work.
 - The import dashboard now treats source lanes as a shared pipeline: discovery fills a FIFO, planning decides what is missing, and processing creates/uploads missing masters, triplets, and previews.
+- The Imports tab's Start background work button reports "already up to date" when no background work is needed.
 - Fill in gaps covers lost masters, lost triplets, and lost previews without forcing a full source reimport or force-uploading known-current objects.
 - Real Estate client imports follow `/Volumes/Saturn/Pictures/RE/<ClientName>/<Property>`, derive most public fields from `<ClientName>`, and keep credentials local/ignored except for sanitized public contexts and Worker secrets.
 - Apple Photos with faces remains off limits.
@@ -21,29 +22,29 @@ Last updated: 2026-05-19
 
 ## Numbered Backlog
 
-1. **Completed in `v79.25`: reconcile dirty Owner generated state.**
+1. **Completed in `v79.29`: reconcile dirty Owner generated state.**
    - The discarded tombstone, public manifest, home data, worker catalog, and SQLite catalog now agree.
    - Newly discarded photos, including the France photo investigated during the session, are excluded from public outputs.
 
-2. **Completed in `v79.25`: make Owner DB the ordinary R2 authority.**
+2. **Completed in `v79.29`: make Owner DB the ordinary R2 authority.**
    - R2 object rows record current, marked-for-delete, and confirmed-deleted states.
    - Older current rows were backfilled with inferred photo ids/object kinds, including Real Estate keys.
    - Ordinary coverage checks trust current-key Owner DB records; deep inventory remains reserved for suspicious storage or legacy-key investigations.
 
-3. **Completed in `v79.25`: finish Fill in gaps behavior.**
+3. **Completed in `v79.29`: finish Fill in gaps behavior.**
    - Fill in gaps covers masters, private triplets, and public previews.
    - It no longer force-uploads objects already recorded as current.
    - It emits initial per-photo checkbox state so pending/done steps are visible before slow work finishes.
 
-4. **Completed in `v79.25`: keep source-lane imports on the shared pipeline model.**
+4. **Completed in `v79.29`: keep source-lane imports on the shared pipeline model.**
    - Source lanes use discovery/planning/processing language and shared matrix display.
    - Processing can begin while discovery continues, and the matrix shows active plus next queued rows instead of every completed row.
 
-5. **Completed in `v79.25`: stabilize R2 background controls.**
+5. **Completed in `v79.29`: stabilize R2 background controls.**
    - The sweep exposes the import-cache phase, Fill in gaps is skippable at phase level, and skipped phases continue to render as `UNFINISHED`.
    - Background controls now report a clean no-missing state when coverage is already complete.
 
-6. **Completed in `v79.25`: make legacy/misplaced repair evidence-led.**
+6. **Completed in `v79.29`: make legacy/misplaced repair evidence-led.**
    - Current-key Owner DB records satisfy normal coverage.
    - Legacy-key searching remains a deliberate deep-dive path instead of an automatic slowdown on every run.
 

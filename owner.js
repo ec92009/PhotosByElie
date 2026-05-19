@@ -134,6 +134,8 @@
   let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
   let lastImportCoverageRefreshAt = 0;
+  let r2BackgroundNotice = "";
+  let r2BackgroundNoticeUntil = 0;
   let latestR2ProgressTasks = [];
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
@@ -1344,8 +1346,15 @@
   const syncR2ActionButtons = () => {
     const busy = r2RepairActive || r2GapFillActive;
     if (r2FixButton) {
-      r2FixButton.disabled = r2CoverageOk || busy;
-      r2FixButton.textContent = busy ? "Background work running" : "Start background work";
+      r2FixButton.disabled = busy;
+      r2FixButton.textContent = busy
+        ? "Background work running"
+        : r2CoverageOk
+          ? "Background work up to date"
+          : "Start background work";
+      r2FixButton.title = r2CoverageOk
+        ? "Everything currently tracked is up to date; click to confirm"
+        : "Start the full lock-guarded background sweep";
     }
     const gapCount = r2GapPhotoCount();
     r2FillGapsButtons.forEach((button) => {
@@ -2521,9 +2530,12 @@
   const renderImportDashboardIdle = () => {
     if (!r2Card || !r2Summary || !r2Counts) return;
     if (r2Card.hidden) r2Card.hidden = false;
-    setText(r2Summary, r2CoverageOk
-      ? "No import job is running. Everything currently tracked is up to date."
-      : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
+    const noticeActive = r2BackgroundNotice && Date.now() < r2BackgroundNoticeUntil;
+    setText(r2Summary, noticeActive
+      ? r2BackgroundNotice
+      : r2CoverageOk
+        ? "No import job is running. Everything currently tracked is up to date."
+        : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
     );
     const gaps = r2GapCounts();
     const rows = [
@@ -2532,6 +2544,7 @@
       ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
       ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
     ];
+    if (noticeActive) rows.push(["Last action", "Start background work checked coverage and found nothing to do."]);
     setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work"])));
     renderSweepPhases({
       id: "imports-idle",
@@ -2541,6 +2554,15 @@
       failed: 0,
     });
     renderR2PhotoPreview("");
+  };
+
+  const announceR2BackgroundAlreadyDone = () => {
+    r2BackgroundNotice = "Start background work checked coverage: everything currently tracked is already up to date, so no background work was started.";
+    r2BackgroundNoticeUntil = Date.now() + 15000;
+    setOwnerTab("imports");
+    renderImportDashboardIdle();
+    setStatus("Everything currently tracked is already up to date. No background work was started.");
+    syncR2ActionButtons();
   };
 
   const loadR2RepairLog = async (task) => {
@@ -3052,6 +3074,14 @@
   r2FixButton?.addEventListener("click", async () => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to run R2 background work.");
     if (ownerAuth?.enabled && !authorized) return;
+    if (!window.photosByElieR2Coverage) {
+      setStatus("Checking R2 coverage before starting background work...");
+      await loadR2Coverage();
+    }
+    if (r2CoverageOk) {
+      announceR2BackgroundAlreadyDone();
+      return;
+    }
     const ok = window.confirm("Start the full lock-guarded cloud media background work now? This may upload/render missing objects, double-check banned-photo R2 cleanup, delete any leftovers while keeping ban records, validate, commit, and push manifest changes.");
     if (!ok) return;
     r2FixButton.disabled = true;
@@ -3074,6 +3104,12 @@
       setStatus(error?.message || "Could not start R2 background work.");
       loadR2Coverage();
     }
+  });
+
+  r2FixButton?.addEventListener("pointerdown", (event) => {
+    if (!r2CoverageOk || r2RepairActive || r2GapFillActive) return;
+    event.preventDefault();
+    announceR2BackgroundAlreadyDone();
   });
 
   const startR2GapFill = async (triggerButton = null) => {

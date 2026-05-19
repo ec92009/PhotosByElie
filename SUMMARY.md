@@ -6,8 +6,8 @@ Date: 2026-05-19
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v79.25`
-- Local Owner page: `http://localhost:8000/owner.html?v=79.25`
+- Current visible build: `v79.29`
+- Local Owner page: `http://localhost:8000/owner.html?v=79.29`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -35,9 +35,10 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 
 ## Current Operational Notes
 
-- `v79.25` reconciles the dirty Owner-generated state: discarded photos are now excluded from public manifest/catalog outputs, including `20180322-0915-00173-e3b893dbea`.
+- `v79.29` reconciles the dirty Owner-generated state: discarded photos are now excluded from public manifest/catalog outputs, including `20180322-0915-00173-e3b893dbea`.
 - Owner DB R2 rows now infer photo id/object kind for older records, including Real Estate keys, and current-key DB records are trusted by ordinary coverage checks.
 - Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
+- In `v79.29`, the Imports tab's Start background work button stays clickable when coverage is already clean and reports that no background work was started because everything tracked is up to date.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.
@@ -73,4 +74,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. Items 1-6 from the prior backlog were completed in `v79.25`; the next major work is Real Estate owner/client delivery, durable hidden/discarded lifecycle hardening, Owner state-table browsing, and commerce hardening.
+`TODO.md` is the numbered backlog source of truth. Items 1-6 from the prior backlog were completed in `v79.29`; the next major work is Real Estate owner/client delivery, durable hidden/discarded lifecycle hardening, Owner state-table browsing, and commerce hardening.

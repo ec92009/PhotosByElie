@@ -937,3 +937,14 @@ Source: public catalog metadata (`assets/catalog/photosbyelie.sqlite`). Target b
    - Suggested platform: Instagram (feed)
    - Suggested caption: Bratislava — small city, big charm. 🇸🇰 #Bratislava #Slovakia #EuropeTravel #StreetPhotography
    - Why this one: Adds variety beyond the usual destinations; “underrated city” travel angle.
+
+---
+
+## 2026-05-19 — R2 master-chain maintenance (daily)
+
+- Repaired masters: 0
+- Repaired renders: 0
+- Pruned private render ghosts: 0
+- Pruned public preview ghosts: 36
+- Remaining missing public previews: 0
+- Failures: 0 (script exited 0; `npm test` + `npm run validate` OK)

@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-title-keyword-review-approvals",
   "schema_version": 1,
-  "updated_at": "2026-05-16T11:11:56.023477+00:00",
+  "updated_at": "2026-05-19T16:24:20.256314+00:00",
   "batch_id": "2026-05-16",
   "approvals": [
     {
@@ -711,6 +711,692 @@
         "portrait orientation",
         "Travel photography"
       ]
+    },
+    {
+      "photo_id": "20180517-2134-00490-dc7a915651",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "square format",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-2126-00483-f23ed1e1e2",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-1437-00477-41cf20c0a9",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-1437-00475-fe4776377f",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-1356-00473-1-1194c3fa61",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-1159-00470-63ff51f1ca",
+      "approved": true,
+      "title": "Lisbon, Lisbonne",
+      "keywords": [
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-1157-00469-ed539494e1",
+      "approved": true,
+      "title": "Lisbon, Lisbonne",
+      "keywords": [
+        "Portugal",
+        "lisbon",
+        "lisbonne",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1635-00440-259768ed5d",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1634-00438-383c90b340",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1633-00437-f9e3bd9336",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1630-00436-1b277ba8a9",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1618-00428-3eb2be0d80",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1617-00427-c6e399f26c",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1608-00420-95ca51dd01",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1553-00417-ce4188ec98",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1554-00418-1666851aba",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1527-00410-ca0f679cc4",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1523-00408-60baa8eb58",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1522-00407-f9ad6d1c21",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1513-00404-d149214374",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1512-00403-ca2da18685",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1511-00400-2d2b644db6",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1510-00399-b36b36b527",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "square format",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1510-00398-b6b2dcafad",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1509-00395-990efe55c7",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "architecture",
+        "Spain",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1508-00393-06cf65e0d9",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "Panoramic",
+        "architecture",
+        "Spain",
+        "vertical composition",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180515-1508-00392-1-63dcf93248",
+      "approved": true,
+      "title": "Bilbao Guggenheim Museum",
+      "keywords": [
+        "Art",
+        "Bilbao",
+        "Guggenheim museum",
+        "Museum",
+        "Panoramic",
+        "architecture",
+        "Spain",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1408-00371-a6f83947e2",
+      "approved": true,
+      "title": "Notre Dame de Paris vue du Quai Montebello, Bouquinistes",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "bouquiniste",
+        "Notre",
+        "Greek mythology",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1140-00367-8ba499e834",
+      "approved": true,
+      "title": "Institut du Monde Arabe, Paris",
+      "keywords": [
+        "France",
+        "IMA",
+        "Paris",
+        "bateau-mouche",
+        "institut du monde arabe",
+        "quai montebello",
+        "arabe",
+        "institut",
+        "Greek mythology",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-112430-00103-6772fdbf3c",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Panoramic",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-2134-00489-a3c2036451",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180517-2132-00488-18ec1fa871",
+      "approved": true,
+      "title": "Beach, Cascais",
+      "keywords": [
+        "Art",
+        "Beach",
+        "Cascais",
+        "Harbor",
+        "Panoramic",
+        "Portugal",
+        "Trip",
+        "anchor",
+        "city",
+        "lisbon",
+        "lisbonne",
+        "statue",
+        "travel",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1129-00366-7adb449fbf",
+      "approved": true,
+      "title": "Notre Dame de Paris, Quai de Seine",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Notre",
+        "Greek mythology",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1122-00363-f7c7bc7936",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1120-00361-edit-e178f03aa6",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1120-00360-2725b746ee",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-1109-00348-29e52a789c",
+      "approved": true,
+      "title": "Notre Dame de Paris, Quai de Seine, Bateau Mouche \"La Nouvelle Seine\"",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Notre",
+        "Greek mythology",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-00337-c0db2ef030",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-00332-c7e2c09dd1",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-14819-411c515f31",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-00329-d32b4864ae",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-00328-cd368139de",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-14822-158692002a",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-00340-9a82c82a19",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180511-0222-00334-e1adbd8eea",
+      "approved": true,
+      "title": "Paris, Bateau Mouche",
+      "keywords": [
+        "France",
+        "Paris",
+        "bateau-mouche",
+        "notre dame de paris",
+        "quai montebello",
+        "Travel photography"
+      ]
     }
   ],
   "rejections": [
@@ -888,12 +1574,29 @@
         "Travel photography"
       ],
       "comment": "if a city and or a country is mentioned in the keywords (porto, portugal), they make a better title than Landscape or Mountiain"
+    },
+    {
+      "photo_id": "20180516-1747-00464-9bdeb008f8",
+      "rejected": true,
+      "title": "Landscape, Mountain",
+      "keywords": [
+        "Landscape",
+        "Mountain",
+        "Portugal",
+        "Trip",
+        "city",
+        "porto",
+        "road",
+        "travel",
+        "Travel photography"
+      ],
+      "comment": "use the keywords as tip"
     }
   ],
   "blocked": [],
   "proposal_state_path": "assets/owner-actions/title-keyword-review-queue/proposed-state.json",
   "not_found": [],
-  "applied_at": "2026-05-16T11:11:56.023243+00:00",
+  "applied_at": "2026-05-19T16:24:09.099395+00:00",
   "review_flag": "Title_Keywords_Reviewed",
   "proposal_state_flag": "Title_Keywords_Proposed",
   "rejection_flag": "Title_Keywords_Rejected"

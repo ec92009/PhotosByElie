@@ -4697,7 +4697,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "France, IMA, Paris, bateau-mouche, institut du monde arabe, quai montebello, arabe, institut"
+            "value": "France, IMA, Paris, bateau-mouche, institut du monde arabe, quai montebello, arabe, institut, Greek mythology, Travel photography"
           },
           {
             "label": "Captured",
@@ -4760,7 +4760,9 @@ export const collections = {
           "institut du monde arabe",
           "quai montebello",
           "arabe",
-          "institut"
+          "institut",
+          "Greek mythology",
+          "Travel photography"
         ]
       },
       {
@@ -4780,7 +4782,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello, Notre, Greek mythology, Travel photography"
           },
           {
             "label": "Captured",
@@ -4840,13 +4842,16 @@ export const collections = {
           "Paris",
           "bateau-mouche",
           "notre dame de paris",
-          "quai montebello"
+          "quai montebello",
+          "Notre",
+          "Greek mythology",
+          "Travel photography"
         ]
       },
       {
         "id": "20180511-112430-00103-6772fdbf3c",
         "className": "p1",
-        "title": "20180511 112430 00103",
+        "title": "Paris, Bateau Mouche",
         "caption": "France / 2018-05-11",
         "full": "JPG master",
         "megapixels": 157.7,
@@ -4856,11 +4861,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180511 112430 00103"
+            "value": "Paris, Bateau Mouche"
           },
           {
             "label": "Keywords",
-            "value": "France, Panoramic, Paris, bateau-mouche, notre dame de paris, quai montebello"
+            "value": "France, Panoramic, Paris, bateau-mouche, notre dame de paris, quai montebello, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -4921,7 +4926,9 @@ export const collections = {
           "Paris",
           "bateau-mouche",
           "notre dame de paris",
-          "quai montebello"
+          "quai montebello",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
@@ -5422,7 +5429,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello, Notre, Greek mythology, Travel photography"
           },
           {
             "label": "Captured",
@@ -5482,7 +5489,10 @@ export const collections = {
           "Paris",
           "bateau-mouche",
           "notre dame de paris",
-          "quai montebello"
+          "quai montebello",
+          "Notre",
+          "Greek mythology",
+          "Travel photography"
         ]
       },
       {
@@ -5648,7 +5658,7 @@ export const collections = {
       {
         "id": "20180511-0222-00340-9a82c82a19",
         "className": "p1",
-        "title": "20180511 0222 00340",
+        "title": "Paris, Bateau Mouche",
         "caption": "France / Paris, Île-de-France, France / 2018-05-11",
         "full": "JPG master",
         "megapixels": 24,
@@ -5658,11 +5668,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180511 0222 00340"
+            "value": "Paris, Bateau Mouche"
           },
           {
             "label": "Keywords",
-            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello, Travel photography"
           },
           {
             "label": "Captured",
@@ -5722,7 +5732,8 @@ export const collections = {
           "Paris",
           "bateau-mouche",
           "notre dame de paris",
-          "quai montebello"
+          "quai montebello",
+          "Travel photography"
         ]
       },
       {
@@ -6210,7 +6221,7 @@ export const collections = {
       {
         "id": "20180511-0222-00329-d32b4864ae",
         "className": "p3",
-        "title": "20180511 0222 00329",
+        "title": "Paris, Bateau Mouche",
         "caption": "France / Paris, Île-de-France, France / 2018-05-11",
         "full": "JPG master",
         "megapixels": 24,
@@ -6220,11 +6231,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180511 0222 00329"
+            "value": "Paris, Bateau Mouche"
           },
           {
             "label": "Keywords",
-            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello, Travel photography"
           },
           {
             "label": "Captured",
@@ -6284,7 +6295,8 @@ export const collections = {
           "Paris",
           "bateau-mouche",
           "notre dame de paris",
-          "quai montebello"
+          "quai montebello",
+          "Travel photography"
         ]
       },
       {
@@ -6530,7 +6542,7 @@ export const collections = {
       {
         "id": "20180511-0222-14822-158692002a",
         "className": "p2",
-        "title": "20180511 0222 14822",
+        "title": "Paris, Bateau Mouche",
         "caption": "France / Paris, Île-de-France, France / 2018-05-11",
         "full": "JPG master",
         "megapixels": 24,
@@ -6540,11 +6552,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180511 0222 14822"
+            "value": "Paris, Bateau Mouche"
           },
           {
             "label": "Keywords",
-            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello"
+            "value": "France, Paris, bateau-mouche, notre dame de paris, quai montebello, Travel photography"
           },
           {
             "label": "Captured",
@@ -6604,7 +6616,8 @@ export const collections = {
           "Paris",
           "bateau-mouche",
           "notre dame de paris",
-          "quai montebello"
+          "quai montebello",
+          "Travel photography"
         ]
       },
       {
@@ -78996,7 +79009,7 @@ export const collections = {
       {
         "id": "20180515-1635-00440-259768ed5d",
         "className": "p2",
-        "title": "20180515 1635 00440",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 12.8,
@@ -79006,11 +79019,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1635 00440"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -79070,7 +79083,9 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
@@ -79156,7 +79171,7 @@ export const collections = {
       {
         "id": "20180515-1634-00438-383c90b340",
         "className": "p4",
-        "title": "20180515 1634 00438",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -79166,11 +79181,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1634 00438"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -79230,13 +79245,15 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
         "id": "20180515-1633-00437-f9e3bd9336",
         "className": "p5",
-        "title": "20180515 1633 00437",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -79246,11 +79263,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1633 00437"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -79310,13 +79327,15 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
         "id": "20180515-1630-00436-1b277ba8a9",
         "className": "p1",
-        "title": "20180515 1630 00436",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -79326,11 +79345,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1630 00436"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -79390,7 +79409,9 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
@@ -79556,7 +79577,7 @@ export const collections = {
       {
         "id": "20180515-1617-00427-c6e399f26c",
         "className": "p4",
-        "title": "20180515 1617 00427",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -79566,11 +79587,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1617 00427"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -79630,7 +79651,9 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
@@ -79956,7 +79979,7 @@ export const collections = {
       {
         "id": "20180515-1553-00417-ce4188ec98",
         "className": "p4",
-        "title": "20180515 1553 00417",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 15,
@@ -79966,11 +79989,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1553 00417"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -80030,7 +80053,10 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
@@ -80276,7 +80302,7 @@ export const collections = {
       {
         "id": "20180515-1522-00407-f9ad6d1c21",
         "className": "p3",
-        "title": "20180515 1522 00407",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 32.6,
@@ -80286,11 +80312,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1522 00407"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -80350,7 +80376,10 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
@@ -80436,7 +80465,7 @@ export const collections = {
       {
         "id": "20180515-1513-00404-d149214374",
         "className": "p5",
-        "title": "20180515 1513 00404",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 28.1,
@@ -80446,11 +80475,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1513 00404"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -80510,7 +80539,10 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
@@ -80756,7 +80788,7 @@ export const collections = {
       {
         "id": "20180515-1511-00400-2d2b644db6",
         "className": "p4",
-        "title": "20180515 1511 00400",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -80766,11 +80798,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1511 00400"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -80830,7 +80862,9 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
@@ -81076,7 +81110,7 @@ export const collections = {
       {
         "id": "20180515-1509-00395-990efe55c7",
         "className": "p3",
-        "title": "20180515 1509 00395",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 14,
@@ -81086,11 +81120,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1509 00395"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, architecture, Spain, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -81150,7 +81184,10 @@ export const collections = {
           "Bilbao",
           "Guggenheim museum",
           "Museum",
-          "architecture"
+          "architecture",
+          "Spain",
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
@@ -81236,7 +81273,7 @@ export const collections = {
       {
         "id": "20180515-1508-00393-06cf65e0d9",
         "className": "p5",
-        "title": "20180515 1508 00393",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 48.2,
@@ -81246,11 +81283,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1508 00393"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, Panoramic, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, Panoramic, architecture, Spain, vertical composition, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -81311,7 +81348,11 @@ export const collections = {
           "Guggenheim museum",
           "Museum",
           "Panoramic",
-          "architecture"
+          "architecture",
+          "Spain",
+          "vertical composition",
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
@@ -81398,7 +81439,7 @@ export const collections = {
       {
         "id": "20180515-1508-00392-1-63dcf93248",
         "className": "p2",
-        "title": "20180515 1508 00392 1",
+        "title": "Bilbao Guggenheim Museum",
         "caption": "Spain / Bilbo, Euskadi, Spain / 2018-05-15",
         "full": "JPG master",
         "megapixels": 112.5,
@@ -81408,11 +81449,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180515 1508 00392 1"
+            "value": "Bilbao Guggenheim Museum"
           },
           {
             "label": "Keywords",
-            "value": "Art, Bilbao, Guggenheim museum, Museum, Panoramic, architecture"
+            "value": "Art, Bilbao, Guggenheim museum, Museum, Panoramic, architecture, Spain, Travel photography"
           },
           {
             "label": "Captured",
@@ -81473,7 +81514,9 @@ export const collections = {
           "Guggenheim museum",
           "Museum",
           "Panoramic",
-          "architecture"
+          "architecture",
+          "Spain",
+          "Travel photography"
         ]
       },
       {
@@ -435542,7 +435585,7 @@ export const collections = {
       {
         "id": "20180517-2134-00490-dc7a915651",
         "className": "p2",
-        "title": "20180517 2134 00490",
+        "title": "Beach, Cascais",
         "caption": "Portugal / Cascais, Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 9.9,
@@ -435552,11 +435595,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 2134 00490"
+            "value": "Beach, Cascais"
           },
           {
             "label": "Keywords",
-            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel, square format, Travel photography"
           },
           {
             "label": "Captured",
@@ -435624,13 +435667,15 @@ export const collections = {
           "lisbon",
           "lisbonne",
           "statue",
-          "travel"
+          "travel",
+          "square format",
+          "Travel photography"
         ]
       },
       {
         "id": "20180517-2134-00489-a3c2036451",
         "className": "p3",
-        "title": "20180517 2134 00489",
+        "title": "Beach, Cascais",
         "caption": "Portugal / Cascais, Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 15.8,
@@ -435640,11 +435685,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 2134 00489"
+            "value": "Beach, Cascais"
           },
           {
             "label": "Keywords",
-            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -435712,13 +435757,15 @@ export const collections = {
           "lisbon",
           "lisbonne",
           "statue",
-          "travel"
+          "travel",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180517-2132-00488-18ec1fa871",
         "className": "p4",
-        "title": "20180517 2132 00488",
+        "title": "Beach, Cascais",
         "caption": "Portugal / Cascais, Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 16,
@@ -435728,11 +435775,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 2132 00488"
+            "value": "Beach, Cascais"
           },
           {
             "label": "Keywords",
-            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -435800,7 +435847,9 @@ export const collections = {
           "lisbon",
           "lisbonne",
           "statue",
-          "travel"
+          "travel",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
@@ -436422,7 +436471,7 @@ export const collections = {
       {
         "id": "20180517-1437-00477-41cf20c0a9",
         "className": "p2",
-        "title": "20180517 1437 00477",
+        "title": "Beach, Cascais",
         "caption": "Portugal / Cascais, Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -436432,11 +436481,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 1437 00477"
+            "value": "Beach, Cascais"
           },
           {
             "label": "Keywords",
-            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+            "value": "Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel, Travel photography"
           },
           {
             "label": "Captured",
@@ -436492,7 +436541,6 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Art",
           "Beach",
           "Cascais",
           "Harbor",
@@ -436504,13 +436552,14 @@ export const collections = {
           "lisbon",
           "lisbonne",
           "statue",
-          "travel"
+          "travel",
+          "Travel photography"
         ]
       },
       {
         "id": "20180517-1437-00475-fe4776377f",
         "className": "p3",
-        "title": "20180517 1437 00475",
+        "title": "Beach, Cascais",
         "caption": "Portugal / Cascais, Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -436520,11 +436569,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 1437 00475"
+            "value": "Beach, Cascais"
           },
           {
             "label": "Keywords",
-            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel, Travel photography"
           },
           {
             "label": "Captured",
@@ -436592,7 +436641,8 @@ export const collections = {
           "lisbon",
           "lisbonne",
           "statue",
-          "travel"
+          "travel",
+          "Travel photography"
         ]
       },
       {
@@ -436774,7 +436824,7 @@ export const collections = {
       {
         "id": "20180517-1356-00473-1-1194c3fa61",
         "className": "p1",
-        "title": "20180517 1356 00473 1",
+        "title": "Beach, Cascais",
         "caption": "Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 164.6,
@@ -436784,11 +436834,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 1356 00473 1"
+            "value": "Beach, Cascais"
           },
           {
             "label": "Keywords",
-            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel"
+            "value": "Art, Beach, Cascais, Harbor, Panoramic, Portugal, Trip, anchor, city, lisbon, lisbonne, statue, travel, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -436856,7 +436906,9 @@ export const collections = {
           "lisbon",
           "lisbonne",
           "statue",
-          "travel"
+          "travel",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
@@ -436950,7 +437002,7 @@ export const collections = {
       {
         "id": "20180517-1159-00470-63ff51f1ca",
         "className": "p3",
-        "title": "20180517 1159 00470",
+        "title": "Lisbon, Lisbonne",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 15.1,
@@ -436960,11 +437012,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 1159 00470"
+            "value": "Lisbon, Lisbonne"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne"
+            "value": "Portugal, lisbon, lisbonne, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -437022,13 +437074,15 @@ export const collections = {
         "keywords": [
           "Portugal",
           "lisbon",
-          "lisbonne"
+          "lisbonne",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180517-1157-00469-ed539494e1",
         "className": "p4",
-        "title": "20180517 1157 00469",
+        "title": "Lisbon, Lisbonne",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-17",
         "full": "JPG master",
         "megapixels": 18.8,
@@ -437038,11 +437092,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180517 1157 00469"
+            "value": "Lisbon, Lisbonne"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne"
+            "value": "Portugal, lisbon, lisbonne, Travel photography"
           },
           {
             "label": "Captured",
@@ -437100,7 +437154,8 @@ export const collections = {
         "keywords": [
           "Portugal",
           "lisbon",
-          "lisbonne"
+          "lisbonne",
+          "Travel photography"
         ]
       },
       {

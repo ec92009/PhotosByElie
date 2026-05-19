@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v79.25`
+- Current visible build: `v80.0`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `c6306eed photosbyelie: move public catalog to TSV`, `be5c6014 photosbyelie: refresh TSV migration notes`, and `ca0bd349 photosbyelie: gate basket by delivery coverage`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
@@ -48,7 +48,7 @@ for remote execution.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
 - Waste Basket review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
 - Public collection pages use the shared `gallery.html?gallery=<slug>` route.
-- `v79.25` reconciles tracked Owner-generated state so discarded photos are excluded from the public manifest, SQLite catalog, Worker catalog, and homepage data. Ordinary R2 coverage now trusts Owner DB `current` object rows before doing expensive cloud work, and Fill in gaps reports initial per-photo step state without force-uploading known-current objects.
+- `v80.0` publishes the latest Owner title/keyword approvals into the public SQLite catalog and Worker catalog, including the approved Portugal, Bilbao, and Paris metadata updates from the `2026-05-16` review batch.
 
 ## First Commands On A Machine
 

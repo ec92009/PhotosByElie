@@ -2046,6 +2046,36 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   resize:vertical;
   min-height:78px;
 }
+.title-keyword-review-model{
+  display:grid;
+  gap:4px;
+  border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface-2) 74%,var(--surface) 26%);
+  padding:8px 10px;
+}
+.title-keyword-review-model p{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:0;
+  min-width:0;
+  line-height:1.3;
+}
+.title-keyword-review-model span{
+  flex:0 0 auto;
+}
+.title-keyword-review-model strong{
+  min-width:0;
+  color:var(--text);
+  font-size:.78rem;
+  overflow-wrap:anywhere;
+}
+.title-keyword-review-model em{
+  color:var(--muted);
+  font-size:.72rem;
+  font-style:normal;
+}
 .title-keyword-review-approve{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));

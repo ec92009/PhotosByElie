@@ -112,6 +112,57 @@
       return !blacklist.has(normalized) && !stateKeywordFlags.has(normalized);
     });
 
+  const cleanModelName = (value) => String(value || "").trim();
+
+  const generatorDetails = (generator, fallback = {}) => {
+    const source = generator && typeof generator === "object" ? generator : {};
+    const backup = fallback && typeof fallback === "object" ? fallback : {};
+    const model = cleanModelName(source.model || backup.generator_model || backup.model);
+    const rawLevel = source.model_level ?? backup.generator_model_level ?? backup.model_level;
+    const numericLevel = Number(rawLevel);
+    return {
+      model,
+      level: Number.isFinite(numericLevel) ? numericLevel : null,
+      maxed: source.model_maxed === true || backup.generator_model_maxed === true || backup.model_maxed === true,
+    };
+  };
+
+  const modelDisplayName = (details) => {
+    const model = cleanModelName(details?.model);
+    if (!model) return "Missing / legacy provenance";
+    if (model === "local-metadata-rules-v1") return "local-metadata-rules-v1";
+    return model;
+  };
+
+  const modelMetaText = (details) => {
+    const parts = [];
+    if (Number.isFinite(details?.level)) parts.push(`level ${details.level}`);
+    if (details?.model === "local-metadata-rules-v1") parts.push("no AI model");
+    if (details?.maxed) parts.push("ladder max");
+    return parts.join(" · ");
+  };
+
+  const modelLineHtml = (label, details) => {
+    const meta = modelMetaText(details);
+    return `
+      <p>
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(modelDisplayName(details))}</strong>
+        ${meta ? `<em>${escapeHtml(meta)}</em>` : ""}
+      </p>
+    `;
+  };
+
+  const proposalModelHtml = (item) => {
+    const actual = generatorDetails(item?.proposed?.generator, item?.proposed);
+    const requested = generatorDetails(item?.state?.requested_generator || item?.state?.requestedGenerator);
+    const previous = generatorDetails(item?.state?.previous_generator || item?.state?.previousGenerator);
+    const lines = [modelLineHtml("Model used", actual)];
+    if (previous.model) lines.push(modelLineHtml("Previous", previous));
+    if (requested.model && requested.model !== actual.model) lines.push(modelLineHtml("Requested next", requested));
+    return `<div class="title-keyword-review-model">${lines.join("")}</div>`;
+  };
+
   const currentKeywordMarkup = (item) => {
     const keywords = Array.isArray(item?.current?.keywords)
       ? item.current.keywords
@@ -283,6 +334,15 @@
       const currentKeywordList = normalizeKeywords(currentKeywords, blacklist);
       const currentKeywordsHtml = currentKeywordMarkup(item);
       const proposedTitle = String(item?.proposed?.title || title || "");
+      const previousRejectComment = String(
+        item?.state?.rework_comment
+        || item?.state?.reworkComment
+        || item?.state?.latest_rejection_comment
+        || item?.state?.latestRejectionComment
+        || item?.state?.owner_comment
+        || item?.state?.ownerComment
+        || "",
+      ).trim();
       const rawProposedKeywords = normalizeKeywords(
         Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords,
         blacklist,
@@ -311,6 +371,7 @@
                 <span>Proposed keywords</span>
                 <textarea rows="3" data-review-keywords>${escapeHtml(proposedKeywords)}</textarea>
               </label>
+              ${proposalModelHtml(item)}
           </form>
           <div class="title-keyword-review-approve title-keyword-review-decision">
             <label>
@@ -323,7 +384,7 @@
             </label>
             <label class="title-keyword-review-reject-comment">
               <span>Reject note</span>
-              <textarea rows="2" data-review-reject-comment placeholder="What should change?"></textarea>
+              <textarea rows="2" data-review-reject-comment placeholder="What should change?">${escapeHtml(previousRejectComment)}</textarea>
             </label>
             <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
             <div class="title-keyword-review-row-tools">
@@ -724,7 +785,11 @@
       comment?.addEventListener("pointerdown", activateRejectFromComment);
       titleInput?.addEventListener("input", activateApproveFromEdit);
       keywordInput?.addEventListener("input", activateApproveFromEdit);
-      propagate?.addEventListener("click", () => propagateDecision(photoId, card));
+      propagate?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        propagateDecision(photoId, card);
+      });
       syncDecisionState();
     });
 

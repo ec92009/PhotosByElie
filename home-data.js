@@ -475,7 +475,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20190624-1827-16232-feef5b78f4",
-        "title": "20190624 1827 16232",
+        "title": "Bratislava, Slovakia",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {

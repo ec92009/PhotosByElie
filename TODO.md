@@ -4,9 +4,9 @@ Last updated: 2026-05-19
 
 ## Current Facts
 
-- Current visible build: `v80.6`.
+- Current visible build: `v80.8`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=80.6`.
+- Local Owner page: `http://localhost:8000/owner.html?v=80.8`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
@@ -16,7 +16,7 @@ Last updated: 2026-05-19
 - The import dashboard now treats source lanes as a shared pipeline: discovery fills a FIFO, planning decides what is missing, and processing creates/uploads missing masters, triplets, and previews.
 - The Imports tab's Start Imports button reports "already up to date" when no import work is needed.
 - Fill in gaps covers lost masters, lost triplets, and lost previews without forcing a full source reimport or force-uploading known-current objects.
-- Title/keyword review proposals are SQLite-backed through `Owner.sqlite`, can be reviewed by proposal batch, and preserve useful current keywords as a floor when generating refreshed metadata.
+- Title/keyword review proposals are SQLite-backed through `Owner.sqlite`, can be reviewed by proposal batch, preserve useful current keywords as a floor when generating refreshed metadata, show model provenance, and clear stale blocked/missing proposed rows.
 - Real Estate client imports follow `/Volumes/Saturn/Pictures/RE/<ClientName>/<Property>`, derive most public fields from `<ClientName>`, and keep credentials local/ignored except for sanitized public contexts and Worker secrets.
 - Apple Photos with faces remains off limits.
 - `npm test`, syntax checks, and `git diff --check` remain mandatory before publishing public-site changes.

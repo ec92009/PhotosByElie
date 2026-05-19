@@ -24177,7 +24177,7 @@ export const collections = {
       {
         "id": "20190723-1419-16523-3d4da421c4",
         "className": "p5",
-        "title": "20190723 1419 16523",
+        "title": "El Capitan",
         "caption": "USA / 2019-07-23",
         "full": "JPG master",
         "megapixels": 22,
@@ -24187,7 +24187,7 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20190723 1419 16523"
+            "value": "El Capitan"
           },
           {
             "label": "Keywords",
@@ -87675,7 +87675,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, hacks., immersion, journeys, selfie, sticks, tours, travel"
+            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, immersion, journeys, selfie, sticks, tours, travel"
           },
           {
             "label": "Captured",
@@ -87721,7 +87721,6 @@ export const collections = {
           "cheap",
           "cultural",
           "eats",
-          "hacks.",
           "immersion",
           "journeys",
           "selfie",
@@ -87956,7 +87955,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, hacks., immersion, journeys, selfie, sticks, tours, travel"
+            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, immersion, journeys, selfie, sticks, tours, travel"
           },
           {
             "label": "Captured",
@@ -88002,7 +88001,6 @@ export const collections = {
           "cheap",
           "cultural",
           "eats",
-          "hacks.",
           "immersion",
           "journeys",
           "selfie",
@@ -89473,7 +89471,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, hacks., immersion, journeys, selfie, sticks, tours, travel"
+            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, immersion, journeys, selfie, sticks, tours, travel"
           },
           {
             "label": "Captured",
@@ -89519,7 +89517,6 @@ export const collections = {
           "cheap",
           "cultural",
           "eats",
-          "hacks.",
           "immersion",
           "journeys",
           "selfie",
@@ -90480,7 +90477,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, hacks., immersion, journeys, selfie, sticks, tours, travel"
+            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, immersion, journeys, selfie, sticks, tours, travel"
           },
           {
             "label": "Captured",
@@ -90526,7 +90523,6 @@ export const collections = {
           "cheap",
           "cultural",
           "eats",
-          "hacks.",
           "immersion",
           "journeys",
           "selfie",
@@ -91491,7 +91487,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, hacks., immersion, journeys, selfie, sticks, tours, travel"
+            "value": "Backpacking, Hostels, Train, alternative, backpacks, budget, camping, cheap, cultural, eats, immersion, journeys, selfie, sticks, tours, travel"
           },
           {
             "label": "Captured",
@@ -91537,7 +91533,6 @@ export const collections = {
           "cheap",
           "cultural",
           "eats",
-          "hacks.",
           "immersion",
           "journeys",
           "selfie",
@@ -166342,7 +166337,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Abstract, Artemis, Goddess, Mucha, artistic, background, childbirth, colors, conception, decoration, foreground, hunt, ink, line, painting, vibrant, virginity., wilderness"
+            "value": "Abstract, Artemis, Goddess, Mucha, artistic, background, childbirth, conception, decoration, foreground, hunt, ink, line, painting, vibrant, virginity., wilderness"
           },
           {
             "label": "Captured",
@@ -166385,7 +166380,6 @@ export const collections = {
           "artistic",
           "background",
           "childbirth",
-          "colors",
           "conception",
           "decoration",
           "foreground",
@@ -166415,7 +166409,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Abstract, Gods, Mucha, Pandora, artistic, background, box, colors, conception, containing, created, decoration, evils, first, foreground., given, ink, line, painting, vibrant, woman, world"
+            "value": "Abstract, Gods, Mucha, Pandora, artistic, background, box, conception, created, decoration, evils, first, foreground., given, ink, line, painting, vibrant, woman, world"
           },
           {
             "label": "Captured",
@@ -166458,9 +166452,7 @@ export const collections = {
           "artistic",
           "background",
           "box",
-          "colors",
           "conception",
-          "containing",
           "created",
           "decoration",
           "evils",
@@ -166492,7 +166484,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Abstract, Artemis, Goddess, Mucha, artistic, background, childbirth, colors, conception, decoration, foreground, hunt, ink, line, painting, vibrant, virginity., wilderness"
+            "value": "Abstract, Artemis, Goddess, Mucha, artistic, background, childbirth, conception, decoration, foreground, hunt, ink, line, painting, vibrant, virginity., wilderness"
           },
           {
             "label": "Captured",
@@ -166535,7 +166527,6 @@ export const collections = {
           "artistic",
           "background",
           "childbirth",
-          "colors",
           "conception",
           "decoration",
           "foreground",
@@ -166565,7 +166556,7 @@ export const collections = {
           },
           {
             "label": "Keywords",
-            "value": "Abstract, Gods, Mucha, Pandora, artistic, background, box, colors, conception, containing, created, decoration, evils, first, foreground., given, ink, line, painting, vibrant, woman, world"
+            "value": "Abstract, Gods, Mucha, Pandora, artistic, background, box, conception, created, decoration, evils, first, foreground., given, ink, line, painting, vibrant, woman, world"
           },
           {
             "label": "Captured",
@@ -166608,9 +166599,7 @@ export const collections = {
           "artistic",
           "background",
           "box",
-          "colors",
           "conception",
-          "containing",
           "created",
           "decoration",
           "evils",
@@ -442060,7 +442049,7 @@ export const collections = {
       {
         "id": "20190624-1827-16232-feef5b78f4",
         "className": "p1",
-        "title": "20190624 1827 16232",
+        "title": "Bratislava, Slovakia",
         "caption": "Slovakia / 2019-06-24",
         "full": "JPG master",
         "megapixels": 21.6,
@@ -442070,7 +442059,7 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20190624 1827 16232"
+            "value": "Bratislava, Slovakia"
           },
           {
             "label": "Keywords",

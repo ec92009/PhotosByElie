@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-title-keyword-review-approvals",
   "schema_version": 1,
-  "updated_at": "2026-05-19T19:35:04.054484+00:00",
+  "updated_at": "2026-05-19T19:54:50.416323+00:00",
   "batch_id": "2026-05-14",
   "approvals": [
     {
@@ -211,6 +211,72 @@
         "_Architecture",
         "_Places",
         "published Adobe"
+      ]
+    },
+    {
+      "photo_id": "20190624-1827-16232-feef5b78f4",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Bratislava, Slovakia",
+      "keywords": [
+        "Bratislava",
+        "SK",
+        "_Architecture",
+        "_Places"
+      ]
+    },
+    {
+      "photo_id": "20190723-1419-16523-3d4da421c4",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "El Capitan",
+      "keywords": [
+        "published Adobe",
+        "USA"
+      ]
+    },
+    {
+      "photo_id": "20191114-1254-15649-pano-05f6c65b28",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Musée Jacquemart André",
+      "keywords": [
+        "France",
+        "Musee Jacquemart Andre",
+        "Paris",
+        "Musée Jacquemart André"
+      ]
+    },
+    {
+      "photo_id": "20191127-1414-17325-9af304efa0",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Eglise de Poissy",
+      "keywords": [
+        "Church",
+        "poissy",
+        "published Adobe",
+        "France"
+      ]
+    },
+    {
+      "photo_id": "20191206-0605-17192-85701a04f9",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+      "keywords": [
+        "Mexico",
+        "puerto vallarta",
+        "icon towers"
+      ]
+    },
+    {
+      "photo_id": "20191207-1718-19516-5bc74a12ce",
+      "batch_id": "2026-05-14",
+      "approved": true,
+      "title": "Puerto Vallarta, Mexico, view from the Icon Towers",
+      "keywords": [
+        "Mexico"
       ]
     }
   ],
@@ -2174,6 +2240,57 @@
         "Occitanie"
       ],
       "comment": ""
+    },
+    {
+      "photo_id": "20191120-1218-17526-6b255bf1cf",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20191120 1218 17526",
+      "keywords": [
+        "France"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20191121-1230-19526-pano-08e814918c",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20191121 1230 19526 Pano",
+      "keywords": [
+        "France"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20191121-1447-19571-e626fda37c",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20191121 1447 19571",
+      "keywords": [
+        "France"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20191121-1456-19535-cde6330de2",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20191121 1456 19535",
+      "keywords": [
+        "France"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "20191122-1655-16797-9068a18da9",
+      "batch_id": "2026-05-14",
+      "rejected": true,
+      "title": "20191122 1655 16797",
+      "keywords": [
+        "published Adobe",
+        "France"
+      ],
+      "comment": ""
     }
   ],
   "blocked": [],
@@ -2182,5 +2299,5 @@
   "review_flag": "Title_Keywords_Reviewed",
   "proposal_state_flag": "Title_Keywords_Proposed",
   "rejection_flag": "Title_Keywords_Rejected",
-  "applied_at": "2026-05-19T19:34:53.765393+00:00"
+  "applied_at": "2026-05-19T19:54:40.125195+00:00"
 }

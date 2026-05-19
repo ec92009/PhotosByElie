@@ -707,6 +707,54 @@ def _pending_title_keyword_batches(conn) -> list[dict]:
     ]
 
 
+def _clear_stale_title_keyword_review_rows(repo_root: Path, conn) -> dict:
+    rows = conn.execute(
+        """
+        SELECT media_id, latest_proposed_batch_id
+        FROM title_keyword_queue
+        WHERE review_state = 'proposed'
+        """
+    ).fetchall()
+    media_ids = [str(row["media_id"] or "") for row in rows if str(row["media_id"] or "")]
+    if not media_ids:
+        return {"blocked": 0, "not_found": 0}
+    catalog_ids = set(_catalog_rows_by_media_id(repo_root, media_ids))
+    discarded_ids = _discarded_photo_ids(repo_root)
+    by_batch: dict[str, dict[str, list[dict]]] = {}
+    for row in rows:
+        media_id = str(row["media_id"] or "").strip()
+        if not media_id:
+            continue
+        is_discarded = media_id in discarded_ids
+        is_missing = media_id not in catalog_ids
+        if not is_discarded and not is_missing:
+            continue
+        batch_id = str(row["latest_proposed_batch_id"] or "stale-title-keyword-review").strip()
+        bucket = by_batch.setdefault(batch_id, {"blocked": [], "not_found": []})
+        item = {"photo_id": media_id, "batch_id": batch_id}
+        if is_discarded:
+            bucket["blocked"].append({**item, "blocked": True})
+        else:
+            bucket["not_found"].append(item)
+    decided_at = datetime.now(timezone.utc).isoformat()
+    blocked_count = 0
+    not_found_count = 0
+    for batch_id, grouped in by_batch.items():
+        result = record_title_keyword_review_decisions_db(
+            repo_root,
+            batch_id,
+            [],
+            [],
+            grouped["blocked"],
+            grouped["not_found"],
+            decided_at=decided_at,
+            conn=conn,
+        )
+        blocked_count += int(result.get("blocked") or 0)
+        not_found_count += int(result.get("not_found") or 0)
+    return {"blocked": blocked_count, "not_found": not_found_count}
+
+
 def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
     rows = conn.execute(
         """
@@ -943,6 +991,7 @@ def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_r
 def title_keyword_review_queue_payload(repo_root: Path) -> dict:
     conn = owner_db_connect(repo_root)
     try:
+        stale_cleanup = _clear_stale_title_keyword_review_rows(repo_root, conn)
         pending_batches = _pending_title_keyword_batches(conn)
         all_photos = []
         all_pending_rows = []
@@ -984,6 +1033,8 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
                     "visible_pending_count": len(all_photos),
                     "sqlite_pending_count": len(all_pending_rows),
                     "batch_count": len(batch_ids),
+                    "stale_blocked_count": stale_cleanup.get("blocked", 0),
+                    "stale_not_found_count": stale_cleanup.get("not_found", 0),
                 },
                 "range": {
                     "newest": max(sort_values) if sort_values else "",
@@ -999,6 +1050,13 @@ def title_keyword_review_queue_payload(repo_root: Path) -> dict:
             "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
             "batch_id": "",
             "pending_batches": [],
+            "selection": {
+                "total_count": 0,
+                "visible_pending_count": 0,
+                "sqlite_pending_count": 0,
+                "stale_blocked_count": stale_cleanup.get("blocked", 0),
+                "stale_not_found_count": stale_cleanup.get("not_found", 0),
+            },
             "photos": [],
         }
     finally:

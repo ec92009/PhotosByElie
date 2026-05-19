@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v80.6`
+- Current visible build: `v80.8`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `6ec82489 photosbyelie: tighten title keyword review workflow`, `681be32d photosbyelie: use run-scoped title keyword batches`, and `3bcc875c photosbyelie: add title keyword review batch 2026-05-19-170500`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
@@ -48,7 +48,7 @@ for remote execution.
 - Public pages use English/French/Spanish translation. Owner-only localhost pages remain English-only by design.
 - Waste Basket review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
 - Public collection pages use the shared `gallery.html?gallery=<slug>` route.
-- `v80.6` publishes the latest Owner title/keyword approvals into the public SQLite catalog and Worker catalog, including the latest `2026-05-19` review batches. The Owner title/keyword review page can load pending proposals from `Owner.sqlite`, split approval records by proposal batch, and the Owner dashboard shows the pending review count.
+- `v80.8` publishes the latest Owner title/keyword approvals into the public SQLite catalog and Worker catalog, adds model provenance to the Owner title/keyword review cards, defaults Owner Review to the title/keyword queue, and clears stale proposed rows that are already blocked or missing from the public catalog.
 
 ## First Commands On A Machine
 

@@ -1,7 +1,8 @@
 (() => {
   const version = new URL(document.currentScript?.src || window.location.href, window.location.href).searchParams.get("v") || "74.9";
   const params = new URLSearchParams(window.location.search);
-  const view = (params.get("view") || "blocked").toLowerCase();
+  const defaultView = "title-keywords";
+  const requestedView = (params.get("view") || defaultView).toLowerCase();
   const main = document.querySelector("[data-owner-review-main]");
   const nav = document.querySelector("[data-owner-review-nav]");
   const topLink = document.querySelector("[data-owner-review-top-link]");
@@ -127,8 +128,9 @@
     },
   };
 
-  const config = views[view] || views.blocked;
-  const href = `./owner-review.html?view=${encodeURIComponent(views[view] ? view : "blocked")}`;
+  const view = views[requestedView] ? requestedView : defaultView;
+  const config = views[view] || views[defaultView];
+  const href = `./owner-review.html?view=${encodeURIComponent(view)}`;
   if (config.bodyGallery) {
     document.body.dataset.gallery = config.bodyGallery;
   } else {

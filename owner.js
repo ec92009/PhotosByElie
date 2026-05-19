@@ -1348,13 +1348,11 @@
     if (r2FixButton) {
       r2FixButton.disabled = busy;
       r2FixButton.textContent = busy
-        ? "Background work running"
-        : r2CoverageOk
-          ? "Background work up to date"
-          : "Start background work";
+        ? "Imports running"
+        : "Start Imports";
       r2FixButton.title = r2CoverageOk
         ? "Everything currently tracked is up to date; click to confirm"
-        : "Start the full lock-guarded background sweep";
+        : "Start the full lock-guarded import sweep";
     }
     const gapCount = r2GapPhotoCount();
     r2FillGapsButtons.forEach((button) => {
@@ -2544,7 +2542,7 @@
       ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
       ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
     ];
-    if (noticeActive) rows.push(["Last action", "Start background work checked coverage and found nothing to do."]);
+    if (noticeActive) rows.push(["Last action", "Start Imports checked coverage and found nothing to do."]);
     setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work"])));
     renderSweepPhases({
       id: "imports-idle",
@@ -2557,7 +2555,7 @@
   };
 
   const announceR2BackgroundAlreadyDone = () => {
-    r2BackgroundNotice = "Start background work checked coverage: everything currently tracked is already up to date, so no background work was started.";
+    r2BackgroundNotice = "Start Imports checked coverage: everything currently tracked is already up to date, so no import work was started.";
     r2BackgroundNoticeUntil = Date.now() + 15000;
     setOwnerTab("imports");
     renderImportDashboardIdle();
@@ -2804,7 +2802,7 @@
         ${importMatrixHtml(missingImportPhotos)}
       ` : missingPrivateDelivery.length ? `
           <h3>Missing private delivery files</h3>
-          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start background work runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
+          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Imports runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
           <div class="owner-coverage-missing-list">
             ${missingPrivateDelivery.slice(0, 12).map((item) => `
               <div class="owner-coverage-missing-row">

@@ -6,8 +6,8 @@ Date: 2026-05-19
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v79.29`
-- Local Owner page: `http://localhost:8000/owner.html?v=79.29`
+- Current visible build: `v79.30`
+- Local Owner page: `http://localhost:8000/owner.html?v=79.30`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -38,7 +38,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - `v79.29` reconciles the dirty Owner-generated state: discarded photos are now excluded from public manifest/catalog outputs, including `20180322-0915-00173-e3b893dbea`.
 - Owner DB R2 rows now infer photo id/object kind for older records, including Real Estate keys, and current-key DB records are trusted by ordinary coverage checks.
 - Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
-- In `v79.29`, the Imports tab's Start background work button stays clickable when coverage is already clean and reports that no background work was started because everything tracked is up to date.
+- In `v79.30`, the Imports tab's Start Imports button stays clickable when coverage is already clean and reports that no import work was started because everything tracked is up to date.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

@@ -104,7 +104,7 @@ Outputs:
 
 When `--r2-upload public` or `--r2-upload both` is enabled, confirmed-upload preview media files are removed from `tmp/import-cache` by default; the manifest, checkpoints, keyword indexes, GPS file, and diagnostics remain. Use `--keep-uploaded-tmp` only when deliberately debugging local staging files.
 
-By default the import metadata omits owner-blacklisted keyword strings from `assets/owner-actions/keyword-blacklist.json`. This blacklist affects only generated keyword metadata and keyword indexes; it does not block, discard, skip, or rewrite any media/source file. Use `--keyword-blacklist <path>` to point at a different metadata-only keyword blacklist. Exact GPS coordinates are written to the separate ignored GPS file by default. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
+By default the import metadata omits owner-blacklisted keyword strings from `assets/owner-actions/Owner.sqlite`. The tracked `assets/owner-actions/keyword-blacklist.json` file is only a SQLite-derived compatibility view for the current Owner UI. This blacklist affects only generated keyword metadata and keyword indexes; it does not block, discard, skip, or rewrite any media/source file. Exact GPS coordinates are written to the separate ignored GPS file by default. Use `--redact-gps` to skip that private GPS file, or `--redact-private-keywords` only for a sanitized publishing pass.
 
 ## Public Catalog Export
 
@@ -142,7 +142,7 @@ For the GitHub-code/R2-media publishing model, write the same public catalog and
 python3 scripts/export_photos_data.py --external-media
 ```
 
-Public catalog export also applies `assets/owner-actions/keyword-blacklist.json` to keyword metadata, so regenerating from an older import manifest will not reintroduce blacklisted keyword strings. It does not use the keyword blacklist to decide which photos are published.
+Public catalog export also applies the `Owner.sqlite` keyword blacklist to keyword metadata, so regenerating from an older import manifest will not reintroduce blacklisted keyword strings. It does not use the keyword blacklist to decide which photos are published.
 
 After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and legacy country-prefixed provenance:
 
@@ -150,7 +150,7 @@ After changing the generated catalog, refresh the media sidecar so each flat pub
 node scripts/write_media_sidecar.mjs
 ```
 
-For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X sends a photo to the Waste Basket by adding its undesirable master to the blocked/master blacklist, U removes the most recent block, and P on the Waste Basket page puts a basketed master back by removing it from the blacklist. The blacklist means "do not make that mistake again": future imports/renders skip those masters. Purging Waste Basket R2 copies deletes public previews, private masters, and currently generated private render triplets for basketed photos, then leaves permanent discard tombstones so the same masters do not return; a banned photo stays banned. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write the local SQLite owner-state tables, and export the handoff to `assets/owner-actions/country-assignments.jsonl`, with a compact latest-state index in `assets/owner-actions/country-assignments.json`. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
+For normal H/X/U/P review, no Apply step is needed: the localhost server updates review state immediately and rewrites the generated catalog/state files. H or X sends a photo to the Waste Basket by adding its undesirable master to the blocked/master blacklist, U removes the most recent block, and P on the Waste Basket page puts a basketed master back by removing it from the blacklist. The blacklist means "do not make that mistake again": future imports/renders skip those masters. Purging Waste Basket R2 copies deletes public previews, private masters, and currently generated private render triplets for basketed photos, then leaves permanent discard tombstones so the same masters do not return; a banned photo stays banned. Unknown-to-country assignments are live server actions, not browser-staged assignments: they remove the assigned photo and its same-day cohort from Unknown immediately, update catalog metadata, write `Owner.sqlite`, and export `assets/owner-actions/country-assignments.jsonl` plus `assets/owner-actions/country-assignments.json` only as handoff/audit views. If the server update fails, the Unknown page should leave the card visible and reset the country selector.
 
 If an older review snapshot needs to be replayed, use `scripts/asset_state.py` directly:
 
@@ -187,7 +187,7 @@ open -a "DB Browser for SQLite" tmp/photo-state.sqlite
 
 Useful tables and views include `photos`, `photo_states`, `r2_objects`, `keywords`, `manifest_files`, `owner_country_assignment_events`, `owner_country_assignments`, `state_counts`, `collection_counts`, `attention`, `import_not_public`, and `unwanted_r2_objects`. The `unwanted_r2_objects` view is intentionally useful while known unwanted photos remain in R2 as test fixtures.
 
-The public site still exposes the same `window.photosByElieData` browser contract. Public pages attempt the committed Brotli-compressed SQLite catalog at `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain SQLite as the guaranteed fallback. The ignored local Owner workflow database lives at `assets/owner-actions/Owner.sqlite`; tracked Owner JSON files remain compatibility exports for the current Owner UI and audit review.
+The public site still exposes the same `window.photosByElieData` browser contract. Public pages attempt the committed Brotli-compressed SQLite catalog at `assets/catalog/photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available, with plain SQLite as the guaranteed fallback. The ignored local Owner workflow database lives at `assets/owner-actions/Owner.sqlite`; tracked Owner JSON files are compatibility views or audit records, not state.
 
 The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`; `node scripts/write_catalog_tsv.cjs` is a legacy-named compatibility command that refreshes the SQLite bootstrap, public DB, and Brotli artifact together. The current active public database has `5,827` `media_items` and `34,962` `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
 
@@ -260,7 +260,7 @@ node scripts/generate_social_post_packages.mjs --dry-run
 
 ## Owner Title / Keyword Review Queue
 
-`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing the catalog review flag `Title_Keywords_Reviewed` and the proposal state flag `Title_Keywords_Proposed` for manual Owner review. It writes proposals and proposal-state tracking to tracked metadata under `assets/owner-actions/title-keyword-review-queue/` and does not modify source-file embedded metadata.
+`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing Owner title/keyword review state for manual Owner review. It reads and writes durable queue/proposal state in `Owner.sqlite`, then writes the current review-page batch view under `assets/owner-actions/title-keyword-review-queue/`. It does not modify source-file embedded metadata.
 
 Generate (nightly batch):
 
@@ -268,14 +268,14 @@ Generate (nightly batch):
 node scripts/generate_title_keyword_review_queue.mjs --limit 100
 ```
 
-The generator updates `assets/owner-actions/title-keyword-review-queue/proposed-state.json` with `Title_Keywords_Proposed` for every photo that already has a proposal, including IDs found in historical `batch-*.json` files. Use `--sync-proposed-state-only` to backfill that state without replacing the active review batch. Use `--include-already-proposed` only when intentionally regenerating proposals for photos that already have proposal state.
+`assets/owner-actions/title-keyword-review-queue/proposed-state.json` is retired. Use `Owner.sqlite:title_keyword_queue`, `title_keyword_proposals`, and `title_keyword_decisions` for proposal state.
 
 Review on localhost:
 
 - Start the local helper server: `python3 scripts/local_server.py 8000`
 - Open `http://localhost:8000/owner-review.html?view=title-keywords`
 
-Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write/merge approvals, rejections, and blocked rows into an audit JSON under `assets/owner-actions/title-keyword-review-queue/`; saved rows are filtered out when the page is opened again. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through `assets/owner-actions/keyword-blacklist.json` before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections are also recorded in `proposed-state.json` for priority rework.
+Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write decisions to `Owner.sqlite`; the `approvals-<batch>.json` file remains a review-page/audit export. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through the `Owner.sqlite` keyword blacklist before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections and parked/rework state are recorded in `Owner.sqlite`.
 
 The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/photosbyelie.sqlite`, `assets/catalog/photosbyelie.sqlite.br`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite source-file embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 

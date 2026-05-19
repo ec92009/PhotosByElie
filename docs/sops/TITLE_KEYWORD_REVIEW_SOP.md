@@ -9,7 +9,9 @@ This SOP defines the Owner title/keyword proposal workflow.
 - `Title_Keywords_Parked`: the current local tooling could not produce a defensible non-placeholder title, so the photo is parked outside the active review queue until better tooling or manual reset is available.
 - `Title_Keywords_Reviewed`: Owner approved and applied the title/keyword metadata. The nightly queue should always skip this photo.
 
-Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, which is the source of truth for title/keyword review state and the target for durable state updates. The tracked JSON files under `assets/owner-actions/title-keyword-review-queue/` are compatibility exports, audit artifacts, or temporary transport files for the current Owner page. Do not use those JSON files as authoritative state when SQLite contains the same workflow state. Approved metadata lives in generated catalog/state files only. Do not write source-file embedded metadata, public previews, private masters, or private render files.
+Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, which is the source of truth for title/keyword review state and the target for durable state updates. Public approved title/keyword metadata belongs in the generated catalog SQLite artifacts: `assets/catalog/photosbyelie.sqlite` and `assets/catalog/photosbyelie.sqlite.br`. JSON files under `assets/owner-actions/title-keyword-review-queue/` are review-page views or audit artifacts only; do not use them as authoritative state. Approved metadata lives in generated catalog/state files only. Do not write source-file embedded metadata, public previews, private masters, or private render files.
+
+`assets/owner-actions/title-keyword-review-queue/proposed-state.json` is retired. The active queue/proposal state is `Owner.sqlite:title_keyword_queue` plus `title_keyword_proposals` and `title_keyword_decisions`.
 
 ## Nightly Generation
 
@@ -17,7 +19,7 @@ Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, whi
 2. Run `node scripts/generate_title_keyword_review_queue.mjs --limit 100`.
 3. The generator must:
    - Read counts, candidate eligibility, proposal/review state, rejection counts, rework priority, and parked status from `assets/owner-actions/Owner.sqlite`.
-   - Write durable proposal/rejection/parked state updates to `Owner.sqlite` first; write JSON only as a derived compatibility export or audit artifact.
+   - Write durable proposal/rejection/parked state updates to `Owner.sqlite`; write JSON only as a derived review-page batch view or audit artifact.
    - Work newest backward.
    - Prioritize photos marked rejected/rework before ordinary new photos.
    - Include all eligible rejected/rework photos first; these are a priority add-on and do not count against the ordinary-new-photo limit.
@@ -33,7 +35,7 @@ Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, whi
    - Use catalog/source path metadata only as fallback, and mark uncertain rows `needs_owner_context`.
    - Avoid filename-style titles as improved proposals.
    - Attempt at least 10 proposed keywords per photo.
-4. The generator updates `Owner.sqlite`, then writes proposal batches, `latest.json`, and `proposed-state.json` under `assets/owner-actions/title-keyword-review-queue/` as compatibility exports derived from SQLite state.
+4. The generator updates `Owner.sqlite`, then writes proposal batches and `latest.json` under `assets/owner-actions/title-keyword-review-queue/` as review-page views derived from SQLite state.
 
 Use JSON backfill/sync commands only for migration or recovery. Normal nightly review work must not rebuild or score authoritative state from JSON when `Owner.sqlite` is available.
 
@@ -66,9 +68,9 @@ The Propagate button must remain explicit and sit below the row status. Basketed
 Saving approvals may contain approvals, rejections, or both.
 
 - Approved rows apply title/keyword values to generated catalog/state files and add `Title_Keywords_Reviewed`.
-- Rejected rows do not apply metadata. They update `Owner.sqlite` and the `proposed-state.json` compatibility export with rejected/rework state, the rejected title/keywords, and the Owner comment.
+- Rejected rows do not apply metadata. They update `Owner.sqlite` with rejected/rework or parked state, the rejected title/keywords, and the Owner comment.
 - Reject comments should be available to the next generation attempt so the rework can avoid repeating the same weak proposal.
-- Parked rows remain in `Owner.sqlite` and the `proposed-state.json` compatibility export but are neither approved nor rejected; they should not be resubmitted until better title-generation tooling or an explicit manual reset is available.
+- Parked rows remain in `Owner.sqlite` but are neither approved nor rejected; they should not be resubmitted until better title-generation tooling or an explicit manual reset is available.
 - Save an audit JSON under `assets/owner-actions/title-keyword-review-queue/`.
 - Merge row autosaves into the audit JSON by `photo_id`; do not overwrite previous saved decisions for the same batch.
 

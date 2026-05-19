@@ -55,8 +55,10 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 ## Owner Action State
 
 - Treat local SQLite databases under `assets/owner-actions/`, especially `assets/owner-actions/Owner.sqlite`, as the source of truth for Owner workflow state.
-- JSON files under `assets/owner-actions/` are compatibility exports, audit artifacts, or temporary transport files. Do not use JSON as authoritative state when a SQLite table exists for the same workflow.
-- Owner workflow automation should read counts, candidate eligibility, rejection/rework/parked state, and approval state from SQLite first, and write durable state updates back to SQLite. Regenerate JSON exports from SQLite when the current Owner UI or audit trail still needs them.
+- The public/deployable catalog source of truth is `assets/catalog/photosbyelie.sqlite` plus its compressed `assets/catalog/photosbyelie.sqlite.br` traveling copy. Owner-private workflow state belongs in `assets/owner-actions/Owner.sqlite`.
+- JSON files under `assets/owner-actions/` are compatibility views, audit artifacts, temporary transport files, or local config. Do not use JSON as authoritative state when a SQLite table exists for the same workflow.
+- Owner workflow automation should read counts, candidate eligibility, rejection/rework/parked state, approval state, country assignments, and keyword blacklist data from SQLite first, and write durable state updates back to SQLite. Regenerate JSON exports from SQLite only when the current Owner UI, a handoff, or an audit trail still needs them.
+- `assets/owner-actions/title-keyword-review-queue/proposed-state.json` is retired. Do not recreate or depend on it for normal title/keyword review work.
 
 ## Workspace Structure
 

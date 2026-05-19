@@ -7,7 +7,7 @@ PhotosByElie is moving toward two SQLite files with different trust boundaries:
 - `assets/catalog/photosbyelie.sqlite`: public/deployable catalog truth.
 - `assets/owner-actions/Owner.sqlite`: local Owner-only workflow truth, ignored by Git.
 
-The goal is to eliminate alternate sources of truth. The public browser runtime now attempts `photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available and keeps plain `photosbyelie.sqlite` as the guaranteed fallback. Owner JSON files remain compatibility exports while `Owner.sqlite` becomes the private write target.
+The goal is to eliminate alternate sources of truth. The public browser runtime now attempts `photosbyelie.sqlite.br` first when it is served as decoded SQLite by the host/CDN or browser raw Brotli decoding is available and keeps plain `photosbyelie.sqlite` as the guaranteed fallback. Owner JSON files are compatibility views, handoff files, or audit artifacts while `Owner.sqlite` is the private workflow source of truth and write target.
 
 ## Public Catalog DB
 
@@ -480,7 +480,7 @@ parked:              0
 blocked:             9
 ```
 
-`Owner.sqlite` now imports title/keyword batches, queue state, proposals, decisions, country assignments, and keyword blacklist entries. The localhost helper writes decisions, country assignments, and blacklist changes into the DB, then exports the tracked JSON files that the current UI still needs.
+`Owner.sqlite` owns title/keyword batches, queue state, proposals, decisions, country assignments, and keyword blacklist entries. The localhost helper writes decisions, country assignments, and blacklist changes into the DB, then exports only the JSON views that the current UI, handoff path, or audit trail still needs. `title-keyword-review-queue/proposed-state.json` is retired; the corresponding state lives in `title_keyword_queue`, `title_keyword_proposals`, and `title_keyword_decisions`.
 
 ## R2 Migration Strategy
 

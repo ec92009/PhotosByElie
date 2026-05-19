@@ -152,9 +152,9 @@ The sweep:
 - `assets/discarded/discarded-photo-ids.json`: durable owner discard tombstones.
 - `assets/discarded-media-manifest.json`: generated discarded-media R2 cleanup record; ignored `Owner.sqlite` keeps trusted R2 object lifecycle state (`current`, `marked_for_delete`, `deleted_confirmed`) for routine cleanup.
 - `assets/hidden/hidden-blacklist.json`: current blocked-photo blacklist.
-- `assets/owner-actions/keyword-blacklist.json`: metadata-only keyword blacklist applied during import/export; it removes useless keyword strings but does not filter photos or rewrite JPG/source metadata.
-- `assets/owner-actions/country-assignments.jsonl`: append-only Unknown-to-country move log.
-- `assets/owner-actions/country-assignments.json`: latest Unknown-to-country assignment index.
+- `assets/owner-actions/keyword-blacklist.json`: SQLite-derived compatibility export for the metadata-only keyword blacklist in `Owner.sqlite`; it removes useless keyword strings but does not filter photos or rewrite JPG/source metadata.
+- `assets/owner-actions/country-assignments.jsonl`: SQLite-derived/audit Unknown-to-country move log.
+- `assets/owner-actions/country-assignments.json`: SQLite-derived latest Unknown-to-country assignment index.
 - `docs/r2-public-cors.json`: public R2 bucket CORS policy used for direct preview browsing.
 
 Do not commit:

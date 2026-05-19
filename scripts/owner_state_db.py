@@ -18,8 +18,11 @@ KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
-TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
+TITLE_KEYWORDS_PROPOSED_FLAG = "Title_Keywords_Proposed"
+TITLE_KEYWORDS_REJECTED_FLAG = "Title_Keywords_Rejected"
+TITLE_KEYWORDS_PARKED_FLAG = "Title_Keywords_Parked"
+TITLE_KEYWORDS_REVIEWED_FLAG = "Title_Keywords_Reviewed"
 
 
 def now_iso() -> str:
@@ -40,6 +43,15 @@ def _write_json(path: Path, payload: Any) -> None:
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
+
+
+def _split_keyword_text(value: Any) -> list[str]:
+    if isinstance(value, list):
+        keywords: list[str] = []
+        for item in value:
+            keywords.extend(_split_keyword_text(item))
+        return keywords
+    return [part.strip() for part in str(value or "").replace(";", ",").split(",") if part.strip()]
 
 
 def _db_path(repo_root: Path, db_path: Path | None = None) -> Path:
@@ -319,6 +331,35 @@ def import_keyword_blacklist(repo_root: Path, conn: sqlite3.Connection | None = 
             conn.close()
 
 
+def keyword_blacklist_terms(repo_root: Path, db_path: Path | None = None, conn: sqlite3.Connection | None = None) -> list[str]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        rows = conn.execute("SELECT keyword FROM keyword_blacklist ORDER BY keyword COLLATE NOCASE").fetchall()
+        return [str(row["keyword"]) for row in rows]
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def export_keyword_blacklist(repo_root: Path, conn: sqlite3.Connection | None = None) -> None:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root)
+    try:
+        rows = conn.execute("SELECT keyword FROM keyword_blacklist ORDER BY keyword COLLATE NOCASE").fetchall()
+        keywords = [str(row["keyword"]) for row in rows]
+        updated = conn.execute("SELECT max(updated_at) FROM keyword_blacklist").fetchone()[0] or now_iso()
+        _write_json(repo_root / KEYWORD_BLACKLIST_PATH, {
+            "format": "photosbyelie-keyword-blacklist",
+            "schema_version": 1,
+            "updated_at": str(updated),
+            "keywords": keywords,
+        })
+    finally:
+        if owns_conn:
+            conn.close()
+
+
 def record_keyword_blacklist(repo_root: Path, keywords: Iterable[str], db_path: Path | None = None) -> dict[str, Any]:
     conn = connect(repo_root, db_path)
     try:
@@ -332,6 +373,7 @@ def record_keyword_blacklist(repo_root: Path, keywords: Iterable[str], db_path: 
             )
         _set_setting(conn, "keyword_blacklist_json", KEYWORD_BLACKLIST_PATH.as_posix())
         conn.commit()
+        export_keyword_blacklist(repo_root, conn)
         return {"db": (db_path or DEFAULT_DB).as_posix(), "keyword_count": len(normalized)}
     finally:
         conn.close()
@@ -623,13 +665,19 @@ def _upsert_queue(
           owner_comment, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(media_id) DO UPDATE SET
-          review_state = excluded.review_state,
+          review_state = CASE
+            WHEN title_keyword_queue.review_state = 'parked' AND excluded.review_state = 'rejected' THEN 'parked'
+            ELSE excluded.review_state
+          END,
           latest_attempt = max(title_keyword_queue.latest_attempt, excluded.latest_attempt),
           latest_proposed_batch_id = COALESCE(NULLIF(excluded.latest_proposed_batch_id, ''), title_keyword_queue.latest_proposed_batch_id),
           latest_proposed_at = COALESCE(NULLIF(excluded.latest_proposed_at, ''), title_keyword_queue.latest_proposed_at),
           reviewed_at = COALESCE(NULLIF(excluded.reviewed_at, ''), title_keyword_queue.reviewed_at),
           applied_at = COALESCE(NULLIF(excluded.applied_at, ''), title_keyword_queue.applied_at),
-          rework_priority = excluded.rework_priority,
+          rework_priority = CASE
+            WHEN title_keyword_queue.review_state = 'parked' AND excluded.review_state = 'rejected' THEN 0
+            ELSE excluded.rework_priority
+          END,
           rejected_count = max(title_keyword_queue.rejected_count, excluded.rejected_count),
           owner_comment = COALESCE(NULLIF(excluded.owner_comment, ''), title_keyword_queue.owner_comment),
           updated_at = excluded.updated_at
@@ -650,6 +698,34 @@ def _upsert_queue(
             now_iso(),
         ),
     )
+
+
+def park_twice_rejected_title_keywords(conn: sqlite3.Connection) -> int:
+    """Move twice-rejected title/keyword rows out of the active rework queue."""
+    result = conn.execute(
+        """
+        UPDATE title_keyword_queue
+        SET review_state = 'parked',
+            rework_priority = 0,
+            updated_at = ?
+        WHERE review_state = 'rejected'
+          AND rejected_count >= 2
+        """,
+        (now_iso(),),
+    )
+    return int(result.rowcount or 0)
+
+
+def _title_keyword_state_tags(review_state: str, rework_priority: bool = False) -> list[str]:
+    if review_state in {"approved", "applied"}:
+        return [TITLE_KEYWORDS_REVIEWED_FLAG]
+    if review_state == "parked":
+        return [TITLE_KEYWORDS_PARKED_FLAG]
+    if review_state == "rejected" or rework_priority:
+        return [TITLE_KEYWORDS_PROPOSED_FLAG, TITLE_KEYWORDS_REJECTED_FLAG]
+    if review_state == "proposed":
+        return [TITLE_KEYWORDS_PROPOSED_FLAG]
+    return []
 
 
 def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_path: str) -> None:
@@ -717,10 +793,69 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
             latest_attempt=attempt,
             batch_id=batch_id,
             proposed_at=proposed_at,
-            rework_priority=state.get("rework_requested") is True,
+            rework_priority=False,
             rejected_count=max(0, attempt - 1),
             owner_comment=str(state.get("rework_comment") or ""),
         )
+
+
+def import_title_keyword_batch_file(repo_root: Path, batch_file: Path, db_path: Path | None = None) -> dict[str, Any]:
+    absolute = batch_file if batch_file.is_absolute() else repo_root / batch_file
+    payload = _read_json(absolute, {})
+    if not isinstance(payload, dict):
+        raise ValueError(f"invalid title/keyword batch JSON: {batch_file}")
+    relative = absolute.relative_to(repo_root).as_posix() if absolute.is_relative_to(repo_root) else str(batch_file)
+    conn = connect(repo_root, db_path)
+    try:
+        _import_batch(conn, payload, relative)
+        _set_setting(conn, "title_keyword_latest_batch_json", relative)
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "batch_id": str(payload.get("batch_id") or ""),
+            "photo_count": len(payload.get("photos") or []),
+        }
+    finally:
+        conn.close()
+
+
+def park_title_keyword_rows_file(repo_root: Path, rows_file: Path, db_path: Path | None = None) -> dict[str, Any]:
+    absolute = rows_file if rows_file.is_absolute() else repo_root / rows_file
+    payload = _read_json(absolute, [])
+    if not isinstance(payload, list):
+        raise ValueError(f"invalid parked title/keyword rows JSON: {rows_file}")
+    conn = connect(repo_root, db_path)
+    parked = 0
+    try:
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            media_id = str(item.get("photo_id") or item.get("photoId") or "").strip()
+            if not media_id:
+                continue
+            batch_id = str(item.get("batch_id") or "").strip()
+            timestamp = str(item.get("parked_at") or now_iso())
+            if batch_id:
+                _upsert_batch(conn, {"batch_id": batch_id, "generated_at": timestamp, "selection": {"total_count": 0}}, "parked-only")
+            existing = conn.execute("SELECT latest_attempt, rejected_count FROM title_keyword_queue WHERE media_id = ?", (media_id,)).fetchone()
+            latest_attempt = max(1, int(item.get("latest_attempt") or (existing["latest_attempt"] if existing else 1) or 1))
+            rejected_count = max(0, int(item.get("rejected_count") or (existing["rejected_count"] if existing else 0) or 0))
+            _upsert_queue(
+                conn,
+                media_id=media_id,
+                review_state="parked",
+                latest_attempt=latest_attempt,
+                batch_id=batch_id,
+                proposed_at=timestamp,
+                rework_priority=False,
+                rejected_count=rejected_count,
+                owner_comment=str(item.get("reason") or item.get("rejection_comment") or ""),
+            )
+            parked += 1
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), "parked": parked}
+    finally:
+        conn.close()
 
 
 def import_title_keyword_review(repo_root: Path, conn: sqlite3.Connection | None = None, *, force: bool = False) -> None:
@@ -739,45 +874,6 @@ def import_title_keyword_review(repo_root: Path, conn: sqlite3.Connection | None
             payload = _read_json(path, {})
             if isinstance(payload, dict):
                 _import_batch(conn, payload, path.relative_to(repo_root).as_posix())
-
-        state = _read_json(repo_root / TITLE_KEYWORD_PROPOSED_STATE, {})
-        if isinstance(state, dict):
-            for batch in state.get("batches") or []:
-                if isinstance(batch, dict):
-                    _upsert_batch(
-                        conn,
-                        {
-                            "batch_id": batch.get("batch_id"),
-                            "generated_at": batch.get("generated_at") or now_iso(),
-                            "selection": {"total_count": batch.get("photo_count") or 0},
-                            "photos": [None] * int(batch.get("photo_count") or 0),
-                        },
-                        "proposed-state",
-                    )
-            for item in state.get("photos") or []:
-                if not isinstance(item, dict):
-                    continue
-                media_id = str(item.get("photo_id") or "").strip()
-                if not media_id:
-                    continue
-                review_state = str(item.get("review_state") or "proposed")
-                if review_state not in {"proposed", "approved", "applied", "rejected", "parked", "blocked"}:
-                    review_state = "proposed"
-                attempt = max(1, _latest_attempt(conn, media_id), int(item.get("latest_attempt") or 0))
-                batch_id = str(item.get("latest_proposed_batch_id") or item.get("latest_rejected_batch_id") or "").strip()
-                if batch_id:
-                    _ensure_placeholder_proposal(conn, media_id, attempt, batch_id, str(item.get("latest_proposed_at") or item.get("latest_rejected_at") or now_iso()))
-                _upsert_queue(
-                    conn,
-                    media_id=media_id,
-                    review_state=review_state,
-                    latest_attempt=attempt,
-                    batch_id=batch_id,
-                    proposed_at=str(item.get("latest_proposed_at") or ""),
-                    rework_priority=item.get("rework_priority") is True,
-                    rejected_count=int(item.get("rejected_count") or 0),
-                    owner_comment=str(item.get("rejection_comment") or ""),
-                )
 
         for path in _approval_files(repo_root):
             payload = _read_json(path, {})
@@ -842,7 +938,11 @@ def record_title_keyword_review_decisions(
                 """,
                 (media_id, attempt, state, title, _keywords_text(keywords), comment, decided_at, applied_at or None),
             )
-            queue_state = "applied" if state == "accepted" and applied_at else ("approved" if state == "accepted" else state)
+            rejected_count = max(1, attempt) if state == "rejected" else 0
+            if state == "rejected" and rejected_count >= 2:
+                queue_state = "parked"
+            else:
+                queue_state = "applied" if state == "accepted" and applied_at else ("approved" if state == "accepted" else state)
             _upsert_queue(
                 conn,
                 media_id=media_id,
@@ -851,8 +951,8 @@ def record_title_keyword_review_decisions(
                 batch_id=batch_id,
                 reviewed_at=decided_at,
                 applied_at=applied_at,
-                rework_priority=state == "rejected",
-                rejected_count=1 if state == "rejected" else 0,
+                rework_priority=state == "rejected" and queue_state != "parked",
+                rejected_count=rejected_count,
                 owner_comment=comment,
             )
             counts[state if state in counts else "accepted"] += 1
@@ -907,13 +1007,53 @@ def title_keyword_review_counts(repo_root: Path, db_path: Path | None = None) ->
                 counts["accepted"] += count
             elif state == "proposed":
                 counts["submitted_unchecked"] += count
-            elif state == "rejected" or row["rework_priority"]:
-                counts["rejected"] += count
             elif state == "parked":
                 counts["parked"] += count
+            elif state == "rejected" or row["rework_priority"]:
+                counts["rejected"] += count
             elif state == "blocked":
                 counts["blocked"] += count
         return counts
+    finally:
+        conn.close()
+
+
+def title_keyword_generator_state(repo_root: Path, db_path: Path | None = None, *, park_twice_rejected: bool = False) -> dict[str, Any]:
+    conn = connect(repo_root, db_path)
+    try:
+        parked_now = park_twice_rejected_title_keywords(conn) if park_twice_rejected else 0
+        if parked_now:
+            conn.commit()
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM title_keyword_queue
+            ORDER BY media_id
+            """
+        ).fetchall()
+        queue = []
+        for row in rows:
+            queue.append({
+                "photo_id": row["media_id"],
+                "review_state": row["review_state"],
+                "rework_priority": bool(row["rework_priority"]),
+                "rejected_count": int(row["rejected_count"] or 0),
+                "owner_comment": row["owner_comment"] or "",
+                "latest_attempt": int(row["latest_attempt"] or 1),
+                "latest_proposed_batch_id": row["latest_proposed_batch_id"] or "",
+                "latest_proposed_at": row["latest_proposed_at"] or "",
+                "state_tags": _title_keyword_state_tags(str(row["review_state"] or ""), bool(row["rework_priority"])),
+            })
+        counts = title_keyword_review_counts(repo_root, db_path)
+        return {
+            "format": "photosbyelie-title-keyword-generator-state",
+            "schema_version": 1,
+            "source_of_truth": (db_path or DEFAULT_DB).as_posix(),
+            "parked_twice_rejected": parked_now,
+            "keyword_blacklist": keyword_blacklist_terms(repo_root, db_path, conn),
+            "counts": counts,
+            "queue": queue,
+        }
     finally:
         conn.close()
 
@@ -1101,7 +1241,12 @@ def main() -> None:
     parser.add_argument("--import-country-assignments", action="store_true")
     parser.add_argument("--export-country-assignments", action="store_true")
     parser.add_argument("--import-title-keyword-review", action="store_true")
+    parser.add_argument("--import-title-keyword-batch-file", type=Path)
+    parser.add_argument("--park-title-keyword-rows-file", type=Path)
+    parser.add_argument("--title-keyword-generator-state-json", action="store_true")
+    parser.add_argument("--park-twice-rejected", action="store_true")
     parser.add_argument("--import-keyword-blacklist", action="store_true")
+    parser.add_argument("--export-keyword-blacklist", action="store_true")
     parser.add_argument("--import-discarded-r2-manifest", action="store_true")
     parser.add_argument("--r2-state-file", type=Path)
     parser.add_argument("--r2-state", choices=("current", "marked_for_delete", "deleted_confirmed"))
@@ -1113,17 +1258,36 @@ def main() -> None:
     repo_root = args.repo_root.resolve()
     if args.import_owner_actions:
         import_owner_actions(repo_root, args.db, force=args.force)
+    elif args.title_keyword_generator_state_json:
+        print(json.dumps(title_keyword_generator_state(repo_root, args.db, park_twice_rejected=args.park_twice_rejected), ensure_ascii=False))
+        return
     else:
         conn = connect(repo_root, args.db)
         try:
             if args.import_keyword_blacklist:
                 import_keyword_blacklist(repo_root, conn, force=args.force)
+            if args.export_keyword_blacklist:
+                export_keyword_blacklist(repo_root, conn)
             if args.import_country_assignments:
                 import_country_assignments(repo_root, conn, force=args.force)
             if args.export_country_assignments:
                 export_country_assignments(repo_root, conn)
             if args.import_title_keyword_review:
                 import_title_keyword_review(repo_root, conn, force=args.force)
+            if args.import_title_keyword_batch_file:
+                conn.close()
+                result = import_title_keyword_batch_file(repo_root, args.import_title_keyword_batch_file, args.db)
+                print(f"title_keyword_batch {result['batch_id']}={result['photo_count']}")
+                conn = connect(repo_root, args.db)
+            if args.park_title_keyword_rows_file:
+                conn.close()
+                result = park_title_keyword_rows_file(repo_root, args.park_title_keyword_rows_file, args.db)
+                print(f"title_keyword_rows_parked={result['parked']}")
+                conn = connect(repo_root, args.db)
+            if args.park_twice_rejected:
+                parked = park_twice_rejected_title_keywords(conn)
+                conn.commit()
+                print(f"title_keyword_queue parked_twice_rejected={parked}")
             if args.import_discarded_r2_manifest:
                 conn.close()
                 result = import_discarded_r2_manifest(repo_root, args.db)

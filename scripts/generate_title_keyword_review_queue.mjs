@@ -12,7 +12,6 @@ const REVIEW_FLAG = "Title_Keywords_Reviewed";
 const PROPOSED_FLAG = "Title_Keywords_Proposed";
 const REJECTED_FLAG = "Title_Keywords_Rejected";
 const PARKED_FLAG = "Title_Keywords_Parked";
-const PROPOSED_STATE_FILENAME = "proposed-state.json";
 const MIN_PROPOSED_KEYWORDS = 10;
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
@@ -94,6 +93,42 @@ const uniqueKeywords = (items) => {
 const readJsonFile = (filePath) => {
   if (!fs.existsSync(filePath)) return null;
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+};
+
+const runOwnerStateDb = (args, options = {}) => {
+  const result = spawnSync("python3", ["scripts/owner_state_db.py", ...args], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    input: options.input,
+  });
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || "Owner.sqlite command failed.").trim());
+  }
+  return result.stdout || "";
+};
+
+const loadOwnerGeneratorState = () => {
+  const stdout = runOwnerStateDb(["--title-keyword-generator-state-json", "--park-twice-rejected"]);
+  const payload = JSON.parse(stdout);
+  const state = createProposalState();
+  for (const item of payload.queue || []) {
+    mergeProposedPhoto(state, item.photo_id, {
+      review_state: item.review_state,
+      rework_priority: item.rework_priority === true,
+      rejected_count: Number(item.rejected_count || 0),
+      rejection_comment: item.owner_comment || "",
+      latest_attempt: Number(item.latest_attempt || 1),
+      latest_proposed_batch_id: item.latest_proposed_batch_id || "",
+      latest_proposed_at: item.latest_proposed_at || "",
+      state_tags: item.state_tags || [],
+    });
+  }
+  return {
+    state,
+    blacklist: blacklistRules(Array.isArray(payload.keyword_blacklist) ? payload.keyword_blacklist : []),
+    counts: payload.counts || {},
+    parkedTwiceRejected: Number(payload.parked_twice_rejected || 0),
+  };
 };
 
 const normalizedPhotoId = (value) => String(value || "").trim();
@@ -478,6 +513,11 @@ const hasMetadataFlag = (photo, flag) => {
 
 const isReviewed = (photo) => hasMetadataFlag(photo, REVIEW_FLAG);
 
+const isApprovedProposal = (entry) => {
+  const tags = Array.isArray(entry?.state_tags) ? entry.state_tags : [];
+  return tags.includes(REVIEW_FLAG) || entry?.review_state === "approved" || entry?.review_state === "applied";
+};
+
 const isAlreadyProposed = (photo, proposedState) => {
   const photoId = normalizedPhotoId(photo?.id);
   return hasMetadataFlag(photo, PROPOSED_FLAG) || Boolean(photoId && proposedState.photosById.has(photoId));
@@ -496,6 +536,7 @@ const isParkedProposal = (entry) => {
 const isRejectedForRework = (photo, proposedState) => {
   const entry = proposalStateEntry(photo, proposedState);
   if (isParkedProposal(entry)) return false;
+  if (Number(entry?.rejected_count || 0) >= 2) return false;
   const tags = Array.isArray(entry?.state_tags) ? entry.state_tags : [];
   return hasMetadataFlag(photo, REJECTED_FLAG)
     || tags.includes(REJECTED_FLAG)
@@ -546,6 +587,7 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
     latest_proposed_batch_id: "",
     first_proposed_at: "",
     latest_proposed_at: "",
+    latest_attempt: 1,
     proposal_files: [],
   };
   existing.state_tags = stateTagsForEntry(existing, Array.isArray(detail.state_tags) ? detail.state_tags : []);
@@ -572,6 +614,7 @@ const mergeProposedPhoto = (state, photoId, detail = {}) => {
     existing.rework_priority = true;
   }
   if (Number.isFinite(Number(detail.rejected_count))) existing.rejected_count = Number(detail.rejected_count);
+  if (Number.isFinite(Number(detail.latest_attempt))) existing.latest_attempt = Math.max(1, Number(detail.latest_attempt));
   if (rejectionComment) existing.rejection_comment = rejectionComment;
   if (detail.clear_rejection) {
     existing.review_state = "proposed";
@@ -718,7 +761,7 @@ const syncOwnerDb = () => {
 };
 
 const parseArgs = (argv) => {
-  const args = { limit: DEFAULT_LIMIT, includeAlreadyProposed: false, syncProposedStateOnly: false };
+  const args = { limit: DEFAULT_LIMIT, includeAlreadyProposed: false };
   for (let index = 2; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--limit") {
@@ -730,10 +773,6 @@ const parseArgs = (argv) => {
     }
     if (value === "--include-already-proposed") {
       args.includeAlreadyProposed = true;
-      continue;
-    }
-    if (value === "--sync-proposed-state-only") {
-      args.syncProposedStateOnly = true;
       continue;
     }
     if (value === "--help" || value === "-h") {
@@ -755,7 +794,8 @@ const main = () => {
   const args = parseArgs(process.argv);
   if (args.help) {
     process.stdout.write(
-      "Usage: node scripts/generate_title_keyword_review_queue.mjs [--limit 100] [--include-already-proposed] [--sync-proposed-state-only]\n",
+      "Usage: node scripts/generate_title_keyword_review_queue.mjs [--limit 100] [--include-already-proposed]\n" +
+      "Normal runs use Owner.sqlite as source of truth and write JSON only as review-page batch views.\n",
     );
     process.exit(0);
   }
@@ -765,27 +805,16 @@ const main = () => {
   const batchFilename = `batch-${batchId}.json`;
   const batchPath = path.join(queueDir, batchFilename);
   const latestPath = path.join(queueDir, "latest.json");
-  const proposedStatePath = path.join(queueDir, PROPOSED_STATE_FILENAME);
-  const proposedState = loadProposalState(queueDir, proposedStatePath);
 
-  if (args.syncProposedStateOnly) {
-    writeProposalState(proposedStatePath, proposedState);
-    syncOwnerDb();
-    process.stdout.write(
-      `Synced ${proposedState.photosById.size} proposed photo IDs -> ${proposedStatePath}\n` +
-      "Synced Owner.sqlite\n" +
-      `Proposal state flag: ${PROPOSED_FLAG}\n`,
-    );
-    process.exit(0);
-  }
+  const ownerGeneratorState = loadOwnerGeneratorState();
+  const proposedState = ownerGeneratorState.state;
 
   const photosData = loadCatalogWindow(REPO_ROOT).photosByElieData;
   if (!photosData || typeof photosData !== "object") {
     throw new Error("Could not load SQLite-backed catalog data (window.photosByElieData).");
   }
 
-  const blacklistPayload = JSON.parse(readText("assets/owner-actions/keyword-blacklist.json"));
-  const blacklist = blacklistRules(Array.isArray(blacklistPayload?.keywords) ? blacklistPayload.keywords : []);
+  const blacklist = ownerGeneratorState.blacklist;
 
   const flattened = [];
   for (const [galleryKey, collection] of Object.entries(photosData)) {
@@ -803,11 +832,11 @@ const main = () => {
 
   for (const row of flattened) {
     const photo = row.photo || {};
-    if (isReviewed(photo)) {
+    const stateEntry = proposalStateEntry(photo, proposedState);
+    if (isReviewed(photo) || isApprovedProposal(stateEntry)) {
       skippedReviewed.push(String(photo?.id || ""));
       continue;
     }
-    const stateEntry = proposalStateEntry(photo, proposedState);
     if (isParkedProposal(stateEntry)) {
       skippedParked.push(String(photo?.id || ""));
       continue;
@@ -826,7 +855,8 @@ const main = () => {
       id: String(photo?.id || ""),
       reworkPriority,
       reworkComment: String(stateEntry?.rejection_comment || stateEntry?.latest_rejection_comment || "").trim(),
-      proposalAttempt: Number(stateEntry?.proposal_attempt_count || stateEntry?.rejected_count || 0) + 1,
+      proposalAttempt: Math.max(Number(stateEntry?.latest_attempt || 0), Number(stateEntry?.rejected_count || 0)) + 1,
+      rejectedCount: Number(stateEntry?.rejected_count || 0),
     });
   }
 
@@ -963,8 +993,9 @@ const main = () => {
   const ordinaryRangeNewest = ordinaryBatch[0]?.capture?.sort || "";
   const ordinaryRangeOldest = ordinaryBatch[ordinaryBatch.length - 1]?.capture?.sort || "";
   const parkedAt = new Date().toISOString();
+  const parkedExportRows = [];
   for (const parked of parkedRows) {
-    parkProposedPhoto(proposedState, parked.record.photo_id, {
+    const parkedDetail = {
       batch_id: batchId,
       parked_at: parkedAt,
       rework_priority: parked.row.reworkPriority,
@@ -974,7 +1005,10 @@ const main = () => {
       reason: parked.row.reworkPriority
         ? "Rejected/rework photo still needs owner context; parked until a stronger title tool is available."
         : "Unable to generate a defensible non-placeholder title from current local metadata.",
-    });
+      latest_attempt: Math.max(1, Number(parked.row.proposalAttempt || 1)),
+      rejected_count: Number(parked.row.rejectedCount || 0),
+    };
+    parkedExportRows.push({ photo_id: parked.record.photo_id, ...parkedDetail });
   }
 
   const payload = {
@@ -994,7 +1028,6 @@ const main = () => {
     proposal_files: {
       batch: batchPath,
       latest: latestPath,
-      proposed_state: proposedStatePath,
     },
     range: {
       newest: rangeNewest,
@@ -1024,19 +1057,23 @@ const main = () => {
   fs.mkdirSync(path.join(REPO_ROOT, queueDir), { recursive: true });
   fs.writeFileSync(path.join(REPO_ROOT, batchPath), JSON.stringify(payload, null, 2) + "\n");
   fs.writeFileSync(path.join(REPO_ROOT, latestPath), JSON.stringify(payload, null, 2) + "\n");
-  mergeBatchPayload(proposedState, payload, batchPath, { clearRejection: true });
-  writeProposalState(proposedStatePath, proposedState);
-  syncOwnerDb();
+  runOwnerStateDb(["--import-title-keyword-batch-file", batchPath]);
+  if (parkedExportRows.length) {
+    const parkedTmpPath = path.join("tmp", `title-keyword-parked-${batchId}-${Date.now()}.json`);
+    fs.mkdirSync(path.join(REPO_ROOT, "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(REPO_ROOT, parkedTmpPath), JSON.stringify(parkedExportRows, null, 2) + "\n");
+    runOwnerStateDb(["--park-title-keyword-rows-file", parkedTmpPath]);
+  }
 
   process.stdout.write(
     `Wrote ${photos.length} proposals -> ${batchPath}\n` +
     `Updated latest -> ${latestPath}\n` +
-    `Updated proposed state -> ${proposedStatePath}\n` +
-    "Synced Owner.sqlite\n" +
+    "Updated Owner.sqlite\n" +
     `Range: ${rangeNewest || "—"} .. ${rangeOldest || "—"}\n` +
     `Skipped reviewed: ${skippedReviewed.length}\n` +
     `Skipped proposed: ${skippedProposed.length}\n` +
     `Skipped parked: ${skippedParked.length}\n` +
+    `Parked twice-rejected before selection: ${ownerGeneratorState.parkedTwiceRejected}\n` +
     `Ordinary new: ${ordinaryBatch.length}/${args.limit}\n` +
     `Rework priority: ${reworkBatch.length}\n` +
     `Parked untitled: ${parkedRows.length}\n`,

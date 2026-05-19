@@ -45,7 +45,6 @@ KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
-TITLE_KEYWORD_PROPOSED_STATE = TITLE_KEYWORD_REVIEW_ROOT / "proposed-state.json"
 REAL_ESTATE_CLIENTS_PATH = OWNER_ACTION_ROOT / "real-estate-clients.local.json"
 REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
 REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
@@ -110,6 +109,7 @@ from sync_r2_media import (  # noqa: E402
     wrangler_put,
 )
 from owner_state_db import backfill_r2_object_metadata, connect as owner_db_connect, upsert_r2_object_state  # noqa: E402
+from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db  # noqa: E402
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
@@ -628,21 +628,10 @@ def _normalized_keyword_blacklist(value: object) -> list[str]:
 
 def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
     path = repo_root / KEYWORD_BLACKLIST_PATH
-    existing = _read_json_file(path, {})
-    if not isinstance(existing, dict):
-        existing = {}
-    current = _normalized_keyword_blacklist(existing.get("keywords") or [])
+    current = _normalized_keyword_blacklist(keyword_blacklist_terms_db(repo_root))
     incoming = _normalized_keyword_blacklist(payload.get("keywords") or [])
     mode = str(payload.get("mode") or "replace").strip().casefold()
     keywords = _normalized_keyword_blacklist(current + incoming) if mode == "append" else incoming
-    next_payload = {
-        **existing,
-        "format": "photosbyelie-keyword-blacklist",
-        "schema_version": 1,
-        "updated_at": datetime.now(timezone.utc).date().isoformat(),
-        "keywords": keywords,
-    }
-    _write_json_file(path, next_payload)
     db_result = record_keyword_blacklist_db(repo_root, keywords)
     return {
         "ok": True,
@@ -655,11 +644,7 @@ def _save_keyword_blacklist(repo_root: Path, payload: dict) -> dict:
 
 
 def _keyword_blacklist_set(repo_root: Path) -> set[str]:
-    path = repo_root / KEYWORD_BLACKLIST_PATH
-    payload = _read_json_file(path, {})
-    if not isinstance(payload, dict):
-        return set()
-    return {keyword.casefold() for keyword in _normalized_keyword_blacklist(payload.get("keywords") or [])}
+    return {keyword.casefold() for keyword in keyword_blacklist_terms_db(repo_root)}
 
 
 def _review_keywords(repo_root: Path, value: object) -> list[str]:
@@ -1096,146 +1081,19 @@ def _unique_keywords(values: list[str]) -> list[str]:
     return unique
 
 
-def _title_keyword_default_proposal_state() -> dict:
-    return {
-        "format": "photosbyelie-title-keyword-proposal-state",
-        "schema_version": 1,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "state_flag": TITLE_KEYWORD_PROPOSED_FLAG,
-        "review_flag": TITLE_KEYWORD_REVIEW_FLAG,
-        "parked_flag": TITLE_KEYWORD_PARKED_FLAG,
-        "photo_count": 0,
-        "photo_ids": [],
-        "photos": [],
-        "batches": [],
-    }
-
-
-def _title_keyword_proposal_state_path(repo_root: Path) -> Path:
-    return repo_root / TITLE_KEYWORD_PROPOSED_STATE
-
-
-def _load_title_keyword_proposal_state(repo_root: Path) -> dict:
-    payload = _read_json_file(_title_keyword_proposal_state_path(repo_root), {})
-    if not isinstance(payload, dict):
-        payload = {}
-    state = _title_keyword_default_proposal_state()
-    state.update(payload)
-    photos = []
-    seen = set()
-    for item in state.get("photos") or []:
-        if not isinstance(item, dict):
-            continue
-        photo_id = str(item.get("photo_id") or item.get("photoId") or "").strip()
-        if not photo_id or photo_id in seen:
-            continue
-        item["photo_id"] = photo_id
-        photos.append(item)
-        seen.add(photo_id)
-    for photo_id in state.get("photo_ids") or []:
-        clean_id = str(photo_id or "").strip()
-        if clean_id and clean_id not in seen:
-            photos.append({
-                "photo_id": clean_id,
-                "state_tags": [TITLE_KEYWORD_PROPOSED_FLAG],
-                "review_state": "proposed",
-                "rework_priority": False,
-                "rejected_count": 0,
-                "rejection_comment": "",
-                "proposal_files": [],
-            })
-            seen.add(clean_id)
-    state["photos"] = photos
-    state["photo_ids"] = sorted(seen)
-    state["photo_count"] = len(seen)
-    return state
-
-
-def _write_title_keyword_proposal_state(repo_root: Path, state: dict) -> None:
-    photos = []
-    seen = set()
-    for item in state.get("photos") or []:
-        if not isinstance(item, dict):
-            continue
-        photo_id = str(item.get("photo_id") or "").strip()
-        if not photo_id or photo_id in seen:
-            continue
-        raw_tags = [str(tag) for tag in item.get("state_tags") or []]
-        is_parked = (
-            item.get("review_state") == "parked"
-            or item.get("parked") is True
-            or TITLE_KEYWORD_PARKED_FLAG in raw_tags
-        )
-        if is_parked:
-            tags = _unique_keywords(
-                [tag for tag in raw_tags if tag not in {TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG}]
-                + [TITLE_KEYWORD_PARKED_FLAG]
-            )
-            item["review_state"] = "parked"
-            item["rework_priority"] = False
-        else:
-            tags = _unique_keywords([tag for tag in raw_tags if tag != TITLE_KEYWORD_PARKED_FLAG] + [TITLE_KEYWORD_PROPOSED_FLAG])
-        item["photo_id"] = photo_id
-        item["state_tags"] = tags
-        item["proposal_files"] = _unique_keywords([str(value) for value in item.get("proposal_files") or []])
-        photos.append(item)
-        seen.add(photo_id)
-    photos.sort(key=lambda item: item["photo_id"])
-    state["format"] = "photosbyelie-title-keyword-proposal-state"
-    state["schema_version"] = 1
-    state["updated_at"] = datetime.now(timezone.utc).isoformat()
-    state["state_flag"] = TITLE_KEYWORD_PROPOSED_FLAG
-    state["review_flag"] = TITLE_KEYWORD_REVIEW_FLAG
-    state["parked_flag"] = TITLE_KEYWORD_PARKED_FLAG
-    state["photo_count"] = len(photos)
-    state["photo_ids"] = [item["photo_id"] for item in photos]
-    state["photos"] = photos
-    _write_json_file(_title_keyword_proposal_state_path(repo_root), state)
-
-
 def _record_title_keyword_rejections(repo_root: Path, batch_id: str, rejections: list[dict]) -> dict:
     if not rejections:
         return {"path": "", "rejected": []}
-    state = _load_title_keyword_proposal_state(repo_root)
-    photos_by_id = {str(item.get("photo_id")): item for item in state.get("photos") or [] if item.get("photo_id")}
-    now = datetime.now(timezone.utc).isoformat()
     rejected = []
     for item in rejections:
         photo_id = str(item.get("photo_id") or "").strip()
         if not photo_id:
             continue
-        entry = photos_by_id.get(photo_id) or {
-            "photo_id": photo_id,
-            "state_tags": [TITLE_KEYWORD_PROPOSED_FLAG],
-            "review_state": "proposed",
-            "rework_priority": False,
-            "rejected_count": 0,
-            "rejection_comment": "",
-            "proposal_files": [],
-        }
-        entry["state_tags"] = _unique_keywords(
-            [
-                tag
-                for tag in [*(entry.get("state_tags") or []), TITLE_KEYWORD_PROPOSED_FLAG, TITLE_KEYWORD_REJECTED_FLAG]
-                if tag != TITLE_KEYWORD_PARKED_FLAG
-            ]
-        )
-        entry["review_state"] = "rejected"
-        entry["rework_priority"] = True
-        entry["parked"] = False
-        entry["rejected_count"] = int(entry.get("rejected_count") or 0) + 1
-        entry["latest_rejected_batch_id"] = batch_id
-        entry["latest_rejected_at"] = now
-        entry["rejection_comment"] = str(item.get("comment") or "").strip()
-        entry["latest_rejected_title"] = str(item.get("title") or "").strip()
-        entry["latest_rejected_keywords"] = _unique_keywords(_split_keyword_text(item.get("keywords")))
-        photos_by_id[photo_id] = entry
         rejected.append(photo_id)
-    state["photos"] = list(photos_by_id.values())
-    _write_title_keyword_proposal_state(repo_root, state)
     return {
-        "path": TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
+        "path": "",
         "rejected": rejected,
+        "role": "owner-sqlite",
     }
 
 
@@ -3470,7 +3328,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 normalized,
             )
             site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
+        _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
         payload_out = {
             "format": "photosbyelie-title-keyword-review-approvals",
             "schema_version": 1,
@@ -3482,7 +3340,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "approvals": normalized,
             "rejections": normalized_rejections,
             "blocked": normalized_blocked,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
         }
         if normalized:
@@ -3509,7 +3366,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "blocked_count": len(merged_record.get("blocked", [])),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
             "updated": updated,
             "review_flag": review_flag,
@@ -3700,7 +3556,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             normalized,
         )
 
-        rejection_state = _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
+        _record_title_keyword_rejections(repo_root, batch_id, normalized_rejections)
         payload_out = {
             "format": "photosbyelie-title-keyword-review-approvals",
             "schema_version": 1,
@@ -3712,7 +3568,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "rejection_flag": TITLE_KEYWORD_REJECTED_FLAG,
             "approvals": normalized,
             "rejections": normalized_rejections,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
         }
         approvals_path, merged_record = _merge_title_keyword_review_record(repo_root, batch_id, payload_out)
@@ -3730,7 +3585,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "blocked_count": len(merged_record.get("blocked", [])),
             "applied_count": len({item["id"] for item in updated}),
             "metadata_changed": metadata_changed,
-            "proposal_state_path": rejection_state.get("path") or TITLE_KEYWORD_PROPOSED_STATE.as_posix(),
             "not_found": not_found,
             "updated": updated,
             "review_flag": review_flag,

@@ -35,7 +35,7 @@ from typing import Any
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
-from owner_state_db import connect as owner_db_connect, upsert_r2_object_state
+from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, upsert_r2_object_state
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, append_upload_state, first_env, s3_put, wrangler_command
 
 
@@ -622,16 +622,9 @@ def list_value(value: Any) -> list[str]:
 
 
 def load_keyword_blacklist(path: Path | None) -> set[str]:
-    if not path:
-        return set()
-    expanded = path.expanduser()
-    if not expanded.exists():
-        return set()
-    payload = json.loads(expanded.read_text(encoding="utf-8"))
-    keywords = payload.get("keywords") if isinstance(payload, dict) else None
-    if not isinstance(keywords, list):
-        return set()
-    return {str(keyword).strip().casefold() for keyword in keywords if str(keyword).strip()}
+    del path
+    repo_root = Path(__file__).resolve().parents[1]
+    return {keyword.casefold() for keyword in owner_keyword_blacklist_terms(repo_root)}
 
 
 def cleaned_keywords(meta: dict[str, Any], include_private: bool, keyword_blacklist: set[str] | None = None) -> list[str]:

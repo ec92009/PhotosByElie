@@ -11,6 +11,7 @@ from pathlib import Path
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
+from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms
 
 LABELS = {
     "france": ("01", "France", "france-gallery", "Saturn Lightroom archive selections prepared from the Camera source."),
@@ -506,13 +507,9 @@ def load_json(path: Path, fallback: object) -> object:
 
 
 def load_keyword_blacklist(path: Path | None) -> set[str]:
-    if not path:
-        return set()
-    payload = load_json(path.expanduser(), {})
-    keywords = payload.get("keywords") if isinstance(payload, dict) else None
-    if not isinstance(keywords, list):
-        return set()
-    return {str(keyword).strip().casefold() for keyword in keywords if str(keyword).strip()}
+    del path
+    repo_root = Path(__file__).resolve().parents[1]
+    return {keyword.casefold() for keyword in owner_keyword_blacklist_terms(repo_root)}
 
 
 def blacklist_ids_from_payload(payload: dict) -> set[str]:
@@ -595,17 +592,16 @@ def country_assignments_from_payload(payload: dict) -> dict[str, str]:
 
 
 def country_assignments_from_owner_index(repo_root: Path) -> dict[str, str]:
-    payload = load_json(repo_root / "assets/owner-actions/country-assignments.json", {})
-    photos = payload.get("photos") if isinstance(payload, dict) else {}
-    if not isinstance(photos, dict):
-        return {}
+    conn = owner_db_connect(repo_root)
     assignments: dict[str, str] = {}
-    for photo_id, record in photos.items():
-        if not isinstance(photo_id, str) or not isinstance(record, dict):
-            continue
-        slug = record.get("gallery_key")
-        if slug in COUNTRY_ASSIGNMENT_TARGETS:
-            assignments[photo_id] = slug
+    try:
+        rows = conn.execute("SELECT media_id, country_slug FROM country_assignments").fetchall()
+        for row in rows:
+            slug = row["country_slug"]
+            if slug in COUNTRY_ASSIGNMENT_TARGETS:
+                assignments[row["media_id"]] = slug
+    finally:
+        conn.close()
     return assignments
 
 

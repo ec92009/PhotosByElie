@@ -29,6 +29,7 @@ assets/hidden/**
 assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
 assets/owner-actions/real-estate-clients.local.json
+assets/owner-actions/title-keyword-review-queue/proposed-state.json
 
 # Local macOS helper bundle; regenerate helper apps instead of committing .app bundles.
 PhotosByElie Blacklist.app/

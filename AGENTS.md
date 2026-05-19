@@ -52,6 +52,12 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - Treat the plain `.sqlite` file as the reliable fallback/proxy for the compressed `.sqlite.br` catalog, not as cleanup clutter.
 - If cleanup work proposes deleting `photosbyelie.sqlite`, remind the user that they explicitly chose to keep it.
 
+## Owner Action State
+
+- Treat local SQLite databases under `assets/owner-actions/`, especially `assets/owner-actions/Owner.sqlite`, as the source of truth for Owner workflow state.
+- JSON files under `assets/owner-actions/` are compatibility exports, audit artifacts, or temporary transport files. Do not use JSON as authoritative state when a SQLite table exists for the same workflow.
+- Owner workflow automation should read counts, candidate eligibility, rejection/rework/parked state, and approval state from SQLite first, and write durable state updates back to SQLite. Regenerate JSON exports from SQLite when the current Owner UI or audit trail still needs them.
+
 ## Workspace Structure
 
 - Repo root: `/Users/ecohen/Dev/PhotosByElie`

@@ -9,13 +9,15 @@ This SOP defines the Owner title/keyword proposal workflow.
 - `Title_Keywords_Parked`: the current local tooling could not produce a defensible non-placeholder title, so the photo is parked outside the active review queue until better tooling or manual reset is available.
 - `Title_Keywords_Reviewed`: Owner approved and applied the title/keyword metadata. The nightly queue should always skip this photo.
 
-Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`. The tracked JSON files under `assets/owner-actions/title-keyword-review-queue/` remain compatibility exports for the current Owner page and audit review. Approved metadata lives in generated catalog/state files only. Do not write source-file embedded metadata, public previews, private masters, or private render files.
+Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`, which is the source of truth for title/keyword review state and the target for durable state updates. The tracked JSON files under `assets/owner-actions/title-keyword-review-queue/` are compatibility exports, audit artifacts, or temporary transport files for the current Owner page. Do not use those JSON files as authoritative state when SQLite contains the same workflow state. Approved metadata lives in generated catalog/state files only. Do not write source-file embedded metadata, public previews, private masters, or private render files.
 
 ## Nightly Generation
 
 1. Pull `main` with `git pull --ff-only origin main`.
 2. Run `node scripts/generate_title_keyword_review_queue.mjs --limit 100`.
 3. The generator must:
+   - Read counts, candidate eligibility, proposal/review state, rejection counts, rework priority, and parked status from `assets/owner-actions/Owner.sqlite`.
+   - Write durable proposal/rejection/parked state updates to `Owner.sqlite` first; write JSON only as a derived compatibility export or audit artifact.
    - Work newest backward.
    - Prioritize photos marked rejected/rework before ordinary new photos.
    - Include all eligible rejected/rework photos first; these are a priority add-on and do not count against the ordinary-new-photo limit.
@@ -31,9 +33,9 @@ Proposal/rejection state lives in local `assets/owner-actions/Owner.sqlite`. The
    - Use catalog/source path metadata only as fallback, and mark uncertain rows `needs_owner_context`.
    - Avoid filename-style titles as improved proposals.
    - Attempt at least 10 proposed keywords per photo.
-4. The generator writes proposal batches, `latest.json`, and `proposed-state.json` under `assets/owner-actions/title-keyword-review-queue/`, then syncs those compatibility exports into `Owner.sqlite`.
+4. The generator updates `Owner.sqlite`, then writes proposal batches, `latest.json`, and `proposed-state.json` under `assets/owner-actions/title-keyword-review-queue/` as compatibility exports derived from SQLite state.
 
-Use `node scripts/generate_title_keyword_review_queue.mjs --sync-proposed-state-only` to backfill proposal state from existing `batch-*.json` files without replacing the active review batch. Use `python3 scripts/owner_state_db.py --import-owner-actions --force --review-counts` to rebuild and score the local Owner DB from compatibility exports.
+Use JSON backfill/sync commands only for migration or recovery. Normal nightly review work must not rebuild or score authoritative state from JSON when `Owner.sqlite` is available.
 
 ## Owner Page
 

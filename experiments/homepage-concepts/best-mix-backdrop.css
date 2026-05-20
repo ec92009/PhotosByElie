@@ -9,6 +9,10 @@ body.best-mix-current-home{
   isolation:isolate;
 }
 
+body.best-mix-current-home main.shell{
+  padding-bottom:clamp(8px,1.4dvh,14px);
+}
+
 body.best-mix-current-home::before,
 body.best-mix-current-home::after{
   content:"";
@@ -33,12 +37,14 @@ body.best-mix-current-home::after{
 body.best-mix-current-home .topbar{
   background:rgba(250,250,250,.17);
   border-bottom-color:rgba(255,255,255,.12);
+  padding-inline:var(--panel-inline);
   backdrop-filter:blur(10px);
 }
 
 body.best-mix-current-home .site-footer{
   background:transparent;
   border-top:0;
+  margin-top:0;
   padding:0 0 clamp(12px,2dvh,24px);
 }
 

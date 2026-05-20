@@ -2709,7 +2709,7 @@ export const collections = {
       {
         "id": "20191121-1230-19526-pano-08e814918c",
         "className": "p3",
-        "title": "20191121 1230 19526 Pano",
+        "title": "Wide panoramic view in France",
         "caption": "France / 2019-11-21",
         "full": "JPG master",
         "megapixels": 21.1,
@@ -2719,11 +2719,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20191121 1230 19526 Pano"
+            "value": "Wide panoramic view in France"
           },
           {
             "label": "Keywords",
-            "value": "France"
+            "value": "France, panorama, wide view, travel, landscape, scenic, outdoors, daylight, vacation, Europe, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -2779,13 +2779,24 @@ export const collections = {
           }
         ],
         "keywords": [
-          "France"
+          "France",
+          "panorama",
+          "wide view",
+          "travel",
+          "landscape",
+          "scenic",
+          "outdoors",
+          "daylight",
+          "vacation",
+          "Europe",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20191120-1218-17526-6b255bf1cf",
         "className": "p4",
-        "title": "20191120 1218 17526",
+        "title": "Travel Scene in France",
         "caption": "France / 2019-11-20",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -2795,11 +2806,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20191120 1218 17526"
+            "value": "Travel Scene in France"
           },
           {
             "label": "Keywords",
-            "value": "France"
+            "value": "France, Travel, Travel photography, Outdoor, Daylight, iPhone XR, 2019, November 2019, Original capture"
           },
           {
             "label": "Captured",
@@ -2855,7 +2866,15 @@ export const collections = {
           }
         ],
         "keywords": [
-          "France"
+          "France",
+          "Travel",
+          "Travel photography",
+          "Outdoor",
+          "Daylight",
+          "iPhone XR",
+          "2019",
+          "November 2019",
+          "Original capture"
         ]
       },
       {
@@ -3344,7 +3363,7 @@ export const collections = {
       {
         "id": "20180525-1443-00956-a9e61b8dde",
         "className": "p1",
-        "title": "20180525 1443 00956",
+        "title": "Albi in Occitanie",
         "caption": "France / Albi, Occitanie, France / 2018-05-25",
         "full": "JPG master",
         "megapixels": 24,
@@ -3354,11 +3373,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180525 1443 00956"
+            "value": "Albi in Occitanie"
           },
           {
             "label": "Keywords",
-            "value": "Albi, France, Occitanie"
+            "value": "Albi, Occitanie, France, travel, city, urban, outdoors, historic, tourism, landscape, Travel photography"
           },
           {
             "label": "Captured",
@@ -3415,8 +3434,16 @@ export const collections = {
         ],
         "keywords": [
           "Albi",
+          "Occitanie",
           "France",
-          "Occitanie"
+          "travel",
+          "city",
+          "urban",
+          "outdoors",
+          "historic",
+          "tourism",
+          "landscape",
+          "Travel photography"
         ]
       },
       {
@@ -3578,7 +3605,7 @@ export const collections = {
       {
         "id": "20180525-1442-00953-93073461ca",
         "className": "p4",
-        "title": "20180525 1442 00953",
+        "title": "Albi Streetscape",
         "caption": "France / Albi, Occitanie, France / 2018-05-25",
         "full": "JPG master",
         "megapixels": 24,
@@ -3588,11 +3615,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180525 1442 00953"
+            "value": "Albi Streetscape"
           },
           {
             "label": "Keywords",
-            "value": "Albi, France, Occitanie"
+            "value": "Albi, Occitanie, France, travel photography, street scene, architecture, historic town, outdoor, daylight, tourism"
           },
           {
             "label": "Captured",
@@ -3649,14 +3676,21 @@ export const collections = {
         ],
         "keywords": [
           "Albi",
+          "Occitanie",
           "France",
-          "Occitanie"
+          "travel photography",
+          "street scene",
+          "architecture",
+          "historic town",
+          "outdoor",
+          "daylight",
+          "tourism"
         ]
       },
       {
         "id": "20180525-1441-00952-0be82ccc8d",
         "className": "p5",
-        "title": "20180525 1441 00952",
+        "title": "Streets in Albi, Occitanie",
         "caption": "France / Albi, Occitanie, France / 2018-05-25",
         "full": "JPG master",
         "megapixels": 24,
@@ -3666,11 +3700,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180525 1441 00952"
+            "value": "Streets in Albi, Occitanie"
           },
           {
             "label": "Keywords",
-            "value": "Albi, France, Occitanie"
+            "value": "Albi, Occitanie, France, street, travel, architecture, cityscape, historic center, daylight, outdoors, urban, Travel photography"
           },
           {
             "label": "Captured",
@@ -3727,14 +3761,23 @@ export const collections = {
         ],
         "keywords": [
           "Albi",
+          "Occitanie",
           "France",
-          "Occitanie"
+          "street",
+          "travel",
+          "architecture",
+          "cityscape",
+          "historic center",
+          "daylight",
+          "outdoors",
+          "urban",
+          "Travel photography"
         ]
       },
       {
         "id": "20180525-1440-00951-9d8859c6b7",
         "className": "p1",
-        "title": "20180525 1440 00951",
+        "title": "Albi, Occitanie, France",
         "caption": "France / Albi, Occitanie, France / 2018-05-25",
         "full": "JPG master",
         "megapixels": 20.6,
@@ -3744,11 +3787,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180525 1440 00951"
+            "value": "Albi, Occitanie, France"
           },
           {
             "label": "Keywords",
-            "value": "Albi, France, Occitanie"
+            "value": "Albi, France, Occitanie, travel, travel photography, portrait orientation, Nikon D7100, NIKON CORPORATION, 2018, camera original"
           },
           {
             "label": "Captured",
@@ -3806,13 +3849,20 @@ export const collections = {
         "keywords": [
           "Albi",
           "France",
-          "Occitanie"
+          "Occitanie",
+          "travel",
+          "travel photography",
+          "portrait orientation",
+          "Nikon D7100",
+          "NIKON CORPORATION",
+          "2018",
+          "camera original"
         ]
       },
       {
         "id": "20180525-1440-00949-4323df4391",
         "className": "p2",
-        "title": "20180525 1440 00949",
+        "title": "Old Town in Albi",
         "caption": "France / Albi, Occitanie, France / 2018-05-25",
         "full": "JPG master",
         "megapixels": 24,
@@ -3822,11 +3872,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180525 1440 00949"
+            "value": "Old Town in Albi"
           },
           {
             "label": "Keywords",
-            "value": "Albi, France, Occitanie"
+            "value": "Albi, France, Occitanie, Old Town, Historic District, Street Scene, Architecture, Travel, Tourism, Cityscape, Europe, Culture, Travel photography"
           },
           {
             "label": "Captured",
@@ -3884,13 +3934,23 @@ export const collections = {
         "keywords": [
           "Albi",
           "France",
-          "Occitanie"
+          "Occitanie",
+          "Old Town",
+          "Historic District",
+          "Street Scene",
+          "Architecture",
+          "Travel",
+          "Tourism",
+          "Cityscape",
+          "Europe",
+          "Culture",
+          "Travel photography"
         ]
       },
       {
         "id": "20180525-1440-00948-f9444792d1",
         "className": "p3",
-        "title": "20180525 1440 00948",
+        "title": "Albi Riverside Panorama",
         "caption": "France / Albi, Occitanie, France / 2018-05-25",
         "full": "JPG master",
         "megapixels": 15,
@@ -3900,11 +3960,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180525 1440 00948"
+            "value": "Albi Riverside Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Albi, France, Occitanie"
+            "value": "Albi, France, Occitanie, Tarn, riverside, panorama, wide view, cityscape, travel photography, historic town, architecture, landscape, wide composition"
           },
           {
             "label": "Captured",
@@ -3962,7 +4022,17 @@ export const collections = {
         "keywords": [
           "Albi",
           "France",
-          "Occitanie"
+          "Occitanie",
+          "Tarn",
+          "riverside",
+          "panorama",
+          "wide view",
+          "cityscape",
+          "travel photography",
+          "historic town",
+          "architecture",
+          "landscape",
+          "wide composition"
         ]
       },
       {
@@ -4280,7 +4350,7 @@ export const collections = {
       {
         "id": "20180524-1746-00941-72deedae61",
         "className": "p3",
-        "title": "Galeries Lafayette, Rue Bayard, Toulouse, France",
+        "title": "Galeries Lafayette on Rue Bayard in Toulouse",
         "caption": "France / Toulouse, Occitanie, France / 2018-05-24",
         "full": "JPG master",
         "megapixels": 17,
@@ -4290,11 +4360,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Galeries Lafayette, Rue Bayard, Toulouse, France"
+            "value": "Galeries Lafayette on Rue Bayard in Toulouse"
           },
           {
             "label": "Keywords",
-            "value": "France, Occitanie, Toulouse"
+            "value": "France, Occitanie, Toulouse, Rue Bayard, Galeries Lafayette, department store, architecture, facade, shopping, urban, travel, Galeries, Greek mythology, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -4352,13 +4422,25 @@ export const collections = {
         "keywords": [
           "France",
           "Occitanie",
-          "Toulouse"
+          "Toulouse",
+          "Rue Bayard",
+          "Galeries Lafayette",
+          "department store",
+          "architecture",
+          "facade",
+          "shopping",
+          "urban",
+          "travel",
+          "Galeries",
+          "Greek mythology",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180524-1746-00940-636b34659d",
         "className": "p4",
-        "title": "Galeries Lafayette, Rue Bayard, Toulouse, France",
+        "title": "Galeries Lafayette on Rue Bayard in Toulouse",
         "caption": "France / Toulouse, Occitanie, France / 2018-05-24",
         "full": "JPG master",
         "megapixels": 12.9,
@@ -4368,11 +4450,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Galeries Lafayette, Rue Bayard, Toulouse, France"
+            "value": "Galeries Lafayette on Rue Bayard in Toulouse"
           },
           {
             "label": "Keywords",
-            "value": "France, Occitanie, Toulouse, Galeries Lafayette, Rue Bayard"
+            "value": "France, Occitanie, Toulouse, Galeries Lafayette, Rue Bayard, department store, shopping, retail, city center, street scene, architecture, travel, urban, Galeries, Greek mythology, square format, Travel photography"
           },
           {
             "label": "Captured",
@@ -4432,7 +4514,19 @@ export const collections = {
           "Occitanie",
           "Toulouse",
           "Galeries Lafayette",
-          "Rue Bayard"
+          "Rue Bayard",
+          "department store",
+          "shopping",
+          "retail",
+          "city center",
+          "street scene",
+          "architecture",
+          "travel",
+          "urban",
+          "Galeries",
+          "Greek mythology",
+          "square format",
+          "Travel photography"
         ]
       },
       {
@@ -44141,7 +44235,7 @@ export const collections = {
       {
         "id": "img-1847-49826cc8ea",
         "className": "p5",
-        "title": "IMG 1847",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44151,7 +44245,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1847"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, Real Palacio, palace, architecture, historic building, travel, tourism, city, landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -44206,12 +44304,26 @@ export const collections = {
             "bytes": 6557632
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "city",
+          "landmark",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1846-be46775020",
         "className": "p1",
-        "title": "IMG 1846",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44221,7 +44333,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1846"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, architecture, historic building, travel, cityscape, landmark, palace, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -44276,12 +44392,26 @@ export const collections = {
             "bytes": 6534205
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "historic building",
+          "travel",
+          "cityscape",
+          "landmark",
+          "palace",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1844-536f7fb72e",
         "className": "p2",
-        "title": "IMG 1844",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 39,
@@ -44291,7 +44421,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1844"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, Palacio Real, travel, architecture, landmark, palace, sightseeing, urban, photography, Real Palacio, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -44346,12 +44480,28 @@ export const collections = {
             "bytes": 9370186
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real",
+          "travel",
+          "architecture",
+          "landmark",
+          "palace",
+          "sightseeing",
+          "urban",
+          "photography",
+          "Real Palacio",
+          "wide composition",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1843-59ad09aad1",
         "className": "p3",
-        "title": "IMG 1843",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -44361,7 +44511,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1843"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Real Palacio, palace, architecture, historic building, travel, tourism, royal residence, city landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -44416,12 +44570,26 @@ export const collections = {
             "bytes": 3203426
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "royal residence",
+          "city landmark",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1839-b05891d741",
         "className": "p4",
-        "title": "IMG 1839",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44431,7 +44599,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1839"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Palacio Real, Community of Madrid, palace, architecture, historic building, travel photography, tourism, landmark, Real Palacio"
           },
           {
             "label": "Captured",
@@ -44486,12 +44658,25 @@ export const collections = {
             "bytes": 6360110
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real",
+          "Community of Madrid",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "tourism",
+          "landmark",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1831-dbefc252ac",
         "className": "p5",
-        "title": "IMG 1831",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -44501,7 +44686,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1831"
+            "value": "Madrid Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, architecture, palace, travel, tourism, city landmark, historic building, royal residence, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -44556,12 +44745,26 @@ export const collections = {
             "bytes": 3316695
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "architecture",
+          "palace",
+          "travel",
+          "tourism",
+          "city landmark",
+          "historic building",
+          "royal residence",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1830-3277921045",
         "className": "p1",
-        "title": "IMG 1830",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -44571,7 +44774,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1830"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Palacio Real, Royal Palace of Madrid, travel photography, architecture, palace, historic building, landmark, tourism, urban scene, royal residence, Community of Madrid, Real Palacio"
           },
           {
             "label": "Captured",
@@ -44626,12 +44833,27 @@ export const collections = {
             "bytes": 3113140
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Palacio Real",
+          "Royal Palace of Madrid",
+          "travel photography",
+          "architecture",
+          "palace",
+          "historic building",
+          "landmark",
+          "tourism",
+          "urban scene",
+          "royal residence",
+          "Community of Madrid",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1829-bec0afa8fe",
         "className": "p2",
-        "title": "IMG 1829",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -44641,7 +44863,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1829"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, Real Palacio, palace, architecture, historic building, landmark, travel, tourism, Travel photography"
           },
           {
             "label": "Captured",
@@ -44696,12 +44922,25 @@ export const collections = {
             "bytes": 2632994
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel",
+          "tourism",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1817-d2c6398e49",
         "className": "p3",
-        "title": "IMG 1817",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44711,7 +44950,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1817"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, palace, architecture, travel, tourism, historic building, cityscape, exterior, landmark, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -44766,12 +45009,27 @@ export const collections = {
             "bytes": 4298083
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "palace",
+          "architecture",
+          "travel",
+          "tourism",
+          "historic building",
+          "cityscape",
+          "exterior",
+          "landmark",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1816-69a1ff5a24",
         "className": "p4",
-        "title": "IMG 1816",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44781,7 +45039,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1816"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, Community of Madrid, travel photography, historic building, palace, architecture, landmark, Real Palacio"
           },
           {
             "label": "Captured",
@@ -44836,12 +45098,24 @@ export const collections = {
             "bytes": 4340249
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Community of Madrid",
+          "travel photography",
+          "historic building",
+          "palace",
+          "architecture",
+          "landmark",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1815-ade5e9ee43",
         "className": "p5",
-        "title": "IMG 1815",
+        "title": "Inside the Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44851,7 +45125,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1815"
+            "value": "Inside the Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, interior, architecture, historic building, landmark, travel, tourism, Europe, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -44906,12 +45184,27 @@ export const collections = {
             "bytes": 6614187
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "interior",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel",
+          "tourism",
+          "Europe",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1814-487ffeadd4",
         "className": "p1",
-        "title": "IMG 1814",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -44921,7 +45214,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1814"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, Community of Madrid, travel, architecture, palace, historic building, tourism, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -44976,12 +45273,25 @@ export const collections = {
             "bytes": 6590440
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Community of Madrid",
+          "travel",
+          "architecture",
+          "palace",
+          "historic building",
+          "tourism",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1813-8516c69731",
         "className": "p2",
-        "title": "IMG 1813",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -44991,7 +45301,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1813"
+            "value": "Madrid Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, architecture, palace, historic building, travel, tourism, Europe, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -45046,12 +45360,25 @@ export const collections = {
             "bytes": 2815622
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "architecture",
+          "palace",
+          "historic building",
+          "travel",
+          "tourism",
+          "Europe",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1812-5d67f74343",
         "className": "p3",
-        "title": "IMG 1812",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45061,7 +45388,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1812"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Real Palacio, palace, architecture, historic building, travel photography, tourism, Europe, city"
           },
           {
             "label": "Captured",
@@ -45116,12 +45447,25 @@ export const collections = {
             "bytes": 3121654
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "tourism",
+          "Europe",
+          "city"
+        ]
       },
       {
         "id": "img-1811-56a049eb64",
         "className": "p4",
-        "title": "IMG 1811",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45131,7 +45475,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1811"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, historic palace, architecture, travel, tourism, landmark, cityscape, heritage, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -45186,12 +45534,26 @@ export const collections = {
             "bytes": 3125289
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "historic palace",
+          "architecture",
+          "travel",
+          "tourism",
+          "landmark",
+          "cityscape",
+          "heritage",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1810-d9dcf2d499",
         "className": "p5",
-        "title": "IMG 1810",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45201,7 +45563,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1810"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, palace, architecture, landmark, travel photography, historic building, tourism, city, Europe, Real Palacio"
           },
           {
             "label": "Captured",
@@ -45256,12 +45622,26 @@ export const collections = {
             "bytes": 2596905
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "landmark",
+          "travel photography",
+          "historic building",
+          "tourism",
+          "city",
+          "Europe",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1809-8b89dbd9ac",
         "className": "p1",
-        "title": "IMG 1809",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -45271,7 +45651,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1809"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Palacio Real, architecture, historic building, travel, tourism, palace, city interior, landmark, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -45326,12 +45710,27 @@ export const collections = {
             "bytes": 6020280
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "palace",
+          "city interior",
+          "landmark",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1806-f5332e5f73",
         "className": "p2",
-        "title": "IMG 1806",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45341,7 +45740,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1806"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Real Palacio, palace, architecture, historic building, travel photography, tourism, Spain travel, Madrid palace"
           },
           {
             "label": "Captured",
@@ -45396,12 +45799,25 @@ export const collections = {
             "bytes": 2016055
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "tourism",
+          "Spain travel",
+          "Madrid palace"
+        ]
       },
       {
         "id": "img-1805-b01bf2bd71",
         "className": "p3",
-        "title": "IMG 1805",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45411,7 +45827,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1805"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, architecture, historic architecture, landmark, travel, tourism, cityscape, palace, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -45466,12 +45886,27 @@ export const collections = {
             "bytes": 2247792
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "historic architecture",
+          "landmark",
+          "travel",
+          "tourism",
+          "cityscape",
+          "palace",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1804-1a434e64c3",
         "className": "p4",
-        "title": "IMG 1804",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45481,7 +45916,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1804"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Palacio Real, Royal Palace, architecture, palace, historic building, travel, tourism, Europe, landmark, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -45536,12 +45975,27 @@ export const collections = {
             "bytes": 2960353
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Palacio Real",
+          "Royal Palace",
+          "architecture",
+          "palace",
+          "historic building",
+          "travel",
+          "tourism",
+          "Europe",
+          "landmark",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1803-1dab4c359f",
         "className": "p5",
-        "title": "IMG 1803",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45551,7 +46005,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1803"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Palace, Architecture, Historic building, Travel, Tourism, Europe, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -45606,12 +46064,25 @@ export const collections = {
             "bytes": 2956777
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Palace",
+          "Architecture",
+          "Historic building",
+          "Travel",
+          "Tourism",
+          "Europe",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1801-df3e767b3e",
         "className": "p1",
-        "title": "IMG 1801",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45621,7 +46092,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1801"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Palacio Real, travel photography, architecture, palace, historic building, city landmark, Real Palacio"
           },
           {
             "label": "Captured",
@@ -45676,12 +46151,24 @@ export const collections = {
             "bytes": 3069554
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "travel photography",
+          "architecture",
+          "palace",
+          "historic building",
+          "city landmark",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1800-c626e67a38",
         "className": "p2",
-        "title": "IMG 1800",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45691,7 +46178,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1800"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, architecture, travel, historic building, palace, cityscape, tourism, Community of Madrid, landmark, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -45746,12 +46237,27 @@ export const collections = {
             "bytes": 3075971
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "travel",
+          "historic building",
+          "palace",
+          "cityscape",
+          "tourism",
+          "Community of Madrid",
+          "landmark",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1799-18f71d3d8a",
         "className": "p3",
-        "title": "IMG 1799",
+        "title": "Madrid Palace Visit",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45761,7 +46267,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1799"
+            "value": "Madrid Palace Visit"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, travel, architecture, historic, tourism, palace, city, Spain travel, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -45816,12 +46326,26 @@ export const collections = {
             "bytes": 2328830
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "travel",
+          "architecture",
+          "historic",
+          "tourism",
+          "palace",
+          "city",
+          "Spain travel",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1798-e899dd7d44",
         "className": "p4",
-        "title": "IMG 1798",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -45831,7 +46355,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1798"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Palacio Real, Royal Palace, historic architecture, palace, travel photography, tourism, cityscape, Community of Madrid, landmark, Real Palacio"
           },
           {
             "label": "Captured",
@@ -45886,12 +46414,25 @@ export const collections = {
             "bytes": 7800683
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Palacio Real",
+          "Royal Palace",
+          "historic architecture",
+          "palace",
+          "travel photography",
+          "tourism",
+          "cityscape",
+          "Community of Madrid",
+          "landmark",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1797-f4d3c9a2a4",
         "className": "p5",
-        "title": "IMG 1797",
+        "title": "Madrid Palace Exterior",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -45901,7 +46442,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1797"
+            "value": "Madrid Palace Exterior"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, travel, cityscape, historic building, tourism, June 2025, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -45956,12 +46501,26 @@ export const collections = {
             "bytes": 6407121
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "travel",
+          "cityscape",
+          "historic building",
+          "tourism",
+          "June 2025",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1796-5ac56ba47d",
         "className": "p1",
-        "title": "IMG 1796",
+        "title": "Madrid Palace Interior",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -45971,7 +46530,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1796"
+            "value": "Madrid Palace Interior"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, palace interior, architecture, historic building, travel, tourism, heritage, interior design, stonework, ornate, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -46026,12 +46589,28 @@ export const collections = {
             "bytes": 4568688
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "palace interior",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "heritage",
+          "interior design",
+          "stonework",
+          "ornate",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1788-894fb6577a",
         "className": "p2",
-        "title": "IMG 1788",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46041,7 +46620,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1788"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Palacio Real, palace, royal residence, historic building, architecture, travel, tourism, sightseeing, landmark, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -46096,12 +46679,28 @@ export const collections = {
             "bytes": 3022527
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real",
+          "palace",
+          "royal residence",
+          "historic building",
+          "architecture",
+          "travel",
+          "tourism",
+          "sightseeing",
+          "landmark",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1782-99f81ac70c",
         "className": "p3",
-        "title": "IMG 1782",
+        "title": "Near the Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46111,7 +46710,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1782"
+            "value": "Near the Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Real Palacio, Royal Palace, travel photography, architecture, palace, historic site, tourism, urban scene, city landmark"
           },
           {
             "label": "Captured",
@@ -46166,12 +46769,25 @@ export const collections = {
             "bytes": 4650780
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Real Palacio",
+          "Royal Palace",
+          "travel photography",
+          "architecture",
+          "palace",
+          "historic site",
+          "tourism",
+          "urban scene",
+          "city landmark"
+        ]
       },
       {
         "id": "img-1781-4c3fffeb41",
         "className": "p4",
-        "title": "IMG 1781",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46181,7 +46797,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1781"
+            "value": "Madrid Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, Community of Madrid, architecture, palace, historic building, travel, tourism, cityscape, landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -46236,12 +46856,26 @@ export const collections = {
             "bytes": 4794308
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "Community of Madrid",
+          "architecture",
+          "palace",
+          "historic building",
+          "travel",
+          "tourism",
+          "cityscape",
+          "landmark",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1780-a1565bd0ad",
         "className": "p5",
-        "title": "IMG 1780",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46251,7 +46885,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1780"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Real Palacio, palace, architecture, historic building, travel, tourism, landmark, city, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -46306,12 +46944,26 @@ export const collections = {
             "bytes": 5336306
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "landmark",
+          "city",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1779-6f52cef5c7",
         "className": "p1",
-        "title": "IMG 1779",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46321,7 +46973,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1779"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Real Palace, Royal Palace, palace, architecture, historic building, travel, tourism, Community of Madrid, Europe, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -46376,12 +47032,26 @@ export const collections = {
             "bytes": 4783343
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Real Palace",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "Community of Madrid",
+          "Europe",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1778-74b22991ee",
         "className": "p2",
-        "title": "IMG 1778",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46391,7 +47061,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1778"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Palacio Real de Madrid, Community of Madrid, historic architecture, palace, travel photography, tourism, European landmark, Real Palacio"
           },
           {
             "label": "Captured",
@@ -46446,12 +47120,24 @@ export const collections = {
             "bytes": 4692927
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real de Madrid",
+          "Community of Madrid",
+          "historic architecture",
+          "palace",
+          "travel photography",
+          "tourism",
+          "European landmark",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1777-69e4124aa8",
         "className": "p3",
-        "title": "IMG 1777",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46461,7 +47147,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1777"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Real Palacio, palace, architecture, landmark, historic building, travel, tourism, city, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -46516,12 +47206,26 @@ export const collections = {
             "bytes": 4595227
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel",
+          "tourism",
+          "city",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1776-21d38493a8",
         "className": "p4",
-        "title": "IMG 1776",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46531,7 +47235,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1776"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palace, Architecture, Historic building, Tourism, Travel photography, City landmark, Royal residence, Exterior, Community of Madrid, Real Palacio"
           },
           {
             "label": "Captured",
@@ -46586,12 +47294,26 @@ export const collections = {
             "bytes": 4648249
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palace",
+          "Architecture",
+          "Historic building",
+          "Tourism",
+          "Travel photography",
+          "City landmark",
+          "Royal residence",
+          "Exterior",
+          "Community of Madrid",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1775-dcd789f219",
         "className": "p5",
-        "title": "IMG 1775",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46601,7 +47323,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1775"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, architecture, palace, historic building, tourism, travel, cityscape, Community of Madrid, exterior, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -46656,12 +47382,27 @@ export const collections = {
             "bytes": 4951776
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "palace",
+          "historic building",
+          "tourism",
+          "travel",
+          "cityscape",
+          "Community of Madrid",
+          "exterior",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1768-ca97268db9",
         "className": "p1",
-        "title": "IMG 1768",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46671,7 +47412,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1768"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, palace, historic building, architecture, travel, tourism, city landmark, exterior, Europe, Real Palacio, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -46726,12 +47471,27 @@ export const collections = {
             "bytes": 3787362
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "palace",
+          "historic building",
+          "architecture",
+          "travel",
+          "tourism",
+          "city landmark",
+          "exterior",
+          "Europe",
+          "Real Palacio",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1767-6a174699d5",
         "className": "p2",
-        "title": "IMG 1767",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46741,7 +47501,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1767"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, palace, historic building, architecture, travel, tourism, Community of Madrid, Real Palacio, landmark, city, Travel photography"
           },
           {
             "label": "Captured",
@@ -46796,12 +47560,26 @@ export const collections = {
             "bytes": 3839149
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "palace",
+          "historic building",
+          "architecture",
+          "travel",
+          "tourism",
+          "Community of Madrid",
+          "Real Palacio",
+          "landmark",
+          "city",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1766-60281b0b90",
         "className": "p3",
-        "title": "IMG 1766",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -46811,7 +47589,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1766"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, landmark, historic, travel, tourism, city, Europe, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -46866,12 +47648,27 @@ export const collections = {
             "bytes": 7031934
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "landmark",
+          "historic",
+          "travel",
+          "tourism",
+          "city",
+          "Europe",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1765-b8467126e6",
         "className": "p4",
-        "title": "IMG 1765",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -46881,7 +47678,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1765"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, palace, architecture, historic building, travel photography, city landmark, tourism, Real Palacio"
           },
           {
             "label": "Captured",
@@ -46936,12 +47737,24 @@ export const collections = {
             "bytes": 6978720
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "city landmark",
+          "tourism",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1762-629604487e",
         "className": "p5",
-        "title": "IMG 1762",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -46951,7 +47764,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1762"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Palacio Real, palace, architecture, landmark, historic building, travel, tourism, city, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47006,12 +47823,27 @@ export const collections = {
             "bytes": 2935985
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real",
+          "palace",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel",
+          "tourism",
+          "city",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1761-4457cdd80b",
         "className": "p1",
-        "title": "IMG 1761",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47021,7 +47853,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1761"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, architecture, travel, historic building, palace, tourism, city landmark, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -47076,12 +47912,25 @@ export const collections = {
             "bytes": 2854100
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "architecture",
+          "travel",
+          "historic building",
+          "palace",
+          "tourism",
+          "city landmark",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1760-5e658b819a",
         "className": "p2",
-        "title": "IMG 1760",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -47091,7 +47940,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1760"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, palace, architecture, historic building, landmark, travel, tourism, royal residence, city, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47146,12 +47999,27 @@ export const collections = {
             "bytes": 6349932
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel",
+          "tourism",
+          "royal residence",
+          "city",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1759-8b159ad669",
         "className": "p3",
-        "title": "IMG 1759",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -47161,7 +48029,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1759"
+            "value": "Madrid Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Palacio Real, Royal Palace, Community of Madrid, palace, architecture, landmark, travel, sightseeing, historic building, tourism, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47216,12 +48088,27 @@ export const collections = {
             "bytes": 6356407
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Palacio Real",
+          "Royal Palace",
+          "Community of Madrid",
+          "palace",
+          "architecture",
+          "landmark",
+          "travel",
+          "sightseeing",
+          "historic building",
+          "tourism",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1758-0fac205230",
         "className": "p4",
-        "title": "IMG 1758",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47231,7 +48118,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1758"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Palacio Real, travel, architecture, palace, historic building, city landmark, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47286,12 +48177,25 @@ export const collections = {
             "bytes": 3977288
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "travel",
+          "architecture",
+          "palace",
+          "historic building",
+          "city landmark",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1757-2f45d03ba4",
         "className": "p5",
-        "title": "IMG 1757",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47301,7 +48205,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1757"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, palace, architecture, travel, historic building, cityscape, Community of Madrid, Real Palacio, tourism, landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -47356,12 +48264,26 @@ export const collections = {
             "bytes": 4004103
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "travel",
+          "historic building",
+          "cityscape",
+          "Community of Madrid",
+          "Real Palacio",
+          "tourism",
+          "landmark",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1747-3ae72f2d25",
         "className": "p1",
-        "title": "IMG 1747",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -47371,7 +48293,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1747"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, Palace, Architecture, Historic building, Travel, Tourism, Landmark, City center, Exterior, Europe, Spanish heritage, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -47426,12 +48352,29 @@ export const collections = {
             "bytes": 8076518
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "Palace",
+          "Architecture",
+          "Historic building",
+          "Travel",
+          "Tourism",
+          "Landmark",
+          "City center",
+          "Exterior",
+          "Europe",
+          "Spanish heritage",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1745-bceb47f6d5",
         "className": "p2",
-        "title": "IMG 1745",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -47441,7 +48384,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1745"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, palace, architecture, historic building, landmark, travel photography, tourism, city center, royal residence, Real Palacio"
           },
           {
             "label": "Captured",
@@ -47496,12 +48443,26 @@ export const collections = {
             "bytes": 6709191
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "palace",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel photography",
+          "tourism",
+          "city center",
+          "royal residence",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1744-7783687f33",
         "className": "p3",
-        "title": "IMG 1744",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47511,7 +48472,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1744"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, palace, architecture, historic building, travel, tourism, city, landmark, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47566,12 +48531,26 @@ export const collections = {
             "bytes": 4169211
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "city",
+          "landmark",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1742-f66dc5409d",
         "className": "p4",
-        "title": "IMG 1742",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47581,7 +48560,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1742"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Palacio Real, architecture, palace, travel, tourism, historic building, cityscape, urban, landmark, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47636,12 +48619,28 @@ export const collections = {
             "bytes": 3986585
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Palacio Real",
+          "architecture",
+          "palace",
+          "travel",
+          "tourism",
+          "historic building",
+          "cityscape",
+          "urban",
+          "landmark",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1741-576b59367f",
         "className": "p5",
-        "title": "IMG 1741",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -47651,7 +48650,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1741"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, Real Palacio, palace, architecture, historic building, travel, tourism, city, landmark, European architecture, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -47706,12 +48709,27 @@ export const collections = {
             "bytes": 6888858
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "city",
+          "landmark",
+          "European architecture",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1740-eed4a4da1d",
         "className": "p1",
-        "title": "IMG 1740",
+        "title": "Madrid at the Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47721,7 +48739,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1740"
+            "value": "Madrid at the Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, Community of Madrid, travel, architecture, city, tourism, palace, urban, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47776,12 +48798,26 @@ export const collections = {
             "bytes": 3561067
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Community of Madrid",
+          "travel",
+          "architecture",
+          "city",
+          "tourism",
+          "palace",
+          "urban",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1739-0f4a603c2d",
         "className": "p2",
-        "title": "IMG 1739",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47791,7 +48827,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1739"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, palace, architecture, historic building, travel photography, urban landmark, tourism, Real Palacio"
           },
           {
             "label": "Captured",
@@ -47846,12 +48886,24 @@ export const collections = {
             "bytes": 3639498
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "urban landmark",
+          "tourism",
+          "Real Palacio"
+        ]
       },
       {
         "id": "img-1735-e1337440c8",
         "className": "p3",
-        "title": "IMG 1735",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -47861,7 +48913,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1735"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, historic, landmark, travel, tourism, Europe, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -47916,12 +48972,26 @@ export const collections = {
             "bytes": 3324247
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic",
+          "landmark",
+          "travel",
+          "tourism",
+          "Europe",
+          "Community of Madrid",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1733-955e266701",
         "className": "p4",
-        "title": "IMG 1733",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -47931,7 +49001,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1733"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace of Madrid, palace, architecture, historic building, landmark, travel, tourism, city, royal residence, urban, Community of Madrid, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -47986,12 +49060,28 @@ export const collections = {
             "bytes": 9207898
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace of Madrid",
+          "palace",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel",
+          "tourism",
+          "city",
+          "royal residence",
+          "urban",
+          "Community of Madrid",
+          "Real Palacio",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1732-3c4378b2eb",
         "className": "p5",
-        "title": "IMG 1732",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -48001,7 +49091,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1732"
+            "value": "Madrid Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, Community of Madrid, palace, architecture, historic building, travel photography, cityscape, tourism, landmark"
           },
           {
             "label": "Captured",
@@ -48056,12 +49150,25 @@ export const collections = {
             "bytes": 8388107
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "Community of Madrid",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "landmark"
+        ]
       },
       {
         "id": "img-1731-a0901994cf",
         "className": "p1",
-        "title": "IMG 1731",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -48071,7 +49178,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1731"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, Real Palacio, Community of Madrid, travel, architecture, palace, city landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -48126,12 +49237,24 @@ export const collections = {
             "bytes": 4557787
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Real Palacio",
+          "Community of Madrid",
+          "travel",
+          "architecture",
+          "palace",
+          "city landmark",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1841-484a17bd40",
         "className": "p2",
-        "title": "IMG 1841",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48141,7 +49264,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1841"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, Real Palacio, palace, architecture, landmark, historic building, travel photography, city, tourism"
           },
           {
             "label": "Captured",
@@ -48195,13 +49322,26 @@ export const collections = {
             "bytes": 14597369
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel photography",
+          "city",
+          "tourism"
+        ],
         "duration": 7.3
       },
       {
         "id": "img-1834-dbeb78d35f",
         "className": "p3",
-        "title": "IMG 1834",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48211,7 +49351,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1834"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Palacio Real, historic architecture, palace, travel photography, tourism, city landmark, urban scene, video, Real Palacio"
           },
           {
             "label": "Captured",
@@ -48265,13 +49409,27 @@ export const collections = {
             "bytes": 13581372
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "historic architecture",
+          "palace",
+          "travel photography",
+          "tourism",
+          "city landmark",
+          "urban scene",
+          "video",
+          "Real Palacio"
+        ],
         "duration": 6.87
       },
       {
         "id": "img-1828-45d847026c",
         "className": "p4",
-        "title": "IMG 1828",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48281,7 +49439,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1828"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, Royal Palace, Real Palacio, palace, historic architecture, landmark, travel photography, tourism"
           },
           {
             "label": "Captured",
@@ -48335,13 +49497,25 @@ export const collections = {
             "bytes": 10031480
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "historic architecture",
+          "landmark",
+          "travel photography",
+          "tourism"
+        ],
         "duration": 8.61
       },
       {
         "id": "img-1827-719cafbfff",
         "className": "p5",
-        "title": "IMG 1827",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48351,7 +49525,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1827"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, Community of Madrid, palace, architecture, travel, tourism, historic building, landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -48405,13 +49583,26 @@ export const collections = {
             "bytes": 14766205
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "Community of Madrid",
+          "palace",
+          "architecture",
+          "travel",
+          "tourism",
+          "historic building",
+          "landmark",
+          "Travel photography"
+        ],
         "duration": 11.61
       },
       {
         "id": "img-1825-1a087a004d",
         "className": "p1",
-        "title": "IMG 1825",
+        "title": "At the Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48421,7 +49612,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1825"
+            "value": "At the Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, travel, architecture, palace, city, tourism, Europe, historic, urban, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -48475,13 +49670,28 @@ export const collections = {
             "bytes": 12473247
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "travel",
+          "architecture",
+          "palace",
+          "city",
+          "tourism",
+          "Europe",
+          "historic",
+          "urban",
+          "Community of Madrid",
+          "Travel photography"
+        ],
         "duration": 7.34
       },
       {
         "id": "img-1823-0e64d2b72f",
         "className": "p2",
-        "title": "IMG 1823",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48491,7 +49701,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1823"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, palace, architecture, historic building, travel, tourism, city, video, Real Palacio, Travel photography"
           },
           {
             "label": "Captured",
@@ -48545,13 +49759,27 @@ export const collections = {
             "bytes": 10501570
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "city",
+          "video",
+          "Real Palacio",
+          "Travel photography"
+        ],
         "duration": 5.27
       },
       {
         "id": "img-1822-2c1fa446a1",
         "className": "p3",
-        "title": "IMG 1822",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48561,7 +49789,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1822"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Real Palacio, palace, architecture, travel, city landmark, historic building, tourism, video, Travel photography"
           },
           {
             "label": "Captured",
@@ -48615,13 +49847,27 @@ export const collections = {
             "bytes": 10133838
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "travel",
+          "city landmark",
+          "historic building",
+          "tourism",
+          "video",
+          "Travel photography"
+        ],
         "duration": 9.54
       },
       {
         "id": "img-1821-755f783ebc",
         "className": "p4",
-        "title": "IMG 1821",
+        "title": "Madrid palace visit",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48631,7 +49877,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1821"
+            "value": "Madrid palace visit"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Real Palacio, Royal Palace, palace, travel, tourism, architecture, sightseeing, Travel photography"
           },
           {
             "label": "Captured",
@@ -48685,13 +49935,25 @@ export const collections = {
             "bytes": 16247428
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Real Palacio",
+          "Royal Palace",
+          "palace",
+          "travel",
+          "tourism",
+          "architecture",
+          "sightseeing",
+          "Travel photography"
+        ],
         "duration": 12.33
       },
       {
         "id": "img-1820-53f03e41b0",
         "className": "p5",
-        "title": "IMG 1820",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48701,7 +49963,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1820"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace of Madrid, Real Palacio, travel, architecture, palace, landmark, cityscape, Travel photography"
           },
           {
             "label": "Captured",
@@ -48755,13 +50021,25 @@ export const collections = {
             "bytes": 9348161
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace of Madrid",
+          "Real Palacio",
+          "travel",
+          "architecture",
+          "palace",
+          "landmark",
+          "cityscape",
+          "Travel photography"
+        ],
         "duration": 8.47
       },
       {
         "id": "img-1819-1b933a590e",
         "className": "p1",
-        "title": "IMG 1819",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48771,7 +50049,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1819"
+            "value": "Royal Palace of Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Royal Palace, Palacio Real, Real Palacio, travel, architecture, landmark, historic building, city, tourism, Travel photography"
           },
           {
             "label": "Captured",
@@ -48825,13 +50107,27 @@ export const collections = {
             "bytes": 14013267
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Real Palacio",
+          "travel",
+          "architecture",
+          "landmark",
+          "historic building",
+          "city",
+          "tourism",
+          "Travel photography"
+        ],
         "duration": 11.93
       },
       {
         "id": "img-1808-1745ac1003",
         "className": "p2",
-        "title": "IMG 1808",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48841,7 +50137,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1808"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, historic building, travel, tourism, Europe, city, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -48895,13 +50195,27 @@ export const collections = {
             "bytes": 41626069
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "Europe",
+          "city",
+          "Community of Madrid",
+          "Travel photography"
+        ],
         "duration": 37
       },
       {
         "id": "img-1785-749fbc5030",
         "className": "p3",
-        "title": "IMG 1785",
+        "title": "Madrid at the Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48911,7 +50225,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1785"
+            "value": "Madrid at the Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Palacio Real, Real Palacio, Community of Madrid, travel, architecture, cityscape, historic building, tourism, Travel photography"
           },
           {
             "label": "Captured",
@@ -48965,13 +50283,26 @@ export const collections = {
             "bytes": 7860966
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Real Palacio",
+          "Community of Madrid",
+          "travel",
+          "architecture",
+          "cityscape",
+          "historic building",
+          "tourism",
+          "Travel photography"
+        ],
         "duration": 6.8
       },
       {
         "id": "img-1784-515f25653b",
         "className": "p4",
-        "title": "IMG 1784",
+        "title": "Madrid Palace Interior",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -48981,7 +50312,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1784"
+            "value": "Madrid Palace Interior"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, interior, travel, architecture, historic, tourism, video, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -49035,13 +50370,27 @@ export const collections = {
             "bytes": 4107700
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "interior",
+          "travel",
+          "architecture",
+          "historic",
+          "tourism",
+          "video",
+          "Community of Madrid",
+          "Travel photography"
+        ],
         "duration": 2.96
       },
       {
         "id": "img-1783-7259c95f33",
         "className": "p5",
-        "title": "IMG 1783",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -49051,7 +50400,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1783"
+            "value": "Royal Palace in Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, Community of Madrid, architecture, travel, cityscape, historic building, palace, tourism, street view, Travel photography"
           },
           {
             "label": "Captured",
@@ -49105,13 +50458,27 @@ export const collections = {
             "bytes": 29709353
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "Community of Madrid",
+          "architecture",
+          "travel",
+          "cityscape",
+          "historic building",
+          "palace",
+          "tourism",
+          "street view",
+          "Travel photography"
+        ],
         "duration": 21.65
       },
       {
         "id": "img-1770-434ac95ffd",
         "className": "p1",
-        "title": "IMG 1770",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -49121,7 +50488,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1770"
+            "value": "Madrid Royal Palace"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Community of Madrid, Real Palacio, Royal Palace, palace, architecture, historic building, travel photography, tourism, landmark, iPhone video"
           },
           {
             "label": "Captured",
@@ -49175,13 +50546,26 @@ export const collections = {
             "bytes": 20244981
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Community of Madrid",
+          "Real Palacio",
+          "Royal Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "tourism",
+          "landmark",
+          "iPhone video"
+        ],
         "duration": 9.27
       },
       {
         "id": "img-1746-f07ddf8619",
         "className": "p2",
-        "title": "IMG 1746",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -49191,7 +50575,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1746"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, historic building, landmark, travel, city, tourism, Europe, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -49245,13 +50633,28 @@ export const collections = {
             "bytes": 7864030
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel",
+          "city",
+          "tourism",
+          "Europe",
+          "Community of Madrid",
+          "Travel photography"
+        ],
         "duration": 6.6
       },
       {
         "id": "img-1738-9138530372",
         "className": "p3",
-        "title": "IMG 1738",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -49261,7 +50664,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1738"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, historic building, travel, tourism, cityscape, Community of Madrid, Travel photography"
           },
           {
             "label": "Captured",
@@ -49315,13 +50722,26 @@ export const collections = {
             "bytes": 25792600
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "tourism",
+          "cityscape",
+          "Community of Madrid",
+          "Travel photography"
+        ],
         "duration": 16.61
       },
       {
         "id": "img-1734-1bf3b86935",
         "className": "p4",
-        "title": "IMG 1734",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -49331,7 +50751,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1734"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, Community of Madrid, palace, architecture, landmark, travel, tourism, city, historic, Travel photography"
           },
           {
             "label": "Captured",
@@ -49385,13 +50809,27 @@ export const collections = {
             "bytes": 23875491
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "Community of Madrid",
+          "palace",
+          "architecture",
+          "landmark",
+          "travel",
+          "tourism",
+          "city",
+          "historic",
+          "Travel photography"
+        ],
         "duration": 12.38
       },
       {
         "id": "img-1725-9b92758bc4",
         "className": "p5",
-        "title": "IMG 1725",
+        "title": "Royal Palace, Madrid",
         "caption": "Spain / 2025-06-14",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -49401,7 +50839,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1725"
+            "value": "Royal Palace, Madrid"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Madrid, Royal Palace, Real Palacio, palace, architecture, travel, tourism, historic building, city, Community of Madrid, landmark, Travel photography"
           },
           {
             "label": "Captured",
@@ -49455,7 +50897,21 @@ export const collections = {
             "bytes": 16800811
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Madrid",
+          "Royal Palace",
+          "Real Palacio",
+          "palace",
+          "architecture",
+          "travel",
+          "tourism",
+          "historic building",
+          "city",
+          "Community of Madrid",
+          "landmark",
+          "Travel photography"
+        ],
         "duration": 14.08
       },
       {
@@ -57443,7 +58899,7 @@ export const collections = {
       {
         "id": "img-1549-471a28324d",
         "className": "p4",
-        "title": "IMG 1549",
+        "title": "Valencia Cathedral",
         "caption": "Spain / 2025-06-09",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -57453,7 +58909,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1549"
+            "value": "Valencia Cathedral"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Valencia, Valencia Cathedral, Catedral de Valencia, Valencian Community, cathedral, church, Gothic architecture, historic architecture, landmark, travel photography, Catedral"
           },
           {
             "label": "Captured",
@@ -57508,7 +58968,20 @@ export const collections = {
             "bytes": 4181184
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Valencia",
+          "Valencia Cathedral",
+          "Catedral de Valencia",
+          "Valencian Community",
+          "cathedral",
+          "church",
+          "Gothic architecture",
+          "historic architecture",
+          "landmark",
+          "travel photography",
+          "Catedral"
+        ]
       },
       {
         "id": "img-1548-bb4fc6c71a",
@@ -57753,7 +59226,7 @@ export const collections = {
       {
         "id": "img-1545-fbf260c171",
         "className": "p3",
-        "title": "IMG 1545",
+        "title": "Valencia Cathedral",
         "caption": "Spain / 2025-06-09",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -57763,7 +59236,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1545"
+            "value": "Valencia Cathedral"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Valencia, Valencia Cathedral, Catedral, Valencian Community, cathedral, church, architecture, historic, landmark, travel, religion, Travel photography"
           },
           {
             "label": "Captured",
@@ -57818,7 +59295,21 @@ export const collections = {
             "bytes": 8667468
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Valencia",
+          "Valencia Cathedral",
+          "Catedral",
+          "Valencian Community",
+          "cathedral",
+          "church",
+          "architecture",
+          "historic",
+          "landmark",
+          "travel",
+          "religion",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1416-ce14e9f776",
@@ -61533,7 +63024,7 @@ export const collections = {
       {
         "id": "img-1297-79f91bca96",
         "className": "p2",
-        "title": "IMG 1297",
+        "title": "Seville",
         "caption": "Spain / 2025-05-16",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -61543,7 +63034,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1297"
+            "value": "Seville"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Seville, Travel photography"
           },
           {
             "label": "Captured",
@@ -61598,7 +63093,11 @@ export const collections = {
             "bytes": 10139422
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Seville",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1296-57d10180dd",
@@ -62513,7 +64012,7 @@ export const collections = {
       {
         "id": "img-1053-c743e3adab",
         "className": "p1",
-        "title": "IMG 1053",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62523,7 +64022,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1053"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62578,12 +64081,16 @@ export const collections = {
             "bytes": 4913688
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1052-3340ac087f",
         "className": "p2",
-        "title": "IMG 1052",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62593,7 +64100,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1052"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62648,12 +64159,16 @@ export const collections = {
             "bytes": 5030728
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1051-a7db55f33d",
         "className": "p3",
-        "title": "IMG 1051",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62663,7 +64178,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1051"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62718,12 +64237,16 @@ export const collections = {
             "bytes": 5443778
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1050-218e6e50fa",
         "className": "p4",
-        "title": "IMG 1050",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62733,7 +64256,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1050"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62788,12 +64315,16 @@ export const collections = {
             "bytes": 5547139
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1049-0d27d1b9e0",
         "className": "p5",
-        "title": "IMG 1049",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62803,7 +64334,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1049"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62858,12 +64393,16 @@ export const collections = {
             "bytes": 5462569
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1048-a88e4bbbed",
         "className": "p1",
-        "title": "IMG 1048",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62873,7 +64412,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1048"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62928,12 +64471,16 @@ export const collections = {
             "bytes": 5358130
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1047-3f423c66d0",
         "className": "p2",
-        "title": "IMG 1047",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -62943,7 +64490,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1047"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -62998,12 +64549,16 @@ export const collections = {
             "bytes": 5217107
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1046-0a291f3f6b",
         "className": "p3",
-        "title": "IMG 1046",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -63013,7 +64568,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1046"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63068,12 +64627,16 @@ export const collections = {
             "bytes": 5607853
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1045-f0bb5afd06",
         "className": "p4",
-        "title": "IMG 1045",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -63083,7 +64646,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1045"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63138,12 +64705,16 @@ export const collections = {
             "bytes": 11557869
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1044-6c1c81f667",
         "className": "p5",
-        "title": "IMG 1044",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -63153,7 +64724,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1044"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63208,12 +64783,16 @@ export const collections = {
             "bytes": 9777958
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1043-3857110b84",
         "className": "p1",
-        "title": "IMG 1043",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -63223,7 +64802,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1043"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63278,12 +64861,16 @@ export const collections = {
             "bytes": 11409812
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1042-e2da70c37c",
         "className": "p2",
-        "title": "IMG 1042",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -63293,7 +64880,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1042"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63348,12 +64939,16 @@ export const collections = {
             "bytes": 11926107
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1041-ebc7a0b91d",
         "className": "p3",
-        "title": "IMG 1041",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -63363,7 +64958,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1041"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63418,12 +65017,16 @@ export const collections = {
             "bytes": 5079369
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1060-9e7b7af75d",
         "className": "p4",
-        "title": "IMG 1060",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63433,7 +65036,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1060"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63487,13 +65094,17 @@ export const collections = {
             "bytes": 33545017
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 29.29
       },
       {
         "id": "img-1059-af6442e4d6",
         "className": "p5",
-        "title": "IMG 1059",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63503,7 +65114,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1059"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63557,13 +65172,17 @@ export const collections = {
             "bytes": 16686540
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 14.14
       },
       {
         "id": "img-1058-8d294fe8e8",
         "className": "p1",
-        "title": "IMG 1058",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63573,7 +65192,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1058"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63627,13 +65250,17 @@ export const collections = {
             "bytes": 13831780
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 11.81
       },
       {
         "id": "img-1057-bb454434b8",
         "className": "p2",
-        "title": "IMG 1057",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63643,7 +65270,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1057"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63697,13 +65328,17 @@ export const collections = {
             "bytes": 11263972
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 9.78
       },
       {
         "id": "img-1056-d435404ae1",
         "className": "p3",
-        "title": "IMG 1056",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63713,7 +65348,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1056"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63767,13 +65406,17 @@ export const collections = {
             "bytes": 8292824
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 6.64
       },
       {
         "id": "img-1055-41b73643cf",
         "className": "p4",
-        "title": "IMG 1055",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63783,7 +65426,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1055"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63837,13 +65484,17 @@ export const collections = {
             "bytes": 26161686
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 22.25
       },
       {
         "id": "img-1054-bbd7e90a80",
         "className": "p5",
-        "title": "IMG 1054",
+        "title": "Ronda",
         "caption": "Spain / 2025-05-07",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -63853,7 +65504,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1054"
+            "value": "Ronda"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Ronda, Travel photography"
           },
           {
             "label": "Captured",
@@ -63907,13 +65562,17 @@ export const collections = {
             "bytes": 14747965
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Spain",
+          "Ronda",
+          "Travel photography"
+        ],
         "duration": 12.28
       },
       {
         "id": "img-0863-07f58ecacb",
         "className": "p1",
-        "title": "IMG 0863",
+        "title": "Alhaurin De La Torre, Sunset",
         "caption": "Spain / 2025-02-23",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -63923,7 +65582,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 0863"
+            "value": "Alhaurin De La Torre, Sunset"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Alhaurin De La Torre, Sunset, Travel photography"
           },
           {
             "label": "Captured",
@@ -63978,12 +65641,17 @@ export const collections = {
             "bytes": 3653901
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Alhaurin De La Torre",
+          "Sunset",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-0862-9252ca91e8",
         "className": "p2",
-        "title": "IMG 0862",
+        "title": "Alhaurin De La Torre, Sunset",
         "caption": "Spain / 2025-02-23",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -63993,7 +65661,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 0862"
+            "value": "Alhaurin De La Torre, Sunset"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Alhaurin De La Torre, Sunset, Travel photography"
           },
           {
             "label": "Captured",
@@ -64048,12 +65720,17 @@ export const collections = {
             "bytes": 3639126
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Alhaurin De La Torre",
+          "Sunset",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-0861-fe2e90fe4e",
         "className": "p3",
-        "title": "IMG 0861",
+        "title": "Alhaurin De La Torre, Sunset",
         "caption": "Spain / 2025-02-23",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -64063,7 +65740,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 0861"
+            "value": "Alhaurin De La Torre, Sunset"
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Alhaurin De La Torre, Sunset, Travel photography"
           },
           {
             "label": "Captured",
@@ -64118,12 +65799,17 @@ export const collections = {
             "bytes": 3635535
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Alhaurin De La Torre",
+          "Sunset",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2888-9f1caafe57",
         "className": "p4",
-        "title": "D5H 2888",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64133,7 +65819,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2888"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64188,12 +65878,17 @@ export const collections = {
             "bytes": 3401879
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2887-2c7995d791",
         "className": "p5",
-        "title": "D5H 2887",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64203,7 +65898,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2887"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64258,12 +65957,17 @@ export const collections = {
             "bytes": 3425240
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2886-1f2ee47bd1",
         "className": "p1",
-        "title": "D5H 2886",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64273,7 +65977,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2886"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64328,12 +66036,17 @@ export const collections = {
             "bytes": 3445623
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2885-2382b61507",
         "className": "p2",
-        "title": "D5H 2885",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64343,7 +66056,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2885"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64398,12 +66115,17 @@ export const collections = {
             "bytes": 3476757
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2884-7d8cd97d5f",
         "className": "p3",
-        "title": "D5H 2884",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64413,7 +66135,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2884"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64468,12 +66194,17 @@ export const collections = {
             "bytes": 3466433
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2883-e5e52f86fb",
         "className": "p4",
-        "title": "D5H 2883",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64483,7 +66214,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2883"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64538,12 +66273,17 @@ export const collections = {
             "bytes": 3501432
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2882-c780011bbe",
         "className": "p5",
-        "title": "D5H 2882",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64553,7 +66293,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2882"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64608,12 +66352,17 @@ export const collections = {
             "bytes": 3458604
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2881-ea5569bb4d",
         "className": "p1",
-        "title": "D5H 2881",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64623,7 +66372,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2881"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64678,12 +66431,17 @@ export const collections = {
             "bytes": 3498876
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2880-4030e3ca13",
         "className": "p2",
-        "title": "D5H 2880",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64693,7 +66451,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2880"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64748,12 +66510,17 @@ export const collections = {
             "bytes": 3352724
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2879-e65cb5a582",
         "className": "p3",
-        "title": "D5H 2879",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64763,7 +66530,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2879"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64818,12 +66589,17 @@ export const collections = {
             "bytes": 3306413
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2878-8338396820",
         "className": "p4",
-        "title": "D5H 2878",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64833,7 +66609,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2878"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64888,12 +66668,17 @@ export const collections = {
             "bytes": 3341590
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2877-5f13bb5308",
         "className": "p5",
-        "title": "D5H 2877",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64903,7 +66688,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2877"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -64958,12 +66747,17 @@ export const collections = {
             "bytes": 3335894
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2876-783b85cc21",
         "className": "p1",
-        "title": "D5H 2876",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -64973,7 +66767,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2876"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -65028,12 +66826,17 @@ export const collections = {
             "bytes": 3313643
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2875-bd388467ea",
         "className": "p2",
-        "title": "D5H 2875",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -65043,7 +66846,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2875"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -65098,12 +66905,17 @@ export const collections = {
             "bytes": 3314087
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2874-9afa306ccd",
         "className": "p3",
-        "title": "D5H 2874",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -65113,7 +66925,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2874"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -65168,12 +66984,17 @@ export const collections = {
             "bytes": 3308109
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2873-c924a9a1ef",
         "className": "p4",
-        "title": "D5H 2873",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -65183,7 +67004,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2873"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -65238,12 +67063,17 @@ export const collections = {
             "bytes": 3194383
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2872-2ab71fa586",
         "className": "p5",
-        "title": "D5H 2872",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -65253,7 +67083,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2872"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -65308,12 +67142,17 @@ export const collections = {
             "bytes": 1888015
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2871-0f2c6b767c",
         "className": "p1",
-        "title": "D5H 2871",
+        "title": "Malaga Airport.",
         "caption": "Spain / 2025-02-22",
         "full": "JPG master",
         "megapixels": 11.6,
@@ -65323,7 +67162,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "D5H 2871"
+            "value": "Malaga Airport."
+          },
+          {
+            "label": "Keywords",
+            "value": "Spain, Malaga Airport., Views From Home, Travel photography"
           },
           {
             "label": "Captured",
@@ -65378,7 +67221,12 @@ export const collections = {
             "bytes": 1827319
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Spain",
+          "Malaga Airport.",
+          "Views From Home",
+          "Travel photography"
+        ]
       },
       {
         "id": "d5h-2870-44153ea21e",
@@ -71333,7 +73181,7 @@ export const collections = {
       {
         "id": "20220705-164431-00139-pano-92425313d3",
         "className": "p2",
-        "title": "20220705 164431 00139 Pano",
+        "title": "Plaza de España, Seville",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 26.6,
@@ -71343,11 +73191,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164431 00139 Pano"
+            "value": "Plaza de España, Seville"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Plaza de España, landmark, architecture, square, travel, Andalusia, panorama, historic, tourism, Travel photography"
           },
           {
             "label": "Captured",
@@ -71404,13 +73252,23 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Plaza de España",
+          "landmark",
+          "architecture",
+          "square",
+          "travel",
+          "Andalusia",
+          "panorama",
+          "historic",
+          "tourism",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-164358-00121-pano-28e2885b71",
         "className": "p3",
-        "title": "20220705 164358 00121 Pano",
+        "title": "Plaza de España, Seville",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 146,
@@ -71420,11 +73278,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164358 00121 Pano"
+            "value": "Plaza de España, Seville"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Plaza de España, landmark, monument, architecture, panorama, travel, historic, plaza, arches, tilework, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71481,13 +73339,25 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Plaza de España",
+          "landmark",
+          "monument",
+          "architecture",
+          "panorama",
+          "travel",
+          "historic",
+          "plaza",
+          "arches",
+          "tilework",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-164409-00126-pano-75c4163f8e",
         "className": "p4",
-        "title": "20220705 164409 00126 Pano",
+        "title": "Seville Cathedral",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 56,
@@ -71497,11 +73367,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164409 00126 Pano"
+            "value": "Seville Cathedral"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Seville Cathedral, cathedral, landmark, monument, architecture, historic, travel, panorama, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71558,13 +73428,23 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Seville Cathedral",
+          "cathedral",
+          "landmark",
+          "monument",
+          "architecture",
+          "historic",
+          "travel",
+          "panorama",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-164412-00127-pano-13a8791aa3",
         "className": "p5",
-        "title": "20220705 164412 00127 Pano",
+        "title": "Plaza de España, Seville",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 38.9,
@@ -71574,11 +73454,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164412 00127 Pano"
+            "value": "Plaza de España, Seville"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Plaza de España, landmark, monument, architecture, panoramic, travel, tourism, historic, plaza, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71635,13 +73515,24 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Plaza de España",
+          "landmark",
+          "monument",
+          "architecture",
+          "panoramic",
+          "travel",
+          "tourism",
+          "historic",
+          "plaza",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-164252-00114-pano-77e6201324",
         "className": "p1",
-        "title": "20220705 164252 00114 Pano",
+        "title": "Seville cityscape",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 34.5,
@@ -71651,11 +73542,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164252 00114 Pano"
+            "value": "Seville cityscape"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Andalusia, cityscape, panorama, architecture, historic center, travel, urban landscape, skyline, wide-angle, tourism, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71712,13 +73603,25 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Andalusia",
+          "cityscape",
+          "panorama",
+          "architecture",
+          "historic center",
+          "travel",
+          "urban landscape",
+          "skyline",
+          "wide-angle",
+          "tourism",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-164226-00105-pano-467f6f472c",
         "className": "p2",
-        "title": "20220705 164226 00105 Pano",
+        "title": "Plaza de España, Seville",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 72.8,
@@ -71728,11 +73631,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164226 00105 Pano"
+            "value": "Plaza de España, Seville"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Plaza de España, monument, landmark, architecture, travel, panorama, historic, tourism, wide angle, Andalusia, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71789,13 +73692,25 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Plaza de España",
+          "monument",
+          "landmark",
+          "architecture",
+          "travel",
+          "panorama",
+          "historic",
+          "tourism",
+          "wide angle",
+          "Andalusia",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-164241-00109-pano-c1234d4711",
         "className": "p3",
-        "title": "20220705 164241 00109 Pano",
+        "title": "Seville landmark panorama",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 47.1,
@@ -71805,11 +73720,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 164241 00109 Pano"
+            "value": "Seville landmark panorama"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, landmark, panorama, architecture, travel, tourism, cityscape, historic, wide-angle, monument, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71866,13 +73781,24 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "landmark",
+          "panorama",
+          "architecture",
+          "travel",
+          "tourism",
+          "cityscape",
+          "historic",
+          "wide-angle",
+          "monument",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-163419-00083-pano-3f4486b119",
         "className": "p4",
-        "title": "20220705 163419 00083 Pano",
+        "title": "Seville landmark panorama",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 35.8,
@@ -71882,11 +73808,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 163419 00083 Pano"
+            "value": "Seville landmark panorama"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, landmark, panorama, architecture, travel, cityscape, historic, tourism, wide view, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -71943,13 +73869,23 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "landmark",
+          "panorama",
+          "architecture",
+          "travel",
+          "cityscape",
+          "historic",
+          "tourism",
+          "wide view",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-163214-00065-pano-bcd3b6cb72",
         "className": "p5",
-        "title": "20220705 163214 00065 Pano",
+        "title": "Seville Panorama",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 21.5,
@@ -71959,11 +73895,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 163214 00065 Pano"
+            "value": "Seville Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, panorama, cityscape, wide view, travel, architecture, urban landscape, sunny, outdoors, historic city, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -72020,13 +73956,24 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "panorama",
+          "cityscape",
+          "wide view",
+          "travel",
+          "architecture",
+          "urban landscape",
+          "sunny",
+          "outdoors",
+          "historic city",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-163201-00058-pano-fcbc893e0f",
         "className": "p1",
-        "title": "20220705 163201 00058 Pano",
+        "title": "Plaza de España, Seville",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 50.2,
@@ -72036,11 +73983,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 163201 00058 Pano"
+            "value": "Plaza de España, Seville"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, Plaza de España, monument, landmark, architecture, historic, tourism, panorama, wide angle, ceramic, arcade, travel, outdoor, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -72097,13 +74044,27 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "Plaza de España",
+          "monument",
+          "landmark",
+          "architecture",
+          "historic",
+          "tourism",
+          "panorama",
+          "wide angle",
+          "ceramic",
+          "arcade",
+          "travel",
+          "outdoor",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-163205-00060-pano-8068d8fe3f",
         "className": "p2",
-        "title": "20220705 163205 00060 Pano",
+        "title": "Seville landmark panorama",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 20.8,
@@ -72113,11 +74074,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 163205 00060 Pano"
+            "value": "Seville landmark panorama"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, landmark, panorama, cityscape, travel, architecture, historic, urban, outdoors, tourism, Andalusia, Travel photography"
           },
           {
             "label": "Captured",
@@ -72174,13 +74135,24 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "landmark",
+          "panorama",
+          "cityscape",
+          "travel",
+          "architecture",
+          "historic",
+          "urban",
+          "outdoors",
+          "tourism",
+          "Andalusia",
+          "Travel photography"
         ]
       },
       {
         "id": "20220705-163053-00041-pano-ffda1926ab",
         "className": "p3",
-        "title": "20220705 163053 00041 Pano",
+        "title": "Seville Panorama",
         "caption": "Spain / 2022-07-05",
         "full": "JPG master",
         "megapixels": 46.5,
@@ -72190,11 +74162,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220705 163053 00041 Pano"
+            "value": "Seville Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Spain, seville"
+            "value": "Spain, Seville, panorama, cityscape, travel, architecture, urban, landmark, sunlit, wide angle, Andalusia, tourism, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -72251,7 +74223,19 @@ export const collections = {
         ],
         "keywords": [
           "Spain",
-          "seville"
+          "Seville",
+          "panorama",
+          "cityscape",
+          "travel",
+          "architecture",
+          "urban",
+          "landmark",
+          "sunlit",
+          "wide angle",
+          "Andalusia",
+          "tourism",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
@@ -72489,7 +74473,7 @@ export const collections = {
       {
         "id": "20220620-144601-00127-pano-1a18b2ed13",
         "className": "p2",
-        "title": "20220620 144601 00127 Pano",
+        "title": "Historic monument in Spain",
         "caption": "Spain / 2022-06-20",
         "full": "JPG master",
         "megapixels": 36.2,
@@ -72499,11 +74483,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220620 144601 00127 Pano"
+            "value": "Historic monument in Spain"
           },
           {
             "label": "Keywords",
-            "value": "Spain"
+            "value": "Spain, Ronda, landmark, historic, architecture, travel, tourism, panorama, outdoor, heritage, square format, Travel photography"
           },
           {
             "label": "Captured",
@@ -72559,7 +74543,18 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain"
+          "Spain",
+          "Ronda",
+          "landmark",
+          "historic",
+          "architecture",
+          "travel",
+          "tourism",
+          "panorama",
+          "outdoor",
+          "heritage",
+          "square format",
+          "Travel photography"
         ]
       },
       {
@@ -72800,7 +74795,7 @@ export const collections = {
       {
         "id": "20220511-101524-04347-16cfbebb6e",
         "className": "p1",
-        "title": "20220511 101524 04347",
+        "title": "Catedral de Santiago, Bilbao",
         "caption": "Spain / 2022-05-11",
         "full": "JPG master",
         "megapixels": 22.7,
@@ -72810,11 +74805,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220511 101524 04347"
+            "value": "Catedral de Santiago, Bilbao"
           },
           {
             "label": "Keywords",
-            "value": "Architecture, Basque Country, Bilbao, Building, Catedral de Santiago, Euzkadi, Guggenheim museum, Pays Basque, Spain, St James Cathedral, Window, columns, planter"
+            "value": "Architecture, Basque Country, Bilbao, Building, Catedral de Santiago, Cathedral, Euzkadi, Gothic, Pays Basque, Spain, St James Cathedral, Window, columns, planter, Guggenheim museum, Travel photography"
           },
           {
             "label": "Captured",
@@ -72875,20 +74870,23 @@ export const collections = {
           "Bilbao",
           "Building",
           "Catedral de Santiago",
+          "Cathedral",
           "Euzkadi",
-          "Guggenheim museum",
+          "Gothic",
           "Pays Basque",
           "Spain",
           "St James Cathedral",
           "Window",
           "columns",
-          "planter"
+          "planter",
+          "Guggenheim museum",
+          "Travel photography"
         ]
       },
       {
         "id": "20220511-101210-04342-d9757c336f",
         "className": "p2",
-        "title": "20220511 101210 04342",
+        "title": "Catedral de Santiago, Bilbao",
         "caption": "Spain / 2022-05-11",
         "full": "JPG master",
         "megapixels": 38.4,
@@ -72898,11 +74896,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220511 101210 04342"
+            "value": "Catedral de Santiago, Bilbao"
           },
           {
             "label": "Keywords",
-            "value": "Architecture, Basque Country, Bilbao, Building, Catedral de Santiago, Euzkadi, Guggenheim museum, Pays Basque, Spain, St James Cathedral, Window, columns, planter"
+            "value": "Catedral de Santiago, Bilbao, Basque Country, Spain, cathedral, church, architecture, facade, window, columns, travel, Building, Euzkadi, Guggenheim museum, Pays Basque, St James Cathedral, planter, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -72958,19 +74956,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Architecture",
-          "Basque Country",
-          "Bilbao",
-          "Building",
           "Catedral de Santiago",
+          "Bilbao",
+          "Basque Country",
+          "Spain",
+          "cathedral",
+          "church",
+          "architecture",
+          "facade",
+          "window",
+          "columns",
+          "travel",
+          "Building",
           "Euzkadi",
           "Guggenheim museum",
           "Pays Basque",
-          "Spain",
           "St James Cathedral",
-          "Window",
-          "columns",
-          "planter"
+          "planter",
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
@@ -73153,7 +75157,7 @@ export const collections = {
       {
         "id": "20220511-001210-04287-13f472f9a5",
         "className": "p5",
-        "title": "20220511 001210 04287",
+        "title": "Catedral de Santiago, Bilbao",
         "caption": "Spain / 2022-05-11",
         "full": "JPG master",
         "megapixels": 33.3,
@@ -73163,11 +75167,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220511 001210 04287"
+            "value": "Catedral de Santiago, Bilbao"
           },
           {
             "label": "Keywords",
-            "value": "Spain"
+            "value": "Spain, travel, travel photography, portrait orientation, vertical, tourism, destination, outdoor, journey, vacation"
           },
           {
             "label": "Captured",
@@ -73223,7 +75227,16 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Spain"
+          "Spain",
+          "travel",
+          "travel photography",
+          "portrait orientation",
+          "vertical",
+          "tourism",
+          "destination",
+          "outdoor",
+          "journey",
+          "vacation"
         ]
       },
       {
@@ -73799,7 +75812,7 @@ export const collections = {
       {
         "id": "20180523-1505-00933-be91168496",
         "className": "p3",
-        "title": "20180523 1505 00933",
+        "title": "Madrid, Spain",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 18.4,
@@ -73809,11 +75822,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1505 00933"
+            "value": "Madrid, Spain"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Comunidad de Madrid, Spain, Europe, travel, travel photography, urban, city, street, May 2018, Nikon D500, Basque Country, Euzkadi"
           },
           {
             "label": "Captured",
@@ -73869,15 +75882,25 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Comunidad de Madrid",
+          "Spain",
+          "Europe",
+          "travel",
+          "travel photography",
+          "urban",
+          "city",
+          "street",
+          "May 2018",
+          "Nikon D500",
           "Basque Country",
-          "Euzkadi",
-          "Spain"
+          "Euzkadi"
         ]
       },
       {
         "id": "20180523-1436-00931-d244aba917",
         "className": "p4",
-        "title": "20180523 1436 00931",
+        "title": "Madrid street scene",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 13.9,
@@ -73887,11 +75910,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1436 00931"
+            "value": "Madrid street scene"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Community of Madrid, Spain, travel photography, street photography, urban scene, city life, outdoors, Europe, Sony?, Basque Country, Euzkadi"
           },
           {
             "label": "Captured",
@@ -73947,15 +75970,24 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Community of Madrid",
+          "Spain",
+          "travel photography",
+          "street photography",
+          "urban scene",
+          "city life",
+          "outdoors",
+          "Europe",
+          "Sony?",
           "Basque Country",
-          "Euzkadi",
-          "Spain"
+          "Euzkadi"
         ]
       },
       {
         "id": "20180523-1436-00930-629888625d",
         "className": "p5",
-        "title": "20180523 1436 00930",
+        "title": "Urban scene in Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 12.7,
@@ -73965,11 +75997,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1436 00930"
+            "value": "Urban scene in Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Comunidad de Madrid, Spain, urban scene, city, street, travel photography, outdoors, 2018, architecture, public space, Basque Country, Euzkadi, wide composition"
           },
           {
             "label": "Captured",
@@ -74025,15 +76057,26 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Comunidad de Madrid",
+          "Spain",
+          "urban scene",
+          "city",
+          "street",
+          "travel photography",
+          "outdoors",
+          "2018",
+          "architecture",
+          "public space",
           "Basque Country",
           "Euzkadi",
-          "Spain"
+          "wide composition"
         ]
       },
       {
         "id": "20180523-1431-00928-2f28a3e130",
         "className": "p1",
-        "title": "20180523 1431 00928",
+        "title": "Madrid, Spain",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 15.5,
@@ -74043,11 +76086,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1431 00928"
+            "value": "Madrid, Spain"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Comunidad de Madrid, Spain, Europe, travel, city, urban, street, photography, outdoor, Basque Country, Euzkadi, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -74103,15 +76146,26 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Comunidad de Madrid",
+          "Spain",
+          "Europe",
+          "travel",
+          "city",
+          "urban",
+          "street",
+          "photography",
+          "outdoor",
           "Basque Country",
           "Euzkadi",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180523-1431-00927-5d8be4af92",
         "className": "p2",
-        "title": "20180523 1431 00927",
+        "title": "Madrid, Spain",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 14.7,
@@ -74121,11 +76175,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1431 00927"
+            "value": "Madrid, Spain"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Comunidad de Madrid, Spain, travel, urban, cityscape, outdoors, daylight, Nikon D500, telephoto, Basque Country, Euzkadi, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -74181,15 +76235,26 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Comunidad de Madrid",
+          "Spain",
+          "travel",
+          "urban",
+          "cityscape",
+          "outdoors",
+          "daylight",
+          "Nikon D500",
+          "telephoto",
           "Basque Country",
           "Euzkadi",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180523-1430-00926-d172f5ecc6",
         "className": "p3",
-        "title": "20180523 1430 00926",
+        "title": "Madrid, Spain",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 18.7,
@@ -74199,11 +76264,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1430 00926"
+            "value": "Madrid, Spain"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Spain, Comunidad de Madrid, travel, city, urban, street, outdoors, Europe, photography, Basque Country, Euzkadi, Travel photography"
           },
           {
             "label": "Captured",
@@ -74259,15 +76324,25 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Spain",
+          "Comunidad de Madrid",
+          "travel",
+          "city",
+          "urban",
+          "street",
+          "outdoors",
+          "Europe",
+          "photography",
           "Basque Country",
           "Euzkadi",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180523-1430-00925-26fcc1b7fe",
         "className": "p4",
-        "title": "20180523 1430 00925",
+        "title": "Madrid, Spain",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 17.2,
@@ -74277,11 +76352,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1430 00925"
+            "value": "Madrid, Spain"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Comunidad de Madrid, Spain, travel, city, urban, street scene, outdoors, daylight, tourism, Nikon D500, Basque Country, Euzkadi, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -74337,9 +76412,21 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Comunidad de Madrid",
+          "Spain",
+          "travel",
+          "city",
+          "urban",
+          "street scene",
+          "outdoors",
+          "daylight",
+          "tourism",
+          "Nikon D500",
           "Basque Country",
           "Euzkadi",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
@@ -75359,7 +77446,7 @@ export const collections = {
       {
         "id": "20180523-1158-00908-c83ee908b8",
         "className": "p3",
-        "title": "20180523 1158 00908",
+        "title": "Street Scene in Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-23",
         "full": "JPG master",
         "megapixels": 18.1,
@@ -75369,11 +77456,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180523 1158 00908"
+            "value": "Street Scene in Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Basque Country, Euzkadi, Spain"
+            "value": "Madrid, Comunidad de Madrid, Spain, travel, street, urban, city, architecture, outdoor, daylight, Europe, Nikon D500, Basque Country, Euzkadi, Travel photography"
           },
           {
             "label": "Captured",
@@ -75429,9 +77516,21 @@ export const collections = {
           }
         ],
         "keywords": [
+          "Madrid",
+          "Comunidad de Madrid",
+          "Spain",
+          "travel",
+          "street",
+          "urban",
+          "city",
+          "architecture",
+          "outdoor",
+          "daylight",
+          "Europe",
+          "Nikon D500",
           "Basque Country",
           "Euzkadi",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
@@ -75749,7 +77848,7 @@ export const collections = {
       {
         "id": "20180522-1335-00897-e59231f9bd",
         "className": "p3",
-        "title": "20180522 1335 00897",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 34.7,
@@ -75759,11 +77858,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1335 00897"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, palace, architecture, landmark, historic building, travel, portrait orientation, vertical composition, city, tourism, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -75820,15 +77919,25 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "palace",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel",
+          "portrait orientation",
+          "vertical composition",
+          "city",
+          "tourism",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1333-00896-18f955bb6f",
         "className": "p4",
-        "title": "20180522 1333 00896",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 25.9,
@@ -75838,11 +77947,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1333 00896"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, palace, architecture, historic building, landmark, tourism, city, travel photography, Comunidad de Madrid, exterior, Sp, square format"
           },
           {
             "label": "Captured",
@@ -75899,15 +78008,25 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "landmark",
+          "tourism",
+          "city",
+          "travel photography",
+          "Comunidad de Madrid",
+          "exterior",
           "Sp",
-          "Spain"
+          "square format"
         ]
       },
       {
         "id": "20180522-1326-00894-70f247c8bf",
         "className": "p5",
-        "title": "20180522 1326 00894",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 14,
@@ -75917,11 +78036,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1326 00894"
+            "value": "Royal Palace of Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, architecture, historic building, palace, travel, cityscape, portrait orientation, Comunidad de Madrid, National Palace, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -75978,15 +78097,24 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
+          "architecture",
+          "historic building",
+          "palace",
+          "travel",
+          "cityscape",
+          "portrait orientation",
+          "Comunidad de Madrid",
           "National Palace",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1326-00893-75d36d95eb",
         "className": "p1",
-        "title": "20180522 1326 00893",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 18.5,
@@ -75996,11 +78124,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1326 00893"
+            "value": "Madrid Royal Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, Palace, architecture, historic building, tourism, travel, plaza, cityscape, Comunidad de Madrid, landmark, National Palace, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76057,15 +78185,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
+          "Palace",
+          "architecture",
+          "historic building",
+          "tourism",
+          "travel",
+          "plaza",
+          "cityscape",
+          "Comunidad de Madrid",
+          "landmark",
           "National Palace",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1325-00892-5b9c7eef8a",
         "className": "p2",
-        "title": "20180522 1325 00892",
+        "title": "Royal Palace in Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 14.2,
@@ -76075,11 +78214,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1325 00892"
+            "value": "Royal Palace in Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, Palacio Real, architecture, historic building, cityscape, travel, plaza, landmark, Comunidad de Madrid, tourism, National Palace, Sp, square format, Travel photography"
           },
           {
             "label": "Captured",
@@ -76136,15 +78275,27 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "historic building",
+          "cityscape",
+          "travel",
+          "plaza",
+          "landmark",
+          "Comunidad de Madrid",
+          "tourism",
           "National Palace",
           "Sp",
-          "Spain"
+          "square format",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1323-00891-7930502b12",
         "className": "p3",
-        "title": "20180522 1323 00891",
+        "title": "Madrid National Palace at Plaza de Oriente",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 19.5,
@@ -76154,11 +78305,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1323 00891"
+            "value": "Madrid National Palace at Plaza de Oriente"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, National Palace, Plaza de Oriente, Spain, Comunidad de Madrid, palace, architecture, landmark, travel photography, historic building, portrait orientation, Sp"
           },
           {
             "label": "Captured",
@@ -76216,14 +78367,22 @@ export const collections = {
         "keywords": [
           "Madrid",
           "National Palace",
-          "Sp",
-          "Spain"
+          "Plaza de Oriente",
+          "Spain",
+          "Comunidad de Madrid",
+          "palace",
+          "architecture",
+          "landmark",
+          "travel photography",
+          "historic building",
+          "portrait orientation",
+          "Sp"
         ]
       },
       {
         "id": "20180522-1322-00889-84c3a77b96",
         "className": "p4",
-        "title": "20180522 1322 00889",
+        "title": "Royal Palace of Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 22.3,
@@ -76233,11 +78392,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1322 00889"
+            "value": "Royal Palace of Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Royal Palace, Palacio Real, Spain, Community of Madrid, architecture, palace, travel, historic building, city landmark, tourism, exterior, National Palace, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76294,15 +78453,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Royal Palace",
+          "Palacio Real",
+          "Spain",
+          "Community of Madrid",
+          "architecture",
+          "palace",
+          "travel",
+          "historic building",
+          "city landmark",
+          "tourism",
+          "exterior",
           "National Palace",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1322-00888-08ac194d19",
         "className": "p5",
-        "title": "20180522 1322 00888",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -76312,11 +78482,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1322 00888"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, palace, architecture, landmark, travel, historic, city, tourism, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76373,15 +78543,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "palace",
+          "architecture",
+          "landmark",
+          "travel",
+          "historic",
+          "city",
+          "tourism",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1309-00886-84c424a432",
         "className": "p1",
-        "title": "20180522 1309 00886",
+        "title": "Madrid National Palace Panorama",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 19.6,
@@ -76391,11 +78569,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1309 00886"
+            "value": "Madrid National Palace Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Panoramic, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, palace, architecture, panoramic, cityscape, landmark, travel, historic, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76452,16 +78630,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
-          "Panoramic",
+          "palace",
+          "architecture",
+          "panoramic",
+          "cityscape",
+          "landmark",
+          "travel",
+          "historic",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1304-00881-db5009c014",
         "className": "p2",
-        "title": "20180522 1304 00881",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 17.5,
@@ -76471,11 +78656,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1304 00881"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, palace, architecture, landmark, historic building, travel, tourism, cityscape, Comunidad de Madrid, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76532,15 +78717,24 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "palace",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel",
+          "tourism",
+          "cityscape",
+          "Comunidad de Madrid",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1300-00879-eea199db6c",
         "className": "p3",
-        "title": "20180522 1300 00879",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 10.5,
@@ -76550,11 +78744,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1300 00879"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, Palace, architecture, travel, landmark, cityscape, portrait orientation, Comunidad de Madrid, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76611,15 +78805,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "Palace",
+          "architecture",
+          "travel",
+          "landmark",
+          "cityscape",
+          "portrait orientation",
+          "Comunidad de Madrid",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1259-00878-8f7fdbf73b",
         "className": "p4",
-        "title": "20180522 1259 00878",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -76629,11 +78831,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1259 00878"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, palace, architecture, historic building, travel, cityscape, landmark, portrait orientation, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76690,15 +78892,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "palace",
+          "architecture",
+          "historic building",
+          "travel",
+          "cityscape",
+          "landmark",
+          "portrait orientation",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1259-00877-3bb003eb2d",
         "className": "p5",
-        "title": "20180522 1259 00877",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -76708,11 +78918,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1259 00877"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, National Palace, Spain, Community of Madrid, travel, architecture, palace, historic building, cityscape, landmark, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76770,14 +78980,22 @@ export const collections = {
         "keywords": [
           "Madrid",
           "National Palace",
+          "Spain",
+          "Community of Madrid",
+          "travel",
+          "architecture",
+          "palace",
+          "historic building",
+          "cityscape",
+          "landmark",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1257-00876-8e04a7ee3e",
         "className": "p1",
-        "title": "20180522 1257 00876",
+        "title": "Madrid Royal Palace Interior",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 15.7,
@@ -76787,11 +79005,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1257 00876"
+            "value": "Madrid Royal Palace Interior"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, Palacio Real, architecture, historic building, landmark, travel, Comunidad de Madrid, cityscape, tourism, palace, National Palace, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76848,15 +79066,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "historic building",
+          "landmark",
+          "travel",
+          "Comunidad de Madrid",
+          "cityscape",
+          "tourism",
+          "palace",
           "National Palace",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1257-00875-b88ee8a0bc",
         "className": "p2",
-        "title": "20180522 1257 00875",
+        "title": "Madrid and the Royal Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 19.5,
@@ -76866,11 +79095,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1257 00875"
+            "value": "Madrid and the Royal Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, Palacio Real, architecture, landmark, cityscape, travel, Comunidad de Madrid, historic building, tourism, palace, National Palace, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -76927,15 +79156,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
+          "Palacio Real",
+          "architecture",
+          "landmark",
+          "cityscape",
+          "travel",
+          "Comunidad de Madrid",
+          "historic building",
+          "tourism",
+          "palace",
           "National Palace",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1252-00873-1e21d9efaa",
         "className": "p3",
-        "title": "20180522 1252 00873",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.1,
@@ -76945,11 +79185,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1252 00873"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, architecture, travel, cityscape, historic building, palace, landmark, exterior, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77006,15 +79246,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "architecture",
+          "travel",
+          "cityscape",
+          "historic building",
+          "palace",
+          "landmark",
+          "exterior",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1252-00872-edb2ed6f2c",
         "className": "p4",
-        "title": "20180522 1252 00872",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 19.9,
@@ -77024,11 +79272,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1252 00872"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, National Palace, Spain, Comunidad de Madrid, travel, architecture, landmark, palace, cityscape, historic, tourism, daylight, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77086,14 +79334,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "National Palace",
+          "Spain",
+          "Comunidad de Madrid",
+          "travel",
+          "architecture",
+          "landmark",
+          "palace",
+          "cityscape",
+          "historic",
+          "tourism",
+          "daylight",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1251-00868-7319a58ddf",
         "className": "p5",
-        "title": "20180522 1251 00868",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.2,
@@ -77103,11 +79361,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1251 00868"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, architecture, palace, travel, cityscape, historic building, Comunidad de Madrid, landmark, tourism, Europe, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77164,15 +79422,25 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "architecture",
+          "palace",
+          "travel",
+          "cityscape",
+          "historic building",
+          "Comunidad de Madrid",
+          "landmark",
+          "tourism",
+          "Europe",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1247-00867-20da9720f2",
         "className": "p1",
-        "title": "20180522 1247 00867",
+        "title": "Madrid Royal Palace Exterior",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.5,
@@ -77182,11 +79450,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1247 00867"
+            "value": "Madrid Royal Palace Exterior"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, palace, royal palace, architecture, landmark, historic, travel, tourism, exterior, city, facade, National Palace, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77243,15 +79511,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "palace",
+          "royal palace",
+          "architecture",
+          "landmark",
+          "historic",
+          "travel",
+          "tourism",
+          "exterior",
+          "city",
+          "facade",
           "National Palace",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1246-00866-e54508e73b",
         "className": "p2",
-        "title": "20180522 1246 00866",
+        "title": "Madrid Royal Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 15.4,
@@ -77261,11 +79540,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1246 00866"
+            "value": "Madrid Royal Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, National Palace, architecture, landmark, historic building, travel, cityscape, tourism, Comunidad de Madrid, palace, Sp, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -77322,15 +79601,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
           "National Palace",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel",
+          "cityscape",
+          "tourism",
+          "Comunidad de Madrid",
+          "palace",
           "Sp",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1246-00865-f227761feb",
         "className": "p3",
-        "title": "20180522 1246 00865",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 25.6,
@@ -77340,11 +79630,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1246 00865"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, National Palace, Spain, Comunidad de Madrid, architecture, palace, landmark, travel, tourism, city, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77402,14 +79692,22 @@ export const collections = {
         "keywords": [
           "Madrid",
           "National Palace",
+          "Spain",
+          "Comunidad de Madrid",
+          "architecture",
+          "palace",
+          "landmark",
+          "travel",
+          "tourism",
+          "city",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1245-00864-8e51015779",
         "className": "p4",
-        "title": "20180522 1245 00864",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 15.6,
@@ -77419,11 +79717,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1245 00864"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, National Palace, Spain, Community of Madrid, travel, architecture, landmark, palace, historic, city, Sp, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -77481,14 +79779,23 @@ export const collections = {
         "keywords": [
           "Madrid",
           "National Palace",
+          "Spain",
+          "Community of Madrid",
+          "travel",
+          "architecture",
+          "landmark",
+          "palace",
+          "historic",
+          "city",
           "Sp",
-          "Spain"
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1244-00862-d10dd36348",
         "className": "p5",
-        "title": "20180522 1244 00862",
+        "title": "Madrid Panoramic View of the National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 27.3,
@@ -77498,11 +79805,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1244 00862"
+            "value": "Madrid Panoramic View of the National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Panoramic, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, panoramic, cityscape, architecture, skyline, travel, wide-angle, urban, landmark, Sp, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -77559,16 +79866,25 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
-          "Panoramic",
+          "panoramic",
+          "cityscape",
+          "architecture",
+          "skyline",
+          "travel",
+          "wide-angle",
+          "urban",
+          "landmark",
           "Sp",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1244-00861-1c8323b22f",
         "className": "p1",
-        "title": "20180522 1244 00861",
+        "title": "Panoramic View of Madrid's Royal Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 14.2,
@@ -77578,11 +79894,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1244 00861"
+            "value": "Panoramic View of Madrid's Royal Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Panoramic, Sp, Spain"
+            "value": "Madrid, Spain, Royal Palace, Palace, panorama, wide angle, cityscape, architecture, travel, historic building, Comunidad de Madrid, landmark, National Palace, Panoramic, Sp, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -77639,16 +79955,28 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
+          "Royal Palace",
+          "Palace",
+          "panorama",
+          "wide angle",
+          "cityscape",
+          "architecture",
+          "travel",
+          "historic building",
+          "Comunidad de Madrid",
+          "landmark",
           "National Palace",
           "Panoramic",
           "Sp",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1243-00860-d80ba96fe3",
         "className": "p2",
-        "title": "20180522 1243 00860",
+        "title": "Madrid National Palace Panorama",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 13.2,
@@ -77658,11 +79986,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1243 00860"
+            "value": "Madrid National Palace Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Panoramic, Sp, Spain"
+            "value": "Madrid, National Palace, Spain, panorama, wide view, architecture, travel, cityscape, landmark, historic building, Panoramic, Sp, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -77720,15 +80048,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "National Palace",
+          "Spain",
+          "panorama",
+          "wide view",
+          "architecture",
+          "travel",
+          "cityscape",
+          "landmark",
+          "historic building",
           "Panoramic",
           "Sp",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1243-00857-9016a8fb74",
         "className": "p3",
-        "title": "20180522 1243 00857",
+        "title": "Madrid National Palace",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 12.6,
@@ -77738,11 +80075,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1243 00857"
+            "value": "Madrid National Palace"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, National Palace, Sp, Spain"
+            "value": "Madrid, Spain, National Palace, Palacio Real, architecture, wide view, cityscape, travel, historic building, exterior, landmark, Comunidad de Madrid, Sp, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -77799,15 +80136,26 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
+          "Spain",
           "National Palace",
+          "Palacio Real",
+          "architecture",
+          "wide view",
+          "cityscape",
+          "travel",
+          "historic building",
+          "exterior",
+          "landmark",
+          "Comunidad de Madrid",
           "Sp",
-          "Spain"
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1156-00849-97eb65fcd7",
         "className": "p4",
-        "title": "20180522 1156 00849",
+        "title": "Mercado San Miguel in Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -77817,11 +80165,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1156 00849"
+            "value": "Mercado San Miguel in Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, market, indoor market, travel, architecture, city life, food market, Comunidad de Madrid, tourism, urban, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77879,14 +80227,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "market",
+          "indoor market",
+          "travel",
+          "architecture",
+          "city life",
+          "food market",
+          "Comunidad de Madrid",
+          "tourism",
+          "urban",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1153-00845-dfbb904491",
         "className": "p5",
-        "title": "20180522 1153 00845",
+        "title": "Mercado San Miguel in Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -77896,11 +80254,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1153 00845"
+            "value": "Mercado San Miguel in Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, Comunidad de Madrid, market hall, indoor market, travel, architecture, food market, city life, tourism, urban scene, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -77958,14 +80316,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "Comunidad de Madrid",
+          "market hall",
+          "indoor market",
+          "travel",
+          "architecture",
+          "food market",
+          "city life",
+          "tourism",
+          "urban scene",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1153-00844-55c8d57db1",
         "className": "p1",
-        "title": "20180522 1153 00844",
+        "title": "Inside Mercado San Miguel, Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -77975,11 +80343,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1153 00844"
+            "value": "Inside Mercado San Miguel, Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, indoor market, food hall, historic market, travel, architecture, market stalls, Comunidad de Madrid, tourism, city center, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -78037,14 +80405,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "indoor market",
+          "food hall",
+          "historic market",
+          "travel",
+          "architecture",
+          "market stalls",
+          "Comunidad de Madrid",
+          "tourism",
+          "city center",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1152-00841-1290b7ad30",
         "className": "p2",
-        "title": "20180522 1152 00841",
+        "title": "Mercado San Miguel, Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -78054,11 +80432,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1152 00841"
+            "value": "Mercado San Miguel, Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, Comunidad de Madrid, market, indoor market, food hall, travel, architecture, city life, street market, tourism, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -78116,14 +80494,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "Comunidad de Madrid",
+          "market",
+          "indoor market",
+          "food hall",
+          "travel",
+          "architecture",
+          "city life",
+          "street market",
+          "tourism",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1152-00839-0fd2439a9a",
         "className": "p3",
-        "title": "20180522 1152 00839",
+        "title": "Mercado San Miguel, Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -78133,11 +80521,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1152 00839"
+            "value": "Mercado San Miguel, Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, Comunidad de Madrid, market, food market, travel, architecture, interior, city, tourism, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -78195,14 +80583,23 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "Comunidad de Madrid",
+          "market",
+          "food market",
+          "travel",
+          "architecture",
+          "interior",
+          "city",
+          "tourism",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1151-00837-3b90404c2a",
         "className": "p4",
-        "title": "20180522 1151 00837",
+        "title": "Mercado San Miguel in Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -78212,11 +80609,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1151 00837"
+            "value": "Mercado San Miguel in Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, market, indoor market, travel, food hall, Comunidad de Madrid, architecture, tourism, street photography, urban, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -78274,14 +80671,24 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "market",
+          "indoor market",
+          "travel",
+          "food hall",
+          "Comunidad de Madrid",
+          "architecture",
+          "tourism",
+          "street photography",
+          "urban",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
         "id": "20180522-1151-00835-e83ea8125d",
         "className": "p5",
-        "title": "20180522 1151 00835",
+        "title": "Mercado San Miguel, Madrid",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -78291,11 +80698,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180522 1151 00835"
+            "value": "Mercado San Miguel, Madrid"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Mercado San Miguel, Sp, Spain"
+            "value": "Madrid, Mercado San Miguel, Spain, market, indoor market, travel, architecture, food hall, Comunidad de Madrid, historic building, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -78353,8 +80760,16 @@ export const collections = {
         "keywords": [
           "Madrid",
           "Mercado San Miguel",
+          "Spain",
+          "market",
+          "indoor market",
+          "travel",
+          "architecture",
+          "food hall",
+          "Comunidad de Madrid",
+          "historic building",
           "Sp",
-          "Spain"
+          "Travel photography"
         ]
       },
       {
@@ -79752,7 +82167,7 @@ export const collections = {
       {
         "id": "20180522-1014-00789-9901434b9a",
         "className": "p3",
-        "title": "Madrid, Sp",
+        "title": "Madrid city view",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -79762,11 +82177,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid city view"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, cityscape, urban, travel, architecture, street scene, outdoors, tourism, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -79823,15 +82238,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Comunidad de Madrid",
+          "cityscape",
+          "urban",
+          "travel",
+          "architecture",
+          "street scene",
+          "outdoors",
+          "tourism",
+          "Sp",
           "Travel photography"
         ]
       },
       {
         "id": "20180522-1008-00786-2e4afd4a78",
         "className": "p4",
-        "title": "Madrid, Sp",
+        "title": "Madrid city view",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 10.7,
@@ -79841,11 +82264,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid city view"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, wide composition, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, cityscape, urban landscape, travel, architecture, street scene, wide angle, outdoors, daylight, tourism, Sp, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -79902,8 +82325,18 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Comunidad de Madrid",
+          "cityscape",
+          "urban landscape",
+          "travel",
+          "architecture",
+          "street scene",
+          "wide angle",
+          "outdoors",
+          "daylight",
+          "tourism",
+          "Sp",
           "wide composition",
           "Travel photography"
         ]
@@ -79911,7 +82344,7 @@ export const collections = {
       {
         "id": "20180522-1006-00785-bb9fe59c25",
         "className": "p5",
-        "title": "Madrid, Sp",
+        "title": "Madrid city view",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 16.2,
@@ -79921,11 +82354,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid city view"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, wide composition, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, cityscape, urban landscape, wide angle, travel photography, architecture, street scene, landmark, Sp, wide composition"
           },
           {
             "label": "Captured",
@@ -79982,16 +82415,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
-          "wide composition",
-          "Travel photography"
+          "Comunidad de Madrid",
+          "cityscape",
+          "urban landscape",
+          "wide angle",
+          "travel photography",
+          "architecture",
+          "street scene",
+          "landmark",
+          "Sp",
+          "wide composition"
         ]
       },
       {
         "id": "20180522-1003-00783-86edce2fca",
         "className": "p1",
-        "title": "Madrid, Sp",
+        "title": "Madrid city scene",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 17.5,
@@ -80001,11 +82441,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid city scene"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, Travel photography"
+            "value": "Madrid, Spain, Community of Madrid, travel, cityscape, urban, street scene, architecture, landmark, tourism, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -80062,15 +82502,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Community of Madrid",
+          "travel",
+          "cityscape",
+          "urban",
+          "street scene",
+          "architecture",
+          "landmark",
+          "tourism",
+          "Sp",
           "Travel photography"
         ]
       },
       {
         "id": "20180522-1002-00782-cf6b288133",
         "className": "p2",
-        "title": "Madrid, Sp",
+        "title": "Madrid City View",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -80080,11 +82528,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid City View"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, urban landscape, architecture, travel, cityscape, street scene, tourism, outdoors, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -80141,15 +82589,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Comunidad de Madrid",
+          "urban landscape",
+          "architecture",
+          "travel",
+          "cityscape",
+          "street scene",
+          "tourism",
+          "outdoors",
+          "Sp",
           "Travel photography"
         ]
       },
       {
         "id": "20180522-0958-00781-483ad21c71",
         "className": "p3",
-        "title": "Madrid, Sp",
+        "title": "Madrid city view",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-22",
         "full": "JPG master",
         "megapixels": 10.5,
@@ -80159,11 +82615,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid city view"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, travel, city, urban, sightseeing, landscape, tourism, street, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -80220,15 +82676,23 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Comunidad de Madrid",
+          "travel",
+          "city",
+          "urban",
+          "sightseeing",
+          "landscape",
+          "tourism",
+          "street",
+          "Sp",
           "Travel photography"
         ]
       },
       {
         "id": "20180521-1954-00774-a43eaf6e85",
         "className": "p4",
-        "title": "Madrid, Sp",
+        "title": "Madrid City View",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-21",
         "full": "JPG master",
         "megapixels": 18.3,
@@ -80238,11 +82702,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid City View"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, travel, city, urban, street photography, destination, landscape, architecture, Sp, Travel photography"
           },
           {
             "label": "Captured",
@@ -80299,8 +82763,16 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Comunidad de Madrid",
+          "travel",
+          "city",
+          "urban",
+          "street photography",
+          "destination",
+          "landscape",
+          "architecture",
+          "Sp",
           "Travel photography"
         ]
       },
@@ -80387,7 +82859,7 @@ export const collections = {
       {
         "id": "20180521-1849-00767-061b255c0f",
         "className": "p1",
-        "title": "Madrid, Sp",
+        "title": "Madrid City View, Plaza Mayor",
         "caption": "Spain / Madrid, Comunidad de Madrid, Spain / 2018-05-21",
         "full": "JPG master",
         "megapixels": 17.2,
@@ -80397,11 +82869,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Madrid, Sp"
+            "value": "Madrid City View, Plaza Mayor"
           },
           {
             "label": "Keywords",
-            "value": "Madrid, Sp, Spain, portrait orientation, Travel photography"
+            "value": "Madrid, Spain, Comunidad de Madrid, travel, cityscape, urban, portrait orientation, street scene, architecture, outdoors, daylight, travel photography, Sp"
           },
           {
             "label": "Captured",
@@ -80458,10 +82930,18 @@ export const collections = {
         ],
         "keywords": [
           "Madrid",
-          "Sp",
           "Spain",
+          "Comunidad de Madrid",
+          "travel",
+          "cityscape",
+          "urban",
           "portrait orientation",
-          "Travel photography"
+          "street scene",
+          "architecture",
+          "outdoors",
+          "daylight",
+          "travel photography",
+          "Sp"
         ]
       },
       {
@@ -419795,7 +422275,7 @@ export const collections = {
       {
         "id": "img-1221-6d39ae64d8",
         "className": "p1",
-        "title": "IMG 1221",
+        "title": "Florence",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 3.6,
@@ -419805,7 +422285,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1221"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, vertical composition, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -419844,12 +422328,18 @@ export const collections = {
             "bytes": 537484
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Florence",
+          "vertical composition",
+          "portrait orientation",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1220-75c863ef2a",
         "className": "p2",
-        "title": "IMG 1220",
+        "title": "Florence",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 3.6,
@@ -419859,7 +422349,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1220"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, vertical composition, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -419898,12 +422392,18 @@ export const collections = {
             "bytes": 459247
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Florence",
+          "vertical composition",
+          "portrait orientation",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1219-570b09bebb",
         "className": "p3",
-        "title": "IMG 1219",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -419913,11 +422413,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1219"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, campanile, landmark, architecture, historic building, travel photography, cityscape, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -419973,13 +422473,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "campanile",
+          "landmark",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "cityscape",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1219-13240aafb0",
         "className": "p4",
-        "title": "IMG 1219",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -419989,7 +422501,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1219"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -420044,12 +422560,22 @@ export const collections = {
             "bytes": 7655645
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1218-fe487846d6",
         "className": "p5",
-        "title": "IMG 1218",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -420059,11 +422585,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1218"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, landmark, architecture, historic building, tourism, travel photography, bell tower, medieval, cityscape, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -420119,13 +422645,27 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "landmark",
+          "architecture",
+          "historic building",
+          "tourism",
+          "travel photography",
+          "bell tower",
+          "medieval",
+          "cityscape",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1217-fba9ecc01d",
         "className": "p1",
-        "title": "IMG 1217",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -420135,11 +422675,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1217"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, Pisa Cathedral, Piazza dei Miracoli, landmark, architecture, historic building, travel photography, portrait orientation, Italian travel, Historic city, Cityscape"
           },
           {
             "label": "Captured",
@@ -420195,13 +422735,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "Pisa Cathedral",
+          "Piazza dei Miracoli",
+          "landmark",
+          "architecture",
+          "historic building",
+          "travel photography",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city",
+          "Cityscape"
         ]
       },
       {
         "id": "img-1216-601dd6c052",
         "className": "p2",
-        "title": "IMG 1216",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -420211,11 +422764,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1216"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, bell tower, Romanesque architecture, landmark, historic monument, architecture, travel photography, cityscape, tourism, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -420271,7 +422824,21 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "bell tower",
+          "Romanesque architecture",
+          "landmark",
+          "historic monument",
+          "architecture",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
@@ -420353,7 +422920,7 @@ export const collections = {
       {
         "id": "img-1214-bde4dfb750",
         "className": "p4",
-        "title": "IMG 1214",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420363,11 +422930,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1214"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, bell tower, medieval architecture, landmark, historic building, Piazza dei Miracoli, UNESCO World Heritage, travel, cityscape, portrait orientation, Travel photography, Italian travel, Historic city, Architecture"
           },
           {
             "label": "Captured",
@@ -420423,13 +422990,29 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "bell tower",
+          "medieval architecture",
+          "landmark",
+          "historic building",
+          "Piazza dei Miracoli",
+          "UNESCO World Heritage",
+          "travel",
+          "cityscape",
+          "portrait orientation",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture"
         ]
       },
       {
         "id": "img-1213-7276413ecc",
         "className": "p5",
-        "title": "IMG 1213",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420439,11 +423022,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1213"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, tower, landmark, architecture, historic building, Italian travel, cityscape, portrait orientation, Travel photography, Historic city"
           },
           {
             "label": "Captured",
@@ -420499,13 +423082,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "tower",
+          "landmark",
+          "architecture",
+          "historic building",
+          "Italian travel",
+          "cityscape",
+          "portrait orientation",
+          "Travel photography",
+          "Historic city"
         ]
       },
       {
         "id": "img-1212-96505e7356",
         "className": "p1",
-        "title": "IMG 1212",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420515,11 +423110,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1212"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, tower, bell tower, architecture, landmark, historic building, medieval, travel photography, cityscape, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -420575,13 +423170,27 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "tower",
+          "bell tower",
+          "architecture",
+          "landmark",
+          "historic building",
+          "medieval",
+          "travel photography",
+          "cityscape",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1212-4fa11b0170",
         "className": "p2",
-        "title": "IMG 1212",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420591,7 +423200,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1212"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -420646,12 +423259,22 @@ export const collections = {
             "bytes": 3268349
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1211-d55a7c07cb",
         "className": "p3",
-        "title": "IMG 1211",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 21.3,
@@ -420661,11 +423284,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1211"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, campanile, architecture, landmark, historic monument, travel photography, cityscape, tourism, bell tower, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -420721,13 +423344,27 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "campanile",
+          "architecture",
+          "landmark",
+          "historic monument",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "bell tower",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1210-e222dcb15c",
         "className": "p4",
-        "title": "IMG 1210",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420737,11 +423374,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1210"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, campanile, architecture, landmark, historic building, tourism, cityscape, Italian travel, medieval, Travel photography, Historic city"
           },
           {
             "label": "Captured",
@@ -420797,13 +423434,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "campanile",
+          "architecture",
+          "landmark",
+          "historic building",
+          "tourism",
+          "cityscape",
+          "Italian travel",
+          "medieval",
+          "Travel photography",
+          "Historic city"
         ]
       },
       {
         "id": "img-1209-2397d71a31",
         "className": "p5",
-        "title": "IMG 1209",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420813,11 +423463,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1209"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, campanile, Piazza dei Miracoli, architecture, landmark, historic building, travel photography, cityscape, tourism, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -420873,13 +423523,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "campanile",
+          "Piazza dei Miracoli",
+          "architecture",
+          "landmark",
+          "historic building",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1208-d059e156dc",
         "className": "p1",
-        "title": "IMG 1208",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 18,
@@ -420889,11 +423552,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1208"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, tower, landmark, architecture, historic building, tourism, Italian travel, cityscape, portrait orientation, Travel photography, Historic city"
           },
           {
             "label": "Captured",
@@ -420949,13 +423612,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "tower",
+          "landmark",
+          "architecture",
+          "historic building",
+          "tourism",
+          "Italian travel",
+          "cityscape",
+          "portrait orientation",
+          "Travel photography",
+          "Historic city"
         ]
       },
       {
         "id": "img-1207-5079ff3336",
         "className": "p2",
-        "title": "IMG 1207",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -420965,11 +423641,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1207"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, campanile, bell tower, architecture, historic landmark, cityscape, travel photography, landmark, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -421025,13 +423701,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "campanile",
+          "bell tower",
+          "architecture",
+          "historic landmark",
+          "cityscape",
+          "travel photography",
+          "landmark",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1206-9aa38d2a4c",
         "className": "p3",
-        "title": "IMG 1206",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -421041,11 +423730,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1206"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, bell tower, architecture, landmark, historic, travel, cityscape, medieval, UNESCO, portrait orientation, Travel photography, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -421101,13 +423790,28 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "bell tower",
+          "architecture",
+          "landmark",
+          "historic",
+          "travel",
+          "cityscape",
+          "medieval",
+          "UNESCO",
+          "portrait orientation",
+          "Travel photography",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1205-78f89398bc",
         "className": "p4",
-        "title": "IMG 1205",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -421117,11 +423821,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1205"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, bell tower, campanile, medieval architecture, landmark, historic monument, travel photography, cityscape, tourism, portrait orientation, Italian travel, Historic city, Architecture"
           },
           {
             "label": "Captured",
@@ -421177,13 +423881,28 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "bell tower",
+          "campanile",
+          "medieval architecture",
+          "landmark",
+          "historic monument",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city",
+          "Architecture"
         ]
       },
       {
         "id": "img-1205-4ca5e788f0",
         "className": "p5",
-        "title": "IMG 1205",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -421193,7 +423912,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1205"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -421248,12 +423971,22 @@ export const collections = {
             "bytes": 5884983
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1204-3a889ed776",
         "className": "p1",
-        "title": "IMG 1204",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -421263,11 +423996,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1204"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, Piazza dei Miracoli, bell tower, architecture, historic landmark, travel photography, cityscape, landmark, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -421323,13 +424056,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "Piazza dei Miracoli",
+          "bell tower",
+          "architecture",
+          "historic landmark",
+          "travel photography",
+          "cityscape",
+          "landmark",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1204-1d710fba81",
         "className": "p2",
-        "title": "IMG 1204",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -421339,7 +424085,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1204"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -421394,7 +424144,17 @@ export const collections = {
             "bytes": 4364821
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1203-d7219d5193",
@@ -421475,7 +424235,7 @@ export const collections = {
       {
         "id": "img-1203-09dfc6e2ae",
         "className": "p4",
-        "title": "IMG 1203",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -421485,7 +424245,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1203"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -421540,12 +424304,22 @@ export const collections = {
             "bytes": 8248358
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1202-cd5854fcaa",
         "className": "p5",
-        "title": "IMG 1202",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -421555,11 +424329,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1202"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, Bell Tower, Campanile, Architecture, Landmark, Historic monument, Travel photography, Italian travel, Tourism, Historic city, Cityscape"
           },
           {
             "label": "Captured",
@@ -421615,13 +424389,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "Bell Tower",
+          "Campanile",
+          "Architecture",
+          "Landmark",
+          "Historic monument",
+          "Travel photography",
+          "Italian travel",
+          "Tourism",
+          "Historic city",
+          "Cityscape"
         ]
       },
       {
         "id": "img-1202-2683ad1a9d",
         "className": "p1",
-        "title": "IMG 1202",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -421631,7 +424418,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1202"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -421686,12 +424477,22 @@ export const collections = {
             "bytes": 3417291
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1201-2b1b1ce0f9",
         "className": "p2",
-        "title": "IMG 1201",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -421701,7 +424502,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1201"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -421756,7 +424561,17 @@ export const collections = {
             "bytes": 3543243
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1201-0d34709cc0",
@@ -421837,7 +424652,7 @@ export const collections = {
       {
         "id": "img-1200-8b6f63148c",
         "className": "p4",
-        "title": "IMG 1200",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -421847,11 +424662,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1200"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, bell tower, Piazza dei Miracoli, Romanesque architecture, landmark, historic architecture, travel photography, cityscape, tourism, Italian travel, Historic city, Architecture"
           },
           {
             "label": "Captured",
@@ -421907,13 +424722,27 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "bell tower",
+          "Piazza dei Miracoli",
+          "Romanesque architecture",
+          "landmark",
+          "historic architecture",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "Italian travel",
+          "Historic city",
+          "Architecture"
         ]
       },
       {
         "id": "img-1199-0ebd1a5044",
         "className": "p5",
-        "title": "IMG 1199",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -421923,11 +424752,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1199"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, tower, landmark, architecture, historic monument, travel photography, cityscape, tourism, Italian landmark, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -421983,13 +424812,26 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "tower",
+          "landmark",
+          "architecture",
+          "historic monument",
+          "travel photography",
+          "cityscape",
+          "tourism",
+          "Italian landmark",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1198-bb563d6235",
         "className": "p1",
-        "title": "IMG 1198",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -421999,11 +424841,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1198"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, campanile, landmark, architecture, historic building, tourism, travel photography, cityscape, famous monument, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -422059,13 +424901,27 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "campanile",
+          "landmark",
+          "architecture",
+          "historic building",
+          "tourism",
+          "travel photography",
+          "cityscape",
+          "famous monument",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1197-0132d88761",
         "className": "p2",
-        "title": "IMG 1197",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422075,11 +424931,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1197"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, bell tower, Piazza dei Miracoli, medieval architecture, landmark, historic building, tourism, architecture, UNESCO World Heritage, portrait orientation, Travel photography, Italian travel, Historic city, Cityscape"
           },
           {
             "label": "Captured",
@@ -422135,13 +424991,29 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "bell tower",
+          "Piazza dei Miracoli",
+          "medieval architecture",
+          "landmark",
+          "historic building",
+          "tourism",
+          "architecture",
+          "UNESCO World Heritage",
+          "portrait orientation",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Cityscape"
         ]
       },
       {
         "id": "img-1196-7c59c4b110",
         "className": "p3",
-        "title": "IMG 1196",
+        "title": "Leaning Tower of Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422151,11 +425023,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1196"
+            "value": "Leaning Tower of Pisa"
           },
           {
             "label": "Keywords",
-            "value": "Italy"
+            "value": "Italy, Pisa, Tuscany, Leaning Tower of Pisa, tower, bell tower, architecture, Romanesque, landmark, historic site, travel photography, cityscape, portrait orientation, Italian travel, Historic city"
           },
           {
             "label": "Captured",
@@ -422211,13 +425083,27 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Italy"
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Leaning Tower of Pisa",
+          "tower",
+          "bell tower",
+          "architecture",
+          "Romanesque",
+          "landmark",
+          "historic site",
+          "travel photography",
+          "cityscape",
+          "portrait orientation",
+          "Italian travel",
+          "Historic city"
         ]
       },
       {
         "id": "img-1196-743b6f88b9",
         "className": "p4",
-        "title": "IMG 1196",
+        "title": "Pisa",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422227,7 +425113,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1196"
+            "value": "Pisa"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Pisa, Tuscany, Travel photography, Italian travel, Historic city, Architecture, Cityscape, Landmark"
           },
           {
             "label": "Captured",
@@ -422282,12 +425172,22 @@ export const collections = {
             "bytes": 2951182
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Pisa",
+          "Tuscany",
+          "Travel photography",
+          "Italian travel",
+          "Historic city",
+          "Architecture",
+          "Cityscape",
+          "Landmark"
+        ]
       },
       {
         "id": "img-1184-adad54985d",
         "className": "p5",
-        "title": "IMG 1184",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -422297,7 +425197,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1184"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422352,12 +425256,16 @@ export const collections = {
             "bytes": 5877981
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1182-5aa2cfd683",
         "className": "p1",
-        "title": "IMG 1182",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422367,7 +425275,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1182"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422422,12 +425334,16 @@ export const collections = {
             "bytes": 4155239
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1181-a12bca4639",
         "className": "p2",
-        "title": "IMG 1181",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -422437,7 +425353,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1181"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422492,12 +425412,16 @@ export const collections = {
             "bytes": 9994214
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1180-fe3d9faa8d",
         "className": "p3",
-        "title": "IMG 1180",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -422507,7 +425431,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1180"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422562,12 +425490,16 @@ export const collections = {
             "bytes": 10048659
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1179-73dc1ce59c",
         "className": "p4",
-        "title": "IMG 1179",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -422577,7 +425509,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1179"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422632,12 +425568,16 @@ export const collections = {
             "bytes": 10441416
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1178-d3dfcb9bcb",
         "className": "p5",
-        "title": "IMG 1178",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -422647,7 +425587,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1178"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422702,12 +425646,16 @@ export const collections = {
             "bytes": 8939131
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1177-ed6ca580f8",
         "className": "p1",
-        "title": "IMG 1177",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422717,7 +425665,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1177"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422772,12 +425724,16 @@ export const collections = {
             "bytes": 1357319
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1176-bda2ef58f7",
         "className": "p2",
-        "title": "IMG 1176",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422787,7 +425743,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1176"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422842,12 +425802,16 @@ export const collections = {
             "bytes": 1483742
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1175-9c75e77850",
         "className": "p3",
-        "title": "IMG 1175",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -422857,7 +425821,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1175"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422912,12 +425880,16 @@ export const collections = {
             "bytes": 1754696
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1174-e74617298f",
         "className": "p4",
-        "title": "IMG 1174",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
         "megapixels": 24.5,
@@ -422927,7 +425899,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1174"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -422982,12 +425958,16 @@ export const collections = {
             "bytes": 6449851
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1166-5254d26291",
         "className": "p5",
-        "title": "IMG 1166",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -422997,7 +425977,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1166"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -423051,13 +426035,17 @@ export const collections = {
             "bytes": 7021034
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ],
         "duration": 5.84
       },
       {
         "id": "img-1165-7f280d668b",
         "className": "p1",
-        "title": "IMG 1165",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -423067,7 +426055,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1165"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -423121,13 +426113,17 @@ export const collections = {
             "bytes": 5847261
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ],
         "duration": 5.07
       },
       {
         "id": "img-1164-ff3aa85aa6",
         "className": "p2",
-        "title": "IMG 1164",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -423137,7 +426133,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1164"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -423191,13 +426191,17 @@ export const collections = {
             "bytes": 17353928
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ],
         "duration": 10.03
       },
       {
         "id": "img-1163-865c215612",
         "className": "p3",
-        "title": "IMG 1163",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -423207,7 +426211,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1163"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -423261,13 +426269,17 @@ export const collections = {
             "bytes": 870964
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ],
         "duration": 0.7
       },
       {
         "id": "img-1162-8d5f189d84",
         "className": "p4",
-        "title": "IMG 1162",
+        "title": "San Gimignano",
         "caption": "Italy / 2025-05-12",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -423277,7 +426289,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1162"
+            "value": "San Gimignano"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, San Gimignano, Travel photography"
           },
           {
             "label": "Captured",
@@ -423331,7 +426347,11 @@ export const collections = {
             "bytes": 7782050
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "San Gimignano",
+          "Travel photography"
+        ],
         "duration": 6.71
       },
       {
@@ -423617,7 +426637,7 @@ export const collections = {
       {
         "id": "img-1140-5f0e42d7e3",
         "className": "p4",
-        "title": "IMG 1140",
+        "title": "Florence",
         "caption": "Italy / 2025-05-11",
         "full": "JPG master",
         "megapixels": 12.2,
@@ -423627,7 +426647,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1140"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, Travel photography"
           },
           {
             "label": "Captured",
@@ -423682,12 +426706,16 @@ export const collections = {
             "bytes": 1466865
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Florence",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1142-7b199b33ad",
         "className": "p5",
-        "title": "IMG 1142",
+        "title": "Florence, inside a restaurant",
         "caption": "Italy / 2025-05-11",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -423697,7 +426725,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1142"
+            "value": "Florence, inside a restaurant"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, Travel photography"
           },
           {
             "label": "Captured",
@@ -423751,7 +426783,11 @@ export const collections = {
             "bytes": 14716541
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "Florence",
+          "Travel photography"
+        ],
         "duration": 7.37
       },
       {
@@ -423967,7 +427003,7 @@ export const collections = {
       {
         "id": "img-1122-38b4360e54",
         "className": "p4",
-        "title": "IMG 1122",
+        "title": "Florence",
         "caption": "Italy / 2025-05-10",
         "full": "JPG master",
         "megapixels": 3.6,
@@ -423977,7 +427013,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1122"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, vertical composition, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -424016,12 +427056,18 @@ export const collections = {
             "bytes": 1026833
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Italy",
+          "Florence",
+          "vertical composition",
+          "portrait orientation",
+          "Travel photography"
+        ]
       },
       {
         "id": "img-1112-482e0b08e3",
         "className": "p5",
-        "title": "IMG 1112",
+        "title": "Florence",
         "caption": "Italy / 2025-05-10",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -424031,7 +427077,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1112"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, Travel photography"
           },
           {
             "label": "Captured",
@@ -424085,13 +427135,17 @@ export const collections = {
             "bytes": 9337840
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "Florence",
+          "Travel photography"
+        ],
         "duration": 8.27
       },
       {
         "id": "img-1111-3e8483bc6f",
         "className": "p1",
-        "title": "IMG 1111",
+        "title": "Florence",
         "caption": "Italy / 2025-05-10",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -424101,7 +427155,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1111"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, Travel photography"
           },
           {
             "label": "Captured",
@@ -424155,13 +427213,17 @@ export const collections = {
             "bytes": 6968843
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "Florence",
+          "Travel photography"
+        ],
         "duration": 6.03
       },
       {
         "id": "img-1110-d9679b1131",
         "className": "p2",
-        "title": "IMG 1110",
+        "title": "Florence",
         "caption": "Italy / 2025-05-10",
         "full": "MOV master",
         "megapixels": 2.1,
@@ -424171,7 +427233,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "IMG 1110"
+            "value": "Florence"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy, Florence, Travel photography"
           },
           {
             "label": "Captured",
@@ -424225,7 +427291,11 @@ export const collections = {
             "bytes": 5604378
           }
         ],
-        "keywords": [],
+        "keywords": [
+          "Italy",
+          "Florence",
+          "Travel photography"
+        ],
         "duration": 4.57
       },
       {
@@ -424714,7 +427784,7 @@ export const collections = {
       {
         "id": "20220519-150855-04494-23ca28ef26",
         "className": "p1",
-        "title": "20220519 150855 04494",
+        "title": "Carmo Convent Ruins, Lisbon",
         "caption": "Portugal / 2022-05-19",
         "full": "JPG master",
         "megapixels": 25.5,
@@ -424724,11 +427794,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220519 150855 04494"
+            "value": "Carmo Convent Ruins, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Carmo Convent, Portugal, city, lisbon, travel"
+            "value": "Carmo Convent, Carmo Archaeological Museum, Lisbon, Portugal, ruins, Gothic architecture, historic site, monastery, church, landmark, travel, architecture, city, Travel photography"
           },
           {
             "label": "Captured",
@@ -424785,16 +427855,25 @@ export const collections = {
         ],
         "keywords": [
           "Carmo Convent",
+          "Carmo Archaeological Museum",
+          "Lisbon",
           "Portugal",
+          "ruins",
+          "Gothic architecture",
+          "historic site",
+          "monastery",
+          "church",
+          "landmark",
+          "travel",
+          "architecture",
           "city",
-          "lisbon",
-          "travel"
+          "Travel photography"
         ]
       },
       {
         "id": "20220519-150528-04477-0e4b4e9c19",
         "className": "p2",
-        "title": "20220519 150528 04477",
+        "title": "Carmo Convent and Santa Justa Lift in Lisbon",
         "caption": "Portugal / 2022-05-19",
         "full": "JPG master",
         "megapixels": 61.7,
@@ -424804,11 +427883,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220519 150528 04477"
+            "value": "Carmo Convent and Santa Justa Lift in Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Carmo Convent, Portugal, Santa Justa Lift, city, lisbon, travel"
+            "value": "Carmo Convent, Santa Justa Lift, Lisbon, Portugal, historic center, cityscape, architecture, travel, urban landmark, ruins, wide composition, tourism, city, Travel photography"
           },
           {
             "label": "Captured",
@@ -424865,11 +427944,19 @@ export const collections = {
         ],
         "keywords": [
           "Carmo Convent",
-          "Portugal",
           "Santa Justa Lift",
+          "Lisbon",
+          "Portugal",
+          "historic center",
+          "cityscape",
+          "architecture",
+          "travel",
+          "urban landmark",
+          "ruins",
+          "wide composition",
+          "tourism",
           "city",
-          "lisbon",
-          "travel"
+          "Travel photography"
         ]
       },
       {
@@ -424957,7 +428044,7 @@ export const collections = {
       {
         "id": "20220519-145733-04458-46544e9a62",
         "className": "p4",
-        "title": "20220519 145733 04458",
+        "title": "Ruins of Carmo Convent in Lisbon",
         "caption": "Portugal / 2022-05-19",
         "full": "JPG master",
         "megapixels": 25.3,
@@ -424967,11 +428054,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220519 145733 04458"
+            "value": "Ruins of Carmo Convent in Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Carmo Convent, Portugal, Santa Justa Lift, city, lisbon, travel"
+            "value": "Carmo Convent, Convento do Carmo, Lisbon, Portugal, Santa Justa Lift, historic ruin, Gothic architecture, monument, travel, cityscape, landmark, tourism, city, portrait orientation, Travel photography"
           },
           {
             "label": "Captured",
@@ -425028,17 +428115,26 @@ export const collections = {
         ],
         "keywords": [
           "Carmo Convent",
+          "Convento do Carmo",
+          "Lisbon",
           "Portugal",
           "Santa Justa Lift",
+          "historic ruin",
+          "Gothic architecture",
+          "monument",
+          "travel",
+          "cityscape",
+          "landmark",
+          "tourism",
           "city",
-          "lisbon",
-          "travel"
+          "portrait orientation",
+          "Travel photography"
         ]
       },
       {
         "id": "20220519-145241-04418-3f31ab4dce",
         "className": "p5",
-        "title": "20220519 145241 04418",
+        "title": "Carmo Convent and Santa Justa Lift, Lisbon",
         "caption": "Portugal / 2022-05-19",
         "full": "JPG master",
         "megapixels": 39.1,
@@ -425048,11 +428144,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220519 145241 04418"
+            "value": "Carmo Convent and Santa Justa Lift, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Carmo Convent, Portugal, Santa Justa Lift, city, lisbon, travel"
+            "value": "Carmo Convent, Santa Justa Lift, Lisbon, Portugal, historic architecture, ruins, cityscape, travel, vertical composition, portrait orientation, tourism, landmark, city, Travel photography"
           },
           {
             "label": "Captured",
@@ -425109,11 +428205,19 @@ export const collections = {
         ],
         "keywords": [
           "Carmo Convent",
-          "Portugal",
           "Santa Justa Lift",
+          "Lisbon",
+          "Portugal",
+          "historic architecture",
+          "ruins",
+          "cityscape",
+          "travel",
+          "vertical composition",
+          "portrait orientation",
+          "tourism",
+          "landmark",
           "city",
-          "lisbon",
-          "travel"
+          "Travel photography"
         ]
       },
       {
@@ -425449,7 +428553,7 @@ export const collections = {
       {
         "id": "20220106-1726-00340-5d09a4fa8b",
         "className": "p5",
-        "title": "20220106 1726 00340",
+        "title": "Travel scene in Portugal",
         "caption": "Portugal / 2022-01-06",
         "full": "JPG master",
         "megapixels": 15.5,
@@ -425459,11 +428563,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220106 1726 00340"
+            "value": "Travel scene in Portugal"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, travel, travel photography, scene, outdoors, street, architecture, tourism, landscape, city, vacation, Europe"
           },
           {
             "label": "Captured",
@@ -425519,13 +428623,24 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "travel",
+          "travel photography",
+          "scene",
+          "outdoors",
+          "street",
+          "architecture",
+          "tourism",
+          "landscape",
+          "city",
+          "vacation",
+          "Europe"
         ]
       },
       {
         "id": "20220103-163309-00200-4107edee53",
         "className": "p1",
-        "title": "20220103 163309 00200",
+        "title": "Travel Scene in Portugal",
         "caption": "Portugal / 2022-01-03",
         "full": "TIFF master",
         "megapixels": 22.5,
@@ -425535,7 +428650,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220103 163309 00200"
+            "value": "Travel Scene in Portugal"
+          },
+          {
+            "label": "Keywords",
+            "value": "Portugal, travel, travel photography, tourism, destination, Europe, scenic, outdoor, journey, vacation"
           },
           {
             "label": "Captured",
@@ -425590,12 +428709,23 @@ export const collections = {
             "bytes": 259831763
           }
         ],
-        "keywords": []
+        "keywords": [
+          "Portugal",
+          "travel",
+          "travel photography",
+          "tourism",
+          "destination",
+          "Europe",
+          "scenic",
+          "outdoor",
+          "journey",
+          "vacation"
+        ]
       },
       {
         "id": "20220103-1633-00042-0f2ff159e9",
         "className": "p2",
-        "title": "20220103 1633 00042",
+        "title": "Portugal Travel Scene",
         "caption": "Portugal / 2022-01-03",
         "full": "JPG master",
         "megapixels": 22.5,
@@ -425605,11 +428735,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20220103 1633 00042"
+            "value": "Portugal Travel Scene"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, travel, travel photography, landscape, outdoor, scenic, tourism, destination, journey, Nikon D500"
           },
           {
             "label": "Captured",
@@ -425665,7 +428795,16 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "travel",
+          "travel photography",
+          "landscape",
+          "outdoor",
+          "scenic",
+          "tourism",
+          "destination",
+          "journey",
+          "Nikon D500"
         ]
       },
       {
@@ -425748,7 +428887,7 @@ export const collections = {
       {
         "id": "20201122-0522-00115-pano-402eec9058",
         "className": "p4",
-        "title": "20201122 0522 00115 Pano",
+        "title": "Portugal Landscape Panorama",
         "caption": "Portugal / 2020-11-22",
         "full": "JPG master",
         "megapixels": 167.4,
@@ -425758,11 +428897,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20201122 0522 00115 Pano"
+            "value": "Portugal Landscape Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, Panorama, Landscape, Scenery, Travel, Travel photography, Outdoors, Nature, Vista, Wide view"
           },
           {
             "label": "Captured",
@@ -425818,13 +428957,22 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "Panorama",
+          "Landscape",
+          "Scenery",
+          "Travel",
+          "Travel photography",
+          "Outdoors",
+          "Nature",
+          "Vista",
+          "Wide view"
         ]
       },
       {
         "id": "20201122-0521-00083-pano-8ac03d9803",
         "className": "p5",
-        "title": "20201122 0521 00083 Pano",
+        "title": "Panoramic View in Portugal",
         "caption": "Portugal / 2020-11-22",
         "full": "JPG master",
         "megapixels": 36.7,
@@ -425834,11 +428982,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20201122 0521 00083 Pano"
+            "value": "Panoramic View in Portugal"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, travel, travel photography, panorama, scenic, landscape, outdoors, horizon, view, nature, destination"
           },
           {
             "label": "Captured",
@@ -425894,13 +429042,23 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "travel",
+          "travel photography",
+          "panorama",
+          "scenic",
+          "landscape",
+          "outdoors",
+          "horizon",
+          "view",
+          "nature",
+          "destination"
         ]
       },
       {
         "id": "20201122-0516-00056-pano-665f19e925",
         "className": "p1",
-        "title": "20201122 0516 00056 Pano",
+        "title": "Panoramic View of Portugal",
         "caption": "Portugal / 2020-11-22",
         "full": "JPG master",
         "megapixels": 42.9,
@@ -425910,11 +429068,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20201122 0516 00056 Pano"
+            "value": "Panoramic View of Portugal"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, panorama, travel, landscape, scenic, outdoors, view, morning, coastline, horizon, Nikon D500, telephoto, Travel photography"
           },
           {
             "label": "Captured",
@@ -425970,13 +429128,25 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "panorama",
+          "travel",
+          "landscape",
+          "scenic",
+          "outdoors",
+          "view",
+          "morning",
+          "coastline",
+          "horizon",
+          "Nikon D500",
+          "telephoto",
+          "Travel photography"
         ]
       },
       {
         "id": "20200830-0932-19541-17dd4fb5d4",
         "className": "p2",
-        "title": "20200830 0932 19541",
+        "title": "Portugal Landscape Panorama",
         "caption": "Portugal / 2020-08-30",
         "full": "JPG master",
         "megapixels": 45.4,
@@ -425986,11 +429156,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20200830 0932 19541"
+            "value": "Portugal Landscape Panorama"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, landscape, panorama, wide angle, travel, scenic, vista, outdoors, horizon, photography, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -426046,13 +429216,24 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "landscape",
+          "panorama",
+          "wide angle",
+          "travel",
+          "scenic",
+          "vista",
+          "outdoors",
+          "horizon",
+          "photography",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20200830-0930-19440-736cbfc9a1",
         "className": "p3",
-        "title": "20200830 0930 19440",
+        "title": "Wide Scenic View in Portugal",
         "caption": "Portugal / 2020-08-30",
         "full": "JPG master",
         "megapixels": 52.3,
@@ -426062,11 +429243,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20200830 0930 19440"
+            "value": "Wide Scenic View in Portugal"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, wide angle, landscape, panorama, scenic, travel, outdoors, vista, daylight, photography, wide composition, Travel photography"
           },
           {
             "label": "Captured",
@@ -426122,13 +429303,24 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "wide angle",
+          "landscape",
+          "panorama",
+          "scenic",
+          "travel",
+          "outdoors",
+          "vista",
+          "daylight",
+          "photography",
+          "wide composition",
+          "Travel photography"
         ]
       },
       {
         "id": "20200719-0707-19625-99d9aec9ff",
         "className": "p4",
-        "title": "20200719 0707 19625",
+        "title": "Panoramic Travel Scene in Portugal",
         "caption": "Portugal / 2020-07-19",
         "full": "JPG master",
         "megapixels": 50.9,
@@ -426138,11 +429330,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20200719 0707 19625"
+            "value": "Panoramic Travel Scene in Portugal"
           },
           {
             "label": "Keywords",
-            "value": "Portugal"
+            "value": "Portugal, panorama, wide composition, travel photography, scenic view, landscape, outdoors, daylight, horizon, expansive, tourism"
           },
           {
             "label": "Captured",
@@ -426198,13 +429390,23 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Portugal"
+          "Portugal",
+          "panorama",
+          "wide composition",
+          "travel photography",
+          "scenic view",
+          "landscape",
+          "outdoors",
+          "daylight",
+          "horizon",
+          "expansive",
+          "tourism"
         ]
       },
       {
         "id": "20180520-1731-00738-1d66a4c1ca",
         "className": "p5",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 24,
@@ -426214,11 +429416,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art, architecture, travel, historic, city, European travel, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426275,7 +429477,16 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art",
+          "architecture",
+          "travel",
+          "historic",
+          "city",
+          "European travel",
           "lisbonne",
           "national museum of antique art",
           "Travel photography"
@@ -426284,7 +429495,7 @@ export const collections = {
       {
         "id": "20180520-1701-00737-a4a3b7e860",
         "className": "p1",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 24,
@@ -426294,11 +429505,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, portrait orientation, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art, travel, architecture, historic building, portrait orientation, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426355,17 +429566,24 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art",
+          "travel",
+          "architecture",
+          "historic building",
+          "portrait orientation",
           "lisbonne",
           "national museum of antique art",
-          "portrait orientation",
           "Travel photography"
         ]
       },
       {
         "id": "20180520-1627-00732-0df4ba1830",
         "className": "p2",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 20.8,
@@ -426375,11 +429593,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, notAFace, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, architecture, travel, historic building, urban scene, notAFace, tourism, exterior, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426436,17 +429654,26 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "architecture",
+          "travel",
+          "historic building",
+          "urban scene",
+          "notAFace",
+          "tourism",
+          "exterior",
           "lisbonne",
           "national museum of antique art",
-          "notAFace",
           "Travel photography"
         ]
       },
       {
         "id": "20180520-1617-00730-5ef53e0579",
         "className": "p3",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -426456,11 +429683,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art, travel, architecture, cityscape, historic, culture, Europe, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426517,7 +429744,17 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art",
+          "travel",
+          "architecture",
+          "cityscape",
+          "historic",
+          "culture",
+          "Europe",
           "lisbonne",
           "national museum of antique art",
           "Travel photography"
@@ -426526,7 +429763,7 @@ export const collections = {
       {
         "id": "20180520-1615-00727-dddf36cc6a",
         "className": "p4",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -426536,11 +429773,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art, architecture, travel, city, historic, culture, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426597,7 +429834,16 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art",
+          "architecture",
+          "travel",
+          "city",
+          "historic",
+          "culture",
           "lisbonne",
           "national museum of antique art",
           "Travel photography"
@@ -426606,7 +429852,7 @@ export const collections = {
       {
         "id": "20180520-1609-00726-631d1d03cb",
         "className": "p5",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -426616,11 +429862,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, city view, travel, architecture, river view, urban landscape, outdoor, sightseeing, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426677,7 +429923,17 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "city view",
+          "travel",
+          "architecture",
+          "river view",
+          "urban landscape",
+          "outdoor",
+          "sightseeing",
           "lisbonne",
           "national museum of antique art",
           "Travel photography"
@@ -426686,7 +429942,7 @@ export const collections = {
       {
         "id": "20180520-1607-00725-b30b83b198",
         "className": "p1",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 11.1,
@@ -426696,11 +429952,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, portrait orientation, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, historic building, architecture, travel, city, culture, portrait orientation, travel photography, lisbonne, national museum of antique art"
           },
           {
             "label": "Captured",
@@ -426757,17 +430013,25 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
-          "lisbonne",
-          "national museum of antique art",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "historic building",
+          "architecture",
+          "travel",
+          "city",
+          "culture",
           "portrait orientation",
-          "Travel photography"
+          "travel photography",
+          "lisbonne",
+          "national museum of antique art"
         ]
       },
       {
         "id": "20180520-1605-00724-c27b7d6b75",
         "className": "p2",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 24,
@@ -426777,11 +430041,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art, travel, architecture, culture, historic, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -426838,7 +430102,15 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art",
+          "travel",
+          "architecture",
+          "culture",
+          "historic",
           "lisbonne",
           "national museum of antique art",
           "Travel photography"
@@ -426847,7 +430119,7 @@ export const collections = {
       {
         "id": "20180520-1600-00723-18e975037f",
         "className": "p3",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 24,
@@ -426857,11 +430129,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, notAFace, portrait orientation, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art museum, travel, architecture, cityscape, historic building, portrait orientation, lisbonne, national museum of antique art, notAFace, Travel photography"
           },
           {
             "label": "Captured",
@@ -426918,18 +430190,26 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art museum",
+          "travel",
+          "architecture",
+          "cityscape",
+          "historic building",
+          "portrait orientation",
           "lisbonne",
           "national museum of antique art",
           "notAFace",
-          "portrait orientation",
           "Travel photography"
         ]
       },
       {
         "id": "20180520-1559-00722-c5fc561a78",
         "className": "p4",
-        "title": "Lisbon, Lisbonne",
+        "title": "National Museum of Ancient Art, Lisbon",
         "caption": "Portugal / Lisboa, Portugal / 2018-05-20",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -426939,11 +430219,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "Lisbon, Lisbonne"
+            "value": "National Museum of Ancient Art, Lisbon"
           },
           {
             "label": "Keywords",
-            "value": "Portugal, lisbon, lisbonne, national museum of antique art, Travel photography"
+            "value": "Portugal, Lisbon, Lisboa, National Museum of Ancient Art, museum, art, travel, architecture, historic, culture, lisbonne, national museum of antique art, Travel photography"
           },
           {
             "label": "Captured",
@@ -427000,7 +430280,15 @@ export const collections = {
         ],
         "keywords": [
           "Portugal",
-          "lisbon",
+          "Lisbon",
+          "Lisboa",
+          "National Museum of Ancient Art",
+          "museum",
+          "art",
+          "travel",
+          "architecture",
+          "historic",
+          "culture",
           "lisbonne",
           "national museum of antique art",
           "Travel photography"
@@ -441294,7 +444582,7 @@ export const collections = {
       {
         "id": "20180516-1747-00464-9bdeb008f8",
         "className": "p4",
-        "title": "20180516 1747 00464",
+        "title": "Road Above Porto",
         "caption": "Portugal / Porto, Portugal / 2018-05-16",
         "full": "JPG master",
         "megapixels": 20.3,
@@ -441304,11 +444592,11 @@ export const collections = {
         "metadata": [
           {
             "label": "Metadata title",
-            "value": "20180516 1747 00464"
+            "value": "Road Above Porto"
           },
           {
             "label": "Keywords",
-            "value": "Landscape, Mountain, Portugal, Trip, city, porto, road, travel"
+            "value": "Portugal, Porto, road, hillside, city, landscape, travel, mountain, scenic, outlook, trip, architecture, Travel photography"
           },
           {
             "label": "Captured",
@@ -441364,14 +444652,19 @@ export const collections = {
           }
         ],
         "keywords": [
-          "Landscape",
-          "Mountain",
           "Portugal",
-          "Trip",
-          "city",
-          "porto",
+          "Porto",
           "road",
-          "travel"
+          "hillside",
+          "city",
+          "landscape",
+          "travel",
+          "mountain",
+          "scenic",
+          "outlook",
+          "trip",
+          "architecture",
+          "Travel photography"
         ]
       },
       {

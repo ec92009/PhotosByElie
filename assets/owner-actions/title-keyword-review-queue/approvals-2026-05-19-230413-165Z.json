@@ -1,0 +1,5960 @@
+{
+  "format": "photosbyelie-title-keyword-review-approvals",
+  "schema_version": 1,
+  "updated_at": "2026-05-20T08:45:31.187999+00:00",
+  "batch_id": "2026-05-19-230413-165Z",
+  "review_flag": "Title_Keywords_Reviewed",
+  "proposal_state_flag": "Title_Keywords_Proposed",
+  "rejection_flag": "Title_Keywords_Rejected",
+  "approvals": [
+    {
+      "photo_id": "20180516-1747-00464-9bdeb008f8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Road Above Porto",
+      "keywords": [
+        "Portugal",
+        "Porto",
+        "road",
+        "hillside",
+        "city",
+        "landscape",
+        "travel",
+        "mountain",
+        "scenic",
+        "outlook",
+        "trip",
+        "architecture",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1559-00722-c5fc561a78",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "travel",
+        "architecture",
+        "historic",
+        "culture",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1600-00723-18e975037f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art museum",
+        "travel",
+        "architecture",
+        "cityscape",
+        "historic building",
+        "portrait orientation",
+        "lisbonne",
+        "national museum of antique art",
+        "notAFace",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1605-00724-c27b7d6b75",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "travel",
+        "architecture",
+        "culture",
+        "historic",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1607-00725-b30b83b198",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "historic building",
+        "architecture",
+        "travel",
+        "city",
+        "culture",
+        "portrait orientation",
+        "travel photography",
+        "lisbonne",
+        "national museum of antique art"
+      ]
+    },
+    {
+      "photo_id": "20180520-1609-00726-631d1d03cb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "city view",
+        "travel",
+        "architecture",
+        "river view",
+        "urban landscape",
+        "outdoor",
+        "sightseeing",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1615-00727-dddf36cc6a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "architecture",
+        "travel",
+        "city",
+        "historic",
+        "culture",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1617-00730-5ef53e0579",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "travel",
+        "architecture",
+        "cityscape",
+        "historic",
+        "culture",
+        "Europe",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1627-00732-0df4ba1830",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "architecture",
+        "travel",
+        "historic building",
+        "urban scene",
+        "notAFace",
+        "tourism",
+        "exterior",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180521-1849-00767-061b255c0f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid City View, Plaza Mayor",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "cityscape",
+        "urban",
+        "portrait orientation",
+        "street scene",
+        "architecture",
+        "outdoors",
+        "daylight",
+        "travel photography",
+        "Sp"
+      ]
+    },
+    {
+      "photo_id": "20180521-1954-00774-a43eaf6e85",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid City View",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "city",
+        "urban",
+        "street photography",
+        "destination",
+        "landscape",
+        "architecture",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-0958-00781-483ad21c71",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid city view",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "city",
+        "urban",
+        "sightseeing",
+        "landscape",
+        "tourism",
+        "street",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1002-00782-cf6b288133",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid City View",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "urban landscape",
+        "architecture",
+        "travel",
+        "cityscape",
+        "street scene",
+        "tourism",
+        "outdoors",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1003-00783-86edce2fca",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid city scene",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Community of Madrid",
+        "travel",
+        "cityscape",
+        "urban",
+        "street scene",
+        "architecture",
+        "landmark",
+        "tourism",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1006-00785-bb9fe59c25",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid city view",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "cityscape",
+        "urban landscape",
+        "wide angle",
+        "travel photography",
+        "architecture",
+        "street scene",
+        "landmark",
+        "Sp",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180522-1008-00786-2e4afd4a78",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid city view",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "cityscape",
+        "urban landscape",
+        "travel",
+        "architecture",
+        "street scene",
+        "wide angle",
+        "outdoors",
+        "daylight",
+        "tourism",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1014-00789-9901434b9a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid city view",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "cityscape",
+        "urban",
+        "travel",
+        "architecture",
+        "street scene",
+        "outdoors",
+        "tourism",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1151-00835-e83ea8125d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Mercado San Miguel, Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "market",
+        "indoor market",
+        "travel",
+        "architecture",
+        "food hall",
+        "Comunidad de Madrid",
+        "historic building",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1151-00837-3b90404c2a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Mercado San Miguel in Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "market",
+        "indoor market",
+        "travel",
+        "food hall",
+        "Comunidad de Madrid",
+        "architecture",
+        "tourism",
+        "street photography",
+        "urban",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1152-00839-0fd2439a9a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Mercado San Miguel, Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "Comunidad de Madrid",
+        "market",
+        "food market",
+        "travel",
+        "architecture",
+        "interior",
+        "city",
+        "tourism",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1152-00841-1290b7ad30",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Mercado San Miguel, Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "Comunidad de Madrid",
+        "market",
+        "indoor market",
+        "food hall",
+        "travel",
+        "architecture",
+        "city life",
+        "street market",
+        "tourism",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1153-00844-55c8d57db1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Inside Mercado San Miguel, Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "indoor market",
+        "food hall",
+        "historic market",
+        "travel",
+        "architecture",
+        "market stalls",
+        "Comunidad de Madrid",
+        "tourism",
+        "city center",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1153-00845-dfbb904491",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Mercado San Miguel in Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "Comunidad de Madrid",
+        "market hall",
+        "indoor market",
+        "travel",
+        "architecture",
+        "food market",
+        "city life",
+        "tourism",
+        "urban scene",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1156-00849-97eb65fcd7",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Mercado San Miguel in Madrid",
+      "keywords": [
+        "Madrid",
+        "Mercado San Miguel",
+        "Spain",
+        "market",
+        "indoor market",
+        "travel",
+        "architecture",
+        "city life",
+        "food market",
+        "Comunidad de Madrid",
+        "tourism",
+        "urban",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1244-00861-1c8323b22f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Panoramic View of Madrid's Royal Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "Palace",
+        "panorama",
+        "wide angle",
+        "cityscape",
+        "architecture",
+        "travel",
+        "historic building",
+        "Comunidad de Madrid",
+        "landmark",
+        "National Palace",
+        "Panoramic",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1244-00862-d10dd36348",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Panoramic View of the National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "panoramic",
+        "cityscape",
+        "architecture",
+        "skyline",
+        "travel",
+        "wide-angle",
+        "urban",
+        "landmark",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1245-00864-8e51015779",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "National Palace",
+        "Spain",
+        "Community of Madrid",
+        "travel",
+        "architecture",
+        "landmark",
+        "palace",
+        "historic",
+        "city",
+        "Sp",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1246-00865-f227761feb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "National Palace",
+        "Spain",
+        "Comunidad de Madrid",
+        "architecture",
+        "palace",
+        "landmark",
+        "travel",
+        "tourism",
+        "city",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1246-00866-e54508e73b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "National Palace",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel",
+        "cityscape",
+        "tourism",
+        "Comunidad de Madrid",
+        "palace",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1247-00867-20da9720f2",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace Exterior",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "palace",
+        "royal palace",
+        "architecture",
+        "landmark",
+        "historic",
+        "travel",
+        "tourism",
+        "exterior",
+        "city",
+        "facade",
+        "National Palace",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1251-00868-7319a58ddf",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "architecture",
+        "palace",
+        "travel",
+        "cityscape",
+        "historic building",
+        "Comunidad de Madrid",
+        "landmark",
+        "tourism",
+        "Europe",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1252-00872-edb2ed6f2c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "National Palace",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "architecture",
+        "landmark",
+        "palace",
+        "cityscape",
+        "historic",
+        "tourism",
+        "daylight",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1252-00873-1e21d9efaa",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "architecture",
+        "travel",
+        "cityscape",
+        "historic building",
+        "palace",
+        "landmark",
+        "exterior",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1257-00875-b88ee8a0bc",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid and the Royal Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "landmark",
+        "cityscape",
+        "travel",
+        "Comunidad de Madrid",
+        "historic building",
+        "tourism",
+        "palace",
+        "National Palace",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1257-00876-8e04a7ee3e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace Interior",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel",
+        "Comunidad de Madrid",
+        "cityscape",
+        "tourism",
+        "palace",
+        "National Palace",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1259-00877-3bb003eb2d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "National Palace",
+        "Spain",
+        "Community of Madrid",
+        "travel",
+        "architecture",
+        "palace",
+        "historic building",
+        "cityscape",
+        "landmark",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1259-00878-8f7fdbf73b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "cityscape",
+        "landmark",
+        "portrait orientation",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1300-00879-eea199db6c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "Palace",
+        "architecture",
+        "travel",
+        "landmark",
+        "cityscape",
+        "portrait orientation",
+        "Comunidad de Madrid",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1304-00881-db5009c014",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "palace",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel",
+        "tourism",
+        "cityscape",
+        "Comunidad de Madrid",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1309-00886-84c424a432",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace Panorama",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "palace",
+        "architecture",
+        "panoramic",
+        "cityscape",
+        "landmark",
+        "travel",
+        "historic",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1322-00888-08ac194d19",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "palace",
+        "architecture",
+        "landmark",
+        "travel",
+        "historic",
+        "city",
+        "tourism",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1322-00889-84c3a77b96",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Spain",
+        "Community of Madrid",
+        "architecture",
+        "palace",
+        "travel",
+        "historic building",
+        "city landmark",
+        "tourism",
+        "exterior",
+        "National Palace",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1323-00891-7930502b12",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace at Plaza de Oriente",
+      "keywords": [
+        "Madrid",
+        "National Palace",
+        "Plaza de Oriente",
+        "Spain",
+        "Comunidad de Madrid",
+        "palace",
+        "architecture",
+        "landmark",
+        "travel photography",
+        "historic building",
+        "portrait orientation",
+        "Sp"
+      ]
+    },
+    {
+      "photo_id": "20180522-1325-00892-5b9c7eef8a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "historic building",
+        "cityscape",
+        "travel",
+        "plaza",
+        "landmark",
+        "Comunidad de Madrid",
+        "tourism",
+        "National Palace",
+        "Sp",
+        "square format",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1326-00894-70f247c8bf",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "architecture",
+        "historic building",
+        "palace",
+        "travel",
+        "cityscape",
+        "portrait orientation",
+        "Comunidad de Madrid",
+        "National Palace",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1326-00893-75d36d95eb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Royal Palace",
+        "Palace",
+        "architecture",
+        "historic building",
+        "tourism",
+        "travel",
+        "plaza",
+        "cityscape",
+        "Comunidad de Madrid",
+        "landmark",
+        "National Palace",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180522-1333-00896-18f955bb6f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "landmark",
+        "tourism",
+        "city",
+        "travel photography",
+        "Comunidad de Madrid",
+        "exterior",
+        "Sp",
+        "square format"
+      ]
+    },
+    {
+      "photo_id": "20180522-1335-00897-e59231f9bd",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "palace",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel",
+        "portrait orientation",
+        "vertical composition",
+        "city",
+        "tourism",
+        "Sp",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180524-1746-00940-636b34659d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Galeries Lafayette on Rue Bayard in Toulouse",
+      "keywords": [
+        "France",
+        "Occitanie",
+        "Toulouse",
+        "Galeries Lafayette",
+        "Rue Bayard",
+        "department store",
+        "shopping",
+        "retail",
+        "city center",
+        "street scene",
+        "architecture",
+        "travel",
+        "urban",
+        "Galeries",
+        "Greek mythology",
+        "square format",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180524-1746-00941-72deedae61",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Galeries Lafayette on Rue Bayard in Toulouse",
+      "keywords": [
+        "France",
+        "Occitanie",
+        "Toulouse",
+        "Rue Bayard",
+        "Galeries Lafayette",
+        "department store",
+        "architecture",
+        "facade",
+        "shopping",
+        "urban",
+        "travel",
+        "Galeries",
+        "Greek mythology",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180525-1440-00948-f9444792d1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Albi Riverside Panorama",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie",
+        "Tarn",
+        "riverside",
+        "panorama",
+        "wide view",
+        "cityscape",
+        "travel photography",
+        "historic town",
+        "architecture",
+        "landscape",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180525-1440-00949-4323df4391",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Old Town in Albi",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie",
+        "Old Town",
+        "Historic District",
+        "Street Scene",
+        "Architecture",
+        "Travel",
+        "Tourism",
+        "Cityscape",
+        "Europe",
+        "Culture",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180525-1440-00951-9d8859c6b7",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Albi, Occitanie, France",
+      "keywords": [
+        "Albi",
+        "France",
+        "Occitanie",
+        "travel",
+        "travel photography",
+        "portrait orientation",
+        "Nikon D7100",
+        "NIKON CORPORATION",
+        "2018",
+        "camera original"
+      ]
+    },
+    {
+      "photo_id": "20180525-1443-00956-a9e61b8dde",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Albi in Occitanie",
+      "keywords": [
+        "Albi",
+        "Occitanie",
+        "France",
+        "travel",
+        "city",
+        "urban",
+        "outdoors",
+        "historic",
+        "tourism",
+        "landscape",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20191120-1218-17526-6b255bf1cf",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Travel Scene in France",
+      "keywords": [
+        "France",
+        "Travel",
+        "Travel photography",
+        "Outdoor",
+        "Daylight",
+        "iPhone XR",
+        "2019",
+        "November 2019",
+        "Original capture"
+      ]
+    },
+    {
+      "photo_id": "20191121-1230-19526-pano-08e814918c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Wide panoramic view in France",
+      "keywords": [
+        "France",
+        "panorama",
+        "wide view",
+        "travel",
+        "landscape",
+        "scenic",
+        "outdoors",
+        "daylight",
+        "vacation",
+        "Europe",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20200719-0707-19625-99d9aec9ff",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Panoramic Travel Scene in Portugal",
+      "keywords": [
+        "Portugal",
+        "panorama",
+        "wide composition",
+        "travel photography",
+        "scenic view",
+        "landscape",
+        "outdoors",
+        "daylight",
+        "horizon",
+        "expansive",
+        "tourism"
+      ]
+    },
+    {
+      "photo_id": "20200830-0930-19440-736cbfc9a1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Wide Scenic View in Portugal",
+      "keywords": [
+        "Portugal",
+        "wide angle",
+        "landscape",
+        "panorama",
+        "scenic",
+        "travel",
+        "outdoors",
+        "vista",
+        "daylight",
+        "photography",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20200830-0932-19541-17dd4fb5d4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Portugal Landscape Panorama",
+      "keywords": [
+        "Portugal",
+        "landscape",
+        "panorama",
+        "wide angle",
+        "travel",
+        "scenic",
+        "vista",
+        "outdoors",
+        "horizon",
+        "photography",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20201122-0516-00056-pano-665f19e925",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Panoramic View of Portugal",
+      "keywords": [
+        "Portugal",
+        "panorama",
+        "travel",
+        "landscape",
+        "scenic",
+        "outdoors",
+        "view",
+        "morning",
+        "coastline",
+        "horizon",
+        "Nikon D500",
+        "telephoto",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20201122-0521-00083-pano-8ac03d9803",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Panoramic View in Portugal",
+      "keywords": [
+        "Portugal",
+        "travel",
+        "travel photography",
+        "panorama",
+        "scenic",
+        "landscape",
+        "outdoors",
+        "horizon",
+        "view",
+        "nature",
+        "destination"
+      ]
+    },
+    {
+      "photo_id": "20201122-0522-00115-pano-402eec9058",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Portugal Landscape Panorama",
+      "keywords": [
+        "Portugal",
+        "Panorama",
+        "Landscape",
+        "Scenery",
+        "Travel",
+        "Travel photography",
+        "Outdoors",
+        "Nature",
+        "Vista",
+        "Wide view"
+      ]
+    },
+    {
+      "photo_id": "20220106-1726-00340-5d09a4fa8b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Travel scene in Portugal",
+      "keywords": [
+        "Portugal",
+        "travel",
+        "travel photography",
+        "scene",
+        "outdoors",
+        "street",
+        "architecture",
+        "tourism",
+        "landscape",
+        "city",
+        "vacation",
+        "Europe"
+      ]
+    },
+    {
+      "photo_id": "20220511-001210-04287-13f472f9a5",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Catedral de Santiago, Bilbao",
+      "keywords": [
+        "Spain",
+        "travel",
+        "travel photography",
+        "portrait orientation",
+        "vertical",
+        "tourism",
+        "destination",
+        "outdoor",
+        "journey",
+        "vacation"
+      ]
+    },
+    {
+      "photo_id": "20220511-101210-04342-d9757c336f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Catedral de Santiago, Bilbao",
+      "keywords": [
+        "Catedral de Santiago",
+        "Bilbao",
+        "Basque Country",
+        "Spain",
+        "cathedral",
+        "church",
+        "architecture",
+        "facade",
+        "window",
+        "columns",
+        "travel",
+        "Building",
+        "Euzkadi",
+        "Guggenheim museum",
+        "Pays Basque",
+        "St James Cathedral",
+        "planter",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220511-101524-04347-16cfbebb6e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Catedral de Santiago, Bilbao",
+      "keywords": [
+        "Architecture",
+        "Basque Country",
+        "Bilbao",
+        "Building",
+        "Catedral de Santiago",
+        "Cathedral",
+        "Euzkadi",
+        "Gothic",
+        "Pays Basque",
+        "Spain",
+        "St James Cathedral",
+        "Window",
+        "columns",
+        "planter",
+        "Guggenheim museum",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220519-145241-04418-3f31ab4dce",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Carmo Convent and Santa Justa Lift, Lisbon",
+      "keywords": [
+        "Carmo Convent",
+        "Santa Justa Lift",
+        "Lisbon",
+        "Portugal",
+        "historic architecture",
+        "ruins",
+        "cityscape",
+        "travel",
+        "vertical composition",
+        "portrait orientation",
+        "tourism",
+        "landmark",
+        "city",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220519-145733-04458-46544e9a62",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ruins of Carmo Convent in Lisbon",
+      "keywords": [
+        "Carmo Convent",
+        "Convento do Carmo",
+        "Lisbon",
+        "Portugal",
+        "Santa Justa Lift",
+        "historic ruin",
+        "Gothic architecture",
+        "monument",
+        "travel",
+        "cityscape",
+        "landmark",
+        "tourism",
+        "city",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220519-150528-04477-0e4b4e9c19",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Carmo Convent and Santa Justa Lift in Lisbon",
+      "keywords": [
+        "Carmo Convent",
+        "Santa Justa Lift",
+        "Lisbon",
+        "Portugal",
+        "historic center",
+        "cityscape",
+        "architecture",
+        "travel",
+        "urban landmark",
+        "ruins",
+        "wide composition",
+        "tourism",
+        "city",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220519-150855-04494-23ca28ef26",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Carmo Convent Ruins, Lisbon",
+      "keywords": [
+        "Carmo Convent",
+        "Carmo Archaeological Museum",
+        "Lisbon",
+        "Portugal",
+        "ruins",
+        "Gothic architecture",
+        "historic site",
+        "monastery",
+        "church",
+        "landmark",
+        "travel",
+        "architecture",
+        "city",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-163201-00058-pano-fcbc893e0f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "monument",
+        "landmark",
+        "architecture",
+        "historic",
+        "tourism",
+        "panorama",
+        "wide angle",
+        "ceramic",
+        "arcade",
+        "travel",
+        "outdoor",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164226-00105-pano-467f6f472c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "monument",
+        "landmark",
+        "architecture",
+        "travel",
+        "panorama",
+        "historic",
+        "tourism",
+        "wide angle",
+        "Andalusia",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164412-00127-pano-13a8791aa3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "landmark",
+        "monument",
+        "architecture",
+        "panoramic",
+        "travel",
+        "tourism",
+        "historic",
+        "plaza",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164431-00139-pano-92425313d3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "landmark",
+        "architecture",
+        "square",
+        "travel",
+        "Andalusia",
+        "panorama",
+        "historic",
+        "tourism",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164358-00121-pano-28e2885b71",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "landmark",
+        "monument",
+        "architecture",
+        "panorama",
+        "travel",
+        "historic",
+        "plaza",
+        "arches",
+        "tilework",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2872-2ab71fa586",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2871-0f2c6b767c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2877-5f13bb5308",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2876-783b85cc21",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2875-bd388467ea",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2874-9afa306ccd",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2873-c924a9a1ef",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2880-4030e3ca13",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2879-e65cb5a582",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2878-8338396820",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2883-e5e52f86fb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2882-c780011bbe",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2881-ea5569bb4d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2888-9f1caafe57",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2887-2c7995d791",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2886-1f2ee47bd1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2885-2382b61507",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "d5h-2884-7d8cd97d5f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-0861-fe2e90fe4e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Alhaurin De La Torre, Sunset",
+      "keywords": [
+        "Spain",
+        "Alhaurin De La Torre",
+        "Sunset",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-0862-9252ca91e8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Alhaurin De La Torre, Sunset",
+      "keywords": [
+        "Spain",
+        "Alhaurin De La Torre",
+        "Sunset",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-0863-07f58ecacb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Alhaurin De La Torre, Sunset",
+      "keywords": [
+        "Spain",
+        "Alhaurin De La Torre",
+        "Sunset",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1054-bbd7e90a80",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1055-41b73643cf",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1056-d435404ae1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1057-bb454434b8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1058-8d294fe8e8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1059-af6442e4d6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1060-9e7b7af75d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1041-ebc7a0b91d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1042-e2da70c37c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1043-3857110b84",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1044-6c1c81f667",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1045-f0bb5afd06",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1046-0a291f3f6b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1047-3f423c66d0",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1048-a88e4bbbed",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1049-0d27d1b9e0",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1050-218e6e50fa",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1051-a7db55f33d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1052-3340ac087f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1053-c743e3adab",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Ronda",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1110-d9679b1131",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1111-3e8483bc6f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1112-482e0b08e3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1122-38b4360e54",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "vertical composition",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1142-7b199b33ad",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence, inside a restaurant",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1140-5f0e42d7e3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1162-8d5f189d84",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1163-865c215612",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1164-ff3aa85aa6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1165-7f280d668b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1166-5254d26291",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1174-e74617298f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1175-9c75e77850",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1176-bda2ef58f7",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1177-ed6ca580f8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1178-d3dfcb9bcb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1179-73dc1ce59c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1180-fe3d9faa8d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1181-a12bca4639",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1182-5aa2cfd683",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1184-adad54985d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "San Gimignano",
+      "keywords": [
+        "Italy",
+        "San Gimignano",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1196-7c59c4b110",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "tower",
+        "bell tower",
+        "architecture",
+        "Romanesque",
+        "landmark",
+        "historic site",
+        "travel photography",
+        "cityscape",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1197-0132d88761",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "bell tower",
+        "Piazza dei Miracoli",
+        "medieval architecture",
+        "landmark",
+        "historic building",
+        "tourism",
+        "architecture",
+        "UNESCO World Heritage",
+        "portrait orientation",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Cityscape"
+      ]
+    },
+    {
+      "photo_id": "img-1201-2b1b1ce0f9",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1205-78f89398bc",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "bell tower",
+        "campanile",
+        "medieval architecture",
+        "landmark",
+        "historic monument",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city",
+        "Architecture"
+      ]
+    },
+    {
+      "photo_id": "img-1205-4ca5e788f0",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1206-9aa38d2a4c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "bell tower",
+        "architecture",
+        "landmark",
+        "historic",
+        "travel",
+        "cityscape",
+        "medieval",
+        "UNESCO",
+        "portrait orientation",
+        "Travel photography",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1207-5079ff3336",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "campanile",
+        "bell tower",
+        "architecture",
+        "historic landmark",
+        "cityscape",
+        "travel photography",
+        "landmark",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1208-d059e156dc",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "tower",
+        "landmark",
+        "architecture",
+        "historic building",
+        "tourism",
+        "Italian travel",
+        "cityscape",
+        "portrait orientation",
+        "Travel photography",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1209-2397d71a31",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "campanile",
+        "Piazza dei Miracoli",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1210-e222dcb15c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "campanile",
+        "architecture",
+        "landmark",
+        "historic building",
+        "tourism",
+        "cityscape",
+        "Italian travel",
+        "medieval",
+        "Travel photography",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1211-d55a7c07cb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "campanile",
+        "architecture",
+        "landmark",
+        "historic monument",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "bell tower",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1212-96505e7356",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "tower",
+        "bell tower",
+        "architecture",
+        "landmark",
+        "historic building",
+        "medieval",
+        "travel photography",
+        "cityscape",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1212-4fa11b0170",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1213-7276413ecc",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "tower",
+        "landmark",
+        "architecture",
+        "historic building",
+        "Italian travel",
+        "cityscape",
+        "portrait orientation",
+        "Travel photography",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1214-bde4dfb750",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "bell tower",
+        "medieval architecture",
+        "landmark",
+        "historic building",
+        "Piazza dei Miracoli",
+        "UNESCO World Heritage",
+        "travel",
+        "cityscape",
+        "portrait orientation",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture"
+      ]
+    },
+    {
+      "photo_id": "img-1216-601dd6c052",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "bell tower",
+        "Romanesque architecture",
+        "landmark",
+        "historic monument",
+        "architecture",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1217-fba9ecc01d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "Pisa Cathedral",
+        "Piazza dei Miracoli",
+        "landmark",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city",
+        "Cityscape"
+      ]
+    },
+    {
+      "photo_id": "img-1218-fe487846d6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "landmark",
+        "architecture",
+        "historic building",
+        "tourism",
+        "travel photography",
+        "bell tower",
+        "medieval",
+        "cityscape",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1219-570b09bebb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "campanile",
+        "landmark",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "cityscape",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ]
+    },
+    {
+      "photo_id": "img-1219-13240aafb0",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1220-75c863ef2a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "vertical composition",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1202-2683ad1a9d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1221-6d39ae64d8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "vertical composition",
+        "portrait orientation",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1297-79f91bca96",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1545-fbf260c171",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Valencia Cathedral",
+      "keywords": [
+        "Spain",
+        "Valencia",
+        "Valencia Cathedral",
+        "Catedral",
+        "Valencian Community",
+        "cathedral",
+        "church",
+        "architecture",
+        "historic",
+        "landmark",
+        "travel",
+        "religion",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1549-471a28324d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Valencia Cathedral",
+      "keywords": [
+        "Spain",
+        "Valencia",
+        "Valencia Cathedral",
+        "Catedral de Valencia",
+        "Valencian Community",
+        "cathedral",
+        "church",
+        "Gothic architecture",
+        "historic architecture",
+        "landmark",
+        "travel photography",
+        "Catedral"
+      ]
+    },
+    {
+      "photo_id": "img-1725-9b92758bc4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "travel",
+        "tourism",
+        "historic building",
+        "city",
+        "Community of Madrid",
+        "landmark",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1734-1bf3b86935",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "Community of Madrid",
+        "palace",
+        "architecture",
+        "landmark",
+        "travel",
+        "tourism",
+        "city",
+        "historic",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1738-9138530372",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "cityscape",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1746-f07ddf8619",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel",
+        "city",
+        "tourism",
+        "Europe",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1770-434ac95ffd",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Real Palacio",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "tourism",
+        "landmark",
+        "iPhone video"
+      ]
+    },
+    {
+      "photo_id": "img-1783-7259c95f33",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "Community of Madrid",
+        "architecture",
+        "travel",
+        "cityscape",
+        "historic building",
+        "palace",
+        "tourism",
+        "street view",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1784-515f25653b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Palace Interior",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "interior",
+        "travel",
+        "architecture",
+        "historic",
+        "tourism",
+        "video",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1785-749fbc5030",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid at the Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Real Palacio",
+        "Community of Madrid",
+        "travel",
+        "architecture",
+        "cityscape",
+        "historic building",
+        "tourism",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1808-1745ac1003",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "Europe",
+        "city",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1819-1b933a590e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Real Palacio",
+        "travel",
+        "architecture",
+        "landmark",
+        "historic building",
+        "city",
+        "tourism",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1820-53f03e41b0",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "travel",
+        "architecture",
+        "palace",
+        "landmark",
+        "cityscape",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1821-755f783ebc",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid palace visit",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Real Palacio",
+        "Royal Palace",
+        "palace",
+        "travel",
+        "tourism",
+        "architecture",
+        "sightseeing",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1822-2c1fa446a1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "travel",
+        "city landmark",
+        "historic building",
+        "tourism",
+        "video",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1823-0e64d2b72f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "city",
+        "video",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1825-1a087a004d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "At the Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "travel",
+        "architecture",
+        "palace",
+        "city",
+        "tourism",
+        "Europe",
+        "historic",
+        "urban",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1827-719cafbfff",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "Community of Madrid",
+        "palace",
+        "architecture",
+        "travel",
+        "tourism",
+        "historic building",
+        "landmark",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1828-45d847026c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "historic architecture",
+        "landmark",
+        "travel photography",
+        "tourism"
+      ]
+    },
+    {
+      "photo_id": "img-1834-dbeb78d35f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "historic architecture",
+        "palace",
+        "travel photography",
+        "tourism",
+        "city landmark",
+        "urban scene",
+        "video",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1841-484a17bd40",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel photography",
+        "city",
+        "tourism"
+      ]
+    },
+    {
+      "photo_id": "img-1731-a0901994cf",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Real Palacio",
+        "Community of Madrid",
+        "travel",
+        "architecture",
+        "palace",
+        "city landmark",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1732-3c4378b2eb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "Community of Madrid",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1733-955e266701",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "palace",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel",
+        "tourism",
+        "city",
+        "royal residence",
+        "urban",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1735-e1337440c8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic",
+        "landmark",
+        "travel",
+        "tourism",
+        "Europe",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1739-0f4a603c2d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "urban landmark",
+        "tourism",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1740-eed4a4da1d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid at the Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Community of Madrid",
+        "travel",
+        "architecture",
+        "city",
+        "tourism",
+        "palace",
+        "urban",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1741-576b59367f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "city",
+        "landmark",
+        "European architecture",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1742-f66dc5409d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "architecture",
+        "palace",
+        "travel",
+        "tourism",
+        "historic building",
+        "cityscape",
+        "urban",
+        "landmark",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1744-7783687f33",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "city",
+        "landmark",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1745-bceb47f6d5",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "palace",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel photography",
+        "tourism",
+        "city center",
+        "royal residence",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1747-3ae72f2d25",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "Palace",
+        "Architecture",
+        "Historic building",
+        "Travel",
+        "Tourism",
+        "Landmark",
+        "City center",
+        "Exterior",
+        "Europe",
+        "Spanish heritage",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1758-0fac205230",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "travel",
+        "architecture",
+        "palace",
+        "historic building",
+        "city landmark",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1757-2f45d03ba4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "travel",
+        "historic building",
+        "cityscape",
+        "Community of Madrid",
+        "Real Palacio",
+        "tourism",
+        "landmark",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1760-5e658b819a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel",
+        "tourism",
+        "royal residence",
+        "city",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1759-8b159ad669",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Palacio Real",
+        "Royal Palace",
+        "Community of Madrid",
+        "palace",
+        "architecture",
+        "landmark",
+        "travel",
+        "sightseeing",
+        "historic building",
+        "tourism",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1761-4457cdd80b",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "architecture",
+        "travel",
+        "historic building",
+        "palace",
+        "tourism",
+        "city landmark",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1762-629604487e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "palace",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel",
+        "tourism",
+        "city",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1766-60281b0b90",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "landmark",
+        "historic",
+        "travel",
+        "tourism",
+        "city",
+        "Europe",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1765-b8467126e6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "city landmark",
+        "tourism",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1767-6a174699d5",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "palace",
+        "historic building",
+        "architecture",
+        "travel",
+        "tourism",
+        "Community of Madrid",
+        "Real Palacio",
+        "landmark",
+        "city",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1768-ca97268db9",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "palace",
+        "historic building",
+        "architecture",
+        "travel",
+        "tourism",
+        "city landmark",
+        "exterior",
+        "Europe",
+        "Real Palacio",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1775-dcd789f219",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "palace",
+        "historic building",
+        "tourism",
+        "travel",
+        "cityscape",
+        "Community of Madrid",
+        "exterior",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1776-21d38493a8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palace",
+        "Architecture",
+        "Historic building",
+        "Tourism",
+        "Travel photography",
+        "City landmark",
+        "Royal residence",
+        "Exterior",
+        "Community of Madrid",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1777-69e4124aa8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "landmark",
+        "historic building",
+        "travel",
+        "tourism",
+        "city",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1778-74b22991ee",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real de Madrid",
+        "Community of Madrid",
+        "historic architecture",
+        "palace",
+        "travel photography",
+        "tourism",
+        "European landmark",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1779-6f52cef5c7",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Real Palace",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "Community of Madrid",
+        "Europe",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1780-a1565bd0ad",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "landmark",
+        "city",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1781-4c3fffeb41",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "Community of Madrid",
+        "architecture",
+        "palace",
+        "historic building",
+        "travel",
+        "tourism",
+        "cityscape",
+        "landmark",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1782-99f81ac70c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Near the Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Real Palacio",
+        "Royal Palace",
+        "travel photography",
+        "architecture",
+        "palace",
+        "historic site",
+        "tourism",
+        "urban scene",
+        "city landmark"
+      ]
+    },
+    {
+      "photo_id": "img-1788-894fb6577a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "palace",
+        "royal residence",
+        "historic building",
+        "architecture",
+        "travel",
+        "tourism",
+        "sightseeing",
+        "landmark",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1796-5ac56ba47d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Palace Interior",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "palace interior",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "heritage",
+        "interior design",
+        "stonework",
+        "ornate",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1797-f4d3c9a2a4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Palace Exterior",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "travel",
+        "cityscape",
+        "historic building",
+        "tourism",
+        "June 2025",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1798-e899dd7d44",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Palacio Real",
+        "Royal Palace",
+        "historic architecture",
+        "palace",
+        "travel photography",
+        "tourism",
+        "cityscape",
+        "Community of Madrid",
+        "landmark",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1799-18f71d3d8a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Palace Visit",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "travel",
+        "architecture",
+        "historic",
+        "tourism",
+        "palace",
+        "city",
+        "Spain travel",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1800-c626e67a38",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "travel",
+        "historic building",
+        "palace",
+        "cityscape",
+        "tourism",
+        "Community of Madrid",
+        "landmark",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1801-df3e767b3e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "travel photography",
+        "architecture",
+        "palace",
+        "historic building",
+        "city landmark",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1803-1dab4c359f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Palace",
+        "Architecture",
+        "Historic building",
+        "Travel",
+        "Tourism",
+        "Europe",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1804-1a434e64c3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Palacio Real",
+        "Royal Palace",
+        "architecture",
+        "palace",
+        "historic building",
+        "travel",
+        "tourism",
+        "Europe",
+        "landmark",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1805-b01bf2bd71",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "historic architecture",
+        "landmark",
+        "travel",
+        "tourism",
+        "cityscape",
+        "palace",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1806-f5332e5f73",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "tourism",
+        "Spain travel",
+        "Madrid palace"
+      ]
+    },
+    {
+      "photo_id": "img-1809-8b89dbd9ac",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "palace",
+        "city interior",
+        "landmark",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1810-d9dcf2d499",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "palace",
+        "architecture",
+        "landmark",
+        "travel photography",
+        "historic building",
+        "tourism",
+        "city",
+        "Europe",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1811-56a049eb64",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "historic palace",
+        "architecture",
+        "travel",
+        "tourism",
+        "landmark",
+        "cityscape",
+        "heritage",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1812-5d67f74343",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "tourism",
+        "Europe",
+        "city"
+      ]
+    },
+    {
+      "photo_id": "img-1813-8516c69731",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "architecture",
+        "palace",
+        "historic building",
+        "travel",
+        "tourism",
+        "Europe",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1814-487ffeadd4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Community of Madrid",
+        "travel",
+        "architecture",
+        "palace",
+        "historic building",
+        "tourism",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1815-ade5e9ee43",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Inside the Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "interior",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel",
+        "tourism",
+        "Europe",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1816-69a1ff5a24",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace in Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "Community of Madrid",
+        "travel photography",
+        "historic building",
+        "palace",
+        "architecture",
+        "landmark",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1817-d2c6398e49",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "palace",
+        "architecture",
+        "travel",
+        "tourism",
+        "historic building",
+        "cityscape",
+        "exterior",
+        "landmark",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1829-bec0afa8fe",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "landmark",
+        "travel",
+        "tourism",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1830-3277921045",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Palacio Real",
+        "Royal Palace of Madrid",
+        "travel photography",
+        "architecture",
+        "palace",
+        "historic building",
+        "landmark",
+        "tourism",
+        "urban scene",
+        "royal residence",
+        "Community of Madrid",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1831-dbefc252ac",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Madrid Royal Palace",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "architecture",
+        "palace",
+        "travel",
+        "tourism",
+        "city landmark",
+        "historic building",
+        "royal residence",
+        "Community of Madrid",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1839-b05891d741",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "Community of Madrid",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel photography",
+        "tourism",
+        "landmark",
+        "Real Palacio"
+      ]
+    },
+    {
+      "photo_id": "img-1843-59ad09aad1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "royal residence",
+        "city landmark",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1844-536f7fb72e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "travel",
+        "architecture",
+        "landmark",
+        "palace",
+        "sightseeing",
+        "urban",
+        "photography",
+        "Real Palacio",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1846-be46775020",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Royal Palace",
+        "Palacio Real",
+        "architecture",
+        "historic building",
+        "travel",
+        "cityscape",
+        "landmark",
+        "palace",
+        "Community of Madrid",
+        "Real Palacio",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1847-49826cc8ea",
+      "batch_id": "2026-05-19-230413-165Z",
+      "approved": true,
+      "title": "Royal Palace of Madrid",
+      "keywords": [
+        "Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Royal Palace of Madrid",
+        "Real Palacio",
+        "palace",
+        "architecture",
+        "historic building",
+        "travel",
+        "tourism",
+        "city",
+        "landmark",
+        "Travel photography"
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "photo_id": "20180520-1701-00737-a4a3b7e860",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "travel",
+        "architecture",
+        "historic building",
+        "portrait orientation",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ],
+      "comment": "likely incorrect"
+    },
+    {
+      "photo_id": "20180520-1731-00738-1d66a4c1ca",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "National Museum of Ancient Art, Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "architecture",
+        "travel",
+        "historic",
+        "city",
+        "European travel",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ],
+      "comment": "use keywords as clues"
+    },
+    {
+      "photo_id": "20180521-1927-00772-736a518350",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "urban",
+        "city",
+        "architecture",
+        "street photography",
+        "Europe",
+        "wide angle",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "try to use the pixels and the keyword clues to determine the title. Probably the royal palace"
+    },
+    {
+      "photo_id": "20180522-1243-00857-9016a8fb74",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid National Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "National Palace",
+        "Palacio Real",
+        "architecture",
+        "wide view",
+        "cityscape",
+        "travel",
+        "historic building",
+        "exterior",
+        "landmark",
+        "Comunidad de Madrid",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "near the palace, looks like a church or cathedral"
+    },
+    {
+      "photo_id": "20180522-1243-00860-d80ba96fe3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid National Palace Panorama",
+      "keywords": [
+        "Madrid",
+        "National Palace",
+        "Spain",
+        "panorama",
+        "wide view",
+        "architecture",
+        "travel",
+        "cityscape",
+        "landmark",
+        "historic building",
+        "Panoramic",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "near the palace, looks like a church or cathedral"
+    },
+    {
+      "photo_id": "20180523-1054-00904-0d99c36c72",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid city scene",
+      "keywords": [
+        "Madrid",
+        "Community of Madrid",
+        "Spain",
+        "travel photography",
+        "city",
+        "urban",
+        "street",
+        "outdoors",
+        "daytime",
+        "Europe",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1158-00906-0c7b4b1a4a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Street scene in Madrid",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel",
+        "street scene",
+        "urban",
+        "architecture",
+        "daytime",
+        "Nikon D500",
+        "telephoto",
+        "outdoor",
+        "city",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1158-00905-cda4564627",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Community of Madrid",
+        "Spain",
+        "travel photography",
+        "urban landscape",
+        "cityscape",
+        "architecture",
+        "wide composition",
+        "street scene",
+        "outdoors",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1158-00907-6ce2b12655",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "Travel photography",
+        "Urban scene",
+        "City life",
+        "Street photography",
+        "Architecture",
+        "Europe",
+        "NIKON D500",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1158-00909-ae9141c3d6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Street Scene in Madrid",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel photography",
+        "city",
+        "urban",
+        "street scene",
+        "Europe",
+        "outdoors",
+        "architecture",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1158-00910-5757c7b525",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel photography",
+        "2018",
+        "May 2018",
+        "Nikon D500",
+        "Nikkor 70-300mm",
+        "city scene",
+        "urban",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1201-00911-eafaa28f50",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel photography",
+        "wide composition",
+        "urban landscape",
+        "cityscape",
+        "Nikon D500",
+        "70-300mm lens",
+        "2018",
+        "documentary",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1202-00912-a00fe362d5",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Wide view of Madrid",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "cityscape",
+        "urban landscape",
+        "travel photography",
+        "wide composition",
+        "daylight",
+        "panoramic",
+        "Nikon D500",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1202-00913-897a1ed221",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "urban",
+        "cityscape",
+        "travel",
+        "street scene",
+        "architecture",
+        "Europe",
+        "outdoors",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1210-00915-fab64fb7c8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid city scene",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel photography",
+        "urban scene",
+        "cityscape",
+        "daylight",
+        "outdoor",
+        "Nikon D500",
+        "telephoto",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1210-00914-2cdae156c4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Street Scene in Madrid",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel",
+        "city",
+        "urban",
+        "street",
+        "outdoors",
+        "daylight",
+        "wide composition",
+        "Basque Country",
+        "Euzkadi",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1210-00916-b8e0288d68",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel",
+        "city",
+        "urban",
+        "Europe",
+        "outdoor",
+        "daylight",
+        "Nikon D500",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1210-00918-3e378ecfd5",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid city scene",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Community of Madrid",
+        "urban",
+        "travel",
+        "street",
+        "cityscape",
+        "outdoors",
+        "architecture",
+        "Europe",
+        "photography",
+        "Basque Country",
+        "Euzkadi",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1212-00919-6df8338b03",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Travel view in Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel photography",
+        "wide composition",
+        "daytime",
+        "outdoors",
+        "urban scene",
+        "panorama",
+        "city view",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1227-00921-6e41710e47",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel photography",
+        "urban scene",
+        "city",
+        "street photography",
+        "Europe",
+        "Nikon D500",
+        "2018",
+        "May 2018",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1232-00922-a14269681d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid Street Scene",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "street scene",
+        "urban",
+        "outdoors",
+        "daytime",
+        "photography",
+        "gallery",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1253-00923-9853f3d6a1",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "Europe",
+        "urban",
+        "city",
+        "travel",
+        "street",
+        "2018",
+        "May 2018",
+        "Nikon D500",
+        "photography",
+        "Basque Country",
+        "Euzkadi",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1158-00908-c83ee908b8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Street Scene in Madrid",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel",
+        "street",
+        "urban",
+        "city",
+        "architecture",
+        "outdoor",
+        "daylight",
+        "Europe",
+        "Nikon D500",
+        "Basque Country",
+        "Euzkadi",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1430-00925-26fcc1b7fe",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel",
+        "city",
+        "urban",
+        "street scene",
+        "outdoors",
+        "daylight",
+        "tourism",
+        "Nikon D500",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1430-00926-d172f5ecc6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "Comunidad de Madrid",
+        "travel",
+        "city",
+        "urban",
+        "street",
+        "outdoors",
+        "Europe",
+        "photography",
+        "Basque Country",
+        "Euzkadi",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1431-00927-5d8be4af92",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "travel",
+        "urban",
+        "cityscape",
+        "outdoors",
+        "daylight",
+        "Nikon D500",
+        "telephoto",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1431-00928-2f28a3e130",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "Europe",
+        "travel",
+        "city",
+        "urban",
+        "street",
+        "photography",
+        "outdoor",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1436-00930-629888625d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Urban scene in Madrid",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "urban scene",
+        "city",
+        "street",
+        "travel photography",
+        "outdoors",
+        "2018",
+        "architecture",
+        "public space",
+        "Basque Country",
+        "Euzkadi",
+        "wide composition"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1436-00931-d244aba917",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid street scene",
+      "keywords": [
+        "Madrid",
+        "Community of Madrid",
+        "Spain",
+        "travel photography",
+        "street photography",
+        "urban scene",
+        "city life",
+        "outdoors",
+        "Europe",
+        "Sony?",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1505-00933-be91168496",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid, Spain",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "Europe",
+        "travel",
+        "travel photography",
+        "urban",
+        "city",
+        "street",
+        "May 2018",
+        "Nikon D500",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180523-1842-00934-ac0d4c2359",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Madrid street scene",
+      "keywords": [
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "Travel photography",
+        "Urban",
+        "Street scene",
+        "City",
+        "Road",
+        "Outdoor",
+        "Daylight",
+        "Europe",
+        "Tourism",
+        "Basque Country",
+        "Euzkadi"
+      ],
+      "comment": "not the city, not madrid, assume for now that place names in the keywords are not misleading"
+    },
+    {
+      "photo_id": "20180525-1441-00952-0be82ccc8d",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Streets in Albi, Occitanie",
+      "keywords": [
+        "Albi",
+        "Occitanie",
+        "France",
+        "street",
+        "travel",
+        "architecture",
+        "cityscape",
+        "historic center",
+        "daylight",
+        "outdoors",
+        "urban",
+        "Travel photography"
+      ],
+      "comment": "no streets"
+    },
+    {
+      "photo_id": "20180525-1442-00953-93073461ca",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Albi Streetscape",
+      "keywords": [
+        "Albi",
+        "Occitanie",
+        "France",
+        "travel photography",
+        "street scene",
+        "architecture",
+        "historic town",
+        "outdoor",
+        "daylight",
+        "tourism"
+      ],
+      "comment": "no streets"
+    },
+    {
+      "photo_id": "20191121-1447-19571-e626fda37c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Travel Scene in France",
+      "keywords": [
+        "France",
+        "travel",
+        "portrait orientation",
+        "outdoors",
+        "daylight",
+        "iPhone XR",
+        "2019",
+        "November 2019",
+        "tourism",
+        "vacation",
+        "Travel photography"
+      ],
+      "comment": "check GPS coordinates on this iphone photo"
+    },
+    {
+      "photo_id": "20191121-1456-19535-cde6330de2",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Travel scene in France",
+      "keywords": [
+        "France",
+        "Travel photography",
+        "Travel",
+        "Outdoor",
+        "Street scene",
+        "Daytime",
+        "Urban",
+        "Landscape",
+        "Architecture",
+        "iPhone photography"
+      ],
+      "comment": "check GPS coordinates on this iphone photo"
+    },
+    {
+      "photo_id": "20191122-1655-16797-9068a18da9",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Wide View in France",
+      "keywords": [
+        "France",
+        "travel photography",
+        "wide composition",
+        "wide-angle",
+        "panorama",
+        "scenic view",
+        "documentary",
+        "landscape",
+        "architecture",
+        "editorial",
+        "published Adobe"
+      ],
+      "comment": "check GPS coordinates on this iphone photo"
+    },
+    {
+      "photo_id": "20220103-163309-00200-4107edee53",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Travel Scene in Portugal",
+      "keywords": [
+        "Portugal",
+        "travel",
+        "travel photography",
+        "tourism",
+        "destination",
+        "Europe",
+        "scenic",
+        "outdoor",
+        "journey",
+        "vacation"
+      ],
+      "comment": "obviously an aquarium"
+    },
+    {
+      "photo_id": "20220103-1633-00042-0f2ff159e9",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Portugal Travel Scene",
+      "keywords": [
+        "Portugal",
+        "travel",
+        "travel photography",
+        "landscape",
+        "outdoor",
+        "scenic",
+        "tourism",
+        "destination",
+        "journey",
+        "Nikon D500"
+      ],
+      "comment": "obviously an aquarium"
+    },
+    {
+      "photo_id": "20220620-144601-00127-pano-1a18b2ed13",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Historic monument in Spain",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "landmark",
+        "historic",
+        "architecture",
+        "travel",
+        "tourism",
+        "panorama",
+        "outdoor",
+        "heritage",
+        "square format",
+        "Travel photography"
+      ],
+      "comment": "this is a well known place / monument. improve the title"
+    },
+    {
+      "photo_id": "20220620-144822-00251-57d2611649",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Iconic Monument in Spain",
+      "keywords": [
+        "Spain",
+        "monument",
+        "landmark",
+        "architecture",
+        "historic site",
+        "travel",
+        "tourism",
+        "panorama",
+        "wide view",
+        "cityscape",
+        "outdoor",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "city view of ronda spain"
+    },
+    {
+      "photo_id": "20220705-163053-00041-pano-ffda1926ab",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville Panorama",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "panorama",
+        "cityscape",
+        "travel",
+        "architecture",
+        "urban",
+        "landmark",
+        "sunlit",
+        "wide angle",
+        "Andalusia",
+        "tourism",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "use keywords as tips, to figure out which famous place / building plaza de espana seville, use clues from other photos from the same shoot (2-3 hour window)"
+    },
+    {
+      "photo_id": "20220705-163205-00060-pano-8068d8fe3f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville landmark panorama",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "landmark",
+        "panorama",
+        "cityscape",
+        "travel",
+        "architecture",
+        "historic",
+        "urban",
+        "outdoors",
+        "tourism",
+        "Andalusia",
+        "Travel photography"
+      ],
+      "comment": "use keywords as tips, to figure out which famous place / building plaza de espana seville, use clues from other photos from the same shoot (2-3 hour window)"
+    },
+    {
+      "photo_id": "20220705-163214-00065-pano-bcd3b6cb72",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville Panorama",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "panorama",
+        "cityscape",
+        "wide view",
+        "travel",
+        "architecture",
+        "urban landscape",
+        "sunny",
+        "outdoors",
+        "historic city",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "use keywords as tips, to figure out which famous place / building plaza de espana seville, use clues from other photos from the same shoot (2-3 hour window)"
+    },
+    {
+      "photo_id": "20220705-163419-00083-pano-3f4486b119",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville landmark panorama",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "landmark",
+        "panorama",
+        "architecture",
+        "travel",
+        "cityscape",
+        "historic",
+        "tourism",
+        "wide view",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "use keywords as tips, to figure out which famous place / building plaza de espana seville, use clues from other photos from the same shoot (2-3 hour window)"
+    },
+    {
+      "photo_id": "20220705-164241-00109-pano-c1234d4711",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville landmark panorama",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "landmark",
+        "panorama",
+        "architecture",
+        "travel",
+        "tourism",
+        "cityscape",
+        "historic",
+        "wide-angle",
+        "monument",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "use keywords as tips, to figure out which famous place / building plaza de espana seville, use clues from other photos from the same shoot (2-3 hour window)"
+    },
+    {
+      "photo_id": "20220705-164252-00114-pano-77e6201324",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville cityscape",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "cityscape",
+        "panorama",
+        "architecture",
+        "historic center",
+        "travel",
+        "urban landscape",
+        "skyline",
+        "wide-angle",
+        "tourism",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "use keywords as tips, to figure out which famous place / building plaza de espana seville, use clues from other photos from the same shoot (2-3 hour window)"
+    },
+    {
+      "photo_id": "20220705-164409-00126-pano-75c4163f8e",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville Cathedral",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Seville Cathedral",
+        "cathedral",
+        "landmark",
+        "monument",
+        "architecture",
+        "historic",
+        "travel",
+        "panorama",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "Still plaza de España"
+    },
+    {
+      "photo_id": "img-1123-807c7c6a80",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": "well known place / monument"
+    },
+    {
+      "photo_id": "img-1124-a67a48ee91",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": "well known place / monument"
+    },
+    {
+      "photo_id": "img-1125-dc58a482c6",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": "well known place / monument"
+    },
+    {
+      "photo_id": "img-1141-e7e66ca045",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1149-ae6b096d6f",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1150-3541f17aa7",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1151-9cde6756a2",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Travel photography"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1196-743b6f88b9",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1198-bb563d6235",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "campanile",
+        "landmark",
+        "architecture",
+        "historic building",
+        "tourism",
+        "travel photography",
+        "cityscape",
+        "famous monument",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1199-0ebd1a5044",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "tower",
+        "landmark",
+        "architecture",
+        "historic monument",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "Italian landmark",
+        "Italian travel",
+        "Historic city"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1200-8b6f63148c",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "bell tower",
+        "Piazza dei Miracoli",
+        "Romanesque architecture",
+        "landmark",
+        "historic architecture",
+        "travel photography",
+        "cityscape",
+        "tourism",
+        "Italian travel",
+        "Historic city",
+        "Architecture"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1202-cd5854fcaa",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "Bell Tower",
+        "Campanile",
+        "Architecture",
+        "Landmark",
+        "Historic monument",
+        "Travel photography",
+        "Italian travel",
+        "Tourism",
+        "Historic city",
+        "Cityscape"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1203-09dfc6e2ae",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1204-3a889ed776",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "Piazza dei Miracoli",
+        "bell tower",
+        "architecture",
+        "historic landmark",
+        "travel photography",
+        "cityscape",
+        "landmark",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1204-1d710fba81",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Travel photography",
+        "Italian travel",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark"
+      ],
+      "comment": ""
+    },
+    {
+      "photo_id": "img-1292-3b723d82be",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1293-a6ef9548d3",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1298-3036cfca45",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1304-dbb036a0a8",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1323-dc4ffe3842",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1324-2a214f3c49",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1285-7dc1335b5a",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1286-6cc8d75107",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1287-89ea2d9bac",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1291-8ca48ed8d2",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1295-8edea483ea",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1294-f5caafc307",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1296-57d10180dd",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    },
+    {
+      "photo_id": "img-1299-258452f505",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1300-a9df85b7fb",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1305-2d00c82f12",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1306-db5384a1f4",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1307-5123942639",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "needs detail"
+    },
+    {
+      "photo_id": "img-1311-33e0bd87ce",
+      "batch_id": "2026-05-19-230413-165Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Travel photography"
+      ],
+      "comment": "use other photos in the shoot as clues"
+    }
+  ],
+  "blocked": [
+    {
+      "photo_id": "img-1109-cb8d636b93",
+      "batch_id": "2026-05-19-230413-165Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T07:50:50.601872+00:00"
+    }
+  ],
+  "not_found": [],
+  "applied_at": "2026-05-20T08:45:21.129233+00:00"
+}

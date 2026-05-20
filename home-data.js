@@ -335,7 +335,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "img-1221-6d39ae64d8",
-        "title": "IMG 1221",
+        "title": "Florence",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -350,7 +350,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-1220-75c863ef2a",
-        "title": "IMG 1220",
+        "title": "Florence",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -365,7 +365,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-1219-570b09bebb",
-        "title": "IMG 1219",
+        "title": "Leaning Tower of Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -380,7 +380,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-1219-13240aafb0",
-        "title": "IMG 1219",
+        "title": "Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {

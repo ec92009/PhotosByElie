@@ -24,9 +24,9 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v80.8`
+- Current visible build: `v81.4`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
-- Recent baseline commits include: `6ec82489 photosbyelie: tighten title keyword review workflow`, `681be32d photosbyelie: use run-scoped title keyword batches`, and `3bcc875c photosbyelie: add title keyword review batch 2026-05-19-170500`.
+- Recent baseline commits include: `297c572d photosbyelie: add title keyword review batch 2026-05-19-230413`, `49471506 photosbyelie: publish title keyword review updates`, and `6ec82489 photosbyelie: tighten title keyword review workflow`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `6,324` publishable media rows: France `292`, USA `184`, Spain `643`, Mexico `2`, AI/Leonardo `4,921`, Italy `63`, Portugal `217`, Slovakia `2`.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite.br` is the preferred payload, `assets/catalog/photosbyelie.sqlite` is the fallback, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract.
@@ -49,6 +49,7 @@ for remote execution.
 - Waste Basket review now uses the shared gallery-card treatment and the same density/fit masonry behavior as public galleries.
 - Public collection pages use the shared `gallery.html?gallery=<slug>` route.
 - `v80.8` publishes the latest Owner title/keyword approvals into the public SQLite catalog and Worker catalog, adds model provenance to the Owner title/keyword review cards, defaults Owner Review to the title/keyword queue, and clears stale proposed rows that are already blocked or missing from the public catalog.
+- `v81.4` publishes 239 approved title/keyword rows from batch `2026-05-19-230413-165Z` into the public SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
 
 ## First Commands On A Machine
 

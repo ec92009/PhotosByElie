@@ -5,6 +5,7 @@ Side-project prototype for three candidate Photos By Elie main pages.
 - `01 Atlas`: bright editorial destination grid with quick country routes.
 - `02 Darkroom`: cinematic full-bleed hero with animated film rail.
 - `03 Desk`: warmer collection/workbench layout with search-first browsing.
+- `04 Best Mix`: current-home structure with a full-bleed Nerja cave hero.
 
 Open `index.html` through the repo's local server:
 

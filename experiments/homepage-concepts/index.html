@@ -4,12 +4,12 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie | Main Page Concepts</title>
-  <meta name="description" content="Three homepage design candidates for Photos By Elie."/>
+  <meta name="description" content="Homepage design candidates for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="../../assets/byelie-logo.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,750&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./main-page-concepts.css"/>
+  <link rel="stylesheet" href="./main-page-concepts.css?v=4"/>
 </head>
 <body>
   <a class="skip-link" href="#concept-stage">Skip to concepts</a>
@@ -25,6 +25,7 @@
       <button type="button" data-concept-target="atlas" aria-pressed="true">01 Atlas</button>
       <button type="button" data-concept-target="darkroom" aria-pressed="false">02 Darkroom</button>
       <button type="button" data-concept-target="desk" aria-pressed="false">03 Desk</button>
+      <button type="button" data-concept-target="best-mix" aria-pressed="false">04 Best Mix</button>
     </nav>
     <a class="current-home-link" href="../../index.html">Current home</a>
   </header>
@@ -177,8 +178,99 @@
         <a href="../../order.html"><span>Send</span><strong>Order flow</strong></a>
       </section>
     </section>
+
+    <section class="concept-page concept-best-mix" id="best-mix" aria-labelledby="best-mix-title" hidden>
+      <header class="best-site-topbar" aria-label="Preview of current site navigation">
+        <div class="best-site-brand">
+          <img src="../../assets/byelie-logo.png" alt="By Elie logo"/>
+          <span>PHOTOS BY ELIE</span>
+        </div>
+        <nav aria-label="Site navigation">
+          <a href="https://ec92009.github.io/byElie/">By Elie</a>
+          <span>|</span>
+          <a class="is-active" href="../../index.html">Photos</a>
+          <span>|</span>
+          <a href="../../real-estate.html?logout=1&client=elie">Client login</a>
+        </nav>
+        <span class="best-version">v81.5</span>
+        <div class="best-controls">
+          <button type="button">English</button>
+          <button type="button">Night</button>
+        </div>
+      </header>
+
+      <section class="best-hero" aria-labelledby="best-mix-title">
+        <img class="best-hero-bg" src="../../assets/apple-photos/2026/2026-nerja-caves/photos/img-3507-d549fabda3_1800.jpg" alt="Nerja cave formations in Spain"/>
+        <div class="best-hero-copy">
+          <h1 id="best-mix-title">Photos By Elie</h1>
+          <div class="action-row">
+            <a class="button button-primary" href="#best-collections">View collections</a>
+            <a class="button button-secondary" href="../../real-estate.html?logout=1&client=elie">Client login</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="best-panel best-featured" aria-labelledby="best-featured-title">
+        <div class="best-section-head">
+          <div>
+            <p class="eyebrow">Featured on Pinterest</p>
+            <h2 id="best-featured-title">Recent Pinterest features</h2>
+          </div>
+          <a class="button button-secondary" href="https://www.pinterest.com/photosbyelie/" target="_blank" rel="noreferrer">View Pinterest</a>
+        </div>
+        <div class="best-feature-grid">
+          <a class="best-feature-card" href="../../campaign.html?c=pinterest-valencia-aquarium-2026-05-16">
+            <img src="../../socials/Pinterest/2026-05-15/valencia-aquarium/images-square/01-img-1567-8286aafbcb-square.jpg" alt="Valencia Aquarium Architecture"/>
+            <span>
+              <strong>Valencia Aquarium Architecture</strong>
+              <small>5-photo Pinterest carousel from Spain's City of Arts and Sciences</small>
+            </span>
+          </a>
+          <a class="best-feature-card" href="../../campaign.html?c=pinterest-invalides-2026-05-14">
+            <img src="../../socials/Pinterest/2026-05-14/images/01-nave.jpg" alt="Eglise des Invalides, Paris"/>
+            <span>
+              <strong>Eglise des Invalides, Paris</strong>
+              <small>10 photos from the shoot, plus nearby Paris finds</small>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <section class="best-panel best-discovery" aria-labelledby="best-discover-title">
+        <div class="best-section-head">
+          <h2 id="best-discover-title">Find photos</h2>
+          <p>Catalog ready</p>
+        </div>
+        <form class="best-filter-bar" aria-label="Photo search and filters">
+          <label><span>Search</span><input type="search" placeholder="Title or keyword"/></label>
+          <label><span>Collection</span><select><option>All</option><option>Spain</option><option>France</option><option>AI Images</option></select></label>
+          <label><span>Date from</span><input type="date"/></label>
+          <label><span>Date to</span><input type="date"/></label>
+          <label><span>Media</span><select><option>All media</option><option>Photos</option><option>Videos</option></select></label>
+          <label><span>Origin</span><select><option>All</option><option>Camera photo</option><option>AI image</option></select></label>
+          <label><span>Orientation</span><select><option>All</option><option>Pano</option><option>Landscape</option><option>Portrait</option><option>Square</option></select></label>
+          <button class="button button-secondary" type="button">Clear</button>
+        </form>
+      </section>
+
+      <section class="best-panel best-collections" id="best-collections" aria-labelledby="best-collections-title">
+        <div class="best-section-head">
+          <h2 id="best-collections-title">Collections</h2>
+        </div>
+        <div class="best-collection-grid">
+          <a href="../../gallery.html?gallery=france"><span>France</span></a>
+          <a href="../../gallery.html?gallery=usa"><span>USA</span></a>
+          <a href="../../gallery.html?gallery=spain"><span>Spain</span></a>
+          <a href="../../gallery.html?gallery=mexico"><span>Mexico</span></a>
+          <a href="../../gallery.html?gallery=italy"><span>Italy</span></a>
+          <a href="../../gallery.html?gallery=ai"><span>AI Images</span></a>
+          <a href="../../gallery.html?gallery=portugal"><span>Portugal</span></a>
+          <a href="../../gallery.html?gallery=slovakia"><span>Slovakia</span></a>
+        </div>
+      </section>
+    </section>
   </main>
 
-  <script src="./main-page-concepts.js"></script>
+  <script src="./main-page-concepts.js?v=4"></script>
 </body>
 </html>

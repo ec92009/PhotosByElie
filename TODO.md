@@ -9,6 +9,7 @@ Last updated: 2026-05-20
 - Local Owner page: `http://localhost:8001/owner.html?v=81.18`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
+- A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
 - Title/keyword review state is SQLite-backed in ignored local `assets/owner-actions/Owner.sqlite`.
 - Title/keyword batch/review JSON under `assets/owner-actions/title-keyword-review-queue/` is ignored/local review-page and audit output. It is no longer tracked as deployable public metadata.
 - Latest generated title/keyword review batch: `2026-05-20-185753-222Z`.
@@ -99,3 +100,8 @@ Last updated: 2026-05-20
 
 22. **Keep repo and media cleanup deliberate.**
     - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
+
+23. **Measure catalog transport cost before another conversion.**
+    - Keep a normalized SQL-shaped JSON catalog on the might-be-nice list, not the active migration path.
+    - Instrument plain SQLite fetch/decode, JS object materialization, gallery filter/search scans, and helper-side rebuild cost before deciding whether SQLite is too expensive.
+    - Revisit JSON tables only if the measurements show meaningful runtime or rebuild overhead from the current SQLite-backed catalog path.

@@ -1,0 +1,2980 @@
+{
+  "format": "photosbyelie-title-keyword-review-approvals",
+  "schema_version": 1,
+  "updated_at": "2026-05-20T15:50:32.542908+00:00",
+  "batch_id": "2026-05-20-093025-705Z",
+  "review_flag": "Title_Keywords_Reviewed",
+  "proposal_state_flag": "Title_Keywords_Proposed",
+  "rejection_flag": "Title_Keywords_Rejected",
+  "approvals": [
+    {
+      "photo_id": "20180520-1701-00737-a4a3b7e860",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Historic Architecture in Lisbon",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "architecture",
+        "historic architecture",
+        "historic building",
+        "building",
+        "urban",
+        "city",
+        "travel",
+        "Europe",
+        "portrait orientation",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180520-1731-00738-1d66a4c1ca",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Historic Building in Lisbon, Portugal",
+      "keywords": [
+        "Portugal",
+        "Lisbon",
+        "Lisboa",
+        "historic building",
+        "architecture",
+        "city",
+        "urban",
+        "travel",
+        "European travel",
+        "facade",
+        "landmark",
+        "museum district",
+        "National Museum of Ancient Art",
+        "museum",
+        "art",
+        "historic",
+        "lisbonne",
+        "national museum of antique art",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180521-1927-00772-736a518350",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Royal Palace, Madrid",
+      "keywords": [
+        "Royal Palace of Madrid",
+        "Palacio Real",
+        "Madrid",
+        "Comunidad de Madrid",
+        "Spain",
+        "palace",
+        "architecture",
+        "landmark",
+        "cityscape",
+        "evening",
+        "wide angle",
+        "travel photography",
+        "Sp",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1054-00904-0d99c36c72",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Euskadi",
+        "Spain",
+        "northern Spain",
+        "Basque region",
+        "Europe",
+        "Iberian Peninsula",
+        "travel photography",
+        "destination",
+        "regional geography",
+        "2018"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00906-0c7b4b1a4a",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country Scene, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "travel",
+        "Europe",
+        "outdoor",
+        "daytime",
+        "telephoto",
+        "Nikon D500",
+        "2018",
+        "regional scene",
+        "travel photography",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00905-cda4564627",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Euskadi",
+        "Spain",
+        "northern Spain",
+        "Europe",
+        "travel",
+        "travel photography",
+        "2018",
+        "Iberian Peninsula",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00907-6ce2b12655",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "Europe",
+        "travel photography",
+        "2018",
+        "May",
+        "Nikon D500",
+        "telephoto"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00908-c83ee908b8",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country Street Scene",
+      "keywords": [
+        "Basque Country",
+        "Euskadi",
+        "Spain",
+        "travel",
+        "street",
+        "architecture",
+        "outdoor",
+        "daylight",
+        "Europe",
+        "town",
+        "neighborhood",
+        "travel photography",
+        "Madrid",
+        "Comunidad de Madrid",
+        "urban",
+        "city",
+        "Nikon D500",
+        "Euzkadi"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00909-ae9141c3d6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "Basque region",
+        "Europe",
+        "travel photography",
+        "Spanish travel",
+        "May 2018",
+        "Iberian Peninsula"
+      ]
+    },
+    {
+      "photo_id": "20180523-1158-00910-5757c7b525",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "travel photography",
+        "2018",
+        "May 2018",
+        "Nikon D500",
+        "Nikkor 70-300mm",
+        "regional geography",
+        "northern Spain"
+      ]
+    },
+    {
+      "photo_id": "20180523-1201-00911-eafaa28f50",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "Europe",
+        "May 2018",
+        "travel photography",
+        "regional geography",
+        "documentary photography",
+        "Nikon D500",
+        "70-300mm lens",
+        "telephoto",
+        "original capture",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1202-00912-a00fe362d5",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country Landscape",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "landscape",
+        "panoramic",
+        "wide view",
+        "daylight",
+        "travel photography",
+        "scenic view",
+        "outdoors",
+        "nature",
+        "distant view",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1202-00913-897a1ed221",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "Europe",
+        "travel",
+        "travel photography",
+        "destination",
+        "regional geography",
+        "Iberian Peninsula",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00915-fab64fb7c8",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country scene",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "travel photography",
+        "daylight",
+        "outdoor",
+        "spring",
+        "Europe",
+        "regional landscape",
+        "telephoto view",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00914-2cdae156c4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "travel",
+        "travel photography",
+        "destination",
+        "regional landscape",
+        "outdoors",
+        "daylight",
+        "Europe",
+        "Iberian Peninsula",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00916-b8e0288d68",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "Basque region",
+        "Spanish region",
+        "Europe",
+        "travel",
+        "travel photography",
+        "destination",
+        "geography",
+        "2018",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1210-00918-3e378ecfd5",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "Europe",
+        "travel",
+        "travel photography",
+        "destination",
+        "Spanish region",
+        "2018"
+      ]
+    },
+    {
+      "photo_id": "20180523-1212-00919-6df8338b03",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country Panorama, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Euskadi",
+        "Spain",
+        "northern Spain",
+        "travel",
+        "travel photography",
+        "panorama",
+        "wide composition",
+        "daytime",
+        "outdoors",
+        "destination"
+      ]
+    },
+    {
+      "photo_id": "20180523-1227-00921-6e41710e47",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Euskadi",
+        "Spain",
+        "northern Spain",
+        "Europe",
+        "travel photography",
+        "2018",
+        "May 2018",
+        "Nikon D500"
+      ]
+    },
+    {
+      "photo_id": "20180523-1232-00922-a14269681d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "Europe",
+        "travel",
+        "travel photography",
+        "daytime",
+        "outdoors",
+        "2018",
+        "regional landscape",
+        "destination photography",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "20180523-1253-00923-9853f3d6a1",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "Spanish",
+        "Europe",
+        "travel",
+        "travel photography",
+        "2018",
+        "May 2018",
+        "Nikon D500"
+      ]
+    },
+    {
+      "photo_id": "20180523-1505-00933-be91168496",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "Europe",
+        "travel",
+        "travel photography",
+        "urban",
+        "street",
+        "May 2018",
+        "Nikon D500",
+        "Madrid",
+        "Comunidad de Madrid",
+        "city"
+      ]
+    },
+    {
+      "photo_id": "20180523-1842-00934-ac0d4c2359",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Euskadi",
+        "Spain",
+        "Northern Spain",
+        "Europe",
+        "Basque region",
+        "European travel",
+        "Spanish travel",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180525-1441-00952-0be82ccc8d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Architecture in Albi, Occitanie",
+      "keywords": [
+        "Albi",
+        "Occitanie",
+        "France",
+        "architecture",
+        "travel",
+        "urban",
+        "outdoors",
+        "daylight",
+        "city",
+        "tourism",
+        "Europe",
+        "travel photography",
+        "street",
+        "cityscape",
+        "historic center"
+      ]
+    },
+    {
+      "photo_id": "20180525-1442-00953-93073461ca",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Historic Architecture in Albi",
+      "keywords": [
+        "Albi",
+        "Occitanie",
+        "France",
+        "architecture",
+        "historic architecture",
+        "historic town",
+        "travel photography",
+        "tourism",
+        "daylight",
+        "outdoor",
+        "urban heritage",
+        "southern France",
+        "street scene"
+      ]
+    },
+    {
+      "photo_id": "20220103-163309-00200-4107edee53",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Aquarium Exhibit in Portugal",
+      "keywords": [
+        "aquarium",
+        "aquarium exhibit",
+        "marine life",
+        "aquatic life",
+        "fish tank",
+        "underwater scene",
+        "indoor attraction",
+        "Portugal",
+        "travel",
+        "tourism",
+        "animal exhibit",
+        "blue water",
+        "travel photography",
+        "destination",
+        "Europe",
+        "scenic",
+        "outdoor",
+        "journey",
+        "vacation"
+      ]
+    },
+    {
+      "photo_id": "20220103-1633-00042-0f2ff159e9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Aquarium Exhibit in Portugal",
+      "keywords": [
+        "aquarium",
+        "aquarium exhibit",
+        "fish tank",
+        "marine life",
+        "underwater",
+        "indoor attraction",
+        "Portugal",
+        "travel",
+        "tourism",
+        "aquatic",
+        "sea life",
+        "wildlife photography",
+        "travel photography",
+        "landscape",
+        "outdoor",
+        "scenic",
+        "destination",
+        "journey",
+        "Nikon D500"
+      ]
+    },
+    {
+      "photo_id": "20220511-101037-04339-de0f00382f",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Catedral de Santiago in Bilbao",
+      "keywords": [
+        "Architecture",
+        "Basque Country",
+        "Bilbao",
+        "Cathedral",
+        "Catedral de Santiago",
+        "St James Cathedral",
+        "Spain",
+        "Window",
+        "Columns",
+        "Planter",
+        "Travel photography",
+        "Euzkadi",
+        "Pays Basque",
+        "Building",
+        "Guggenheim museum"
+      ]
+    },
+    {
+      "photo_id": "20220519-145011-04398-926891f8aa",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Carmo Convent and Santa Justa Lift in Lisbon",
+      "keywords": [
+        "Carmo Convent",
+        "Santa Justa Lift",
+        "Lisbon",
+        "Portugal",
+        "architecture",
+        "historic",
+        "ruins",
+        "landmark",
+        "city",
+        "travel",
+        "urban",
+        "sightseeing",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220620-144601-00127-pano-1a18b2ed13",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Well Known Landmark in Ronda, Spain",
+      "keywords": [
+        "Spain",
+        "Ronda",
+        "landmark",
+        "monument",
+        "historic site",
+        "architecture",
+        "heritage",
+        "travel",
+        "tourism",
+        "panorama",
+        "outdoor",
+        "Andalusia",
+        "historic",
+        "square format",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220620-144822-00251-57d2611649",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "City View of Ronda, Spain",
+      "keywords": [
+        "Ronda",
+        "Spain",
+        "Andalusia",
+        "city view",
+        "cityscape",
+        "historic town",
+        "white buildings",
+        "hillside town",
+        "Spanish architecture",
+        "urban landscape",
+        "travel",
+        "tourism",
+        "panorama",
+        "scenic view",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-163053-00041-pano-ffda1926ab",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "Andalusia",
+        "landmark",
+        "monument",
+        "architecture",
+        "panorama",
+        "plaza",
+        "historic",
+        "tourism",
+        "travel",
+        "wide angle",
+        "cityscape",
+        "urban",
+        "sunlit",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-163205-00060-pano-8068d8fe3f",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "landmark",
+        "architecture",
+        "plaza",
+        "panorama",
+        "wide angle",
+        "Andalusia",
+        "historic",
+        "tourism",
+        "travel",
+        "cityscape",
+        "urban",
+        "outdoors",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-163214-00065-pano-bcd3b6cb72",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "Plaza de Espana",
+        "Andalusia",
+        "landmark",
+        "architecture",
+        "plaza",
+        "panorama",
+        "arcade",
+        "ceramic tilework",
+        "historic",
+        "travel",
+        "tourism",
+        "wide angle",
+        "outdoor",
+        "cityscape",
+        "wide view",
+        "urban landscape",
+        "sunny",
+        "outdoors",
+        "historic city",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-163419-00083-pano-3f4486b119",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "Andalusia",
+        "plaza",
+        "landmark",
+        "monument",
+        "architecture",
+        "historic",
+        "panorama",
+        "travel",
+        "tourism",
+        "wide angle",
+        "cityscape",
+        "wide view",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164241-00109-pano-c1234d4711",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España Panorama, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "plaza",
+        "landmark",
+        "monument",
+        "architecture",
+        "panorama",
+        "historic",
+        "travel",
+        "tourism",
+        "Andalusia",
+        "wide angle",
+        "cityscape",
+        "wide-angle",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164252-00114-pano-77e6201324",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Panoramic View of Seville Historic Center",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "historic center",
+        "panorama",
+        "cityscape",
+        "architecture",
+        "urban landscape",
+        "skyline",
+        "travel",
+        "tourism",
+        "wide-angle",
+        "rooftops",
+        "Spanish city",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20220705-164409-00126-pano-75c4163f8e",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España Panorama, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "plaza",
+        "square",
+        "landmark",
+        "architecture",
+        "historic",
+        "panorama",
+        "wide composition",
+        "travel",
+        "Andalusia",
+        "Seville Cathedral",
+        "cathedral",
+        "monument",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20191122-1655-16797-9068a18da9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Ultra Wide Panorama in France",
+      "keywords": [
+        "France",
+        "panorama",
+        "ultra-wide",
+        "wide-angle",
+        "landscape",
+        "scenic view",
+        "travel",
+        "outdoors",
+        "open view",
+        "horizon",
+        "documentary",
+        "published Adobe",
+        "wide composition",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "20180523-1430-00925-26fcc1b7fe",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "northern Spain",
+        "travel",
+        "outdoors",
+        "daylight",
+        "tourism",
+        "wide composition",
+        "travel photography",
+        "Nikon D500",
+        "2018",
+        "Madrid",
+        "Comunidad de Madrid",
+        "city",
+        "urban",
+        "street scene"
+      ]
+    },
+    {
+      "photo_id": "20180523-1430-00926-d172f5ecc6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country Street Scene",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "travel",
+        "street",
+        "urban",
+        "outdoors",
+        "Europe",
+        "photography",
+        "travel photography",
+        "Madrid",
+        "Comunidad de Madrid",
+        "city"
+      ]
+    },
+    {
+      "photo_id": "20180523-1431-00927-5d8be4af92",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country Landscape, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "travel",
+        "landscape",
+        "countryside",
+        "rural",
+        "outdoors",
+        "daylight",
+        "scenic",
+        "telephoto",
+        "wide composition",
+        "travel photography",
+        "Madrid",
+        "Comunidad de Madrid",
+        "urban",
+        "cityscape",
+        "Nikon D500"
+      ]
+    },
+    {
+      "photo_id": "20180523-1431-00928-2f28a3e130",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Basque Country, Spain",
+      "keywords": [
+        "Basque Country",
+        "Euskadi",
+        "Spain",
+        "Europe",
+        "travel",
+        "outdoor",
+        "landscape",
+        "scenic",
+        "destination",
+        "regional",
+        "photography",
+        "travel photography",
+        "Madrid",
+        "Comunidad de Madrid",
+        "city",
+        "urban",
+        "street",
+        "Euzkadi",
+        "wide composition"
+      ]
+    },
+    {
+      "photo_id": "img-0149-250b7e4307",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Trip To San Diego, Kelly's Wedding",
+      "keywords": [
+        "USA",
+        "Trip To San Diego",
+        "Kelly's Wedding",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-0150-bdc5d3d952",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Trip To San Diego, Kelly's Wedding",
+      "keywords": [
+        "USA",
+        "Trip To San Diego",
+        "Kelly's Wedding",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1141-e7e66ca045",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Restaurant Interior in Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "restaurant",
+        "interior",
+        "dining room",
+        "tables",
+        "chairs",
+        "warm lighting",
+        "travel photography",
+        "hospitality"
+      ]
+    },
+    {
+      "photo_id": "img-1149-ae6b096d6f",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Evening in Florence",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "travel",
+        "evening",
+        "city",
+        "architecture",
+        "street",
+        "urban",
+        "vacation",
+        "landscape",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1150-3541f17aa7",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Florence Evening Scene",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "travel",
+        "evening",
+        "city",
+        "vacation",
+        "tourism",
+        "Tuscany",
+        "street scene",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1151-9cde6756a2",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Florence Evening Walk",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Tuscany",
+        "travel",
+        "cityscape",
+        "evening",
+        "dusk",
+        "street",
+        "urban",
+        "holiday",
+        "tourism",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1203-09dfc6e2ae",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Pisa City View",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Italian travel",
+        "Travel photography",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark",
+        "Urban scene",
+        "Street photography",
+        "Tourism"
+      ]
+    },
+    {
+      "photo_id": "img-1204-1d710fba81",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Pisa, Italy",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Italian travel",
+        "travel photography",
+        "historic city",
+        "architecture",
+        "cityscape",
+        "landmark",
+        "tourism",
+        "urban scene"
+      ]
+    },
+    {
+      "photo_id": "img-1286-6cc8d75107",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Seville Architecture",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "architecture",
+        "travel",
+        "cityscape",
+        "landmark",
+        "urban",
+        "street photography",
+        "tourism",
+        "Travel photography"
+      ]
+    },
+    {
+      "photo_id": "img-1296-57d10180dd",
+      "batch_id": "2026-05-20-093025-705Z",
+      "approved": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "Andalusia",
+        "travel",
+        "architecture",
+        "landmark",
+        "historic",
+        "outdoors",
+        "cityscape",
+        "tourism",
+        "urban",
+        "Travel photography"
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "photo_id": "20180522-1243-00857-9016a8fb74",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Cathedral Near Madrid Royal Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "cathedral",
+        "church",
+        "Royal Palace area",
+        "Palacio Real",
+        "historic architecture",
+        "landmark",
+        "exterior",
+        "travel",
+        "cityscape",
+        "Comunidad de Madrid",
+        "wide view",
+        "urban skyline",
+        "National Palace",
+        "architecture",
+        "historic building",
+        "Sp",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, The cathedral next to the Royal Palace in Madrid is Almudena Cathedral — full name Catedral de Santa María la Real de la Almudena."
+    },
+    {
+      "photo_id": "20180522-1243-00860-d80ba96fe3",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Cathedral Near Madrid Royal Palace",
+      "keywords": [
+        "Madrid",
+        "Spain",
+        "cathedral",
+        "church",
+        "Royal Palace",
+        "palace area",
+        "historic architecture",
+        "landmark",
+        "cityscape",
+        "panorama",
+        "wide view",
+        "travel photography",
+        "National Palace",
+        "architecture",
+        "travel",
+        "historic building",
+        "Panoramic",
+        "Sp",
+        "wide composition"
+      ],
+      "comment": "dig up more details, The cathedral next to the Royal Palace in Madrid is Almudena Cathedral — full name Catedral de Santa María la Real de la Almudena."
+    },
+    {
+      "photo_id": "20180523-1436-00930-629888625d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Street Scene in the Basque Country",
+      "keywords": [
+        "Basque Country",
+        "Euzkadi",
+        "Spain",
+        "street scene",
+        "urban",
+        "architecture",
+        "public space",
+        "outdoors",
+        "travel photography",
+        "wide composition",
+        "2018",
+        "city life",
+        "Madrid",
+        "Comunidad de Madrid",
+        "urban scene",
+        "city",
+        "street"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "20180523-1436-00931-d244aba917",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Basque Country Street Scene",
+      "keywords": [
+        "Basque Country",
+        "Euskadi",
+        "Euzkadi",
+        "Spain",
+        "Europe",
+        "travel photography",
+        "street photography",
+        "urban scene",
+        "city life",
+        "outdoors",
+        "northern Spain",
+        "Madrid",
+        "Community of Madrid",
+        "Sony?"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-0259-f59bf422a8",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "img-0260-c7151549e6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "img-0261-d4f35781f7",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "wide composition",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "img-0262-c5830261a2",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2795-bbf00fe6fa",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2794-5f7928d7e1",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2796-3f654badfa",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2797-41828275e5",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2798-fd15b841b0",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2799-bc205aa98c",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2800-60229a39c6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2802-3b442f6977",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2801-a606fe6227",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2803-d7ae678824",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2804-8e7cb7775b",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2805-c3043d7b2e",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "what should change?"
+    },
+    {
+      "photo_id": "d5h-2806-a6c3e47747",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2807-b629871f71",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2808-a414c6975f",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2809-2e7c2a33ca",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2810-a37d9c7aab",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2811-50c1637924",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2812-66798fba78",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2814-13534005fd",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2813-bc947245f9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2815-aed9879479",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2816-195eb785cb",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2817-b0f1332f34",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2818-6bac5ec2c6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2820-1981ff61d5",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2819-aca68214de",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2822-1ad6b49703",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2821-5d8b366fee",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2823-70d4cc3e16",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2824-d7093906e9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2826-60911d9e7f",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2825-a3ff0c693d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2827-ce6b63edbb",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2828-b893c7dc9a",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2829-bc8865f206",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2830-f1da09b997",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2832-0cf9e7f15d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2831-d9173324b6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2834-f522b16a65",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2833-f23a89e2c6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2837-a0ac78f2a6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2836-b896149f7d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2835-34a2c461d6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2840-f72c876a09",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2839-cd470cbed6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2838-799ebb1434",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2843-b2610cbcf4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2842-1587374695",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2841-00655c29f1",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2846-32a5d11d14",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2845-6607a56dae",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2844-1502cd5d4d",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2849-5aba9af5c9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2848-be7448b5c4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2847-8ba092fc80",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2852-a40dc3844a",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2851-90fe42ccc3",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2850-e042e2b2c9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2854-83f10a819e",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2853-d3e8a6b341",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2858-5b99d1a5f4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2857-0da5fbe2b4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2856-e3bc65479f",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2855-d2ee176ede",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2860-af49afe5a8",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2859-404ffb7b9e",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2862-67ad774f36",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2861-513e324ce5",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2864-176739c172",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2863-bda0fbd9ec",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2866-eb5d014d00",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2865-0d7dae75f6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2868-558639b8eb",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2867-03f33595bb",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2870-44153ea21e",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "d5h-2869-befddf71e4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details, the keywords also say views from home, so Malaga Airport viewed from home...."
+    },
+    {
+      "photo_id": "img-1123-807c7c6a80",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Florence Cathedral",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "Florence Cathedral",
+        "Cathedral",
+        "Duomo",
+        "Duomo di Firenze",
+        "landmark",
+        "monument",
+        "architecture",
+        "church",
+        "travel",
+        "Tuscany",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1124-a67a48ee91",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Florence Cathedral",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "cathedral",
+        "Duomo",
+        "Santa Maria del Fiore",
+        "landmark",
+        "monument",
+        "architecture",
+        "historic",
+        "travel",
+        "church",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1125-dc58a482c6",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Florence Landmark",
+      "keywords": [
+        "Italy",
+        "Florence",
+        "landmark",
+        "monument",
+        "travel",
+        "architecture",
+        "tourism",
+        "historic",
+        "cityscape",
+        "daylight",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-0258-571157fd74",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Malaga Airport.",
+      "keywords": [
+        "Spain",
+        "Malaga Airport.",
+        "Views From Home",
+        "Travel photography"
+      ],
+      "comment": "dig up more details"
+    },
+    {
+      "photo_id": "img-1196-743b6f88b9",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Pisa cityscape",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Italian travel",
+        "Travel photography",
+        "Historic city",
+        "Architecture",
+        "Cityscape",
+        "Landmark",
+        "Urban scene",
+        "Street scene",
+        "Destination"
+      ],
+      "comment": "dig up more details"
+    },
+    {
+      "photo_id": "img-1198-bb563d6235",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa, Piazza dei Miracoli",
+      "keywords": [
+        "Leaning Tower of Pisa",
+        "Pisa",
+        "Italy",
+        "Tuscany",
+        "Piazza dei Miracoli",
+        "Piazza del Duomo",
+        "bell tower",
+        "campanile",
+        "landmark",
+        "historic architecture",
+        "UNESCO World Heritage",
+        "Italian monument",
+        "travel photography",
+        "tourist attraction",
+        "medieval architecture",
+        "architecture",
+        "historic building",
+        "tourism",
+        "cityscape",
+        "famous monument",
+        "portrait orientation",
+        "Italian travel",
+        "Historic city"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1199-0ebd1a5044",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "Torre Pendente di Pisa",
+        "Piazza del Duomo",
+        "Piazza dei Miracoli",
+        "bell tower",
+        "campanile",
+        "landmark",
+        "architecture",
+        "historic monument",
+        "tourism",
+        "travel photography",
+        "tower",
+        "cityscape",
+        "Italian landmark",
+        "Italian travel",
+        "Historic city"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1200-8b6f63148c",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa, Bell Tower of Pisa Cathedral",
+      "keywords": [
+        "Italy",
+        "Pisa",
+        "Tuscany",
+        "Leaning Tower of Pisa",
+        "Pisa Cathedral",
+        "cathedral bell tower",
+        "campanile",
+        "Piazza dei Miracoli",
+        "Piazza del Duomo",
+        "Romanesque architecture",
+        "landmark",
+        "historic architecture",
+        "UNESCO World Heritage Site",
+        "travel photography",
+        "Italian travel",
+        "bell tower",
+        "cityscape",
+        "tourism",
+        "Historic city",
+        "Architecture"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1202-cd5854fcaa",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa",
+      "keywords": [
+        "Leaning Tower of Pisa",
+        "Pisa",
+        "Italy",
+        "Tuscany",
+        "campanile",
+        "bell tower",
+        "landmark",
+        "historic monument",
+        "Italian architecture",
+        "Romanesque architecture",
+        "travel photography",
+        "tourism",
+        "Piazza del Duomo",
+        "famous building",
+        "Architecture",
+        "Italian travel",
+        "Historic city",
+        "Cityscape"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1204-3a889ed776",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Leaning Tower of Pisa, Bell Tower of Pisa Cathedral",
+      "keywords": [
+        "Leaning Tower of Pisa",
+        "Pisa",
+        "Tuscany",
+        "Italy",
+        "Piazza dei Miracoli",
+        "Piazza del Duomo",
+        "Pisa Cathedral",
+        "campanile",
+        "bell tower",
+        "Romanesque architecture",
+        "UNESCO World Heritage",
+        "historic landmark",
+        "travel photography",
+        "portrait orientation",
+        "architecture",
+        "cityscape",
+        "landmark",
+        "Italian travel",
+        "Historic city"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1292-3b723d82be",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville city scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "cityscape",
+        "street scene",
+        "urban",
+        "summer",
+        "tourism",
+        "Europe",
+        "Travel photography"
+      ],
+      "comment": "dig up more details"
+    },
+    {
+      "photo_id": "img-1293-a6ef9548d3",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville Street Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "urban",
+        "street",
+        "architecture",
+        "vacation",
+        "tourism",
+        "landmark",
+        "video",
+        "Travel photography"
+      ],
+      "comment": "dig up more details"
+    },
+    {
+      "photo_id": "img-1298-3036cfca45",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville City Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "urban",
+        "street",
+        "architecture",
+        "outdoors",
+        "daylight",
+        "tourism",
+        "video frame",
+        "Travel photography"
+      ],
+      "comment": "dig up more details"
+    },
+    {
+      "photo_id": "img-1304-dbb036a0a8",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville, Spain",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "travel photography",
+        "city",
+        "urban",
+        "Europe",
+        "2025",
+        "vacation",
+        "iPhone"
+      ],
+      "comment": "dig up more details"
+    },
+    {
+      "photo_id": "img-1323-dc4ffe3842",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville city scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "urban",
+        "street",
+        "video",
+        "iPhone",
+        "May 2025",
+        "outdoor",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1324-2a214f3c49",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Plaza de España, Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Plaza de España",
+        "architecture",
+        "landmark",
+        "travel",
+        "tourism",
+        "cityscape",
+        "historic site",
+        "Andalusia",
+        "outdoors",
+        "urban landscape",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1285-7dc1335b5a",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville Street Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "cityscape",
+        "street scene",
+        "urban",
+        "outdoors",
+        "daylight",
+        "vacation",
+        "architecture",
+        "tourism",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1287-89ea2d9bac",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville Street Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "cityscape",
+        "street scene",
+        "architecture",
+        "urban",
+        "outdoors",
+        "daylight",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1291-8ca48ed8d2",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville City View",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "travel",
+        "city",
+        "urban",
+        "Europe",
+        "iPhone",
+        "smartphone",
+        "photography",
+        "daytime",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1295-8edea483ea",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville Streetscape",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "street",
+        "urban",
+        "outdoor",
+        "daylight",
+        "iPhone photography",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1294-f5caafc307",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville cityscape",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "cityscape",
+        "architecture",
+        "landmark",
+        "tourism",
+        "outdoors",
+        "wide-angle",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1299-258452f505",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville Street Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel photography",
+        "city scene",
+        "urban landscape",
+        "street photography",
+        "vacation",
+        "historic city",
+        "daylight",
+        "summer",
+        "tourism"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1300-a9df85b7fb",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville street scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "urban",
+        "street photography",
+        "architecture",
+        "tourism",
+        "daytime",
+        "outdoor",
+        "vacation",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1305-2d00c82f12",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville City Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "urban",
+        "outdoors",
+        "daylight",
+        "photography",
+        "street",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1306-db5384a1f4",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville City Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "cityscape",
+        "street scene",
+        "urban",
+        "travel photography",
+        "architecture",
+        "sunlight",
+        "Europe",
+        "outdoor"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1307-5123942639",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville Travel Scene",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "city",
+        "urban",
+        "vacation",
+        "Europe",
+        "iPhone",
+        "photography",
+        "Travel photography"
+      ],
+      "comment": "this title is incorrect"
+    },
+    {
+      "photo_id": "img-1311-33e0bd87ce",
+      "batch_id": "2026-05-20-093025-705Z",
+      "rejected": true,
+      "title": "Seville",
+      "keywords": [
+        "Spain",
+        "Seville",
+        "Andalusia",
+        "travel",
+        "travel photography",
+        "architecture",
+        "landmark",
+        "cityscape",
+        "historic",
+        "tourism"
+      ],
+      "comment": "dig up more details"
+    }
+  ],
+  "blocked": [
+    {
+      "photo_id": "img-0033-01c001fd5e",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:08.957203+00:00"
+    },
+    {
+      "photo_id": "img-0034-c4a46b1958",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:09.220366+00:00"
+    },
+    {
+      "photo_id": "img-0035-61b9d29514",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:09.248821+00:00"
+    },
+    {
+      "photo_id": "img-0060-1d27a287b1",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:09.260619+00:00"
+    },
+    {
+      "photo_id": "img-0061-e9e8cc7704",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:09.594237+00:00"
+    },
+    {
+      "photo_id": "img-0062-b234ed6a44",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:09.610240+00:00"
+    },
+    {
+      "photo_id": "img-0063-020de02191",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:51.836359+00:00"
+    },
+    {
+      "photo_id": "img-0064-741d90ed68",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:32:45.601831+00:00"
+    },
+    {
+      "photo_id": "img-0065-3f4e988a75",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:34:43.499862+00:00"
+    },
+    {
+      "photo_id": "dji-20241023-173030-299-slowmotion-a430719dec",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:31:52.088714+00:00"
+    },
+    {
+      "photo_id": "20191121-1447-19571-e626fda37c",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:32:45.351311+00:00"
+    },
+    {
+      "photo_id": "20191121-1456-19535-cde6330de2",
+      "batch_id": "2026-05-20-093025-705Z",
+      "blocked": true,
+      "blocked_at": "2026-05-20T15:32:34.809802+00:00"
+    }
+  ],
+  "not_found": [],
+  "applied_at": "2026-05-20T15:50:13.653789+00:00"
+}

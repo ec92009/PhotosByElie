@@ -5,9 +5,9 @@ Date: 2026-05-20
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
-- Branch: `main`
-- Current visible build: `v81.9`
-- Local Owner page: `http://localhost:8000/owner.html?v=81.9`
+- Branch: `codex/homepage-concepts`
+- Current visible build: `v81.10`
+- Local Owner page: `http://localhost:8000/owner.html?v=81.10`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -36,7 +36,8 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 16. The latest successful nightly run generated batch `2026-05-19-230413-165Z` with `321` proposals: `221` Codex-backed rework rows and `100` ordinary new-photo rows. Two rework rows remain model-blocked and are kept rejected for future stronger tooling/context.
 17. The Owner review page Propagate button now propagates the reject note along with the reject decision, reject reasons are visible mutually exclusive horizontal checkbox options with short labels and editable note templates, video review rows show the usual play-triangle overlay, and rows can be basketed with a visible Block button or `H`/`X`.
 18. Handoff sweep published 239 approved rows from batch `2026-05-19-230413-165Z` into the public SQLite catalog, compressed catalog, homepage data, Worker catalog, and approval audit JSON.
-19. The nightly title/keyword run and the improved review UI are an excellent key step: many remaining rejects should be treated as useful evidence that the next quality jump needs stronger picture recognition, more reliable visual clues, and better use of nearby-shoot context rather than another local-rule cycle.
+19. Handoff sweep published 53 approved rows from batch `2026-05-20-093025-705Z`, refreshed hidden counts, and generated visible build `v81.10`.
+20. The nightly title/keyword run and the improved review UI are an excellent key step: many remaining rejects should be treated as useful evidence that the next quality jump needs stronger picture recognition, more reliable visual clues, and better use of nearby-shoot context rather than another local-rule cycle.
 
 ## Current Operational Notes
 
@@ -52,9 +53,10 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.7`, Block is a third title/keyword review decision beside Approve and Reject, propagates across current/following same-shoot rows, and saved block rows show `Blocked`.
 - In `v81.8`, propagated title/keyword blocks use a helper-side batch Waste Basket action, avoiding one full catalog/Worker rewrite per blocked row.
 - In `v81.9`, title/keyword decision controls ignore browser-restored checkbox state on reload so stale Block checks cannot trigger surprise autosaves.
+- In `v81.10`, 53 approved title/keyword rows from batch `2026-05-20-093025-705Z` are published into the buyer-facing SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
 - Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Owner rejection patterns from this run should now feed the next model/tooling iteration. Rejects caused by insufficient visual understanding, missing landmark/context clues, or weak nearby-shoot inference are not a reason to weaken the workflow; they are the backlog signal for better picture recognition and richer per-photo context.
-- Current title/keyword review counts after the successful nightly generation were accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.
+- Current title/keyword queue counts are applied `1049`, approved `20`, proposed `218`, blocked `27`, parked `62`.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

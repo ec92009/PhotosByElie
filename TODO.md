@@ -4,14 +4,14 @@ Last updated: 2026-05-20
 
 ## Current Facts
 
-- Current visible build: `v81.9`.
+- Current visible build: `v81.10`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=81.9`.
+- Local Owner page: `http://localhost:8000/owner.html?v=81.10`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
-- Title/keyword review state is SQLite-backed in `assets/owner-actions/Owner.sqlite`; the latest generated review batch is `2026-05-19-230413-165Z`.
-- Current Owner title/keyword counts: accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.
-- The latest title/keyword batch has `321` proposals: `221` rework proposals produced by `codex-gpt-5.4-mini` plus `100` ordinary new-photo proposals produced by `local-metadata-rules-v1`.
-- Two rework rows remain model-blocked after retry: `20220519-145011-04398-926891f8aa` and `20220511-101037-04339-de0f00382f`.
+- Title/keyword review state is SQLite-backed in `assets/owner-actions/Owner.sqlite`; the latest generated review batch is `2026-05-20-155552-073Z`.
+- Current Owner title/keyword queue counts: applied `1049`, approved `20`, proposed `218`, blocked `27`, parked `62`.
+- The latest title/keyword batch has `212` proposals: `112` rework proposals produced by Codex ladder models plus `100` ordinary new-photo proposals produced by `local-metadata-rules-v1`.
+- Batch `2026-05-20-093025-705Z` has `53` approved rows published into the public catalog in `v81.10`.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
 - Owner DB records R2 objects as current, marked for delete, or confirmed deleted, and ordinary coverage checks trust current-key records before doing expensive cloud work.
@@ -22,14 +22,14 @@ Last updated: 2026-05-20
 ## Numbered Backlog
 
 1. **Review the new title/keyword batch.**
-   - Open `owner-review.html?view=title-keywords` locally and work through batch `2026-05-19-230413-165Z`.
-   - Prioritize the `221` rework rows because they now have real Codex model provenance.
+   - Open `owner-review.html?view=title-keywords` locally and work through batch `2026-05-20-155552-073Z`.
+   - Prioritize the remaining rework rows because they now have real Codex model provenance.
    - Approve strong rows, reject weak rows with concrete comments, and use H/X for photos that should leave the sale/review surface.
 
-2. **Resolve the two model-blocked title/keyword rows.**
-   - Inspect `20220519-145011-04398-926891f8aa` and `20220511-101037-04339-de0f00382f`.
-   - Decide whether to retry with a stronger/vision ladder level, provide manual Owner context, or park them deliberately.
-   - Preserve their rejected/rework state until a defensible proposal exists.
+2. **Improve Codex-backed title/keyword quality.**
+   - Inspect weak rework rows for image-understanding gaps, missing landmark context, and nearby-shoot inference failures.
+   - Decide whether stronger visual context, manual Owner context, or a different ladder level is needed.
+   - Preserve rejected/rework state until a defensible proposal exists.
 
 3. **Improve title/keyword generator operator feedback.**
    - Stream progress while Codex-backed rework rows are running so long nightly jobs are less opaque.

@@ -127,7 +127,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "img-0150-bdc5d3d952",
-        "title": "IMG 0150",
+        "title": "Trip To San Diego, Kelly's Wedding",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {

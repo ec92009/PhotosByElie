@@ -6,8 +6,8 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v81.1`
-- Local Owner page: `http://localhost:8000/owner.html?v=81.1`
+- Current visible build: `v81.2`
+- Local Owner page: `http://localhost:8000/owner.html?v=81.2`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -34,7 +34,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 14. Photo `20180322-0915-00173-e3b893dbea` was investigated for both H/X and orientation. It had an EXIF rotate-180 source flag, and the public preview had been regenerated upside down. The importer now recognizes numeric EXIF orientation values, and corrected 900/1800 previews were uploaded to remote R2.
 15. The title/keyword generator now invokes the selected Codex ladder model for each rework proposal instead of merely recording requested model metadata. Rework rows preserve prior rejected title/keywords and Owner comments as explicit model context.
 16. The latest successful nightly run generated batch `2026-05-19-230413-165Z` with `321` proposals: `221` Codex-backed rework rows and `100` ordinary new-photo rows. Two rework rows remain model-blocked and are kept rejected for future stronger tooling/context.
-17. The Owner review page Propagate button now propagates the reject note along with the reject decision, video review rows show the usual play-triangle overlay, and the visible build/cache-bust version is `v81.1`.
+17. The Owner review page Propagate button now propagates the reject note along with the reject decision, reject reasons are visible checkbox options that prefill but do not lock the note, video review rows show the usual play-triangle overlay, and the visible build/cache-bust version is `v81.2`.
 
 ## Current Operational Notes
 
@@ -43,7 +43,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
 - In `v79.30`, the Imports tab's Start Imports button stays clickable when coverage is already clean and reports that no import work was started because everything tracked is up to date.
 - In `v80.0`, the latest Owner title/keyword approvals are published into the public SQLite catalog and Worker catalog. The `2026-05-16` approval batch now contains 89 approved rows, with fresh Portugal, Bilbao, and Paris metadata carried into buyer-facing catalog data.
-- In `v81.1`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, clear stale proposed rows that are already blocked or missing from the public catalog, propagate reject notes with propagated rejection decisions, and mark video rows with a centered play badge.
+- In `v81.2`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, clear stale proposed rows that are already blocked or missing from the public catalog, propagate reject notes with propagated rejection decisions, offer visible reject-reason checkboxes that prefill editable notes, and mark video rows with a centered play badge.
 - Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Current title/keyword review counts after the successful nightly generation were accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.
 - Current local coverage reports zero missing active masters, triplets, or previews.

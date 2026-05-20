@@ -17,6 +17,14 @@
     "title_keywords_rejected",
     "title_keywords_parked",
   ]);
+  const rejectReasons = [
+    { value: "incorrect", label: "Incorrect", note: "incorrect" },
+    { value: "keywords", label: "Use keywords as clues", note: "use the hints in the keywords to provide a decent title" },
+    { value: "detail", label: "Needs detail", note: "needs detail" },
+    { value: "shoot", label: "Use other photos in shoot as clues", note: "use other photos in the shoot as clues" },
+    { value: "other", label: "Other", note: "other: " },
+  ];
+  const rejectReasonByValue = new Map(rejectReasons.map((reason) => [reason.value, reason]));
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/[&<>'\"]/g, (char) => ({
@@ -113,6 +121,39 @@
     });
 
   const cleanModelName = (value) => String(value || "").trim();
+
+  const rejectReasonCheckboxesHtml = (selectedValue = "") => rejectReasons
+    .map((reason) => `
+      <label class="title-keyword-review-reject-option">
+        <input type="checkbox" value="${escapeHtml(reason.value)}" data-review-reject-reason${reason.value === selectedValue ? " checked" : ""}/>
+        <span>${escapeHtml(reason.label)}</span>
+      </label>
+    `)
+    .join("");
+
+  const rejectReasonValueForComment = (comment) => {
+    const normalized = String(comment || "").trim().toLowerCase();
+    if (!normalized) return "";
+    const exact = rejectReasons.find((reason) => reason.note.trim().toLowerCase() === normalized);
+    if (exact) return exact.value;
+    if (normalized.startsWith("other:")) return "other";
+    return "other";
+  };
+
+  const checkedRejectReasonValue = (rootNode) => String(rootNode?.querySelector?.("[data-review-reject-reason]:checked")?.value || "");
+
+  const setRejectReasonValue = (rootNode, value = "") => {
+    rootNode?.querySelectorAll?.("[data-review-reject-reason]").forEach((input) => {
+      input.checked = Boolean(value) && input.value === value;
+    });
+  };
+
+  const setRejectReasonsDisabled = (rootNode, disabled) => {
+    rootNode?.querySelectorAll?.("[data-review-reject-reason]").forEach((input) => {
+      input.disabled = Boolean(disabled);
+      input.closest("label")?.classList.toggle("is-disabled", Boolean(disabled));
+    });
+  };
 
   const generatorDetails = (generator, fallback = {}) => {
     const source = generator && typeof generator === "object" ? generator : {};
@@ -376,6 +417,7 @@
         || item?.state?.ownerComment
         || "",
       ).trim();
+      const previousRejectReason = rejectReasonValueForComment(previousRejectComment);
       const rawProposedKeywords = normalizeKeywords(
         Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords,
         blacklist,
@@ -417,10 +459,11 @@
               <input type="checkbox" data-review-approve/>
               <span>Approve</span>
             </label>
-            <label>
-              <input type="checkbox" data-review-reject/>
-              <span>Reject</span>
-            </label>
+            <input type="checkbox" data-review-reject hidden/>
+            <div class="title-keyword-review-reject-reasons" role="group" aria-label="Reject reason">
+              <p>Reject</p>
+              ${rejectReasonCheckboxesHtml(previousRejectReason)}
+            </div>
             <label class="title-keyword-review-reject-comment">
               <span>Reject note</span>
               <textarea rows="2" data-review-reject-comment placeholder="What should change?">${escapeHtml(previousRejectComment)}</textarea>
@@ -667,6 +710,7 @@
         return;
       }
       const sourceComment = String(card.querySelector("[data-review-reject-comment]")?.value || "");
+      const sourceRejectReason = checkedRejectReasonValue(card);
       const targets = cardsInShootWindow(card);
       targets.forEach((targetCard) => {
         const targetPhotoId = targetCard.getAttribute("data-review-photo-id") || "";
@@ -676,9 +720,13 @@
         if (sourceDecision.approval) {
           if (targetApprove) targetApprove.checked = true;
           if (targetReject) targetReject.checked = false;
+          setRejectReasonValue(targetCard, "");
+          setRejectReasonsDisabled(targetCard, true);
         } else {
           if (targetApprove) targetApprove.checked = false;
           if (targetReject) targetReject.checked = true;
+          setRejectReasonsDisabled(targetCard, false);
+          setRejectReasonValue(targetCard, sourceRejectReason);
           if (targetComment) {
             targetComment.value = sourceComment;
           }
@@ -728,6 +776,13 @@
         if (checkbox) checkbox.checked = true;
         const reject = card.querySelector("[data-review-reject]");
         if (reject) reject.checked = false;
+        setRejectReasonValue(card, "");
+        setRejectReasonsDisabled(card, true);
+        const comment = card.querySelector("[data-review-reject-comment]");
+        if (comment) {
+          comment.readOnly = true;
+          comment.closest("label")?.classList.add("is-disabled");
+        }
       });
       if (status) status.textContent = `${cardById.size} visible photos selected for approval; saving as one batch.`;
       saveCardsDecisions([...cardById.values()]).then((result) => {
@@ -772,6 +827,7 @@
     cardById.forEach((card, photoId) => {
       const approve = card.querySelector("[data-review-approve]");
       const reject = card.querySelector("[data-review-reject]");
+      const rejectReasonInputs = [...card.querySelectorAll("[data-review-reject-reason]")];
       const comment = card.querySelector("[data-review-reject-comment]");
       const titleInput = card.querySelector("[data-review-title]");
       const keywordInput = card.querySelector("[data-review-keywords]");
@@ -788,10 +844,30 @@
         if (href) window.location.assign(href);
       });
       const syncDecisionState = () => {
-        if (!comment) return;
         const approved = Boolean(approve?.checked);
-        comment.readOnly = approved;
-        comment.closest("label")?.classList.toggle("is-disabled", approved);
+        if (comment) {
+          comment.readOnly = approved;
+          comment.closest("label")?.classList.toggle("is-disabled", approved);
+        }
+        setRejectReasonsDisabled(card, approved);
+      };
+      const fillRejectReasonNote = (value = "") => {
+        const reason = rejectReasonByValue.get(value || checkedRejectReasonValue(card));
+        if (!reason || !comment) return;
+        comment.value = reason.note;
+      };
+      const activateReject = ({ reasonValue = "", fillNote = false, saveDelay = null } = {}) => {
+        if (approve?.checked) approve.checked = false;
+        if (reject) reject.checked = true;
+        if (reasonValue) setRejectReasonValue(card, reasonValue);
+        if (fillNote) {
+          fillRejectReasonNote(reasonValue);
+        } else if (!checkedRejectReasonValue(card) && !String(comment?.value || "").trim()) {
+          setRejectReasonValue(card, "incorrect");
+          fillRejectReasonNote("incorrect");
+        }
+        syncDecisionState();
+        if (saveDelay !== null) scheduleRowSave(photoId, card, saveDelay);
       };
       const activateApproveFromEdit = () => {
         if (reject?.checked) reject.checked = false;
@@ -800,21 +876,34 @@
         scheduleRowSave(photoId, card);
       };
       const activateRejectFromComment = () => {
-        if (approve?.checked) approve.checked = false;
-        if (reject) reject.checked = true;
-        syncDecisionState();
+        if (!checkedRejectReasonValue(card)) setRejectReasonValue(card, "other");
+        activateReject();
       };
       approve?.addEventListener("change", () => {
-        if (approve.checked && reject) reject.checked = false;
+        if (approve.checked) {
+          if (reject) reject.checked = false;
+          setRejectReasonValue(card, "");
+        }
         syncDecisionState();
         if (approve.checked) scheduleRowSave(photoId, card, 150);
         else setRowStatus(card, "Not saved");
       });
       reject?.addEventListener("change", () => {
-        if (reject.checked && approve) approve.checked = false;
-        syncDecisionState();
-        if (reject.checked) scheduleRowSave(photoId, card, 150);
+        if (reject.checked) activateReject({ saveDelay: 150 });
         else setRowStatus(card, "Not saved");
+      });
+      rejectReasonInputs.forEach((input) => {
+        input.addEventListener("change", () => {
+          if (input.checked) {
+            activateReject({ reasonValue: input.value, fillNote: true, saveDelay: 150 });
+            return;
+          }
+          if (!checkedRejectReasonValue(card) && !String(comment?.value || "").trim()) {
+            if (reject) reject.checked = false;
+            syncDecisionState();
+            setRowStatus(card, "Not saved");
+          }
+        });
       });
       comment?.addEventListener("input", () => {
         activateRejectFromComment();
@@ -861,18 +950,16 @@
           comment.readOnly = true;
           comment.closest("label")?.classList.add("is-disabled");
         }
+        setRejectReasonsDisabled(activeCard, true);
         scheduleRowSave(photoId, activeCard, 150);
         event.preventDefault();
         return;
       }
       if (key === "r") {
-        if (approve) approve.checked = false;
-        if (reject) reject.checked = true;
-        if (comment) {
-          comment.readOnly = false;
-          comment.closest("label")?.classList.remove("is-disabled");
+        if (reject) {
+          reject.checked = true;
+          reject.dispatchEvent(new Event("change", { bubbles: true }));
         }
-        scheduleRowSave(photoId, activeCard, 150);
         event.preventDefault();
         return;
       }

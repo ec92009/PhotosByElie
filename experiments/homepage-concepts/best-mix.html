@@ -20,13 +20,38 @@
       try {
         const saved = localStorage.getItem('byelie-theme');
         if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+        const params = new URLSearchParams(window.location.search);
+        const readPercent = (value, fallback) => {
+          if (value === null || value === '') return fallback;
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : fallback;
+        };
+        const cardOpacityParam = params.get('cardOpacity');
+        const frostingParam = params.get('frosting');
+        if (cardOpacityParam !== null || frostingParam !== null) {
+          const cardOpacity = cardOpacityParam === 'low' ? 35 : readPercent(cardOpacityParam, 100);
+          const frosting = cardOpacityParam === 'low' ? 50 : readPercent(frostingParam, 100);
+          const style = document.documentElement.style;
+          const setAlpha = (name, base) => style.setProperty(name, String(Number((base * cardOpacity / 100).toFixed(4))));
+          document.documentElement.dataset.bestMixTuned = 'true';
+          document.documentElement.dataset.bestMixCardOpacity = String(cardOpacity);
+          document.documentElement.dataset.bestMixFrosting = String(frosting);
+          setAlpha('--best-mix-topbar-alpha', .17);
+          setAlpha('--best-mix-control-alpha', .23);
+          setAlpha('--best-mix-panel-alpha', .19);
+          setAlpha('--best-mix-card-alpha', .26);
+          setAlpha('--best-mix-card-hover-alpha', .32);
+          setAlpha('--best-mix-pill-alpha', .34);
+          style.setProperty('--best-mix-heavy-blur', `${10 * frosting / 100}px`);
+          style.setProperty('--best-mix-light-blur', `${8 * frosting / 100}px`);
+        }
       } catch {}
     })();
   </script>
   <link rel="stylesheet" href="../../shared.css?v=81.5"/>
   <link rel="stylesheet" href="../../styles.css?v=81.5"/>
   <link rel="stylesheet" href="../../photos.css?v=81.5"/>
-  <link rel="stylesheet" href="./best-mix-backdrop.css?v=22"/>
+  <link rel="stylesheet" href="./best-mix-backdrop.css?v=27"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">

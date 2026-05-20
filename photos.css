@@ -2321,6 +2321,8 @@ body[data-real-estate]{
   --re-positive:#176b45;
   --re-card-min:260px;
   --re-action-bar-clearance:132px;
+  --glass-heavy-blur:0px;
+  --glass-light-blur:0px;
 }
 body[data-real-estate] main.shell{
   width:100%;
@@ -5378,5 +5380,389 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .real-estate-grid[data-density="compact"],
   .real-estate-grid[data-density="large"]{
     --re-card-min:min(100%,240px);
+  }
+}
+
+/* Global Nerja glass treatment. Keep this late so page-specific solid panels inherit the new skin. */
+.photo-hero,
+.photo-carousel-panel,
+.home-discovery-panel,
+.featured-campaigns,
+.campaign-main,
+.campaign-section,
+.campaign-hero-copy,
+.gallery-hero,
+.owner-hero,
+.owner-panel,
+.detail-bottom-actions,
+.purchase-panel,
+.basket-panel,
+.order-intent-panel,
+.order-panel,
+.mock-gallery,
+.real-estate-login,
+.real-estate-hero,
+.real-estate-wizard,
+.real-estate-workbench,
+.real-estate-output-panel,
+.real-estate-action-bar,
+.basket-rail{
+  background:var(--glass-panel-bg);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--glass-panel-shadow);
+  backdrop-filter:blur(var(--glass-heavy-blur));
+  -webkit-backdrop-filter:blur(var(--glass-heavy-blur));
+  text-shadow:var(--glass-copy-shadow);
+}
+.featured-campaign-card,
+.real-estate-login-card,
+.real-estate-control-group,
+.real-estate-photo-card,
+.real-estate-draft-item,
+.real-estate-output-choice,
+.real-estate-empty-state,
+.real-estate-lightbox,
+.real-estate-help,
+.owner-card,
+.owner-real-estate-table-wrap,
+.owner-cost-breakdown,
+.owner-price-list,
+.owner-real-estate-computed div,
+.owner-real-estate-output,
+.owner-keyword-blacklist-list,
+.owner-sweep-phase,
+.owner-coverage-missing,
+.basket-item,
+.basket-product-row,
+.resolution-row,
+.order-state-rail span,
+.order-file-downloads li,
+.mock-checkout-result,
+.embedded-browser-warning,
+.empty-gallery-card{
+  background:var(--glass-card-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(var(--glass-light-blur));
+  -webkit-backdrop-filter:blur(var(--glass-light-blur));
+  text-shadow:var(--glass-copy-shadow);
+}
+.featured-campaign-card:hover,
+.real-estate-photo-card:hover,
+.basket-item:hover,
+.basket-product-row:hover{
+  background:var(--glass-card-hover-bg);
+}
+.gallery-filter-bar select,
+.gallery-filter-bar input,
+.gallery-density-control,
+.gallery-fit-control,
+.gallery-top-button,
+.topbar .gallery-view-controls .gallery-density-control,
+.topbar .gallery-view-controls .gallery-fit-control,
+.topbar .gallery-view-controls .gallery-top-button,
+.gallery-view-controls.is-header-mounted .gallery-density-control,
+.gallery-view-controls.is-header-mounted .gallery-fit-control,
+.gallery-view-controls.is-header-mounted .gallery-top-button,
+.owner-tab-button,
+.owner-refresh-button,
+.owner-real-estate-icon-button,
+.owner-real-estate-form input,
+.owner-real-estate-form textarea,
+.owner-real-estate-cell-input,
+.owner-number-control input,
+.owner-number-control select,
+.owner-keyword-blacklist-add input,
+.owner-keyword-blacklist-add textarea,
+.owner-metadata-editor input,
+.owner-metadata-editor textarea,
+.owner-metadata-modal input,
+.owner-metadata-modal textarea,
+.owner-export-result textarea,
+.owner-export-path span,
+.owner-keyword-blacklist-term,
+.owner-keyword-blacklist-term button,
+.owner-price-field input,
+.real-estate-login-form input,
+.real-estate-filter-form input,
+.real-estate-filter-form select,
+.real-estate-pdf-setting select,
+.real-estate-pdf-setting input,
+.real-estate-title-field input,
+.real-estate-lightbox input,
+.real-estate-originals-form input,
+.real-estate-stepper button,
+.real-estate-album-filter,
+.real-estate-project-choice,
+.real-estate-draft-handle,
+.real-estate-draft-position,
+.real-estate-draft-actions button,
+.order-email-draft,
+.order-copy-field textarea,
+.mock-checkout input{
+  background:var(--glass-field-bg);
+  border-color:var(--glass-border);
+  color:var(--text);
+  text-shadow:none;
+  backdrop-filter:blur(var(--glass-light-blur));
+  -webkit-backdrop-filter:blur(var(--glass-light-blur));
+}
+.gallery-status,
+.keyboard-hint,
+.real-estate-muted,
+.real-estate-login-status,
+.real-estate-output-choice small,
+.real-estate-photo-details dt,
+.real-estate-originals-form label,
+.owner-card p,
+.owner-count-note,
+.owner-real-estate-table td small,
+.owner-cost-table td,
+.basket-status,
+.basket-product-row small,
+.order-status-card p,
+.order-state-rail small,
+.order-file-downloads small,
+.order-file-downloads output,
+.mock-checkout-note,
+.embedded-browser-warning p,
+.embedded-download-note{
+  color:var(--muted);
+}
+.featured-campaign-card small,
+.eyebrow,
+.lead{
+  color:var(--muted);
+}
+.site-footer .footer-note,
+.site-footer .footer-nav a{
+  color:var(--text);
+  font-weight:700;
+}
+
+body.best-mix-current-home main.shell{
+  padding-bottom:clamp(8px,1.4dvh,14px);
+}
+body.best-mix-current-home .photo-hero{order:1}
+body.best-mix-current-home .featured-campaigns{order:2}
+body.best-mix-current-home .photo-carousel-panel{order:3}
+body.best-mix-current-home .home-discovery-panel{order:4}
+body.best-mix-current-home .basket-rail{
+  display:none!important;
+}
+body.best-mix-current-home main.has-basket-rail{
+  display:grid;
+  grid-template-columns:1fr;
+}
+body.best-mix-current-home [data-best-mix-section]{
+  scroll-margin-top:96px;
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+body.best-mix-current-home .cta .btn{
+  appearance:none;
+  cursor:pointer;
+  font:inherit;
+}
+body.best-mix-current-home .cta .btn[aria-expanded="true"]{
+  background:rgba(17,17,17,.84);
+  border-color:rgba(17,17,17,.42);
+  color:#fff;
+  box-shadow:0 14px 30px rgba(0,0,0,.2);
+}
+html[data-theme="dark"] body.best-mix-current-home .cta .btn[aria-expanded="true"]{
+  background:rgba(255,255,255,.92);
+  border-color:rgba(255,255,255,.42);
+  color:#111;
+}
+body.best-mix-current-home [data-best-mix-section] .eyebrow,
+body.best-mix-current-home .home-discovery-status-row .gallery-status{
+  display:inline-flex;
+  width:max-content;
+  max-width:100%;
+  align-items:center;
+  color:var(--text);
+  background:var(--glass-pill-bg);
+  border:1px solid var(--glass-border);
+  border-radius:999px;
+  padding:5px 10px;
+  font-weight:900;
+  text-shadow:var(--glass-copy-shadow);
+  backdrop-filter:blur(var(--glass-light-blur));
+  -webkit-backdrop-filter:blur(var(--glass-light-blur));
+}
+body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  cursor:pointer;
+  min-height:112px;
+  padding-block:clamp(18px,3dvh,30px);
+}
+body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed:hover{
+  border-color:rgba(255,255,255,.32);
+  box-shadow:0 16px 36px rgba(0,0,0,.12);
+}
+body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed h2,
+body.best-mix-current-home .photo-carousel-panel.is-best-mix-section-collapsed .photo-head{
+  margin-bottom:0;
+}
+body.best-mix-current-home .featured-campaigns.is-best-mix-section-collapsed .featured-campaign-grid,
+body.best-mix-current-home .featured-campaigns.is-best-mix-section-collapsed .featured-campaigns-head .btn,
+body.best-mix-current-home .photo-carousel-panel.is-best-mix-section-collapsed .carousel-wrap,
+body.best-mix-current-home .photo-carousel-panel.is-best-mix-section-collapsed .carousel-dots,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-controls,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-results,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-keyboard-hint,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .gallery-pagination-controls,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-status-row,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-toggle{
+  display:none;
+}
+body.best-mix-current-home .home-discovery-keyboard-hint{
+  display:none!important;
+}
+body.best-mix-current-home .home-discovery-head{
+  align-items:center;
+  margin-bottom:0;
+}
+body.best-mix-current-home .home-discovery-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+}
+body.best-mix-current-home .home-discovery-toggle{
+  min-width:104px;
+}
+body.best-mix-current-home .home-discovery-toggle::after{
+  content:"";
+  display:inline-block;
+  width:.48em;
+  height:.48em;
+  margin-left:8px;
+  border-right:2px solid currentColor;
+  border-bottom:2px solid currentColor;
+  transform:translateY(-2px) rotate(45deg);
+  transition:transform .18s ease;
+}
+body.best-mix-current-home .home-discovery-toggle[aria-expanded="true"]::after{
+  transform:translateY(2px) rotate(225deg);
+}
+body.best-mix-current-home .home-discovery-panel:not(.is-discovery-collapsed) .home-discovery-controls{
+  margin-top:16px;
+}
+body.best-mix-current-home .home-discovery-status-row{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+body.best-mix-current-home .home-discovery-status-row .gallery-status{
+  margin:0;
+  text-align:right;
+}
+body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-controls,
+body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-results,
+body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-keyboard-hint,
+body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-status-row,
+body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .gallery-pagination-controls{
+  display:none;
+}
+body.best-mix-current-home .featured-campaign-card{
+  overflow:hidden;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease;
+}
+body.best-mix-current-home .featured-campaign-card img{
+  transform-origin:50% 50%;
+  transition:opacity .27s ease,transform .54s ease,filter .54s ease;
+  will-change:transform,opacity;
+}
+body.best-mix-current-home .featured-campaign-card:is(:hover,:focus-visible,.is-preview-cycling){
+  border-color:rgba(255,255,255,.32);
+  background:var(--glass-card-hover-bg);
+  box-shadow:0 18px 38px rgba(0,0,0,.16);
+  transform:translateY(-2px);
+}
+body.best-mix-current-home .featured-campaign-card:is(:hover,.is-preview-cycling) img{
+  filter:saturate(1.08) contrast(1.04);
+  transform:scale(1.045);
+}
+body.best-mix-current-home .featured-campaign-card img.is-preview-swapping{
+  opacity:.35;
+  transform:scale(1.075);
+}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]{
+  --stack-shuffle-x:0px;
+  --stack-shuffle-y:0px;
+  --stack-shuffle-rotate:0deg;
+  animation:best-mix-stack-shuffle 1s cubic-bezier(.2,.88,.24,1) both;
+  animation-delay:var(--stack-shuffle-delay,0ms);
+  transform-origin:50% 58%;
+  will-change:transform,opacity;
+}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(1){--stack-shuffle-x:-110px;--stack-shuffle-y:42px;--stack-shuffle-rotate:-20deg;--stack-shuffle-delay:0ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(2){--stack-shuffle-x:66px;--stack-shuffle-y:-78px;--stack-shuffle-rotate:18deg;--stack-shuffle-delay:200ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(3){--stack-shuffle-x:124px;--stack-shuffle-y:38px;--stack-shuffle-rotate:14deg;--stack-shuffle-delay:400ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(4){--stack-shuffle-x:-86px;--stack-shuffle-y:-46px;--stack-shuffle-rotate:-16deg;--stack-shuffle-delay:600ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(5){--stack-shuffle-x:58px;--stack-shuffle-y:96px;--stack-shuffle-rotate:22deg;--stack-shuffle-delay:800ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(6){--stack-shuffle-x:-120px;--stack-shuffle-y:74px;--stack-shuffle-rotate:-24deg;--stack-shuffle-delay:1000ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(7){--stack-shuffle-x:108px;--stack-shuffle-y:-34px;--stack-shuffle-rotate:16deg;--stack-shuffle-delay:1200ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(8){--stack-shuffle-x:-58px;--stack-shuffle-y:108px;--stack-shuffle-rotate:-18deg;--stack-shuffle-delay:1400ms}
+@keyframes best-mix-stack-shuffle{
+  0%{
+    opacity:0;
+    transform:translate(var(--stack-shuffle-x),var(--stack-shuffle-y)) rotate(var(--stack-shuffle-rotate)) scale(.72);
+  }
+  72%{
+    opacity:1;
+  }
+  100%{
+    opacity:1;
+    transform:var(--stack-final-transform);
+  }
+}
+@media (max-width:900px),(max-height:760px){
+  body.best-mix-current-home .photo-hero{
+    min-height:min(560px,calc(100dvh - 96px));
+    grid-template-columns:minmax(0,.58fr) minmax(310px,1fr);
+    align-items:center;
+    gap:clamp(16px,3vw,34px);
+    padding-block:clamp(28px,6dvh,54px);
+  }
+  body.best-mix-current-home .photo-hero h1{
+    max-width:9ch;
+    font-size:clamp(2.2rem,7vw,4.2rem);
+  }
+  body.best-mix-current-home .photo-stack{
+    display:block;
+    min-height:clamp(300px,48dvh,420px);
+  }
+}
+@media (max-width:700px){
+  body.best-mix-current-home .photo-hero{
+    min-height:0;
+    grid-template-columns:1fr;
+  }
+  body.best-mix-current-home .photo-stack{
+    min-height:clamp(360px,68vw,470px);
+  }
+  body.best-mix-current-home .home-discovery-head,
+  body.best-mix-current-home .home-discovery-actions{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  body.best-mix-current-home .home-discovery-status-row{
+    justify-content:flex-start;
+  }
+  body.best-mix-current-home .home-discovery-status-row .gallery-status{
+    text-align:left;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]{
+    animation:none;
+    opacity:1;
+  }
+  body.best-mix-current-home .featured-campaign-card,
+  body.best-mix-current-home .featured-campaign-card img{
+    transition:none;
   }
 }

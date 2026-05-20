@@ -17,7 +17,7 @@
   --panel-inline:clamp(16px,2.2vw,28px);
   --panel-block:clamp(24px,5dvh,60px);
   --hero-min-height:clamp(420px,calc(100dvh - 118px),760px);
-  --glass-bg-image:url("./tmp/homepage-concepts/nerja-original-bg.jpg");
+  --glass-bg-image:url("./assets/backgrounds/nerja-cave-bg.jpg");
   --glass-bg-saturation:1.34;
   --glass-bg-contrast:1.08;
   --glass-bg-brightness:.64;

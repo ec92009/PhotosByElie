@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import catalogTsv from "./catalog_tsv.cjs";
 
 const REPO_ROOT = process.cwd();
@@ -19,6 +19,7 @@ const MIN_PROPOSED_KEYWORDS = 10;
 const TITLE_KEYWORD_PARK_REJECTED_COUNT = 10;
 const DEFAULT_MODEL_RETRIES = 2;
 const DEFAULT_MODEL_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_MODEL_CONCURRENCY = 3;
 const DEFAULT_MODEL_LADDER = [
   LOCAL_GENERATOR_MODEL,
   "codex-gpt-5.4-mini",
@@ -33,6 +34,39 @@ const MODEL_LADDER = (process.env.PBE_TITLE_KEYWORD_MODEL_LADDER || DEFAULT_MODE
 const GENERATOR_MODEL = (process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0] || "local-metadata-rules-v1").trim();
 const MODEL_RETRIES = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_RETRIES || DEFAULT_MODEL_RETRIES));
 const MODEL_TIMEOUT_MS = Math.max(30_000, Number(process.env.PBE_TITLE_KEYWORD_MODEL_TIMEOUT_MS || DEFAULT_MODEL_TIMEOUT_MS));
+const MODEL_CONCURRENCY = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_CONCURRENCY || DEFAULT_MODEL_CONCURRENCY));
+const PROGRESS_ENABLED = process.env.PBE_TITLE_KEYWORD_PROGRESS !== "0";
+const PROGRESS_STARTED_AT = Date.now();
+
+const durationLabel = (milliseconds) => {
+  const totalSeconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+  const pair = (value) => String(value).padStart(2, "0");
+  return hours > 0 ? `${hours}:${pair(minutes)}:${pair(seconds)}` : `${pair(minutes)}:${pair(seconds)}`;
+};
+
+const progress = (message) => {
+  if (!PROGRESS_ENABLED) return;
+  process.stderr.write(`[title-keyword ${durationLabel(Date.now() - PROGRESS_STARTED_AT)}] ${message}\n`);
+};
+
+const mapWithConcurrency = async (items, limit, worker) => {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, Number(limit) || 1), items.length);
+  const runners = new Array(workerCount).fill(null).map(async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+};
 
 const readText = (relativePath) => fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
 const { loadCatalogWindow } = catalogTsv;
@@ -782,7 +816,7 @@ const modelPromptForPhoto = ({
   ].join("\n");
 };
 
-const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
+const codexInvocation = ({ modelInfo, imagePath = "" }) => {
   const codexConfig = codexModelConfig(modelInfo);
   if (!codexConfig?.model) throw new Error(`No Codex model mapping for ${modelInfo?.model || "unknown model"}.`);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pbe-title-keyword-model-"));
@@ -813,6 +847,11 @@ const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
     args.push("--image", imagePath);
   }
   args.push("-");
+  return { args, outputPath };
+};
+
+const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
+  const { args, outputPath } = codexInvocation({ modelInfo, imagePath });
   const result = spawnSync(codexBinary(), args, {
     cwd: REPO_ROOT,
     encoding: "utf8",
@@ -826,6 +865,62 @@ const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
   }
   const output = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : (result.stdout || "");
   return parseModelProposalText(output);
+};
+
+const invokeCodexProposalModelAsync = ({ modelInfo, prompt, imagePath = "" }) => {
+  const { args, outputPath } = codexInvocation({ modelInfo, imagePath });
+  return new Promise((resolve, reject) => {
+    const child = spawn(codexBinary(), args, {
+      cwd: REPO_ROOT,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    let timedOut = false;
+    let timeout = null;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      fn(value);
+    };
+    timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (!settled) child.kill("SIGKILL");
+      }, 2_000).unref();
+    }, MODEL_TIMEOUT_MS);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      settle(reject, error);
+    });
+    child.on("close", (status) => {
+      if (timedOut) {
+        settle(reject, new Error(`Codex model invocation timed out after ${durationLabel(MODEL_TIMEOUT_MS)}.`));
+        return;
+      }
+      if (status !== 0) {
+        settle(reject, new Error((stderr || stdout || `Codex model invocation failed with status ${status}.`).trim()));
+        return;
+      }
+      try {
+        const output = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : stdout;
+        settle(resolve, parseModelProposalText(output));
+      } catch (error) {
+        settle(reject, error);
+      }
+    });
+    child.stdin.end(prompt);
+  });
 };
 
 const normalizeModelProposal = ({ payload, localProposal, currentKeywords, blacklist, sourcePath }) => {
@@ -858,7 +953,7 @@ const normalizeModelProposal = ({ payload, localProposal, currentKeywords, black
   };
 };
 
-const generateModelProposal = ({
+const generateModelProposal = async ({
   row,
   photo,
   galleryLabel,
@@ -872,6 +967,10 @@ const generateModelProposal = ({
 }) => {
   const previewPath = localPreviewPathForPhoto(photo);
   let lastError = "";
+  progress(
+    `Model start ${row.id}: requested=${requestedGenerator.model} level=${requestedGenerator.model_level} ` +
+    `attempts=${MODEL_RETRIES} preview=${previewPath ? path.relative(REPO_ROOT, previewPath) : "none"}`,
+  );
   for (let attempt = 1; attempt <= MODEL_RETRIES; attempt += 1) {
     const prompt = modelPromptForPhoto({
       row,
@@ -888,7 +987,8 @@ const generateModelProposal = ({
       retryNote: lastError ? `Previous attempt failed validation: ${lastError}` : "",
     });
     try {
-      const payload = invokeCodexProposalModel({ modelInfo: requestedGenerator, prompt, imagePath: previewPath });
+      progress(`Model attempt ${attempt}/${MODEL_RETRIES} ${row.id}: invoking ${requestedGenerator.model}`);
+      const payload = await invokeCodexProposalModelAsync({ modelInfo: requestedGenerator, prompt, imagePath: previewPath });
       const proposal = normalizeModelProposal({
         payload,
         localProposal,
@@ -896,6 +996,10 @@ const generateModelProposal = ({
         blacklist,
         sourcePath: sourceFile?.path || meta.original_file || "",
       });
+      progress(
+        `Model success ${row.id}: ${requestedGenerator.model} title="${proposal.title.slice(0, 80)}" ` +
+        `keywords=${proposal.keywords.length}`,
+      );
       return {
         ok: true,
         proposal,
@@ -904,8 +1008,10 @@ const generateModelProposal = ({
       };
     } catch (error) {
       lastError = String(error?.message || error || "unknown model error").slice(0, 800);
+      progress(`Model attempt failed ${attempt}/${MODEL_RETRIES} ${row.id}: ${lastError}`);
     }
   }
+  progress(`Model blocked ${row.id}: ${lastError || "Model invocation failed."}`);
   return {
     ok: false,
     previewPath,
@@ -1211,12 +1317,13 @@ const runBatchId = (date = new Date()) => {
   return `${datePart}-${safeTime}Z`;
 };
 
-const main = () => {
+const main = async () => {
   const args = parseArgs(process.argv);
   if (args.help) {
     process.stdout.write(
       "Usage: node scripts/generate_title_keyword_review_queue.mjs [--limit 100] [--include-already-proposed]\n" +
-      "Normal runs use Owner.sqlite as source of truth and write JSON only as review-page batch views.\n",
+      "Normal runs use Owner.sqlite as source of truth and write JSON only as review-page batch views.\n" +
+      "Set PBE_TITLE_KEYWORD_MODEL_CONCURRENCY to tune parallel model calls.\n",
     );
     process.exit(0);
   }
@@ -1227,6 +1334,10 @@ const main = () => {
   const batchPath = path.join(queueDir, batchFilename);
   const latestPath = path.join(queueDir, "latest.json");
   const proposalStatePath = path.join("assets", "owner-actions", "Owner.sqlite");
+  progress(
+    `Starting batch ${batchId}: limit=${args.limit} generator=${GENERATOR_MODEL} ` +
+    `ladder=${MODEL_LADDER.join(" > ")}`,
+  );
 
   const ownerGeneratorState = loadOwnerGeneratorState();
   const proposedState = ownerGeneratorState.state;
@@ -1301,8 +1412,14 @@ const main = () => {
 
   const reworkCandidates = candidates.filter((row) => row.reworkPriority);
   const ordinaryCandidates = candidates.filter((row) => !row.reworkPriority);
+  progress(
+    `Loaded ${flattened.length} photos; candidates=${candidates.length} ` +
+    `rework=${reworkCandidates.length} ordinary=${ordinaryCandidates.length} ` +
+    `skipped_reviewed=${skippedReviewed.length} skipped_proposed=${skippedProposed.length} ` +
+    `skipped_parked=${skippedParked.length}`,
+  );
 
-  const buildPhotoRecord = (row) => {
+  const buildPhotoRecord = async (row) => {
     const photo = row.photo || {};
     const currentKeywordsRaw = metadataValue(photo, "Keywords");
     const currentKeywords = uniqueKeywords(splitKeywordText(currentKeywordsRaw));
@@ -1355,7 +1472,7 @@ const main = () => {
         message: "Latest rejected proposal already used the strongest configured model.",
       };
     } else if (isAiGeneratorModel(requestedGenerator.model)) {
-      const modelResult = generateModelProposal({
+      const modelResult = await generateModelProposal({
         row,
         photo,
         galleryLabel: row.galleryLabel,
@@ -1463,19 +1580,29 @@ const main = () => {
   const modelBlockedRows = [];
   let ordinaryNewCount = 0;
 
-  const addCandidate = (row, ordinarySlot = false) => {
-    const built = buildPhotoRecord(row);
+  const logCandidateOutcome = (row, outcome) => {
+    progress(
+      `Progress ${outcome} ${row.id}: proposals=${photos.length} rework=${photos.filter((item) => item?.state?.rework_requested === true).length} ` +
+      `ordinary=${ordinaryNewCount}/${args.limit} blocked=${modelBlockedRows.length} ` +
+      `unresolved_rework=${unresolvedReworkRows.length} parked=${parkedRows.length} no_change=${noChangeRows.length}`,
+    );
+  };
+
+  const applyCandidateResult = (row, built, ordinarySlot = false) => {
     const record = built.record;
     if (built.modelBlocker?.kind === "model_ladder_exhausted") {
       parkedRows.push({ row, record, blocker: built.modelBlocker });
+      logCandidateOutcome(row, "parked_ladder_exhausted");
       return false;
     }
     if (built.modelBlocker) {
       modelBlockedRows.push({ row, record, blocker: built.modelBlocker });
+      logCandidateOutcome(row, "model_blocked");
       return false;
     }
     if (record?.changes?.no_change_needed === true && row.reworkPriority !== true) {
       noChangeRows.push({ row, record });
+      logCandidateOutcome(row, "no_change_reviewed");
       return true;
     }
     const title = String(record?.proposed?.title || "").trim();
@@ -1483,22 +1610,53 @@ const main = () => {
     if (!title || isPlaceholderTitle(title, sourcePath)) {
       if (row.reworkPriority === true && Number(row.rejectedCount || 0) < TITLE_KEYWORD_PARK_REJECTED_COUNT) {
         unresolvedReworkRows.push({ row, record });
+        logCandidateOutcome(row, "unresolved_rework_kept_rejected");
         return false;
       }
       parkedRows.push({ row, record });
+      logCandidateOutcome(row, "parked_untitled");
       return false;
     }
     photos.push(record);
     if (ordinarySlot) ordinaryNewCount += 1;
+    logCandidateOutcome(row, row.reworkPriority ? "added_rework" : "added_ordinary");
     return true;
   };
 
+  const addCandidate = async (row, ordinarySlot = false) => applyCandidateResult(row, await buildPhotoRecord(row), ordinarySlot);
+
+  const reworkGroupsByModel = new Map();
   for (const row of reworkCandidates) {
-    addCandidate(row, false);
+    const requested = selectedGeneratorForRow(row);
+    const key = `${String(requested.model_level).padStart(3, "0")}:${requested.model}`;
+    if (!reworkGroupsByModel.has(key)) reworkGroupsByModel.set(key, { requested, rows: [] });
+    reworkGroupsByModel.get(key).rows.push(row);
   }
-  for (const row of ordinaryCandidates) {
+  const reworkGroups = [...reworkGroupsByModel.values()]
+    .sort((a, b) => Number(a.requested.model_level || 0) - Number(b.requested.model_level || 0));
+  let reworkOffset = 0;
+  for (const group of reworkGroups) {
+    progress(
+      `Rework model batch ${group.requested.model} level=${group.requested.model_level}: ` +
+      `${group.rows.length} rows concurrency=${MODEL_CONCURRENCY}`,
+    );
+    const builtRows = await mapWithConcurrency(group.rows, MODEL_CONCURRENCY, async (row, groupIndex) => {
+      progress(
+        `Rework candidate ${reworkOffset + groupIndex + 1}/${reworkCandidates.length}: ${row.id} ` +
+        `rejected_count=${row.rejectedCount} requested=${group.requested.model}`,
+      );
+      return buildPhotoRecord(row);
+    });
+    group.rows.forEach((row, index) => {
+      applyCandidateResult(row, builtRows[index], false);
+    });
+    reworkOffset += group.rows.length;
+  }
+  for (let index = 0; index < ordinaryCandidates.length; index += 1) {
+    const row = ordinaryCandidates[index];
     if (ordinaryNewCount >= args.limit) break;
-    addCandidate(row, true);
+    progress(`Ordinary candidate ${index + 1}/${ordinaryCandidates.length}: ${row.id} ordinary=${ordinaryNewCount}/${args.limit}`);
+    await addCandidate(row, true);
   }
 
   const ordinaryBatch = photos.filter((item) => item?.state?.rework_requested !== true);
@@ -1612,22 +1770,27 @@ const main = () => {
     photos,
   };
 
+  progress(`Writing batch JSON ${batchPath} with ${photos.length} proposals.`);
   fs.mkdirSync(path.join(REPO_ROOT, queueDir), { recursive: true });
   fs.writeFileSync(path.join(REPO_ROOT, batchPath), JSON.stringify(payload, null, 2) + "\n");
   fs.writeFileSync(path.join(REPO_ROOT, latestPath), JSON.stringify(payload, null, 2) + "\n");
+  progress(`Importing batch ${batchId} into Owner.sqlite.`);
   runOwnerStateDb(["--import-title-keyword-batch-file", batchPath]);
   if (parkedExportRows.length) {
     const parkedTmpPath = path.join("tmp", `title-keyword-parked-${batchId}-${Date.now()}.json`);
     fs.mkdirSync(path.join(REPO_ROOT, "tmp"), { recursive: true });
     fs.writeFileSync(path.join(REPO_ROOT, parkedTmpPath), JSON.stringify(parkedExportRows, null, 2) + "\n");
+    progress(`Marking ${parkedExportRows.length} rows parked in Owner.sqlite.`);
     runOwnerStateDb(["--park-title-keyword-rows-file", parkedTmpPath]);
   }
   if (noChangeExportRows.length) {
     const noChangeTmpPath = path.join("tmp", `title-keyword-reviewed-no-change-${batchId}-${Date.now()}.json`);
     fs.mkdirSync(path.join(REPO_ROOT, "tmp"), { recursive: true });
     fs.writeFileSync(path.join(REPO_ROOT, noChangeTmpPath), JSON.stringify(noChangeExportRows, null, 2) + "\n");
+    progress(`Marking ${noChangeExportRows.length} no-change rows reviewed in Owner.sqlite.`);
     runOwnerStateDb(["--mark-title-keyword-reviewed-file", noChangeTmpPath]);
   }
+  progress(`Completed batch ${batchId}.`);
 
   process.stdout.write(
     `Wrote ${photos.length} proposals -> ${batchPath}\n` +
@@ -1650,12 +1813,10 @@ const main = () => {
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try {
-    main();
-  } catch (error) {
+  main().catch((error) => {
     process.stderr.write(`${error?.stack || error?.message || error}\n`);
     process.exit(1);
-  }
+  });
 }
 
 export {

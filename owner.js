@@ -928,13 +928,16 @@
       realEstateClientList.innerHTML = realEstateClients.length ? realEstateClients.map((client) => {
         const active = client.id === selected?.id;
         const properties = realEstatePropertiesFor(client);
+        const availableProperties = client.availableProperties || [];
         const missingProperties = client.missingProperties || [];
+        const discoveredText = availableProperties.length ? `${formatCount(availableProperties.length)} found` : "none found";
         const statusBits = client.isDraft
           ? ["draft", "not saved"]
           : [
               missingProperties.length
                 ? `skipping: ${missingProperties.join(", ")}`
                 : (client.sourceRootExists ? "source ok" : "source missing"),
+              `discovered: ${discoveredText}`,
               client.publicContextExists ? "published" : "not published",
             ];
         const rowLabel = client.customer || client.id || "new client";
@@ -1163,7 +1166,7 @@
       return;
     }
     if (selected.isDraft) {
-      setRealEstateStatus("Finish the draft client before running imports, publishing, or uploads.");
+      setRealEstateStatus("Finish the draft client before running client actions.");
       return;
     }
     if (action === "upload-client") {
@@ -1173,6 +1176,7 @@
     setRealEstateBusy(true);
     const labels = {
       "import-client": "Importing previews...",
+      "discover-properties": "Discovering property folders...",
       "publish-client": "Publishing context...",
       "upload-dry-run": "Checking upload inventory...",
       "upload-client": "Uploading masters and previews...",
@@ -1210,6 +1214,7 @@
           "import-client": importProgress
             ? `${clientName} previews imported: ${formatCount(importProgress.completed || 0)} / ${formatCount(importProgress.total || 0)} media.${skipped.length ? ` Skipped missing: ${skipped.join(", ")}.` : ""}`
             : `${clientName} previews imported.`,
+          "discover-properties": `${clientName} properties updated from ${formatCount(payload.properties?.length || 0)} discovered folders.`,
           "publish-client": `${clientName} context published.`,
           "upload-dry-run": `${clientName} upload dry run complete.`,
           "upload-client": `${clientName} upload complete.`,

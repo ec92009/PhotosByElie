@@ -260,7 +260,7 @@ node scripts/generate_social_post_packages.mjs --dry-run
 
 ## Owner Title / Keyword Review Queue
 
-`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing Owner title/keyword review state for manual Owner review. It reads and writes durable queue/proposal state in `Owner.sqlite`, then writes the current review-page batch view under `assets/owner-actions/title-keyword-review-queue/`. It does not modify source-file embedded metadata.
+`generate_title_keyword_review_queue.mjs` prepares the newest 100 photos missing Owner title/keyword review state for manual Owner review. It reads and writes durable queue/proposal state in `Owner.sqlite`, then writes the current review-page batch view under ignored `assets/owner-actions/title-keyword-review-queue/` for localhost review only. It does not modify source-file embedded metadata.
 
 Generate (nightly batch):
 
@@ -275,7 +275,7 @@ Review on localhost:
 - Start the local helper server: `python3 scripts/local_server.py 8000`
 - Open `http://localhost:8000/owner-review.html?view=title-keywords`
 
-Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write decisions to `Owner.sqlite`; the `approvals-<batch>.json` file remains a review-page/audit export. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through the `Owner.sqlite` keyword blacklist before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections and parked/rework state are recorded in `Owner.sqlite`.
+Use the page to review one photo per row, edit proposed title/keywords, approve individual rows, reject rows with an optional rework comment, block rows with `H`/`X`, or use Approve all when the whole batch is acceptable. Per-row saves require the helper server and write decisions to `Owner.sqlite`; `approvals-<batch>.json` is an ignored localhost review-page/audit export derived from SQLite, not a deployable source of truth. Approved/rejected keywords are normalized case-insensitively, deduplicated, and filtered through the `Owner.sqlite` keyword blacklist before they are saved. Applying approved rows updates generated catalog metadata/state files and adds the `Title_Keywords_Reviewed` flag so future batches skip applied photos. Rejections and parked/rework state are recorded in `Owner.sqlite`.
 
 The approval apply path is manifest-only. It rewrites generated catalog/state files such as `assets/catalog/photosbyelie.sqlite`, `assets/catalog/photosbyelie.sqlite.br`, the `photos-data.js` bootstrap, `home-data.js`, `assets/expo-manifest.json`, reserve/hidden state as needed, and `worker/photos-catalog.generated.mjs`; it does not rewrite source-file embedded metadata, public previews, private masters, or private render files. Run `npm test` and `npm run validate` after applying a batch and before committing.
 

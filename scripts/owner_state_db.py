@@ -675,16 +675,34 @@ def _upsert_batch(conn: sqlite3.Connection, payload: dict[str, Any], notes: str 
           oldest_capture_at, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(batch_id) DO UPDATE SET
-          generated_at = excluded.generated_at,
-          total_count = excluded.total_count,
-          ordinary_new_count = excluded.ordinary_new_count,
-          rework_count = excluded.rework_count,
-          parked_count = excluded.parked_count,
-          ordinary_new_limit = excluded.ordinary_new_limit,
-          candidate_count = excluded.candidate_count,
-          newest_capture_at = excluded.newest_capture_at,
-          oldest_capture_at = excluded.oldest_capture_at,
-          notes = excluded.notes
+          generated_at = CASE
+            WHEN excluded.total_count = 0 AND title_keyword_batches.total_count > 0 THEN title_keyword_batches.generated_at
+            ELSE excluded.generated_at
+          END,
+          total_count = CASE
+            WHEN excluded.total_count = 0 AND title_keyword_batches.total_count > 0 THEN title_keyword_batches.total_count
+            ELSE excluded.total_count
+          END,
+          ordinary_new_count = CASE
+            WHEN excluded.total_count = 0 AND title_keyword_batches.total_count > 0 THEN title_keyword_batches.ordinary_new_count
+            ELSE excluded.ordinary_new_count
+          END,
+          rework_count = CASE
+            WHEN excluded.total_count = 0 AND title_keyword_batches.total_count > 0 THEN title_keyword_batches.rework_count
+            ELSE excluded.rework_count
+          END,
+          parked_count = CASE
+            WHEN excluded.total_count = 0 AND title_keyword_batches.total_count > 0 THEN title_keyword_batches.parked_count
+            ELSE excluded.parked_count
+          END,
+          ordinary_new_limit = COALESCE(excluded.ordinary_new_limit, title_keyword_batches.ordinary_new_limit),
+          candidate_count = COALESCE(excluded.candidate_count, title_keyword_batches.candidate_count),
+          newest_capture_at = COALESCE(NULLIF(excluded.newest_capture_at, ''), title_keyword_batches.newest_capture_at),
+          oldest_capture_at = COALESCE(NULLIF(excluded.oldest_capture_at, ''), title_keyword_batches.oldest_capture_at),
+          notes = CASE
+            WHEN excluded.total_count = 0 AND title_keyword_batches.total_count > 0 THEN title_keyword_batches.notes
+            ELSE excluded.notes
+          END
         """,
         (
             batch_id,

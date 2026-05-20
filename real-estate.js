@@ -727,6 +727,12 @@
     `).join("") : `<p class="real-estate-muted">No selected media yet.</p>`;
   };
 
+  const activeOutputSummary = () => state.albums
+    .map((album) => ({ title: album.displayTitle || album.title, count: albumSelectedCount(album.slug) }))
+    .filter((item) => item.count > 0)
+    .map((item) => `${item.title}: ${item.count}`)
+    .join(" / ");
+
   const stepCopy = () => {
     const selected = activeSelectedPhotos().length;
     if (state.wizardStep === 0) return "Choose the property you want to prepare.";
@@ -738,7 +744,7 @@
       ? `Drag the ${selected} selected media items into the order you want.`
       : "Select at least one photo or video before ordering.";
     return selected
-      ? "Choose PDF, video, or both, then open the selected outputs in the browser."
+      ? `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Choose PDF, video, or both.`
       : "Select at least one photo or video before creating outputs.";
   };
 

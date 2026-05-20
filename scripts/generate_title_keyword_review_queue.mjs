@@ -20,6 +20,10 @@ const TITLE_KEYWORD_PARK_REJECTED_COUNT = 10;
 const DEFAULT_MODEL_RETRIES = 2;
 const DEFAULT_MODEL_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_MODEL_CONCURRENCY = 3;
+const OWNER_STATE_DB_MAX_BUFFER = Math.max(
+  16 * 1024 * 1024,
+  Number(process.env.PBE_OWNER_STATE_DB_MAX_BUFFER || 0),
+);
 const DEFAULT_MODEL_LADDER = [
   LOCAL_GENERATOR_MODEL,
   "codex-gpt-5.4-mini",
@@ -154,6 +158,7 @@ const runOwnerStateDb = (args, options = {}) => {
     cwd: REPO_ROOT,
     encoding: "utf8",
     input: options.input,
+    maxBuffer: options.maxBuffer || OWNER_STATE_DB_MAX_BUFFER,
   });
   if (result.status !== 0) {
     throw new Error((result.stderr || result.stdout || "Owner.sqlite command failed.").trim());
@@ -211,6 +216,7 @@ const selectedGeneratorForRow = (row) => {
 };
 
 const loadOwnerGeneratorState = () => {
+  progress(`Loading Owner.sqlite generator state with maxBuffer=${OWNER_STATE_DB_MAX_BUFFER} bytes.`);
   const stdout = runOwnerStateDb(["--title-keyword-generator-state-json", "--park-retry-exhausted"]);
   const payload = JSON.parse(stdout);
   const state = createProposalState();
@@ -234,6 +240,10 @@ const loadOwnerGeneratorState = () => {
       state_tags: item.state_tags || [],
     });
   }
+  progress(
+    `Loaded Owner.sqlite generator state: queue=${(payload.queue || []).length} ` +
+    `blacklist=${(payload.keyword_blacklist || []).length} parked_retry_exhausted=${Number(payload.parked_retry_exhausted || payload.parked_twice_rejected || 0)}`,
+  );
   return {
     state,
     blacklist: blacklistRules(Array.isArray(payload.keyword_blacklist) ? payload.keyword_blacklist : []),
@@ -288,9 +298,25 @@ const allowedKeywords = (items, rules) => uniqueKeywords(items)
   .filter((keyword) => !hasBlacklistedTerm(keyword, rules));
 
 const STATE_KEYWORDS = new Set([REVIEW_FLAG, PROPOSED_FLAG, REJECTED_FLAG, PARKED_FLAG].map((value) => value.toLowerCase()));
+const NON_PHOTO_KEYWORDS = new Set([
+  "notmyphoto",
+  "not my photo",
+]);
 
-const reviewableKeywords = (items, rules) => allowedKeywords(items, rules)
-  .filter((keyword) => !STATE_KEYWORDS.has(keyword.toLowerCase()));
+const normalizedReviewKeyword = (keyword) => {
+  const value = cleanText(keyword);
+  if (!value) return "";
+  const comparable = value.toLowerCase();
+  if (NON_PHOTO_KEYWORDS.has(comparable)) return "";
+  if (/^family\s*4\+$/i.test(value)) return "Family travel";
+  return value;
+};
+
+const reviewableKeywords = (items, rules) => allowedKeywords((items || []).map(normalizedReviewKeyword), rules)
+  .filter((keyword) => {
+    const normalized = keyword.toLowerCase();
+    return !STATE_KEYWORDS.has(normalized) && !NON_PHOTO_KEYWORDS.has(normalized);
+  });
 
 const proposalKeywordsWithFloor = (proposed, currentNonBlacklisted, rules) => {
   const proposedKeywords = reviewableKeywords(proposed, rules);
@@ -383,6 +409,20 @@ const compactDescriptiveTitle = (title) => {
   return withoutStyle !== value && withoutStyle ? titleCase(withoutStyle) : "";
 };
 
+const titleFromInternalMetadata = ({ currentTitle, keywords, galleryLabel, context }) => {
+  const sourceText = `${currentTitle || ""} ${(keywords || []).join(" ")} ${(context?.parts || []).join(" ")}`.toLowerCase();
+  const family = /family\s*4\+|family travel|family trip|family/i.test(sourceText);
+  const gallery = cleanText(galleryLabel);
+  const cityOrVenue = context?.title || context?.venue || context?.city || "";
+  if (/notmyphoto|not my photo|family\s*4\+/.test(sourceText)) {
+    if (family && gallery && !/^(photo|photos)$/i.test(gallery)) return `Family Travel in ${gallery}`;
+    if (family && cityOrVenue) return `Family Travel, ${cityOrVenue}`;
+    if (family) return "Family Travel";
+    if (cityOrVenue) return cityOrVenue;
+  }
+  return "";
+};
+
 const splitPathSegments = (sourcePath) => String(sourcePath || "")
   .split(/[\\/]+/)
   .map((part) => cleanText(part))
@@ -435,6 +475,62 @@ const cityRegionKeyword = (city) => {
   }[key] || "";
 };
 
+const galleryContextKeywords = (galleryLabel) => {
+  const gallery = cleanText(galleryLabel);
+  const lower = gallery.toLowerCase();
+  const keywords = [gallery];
+  if (["france", "italy", "spain", "portugal", "slovakia"].includes(lower)) {
+    keywords.push(`${gallery} travel`, "European travel", "Europe", "Travel photography", "Travel archive");
+  } else if (lower === "usa" || lower === "united states") {
+    keywords.push("USA travel", "United States", "American travel", "Travel photography", "Travel archive");
+  } else if (lower === "mexico") {
+    keywords.push("Mexico travel", "Latin America travel", "Travel photography", "Travel archive");
+  } else if (lower) {
+    keywords.push(`${gallery} travel`, "Travel photography", "Travel archive");
+  }
+  return keywords;
+};
+
+const captureContextKeywords = (capture) => {
+  const raw = String(capture?.raw || capture?.sort || "").trim();
+  const match = raw.match(/^(\d{4})[:-](\d{2})[:-](\d{2})/);
+  if (!match) return [];
+  const [, year, month] = match;
+  const monthName = [
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ][Number(month)] || "";
+  const season = Number(month) <= 2 || Number(month) === 12
+    ? "Winter travel"
+    : Number(month) <= 5
+    ? "Spring travel"
+    : Number(month) <= 8
+    ? "Summer travel"
+    : "Autumn travel";
+  return [`${year} travel`, monthName ? `${monthName} travel` : "", season].filter(Boolean);
+};
+
+const localContextKeywordFloor = ({ photo, galleryLabel, context, currentTitle, sourceFile, capture }) => {
+  const sourceText = `${currentTitle || ""} ${sourceFile?.path || ""} ${(context?.parts || []).join(" ")}`.toLowerCase();
+  const keywords = [
+    ...galleryContextKeywords(galleryLabel),
+    context?.city,
+    context?.venue,
+    cityRegionKeyword(context?.city),
+    ...captureContextKeywords(capture),
+  ];
+  if (/family\s*4\+|family/.test(sourceText)) {
+    keywords.push("Family travel", "Family trip", "Travel memories", "Personal travel archive");
+  }
+  if (String(photo?.sourceOrigin || "").toLowerCase() === "camera") {
+    keywords.push("Camera original", "Documentary travel", "Candid travel", "Location-based metadata");
+  }
+  if (String(photo?.sourceOrigin || "").toLowerCase() === "ai") {
+    keywords.push("AI image", "Digital artwork", "Illustrative image");
+  }
+  return uniqueKeywords(keywords);
+};
+
 const imageShapeKeywords = (photo) => {
   const rawSize = metadataValue(photo, "Original size") || metadataValue(photo, "Preview file");
   const match = String(rawSize || "").match(/(\d{3,5})\s*x\s*(\d{3,5})/);
@@ -475,7 +571,7 @@ const titleKeywordHints = (title, sourceOrigin) => {
   return uniqueKeywords(hints);
 };
 
-const metadataExpansionKeywords = ({ photo, galleryLabel, context, currentTitle, sourceFile }) => {
+const metadataExpansionKeywords = ({ photo, galleryLabel, context, currentTitle, sourceFile, capture }) => {
   const sourceText = `${sourceFile?.path || ""} ${currentTitle || ""} ${(context.parts || []).join(" ")}`.toLowerCase();
   const origin = String(photo?.sourceOrigin || "").toLowerCase();
   const keywords = [
@@ -485,6 +581,7 @@ const metadataExpansionKeywords = ({ photo, galleryLabel, context, currentTitle,
     context.venue,
     ...context.parts,
     ...imageShapeKeywords(photo),
+    ...localContextKeywordFloor({ photo, galleryLabel, context, currentTitle, sourceFile, capture }),
   ];
 
   if (origin === "camera") {
@@ -606,7 +703,7 @@ const titleFromKeywordHints = ({ keywords, galleryLabel, context }) => {
   return isPlaceholderTitle(title) ? "" : title;
 };
 
-const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklist, sourceFile }) => {
+const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, currentKeywordsRaw, blacklist, sourceFile, capture }) => {
   const context = contextFromSource(sourceFile?.path || "", galleryLabel);
   const withoutBlacklisted = currentKeywords.filter((keyword) => !hasBlacklistedTerm(keyword, blacklist));
   const removedBlacklisted = currentKeywords.filter((keyword) => hasBlacklistedTerm(keyword, blacklist));
@@ -631,9 +728,10 @@ const proposalForPhoto = ({ photo, galleryLabel, currentTitle, currentKeywords, 
   const promptTitle = compactPromptTitle(currentTitle, currentKeywords);
   const descriptiveTitle = compactDescriptiveTitle(currentTitle);
   const keywordTitle = titleFromKeywordHints({ keywords: withoutBlacklisted, galleryLabel, context });
+  const internalTitle = titleFromInternalMetadata({ currentTitle, keywords: withoutBlacklisted, galleryLabel, context });
   const promptKeywords = compactPromptKeywords(currentTitle);
-  const expansionKeywords = metadataExpansionKeywords({ photo, galleryLabel, context, currentTitle, sourceFile });
-  const proposedTitle = promptTitle || descriptiveTitle || (placeholder ? (context.title || keywordTitle) : currentTitle);
+  const expansionKeywords = metadataExpansionKeywords({ photo, galleryLabel, context, currentTitle, sourceFile, capture });
+  const proposedTitle = promptTitle || descriptiveTitle || internalTitle || (placeholder ? (context.title || keywordTitle) : currentTitle);
   const proposedKeywords = allowedKeywords(
     [...withoutBlacklisted, ...context.keywords, ...promptKeywords, ...expansionKeywords],
     blacklist,
@@ -670,7 +768,7 @@ const modelOutputSchema = () => ({
     title: { type: "string", minLength: 1 },
     keywords: {
       type: "array",
-      minItems: 1,
+      minItems: MIN_PROPOSED_KEYWORDS,
       items: { type: "string", minLength: 1 },
     },
     confidence: { type: "string", enum: ["low", "medium", "high"] },
@@ -940,14 +1038,15 @@ const normalizeModelProposal = ({ payload, localProposal, currentKeywords, black
   const rawStatus = String(payload?.status || "").trim();
   const fallbackStatus = localProposal?.status === "rework_requested" ? "model_rework" : "model_context";
   const allowedStatuses = new Set(["model_rework", "model_context", "needs_owner_context", "metadata_context", "metadata_cleanup", "source_context"]);
+  const safeProposedKeywords = proposalKeywordsWithFloor(proposedKeywords, currentKeywords, blacklist);
   return {
     title,
-    keywords: proposalKeywordsWithFloor(proposedKeywords, currentKeywords, blacklist),
+    keywords: safeProposedKeywords,
     status: needsOwnerContext ? "needs_owner_context" : (allowedStatuses.has(rawStatus) ? rawStatus : fallbackStatus),
     confidence: needsOwnerContext ? "low" : confidence,
     reason: String(payload?.reason || "Generated by the selected title/keyword model using local catalog context.").trim(),
     removedBlacklisted: localProposal?.removedBlacklisted || [],
-    keywordTargetMet: proposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
+    keywordTargetMet: safeProposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
     noChangeNeeded: false,
     blacklistOnlyCleanup: false,
   };
@@ -1280,6 +1379,7 @@ const syncOwnerDb = () => {
   const result = spawnSync("python3", ["scripts/owner_state_db.py", "--import-owner-actions", "--force"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
+    maxBuffer: OWNER_STATE_DB_MAX_BUFFER,
   });
   if (result.status !== 0) {
     throw new Error((result.stderr || result.stdout || "Owner.sqlite sync failed.").trim());
@@ -1448,6 +1548,7 @@ const main = async () => {
       currentKeywordsRaw,
       blacklist,
       sourceFile,
+      capture: row.capture,
     });
     const requestedGenerator = selectedGeneratorForRow(row);
     let actualGenerator = isAiGeneratorModel(requestedGenerator.model) ? requestedGenerator : generatorModelInfo();
@@ -1707,6 +1808,28 @@ const main = async () => {
     const model = String(record?.proposed?.generator?.model || "unknown");
     reworkGeneratorCounts[model] = (reworkGeneratorCounts[model] || 0) + 1;
   }
+  const qualitySummaryFor = (records) => {
+    const summary = {
+      empty_title_count: 0,
+      placeholder_title_count: 0,
+      keyword_target_miss_count: 0,
+      needs_owner_context_count: 0,
+      source_context_count: 0,
+      low_confidence_count: 0,
+    };
+    for (const record of records) {
+      const title = String(record?.proposed?.title || "").trim();
+      const sourcePath = record?.source?.file?.path || record?.meta?.original_file || "";
+      if (!title) summary.empty_title_count += 1;
+      if (title && isPlaceholderTitle(title, sourcePath)) summary.placeholder_title_count += 1;
+      if (record?.changes?.keyword_target_met !== true) summary.keyword_target_miss_count += 1;
+      if (record?.proposed?.status === "needs_owner_context") summary.needs_owner_context_count += 1;
+      if (record?.proposed?.status === "source_context") summary.source_context_count += 1;
+      if (record?.proposed?.confidence === "low") summary.low_confidence_count += 1;
+    }
+    return summary;
+  };
+  const qualitySummary = qualitySummaryFor(photos);
   const modelBlockedExportRows = modelBlockedRows.map(({ row, record, blocker }) => ({
     photo_id: record.photo_id,
     rework_requested: row.reworkPriority === true,
@@ -1757,6 +1880,7 @@ const main = async () => {
       candidate_count: candidates.length,
       generator_counts: generatorCounts,
       rework_generator_counts: reworkGeneratorCounts,
+      quality_summary: qualitySummary,
     },
     skipped: {
       reviewed: skippedReviewed.filter(Boolean),
@@ -1770,6 +1894,12 @@ const main = async () => {
     photos,
   };
 
+  progress(
+    `Quality summary: empty_titles=${qualitySummary.empty_title_count} ` +
+    `placeholder_titles=${qualitySummary.placeholder_title_count} ` +
+    `keyword_target_miss=${qualitySummary.keyword_target_miss_count} ` +
+    `needs_owner_context=${qualitySummary.needs_owner_context_count}`,
+  );
   progress(`Writing batch JSON ${batchPath} with ${photos.length} proposals.`);
   fs.mkdirSync(path.join(REPO_ROOT, queueDir), { recursive: true });
   fs.writeFileSync(path.join(REPO_ROOT, batchPath), JSON.stringify(payload, null, 2) + "\n");
@@ -1805,6 +1935,7 @@ const main = async () => {
     `Rework priority: ${reworkBatch.length}\n` +
     `Generator counts: ${JSON.stringify(generatorCounts)}\n` +
     `Rework generator counts: ${JSON.stringify(reworkGeneratorCounts)}\n` +
+    `Quality summary: ${JSON.stringify(qualitySummary)}\n` +
     `Model escalation blockers: ${modelBlockedRows.length} (rework ${modelBlockedRows.filter((item) => item.row.reworkPriority).length}, ordinary ${modelBlockedRows.filter((item) => !item.row.reworkPriority).length})\n` +
     `Marked reviewed without changes: ${noChangeRows.length}\n` +
     `Unresolved rework kept rejected: ${unresolvedReworkRows.length}\n` +
@@ -1828,5 +1959,6 @@ export {
   isLocalGeneratorModel,
   nextModelAfterLevel,
   parseModelProposalText,
+  proposalForPhoto,
   selectedGeneratorForRow,
 };

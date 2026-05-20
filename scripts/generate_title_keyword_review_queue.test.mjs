@@ -8,6 +8,7 @@ import {
   codexModelConfig,
   invokeCodexProposalModel,
   parseModelProposalText,
+  proposalForPhoto,
   selectedGeneratorForRow,
 } from "./generate_title_keyword_review_queue.mjs";
 
@@ -60,6 +61,28 @@ test("model proposal text parser accepts fenced JSON", () => {
   const parsed = parseModelProposalText("```json\n{\"title\":\"Pisa Tower\",\"keywords\":[\"Pisa\"]}\n```");
   assert.equal(parsed.title, "Pisa Tower");
   assert.deepEqual(parsed.keywords, ["Pisa"]);
+});
+
+test("local rules clean internal markers and still meet the keyword floor", () => {
+  const proposal = proposalForPhoto({
+    photo: {
+      id: "20110106-0633-16316",
+      sourceOrigin: "camera",
+      metadata: [{ label: "Original size", value: "1800 x 1200" }],
+    },
+    galleryLabel: "France",
+    currentTitle: "Family 4+, NotMyPhoto",
+    currentKeywords: ["Family 4+", "France", "NotMyPhoto"],
+    currentKeywordsRaw: "Family 4+, France, NotMyPhoto",
+    blacklist: [],
+    sourceFile: { path: "2010-2014/20110106 0633 16316.jpg" },
+    capture: { raw: "2011:01:06 06:33:21", sort: "2011-01-06T06:33:21" },
+  });
+  assert.equal(proposal.title, "Family Travel in France");
+  assert.equal(proposal.keywords.includes("NotMyPhoto"), false);
+  assert.ok(proposal.keywords.length >= 10);
+  assert.ok(proposal.keywords.includes("Family travel"));
+  assert.ok(proposal.keywordTargetMet);
 });
 
 test("Codex model invocation uses the configured CLI and output file", () => {

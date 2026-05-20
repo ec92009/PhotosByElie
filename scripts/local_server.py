@@ -3319,6 +3319,30 @@ def _real_estate_client_for_action(repo_root: Path, payload: dict) -> tuple[dict
     return state, client
 
 
+def _discover_real_estate_client_properties(repo_root: Path, payload: dict) -> dict:
+    state, client = _real_estate_client_for_action(repo_root, payload)
+    source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
+    if not source_root.is_dir():
+        raise ValueError(f"source root not found: {source_root}")
+    discovered = _real_estate_discovered_properties(str(source_root))
+    if not discovered:
+        available_text = ", ".join(_real_estate_child_directories(str(source_root))) or "none"
+        raise ValueError(
+            f"No property folders with supported media were found under {source_root}. "
+            f"Available folders: {available_text}."
+        )
+    client["properties"] = discovered
+    client["albums"] = discovered
+    _persist_real_estate_client_update(repo_root, state, client)
+    return {
+        "ok": True,
+        "action": "discover-properties",
+        "client": _safe_real_estate_client(repo_root, client),
+        "clients": [_safe_real_estate_client(repo_root, item) for item in state["clients"]],
+        "properties": discovered,
+    }
+
+
 def _run_real_estate_command(repo_root: Path, command: list[str], env: dict[str, str] | None = None) -> dict:
     result = subprocess.run(
         command,
@@ -3713,6 +3737,8 @@ def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
         return _save_real_estate_client(repo_root, payload.get("client") if isinstance(payload.get("client"), dict) else payload)
     if action == "delete-client":
         return _delete_real_estate_client(repo_root, payload)
+    if action == "discover-properties":
+        return _discover_real_estate_client_properties(repo_root, payload)
     if action == "import-client":
         return _import_real_estate_client(repo_root, payload)
     if action == "publish-client":

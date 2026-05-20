@@ -413,8 +413,10 @@ html[data-theme="light"] .photo-art.has-photo::after{
   flex-wrap:wrap;
   gap:8px;
   align-items:center;
-  border-bottom:1px solid var(--line);
-  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 58%,transparent);
+  background:rgb(var(--glass-surface-rgb) / .24);
+  backdrop-filter:blur(var(--glass-light-blur));
+  -webkit-backdrop-filter:blur(var(--glass-light-blur));
   padding:0 0 12px;
 }
 .owner-tab-button{
@@ -5505,6 +5507,12 @@ html[data-theme="light"] .detail-preview.has-image::after{
   text-shadow:none;
   backdrop-filter:blur(var(--glass-light-blur));
   -webkit-backdrop-filter:blur(var(--glass-light-blur));
+}
+.owner-tabs .owner-tab-button{
+  background:rgb(var(--glass-control-rgb) / .42);
+}
+.owner-tabs .owner-tab-button.is-active{
+  background:color-mix(in srgb,var(--text) 90%,transparent);
 }
 .gallery-status,
 .keyboard-hint,

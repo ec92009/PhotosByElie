@@ -1,13 +1,13 @@
 # Conversation Summary
 
-Date: 2026-05-19
+Date: 2026-05-20
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v80.8`
-- Local Owner page: `http://localhost:8000/owner.html?v=80.8`
+- Current visible build: `v81.0`
+- Local Owner page: `http://localhost:8000/owner.html?v=81.0`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -16,7 +16,7 @@ Date: 2026-05-19
 
 ## What This Conversation Covered
 
-This conversation focused on getting the Owner side of Photos By Elie usable as an operations console instead of a long, fragile page. The work started with the Real Estate owner extension and grew into a broader pass over imports, R2 coverage, hidden/discarded state, and local catalog rebuild safety.
+This conversation focused on getting the Owner side of Photos By Elie usable as an operations console and then unblocking the nightly title/keyword review run. The earlier work started with the Real Estate owner extension and grew into a broader pass over imports, R2 coverage, hidden/discarded state, and local catalog rebuild safety. The latest work made the title/keyword queue generator use real per-photo Codex model calls for rework rows, produced a reviewable 321-row nightly batch, and tightened the review page's Propagate behavior.
 
 1. The Owner Real Estate side gained client management: create/update/delete clients, show plaintext local passwords for now, edit rows directly, derive usernames/slugs/gallery keys/titles/prefixes from the client name, and use `/Volumes/Saturn/Pictures/RE/<ClientName>/<Property>` as the source convention.
 2. Real Estate import now proceeds with available property folders instead of failing the whole import on a missing folder, and progress reports count/total while it imports.
@@ -32,6 +32,9 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 12. The AI catalog was recovered after a bad export path dropped many AI rows. The active catalog was restored to the expected full scale.
 13. The France gallery/detail H/X behavior was repaired. Detail-page H/X now navigates away assertively and repairs cases where local hidden state exists but the catalog state needs to be republished.
 14. Photo `20180322-0915-00173-e3b893dbea` was investigated for both H/X and orientation. It had an EXIF rotate-180 source flag, and the public preview had been regenerated upside down. The importer now recognizes numeric EXIF orientation values, and corrected 900/1800 previews were uploaded to remote R2.
+15. The title/keyword generator now invokes the selected Codex ladder model for each rework proposal instead of merely recording requested model metadata. Rework rows preserve prior rejected title/keywords and Owner comments as explicit model context.
+16. The latest successful nightly run generated batch `2026-05-19-230413-165Z` with `321` proposals: `221` Codex-backed rework rows and `100` ordinary new-photo rows. Two rework rows remain model-blocked and are kept rejected for future stronger tooling/context.
+17. The Owner review page Propagate button now propagates the reject note along with the reject decision, and the visible build/cache-bust version is `v81.0`.
 
 ## Current Operational Notes
 
@@ -40,8 +43,9 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
 - In `v79.30`, the Imports tab's Start Imports button stays clickable when coverage is already clean and reports that no import work was started because everything tracked is up to date.
 - In `v80.0`, the latest Owner title/keyword approvals are published into the public SQLite catalog and Worker catalog. The `2026-05-16` approval batch now contains 89 approved rows, with fresh Portugal, Bilbao, and Paris metadata carried into buyer-facing catalog data.
-- In `v80.8`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, and clear stale proposed rows that are already blocked or missing from the public catalog. The current generated catalog artifacts include the latest `2026-05-19` title/keyword approval batches.
-- The next handoff pass adds Codex-backed title/keyword rework escalation: rejected rows now carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
+- In `v81.0`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, clear stale proposed rows that are already blocked or missing from the public catalog, and propagate reject notes with propagated rejection decisions.
+- Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
+- Current title/keyword review counts after the successful nightly generation were accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

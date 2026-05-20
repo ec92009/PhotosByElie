@@ -388,7 +388,7 @@
             </label>
             <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
             <div class="title-keyword-review-row-tools">
-              <button type="button" data-review-propagate title="Apply this row's approve/reject choice to current and following rows in the same two-hour shoot window">Propagate</button>
+              <button type="button" data-review-propagate title="Apply this row's approve/reject choice, including reject note, to current and following rows in the same two-hour shoot window">Propagate</button>
             </div>
           </div>
         </article>
@@ -640,14 +640,15 @@
         } else {
           if (targetApprove) targetApprove.checked = false;
           if (targetReject) targetReject.checked = true;
-          if (targetComment && sourceComment && !String(targetComment.value || "").trim()) {
+          if (targetComment) {
             targetComment.value = sourceComment;
           }
         }
         targetComment?.closest("label")?.classList.toggle("is-disabled", Boolean(sourceDecision.approval));
         if (targetComment) targetComment.readOnly = Boolean(sourceDecision.approval);
       });
-      if (status) status.textContent = `Propagated ${sourceDecision.rejection ? "reject" : "approve"} to ${targets.length} current/following same-shoot rows; saving as one batch.`;
+      const propagatedLabel = sourceDecision.rejection ? "reject + note" : "approve";
+      if (status) status.textContent = `Propagated ${propagatedLabel} to ${targets.length} current/following same-shoot rows; saving as one batch.`;
       saveCardsDecisions(targets).then((result) => {
         if (result && status) status.textContent = `Propagated and saved ${result.count} current/following same-shoot rows.`;
       }).catch((error) => {

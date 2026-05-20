@@ -67,21 +67,6 @@ process.stdout.write(JSON.stringify(catalog));
     return json.loads(output)
 
 
-def write_brotli_copy(path: Path) -> None:
-    script = """
-const fs = require("node:fs");
-const zlib = require("node:zlib");
-const input = process.argv[1];
-const output = `${input}.br`;
-const bytes = fs.readFileSync(input);
-const compressed = zlib.brotliCompressSync(bytes, {
-  params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
-});
-fs.writeFileSync(output, compressed);
-"""
-    subprocess.run(["node", "-e", script, str(path)], check=True)
-
-
 def load_existing_video_durations(path: Path) -> dict[str, float]:
     if not path.exists():
         return {}
@@ -946,7 +931,6 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
         }
         conn.close()
         temp_path.replace(output)
-        write_brotli_copy(output)
         return counts
     except Exception:
         temp_path.unlink(missing_ok=True)

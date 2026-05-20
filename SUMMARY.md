@@ -6,11 +6,12 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v81.17`
-- Local Owner page: `http://localhost:8001/owner.html?v=81.17`
+- Current visible build: `v81.18`
+- Local Owner page: `http://localhost:8001/owner.html?v=81.18`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
+- Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is local SQLite in ignored `assets/owner-actions/Owner.sqlite`; generated review batch JSON is ignored/local and no longer tracked as deployable public metadata.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
 - Localhost Owner/helper workflows remain the mutation path for catalog edits, hidden/discarded state, imports, R2 maintenance, and Real Estate client management.
@@ -72,6 +73,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - Latest generated title/keyword review batch is `2026-05-20-185753-222Z`, with `200` proposals: `100` Codex-backed rework rows and `100` ordinary local-rule rows.
 - Owner review JSON under `assets/owner-actions/title-keyword-review-queue/` is now ignored/local. The helper and generator should keep treating it as derived localhost review-page/audit output, with `Owner.sqlite` as durable state.
 - In `v81.15`, the title/keyword generator has a durable buffer fix and local proposal-quality improvements, while the Real Estate owner UI can use discovered property folders and the client review output step summarizes selected projects.
+- In `v81.18`, public catalog loading and helper rebuilds use the plain SQLite catalog directly and stop generating or preferring the Brotli-compressed `.sqlite.br` artifact.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

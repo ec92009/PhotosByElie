@@ -5,7 +5,7 @@
   "publish_scope": "all-eligible",
   "selection_mode": "live-local-action",
   "seed": null,
-  "photos_count": 6324,
+  "photos_count": 6239,
   "reserve_counts": {
     "france": 0,
     "usa": 0,
@@ -18,12 +18,12 @@
     "unknown": 0
   },
   "hidden_counts": {
-    "france": 2,
-    "usa": 18,
-    "spain": 2,
+    "france": 131,
+    "usa": 1,
+    "spain": 0,
     "mexico": 0,
     "ai": 0,
-    "italy": 2,
+    "italy": 0,
     "portugal": 0,
     "slovakia": 0,
     "unknown": 0
@@ -447,34 +447,6 @@
       "derivatives": {
         "gallery": "expo/20191122-1655-16797-9068a18da9_900.jpg",
         "detail": "expo/20191122-1655-16797-9068a18da9_1800.jpg"
-      }
-    },
-    {
-      "id": "20191121-1456-19535-cde6330de2",
-      "relative_path": "2015-2019/20191121 1456 19535.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20191121-1456-19535-cde6330de2_900.jpg",
-        "detail": "expo/20191121-1456-19535-cde6330de2_1800.jpg"
-      }
-    },
-    {
-      "id": "20191121-1447-19571-e626fda37c",
-      "relative_path": "2015-2019/20191121 1447 19571.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20191121-1447-19571-e626fda37c_900.jpg",
-        "detail": "expo/20191121-1447-19571-e626fda37c_1800.jpg"
       }
     },
     {
@@ -3054,20 +3026,6 @@
       }
     },
     {
-      "id": "20110104-0644-16655-957b486fce",
-      "relative_path": "2010-2014/20110104 0644 16655.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0644-16655-957b486fce_900.jpg",
-        "detail": "expo/20110104-0644-16655-957b486fce_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0642-15332-cb5885a2b9",
       "relative_path": "2010-2014/20110104 0642 15332.jpg",
       "gallery_country": {
@@ -3124,34 +3082,6 @@
       }
     },
     {
-      "id": "20110104-0639-28124-e22fe01ca5",
-      "relative_path": "2010-2014/20110104 0639 28124.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0639-28124-e22fe01ca5_900.jpg",
-        "detail": "expo/20110104-0639-28124-e22fe01ca5_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0639-16472-0d0f8c2260",
-      "relative_path": "2010-2014/20110104 0639 16472.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0639-16472-0d0f8c2260_900.jpg",
-        "detail": "expo/20110104-0639-16472-0d0f8c2260_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0639-16206-903f159ce4",
       "relative_path": "2010-2014/20110104 0639 16206.jpg",
       "gallery_country": {
@@ -3163,20 +3093,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0639-16206-903f159ce4_900.jpg",
         "detail": "expo/20110104-0639-16206-903f159ce4_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0638-28095-03bff9a26d",
-      "relative_path": "2010-2014/20110104 0638 28095.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0638-28095-03bff9a26d_900.jpg",
-        "detail": "expo/20110104-0638-28095-03bff9a26d_1800.jpg"
       }
     },
     {
@@ -3219,20 +3135,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0637-28099-116604bf45_900.jpg",
         "detail": "expo/20110104-0637-28099-116604bf45_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0637-14932-34cc0207e8",
-      "relative_path": "2010-2014/20110104 0637 14932.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0637-14932-34cc0207e8_900.jpg",
-        "detail": "expo/20110104-0637-14932-34cc0207e8_1800.jpg"
       }
     },
     {
@@ -3362,20 +3264,6 @@
       }
     },
     {
-      "id": "20110104-0632-16536-ac01855f76",
-      "relative_path": "2010-2014/20110104 0632 16536.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0632-16536-ac01855f76_900.jpg",
-        "detail": "expo/20110104-0632-16536-ac01855f76_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0632-15688-1e780efc62",
       "relative_path": "2010-2014/20110104 0632 15688.jpg",
       "gallery_country": {
@@ -3387,34 +3275,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0632-15688-1e780efc62_900.jpg",
         "detail": "expo/20110104-0632-15688-1e780efc62_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0631-16082-168eb01135",
-      "relative_path": "2010-2014/20110104 0631 16082.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0631-16082-168eb01135_900.jpg",
-        "detail": "expo/20110104-0631-16082-168eb01135_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0631-16428-d7b3a84272",
-      "relative_path": "2010-2014/20110104 0631 16428.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0631-16428-d7b3a84272_900.jpg",
-        "detail": "expo/20110104-0631-16428-d7b3a84272_1800.jpg"
       }
     },
     {
@@ -3432,90 +3292,6 @@
       }
     },
     {
-      "id": "20110104-0629-15206-54e04d1678",
-      "relative_path": "2010-2014/20110104 0629 15206.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0629-15206-54e04d1678_900.jpg",
-        "detail": "expo/20110104-0629-15206-54e04d1678_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0629-15999-1b41a0f370",
-      "relative_path": "2010-2014/20110104 0629 15999.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0629-15999-1b41a0f370_900.jpg",
-        "detail": "expo/20110104-0629-15999-1b41a0f370_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0629-16103-5b91cbe409",
-      "relative_path": "2010-2014/20110104 0629 16103.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0629-16103-5b91cbe409_900.jpg",
-        "detail": "expo/20110104-0629-16103-5b91cbe409_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0629-16144-dd8bcfa61f",
-      "relative_path": "2010-2014/20110104 0629 16144.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0629-16144-dd8bcfa61f_900.jpg",
-        "detail": "expo/20110104-0629-16144-dd8bcfa61f_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0628-16715-4dc4a1fc6c",
-      "relative_path": "2010-2014/20110104 0628 16715.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0628-16715-4dc4a1fc6c_900.jpg",
-        "detail": "expo/20110104-0628-16715-4dc4a1fc6c_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0628-28102-d78ba3bc43",
-      "relative_path": "2010-2014/20110104 0628 28102.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0628-28102-d78ba3bc43_900.jpg",
-        "detail": "expo/20110104-0628-28102-d78ba3bc43_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0627-28088-d75e79ce26",
       "relative_path": "2010-2014/20110104 0627 28088.jpg",
       "gallery_country": {
@@ -3527,34 +3303,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0627-28088-d75e79ce26_900.jpg",
         "detail": "expo/20110104-0627-28088-d75e79ce26_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0627-28087-a400d00100",
-      "relative_path": "2010-2014/20110104 0627 28087.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0627-28087-a400d00100_900.jpg",
-        "detail": "expo/20110104-0627-28087-a400d00100_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0626-15921-b45ec60603",
-      "relative_path": "2010-2014/20110104 0626 15921.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0626-15921-b45ec60603_900.jpg",
-        "detail": "expo/20110104-0626-15921-b45ec60603_1800.jpg"
       }
     },
     {
@@ -3572,20 +3320,6 @@
       }
     },
     {
-      "id": "20110104-0625-28115-f1b8c6579a",
-      "relative_path": "2010-2014/20110104 0625 28115.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0625-28115-f1b8c6579a_900.jpg",
-        "detail": "expo/20110104-0625-28115-f1b8c6579a_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0624-28130-514206400f",
       "relative_path": "2010-2014/20110104 0624 28130.jpg",
       "gallery_country": {
@@ -3597,34 +3331,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0624-28130-514206400f_900.jpg",
         "detail": "expo/20110104-0624-28130-514206400f_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0624-28089-3406356273",
-      "relative_path": "2010-2014/20110104 0624 28089.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0624-28089-3406356273_900.jpg",
-        "detail": "expo/20110104-0624-28089-3406356273_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0624-15039-ece2fac7c7",
-      "relative_path": "2010-2014/20110104 0624 15039.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0624-15039-ece2fac7c7_900.jpg",
-        "detail": "expo/20110104-0624-15039-ece2fac7c7_1800.jpg"
       }
     },
     {
@@ -3796,34 +3502,6 @@
       }
     },
     {
-      "id": "20110104-0615-28086-f4008ccfa2",
-      "relative_path": "2010-2014/20110104 0615 28086.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0615-28086-f4008ccfa2_900.jpg",
-        "detail": "expo/20110104-0615-28086-f4008ccfa2_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0615-14977-667f42308d",
-      "relative_path": "2010-2014/20110104 0615 14977.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0615-14977-667f42308d_900.jpg",
-        "detail": "expo/20110104-0615-14977-667f42308d_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0615-15217-2e1f2437d2",
       "relative_path": "2010-2014/20110104 0615 15217.jpg",
       "gallery_country": {
@@ -3852,34 +3530,6 @@
       }
     },
     {
-      "id": "20110104-0612-15223-197c79de18",
-      "relative_path": "2010-2014/20110104 0612 15223.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0612-15223-197c79de18_900.jpg",
-        "detail": "expo/20110104-0612-15223-197c79de18_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0612-28104-2e96e8012a",
-      "relative_path": "2010-2014/20110104 0612 28104.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0612-28104-2e96e8012a_900.jpg",
-        "detail": "expo/20110104-0612-28104-2e96e8012a_1800.jpg"
-      }
-    },
-    {
       "id": "20110104-0612-28118-79cde9baa5",
       "relative_path": "2010-2014/20110104 0612 28118.jpg",
       "gallery_country": {
@@ -3891,20 +3541,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0612-28118-79cde9baa5_900.jpg",
         "detail": "expo/20110104-0612-28118-79cde9baa5_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0611-28119-21e3a18f34",
-      "relative_path": "2010-2014/20110104 0611 28119.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0611-28119-21e3a18f34_900.jpg",
-        "detail": "expo/20110104-0611-28119-21e3a18f34_1800.jpg"
       }
     },
     {
@@ -3961,412 +3597,6 @@
       "derivatives": {
         "gallery": "expo/20110104-0610-28075-77e797456a_900.jpg",
         "detail": "expo/20110104-0610-28075-77e797456a_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0610-15209-b8832eedf5",
-      "relative_path": "2010-2014/20110104 0610 15209.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0610-15209-b8832eedf5_900.jpg",
-        "detail": "expo/20110104-0610-15209-b8832eedf5_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0609-16699-d1371457d6",
-      "relative_path": "2010-2014/20110104 0609 16699.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0609-16699-d1371457d6_900.jpg",
-        "detail": "expo/20110104-0609-16699-d1371457d6_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0608-28096-72dfe10863",
-      "relative_path": "2010-2014/20110104 0608 28096.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0608-28096-72dfe10863_900.jpg",
-        "detail": "expo/20110104-0608-28096-72dfe10863_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0608-28076-2979b7cf47",
-      "relative_path": "2010-2014/20110104 0608 28076.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0608-28076-2979b7cf47_900.jpg",
-        "detail": "expo/20110104-0608-28076-2979b7cf47_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0602-16550-5c4e1038d6",
-      "relative_path": "2010-2014/20110104 0602 16550.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0602-16550-5c4e1038d6_900.jpg",
-        "detail": "expo/20110104-0602-16550-5c4e1038d6_1800.jpg"
-      }
-    },
-    {
-      "id": "20110104-0602-28078-fd1f4c2685",
-      "relative_path": "2010-2014/20110104 0602 28078.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110104-0602-28078-fd1f4c2685_900.jpg",
-        "detail": "expo/20110104-0602-28078-fd1f4c2685_1800.jpg"
-      }
-    },
-    {
-      "id": "20110103-0618-16557-c5c44dacbe",
-      "relative_path": "2010-2014/20110103 0618 16557.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110103-0618-16557-c5c44dacbe_900.jpg",
-        "detail": "expo/20110103-0618-16557-c5c44dacbe_1800.jpg"
-      }
-    },
-    {
-      "id": "20110103-0617-27993-1dd9c8bbe5",
-      "relative_path": "2010-2014/20110103 0617 27993.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110103-0617-27993-1dd9c8bbe5_900.jpg",
-        "detail": "expo/20110103-0617-27993-1dd9c8bbe5_1800.jpg"
-      }
-    },
-    {
-      "id": "20110103-0617-27992-905a2e12fb",
-      "relative_path": "2010-2014/20110103 0617 27992.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110103-0617-27992-905a2e12fb_900.jpg",
-        "detail": "expo/20110103-0617-27992-905a2e12fb_1800.jpg"
-      }
-    },
-    {
-      "id": "20110103-0617-15824-b5b45b29da",
-      "relative_path": "2010-2014/20110103 0617 15824.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110103-0617-15824-b5b45b29da_900.jpg",
-        "detail": "expo/20110103-0617-15824-b5b45b29da_1800.jpg"
-      }
-    },
-    {
-      "id": "20110103-0616-15770-639b853c2d",
-      "relative_path": "2010-2014/20110103 0616 15770.jpg",
-      "gallery_country": {
-        "slug": "france",
-        "label": "France",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/20110103-0616-15770-639b853c2d_900.jpg",
-        "detail": "expo/20110103-0616-15770-639b853c2d_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0226-69593449e4",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0226.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0226-69593449e4_900.jpg",
-        "detail": "expo/img-0226-69593449e4_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0225-6bcf02e3f5",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0225.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0225-6bcf02e3f5_900.jpg",
-        "detail": "expo/img-0225-6bcf02e3f5_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0155-14d70afbec",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0155.MOV",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0155-14d70afbec_900.jpg",
-        "detail": "expo/img-0155-14d70afbec_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "img-0150-bdc5d3d952",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0150.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0150-bdc5d3d952_900.jpg",
-        "detail": "expo/img-0150-bdc5d3d952_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0149-250b7e4307",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0149.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0149-250b7e4307_900.jpg",
-        "detail": "expo/img-0149-250b7e4307_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0129-fe142b6197",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0129.MOV",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0129-fe142b6197_900.jpg",
-        "detail": "expo/img-0129-fe142b6197_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "dji-20241024-161503-942-video-5a83f65bad",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/DJI_20241024_161503_942_video.mp4",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/dji-20241024-161503-942-video-5a83f65bad_900.jpg",
-        "detail": "expo/dji-20241024-161503-942-video-5a83f65bad_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "dji-20241023-173111-129-slowmotion-f0c5ba9459",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/DJI_20241023_173111_129_slowmotion.mp4",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/dji-20241023-173111-129-slowmotion-f0c5ba9459_900.jpg",
-        "detail": "expo/dji-20241023-173111-129-slowmotion-f0c5ba9459_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "dji-20241023-173030-299-slowmotion-a430719dec",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/DJI_20241023_173030_299_slowmotion.mp4",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/dji-20241023-173030-299-slowmotion-a430719dec_900.jpg",
-        "detail": "expo/dji-20241023-173030-299-slowmotion-a430719dec_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "img-0065-3f4e988a75",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0065.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0065-3f4e988a75_900.jpg",
-        "detail": "expo/img-0065-3f4e988a75_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0064-741d90ed68",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0064.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0064-741d90ed68_900.jpg",
-        "detail": "expo/img-0064-741d90ed68_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0063-020de02191",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0063.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0063-020de02191_900.jpg",
-        "detail": "expo/img-0063-020de02191_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0062-b234ed6a44",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0062.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0062-b234ed6a44_900.jpg",
-        "detail": "expo/img-0062-b234ed6a44_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0061-e9e8cc7704",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0061.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0061-e9e8cc7704_900.jpg",
-        "detail": "expo/img-0061-e9e8cc7704_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0060-1d27a287b1",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0060.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0060-1d27a287b1_900.jpg",
-        "detail": "expo/img-0060-1d27a287b1_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0035-61b9d29514",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0035.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0035-61b9d29514_900.jpg",
-        "detail": "expo/img-0035-61b9d29514_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0034-c4a46b1958",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0034.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0034-c4a46b1958_900.jpg",
-        "detail": "expo/img-0034-c4a46b1958_1800.jpg"
-      }
-    },
-    {
-      "id": "img-0033-01c001fd5e",
-      "relative_path": "2024 Trip to San Diego, Kelly's Wedding/IMG_0033.JPG",
-      "gallery_country": {
-        "slug": "usa",
-        "label": "USA",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-0033-01c001fd5e_900.jpg",
-        "detail": "expo/img-0033-01c001fd5e_1800.jpg"
       }
     },
     {
@@ -12641,34 +11871,6 @@
       "derivatives": {
         "gallery": "expo/d5h-2807-b629871f71_900.jpg",
         "detail": "expo/d5h-2807-b629871f71_1800.jpg"
-      }
-    },
-    {
-      "id": "d5h-2806-a6c3e47747",
-      "relative_path": "2025 Views from home, Malaga Airport./D5H_2806.JPG",
-      "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/d5h-2806-a6c3e47747_900.jpg",
-        "detail": "expo/d5h-2806-a6c3e47747_1800.jpg"
-      }
-    },
-    {
-      "id": "d5h-2805-c3043d7b2e",
-      "relative_path": "2025 Views from home, Malaga Airport./D5H_2805.JPG",
-      "gallery_country": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/d5h-2805-c3043d7b2e_900.jpg",
-        "detail": "expo/d5h-2805-c3043d7b2e_1800.jpg"
       }
     },
     {
@@ -84618,34 +83820,6 @@
       }
     },
     {
-      "id": "img-1221-6d39ae64d8",
-      "relative_path": "2025 Florence/IMG_1221.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1221-6d39ae64d8_900.jpg",
-        "detail": "expo/img-1221-6d39ae64d8_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1220-75c863ef2a",
-      "relative_path": "2025 Florence/IMG_1220.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1220-75c863ef2a_900.jpg",
-        "detail": "expo/img-1220-75c863ef2a_1800.jpg"
-      }
-    },
-    {
       "id": "img-1219-570b09bebb",
       "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1219.jpeg",
       "gallery_country": {
@@ -84660,20 +83834,6 @@
       }
     },
     {
-      "id": "img-1219-13240aafb0",
-      "relative_path": "2025 Pisa/IMG_1219.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1219-13240aafb0_900.jpg",
-        "detail": "expo/img-1219-13240aafb0_1800.jpg"
-      }
-    },
-    {
       "id": "img-1218-fe487846d6",
       "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1218.jpeg",
       "gallery_country": {
@@ -84685,62 +83845,6 @@
       "derivatives": {
         "gallery": "expo/img-1218-fe487846d6_900.jpg",
         "detail": "expo/img-1218-fe487846d6_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1217-fba9ecc01d",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1217.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1217-fba9ecc01d_900.jpg",
-        "detail": "expo/img-1217-fba9ecc01d_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1216-601dd6c052",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1216.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1216-601dd6c052_900.jpg",
-        "detail": "expo/img-1216-601dd6c052_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1215-f021b9e4a9",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1215.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1215-f021b9e4a9_900.jpg",
-        "detail": "expo/img-1215-f021b9e4a9_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1214-bde4dfb750",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1214.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1214-bde4dfb750_900.jpg",
-        "detail": "expo/img-1214-bde4dfb750_1800.jpg"
       }
     },
     {
@@ -84772,62 +83876,6 @@
       }
     },
     {
-      "id": "img-1212-4fa11b0170",
-      "relative_path": "2025 Pisa/IMG_1212.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1212-4fa11b0170_900.jpg",
-        "detail": "expo/img-1212-4fa11b0170_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1211-d55a7c07cb",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1211.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1211-d55a7c07cb_900.jpg",
-        "detail": "expo/img-1211-d55a7c07cb_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1210-e222dcb15c",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1210.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1210-e222dcb15c_900.jpg",
-        "detail": "expo/img-1210-e222dcb15c_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1209-2397d71a31",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1209.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1209-2397d71a31_900.jpg",
-        "detail": "expo/img-1209-2397d71a31_1800.jpg"
-      }
-    },
-    {
       "id": "img-1208-d059e156dc",
       "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1208.jpeg",
       "gallery_country": {
@@ -84856,34 +83904,6 @@
       }
     },
     {
-      "id": "img-1206-9aa38d2a4c",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1206.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1206-9aa38d2a4c_900.jpg",
-        "detail": "expo/img-1206-9aa38d2a4c_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1205-78f89398bc",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1205.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1205-78f89398bc_900.jpg",
-        "detail": "expo/img-1205-78f89398bc_1800.jpg"
-      }
-    },
-    {
       "id": "img-1205-4ca5e788f0",
       "relative_path": "2025 Pisa/IMG_1205.JPG",
       "gallery_country": {
@@ -84895,20 +83915,6 @@
       "derivatives": {
         "gallery": "expo/img-1205-4ca5e788f0_900.jpg",
         "detail": "expo/img-1205-4ca5e788f0_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1204-3a889ed776",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1204.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1204-3a889ed776_900.jpg",
-        "detail": "expo/img-1204-3a889ed776_1800.jpg"
       }
     },
     {
@@ -84937,90 +83943,6 @@
       "derivatives": {
         "gallery": "expo/img-1203-d7219d5193_900.jpg",
         "detail": "expo/img-1203-d7219d5193_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1203-09dfc6e2ae",
-      "relative_path": "2025 Pisa/IMG_1203.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1203-09dfc6e2ae_900.jpg",
-        "detail": "expo/img-1203-09dfc6e2ae_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1202-cd5854fcaa",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1202.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1202-cd5854fcaa_900.jpg",
-        "detail": "expo/img-1202-cd5854fcaa_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1202-2683ad1a9d",
-      "relative_path": "2025 Pisa/IMG_1202.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1202-2683ad1a9d_900.jpg",
-        "detail": "expo/img-1202-2683ad1a9d_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1201-2b1b1ce0f9",
-      "relative_path": "2025 Pisa/IMG_1201.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1201-2b1b1ce0f9_900.jpg",
-        "detail": "expo/img-1201-2b1b1ce0f9_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1201-0d34709cc0",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1201.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1201-0d34709cc0_900.jpg",
-        "detail": "expo/img-1201-0d34709cc0_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1200-8b6f63148c",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1200.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1200-8b6f63148c_900.jpg",
-        "detail": "expo/img-1200-8b6f63148c_1800.jpg"
       }
     },
     {
@@ -85063,34 +83985,6 @@
       "derivatives": {
         "gallery": "expo/img-1197-0132d88761_900.jpg",
         "detail": "expo/img-1197-0132d88761_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1196-7c59c4b110",
-      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1196.jpeg",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1196-7c59c4b110_900.jpg",
-        "detail": "expo/img-1196-7c59c4b110_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1196-743b6f88b9",
-      "relative_path": "2025 Pisa/IMG_1196.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1196-743b6f88b9_900.jpg",
-        "detail": "expo/img-1196-743b6f88b9_1800.jpg"
       }
     },
     {
@@ -85164,20 +84058,6 @@
       }
     },
     {
-      "id": "img-1178-d3dfcb9bcb",
-      "relative_path": "2025 San Gimignano/IMG_1178.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1178-d3dfcb9bcb_900.jpg",
-        "detail": "expo/img-1178-d3dfcb9bcb_1800.jpg"
-      }
-    },
-    {
       "id": "img-1177-ed6ca580f8",
       "relative_path": "2025 San Gimignano/IMG_1177.JPG",
       "gallery_country": {
@@ -85189,48 +84069,6 @@
       "derivatives": {
         "gallery": "expo/img-1177-ed6ca580f8_900.jpg",
         "detail": "expo/img-1177-ed6ca580f8_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1176-bda2ef58f7",
-      "relative_path": "2025 San Gimignano/IMG_1176.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1176-bda2ef58f7_900.jpg",
-        "detail": "expo/img-1176-bda2ef58f7_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1175-9c75e77850",
-      "relative_path": "2025 San Gimignano/IMG_1175.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1175-9c75e77850_900.jpg",
-        "detail": "expo/img-1175-9c75e77850_1800.jpg"
-      }
-    },
-    {
-      "id": "img-1174-e74617298f",
-      "relative_path": "2025 San Gimignano/IMG_1174.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1174-e74617298f_900.jpg",
-        "detail": "expo/img-1174-e74617298f_1800.jpg"
       }
     },
     {
@@ -85388,20 +84226,6 @@
       }
     },
     {
-      "id": "img-1125-dc58a482c6",
-      "relative_path": "2025 Florence/IMG_1125.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1125-dc58a482c6_900.jpg",
-        "detail": "expo/img-1125-dc58a482c6_1800.jpg"
-      }
-    },
-    {
       "id": "img-1124-a67a48ee91",
       "relative_path": "2025 Florence/IMG_1124.JPG",
       "gallery_country": {
@@ -85483,20 +84307,6 @@
       "derivatives": {
         "gallery": "expo/img-1110-d9679b1131_900.jpg",
         "detail": "expo/img-1110-d9679b1131_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "img-1109-cb8d636b93",
-      "relative_path": "2025 Florence/IMG_1109.MOV",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "review-snapshot"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1109-cb8d636b93_900.jpg",
-        "detail": "expo/img-1109-cb8d636b93_short_5s_720p.mp4"
       }
     },
     {

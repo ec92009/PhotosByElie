@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 292,
+    "count": 255,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,12 +74,12 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 184,
+    "count": 166,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
-        "id": "img-0226-69593449e4",
-        "title": "IMG 0226",
+        "id": "img-0032-015b172a1c",
+        "title": "IMG 0032",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -87,14 +87,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0226-69593449e4_900.jpg",
-            "detailKey": "expo/img-0226-69593449e4_1800.jpg"
+            "galleryKey": "expo/img-0032-015b172a1c_900.jpg",
+            "detailKey": "expo/img-0032-015b172a1c_1800.jpg"
           }
         }
       },
       {
-        "id": "img-0225-6bcf02e3f5",
-        "title": "IMG 0225",
+        "id": "img-0031-c6a2f4747d",
+        "title": "IMG 0031",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -102,32 +102,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0225-6bcf02e3f5_900.jpg",
-            "detailKey": "expo/img-0225-6bcf02e3f5_1800.jpg"
+            "galleryKey": "expo/img-0031-c6a2f4747d_900.jpg",
+            "detailKey": "expo/img-0031-c6a2f4747d_1800.jpg"
           }
         }
       },
       {
-        "id": "img-0155-14d70afbec",
-        "title": "IMG 0155",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "video",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-0155-14d70afbec_900.jpg",
-            "detailKey": "expo/img-0155-14d70afbec_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 32
-          }
-        }
-      },
-      {
-        "id": "img-0150-bdc5d3d952",
-        "title": "Trip To San Diego, Kelly's Wedding",
+        "id": "img-0030-cc5739f870",
+        "title": "IMG 0030",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -135,8 +117,23 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0150-bdc5d3d952_900.jpg",
-            "detailKey": "expo/img-0150-bdc5d3d952_1800.jpg"
+            "galleryKey": "expo/img-0030-cc5739f870_900.jpg",
+            "detailKey": "expo/img-0030-cc5739f870_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-0028-1a92da1863",
+        "title": "IMG 0028",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-0028-1a92da1863_900.jpg",
+            "detailKey": "expo/img-0028-1a92da1863_1800.jpg"
           }
         }
       }
@@ -147,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 643,
+    "count": 641,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -330,39 +327,9 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 63,
+    "count": 35,
     "href": "./gallery.html?gallery=italy",
     "photos": [
-      {
-        "id": "img-1221-6d39ae64d8",
-        "title": "Florence",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1221-6d39ae64d8_900.jpg",
-            "detailKey": "expo/img-1221-6d39ae64d8_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1220-75c863ef2a",
-        "title": "Florence",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1220-75c863ef2a_900.jpg",
-            "detailKey": "expo/img-1220-75c863ef2a_1800.jpg"
-          }
-        }
-      },
       {
         "id": "img-1219-570b09bebb",
         "title": "Leaning Tower of Pisa",
@@ -379,8 +346,8 @@ window.photosByElieHomeData = {
         }
       },
       {
-        "id": "img-1219-13240aafb0",
-        "title": "Pisa",
+        "id": "img-1218-fe487846d6",
+        "title": "Leaning Tower of Pisa",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -388,8 +355,38 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-1219-13240aafb0_900.jpg",
-            "detailKey": "expo/img-1219-13240aafb0_1800.jpg"
+            "galleryKey": "expo/img-1218-fe487846d6_900.jpg",
+            "detailKey": "expo/img-1218-fe487846d6_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1213-7276413ecc",
+        "title": "Leaning Tower of Pisa",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1213-7276413ecc_900.jpg",
+            "detailKey": "expo/img-1213-7276413ecc_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1212-96505e7356",
+        "title": "Leaning Tower of Pisa",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1212-96505e7356_900.jpg",
+            "detailKey": "expo/img-1212-96505e7356_1800.jpg"
           }
         }
       }

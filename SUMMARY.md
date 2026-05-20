@@ -1,16 +1,16 @@
 # Conversation Summary
 
-Date: 2026-05-20
+Date: 2026-05-21
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v81.21`
-- Local Owner page: `http://localhost:8001/owner.html?v=81.21`
+- Current visible build: `v82.0`
+- Local Owner page: `http://localhost:8001/owner.html?v=82.0`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `6,324` public media rows in the SQLite catalog.
+- Current catalog scale: `6,239` public media rows in the SQLite catalog: France `255`, USA `166`, Spain `641`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `217`, Slovakia `2`.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is local SQLite in ignored `assets/owner-actions/Owner.sqlite`; generated review batch JSON is ignored/local and no longer tracked as deployable public metadata.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
@@ -51,6 +51,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 29. Batch `2026-05-20-181058-181Z` was rejected in local `Owner.sqlite` for rework with the exact Owner note `use the hints in the keywords to provide a decent title`, moving the 100 weak proposals out of submitted-unchecked state and into rework eligibility.
 30. The improved generator then produced replacement batch `2026-05-20-185753-222Z` with `200` proposals: `100` Codex-backed rework rows, `100` ordinary local-rule rows, `0` model blockers, `0` keyword-target misses, and `74` `needs_owner_context` rows. Seven ordinary rows were marked reviewed as no-change.
 31. A batch-summary preservation bug surfaced when no-change review marking overwrote the new batch's count row with zeros. `owner_state_db.py` now preserves existing nonzero batch counts when later decision-only/no-change writes touch the same batch, and the local row for `2026-05-20-185753-222Z` was repaired by re-importing the generated batch view.
+32. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,239` rows and moving `4,476` photo IDs into durable discarded state.
 
 ## Current Operational Notes
 
@@ -78,6 +79,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.20`, Start Imports no longer short-circuits on clean catalog coverage; Fill in gaps remains the coverage-only repair action.
 - In `v81.20`, Camera, Apple Photos, and Leonardo source rows keep a source checkpoint, and Real Estate upload resume records include file size plus mtime. Edited source files are treated as new import work and force fresh renders/uploads under the existing R2 keys.
 - In `v81.21`, Camera, Apple Photos, AI/Leonardo, and Real Estate import lanes use the same Owner matrix renderer, matrix rows can show tiny localhost-only source thumbnails, and a sweep stopped by skipped source lanes displays the catalog export as blocked/needs attention instead of making later phases look like they are waiting forever.
+- In `v82.0`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-media manifests reflect the latest Owner discard/tombstone state: `6,239` active public rows and `4,476` discarded photo IDs.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

@@ -315,6 +315,7 @@ def load_upload_state(path: Path) -> set[str]:
 
 
 def append_upload_state(path: Path, item: UploadItem, lock: threading.Lock) -> None:
+    stat = item.path.stat()
     row = {
         "uploaded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "ok": True,
@@ -322,7 +323,8 @@ def append_upload_state(path: Path, item: UploadItem, lock: threading.Lock) -> N
         "bucket": item.bucket,
         "key": item.key,
         "path": str(item.path),
-        "bytes": item.path.stat().st_size,
+        "bytes": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     with lock:

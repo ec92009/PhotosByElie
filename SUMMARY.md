@@ -6,8 +6,8 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v81.19`
-- Local Owner page: `http://localhost:8001/owner.html?v=81.19`
+- Current visible build: `v81.20`
+- Local Owner page: `http://localhost:8001/owner.html?v=81.20`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -57,7 +57,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - `v79.29` reconciles the dirty Owner-generated state: discarded photos are now excluded from public manifest/catalog outputs, including `20180322-0915-00173-e3b893dbea`.
 - Owner DB R2 rows now infer photo id/object kind for older records, including Real Estate keys, and current-key DB records are trusted by ordinary coverage checks.
 - Fill in gaps now trusts known-current R2 objects, avoids force-uploading them, and emits initial checkbox state for each photo before slow work starts.
-- In `v79.30`, the Imports tab's Start Imports button stays clickable when coverage is already clean and reports that no import work was started because everything tracked is up to date.
+- In `v81.20`, the Imports tab's Start Imports button always starts the full source sweep across Camera, Apple Photos, Leonardo, and Real Estate, even when current catalog coverage is clean.
 - In `v80.0`, the latest Owner title/keyword approvals are published into the public SQLite catalog and Worker catalog. The `2026-05-16` approval batch now contains 89 approved rows, with fresh Portugal, Bilbao, and Paris metadata carried into buyer-facing catalog data.
 - In `v81.3`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, clear stale proposed rows that are already blocked or missing from the public catalog, propagate reject notes with propagated rejection decisions, offer mutually exclusive horizontal reject-reason checkboxes that prefill editable notes, preserve previous reject notes unchanged on load, and mark video rows with a centered play badge.
 - In `v81.4`, 239 approved title/keyword rows from batch `2026-05-19-230413-165Z` are published into the buyer-facing SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
@@ -75,6 +75,8 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.15`, the title/keyword generator has a durable buffer fix and local proposal-quality improvements, while the Real Estate owner UI can use discovered property folders and the client review output step summarizes selected projects.
 - In `v81.18`, public catalog loading and helper rebuilds use the plain SQLite catalog directly and stop generating or preferring the Brotli-compressed `.sqlite.br` artifact.
 - In `v81.19`, gallery Fill mode uses uniform square image cells while Fit mode keeps natural-ratio masonry.
+- In `v81.20`, Start Imports no longer short-circuits on clean catalog coverage; Fill in gaps remains the coverage-only repair action.
+- In `v81.20`, Camera, Apple Photos, and Leonardo source rows keep a source checkpoint, and Real Estate upload resume records include file size plus mtime. Edited source files are treated as new import work and force fresh renders/uploads under the existing R2 keys.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

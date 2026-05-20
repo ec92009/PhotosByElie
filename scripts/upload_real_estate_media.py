@@ -15,7 +15,6 @@ from sync_r2_media import (
     DEFAULT_PUBLIC_BUCKET,
     DEFAULT_THROTTLE_FILE,
     UploadItem,
-    load_upload_state,
     upload,
     upload_id,
 )
@@ -63,10 +62,38 @@ def record_r2_object_current(root: Path, item: UploadItem, source: str) -> None:
         conn.close()
 
 
-def record_current_items(root: Path, items: list[UploadItem], uploaded_ids: set[str], source: str) -> None:
+def record_current_items(root: Path, items: list[UploadItem], uploaded_records: dict[str, dict[str, Any]], source: str) -> None:
     for item in items:
-        if upload_id(item) in uploaded_ids:
+        if item_upload_is_current(item, uploaded_records):
             record_r2_object_current(root, item, source)
+
+
+def load_upload_records(path: Path) -> dict[str, dict[str, Any]]:
+    records: dict[str, dict[str, Any]] = {}
+    if not path.exists():
+        return records
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("ok") and row.get("id"):
+                records[str(row["id"])] = row
+    return records
+
+
+def item_upload_is_current(item: UploadItem, records: dict[str, dict[str, Any]]) -> bool:
+    row = records.get(upload_id(item))
+    if not row:
+        return False
+    try:
+        stat = item.path.stat()
+        uploaded_bytes = int(row.get("bytes"))
+        uploaded_mtime_ns = int(row.get("mtime_ns"))
+    except (OSError, TypeError, ValueError):
+        return False
+    return uploaded_bytes == stat.st_size and uploaded_mtime_ns == stat.st_mtime_ns
 
 
 def resolve_output_path(root: Path, output_root: Path, value: str) -> Path:
@@ -247,7 +274,7 @@ def emit_step(enabled: bool, group: dict[str, Any], step: str, total: int = 0, c
 
 
 def upload_grouped(args: argparse.Namespace, root: Path, groups: list[dict[str, Any]], resumed_count: int) -> int:
-    uploaded_ids = load_upload_state(args.state_file) if not args.no_resume else set()
+    uploaded_records = load_upload_records(args.state_file) if not args.no_resume else {}
     total_photos = len(groups)
     processed_photos = 0
     emit_import_event(args.progress_json, "QUEUE_START", seen=total_photos, inspected=total_photos, queued=total_photos, alreadySelected=resumed_count, processed=0, active=0, queueDepth=total_photos)
@@ -260,7 +287,7 @@ def upload_grouped(args: argparse.Namespace, root: Path, groups: list[dict[str, 
         emit_import_event(args.progress_json, "QUEUE_PROGRESS", seen=total_photos, inspected=total_photos, queued=total_photos, alreadySelected=resumed_count, processed=processed_photos, active=1, queueDepth=max(0, total_photos - processed_photos - 1))
         emit_photo(args.progress_json, index, group, "running")
 
-        master_items = [item for item in group["master"] if args.no_resume or upload_id(item) not in uploaded_ids]
+        master_items = [item for item in group["master"] if args.no_resume or not item_upload_is_current(item, uploaded_records)]
         if master_items:
             failed += upload(
                 master_items,
@@ -277,14 +304,14 @@ def upload_grouped(args: argparse.Namespace, root: Path, groups: list[dict[str, 
                 args.s3_endpoint,
                 clean_uploaded_tmp=False,
             )
-            uploaded_ids = load_upload_state(args.state_file)
-        record_current_items(root, group["master"], uploaded_ids, "upload_real_estate_media")
-        emit_step(args.progress_json, group, "master_uploaded", total=max(1, len(group["master"])), completed=sum(1 for item in group["master"] if upload_id(item) in uploaded_ids))
+            uploaded_records = load_upload_records(args.state_file)
+        record_current_items(root, group["master"], uploaded_records, "upload_real_estate_media")
+        emit_step(args.progress_json, group, "master_uploaded", total=max(1, len(group["master"])), completed=sum(1 for item in group["master"] if item_upload_is_current(item, uploaded_records)))
         emit_step(args.progress_json, group, "triplets_created", status="skipped", reason="Real Estate lane does not create private JPG triplets")
         emit_step(args.progress_json, group, "triplets_uploaded", status="skipped", reason="Real Estate lane does not upload private JPG triplets")
         emit_step(args.progress_json, group, "previews_created", total=max(1, len(group["previews"])), completed=len(group["previews"]))
 
-        preview_items = [item for item in group["previews"] if args.no_resume or upload_id(item) not in uploaded_ids]
+        preview_items = [item for item in group["previews"] if args.no_resume or not item_upload_is_current(item, uploaded_records)]
         if preview_items:
             failed += upload(
                 preview_items,
@@ -301,9 +328,9 @@ def upload_grouped(args: argparse.Namespace, root: Path, groups: list[dict[str, 
                 args.s3_endpoint,
                 clean_uploaded_tmp=False,
             )
-            uploaded_ids = load_upload_state(args.state_file)
-        record_current_items(root, group["previews"], uploaded_ids, "upload_real_estate_media")
-        emit_step(args.progress_json, group, "previews_uploaded", total=max(1, len(group["previews"])), completed=sum(1 for item in group["previews"] if upload_id(item) in uploaded_ids))
+            uploaded_records = load_upload_records(args.state_file)
+        record_current_items(root, group["previews"], uploaded_records, "upload_real_estate_media")
+        emit_step(args.progress_json, group, "previews_uploaded", total=max(1, len(group["previews"])), completed=sum(1 for item in group["previews"] if item_upload_is_current(item, uploaded_records)))
         processed_photos += 1
         emit_import_event(args.progress_json, "QUEUE_PROGRESS", seen=total_photos, inspected=total_photos, queued=total_photos, alreadySelected=resumed_count, processed=processed_photos, active=0, queueDepth=max(0, total_photos - processed_photos))
         emit_import_event(args.progress_json, "PHOTO_DONE", photoId=str(group.get("photoId") or ""), status="done" if failed == 0 else "error")
@@ -333,13 +360,13 @@ def main() -> int:
 
     resumed_count = 0
     if args.upload and not args.no_resume:
-        uploaded_ids = load_upload_state(args.state_file)
+        uploaded_records = load_upload_records(args.state_file)
         before = len(items)
-        resumed_count = sum(1 for item in items if upload_id(item) in uploaded_ids)
+        resumed_count = sum(1 for item in items if item_upload_is_current(item, uploaded_records))
         if not args.progress_json:
-            items = [item for item in items if upload_id(item) not in uploaded_ids]
+            items = [item for item in items if not item_upload_is_current(item, uploaded_records)]
         else:
-            record_current_items(root, items, uploaded_ids, "upload_real_estate_media-resume")
+            record_current_items(root, items, uploaded_records, "upload_real_estate_media-resume")
         if resumed_count != before - len(items) and not args.progress_json:
             resumed_count = before - len(items)
 

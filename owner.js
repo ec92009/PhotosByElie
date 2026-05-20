@@ -135,8 +135,6 @@
   let wasteCleanupActive = false;
   let lastWasteCoverageRefreshAt = 0;
   let lastImportCoverageRefreshAt = 0;
-  let r2BackgroundNotice = "";
-  let r2BackgroundNoticeUntil = 0;
   let latestR2ProgressTasks = [];
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
@@ -1358,7 +1356,7 @@
 
   const r2GapStatusText = () => {
     if (!window.photosByElieR2Coverage) return "Coverage is still loading.";
-    if (r2CoverageOk) return "Imports are up to date: no active catalog media gaps are listed.";
+    if (r2CoverageOk) return "Current catalog coverage is up to date; Start Imports still scans source anchors for new files.";
     const gaps = r2GapCounts();
     if (gaps.photos) {
       return `${formatCount(gaps.photos)} incomplete photos: ${formatCount(gaps.masters)} need masters, ${formatCount(gaps.triplets)} need private JPG triplets, ${formatCount(gaps.previews)} need public previews.`;
@@ -1374,9 +1372,7 @@
       r2FixButton.textContent = busy
         ? "Imports running"
         : "Start Imports";
-      r2FixButton.title = r2CoverageOk
-        ? "Everything currently tracked is up to date; click to confirm"
-        : "Start the full lock-guarded import sweep";
+      r2FixButton.title = "Scan Camera, Apple Photos, Leonardo, and Real Estate import anchors";
     }
     const gapCount = r2GapPhotoCount();
     r2FillGapsButtons.forEach((button) => {
@@ -2552,22 +2548,20 @@
   const renderImportDashboardIdle = () => {
     if (!r2Card || !r2Summary || !r2Counts) return;
     if (r2Card.hidden) r2Card.hidden = false;
-    const noticeActive = r2BackgroundNotice && Date.now() < r2BackgroundNoticeUntil;
-    setText(r2Summary, noticeActive
-      ? r2BackgroundNotice
-      : r2CoverageOk
-        ? "No import job is running. Everything currently tracked is up to date."
+    setText(r2Summary, r2CoverageOk
+        ? "No import job is running. Current catalog coverage is up to date; Start Imports still scans every source anchor for new files."
         : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
     );
     const gaps = r2GapCounts();
     const rows = [
       ["State", "Idle"],
       ["Coverage", window.photosByElieR2Coverage ? (r2CoverageOk ? "Up to date" : "Needs work") : "Loading"],
+      ["Source scan", "Not running"],
       ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
       ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
+      ["Import anchors", "Camera, Apple Photos, Leonardo, Real Estate"],
     ];
-    if (noticeActive) rows.push(["Last action", "Start Imports checked coverage and found nothing to do."]);
-    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work"])));
+    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Import anchors"])));
     renderSweepPhases({
       id: "imports-idle",
       operation: "imports-idle",
@@ -2576,15 +2570,6 @@
       failed: 0,
     });
     renderR2PhotoPreview("");
-  };
-
-  const announceR2BackgroundAlreadyDone = () => {
-    r2BackgroundNotice = "Start Imports checked coverage: everything currently tracked is already up to date, so no import work was started.";
-    r2BackgroundNoticeUntil = Date.now() + 15000;
-    setOwnerTab("imports");
-    renderImportDashboardIdle();
-    setStatus("Everything currently tracked is already up to date. No background work was started.");
-    syncR2ActionButtons();
   };
 
   const loadR2RepairLog = async (task) => {
@@ -3094,44 +3079,34 @@
   });
 
   r2FixButton?.addEventListener("click", async () => {
-    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to run R2 background work.");
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to scan import sources.");
     if (ownerAuth?.enabled && !authorized) return;
     if (!window.photosByElieR2Coverage) {
-      setStatus("Checking R2 coverage before starting background work...");
+      setStatus("Loading current catalog coverage before starting imports...");
       await loadR2Coverage();
     }
-    if (r2CoverageOk) {
-      announceR2BackgroundAlreadyDone();
-      return;
-    }
-    const ok = window.confirm("Start the full lock-guarded cloud media background work now? This may upload/render missing objects, double-check banned-photo R2 cleanup, delete any leftovers while keeping ban records, validate, commit, and push manifest changes.");
+    const ok = window.confirm("Start the full lock-guarded import sweep now? This scans the Camera, Apple Photos, Leonardo, and Real Estate source anchors for new files, then renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.");
     if (!ok) return;
     r2FixButton.disabled = true;
-    setStatus("Starting R2 background work...");
+    setStatus("Starting full import source scan...");
     try {
       const response = await fetch("/__photosbyelie/r2-fix", {
         method: "POST",
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start R2 background work.");
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start imports.");
       r2RepairActive = true;
       syncR2ActionButtons();
-      setStatus("R2 background work started.");
+      setStatus("Import source scan started.");
       setOwnerTab("imports");
       renderR2Progress([payload.task]);
       loadR2Progress();
     } catch (error) {
       r2RepairActive = false;
       syncR2ActionButtons();
-      setStatus(error?.message || "Could not start R2 background work.");
+      setStatus(error?.message || "Could not start imports.");
       loadR2Coverage();
     }
-  });
-
-  r2FixButton?.addEventListener("pointerdown", (event) => {
-    if (!r2CoverageOk || r2RepairActive || r2GapFillActive) return;
-    event.preventDefault();
-    announceR2BackgroundAlreadyDone();
   });
 
   const startR2GapFill = async (triggerButton = null) => {

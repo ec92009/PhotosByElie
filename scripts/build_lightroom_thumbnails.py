@@ -1546,6 +1546,20 @@ def plan_r2_assets(plan: dict[str, Any], source_path: Path, preview_paths: dict[
     return assets
 
 
+def force_artifact_plan_reimport(plan: dict[str, Any]) -> None:
+    master = plan.get("privateMaster")
+    if isinstance(master, dict):
+        master["covered"] = False
+    for key in ("privateRenders", "publicPreviews"):
+        for item in plan.get(key) or []:
+            if isinstance(item, dict):
+                item["covered"] = False
+    plan["needsMaster"] = bool(plan.get("privateMaster"))
+    plan["needsRenders"] = list(plan.get("privateRenders") or [])
+    plan["needsPreviews"] = list(plan.get("publicPreviews") or [])
+    plan["complete"] = False
+
+
 def emit_import_plan_steps(row: dict[str, Any], plan: dict[str, Any]) -> None:
     master = plan.get("privateMaster")
     if master:
@@ -1589,9 +1603,10 @@ def r2_put_file(
     content_type: str,
     retries: int,
     cache_control: str | None = None,
+    force_upload: bool = False,
 ) -> dict[str, Any]:
     item = UploadItem(bucket=bucket, key=key, path=path, content_type=content_type, cache_control=cache_control or "")
-    if not getattr(args, "r2_force_upload", False) and f"{bucket}/{key}" in r2_covered_keys():
+    if not force_upload and not getattr(args, "r2_force_upload", False) and f"{bucket}/{key}" in r2_covered_keys():
         record_r2_object_current(item, "build_lightroom_thumbnails-covered")
         return {
             "bucket": bucket,
@@ -1727,9 +1742,10 @@ def upload_r2_assets(
 ) -> dict[str, Any]:
     preview_paths = {"gallery": gallery_path, "detail": detail_path}
     uploaded = plan_r2_assets(plan, source_path, preview_paths)
+    force_reimport = bool(row.get("_force_reimport"))
 
     master = plan.get("privateMaster")
-    if master and not master.get("covered"):
+    if master and (force_reimport or not master.get("covered")):
         uploaded["private_master"] = r2_put_file(
             args,
             str(master["bucket"]),
@@ -1737,12 +1753,13 @@ def upload_r2_assets(
             source_path,
             mimetypes.guess_type(source_path.name)[0] or "application/octet-stream",
             args.r2_retries,
+            force_upload=force_reimport,
         )
         master["covered"] = True
         emit_import_step(row, "master_uploaded", status="done", total=1, completed=1)
 
     render_specs = plan.get("privateRenders") or []
-    missing_renders = [item for item in render_specs if not item.get("covered")]
+    missing_renders = [item for item in render_specs if force_reimport or not item.get("covered")]
     if missing_renders:
         source_size = image_size(source_path)
         render_root = Path(tempfile.gettempdir()) / "photosbyelie-private-renders" / str(row.get("id") or source_path.stem)
@@ -1756,7 +1773,7 @@ def upload_r2_assets(
                 if not long_edge:
                     continue
                 render_path = render_root / f"{product_id}.jpg"
-                render_private_deliverable(source_path, render_path, long_edge, args.force)
+                render_private_deliverable(source_path, render_path, long_edge, args.force or force_reimport)
                 rendered_count += 1
                 emit_import_step(row, "triplets_created", total=len(render_specs), completed=covered_count + rendered_count)
             uploaded_count = 0
@@ -1772,6 +1789,7 @@ def upload_r2_assets(
                         render_path,
                         "image/jpeg",
                         args.r2_retries,
+                        force_upload=force_reimport,
                     )
                 )
                 spec["covered"] = True
@@ -1783,7 +1801,7 @@ def upload_r2_assets(
             shutil.rmtree(render_root, ignore_errors=True)
 
     preview_specs = plan.get("publicPreviews") or []
-    missing_previews = [item for item in preview_specs if not item.get("covered")]
+    missing_previews = [item for item in preview_specs if force_reimport or not item.get("covered")]
     if missing_previews:
         covered_count = len(preview_specs) - len(missing_previews)
         created_count = 0
@@ -1793,12 +1811,12 @@ def upload_r2_assets(
             output = preview_paths[derivative]
             if row.get("media_type") == "video":
                 if derivative == "gallery":
-                    render_video_poster(source_path, output, args.watermark, row["_font"], args.force)
+                    render_video_poster(source_path, output, args.watermark, row["_font"], args.force or force_reimport)
                 else:
-                    render_video_preview(source_path, output, args.watermark, row["_font"], args.force)
+                    render_video_preview(source_path, output, args.watermark, row["_font"], args.force or force_reimport)
             else:
                 max_px = args.gallery_max if derivative == "gallery" else args.detail_max
-                render_derivative(source_path, output, max_px, args.watermark, row["_font"], args.force, source_orientation)
+                render_derivative(source_path, output, max_px, args.watermark, row["_font"], args.force or force_reimport, source_orientation)
             created_count += 1
             emit_import_step(row, "previews_created", total=len(preview_specs), completed=covered_count + created_count)
 
@@ -1817,6 +1835,7 @@ def upload_r2_assets(
                     content_type,
                     args.r2_retries,
                     cache_control="public, max-age=31536000, immutable",
+                    force_upload=force_reimport,
                 )
             )
             spec["covered"] = True
@@ -2164,6 +2183,7 @@ def process_batch(
                 "media_type": media_type,
                 "source_path_hint": str(source),
                 "metadata_path_hint": str(metadata_path),
+                "source_checkpoint": item["checkpoint"],
                 "gallery_country": gallery_country,
                 "derivatives": {
                     "gallery": gallery_path.relative_to(args.output_root).as_posix(),
@@ -2180,6 +2200,9 @@ def process_batch(
             row["metadata"] = selected_metadata["display"]
             row["raw_metadata"] = selected_metadata["raw"]
             row["selection_metadata"] = compact_metadata(meta)
+            if item.get("source_changed"):
+                row["_force_reimport"] = True
+                force_artifact_plan_reimport(artifact_plan)
             item_index = index_offset + rendered_count + 1
             print(f"START {item_index}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
             emit_import_event(
@@ -2219,11 +2242,13 @@ def process_batch(
                         row["tmp_removed_after_upload"] = removed_tmp
                 row.pop("_font", None)
                 row.pop("_source_orientation", None)
+                row.pop("_force_reimport", None)
                 row["derivative_files"] = {
                     "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
                     "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
                     "generated_at": now_iso(),
                 }
+            row.pop("_force_reimport", None)
             manifest[relative_path] = row
             failures.pop(relative_path, None)
             append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
@@ -2430,6 +2455,8 @@ def main() -> int:
                 continue
             photo_id = slug_for(relative_path)
             plan = artifact_plan_for_source(args, photo_id, source_path)
+            if selected_item.get("source_changed"):
+                force_artifact_plan_reimport(plan)
             selected_item["artifact_plan"] = plan
             queued_index = add_counter("queued")
             plan_row = {
@@ -2498,15 +2525,28 @@ def main() -> int:
                         },
                     )
                     continue
-                if not args.force and relative_path in manifest:
+                prior = state.get(relative_path)
+                manifest_row = manifest.get(relative_path) if isinstance(manifest.get(relative_path), dict) else None
+                prior_matches = should_skip_metadata(prior, stamp, args.force)
+                manifest_checkpoint = manifest_row.get("source_checkpoint") if manifest_row else None
+                manifest_matches = bool(manifest_checkpoint and manifest_checkpoint == stamp)
+                source_known_current = bool(prior_matches or manifest_matches)
+                source_changed = bool(
+                    (
+                        (prior is not None and not prior_matches)
+                        or (manifest_checkpoint and not manifest_matches)
+                    )
+                    and not source_known_current
+                    and not args.force
+                )
+                if not args.force and relative_path in manifest and not source_changed:
                     coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
                     if coverage_plan.get("complete"):
                         add_counter("alreadySelected")
                         if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
                             break
                         continue
-                prior = state.get(relative_path)
-                if should_skip_metadata(prior, stamp, args.force):
+                if prior_matches:
                     prior_status = prior.get("status")
                     if prior_status == "skipped":
                         continue
@@ -2529,6 +2569,7 @@ def main() -> int:
                         "source_path": source,
                         "metadata_path": metadata_path,
                         "checkpoint": stamp,
+                        "source_changed": source_changed,
                     }
                 )
                 if len(batch) >= args.batch_size:

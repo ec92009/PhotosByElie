@@ -4,10 +4,10 @@ Date: 2026-05-20
 
 ## Current State
 
-- Repo: `/Users/ecohen/Dev/photosByElie`
+- Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v81.10`
-- Local Owner page: `http://localhost:8000/owner.html?v=81.10`
+- Current visible build: `v81.14`
+- Local Owner page: `http://localhost:8000/owner.html?v=81.14`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -16,7 +16,7 @@ Date: 2026-05-20
 
 ## What This Conversation Covered
 
-This conversation focused on getting the Owner side of Photos By Elie usable as an operations console and then unblocking the nightly title/keyword review run. The earlier work started with the Real Estate owner extension and grew into a broader pass over imports, R2 coverage, hidden/discarded state, and local catalog rebuild safety. The latest work made the title/keyword queue generator use real per-photo Codex model calls for rework rows, produced a reviewable 321-row nightly batch, and tightened the review page's Propagate behavior.
+This conversation focused on getting the Owner side of Photos By Elie usable as an operations console, then tightening the title/keyword review pipeline and its operational safety. The earlier work started with the Real Estate owner extension and grew into a broader pass over imports, R2 coverage, hidden/discarded state, and local catalog rebuild safety. The latest work ran the David-only nightly title/keyword automation locally, produced a fresh 100-row review batch, and identified a moderate security/privacy risk from committing Owner review JSON into deployable assets.
 
 1. The Owner Real Estate side gained client management: create/update/delete clients, show plaintext local passwords for now, edit rows directly, derive usernames/slugs/gallery keys/titles/prefixes from the client name, and use `/Volumes/Saturn/Pictures/RE/<ClientName>/<Property>` as the source convention.
 2. Real Estate import now proceeds with available property folders instead of failing the whole import on a missing folder, and progress reports count/total while it imports.
@@ -33,11 +33,14 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 13. The France gallery/detail H/X behavior was repaired. Detail-page H/X now navigates away assertively and repairs cases where local hidden state exists but the catalog state needs to be republished.
 14. Photo `20180322-0915-00173-e3b893dbea` was investigated for both H/X and orientation. It had an EXIF rotate-180 source flag, and the public preview had been regenerated upside down. The importer now recognizes numeric EXIF orientation values, and corrected 900/1800 previews were uploaded to remote R2.
 15. The title/keyword generator now invokes the selected Codex ladder model for each rework proposal instead of merely recording requested model metadata. Rework rows preserve prior rejected title/keywords and Owner comments as explicit model context.
-16. The latest successful nightly run generated batch `2026-05-19-230413-165Z` with `321` proposals: `221` Codex-backed rework rows and `100` ordinary new-photo rows. Two rework rows remain model-blocked and are kept rejected for future stronger tooling/context.
+16. A successful nightly run generated batch `2026-05-19-230413-165Z` with `321` proposals: `221` Codex-backed rework rows and `100` ordinary new-photo rows. Two rework rows remained model-blocked and were kept rejected for future stronger tooling/context.
 17. The Owner review page Propagate button now propagates the reject note along with the reject decision, reject reasons are visible mutually exclusive horizontal checkbox options with short labels and editable note templates, video review rows show the usual play-triangle overlay, and rows can be basketed with a visible Block button or `H`/`X`.
 18. Handoff sweep published 239 approved rows from batch `2026-05-19-230413-165Z` into the public SQLite catalog, compressed catalog, homepage data, Worker catalog, and approval audit JSON.
 19. Handoff sweep published 53 approved rows from batch `2026-05-20-093025-705Z`, refreshed hidden counts, and generated visible build `v81.10`.
 20. The nightly title/keyword run and the improved review UI are an excellent key step: many remaining rejects should be treated as useful evidence that the next quality jump needs stronger picture recognition, more reliable visual clues, and better use of nearby-shoot context rather than another local-rule cycle.
+21. The David-only nightly automation generated batch `2026-05-20-181058-181Z` with `100` ordinary new proposals, no rework rows, no model blockers, and no newly parked rows. All 100 proposals have non-empty titles and actual generator provenance of `local-metadata-rules-v1`, but all are `source_context` rows below the 10-keyword target, so they need close Owner review.
+22. The automation exposed a workflow-method issue: `owner_state_db.py --title-keyword-generator-state-json` now emits about 1.36 MB, which can exceed Node's default `spawnSync` buffer in the generator. The run succeeded with a local in-memory buffer override; the durable fix should raise the generator's `runOwnerStateDb` buffer without changing workflow behavior.
+23. The security review concluded that the current setup is a moderate metadata/privacy risk if Owner review JSON is pushed to a public deployable site. `Owner.sqlite` is ignored/local, which is correct, but committed review batches can expose photo IDs, capture dates, internal workflow state, title/keyword proposals, source-path clues, and Owner curation context.
 
 ## Current Operational Notes
 
@@ -56,7 +59,9 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.10`, 53 approved title/keyword rows from batch `2026-05-20-093025-705Z` are published into the buyer-facing SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
 - Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Owner rejection patterns from this run should now feed the next model/tooling iteration. Rejects caused by insufficient visual understanding, missing landmark/context clues, or weak nearby-shoot inference are not a reason to weaken the workflow; they are the backlog signal for better picture recognition and richer per-photo context.
-- Current title/keyword queue counts are applied `1049`, approved `20`, proposed `218`, blocked `27`, parked `62`.
+- Current title/keyword queue counts are accepted `1069`, proposed/submitted-unchecked `318`, rejected `0`, blocked `27`, parked `62`.
+- Latest generated title/keyword review batch is `2026-05-20-181058-181Z`, with `100` ordinary local-rule proposals covering capture dates from `2011-01-06T06:33:21` through `2011-01-04T06:34:22`.
+- Owner review JSON under `assets/owner-actions/title-keyword-review-queue/` should be treated as public if pushed. The next hardening step is to separate owner-private review artifacts from public deployable assets, or sanitize committed batch views so they expose only what the review page truly needs.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.
@@ -101,4 +106,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. Items 1-6 from the prior backlog were completed in `v79.29`; the next major work is Real Estate owner/client delivery, durable hidden/discarded lifecycle hardening, Owner state-table browsing, and commerce hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review the latest 100-row title/keyword batch, separate Owner-private review artifacts from public deployable assets, fix the title/keyword generator buffer limit, improve keyword/title proposal quality, then continue Real Estate delivery, hidden/discarded lifecycle hardening, Owner state-table browsing, and commerce hardening.

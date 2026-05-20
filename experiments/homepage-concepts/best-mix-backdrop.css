@@ -105,14 +105,14 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   will-change:transform,opacity;
 }
 
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(1){--stack-shuffle-x:-110px;--stack-shuffle-y:42px;--stack-shuffle-rotate:-20deg;--stack-shuffle-delay:30ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(2){--stack-shuffle-x:66px;--stack-shuffle-y:-78px;--stack-shuffle-rotate:18deg;--stack-shuffle-delay:90ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(3){--stack-shuffle-x:124px;--stack-shuffle-y:38px;--stack-shuffle-rotate:14deg;--stack-shuffle-delay:150ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(4){--stack-shuffle-x:-86px;--stack-shuffle-y:-46px;--stack-shuffle-rotate:-16deg;--stack-shuffle-delay:210ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(5){--stack-shuffle-x:58px;--stack-shuffle-y:96px;--stack-shuffle-rotate:22deg;--stack-shuffle-delay:270ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(6){--stack-shuffle-x:-120px;--stack-shuffle-y:74px;--stack-shuffle-rotate:-24deg;--stack-shuffle-delay:330ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(7){--stack-shuffle-x:108px;--stack-shuffle-y:-34px;--stack-shuffle-rotate:16deg;--stack-shuffle-delay:390ms}
-body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(8){--stack-shuffle-x:-58px;--stack-shuffle-y:108px;--stack-shuffle-rotate:-18deg;--stack-shuffle-delay:450ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(1){--stack-shuffle-x:-110px;--stack-shuffle-y:42px;--stack-shuffle-rotate:-20deg;--stack-shuffle-delay:0ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(2){--stack-shuffle-x:66px;--stack-shuffle-y:-78px;--stack-shuffle-rotate:18deg;--stack-shuffle-delay:250ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(3){--stack-shuffle-x:124px;--stack-shuffle-y:38px;--stack-shuffle-rotate:14deg;--stack-shuffle-delay:500ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(4){--stack-shuffle-x:-86px;--stack-shuffle-y:-46px;--stack-shuffle-rotate:-16deg;--stack-shuffle-delay:750ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(5){--stack-shuffle-x:58px;--stack-shuffle-y:96px;--stack-shuffle-rotate:22deg;--stack-shuffle-delay:1000ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(6){--stack-shuffle-x:-120px;--stack-shuffle-y:74px;--stack-shuffle-rotate:-24deg;--stack-shuffle-delay:1250ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(7){--stack-shuffle-x:108px;--stack-shuffle-y:-34px;--stack-shuffle-rotate:16deg;--stack-shuffle-delay:1500ms}
+body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(8){--stack-shuffle-x:-58px;--stack-shuffle-y:108px;--stack-shuffle-rotate:-18deg;--stack-shuffle-delay:1750ms}
 
 @keyframes best-mix-stack-shuffle{
   0%{

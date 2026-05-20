@@ -3733,6 +3733,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     photo_id = payload.get("photo_id")
     if action not in {
         "hide",
+        "hide-many",
         "undo-hide",
         "promote-hidden",
         "return-to-reserve",
@@ -3750,6 +3751,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         raise ValueError("unsupported photo action")
     if action not in {
         "assign-country",
+        "hide-many",
         "sync-country-keywords",
         "remove-collection-keyword",
         "publish-hidden-blacklist",
@@ -3764,6 +3766,10 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         if target_slug not in COUNTRY_ASSIGNMENT_TARGETS:
             raise ValueError("gallery_key must be a country slug")
         photo_ids = _normalized_photo_ids(payload.get("photo_ids") or photo_id)
+        if not photo_ids:
+            raise ValueError("photo_ids must include at least one photo id")
+    if action == "hide-many":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
         if not photo_ids:
             raise ValueError("photo_ids must include at least one photo id")
 
@@ -3964,6 +3970,58 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "discarded_count": len(tombstone.get("photo_ids") or []),
             "hidden_ids": [],
             "r2_delete_task": r2_task,
+            "site": site_state,
+        }
+
+    if action == "hide-many":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
+        hidden_at = datetime.now(timezone.utc).isoformat()
+        moved = []
+        already_hidden = []
+        not_found = []
+        for current_photo_id in photo_ids:
+            found = _find_photo(expo_groups, current_photo_id)
+            source_state = "expo"
+            if not found:
+                found = _find_photo(reserve_groups, current_photo_id)
+                source_state = "reserve"
+            if not found:
+                hidden_hit = next(
+                    ((slug, photo) for slug, photos in hidden_groups.items() for photo in photos if photo.get("id") == current_photo_id),
+                    None,
+                )
+                if hidden_hit:
+                    already_hidden.append(current_photo_id)
+                    continue
+                not_found.append(current_photo_id)
+                continue
+            source_slug, source_photo = found
+            hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, hidden_at)
+            _remove_existing(hidden_groups, current_photo_id)
+            hidden_groups[source_slug].append(hidden_photo)
+            moved.append(
+                {
+                    "photo_id": current_photo_id,
+                    "from": source_state,
+                    "from_slug": source_slug,
+                    "to": "hidden",
+                    "to_slug": source_slug,
+                    "mode": "blacklist",
+                }
+            )
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
+        hidden_ids = [item["photo_id"] for item in moved] + already_hidden
+        return {
+            "ok": True,
+            "action": action,
+            "photo_ids": photo_ids,
+            "hidden_ids": hidden_ids,
+            "already_hidden": already_hidden,
+            "not_found": not_found,
+            "moved": moved,
+            "r2_blacklist_task": r2_task,
+            "worker_catalog": worker_catalog,
             "site": site_state,
         }
 

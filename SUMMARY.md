@@ -6,8 +6,8 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v81.5`
-- Local Owner page: `http://localhost:8000/owner.html?v=81.5`
+- Current visible build: `v81.9`
+- Local Owner page: `http://localhost:8000/owner.html?v=81.9`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -48,6 +48,10 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.3`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, clear stale proposed rows that are already blocked or missing from the public catalog, propagate reject notes with propagated rejection decisions, offer mutually exclusive horizontal reject-reason checkboxes that prefill editable notes, preserve previous reject notes unchanged on load, and mark video rows with a centered play badge.
 - In `v81.4`, 239 approved title/keyword rows from batch `2026-05-19-230413-165Z` are published into the buyer-facing SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
 - In `v81.5`, the Owner title/keyword review rows expose the existing H/X Waste Basket path as a visible Block button beside Propagate, so bad proposals can be blocked during the same review pass.
+- In `v81.6`, individual title/keyword approvals autosave and move selection/scroll to the next row, making the review pass flow without manual arrow navigation after every approved photo.
+- In `v81.7`, Block is a third title/keyword review decision beside Approve and Reject, propagates across current/following same-shoot rows, and saved block rows show `Blocked`.
+- In `v81.8`, propagated title/keyword blocks use a helper-side batch Waste Basket action, avoiding one full catalog/Worker rewrite per blocked row.
+- In `v81.9`, title/keyword decision controls ignore browser-restored checkbox state on reload so stale Block checks cannot trigger surprise autosaves.
 - Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Owner rejection patterns from this run should now feed the next model/tooling iteration. Rejects caused by insufficient visual understanding, missing landmark/context clues, or weak nearby-shoot inference are not a reason to weaken the workflow; they are the backlog signal for better picture recognition and richer per-photo context.
 - Current title/keyword review counts after the successful nightly generation were accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.

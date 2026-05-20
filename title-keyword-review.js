@@ -391,7 +391,7 @@
         <button class="btn secondary" type="button" data-title-keyword-review-download>Export selected JSON</button>
         <a class="btn secondary" href="${escapeHtml(queueHref)}" target="_blank" rel="noreferrer">Open proposal source</a>
       </div>
-      <p class="gallery-status">Rows autosave as soon as you approve, reject, block, or edit. Apply selected updates catalog metadata for checked approvals and queues checked rejections for rework.</p>
+      <p class="gallery-status">Rows autosave as soon as you approve, reject, block, or edit. Apply selected updates catalog metadata for checked approvals, queues checked rejections for rework, and moves checked blocks to the Waste Basket.</p>
     `;
 
     root.replaceChildren();
@@ -441,7 +441,7 @@
         isVideo ? "is-video" : "",
       ].filter(Boolean).join(" ");
       return `
-        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" tabindex="0">
+        <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" data-review-previous-reject-reason="${escapeHtml(previousRejectReason)}" tabindex="0">
           <a class="${previewClasses}" href="${escapeHtml(href)}" aria-label="Open ${isVideo ? "video" : "photo"} ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
             ${isVideo ? `<span class="title-keyword-review-video-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
@@ -451,7 +451,7 @@
             <h2>${escapeHtml(title || photoId)}</h2>
             <p>${currentKeywordsHtml}</p>
           </div>
-          <form class="title-keyword-review-proposed" data-review-editor>
+          <form class="title-keyword-review-proposed" data-review-editor autocomplete="off">
               <label>
                 <span>Proposed title</span>
                 <input type="text" value="${escapeHtml(proposedTitle)}" data-review-title/>
@@ -467,6 +467,10 @@
               <input type="checkbox" data-review-approve/>
               <span>Approve</span>
             </label>
+            <label class="title-keyword-review-block-choice" title="Move this photo to the Waste Basket and record it as blocked (H/X)">
+              <input type="checkbox" data-review-block/>
+              <span>Block</span>
+            </label>
             <input type="checkbox" data-review-reject hidden/>
             <div class="title-keyword-review-reject-reasons" role="group" aria-label="Reject reason">
               <p>Reject</p>
@@ -478,8 +482,7 @@
             </label>
             <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
             <div class="title-keyword-review-row-tools">
-              <button type="button" data-review-propagate title="Apply this row's approve/reject choice, including reject note, to current and following rows in the same two-hour shoot window">Propagate</button>
-              <button type="button" data-review-block title="Move this photo to the Waste Basket and record it as blocked (H/X)">Block</button>
+              <button type="button" data-review-propagate title="Apply this row's approve/reject/block choice, including reject note, to current and following rows in the same two-hour shoot window">Propagate</button>
             </div>
           </div>
         </article>
@@ -510,29 +513,35 @@
       const keywordsRaw = String(card.querySelector("[data-review-keywords]")?.value || "");
       const keywords = normalizeKeywords(keywordsRaw, blacklist);
       const comment = String(card.querySelector("[data-review-reject-comment]")?.value || "").trim();
-      const rejected = Boolean(card.querySelector("[data-review-reject]")?.checked);
-      const approved = Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
+      const blocked = Boolean(card.querySelector("[data-review-block]")?.checked);
+      const rejected = !blocked && Boolean(card.querySelector("[data-review-reject]")?.checked);
+      const approved = !blocked && Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
       return {
         approval: approved ? { photo_id: photoId, batch_id: rowBatchId, approved: true, title, keywords } : null,
         rejection: rejected ? { photo_id: photoId, batch_id: rowBatchId, rejected: true, title, keywords, comment } : null,
+        blocked: blocked ? { photo_id: photoId, batch_id: rowBatchId, blocked: true } : null,
         approved,
         rejected,
+        blocked,
       };
     };
 
     const buildApprovalsPayload = (action = "apply-title-keyword-review-approvals") => {
       const approvals = [];
       const rejections = [];
+      const blocked = [];
       for (const [photoId, card] of cardById.entries()) {
         const decision = buildRowDecision(photoId, card);
         if (decision.approval) approvals.push(decision.approval);
         if (decision.rejection) rejections.push(decision.rejection);
+        if (decision.blocked) blocked.push(decision.blocked);
       }
       return {
         action,
         batch_id: batchId,
         approvals,
         rejections,
+        blocked,
       };
     };
 
@@ -542,6 +551,19 @@
       rowStatus.textContent = message;
       rowStatus.dataset.state = state;
       rowStatus.title = detail || "";
+    };
+    const setBlockedControlsDisabled = (card, disabled) => {
+      card.querySelectorAll([
+        "[data-review-title]",
+        "[data-review-keywords]",
+        "[data-review-approve]",
+        "[data-review-reject]",
+        "[data-review-reject-reason]",
+        "[data-review-reject-comment]",
+        "[data-review-block]",
+      ].join(",")).forEach((input) => {
+        input.disabled = Boolean(disabled);
+      });
     };
 
     let activeCard = null;
@@ -556,6 +578,16 @@
       activeCard = card;
       activeCard.classList.add("is-selected");
     };
+    const scrollCardIntoReview = (card, block = "nearest") => {
+      if (!card) return;
+      const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+      card.focus?.({ preventScroll: true });
+      card.scrollIntoView?.({
+        block,
+        inline: "nearest",
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    };
     const moveActiveCard = (delta) => {
       const cards = [...cardById.values()];
       if (!cards.length) return;
@@ -563,8 +595,15 @@
       const nextIndex = Math.max(0, Math.min(cards.length - 1, currentIndex + delta));
       const nextCard = cards[nextIndex];
       setActiveCard(nextCard);
-      nextCard?.focus?.({ preventScroll: true });
-      nextCard?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      scrollCardIntoReview(nextCard);
+    };
+    const advanceAfterApprove = (card) => {
+      const cards = [...cardById.values()];
+      const currentIndex = cards.indexOf(card);
+      if (currentIndex < 0 || currentIndex >= cards.length - 1) return;
+      const nextCard = cards[currentIndex + 1];
+      setActiveCard(nextCard);
+      scrollCardIntoReview(nextCard, "center");
     };
 
     const postApprovalsPayload = async (payload) => {
@@ -583,21 +622,22 @@
       return result;
     };
 
-    const postPhotoAction = async (action, photoId) => {
+    const postPhotoActionPayload = async (payload) => {
       const ok = await window.photosByElieOwnerAuth?.requireAuth?.("Owner helper unavailable.") ?? true;
       if (!ok) return null;
       const response = await fetch(approvalsEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action, photo_id: photoId }),
+        body: JSON.stringify(payload),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || `Could not ${action} photo.`);
+        throw new Error(result?.error || `Could not ${payload?.action || "update"} photo.`);
       }
       return result;
     };
+    const postPhotoActionMany = async (action, photoIds) => postPhotoActionPayload({ action, photo_ids: photoIds });
 
     const removeReviewCard = (photoId, card) => {
       cardById.delete(photoId);
@@ -611,10 +651,68 @@
     };
 
     const rowSaveTimers = new Map();
+    const saveBlockedTargets = async (targets) => {
+      targets.forEach(({ card }) => setRowStatus(card, "Blocking...", "saving"));
+      const photoIds = targets.map(({ photoId }) => photoId);
+      let hideResult = null;
+      try {
+        hideResult = await postPhotoActionMany("hide-many", photoIds);
+      } catch (error) {
+        const message = error?.message || "Could not block photo.";
+        targets.forEach(({ card }) => setRowStatus(card, "Block failed", "error", message));
+        throw error;
+      }
+      if (!hideResult) {
+        targets.forEach(({ card }) => setRowStatus(card, "Auth required", "error"));
+        return null;
+      }
+      const hiddenIds = new Set((hideResult.hidden_ids || []).map((item) => String(item || "")));
+      const notFound = new Set((hideResult.not_found || []).map((item) => String(item || "")));
+      const savedTargets = targets.filter(({ photoId }) => hiddenIds.has(photoId));
+      targets.forEach(({ card, photoId }) => {
+        if (hiddenIds.has(photoId)) return;
+        if (notFound.has(photoId)) {
+          setRowStatus(card, "Not in catalog", "error", "Could not move this photo to the Waste Basket because the helper could not find it.");
+          return;
+        }
+        setRowStatus(card, "Block failed", "error", "The helper did not confirm this photo moved to the Waste Basket.");
+      });
+      if (!savedTargets.length) return { count: 0, result: null };
+      let result = null;
+      try {
+        result = await postApprovalsPayload({
+          action: "save-title-keyword-review-approvals",
+          batch_id: batchId,
+          approvals: [],
+          rejections: [],
+          blocked: savedTargets.map(({ decision }) => decision.blocked),
+        });
+      } catch (error) {
+        const message = error?.message || "Could not save block review records.";
+        savedTargets.forEach(({ card }) => setRowStatus(card, "Review save failed", "error", message));
+        throw error;
+      }
+      if (!result) {
+        savedTargets.forEach(({ card }) => setRowStatus(card, "Auth required", "error"));
+        return null;
+      }
+      savedTargets.forEach(({ card }) => {
+        card.classList.add("is-owner-actioned");
+        setBlockedControlsDisabled(card, true);
+        setRowStatus(card, "Blocked", "saved");
+      });
+      return { count: savedTargets.length, result };
+    };
+
     const saveRowDecision = async (photoId, card) => {
       const decision = buildRowDecision(photoId, card);
-      if (!decision.approval && !decision.rejection) {
+      if (!decision.approval && !decision.rejection && !decision.blocked) {
         setRowStatus(card, "Not saved");
+        return;
+      }
+      if (decision.blocked) {
+        const result = await saveBlockedTargets([{ card, decision, photoId }]);
+        if (result && status) status.textContent = `${photoId} blocked, moved to Waste Basket, and saved to this review record.`;
         return;
       }
       setRowStatus(card, "Saving...", "saving");
@@ -623,6 +721,7 @@
         batch_id: batchId,
         approvals: decision.approval ? [decision.approval] : [],
         rejections: decision.rejection ? [decision.rejection] : [],
+        blocked: [],
       });
       if (!result) {
         setRowStatus(card, "Auth required", "error");
@@ -659,13 +758,19 @@
       const approvals = [];
       const rejections = [];
       const targets = [];
+      const blockedTargets = [];
       cards.forEach((card) => {
         const targetPhotoId = card.getAttribute("data-review-photo-id") || "";
         if (!targetPhotoId) return;
         window.clearTimeout(rowSaveTimers.get(targetPhotoId));
         const decision = buildRowDecision(targetPhotoId, card);
-        if (!decision.approval && !decision.rejection) {
+        if (!decision.approval && !decision.rejection && !decision.blocked) {
           setRowStatus(card, "Not saved");
+          return;
+        }
+        if (decision.blocked) {
+          blockedTargets.push({ card, decision, photoId: targetPhotoId });
+          setRowStatus(card, "Blocking...", "saving");
           return;
         }
         if (decision.approval) approvals.push(decision.approval);
@@ -673,26 +778,38 @@
         targets.push({ card, decision, photoId: targetPhotoId });
         setRowStatus(card, "Saving...", "saving");
       });
-      if (!targets.length) return { count: 0 };
-      const result = await postApprovalsPayload({
-        action: "save-title-keyword-review-approvals",
-        batch_id: batchId,
-        approvals,
-        rejections,
-      });
-      if (!result) {
-        targets.forEach(({ card }) => setRowStatus(card, "Auth required", "error"));
-        return null;
-      }
-      const missing = new Set((result.not_found || []).map((item) => String(item || "")));
-      targets.forEach(({ card, decision, photoId }) => {
-        if (missing.has(photoId)) {
-          setRowStatus(card, "Not in catalog", "error", "Marked blocked in Owner state because the helper could not find this photo in the current catalog.");
-          return;
+      if (!targets.length && !blockedTargets.length) return { count: 0 };
+      let result = null;
+      if (targets.length) {
+        result = await postApprovalsPayload({
+          action: "save-title-keyword-review-approvals",
+          batch_id: batchId,
+          approvals,
+          rejections,
+          blocked: [],
+        });
+        if (!result) {
+          targets.forEach(({ card }) => setRowStatus(card, "Auth required", "error"));
+          return null;
         }
-        setRowStatus(card, decision.rejection ? "Rejected and saved" : "Approved and applied", "saved");
-      });
-      return { count: targets.length, result };
+        const missing = new Set((result.not_found || []).map((item) => String(item || "")));
+        targets.forEach(({ card, decision, photoId }) => {
+          if (missing.has(photoId)) {
+            setRowStatus(card, "Not in catalog", "error", "Marked blocked in Owner state because the helper could not find this photo in the current catalog.");
+            return;
+          }
+          setRowStatus(card, decision.rejection ? "Rejected and saved" : "Approved and applied", "saved");
+        });
+      }
+      const blockedResult = blockedTargets.length ? await saveBlockedTargets(blockedTargets) : null;
+      return {
+        count: targets.length + (blockedResult?.count || 0),
+        approvals: approvals.length,
+        rejections: rejections.length,
+        blocked: blockedResult?.count || 0,
+        result,
+        blockedResult,
+      };
     };
 
     const cardsInShootWindow = (sourceCard) => {
@@ -714,8 +831,8 @@
 
     const propagateDecision = (photoId, card) => {
       const sourceDecision = buildRowDecision(photoId, card);
-      if (!sourceDecision.approval && !sourceDecision.rejection) {
-        window.alert?.("Choose Approve or Reject before propagating.");
+      if (!sourceDecision.approval && !sourceDecision.rejection && !sourceDecision.blocked) {
+        window.alert?.("Choose Approve, Reject, or Block before propagating.");
         return;
       }
       const sourceComment = String(card.querySelector("[data-review-reject-comment]")?.value || "");
@@ -723,27 +840,37 @@
       const targets = cardsInShootWindow(card);
       targets.forEach((targetCard) => {
         const targetPhotoId = targetCard.getAttribute("data-review-photo-id") || "";
+        targetCard.dataset.reviewDecisionTouched = "1";
         const targetApprove = targetCard.querySelector("[data-review-approve]");
         const targetReject = targetCard.querySelector("[data-review-reject]");
+        const targetBlock = targetCard.querySelector("[data-review-block]");
         const targetComment = targetCard.querySelector("[data-review-reject-comment]");
         if (sourceDecision.approval) {
           if (targetApprove) targetApprove.checked = true;
           if (targetReject) targetReject.checked = false;
+          if (targetBlock) targetBlock.checked = false;
           setRejectReasonValue(targetCard, "");
           setRejectReasonsDisabled(targetCard, true);
-        } else {
+        } else if (sourceDecision.rejection) {
           if (targetApprove) targetApprove.checked = false;
           if (targetReject) targetReject.checked = true;
+          if (targetBlock) targetBlock.checked = false;
           setRejectReasonsDisabled(targetCard, false);
           setRejectReasonValue(targetCard, sourceRejectReason);
           if (targetComment) {
             targetComment.value = sourceComment;
           }
+        } else {
+          if (targetApprove) targetApprove.checked = false;
+          if (targetReject) targetReject.checked = false;
+          if (targetBlock) targetBlock.checked = true;
+          setRejectReasonValue(targetCard, "");
+          setRejectReasonsDisabled(targetCard, true);
         }
-        targetComment?.closest("label")?.classList.toggle("is-disabled", Boolean(sourceDecision.approval));
-        if (targetComment) targetComment.readOnly = Boolean(sourceDecision.approval);
+        targetComment?.closest("label")?.classList.toggle("is-disabled", Boolean(sourceDecision.approval || sourceDecision.blocked));
+        if (targetComment) targetComment.readOnly = Boolean(sourceDecision.approval || sourceDecision.blocked);
       });
-      const propagatedLabel = sourceDecision.rejection ? "reject + note" : "approve";
+      const propagatedLabel = sourceDecision.blocked ? "block" : sourceDecision.rejection ? "reject + note" : "approve";
       if (status) status.textContent = `Propagated ${propagatedLabel} to ${targets.length} current/following same-shoot rows; saving as one batch.`;
       saveCardsDecisions(targets).then((result) => {
         if (result && status) status.textContent = `Propagated and saved ${result.count} current/following same-shoot rows.`;
@@ -755,36 +882,21 @@
     };
 
     const blockPhoto = (photoId, card) => {
-      setRowStatus(card, "Blocking...", "saving");
-      postPhotoAction("hide", photoId).then((result) => {
-        if (!result) {
-          setRowStatus(card, "Auth required", "error");
-          return;
-        }
-        return postApprovalsPayload({
-          action: "save-title-keyword-review-approvals",
-          batch_id: batchId,
-          approvals: [],
-          rejections: [],
-          blocked: [{ photo_id: photoId, batch_id: batchIdForCard(card), blocked: true }],
-        }).then(() => {
-          card.classList.add("is-owner-actioned");
-          setRowStatus(card, "Basketed", "saved");
-          removeReviewCard(photoId, card);
-          if (status) status.textContent = `${photoId} moved to Waste Basket and saved to this review record.`;
-        });
-      }).catch((error) => {
-        setRowStatus(card, "Block failed", "error");
-        if (status) status.textContent = error?.message || "Could not block photo.";
-      });
+      const block = card.querySelector("[data-review-block]");
+      if (!block) return;
+      block.checked = true;
+      block.dispatchEvent(new Event("change", { bubbles: true }));
     };
 
     const approveAll = () => {
       cardById.forEach((card, photoId) => {
+        card.dataset.reviewDecisionTouched = "1";
         const checkbox = card.querySelector("[data-review-approve]");
         if (checkbox) checkbox.checked = true;
         const reject = card.querySelector("[data-review-reject]");
         if (reject) reject.checked = false;
+        const block = card.querySelector("[data-review-block]");
+        if (block) block.checked = false;
         setRejectReasonValue(card, "");
         setRejectReasonsDisabled(card, true);
         const comment = card.querySelector("[data-review-reject-comment]");
@@ -805,29 +917,31 @@
 
     const saveApprovals = async () => {
       const payload = buildApprovalsPayload();
-      if (!payload.approvals.length && !payload.rejections.length) {
-        window.alert?.("Select at least one photo to approve or reject.");
+      if (!payload.approvals.length && !payload.rejections.length && !payload.blocked.length) {
+        window.alert?.("Select at least one photo to approve, reject, or block.");
         return;
       }
       const confirmed = window.confirm?.(
-        `Apply ${payload.approvals.length} approvals and save ${payload.rejections.length} rejections?\n\n` +
-        "Approved rows update catalog metadata. Rejected rows are prioritized for a new proposal. JPG/source files, public previews, private masters, and render files will not be changed.",
+        `Apply ${payload.approvals.length} approvals, save ${payload.rejections.length} rejections, and block ${payload.blocked.length} photos?\n\n` +
+        "Approved rows update catalog metadata. Rejected rows are prioritized for a new proposal. Blocked rows move to the Waste Basket. JPG/source files, public previews, private masters, and render files will not be changed directly by title/keyword approval.",
       ) ?? true;
       if (!confirmed) return;
-      const result = await postApprovalsPayload(payload);
+      const result = await saveCardsDecisions([...cardById.values()]);
       if (!result) return;
+      const saveResult = result.result || result.blockedResult?.result || {};
       window.alert?.(
-        `Applied ${result.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
-        `Saved ${result.rejected_count || payload.rejections.length} rejections for proposal rework.\n` +
-        `Saved approval record to ${result.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +
+        `Applied ${saveResult.applied_count || payload.approvals.length} approvals to catalog metadata files.\n` +
+        `Saved ${result.rejections || payload.rejections.length} rejections for proposal rework.\n` +
+        `Moved ${result.blocked || payload.blocked.length} photos to the Waste Basket.\n` +
+        `Saved review record to ${saveResult.path || "assets/owner-actions/title-keyword-review-queue/"}.\n\n` +
         "Run validation and commit the metadata changes when ready.",
       );
     };
 
     const downloadApprovals = () => {
       const payload = buildApprovalsPayload();
-      if (!payload.approvals.length && !payload.rejections.length) {
-        window.alert?.("Select at least one photo to approve or reject.");
+      if (!payload.approvals.length && !payload.rejections.length && !payload.blocked.length) {
+        window.alert?.("Select at least one photo to approve, reject, or block.");
         return;
       }
       downloadJson(`title-keyword-review-approvals-${batchId}.json`, payload);
@@ -843,6 +957,11 @@
       const keywordInput = card.querySelector("[data-review-keywords]");
       const propagate = card.querySelector("[data-review-propagate]");
       const block = card.querySelector("[data-review-block]");
+      const previousRejectReason = card.dataset.reviewPreviousRejectReason || "";
+      if (approve) approve.checked = false;
+      if (reject) reject.checked = false;
+      if (block) block.checked = false;
+      setRejectReasonValue(card, previousRejectReason);
       card.addEventListener("click", (event) => {
         const previewLink = event.target instanceof HTMLElement ? event.target.closest(".title-keyword-review-preview") : null;
         if (previewLink) event.preventDefault();
@@ -856,19 +975,43 @@
       });
       const syncDecisionState = () => {
         const approved = Boolean(approve?.checked);
+        const blocked = Boolean(block?.checked);
+        const disabled = approved || blocked;
         if (comment) {
-          comment.readOnly = approved;
-          comment.closest("label")?.classList.toggle("is-disabled", approved);
+          comment.readOnly = disabled;
+          comment.closest("label")?.classList.toggle("is-disabled", disabled);
         }
-        setRejectReasonsDisabled(card, approved);
+        setRejectReasonsDisabled(card, disabled);
       };
+      const markDecisionTouched = () => {
+        card.dataset.reviewDecisionTouched = "1";
+      };
+      const resetRestoredDecisionState = () => {
+        if (card.dataset.reviewDecisionTouched === "1") return;
+        window.clearTimeout(rowSaveTimers.get(photoId));
+        if (approve) approve.checked = false;
+        if (reject) reject.checked = false;
+        if (block) block.checked = false;
+        setRejectReasonValue(card, previousRejectReason);
+        syncDecisionState();
+        setRowStatus(card, "Not saved");
+      };
+      approve?.closest("label")?.addEventListener("pointerdown", markDecisionTouched);
+      block?.closest("label")?.addEventListener("pointerdown", markDecisionTouched);
+      [approve, block].forEach((input) => {
+        input?.addEventListener("keydown", (event) => {
+          if (event.key === " " || event.key === "Enter") markDecisionTouched();
+        });
+      });
       const fillRejectReasonNote = (value = "") => {
         const reason = rejectReasonByValue.get(value || checkedRejectReasonValue(card));
         if (!reason || !comment) return;
         comment.value = reason.note;
       };
       const activateReject = ({ reasonValue = "", fillNote = false, saveDelay = null } = {}) => {
+        markDecisionTouched();
         if (approve?.checked) approve.checked = false;
+        if (block?.checked) block.checked = false;
         if (reject) reject.checked = true;
         if (reasonValue) setRejectReasonValue(card, reasonValue);
         if (fillNote) {
@@ -881,7 +1024,9 @@
         if (saveDelay !== null) scheduleRowSave(photoId, card, saveDelay);
       };
       const activateApproveFromEdit = () => {
+        markDecisionTouched();
         if (reject?.checked) reject.checked = false;
+        if (block?.checked) block.checked = false;
         if (approve) approve.checked = true;
         syncDecisionState();
         scheduleRowSave(photoId, card);
@@ -891,20 +1036,50 @@
         activateReject();
       };
       approve?.addEventListener("change", () => {
+        if (card.dataset.reviewDecisionTouched !== "1") {
+          resetRestoredDecisionState();
+          return;
+        }
         if (approve.checked) {
           if (reject) reject.checked = false;
+          if (block) block.checked = false;
           setRejectReasonValue(card, "");
         }
         syncDecisionState();
-        if (approve.checked) scheduleRowSave(photoId, card, 150);
-        else setRowStatus(card, "Not saved");
+        if (approve.checked) {
+          scheduleRowSave(photoId, card, 150);
+          advanceAfterApprove(card);
+        } else {
+          setRowStatus(card, "Not saved");
+        }
       });
       reject?.addEventListener("change", () => {
+        if (card.dataset.reviewDecisionTouched !== "1") {
+          resetRestoredDecisionState();
+          return;
+        }
         if (reject.checked) activateReject({ saveDelay: 150 });
         else setRowStatus(card, "Not saved");
       });
+      block?.addEventListener("change", () => {
+        if (card.dataset.reviewDecisionTouched !== "1") {
+          resetRestoredDecisionState();
+          return;
+        }
+        if (block.checked) {
+          if (approve) approve.checked = false;
+          if (reject) reject.checked = false;
+          setRejectReasonValue(card, "");
+          syncDecisionState();
+          scheduleRowSave(photoId, card, 150);
+        } else {
+          syncDecisionState();
+          setRowStatus(card, "Not saved");
+        }
+      });
       const chooseRejectReason = (input) => {
         if (!input || input.disabled) return;
+        markDecisionTouched();
         activateReject({ reasonValue: input.value, fillNote: true, saveDelay: 150 });
       };
       rejectReasonOptions.forEach((option) => {
@@ -941,12 +1116,10 @@
         event.stopPropagation();
         propagateDecision(photoId, card);
       });
-      block?.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        blockPhoto(photoId, card);
-      });
       syncDecisionState();
+      window.setTimeout(resetRestoredDecisionState, 0);
+      window.setTimeout(resetRestoredDecisionState, 500);
+      window.setTimeout(resetRestoredDecisionState, 1500);
     });
 
     const firstCard = cardById.values().next().value;
@@ -959,6 +1132,7 @@
       const key = event.key.toLowerCase();
       const approve = activeCard.querySelector("[data-review-approve]");
       const reject = activeCard.querySelector("[data-review-reject]");
+      const block = activeCard.querySelector("[data-review-block]");
       const comment = activeCard.querySelector("[data-review-reject-comment]");
       if (event.key === "ArrowDown" || event.key === "ArrowRight") {
         moveActiveCard(1);
@@ -971,18 +1145,22 @@
         return;
       }
       if (key === "a") {
+        activeCard.dataset.reviewDecisionTouched = "1";
         if (approve) approve.checked = true;
         if (reject) reject.checked = false;
+        if (block) block.checked = false;
         if (comment) {
           comment.readOnly = true;
           comment.closest("label")?.classList.add("is-disabled");
         }
         setRejectReasonsDisabled(activeCard, true);
         scheduleRowSave(photoId, activeCard, 150);
+        advanceAfterApprove(activeCard);
         event.preventDefault();
         return;
       }
       if (key === "r") {
+        activeCard.dataset.reviewDecisionTouched = "1";
         if (reject) {
           reject.checked = true;
           reject.dispatchEvent(new Event("change", { bubbles: true }));
@@ -996,6 +1174,7 @@
         return;
       }
       if (key === "h" || key === "x") {
+        activeCard.dataset.reviewDecisionTouched = "1";
         blockPhoto(photoId, activeCard);
         event.preventDefault();
       }

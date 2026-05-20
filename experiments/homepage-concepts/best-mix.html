@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="../../shared.css?v=81.5"/>
   <link rel="stylesheet" href="../../styles.css?v=81.5"/>
   <link rel="stylesheet" href="../../photos.css?v=81.5"/>
-  <link rel="stylesheet" href="./best-mix-backdrop.css?v=5"/>
+  <link rel="stylesheet" href="./best-mix-backdrop.css?v=6"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -52,14 +52,15 @@
       <div>
         <h1 id="page-title">Photos By Elie</h1>
         <div class="cta">
-          <a class="btn primary" href="#collections" data-i18n="home.view_collections">View collections</a>
-          <a class="btn secondary" href="../../real-estate.html?logout=1&client=elie">Client login</a>
+          <button class="btn primary" type="button" aria-controls="collections" aria-expanded="false" data-best-mix-section-trigger="collections">Collections</button>
+          <button class="btn secondary" type="button" aria-controls="discover" aria-expanded="false" data-best-mix-section-trigger="search">Search</button>
+          <button class="btn secondary" type="button" aria-controls="featured" aria-expanded="false" data-best-mix-section-trigger="featured">Featured</button>
         </div>
       </div>
       <div class="photo-stack" data-home-stack aria-label="Featured collections"></div>
     </section>
 
-    <section class="panel featured-campaigns" aria-labelledby="featured-campaigns-title">
+    <section class="panel featured-campaigns is-best-mix-section-collapsed" id="featured" data-best-mix-section="featured" aria-labelledby="featured-campaigns-title">
       <div class="featured-campaigns-head">
         <div>
           <p class="eyebrow">Featured on Pinterest</p>
@@ -85,7 +86,7 @@
       </div>
     </section>
 
-    <section class="panel home-discovery-panel is-discovery-collapsed" id="discover" data-home-discovery aria-labelledby="discover-title">
+    <section class="panel home-discovery-panel is-best-mix-section-collapsed is-discovery-collapsed" id="discover" data-home-discovery data-best-mix-section="search" aria-labelledby="discover-title">
       <div class="home-discovery-head">
         <h2 id="discover-title" data-i18n="home.discover">Find photos</h2>
         <div class="home-discovery-actions">
@@ -162,7 +163,7 @@
       </div>
     </section>
 
-    <section class="panel carousel photo-carousel-panel" id="collections" aria-label="Photo collections carousel">
+    <section class="panel carousel photo-carousel-panel is-best-mix-section-collapsed" id="collections" data-best-mix-section="collections" aria-label="Photo collections carousel">
       <div class="carousel-head photo-head">
         <div>
           <h2 data-i18n="home.collections">Collections</h2>
@@ -297,7 +298,7 @@
       <p class="footer-note">© 2026 Photos By Elie</p>
       <nav class="footer-nav" aria-label="Footer navigation" data-i18n-aria-label="a11y.footer_nav">
         <a href="https://ec92009.github.io/byElie/">By Elie</a>
-        <a href="#collections" data-i18n="nav.collections">Collections</a>
+        <a href="#collections" data-i18n="nav.collections" data-best-mix-section-trigger="collections">Collections</a>
         <span class="footer-owner-tools" data-owner-tools hidden>
           <a href="../../owner.html" data-i18n="nav.owner">Owner</a>
         </span>
@@ -672,6 +673,6 @@
   <script src="../../home-gallery-randomizer.js?v=81.5"></script>
   <script src="../../home-catalog-loader.js?v=81.5"></script>
   <script src="../../home-discovery.js?v=81.5"></script>
-  <script src="./best-mix.js?v=1"></script>
+  <script src="./best-mix.js?v=2"></script>
 </body>
 </html>

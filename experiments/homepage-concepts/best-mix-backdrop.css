@@ -70,6 +70,46 @@ body.best-mix-current-home .gallery-filter-bar select{
   backdrop-filter:blur(8px);
 }
 
+body.best-mix-current-home [data-best-mix-section]{
+  scroll-margin-top:96px;
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+
+body.best-mix-current-home .cta .btn{
+  appearance:none;
+  cursor:pointer;
+  font:inherit;
+}
+
+body.best-mix-current-home .cta .btn[aria-expanded="true"]{
+  background:rgba(17,17,17,.84);
+  border-color:rgba(17,17,17,.42);
+  color:#fff;
+  box-shadow:0 14px 30px rgba(0,0,0,.2);
+}
+
+body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed{
+  cursor:pointer;
+  padding-block:clamp(18px,3dvh,30px);
+}
+
+body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed:hover{
+  border-color:rgba(255,255,255,.28);
+  box-shadow:0 16px 36px rgba(0,0,0,.12);
+}
+
+body.best-mix-current-home .featured-campaigns.is-best-mix-section-collapsed .featured-campaign-grid,
+body.best-mix-current-home .featured-campaigns.is-best-mix-section-collapsed .featured-campaigns-head .btn,
+body.best-mix-current-home .photo-carousel-panel.is-best-mix-section-collapsed .carousel-wrap,
+body.best-mix-current-home .photo-carousel-panel.is-best-mix-section-collapsed .carousel-dots,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-controls,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-results,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-keyboard-hint,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .gallery-pagination-controls,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-toggle{
+  display:none;
+}
+
 body.best-mix-current-home .home-discovery-head{
   align-items:center;
   margin-bottom:0;

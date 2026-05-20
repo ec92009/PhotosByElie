@@ -99,7 +99,7 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   --stack-shuffle-x:0px;
   --stack-shuffle-y:0px;
   --stack-shuffle-rotate:0deg;
-  animation:best-mix-stack-shuffle 1.72s cubic-bezier(.2,.88,.24,1) both;
+  animation:best-mix-stack-shuffle 1s cubic-bezier(.2,.88,.24,1) both;
   animation-delay:var(--stack-shuffle-delay,0ms);
   transform-origin:50% 58%;
   will-change:transform,opacity;

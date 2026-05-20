@@ -27,7 +27,7 @@
     stack.classList.remove("is-stack-shuffling");
     window.requestAnimationFrame(() => {
       stack.classList.add("is-stack-shuffling");
-      window.setTimeout(() => stack.classList.remove("is-stack-shuffling"), 3500);
+      window.setTimeout(() => stack.classList.remove("is-stack-shuffling"), 2800);
     });
   };
 

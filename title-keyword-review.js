@@ -479,6 +479,7 @@
             <p class="title-keyword-review-row-status" data-review-row-status>Not saved</p>
             <div class="title-keyword-review-row-tools">
               <button type="button" data-review-propagate title="Apply this row's approve/reject choice, including reject note, to current and following rows in the same two-hour shoot window">Propagate</button>
+              <button type="button" data-review-block title="Move this photo to the Waste Basket and record it as blocked (H/X)">Block</button>
             </div>
           </div>
         </article>
@@ -841,6 +842,7 @@
       const titleInput = card.querySelector("[data-review-title]");
       const keywordInput = card.querySelector("[data-review-keywords]");
       const propagate = card.querySelector("[data-review-propagate]");
+      const block = card.querySelector("[data-review-block]");
       card.addEventListener("click", (event) => {
         const previewLink = event.target instanceof HTMLElement ? event.target.closest(".title-keyword-review-preview") : null;
         if (previewLink) event.preventDefault();
@@ -938,6 +940,11 @@
         event.preventDefault();
         event.stopPropagation();
         propagateDecision(photoId, card);
+      });
+      block?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        blockPhoto(photoId, card);
       });
       syncDecisionState();
     });

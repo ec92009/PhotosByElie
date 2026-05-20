@@ -68,9 +68,9 @@ The page supports row selection. Single-click selects a row without opening deta
 - `A`: approve.
 - `R`: reject using the default Incorrect reason.
 - `P`: propagate the selected approve/reject state to rows from the same gallery within a two-hour capture window. For rejections, the reject note is propagated with the reject decision.
-- `H` / `X`: block the photo using the helper's `hide` action.
+- `H` / `X`: block the photo using the same helper `hide` action as the visible Block button.
 
-The Propagate button must remain explicit and sit below the row status. Basketed rows disappear immediately after the helper confirms success. Approved/rejected rows remain visible in the current browser session, but when the Owner leaves or reloads the page, rows already saved in `approvals-<batch>.json` should no longer be shown.
+The Propagate and Block buttons must remain explicit and sit below the row status. Basketed rows disappear immediately after the helper confirms success. Approved/rejected rows remain visible in the current browser session, but when the Owner leaves or reloads the page, rows already saved in `approvals-<batch>.json` should no longer be shown.
 
 ## Save Behavior
 

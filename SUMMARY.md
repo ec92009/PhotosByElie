@@ -6,8 +6,8 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/photosByElie`
 - Branch: `main`
-- Current visible build: `v81.4`
-- Local Owner page: `http://localhost:8000/owner.html?v=81.4`
+- Current visible build: `v81.5`
+- Local Owner page: `http://localhost:8000/owner.html?v=81.5`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -34,7 +34,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 14. Photo `20180322-0915-00173-e3b893dbea` was investigated for both H/X and orientation. It had an EXIF rotate-180 source flag, and the public preview had been regenerated upside down. The importer now recognizes numeric EXIF orientation values, and corrected 900/1800 previews were uploaded to remote R2.
 15. The title/keyword generator now invokes the selected Codex ladder model for each rework proposal instead of merely recording requested model metadata. Rework rows preserve prior rejected title/keywords and Owner comments as explicit model context.
 16. The latest successful nightly run generated batch `2026-05-19-230413-165Z` with `321` proposals: `221` Codex-backed rework rows and `100` ordinary new-photo rows. Two rework rows remain model-blocked and are kept rejected for future stronger tooling/context.
-17. The Owner review page Propagate button now propagates the reject note along with the reject decision, reject reasons are visible mutually exclusive horizontal checkbox options with short labels and editable note templates, video review rows show the usual play-triangle overlay, and the visible build/cache-bust version is `v81.3`.
+17. The Owner review page Propagate button now propagates the reject note along with the reject decision, reject reasons are visible mutually exclusive horizontal checkbox options with short labels and editable note templates, video review rows show the usual play-triangle overlay, and rows can be basketed with a visible Block button or `H`/`X`.
 18. Handoff sweep published 239 approved rows from batch `2026-05-19-230413-165Z` into the public SQLite catalog, compressed catalog, homepage data, Worker catalog, and approval audit JSON.
 19. The nightly title/keyword run and the improved review UI are an excellent key step: many remaining rejects should be treated as useful evidence that the next quality jump needs stronger picture recognition, more reliable visual clues, and better use of nearby-shoot context rather than another local-rule cycle.
 
@@ -47,6 +47,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v80.0`, the latest Owner title/keyword approvals are published into the public SQLite catalog and Worker catalog. The `2026-05-16` approval batch now contains 89 approved rows, with fresh Portugal, Bilbao, and Paris metadata carried into buyer-facing catalog data.
 - In `v81.3`, the Owner title/keyword review flow can load pending proposals directly from `Owner.sqlite`, preserve useful existing keywords as a floor when generating proposals, split approval writes by proposal batch, show the pending review count from the Owner dashboard, show proposal model provenance, clear stale proposed rows that are already blocked or missing from the public catalog, propagate reject notes with propagated rejection decisions, offer mutually exclusive horizontal reject-reason checkboxes that prefill editable notes, preserve previous reject notes unchanged on load, and mark video rows with a centered play badge.
 - In `v81.4`, 239 approved title/keyword rows from batch `2026-05-19-230413-165Z` are published into the buyer-facing SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
+- In `v81.5`, the Owner title/keyword review rows expose the existing H/X Waste Basket path as a visible Block button beside Propagate, so bad proposals can be blocked during the same review pass.
 - Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Owner rejection patterns from this run should now feed the next model/tooling iteration. Rejects caused by insufficient visual understanding, missing landmark/context clues, or weak nearby-shoot inference are not a reason to weaken the workflow; they are the backlog signal for better picture recognition and richer per-photo context.
 - Current title/keyword review counts after the successful nightly generation were accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.

@@ -37,8 +37,15 @@ body.best-mix-current-home .topbar{
 }
 
 body.best-mix-current-home .site-footer{
+  background:transparent;
+  border-top:0;
+  padding:0 0 clamp(12px,2dvh,24px);
+}
+
+body.best-mix-current-home .site-footer .shell{
   background:rgba(250,250,250,.17);
-  border-top-color:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.12);
+  padding:28px var(--panel-inline);
   backdrop-filter:blur(10px);
 }
 

@@ -195,6 +195,10 @@ body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .
   display:none;
 }
 
+body.best-mix-current-home .home-discovery-keyboard-hint{
+  display:none !important;
+}
+
 body.best-mix-current-home .home-discovery-head{
   align-items:center;
   margin-bottom:0;

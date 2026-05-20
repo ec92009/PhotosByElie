@@ -4,9 +4,9 @@ Last updated: 2026-05-20
 
 ## Current Facts
 
-- Current visible build: `v81.0`.
+- Current visible build: `v81.1`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=81.0`.
+- Local Owner page: `http://localhost:8000/owner.html?v=81.1`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Title/keyword review state is SQLite-backed in `assets/owner-actions/Owner.sqlite`; the latest generated review batch is `2026-05-19-230413-165Z`.
 - Current Owner title/keyword counts: accepted `711`, submitted-unchecked `321`, rejected `2`, parked `14`.

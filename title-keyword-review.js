@@ -192,6 +192,38 @@
     return publicMediaUrl(key);
   };
 
+  const videoExtensions = new Set(["mov", "mp4", "m4v", "webm"]);
+  const looksLikeVideoValue = (value) => {
+    const text = String(value || "").trim().toLowerCase();
+    if (!text) return false;
+    if (text === "video") return true;
+    return videoExtensions.has(text.replace(/^\./, ""));
+  };
+
+  const reviewItemIsVideo = (item) => {
+    if (window.photosByElieIsVideo?.(item) === true) return true;
+    const typedValues = [
+      item?.media?.type,
+      item?.type,
+      item?.source?.type,
+      item?.source?.file?.type,
+      item?.source?.media_type,
+      item?.source?.mediaType,
+      item?.current?.type,
+    ];
+    if (typedValues.some(looksLikeVideoValue)) return true;
+    const pathValues = [
+      item?.source?.file?.path,
+      item?.source?.path,
+      item?.media?.path,
+      item?.current?.path,
+    ];
+    return pathValues.some((value) => {
+      const match = String(value || "").toLowerCase().match(/\.([a-z0-9]+)(?:[?#].*)?$/);
+      return match ? videoExtensions.has(match[1]) : false;
+    });
+  };
+
   const savedReviewIds = (payload) => {
     const ids = new Set();
     for (const key of ["approvals", "rejections", "blocked"]) {
@@ -329,6 +361,7 @@
       const galleryKey = String(item?.gallery?.key || item?.gallery_key || item?.gallery?.label || galleryLabel || "");
       const captureTime = parseCaptureTime(capture);
       const thumb = reviewThumbUrl(item);
+      const isVideo = reviewItemIsVideo(item);
       const fetchPriority = index < 12 ? "high" : "low";
       const currentKeywords = Array.isArray(item?.current?.keywords) ? item.current.keywords.join(", ") : String(item?.current?.keywords_raw || "");
       const currentKeywordList = normalizeKeywords(currentKeywords, blacklist);
@@ -352,10 +385,16 @@
         : rawProposedKeywords;
       const proposedKeywords = proposedKeywordList.join(", ");
       const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
+      const previewClasses = [
+        "title-keyword-review-preview",
+        thumb ? "has-image" : "is-missing-preview",
+        isVideo ? "is-video" : "",
+      ].filter(Boolean).join(" ");
       return `
         <article class="title-keyword-review-row" data-review-photo-id="${escapeHtml(photoId)}" data-review-batch-id="${escapeHtml(photoBatchId)}" data-review-gallery-key="${escapeHtml(galleryKey)}" data-review-capture-time="${Number.isFinite(captureTime) ? String(captureTime) : ""}" data-review-detail-href="${escapeHtml(href)}" tabindex="0">
-          <a class="title-keyword-review-preview ${thumb ? "has-image" : "is-missing-preview"}" href="${escapeHtml(href)}" aria-label="Open photo ${escapeHtml(photoId)}">
+          <a class="${previewClasses}" href="${escapeHtml(href)}" aria-label="Open ${isVideo ? "video" : "photo"} ${escapeHtml(photoId)}">
             ${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(title || photoId)}" loading="eager" decoding="async" fetchpriority="${fetchPriority}"/>` : `<span class="unknown-missing-preview">No preview</span>`}
+            ${isVideo ? `<span class="title-keyword-review-video-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
           </a>
           <div class="title-keyword-review-current">
             <p class="eyebrow">${escapeHtml(galleryLabel || "Photo")}${capture ? ` / ${escapeHtml(capture)}` : ""}</p>

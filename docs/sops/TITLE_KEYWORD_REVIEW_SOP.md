@@ -61,6 +61,8 @@ Rows autosave as soon as the Owner approves, rejects, comments, or manually edit
 
 For blacklist-only cleanup rows, the current/original keyword field should visually mark removed blacklisted terms so the Owner can see that the proposed change is only keyword cleanup.
 
+Video rows must show the standard centered play-triangle overlay on the preview thumbnail so they are visually distinguishable during review.
+
 The page supports row selection. Single-click selects a row without opening detail. Double-click opens detail. Keyboard shortcuts apply to the selected row:
 
 - `A`: approve.

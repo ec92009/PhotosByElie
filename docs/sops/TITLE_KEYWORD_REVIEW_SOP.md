@@ -55,7 +55,7 @@ Columns:
 3. Proposed title/keywords.
 4. Decision controls.
 
-Decision controls include an Approve checkbox plus visible reject-reason checkboxes: Incorrect, Use keywords as clues, Needs detail, Use other photos in the shoot as clues, and Other. Choosing any reject reason checks Reject internally, unchecks Approve, fills the reject note, and leaves the note editable. Typing in the reject comment checks Reject and unchecks Approve. Clicking Approve does not erase the comment; it greys/read-onlys the comment until the Owner interacts with the comment again, which reactivates Reject.
+Decision controls include an Approve checkbox plus visible horizontal, mutually exclusive reject-reason checkboxes: incorrect, use keywords, add details, use shoot, and other. Choosing any reject reason checks Reject internally, unchecks Approve, fills the reject note, leaves the note editable, and clears the other reject reasons. Existing previous reject notes must load unchanged for the Owner to edit or expand upon. Typing in the reject comment checks Reject and unchecks Approve. Clicking Approve does not erase the comment; it greys/read-onlys the comment until the Owner interacts with the comment again, which reactivates Reject.
 
 Rows autosave as soon as the Owner approves, rejects, comments, or manually edits a proposed title/keyword. Editing proposed title/keywords automatically checks Approve. Save approvals at the top/bottom remains as a retry/manual batch-save control. Keep the header back-to-top control.
 

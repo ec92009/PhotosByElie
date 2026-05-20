@@ -18,13 +18,20 @@
     "title_keywords_parked",
   ]);
   const rejectReasons = [
-    { value: "incorrect", label: "Incorrect", note: "incorrect" },
-    { value: "keywords", label: "Use keywords as clues", note: "use the hints in the keywords to provide a decent title" },
-    { value: "detail", label: "Needs detail", note: "needs detail" },
-    { value: "shoot", label: "Use other photos in shoot as clues", note: "use other photos in the shoot as clues" },
-    { value: "other", label: "Other", note: "other: " },
+    { value: "incorrect", label: "incorrect", note: "this title is incorrect" },
+    { value: "keywords", label: "use keywords", note: "use the existing keywords as clues" },
+    { value: "detail", label: "add details", note: "dig up more details" },
+    { value: "shoot", label: "use shoot", note: "use other photos in the 2-3 hour window for clues" },
+    { value: "other", label: "other", note: "what should change?" },
   ];
   const rejectReasonByValue = new Map(rejectReasons.map((reason) => [reason.value, reason]));
+  const legacyRejectReasonNotes = new Map([
+    ["incorrect", "incorrect"],
+    ["use the hints in the keywords to provide a decent title", "keywords"],
+    ["needs detail", "detail"],
+    ["use other photos in the shoot as clues", "shoot"],
+    ["other:", "other"],
+  ]);
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/[&<>'\"]/g, (char) => ({
@@ -124,7 +131,7 @@
 
   const rejectReasonCheckboxesHtml = (selectedValue = "") => rejectReasons
     .map((reason) => `
-      <label class="title-keyword-review-reject-option">
+      <label class="title-keyword-review-reject-option" data-review-reject-option>
         <input type="checkbox" value="${escapeHtml(reason.value)}" data-review-reject-reason${reason.value === selectedValue ? " checked" : ""}/>
         <span>${escapeHtml(reason.label)}</span>
       </label>
@@ -136,6 +143,7 @@
     if (!normalized) return "";
     const exact = rejectReasons.find((reason) => reason.note.trim().toLowerCase() === normalized);
     if (exact) return exact.value;
+    if (legacyRejectReasonNotes.has(normalized)) return legacyRejectReasonNotes.get(normalized) || "";
     if (normalized.startsWith("other:")) return "other";
     return "other";
   };
@@ -828,6 +836,7 @@
       const approve = card.querySelector("[data-review-approve]");
       const reject = card.querySelector("[data-review-reject]");
       const rejectReasonInputs = [...card.querySelectorAll("[data-review-reject-reason]")];
+      const rejectReasonOptions = [...card.querySelectorAll("[data-review-reject-option]")];
       const comment = card.querySelector("[data-review-reject-comment]");
       const titleInput = card.querySelector("[data-review-title]");
       const keywordInput = card.querySelector("[data-review-keywords]");
@@ -892,17 +901,28 @@
         if (reject.checked) activateReject({ saveDelay: 150 });
         else setRowStatus(card, "Not saved");
       });
+      const chooseRejectReason = (input) => {
+        if (!input || input.disabled) return;
+        activateReject({ reasonValue: input.value, fillNote: true, saveDelay: 150 });
+      };
+      rejectReasonOptions.forEach((option) => {
+        option.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          chooseRejectReason(option.querySelector("[data-review-reject-reason]"));
+        });
+        option.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          chooseRejectReason(option.querySelector("[data-review-reject-reason]"));
+        });
+      });
       rejectReasonInputs.forEach((input) => {
-        input.addEventListener("change", () => {
-          if (input.checked) {
-            activateReject({ reasonValue: input.value, fillNote: true, saveDelay: 150 });
-            return;
-          }
-          if (!checkedRejectReasonValue(card) && !String(comment?.value || "").trim()) {
-            if (reject) reject.checked = false;
-            syncDecisionState();
-            setRowStatus(card, "Not saved");
-          }
+        input.addEventListener("keydown", (event) => {
+          if (event.key !== " " && event.key !== "Enter") return;
+          event.preventDefault();
+          chooseRejectReason(input);
         });
       });
       comment?.addEventListener("input", () => {

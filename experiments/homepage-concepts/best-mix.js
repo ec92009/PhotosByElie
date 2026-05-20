@@ -7,11 +7,38 @@
       .map((section) => [section.dataset.bestMixSection, section])
   );
   const triggers = [...page.querySelectorAll("[data-best-mix-section-trigger]")];
+  const stack = page.querySelector("[data-home-stack]");
   const discovery = page.querySelector("[data-home-discovery]");
   const discoveryToggle = discovery?.querySelector("[data-best-mix-discovery-toggle]");
   const discoveryLabel = discovery?.querySelector("[data-best-mix-discovery-toggle-label]");
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
   let activeSection = "";
+  let stackShufflePlayed = false;
+
+  const shuffleStackOnce = () => {
+    if (stackShufflePlayed || reducedMotion || !stack?.children.length) return;
+    const cards = [...stack.querySelectorAll("[data-home-stack-card]")];
+    if (!cards.length) return;
+    stackShufflePlayed = true;
+    stack.dataset.stackShufflePlayed = "true";
+    cards.forEach((card) => {
+      card.style.setProperty("--stack-final-transform", getComputedStyle(card).transform);
+    });
+    stack.classList.remove("is-stack-shuffling");
+    window.requestAnimationFrame(() => {
+      stack.classList.add("is-stack-shuffling");
+      window.setTimeout(() => stack.classList.remove("is-stack-shuffling"), 2600);
+    });
+  };
+
+  if (stack) {
+    shuffleStackOnce();
+    const stackObserver = new MutationObserver(() => {
+      shuffleStackOnce();
+      if (stackShufflePlayed) stackObserver.disconnect();
+    });
+    stackObserver.observe(stack, { childList: true });
+  }
 
   const setDiscoveryExpanded = (expanded) => {
     if (!discovery || !discoveryToggle) return;

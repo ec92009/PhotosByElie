@@ -49,6 +49,18 @@ body.best-mix-current-home .site-footer .shell{
   backdrop-filter:blur(10px);
 }
 
+body.best-mix-current-home .site-footer,
+body.best-mix-current-home .site-footer .footer-note,
+body.best-mix-current-home .site-footer .footer-nav a{
+  color:rgba(17,17,17,.94);
+  font-weight:800;
+  text-shadow:0 1px 14px rgba(255,255,255,.72);
+}
+
+body.best-mix-current-home .site-footer .footer-nav a:hover{
+  color:#000;
+}
+
 body.best-mix-current-home .version-switch,
 body.best-mix-current-home .theme-toggle,
 body.best-mix-current-home .language-toggle,
@@ -112,13 +124,22 @@ body.best-mix-current-home .home-discovery-head .gallery-status{
 }
 
 body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
   cursor:pointer;
+  min-height:112px;
   padding-block:clamp(18px,3dvh,30px);
 }
 
 body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed:hover{
   border-color:rgba(255,255,255,.28);
   box-shadow:0 16px 36px rgba(0,0,0,.12);
+}
+
+body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed h2,
+body.best-mix-current-home .photo-carousel-panel.is-best-mix-section-collapsed .photo-head{
+  margin-bottom:0;
 }
 
 body.best-mix-current-home .featured-campaigns.is-best-mix-section-collapsed .featured-campaign-grid,

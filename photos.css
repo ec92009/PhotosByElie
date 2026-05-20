@@ -4723,6 +4723,14 @@ body.detail-fullscreen-active{
   margin:0;
   color:var(--muted);
 }
+.owner-panel .empty-basket{
+  color:var(--text);
+  font-weight:700;
+  background:var(--glass-card-bg);
+  border:1px solid var(--glass-border);
+  padding:12px 14px;
+  text-shadow:var(--glass-copy-shadow);
+}
 .basket-list{
   display:grid;
   gap:10px;

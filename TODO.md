@@ -4,9 +4,9 @@ Last updated: 2026-05-20
 
 ## Current Facts
 
-- Current visible build: `v81.15`.
+- Current visible build: `v81.17`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=81.15`.
+- Local Owner page: `http://localhost:8001/owner.html?v=81.17`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Title/keyword review state is SQLite-backed in ignored local `assets/owner-actions/Owner.sqlite`.
 - Title/keyword batch/review JSON under `assets/owner-actions/title-keyword-review-queue/` is ignored/local review-page and audit output. It is no longer tracked as deployable public metadata.

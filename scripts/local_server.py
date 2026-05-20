@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import datetime, timezone
+import hashlib
 import os
 import ipaddress
 import json
@@ -32,6 +33,7 @@ R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
 R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
 R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
+IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
 OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
@@ -53,6 +55,8 @@ REAL_ESTATE_IMPORT_ROOT = Path("tmp/real-estate-import")
 REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
+IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
+IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
@@ -75,6 +79,12 @@ R2_SWEEP_SKIPPABLE_PHASES = {
     "discard-final",
     "test",
     "validate",
+}
+IMPORT_SOURCE_ROOTS = {
+    "camera": Path("/Volumes/Saturn/Pictures/LR/Camera"),
+    "apple-photo-albums": Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
+    "leonardo": Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
+    "real-estate": REAL_ESTATE_SOURCE_ROOT,
 }
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
@@ -171,6 +181,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_COVERAGE_PATH:
             self._handle_r2_coverage()
             return
+        if path == IMPORT_SOURCE_THUMB_PATH:
+            self._handle_import_source_thumb()
+            return
         if path == REAL_ESTATE_OWNER_PATH:
             self._handle_real_estate_owner()
             return
@@ -251,6 +264,33 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd(), resolve_sources=False)})
+
+    def _handle_import_source_thumb(self) -> None:
+        if not self._is_loopback_request():
+            self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
+            return
+        query = parse_qs(urlparse(self.path).query)
+        phase = (query.get("phase") or [""])[0]
+        relative = (query.get("path") or [""])[0]
+        source_hint = (query.get("source") or [""])[0]
+        try:
+            source = _resolve_import_source_thumbnail(phase, relative, source_hint)
+            thumb = _import_source_thumbnail_path(source)
+        except ValueError as error:
+            message = str(error)
+            status = HTTPStatus.UNSUPPORTED_MEDIA_TYPE if "not a still image" in message else HTTPStatus.BAD_REQUEST
+            self.send_error(status, message)
+            return
+        except (OSError, FileNotFoundError) as error:
+            self.send_error(HTTPStatus.NOT_FOUND, str(error))
+            return
+        body = thumb.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _handle_r2_fix(self) -> None:
         if not self._is_loopback_request():
@@ -2071,6 +2111,65 @@ def _record_r2_item_lifecycle(item: UploadItem, lifecycle_state: str, source: st
             conn.close()
     except Exception:
         return
+
+
+def _import_source_allowed_roots() -> list[Path]:
+    roots = [root for root in IMPORT_SOURCE_ROOTS.values()]
+    roots.extend(SOURCE_ROOT_CANDIDATES)
+    return roots
+
+
+def _resolve_import_source_thumbnail(phase: str, relative: str, source_hint: str) -> Path:
+    if source_hint:
+        source = Path(source_hint).expanduser().resolve()
+        allowed = False
+        for root in _import_source_allowed_roots():
+            try:
+                root_resolved = root.resolve()
+            except OSError:
+                continue
+            if source == root_resolved or root_resolved in source.parents:
+                allowed = True
+                break
+        if not allowed:
+            raise ValueError("source path is outside known import roots")
+    else:
+        root = IMPORT_SOURCE_ROOTS.get(phase)
+        if not root or not relative:
+            raise ValueError("missing import source thumbnail parameters")
+        relative_path = Path(relative)
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            raise ValueError("unsafe source path")
+        root_resolved = root.resolve()
+        source = (root_resolved / relative_path).resolve()
+        if source != root_resolved and root_resolved not in source.parents:
+            raise ValueError("unsafe source path")
+    if not source.exists() or not source.is_file():
+        raise FileNotFoundError(str(source))
+    if source.suffix.lower() not in IMPORT_SOURCE_IMAGE_EXTENSIONS:
+        raise ValueError("source is not a still image")
+    return source
+
+
+def _import_source_thumbnail_path(source: Path) -> Path:
+    stat = source.stat()
+    token = hashlib.sha256(f"{source}:{stat.st_size}:{stat.st_mtime_ns}".encode("utf-8")).hexdigest()
+    thumb = IMPORT_SOURCE_THUMB_ROOT / f"{token}.jpg"
+    if thumb.exists():
+        return thumb
+    thumb.parent.mkdir(parents=True, exist_ok=True)
+    tmp = thumb.with_suffix(".tmp.jpg")
+    result = subprocess.run(
+        ["sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", "-Z", "96", str(source), "--out", str(tmp)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0 or not tmp.exists():
+        tmp.unlink(missing_ok=True)
+        raise OSError((result.stderr or result.stdout or "thumbnail render failed").strip())
+    tmp.replace(thumb)
+    return thumb
 
 
 def _r2_task_snapshot() -> list[dict]:

@@ -6,8 +6,8 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v81.20`
-- Local Owner page: `http://localhost:8001/owner.html?v=81.20`
+- Current visible build: `v81.21`
+- Local Owner page: `http://localhost:8001/owner.html?v=81.21`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -77,6 +77,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.19`, gallery Fill mode uses uniform square image cells while Fit mode keeps natural-ratio masonry.
 - In `v81.20`, Start Imports no longer short-circuits on clean catalog coverage; Fill in gaps remains the coverage-only repair action.
 - In `v81.20`, Camera, Apple Photos, and Leonardo source rows keep a source checkpoint, and Real Estate upload resume records include file size plus mtime. Edited source files are treated as new import work and force fresh renders/uploads under the existing R2 keys.
+- In `v81.21`, Camera, Apple Photos, AI/Leonardo, and Real Estate import lanes use the same Owner matrix renderer, matrix rows can show tiny localhost-only source thumbnails, and a sweep stopped by skipped source lanes displays the catalog export as blocked/needs attention instead of making later phases look like they are waiting forever.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

@@ -213,6 +213,12 @@
     "test",
     "validate",
   ]);
+  const SWEEP_PHASE_ALIASES = new Map([
+    ["catalog-blocked", "catalog"],
+  ]);
+  const normalizeSweepPhaseKey = (phaseKey = "") => (
+    SWEEP_PHASE_ALIASES.get(String(phaseKey || "")) || String(phaseKey || "")
+  );
 
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!ownerAuth?.enabled) return;
@@ -1426,7 +1432,8 @@
     const deleteContext = lastMatch(/^DELETE_CONTEXT\s+({.+})$/);
     const deleteContextPayload = parsePayloadMatch(deleteContext);
     const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
-    const importPhaseKey = phaseMarker?.match?.[1] || "";
+    const rawPhaseKey = phaseMarker?.match?.[1] || "";
+    const importPhaseKey = normalizeSweepPhaseKey(rawPhaseKey);
     const scopedImport = PHOTO_IMPORT_PHASES.has(importPhaseKey);
     const importStartIndex = scopedImport ? phaseMarker.index + 1 : 0;
     const scanPattern = /^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/;
@@ -1471,6 +1478,8 @@
           id,
           index: importPhotoRows.length + 1,
           relativePath: "",
+          sourcePath: "",
+          phaseKey: importPhaseKey,
           country: "",
           mediaType: "",
           status: "running",
@@ -1483,6 +1492,8 @@
       if (payload.eventIndex !== undefined) row.lastEventIndex = Number(payload.eventIndex) || row.lastEventIndex || 0;
       if (payload.index) row.index = Number(payload.index) || row.index;
       if (payload.relativePath) row.relativePath = String(payload.relativePath);
+      if (payload.sourcePath) row.sourcePath = String(payload.sourcePath);
+      if (importPhaseKey) row.phaseKey = importPhaseKey;
       if (payload.country) row.country = String(payload.country);
       if (payload.mediaType) row.mediaType = String(payload.mediaType);
       if (payload.status) {
@@ -1517,10 +1528,10 @@
       }
     }
     const doneKeys = new Set(lines
-      .map((line) => line.match(/^SWEEP_DONE\s+(\S+)/)?.[1])
+      .map((line) => normalizeSweepPhaseKey(line.match(/^SWEEP_DONE\s+(\S+)/)?.[1]))
       .filter(Boolean));
     const skippedKeys = new Set(lines
-      .map((line) => line.match(/^SWEEP_SKIP\s+(\S+)/)?.[1])
+      .map((line) => normalizeSweepPhaseKey(line.match(/^SWEEP_SKIP\s+(\S+)/)?.[1]))
       .filter(Boolean));
     const skipTerminatedError = rawError && skippedKeys.size && /\bSIGTERM\b|Signals\.SIGTERM/i.test(rawError.line);
     const error = skipTerminatedError ? null : rawError;
@@ -1540,7 +1551,7 @@
     if (manifest) phase = "Refreshing private delivery manifest";
     if (phaseMarker) phase = phaseMarker.match[2];
     if (error) phase = "Needs attention";
-    let phaseKey = phaseMarker?.match?.[1] || "";
+    let phaseKey = normalizeSweepPhaseKey(rawPhaseKey);
     if (!phaseKey) {
       if (upload || processed || manifest) phaseKey = "private";
       else if (importPlanPayload || importDonePayload) phaseKey = "gap-fill";
@@ -1553,6 +1564,7 @@
       latest,
       phase,
       phaseKey,
+      rawPhaseKey,
       doneKeys,
       skippedKeys,
       deleted,
@@ -1681,7 +1693,7 @@
     };
   };
 
-  const cameraImportProgress = (logSummary, task = null) => {
+  const sourceImportProgress = (logSummary, task = null) => {
     const rows = Array.isArray(logSummary?.importPhotoRows) ? logSummary.importPhotoRows : [];
     const finishedRows = rows.filter((row) => row.status === "done" || row.status === "error").length;
     const runningRow = rows.find((row) => row.status !== "done" && row.status !== "error") || null;
@@ -1755,10 +1767,8 @@
 
   const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
 
-  const sourceLaneAction = (phaseKey) => (
-    phaseKey === "real-estate"
-      ? "Checks configured client property folders, rebuilds public review context, and uploads expected RE preview/master keys."
-      : "Pipeline: scanner finds source files, planner checks metadata and trusted R2 coverage, worker only creates/uploads missing boxes."
+  const sourceLaneAction = () => (
+    "Pipeline: scanner finds source files, planner checks metadata and trusted R2 coverage, worker only creates/uploads missing boxes."
   );
 
   const sourceLaneDetailRows = (phaseKey, details = {}) => {
@@ -1786,7 +1796,7 @@
     return rows;
   };
 
-  const cameraImportProgressDetail = (progress, phaseKey = "camera") => {
+  const sourceImportProgressDetail = (progress, phaseKey = "camera") => {
     const sourceLabel = importSourceLabel(phaseKey);
     const gapSummary = coverageRepairGapSummary();
     if (!progress.selected) {
@@ -1920,13 +1930,13 @@
   const sourceLaneProgress = (phaseKey, logSummary = null, task = null) => (
     phaseKey === "real-estate" && !sourceLaneHasQueueProgress(logSummary)
       ? realEstateImportProgress(logSummary, task)
-      : cameraImportProgress(logSummary, task)
+      : sourceImportProgress(logSummary, task)
   );
 
   const sourceLaneProgressDetail = (phaseKey, progress) => (
     phaseKey === "real-estate" && progress.selected === undefined
       ? progress.detail
-      : cameraImportProgressDetail(progress, phaseKey)
+      : sourceImportProgressDetail(progress, phaseKey)
   );
 
   const sourceLaneProgressCountText = (phaseKey, progress = {}) => {
@@ -2105,7 +2115,33 @@
     `;
   };
 
-  const importMatrixHtml = (photos = []) => {
+  const importMatrixStillImagePath = (photo = {}) => (
+    /\.(jpe?g|png|tiff?|heic|heif|webp)$/i.test(String(photo.sourcePath || photo.relativePath || ""))
+  );
+
+  const importMatrixThumbnailUrl = (photo = {}, phaseKey = "") => {
+    if (!importMatrixStillImagePath(photo)) return "";
+    const params = new URLSearchParams();
+    const lane = photo.phaseKey || phaseKey || "";
+    if (lane) params.set("phase", lane);
+    if (photo.sourcePath) params.set("source", photo.sourcePath);
+    else if (photo.relativePath && PHOTO_IMPORT_PHASES.has(lane)) params.set("path", photo.relativePath);
+    if (!params.has("source") && !params.has("path")) return "";
+    return `/__photosbyelie/import-source-thumb?${params.toString()}`;
+  };
+
+  const importMatrixThumbHtml = (photo = {}, phaseKey = "") => {
+    const url = importMatrixThumbnailUrl(photo, phaseKey);
+    const fallback = String(photo.mediaType || "").toLowerCase() === "video" ? "Video" : "";
+    if (!url) return `<span class="owner-import-thumb owner-import-thumb-empty">${escapeHtml(fallback)}</span>`;
+    return `
+      <span class="owner-import-thumb">
+        <img src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.owner-import-thumb')?.classList.add('owner-import-thumb-empty');this.remove();">
+      </span>
+    `;
+  };
+
+  const importMatrixHtml = (photos = [], phaseKey = "") => {
     if (!photos.length) return "";
     const visibleInfo = importMatrixVisibleInfo(photos);
     const visibleRows = visibleInfo.rows;
@@ -2131,8 +2167,13 @@
             ${visibleRows.map((photo) => `
               <tr class="owner-import-matrix-photo-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
                 <th scope="rowgroup" colspan="${IMPORT_MATRIX_STEPS.length + 1}">
-                  <strong>${escapeHtml(photo.id)}</strong>
-                  <span>${escapeHtml(photo.relativePath || photo.country || "")}</span>
+                  <div class="owner-import-photo-label">
+                    ${importMatrixThumbHtml(photo, phaseKey)}
+                    <span class="owner-import-photo-copy">
+                      <strong>${escapeHtml(photo.id)}</strong>
+                      <span>${escapeHtml(photo.relativePath || photo.country || "")}</span>
+                    </span>
+                  </div>
                 </th>
               </tr>
               <tr class="owner-import-matrix-step-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
@@ -2178,8 +2219,8 @@
   };
 
   const phaseLabelForKey = (phaseKey, task = null) => (
-    phaseListForTask(task).find((phase) => phase.key === phaseKey)?.label
-    || SWEEP_PHASES.find((phase) => phase.key === phaseKey)?.label
+    phaseListForTask(task).find((phase) => phase.key === normalizeSweepPhaseKey(phaseKey))?.label
+    || SWEEP_PHASES.find((phase) => phase.key === normalizeSweepPhaseKey(phaseKey))?.label
     || ""
   );
 
@@ -2196,12 +2237,18 @@
     const coverageIncomplete = task.operation !== "gap-fill" && !active && task.state === "done" && r2CoverageOk === false;
     const failed = Number(task.failed || 0) > 0 || task.state === "failed" || coverageIncomplete;
     const complete = !active && !failed && task.state === "done";
-    const activeKey = coverageIncomplete ? "coverage" : (active && task?.currentPhaseKey) || logSummary?.phaseKey || task?.currentPhaseKey || "prepare";
+    const taskPhaseKey = normalizeSweepPhaseKey(task?.currentPhaseKey || "");
+    const logPhaseKey = normalizeSweepPhaseKey(logSummary?.phaseKey || "");
+    const activeKey = coverageIncomplete
+      ? "coverage"
+      : active
+      ? (taskPhaseKey || logPhaseKey || "prepare")
+      : (logPhaseKey || taskPhaseKey || "prepare");
     const activeIndex = Math.max(0, phaseList.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
     const skippedKeys = new Set([
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
-      ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).filter(Boolean)),
+      ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
     ]);
     const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Progress bar counts", "Progress summary", "Upload progress", "Upload matrix", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
@@ -2226,7 +2273,7 @@
       const hasProgressNote = Boolean(progress.detail && !genericProgressDetails.has(progress.detail));
       const canExpand = (state === "done" || state === "failed") && (phaseRows.length || matrixRows.length || hasProgressNote);
       const showPhaseDetails = state === "running" || (canExpand && expandedSweepPhaseKeys.has(phase.key));
-      const matrixHtml = showPhaseDetails && matrixRows.length ? importMatrixHtml(matrixRows) : "";
+      const matrixHtml = showPhaseDetails && matrixRows.length ? importMatrixHtml(matrixRows, phase.key) : "";
       const hasMatrix = Boolean(matrixHtml);
       const detailHtml = showPhaseDetails && phaseRows.length
         ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
@@ -2267,9 +2314,25 @@
     const coverageIncomplete = !gapFill && !active && latest.state === "done" && r2CoverageOk === false;
     const failureCount = Number(latest.failed || 0);
     const failed = failureCount > 0 || latest.state === "failed" || coverageIncomplete;
-    const activePhaseKey = coverageIncomplete ? "coverage" : (active && latest.currentPhaseKey) || logSummary?.phaseKey || latest.currentPhaseKey || "prepare";
+    const latestPhaseKey = normalizeSweepPhaseKey(latest.currentPhaseKey || "");
+    const logPhaseKey = normalizeSweepPhaseKey(logSummary?.phaseKey || "");
+    const activePhaseKey = coverageIncomplete
+      ? "coverage"
+      : active
+      ? (latestPhaseKey || logPhaseKey || "prepare")
+      : (logPhaseKey || latestPhaseKey || "prepare");
     const activePhaseLabel = phaseLabelForKey(activePhaseKey, latest) || logSummary?.phase || "Current phase";
-    const logMatchesActivePhase = !active || !logSummary?.phaseKey || logSummary.phaseKey === activePhaseKey;
+    const logMatchesActivePhase = !active || !logSummary?.phaseKey || normalizeSweepPhaseKey(logSummary.phaseKey) === activePhaseKey;
+    const skippedPhaseKeys = new Set([
+      ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
+      ...((Array.isArray(latest?.skipPhases) ? latest.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
+    ]);
+    const skippedSourceLanes = [...skippedPhaseKeys].filter((key) => PHOTO_IMPORT_PHASES.has(key));
+    const catalogBlocked = !active && activePhaseKey === "catalog" && (
+      logSummary?.rawPhaseKey === "catalog-blocked"
+      || /Catalog export blocked/i.test(logSummary?.phase || "")
+      || /Catalog export blocked/i.test(logSummary?.latest || "")
+    );
     if (active) {
       if (latest.external_pid) {
         setText(r2Summary, activePhaseLabel
@@ -2287,6 +2350,8 @@
         ? "Fill in gaps stopped before all missing uploads completed."
         : coverageIncomplete
         ? `R2 repair finished, but coverage is still missing (${coverageMissingDetail()}).`
+        : catalogBlocked
+        ? "Catalog export was blocked because source imports were skipped or interrupted."
         : logSummary?.phase === "Needs attention"
         ? "R2 coverage repair needs attention."
         : "R2 coverage repair stopped before completion.");
@@ -2300,7 +2365,14 @@
       detailRowsByPhase.get(phaseKey).push([label, value]);
     };
     let lastPhotoId = "";
-    if (latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
+    if (active && latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
+    if (catalogBlocked) {
+      addPhaseRow("catalog", "Needs attention", "Catalog export was held back because one or more source import lanes were left unfinished.");
+      if (skippedSourceLanes.length) {
+        addPhaseRow("catalog", "Unfinished source lanes", skippedSourceLanes.map((key) => importSourceLabel(key)).join(", "));
+      }
+      addPhaseRow("catalog", "What happens", "Start Imports refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
+    }
     if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
       const visibleMatrixInfo = importMatrixVisibleInfo(logSummary.importPhotoRows);
       const visibleMatrixRows = visibleMatrixInfo.rows;
@@ -2794,6 +2866,8 @@
         id: String(item.photoId || item.id || ""),
         index: index + 1,
         relativePath: String(item.relativePath || item.sourceFile || ""),
+        sourcePath: String(item.sourcePath || ""),
+        phaseKey: "gap-fill",
         country: String(item.collectionKey || ""),
         mediaType: String(item.mediaType || ""),
         status: "pending",
@@ -2808,7 +2882,7 @@
       r2CoverageMissing.innerHTML = missingImportPhotos.length ? `
         <h3>Photos needing upload work</h3>
         <p>${escapeHtml(`${formatCount(missingImportPhotos.length)} incomplete photos: ${formatCount(masterCount)} need masters, ${formatCount(tripletCount)} need private JPG triplets, ${formatCount(previewCount)} need public previews.`)}</p>
-        ${importMatrixHtml(missingImportPhotos)}
+        ${importMatrixHtml(missingImportPhotos, "gap-fill")}
       ` : missingPrivateDelivery.length ? `
           <h3>Missing private delivery files</h3>
           <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Imports runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>

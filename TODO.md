@@ -4,9 +4,9 @@ Last updated: 2026-05-20
 
 ## Current Facts
 
-- Current visible build: `v81.20`.
+- Current visible build: `v81.21`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8001/owner.html?v=81.20`.
+- Local Owner page: `http://localhost:8001/owner.html?v=81.21`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
@@ -19,6 +19,7 @@ Last updated: 2026-05-20
 - The generator now uses a larger Owner-state subprocess buffer, filters internal marker keywords like `NotMyPhoto`, expands safe local keyword floors, and reports proposal quality counts before write/import.
 - Real Estate owner clients can save/edit/delete, discover media-bearing property folders, import available configured properties with count/total progress, publish sanitized contexts, dry-run/upload R2 objects, and prepare the Worker secret payload.
 - Start Imports scans the full fixed import anchors every time: Camera, Apple Photos, Leonardo, and Real Estate. It must not treat clean catalog coverage as proof that no new source files exist, and changed source files must re-render/re-upload even when their R2 keys already exist.
+- Import source lanes share the same Owner matrix/progress renderer. Skipped source lanes are unfinished, and a blocked catalog export is shown as the needs-attention phase rather than as silent downstream waiting.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
 - Apple Photos with faces remains off limits.
@@ -69,40 +70,44 @@ Last updated: 2026-05-20
 11. **Add Owner state-table browsing.**
     - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
 
-12. **Prove Stripe checkout in test mode.**
+12. **Split banned-photo R2 cleanup out of Start Imports.**
+    - Give the independent banned-photo R2 cleanup/double-check its own Owner button and dashboard lane.
+    - Keep Start Imports focused on source discovery plus missing/edited media processing for Camera, Apple Photos, Leonardo, and Real Estate.
+
+13. **Prove Stripe checkout in test mode.**
     - Configure Stripe test keys/webhook secret, test success/decline/3DS/replay, and confirm paid-only private download tokens.
 
-13. **Make checkout and order storage production-durable.**
+14. **Make checkout and order storage production-durable.**
     - Choose KV, D1, or a deliberate hybrid for orders, delivery keys, token events, and recovery.
 
-14. **Add browser-side ZIP assembly for paid mainline delivery.**
+15. **Add browser-side ZIP assembly for paid mainline delivery.**
     - Keep Worker delivery per-file; build a buyer-side ZIP from ready purchased files with per-file fallback.
 
-15. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+16. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
     - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-16. **Curate the first sellable storefront.**
+17. **Curate the first sellable storefront.**
     - Apply strong title/keyword approvals, block unsellable rows, and pick intentional featured collections/hero images.
 
-17. **Clarify the buyer offer.**
+18. **Clarify the buyer offer.**
     - Explain resolution tiers, licensing, delivery, refunds, custom licenses, and contact help in buyer language.
 
-18. **Add conversion analytics.**
+19. **Add conversion analytics.**
     - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-19. **Improve public discovery and SEO.**
+20. **Improve public discovery and SEO.**
     - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, sitemap, and structured data without Owner-only metadata.
 
-20. **Add frontend smoke tests for buyer and client paths.**
+21. **Add frontend smoke tests for buyer and client paths.**
     - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
 
-21. **Keep physical products behind Owner review.**
+22. **Keep physical products behind Owner review.**
     - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
 
-22. **Keep repo and media cleanup deliberate.**
+23. **Keep repo and media cleanup deliberate.**
     - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
 
-23. **Measure catalog transport cost before another conversion.**
+24. **Measure catalog transport cost before another conversion.**
     - Keep a normalized SQL-shaped JSON catalog on the might-be-nice list, not the active migration path.
     - Instrument plain SQLite fetch/decode, JS object materialization, gallery filter/search scans, and helper-side rebuild cost before deciding whether SQLite is too expensive.
     - Revisit JSON tables only if the measurements show meaningful runtime or rebuild overhead from the current SQLite-backed catalog path.

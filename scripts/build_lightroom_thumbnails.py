@@ -495,6 +495,7 @@ def emit_import_step(row: dict[str, Any], step: str, status: str = "done", **pay
         "STEP",
         photoId=str(row.get("id") or ""),
         relativePath=str(row.get("relative_path") or ""),
+        sourcePath=str(row.get("source_path_hint") or ""),
         mediaType=str(row.get("media_type") or ""),
         step=step,
         status=status,
@@ -2210,6 +2211,7 @@ def process_batch(
                 index=item_index,
                 photoId=slug,
                 relativePath=relative_path,
+                sourcePath=str(source),
                 country=gallery_country["slug"],
                 mediaType=media_type,
                 status="running",
@@ -2263,7 +2265,7 @@ def process_batch(
                     f"public {public_count} private-renders {private_render_count}",
                     flush=True,
                 )
-                emit_import_event("PHOTO_DONE", photoId=slug, status="done")
+                emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
             if selection_limit and rendered_count >= selection_limit:
                 break
         except Exception as exc:
@@ -2274,7 +2276,7 @@ def process_batch(
                 "failed_at": now_iso(),
             }
             append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
-            emit_import_event("PHOTO_DONE", photoId=photo_slug, relativePath=relative_path, status="error", error=str(exc))
+            emit_import_event("PHOTO_DONE", photoId=photo_slug, relativePath=relative_path, sourcePath=str(source), status="error", error=str(exc))
             print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
     return rendered_count
 
@@ -2469,6 +2471,7 @@ def main() -> int:
                 index=queued_index,
                 photoId=photo_id,
                 relativePath=relative_path,
+                sourcePath=str(source_path),
                 mediaType=plan_row["media_type"],
                 status="queued",
             )

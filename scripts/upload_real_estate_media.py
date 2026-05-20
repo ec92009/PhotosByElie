@@ -140,6 +140,7 @@ def build_photo_upload_groups(root: Path, manifest: dict[str, Any], scope: str, 
         group = {
             "photoId": photo_id,
             "relativePath": "/".join(part for part in [str(photo.get("album") or ""), str(photo.get("full") or "")] if part),
+            "sourcePath": str(real_estate.get("sourcePath") or ""),
             "mediaType": str((photo.get("media") or {}).get("type") or "photo") if isinstance(photo.get("media"), dict) else "photo",
             "master": [],
             "previews": [],
@@ -252,6 +253,7 @@ def emit_photo(enabled: bool, index: int, group: dict[str, Any], status: str) ->
         index=index,
         photoId=str(group.get("photoId") or ""),
         relativePath=str(group.get("relativePath") or ""),
+        sourcePath=str(group.get("sourcePath") or ""),
         mediaType=str(group.get("mediaType") or "photo"),
         status=status,
     )
@@ -261,6 +263,7 @@ def emit_step(enabled: bool, group: dict[str, Any], step: str, total: int = 0, c
     payload = {
         "photoId": str(group.get("photoId") or ""),
         "relativePath": str(group.get("relativePath") or ""),
+        "sourcePath": str(group.get("sourcePath") or ""),
         "mediaType": str(group.get("mediaType") or "photo"),
         "step": step,
         "status": status,
@@ -333,7 +336,14 @@ def upload_grouped(args: argparse.Namespace, root: Path, groups: list[dict[str, 
         emit_step(args.progress_json, group, "previews_uploaded", total=max(1, len(group["previews"])), completed=sum(1 for item in group["previews"] if item_upload_is_current(item, uploaded_records)))
         processed_photos += 1
         emit_import_event(args.progress_json, "QUEUE_PROGRESS", seen=total_photos, inspected=total_photos, queued=total_photos, alreadySelected=resumed_count, processed=processed_photos, active=0, queueDepth=max(0, total_photos - processed_photos))
-        emit_import_event(args.progress_json, "PHOTO_DONE", photoId=str(group.get("photoId") or ""), status="done" if failed == 0 else "error")
+        emit_import_event(
+            args.progress_json,
+            "PHOTO_DONE",
+            photoId=str(group.get("photoId") or ""),
+            relativePath=str(group.get("relativePath") or ""),
+            sourcePath=str(group.get("sourcePath") or ""),
+            status="done" if failed == 0 else "error",
+        )
         if failed:
             break
     return failed

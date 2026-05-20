@@ -108,8 +108,8 @@
       let frameIndex = 0;
       let intervalId = 0;
       let swapTimeout = 0;
-      const cycleMs = 680;
-      const swapMs = 90;
+      const cycleMs = 1020;
+      const swapMs = 135;
 
       const setFrame = (nextIndex, { animate = true } = {}) => {
         frameIndex = ((nextIndex % frames.length) + frames.length) % frames.length;

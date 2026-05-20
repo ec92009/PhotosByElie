@@ -102,7 +102,7 @@ body.best-mix-current-home .featured-campaign-card{
 
 body.best-mix-current-home .featured-campaign-card img{
   transform-origin:50% 50%;
-  transition:opacity .18s ease,transform .36s ease,filter .36s ease;
+  transition:opacity .27s ease,transform .54s ease,filter .54s ease;
   will-change:transform,opacity;
 }
 

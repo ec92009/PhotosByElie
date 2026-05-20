@@ -359,14 +359,19 @@ html[data-theme="light"] .photo-art.has-photo::after{
   font-weight:700;
 }
 .keyboard-hint{
-  margin:0;
-  padding:0 var(--panel-inline);
-  color:color-mix(in srgb,var(--muted) 84%,transparent);
+  margin:8px var(--panel-inline) 0;
+  padding:8px 10px;
+  border:1px solid var(--glass-border);
+  background:var(--glass-card-bg);
+  color:var(--text);
   font-size:.72rem;
   font-weight:800;
   letter-spacing:.04em;
   line-height:1.8;
+  text-shadow:var(--glass-copy-shadow);
   text-transform:uppercase;
+  backdrop-filter:blur(var(--glass-light-blur));
+  -webkit-backdrop-filter:blur(var(--glass-light-blur));
 }
 .keyboard-hint[hidden]{
   display:none;
@@ -377,14 +382,15 @@ html[data-theme="light"] .photo-art.has-photo::after{
   margin:0 2px;
   padding:1px 6px 2px;
   place-items:center;
-  border:1px solid color-mix(in srgb,var(--line) 76%,transparent);
+  border:1px solid var(--glass-border);
   border-radius:6px;
-  background:color-mix(in srgb,var(--surface) 78%,var(--bg) 22%);
+  background:var(--glass-field-bg);
   color:var(--text);
   font:inherit;
   font-size:.68rem;
   letter-spacing:.02em;
   line-height:1.35;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .22);
   text-transform:none;
 }
 .detail-keyboard-hint{
@@ -5515,7 +5521,6 @@ html[data-theme="light"] .detail-preview.has-image::after{
   background:color-mix(in srgb,var(--text) 90%,transparent);
 }
 .gallery-status,
-.keyboard-hint,
 .real-estate-muted,
 .real-estate-login-status,
 .real-estate-output-choice small,

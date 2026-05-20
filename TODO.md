@@ -4,9 +4,9 @@ Last updated: 2026-05-20
 
 ## Current Facts
 
-- Current visible build: `v81.18`.
+- Current visible build: `v81.19`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8001/owner.html?v=81.18`.
+- Local Owner page: `http://localhost:8001/owner.html?v=81.19`.
 - Current catalog scale: `6,324` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.

@@ -6,8 +6,8 @@ Date: 2026-05-20
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v81.18`
-- Local Owner page: `http://localhost:8001/owner.html?v=81.18`
+- Current visible build: `v81.19`
+- Local Owner page: `http://localhost:8001/owner.html?v=81.19`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,324` public media rows in the SQLite catalog.
@@ -74,6 +74,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - Owner review JSON under `assets/owner-actions/title-keyword-review-queue/` is now ignored/local. The helper and generator should keep treating it as derived localhost review-page/audit output, with `Owner.sqlite` as durable state.
 - In `v81.15`, the title/keyword generator has a durable buffer fix and local proposal-quality improvements, while the Real Estate owner UI can use discovered property folders and the client review output step summarizes selected projects.
 - In `v81.18`, public catalog loading and helper rebuilds use the plain SQLite catalog directly and stop generating or preferring the Brotli-compressed `.sqlite.br` artifact.
+- In `v81.19`, gallery Fill mode uses uniform square image cells while Fit mode keeps natural-ratio masonry.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

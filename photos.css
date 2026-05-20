@@ -3816,7 +3816,7 @@ body.commerce-page[data-fixed-header] .basket-total-band{
   fill:currentColor;
 }
 .mock-gallery[data-image-fit="fill"] .mock-photo{
-  aspect-ratio:var(--photo-aspect-ratio,1);
+  aspect-ratio:1;
   background:color-mix(in srgb,var(--surface-2) 72%,var(--bg));
 }
 .mock-gallery[data-image-fit="fill"] .mock-photo img{

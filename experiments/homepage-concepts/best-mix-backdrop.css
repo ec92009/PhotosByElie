@@ -95,6 +95,34 @@ body.best-mix-current-home .gallery-filter-bar select{
   backdrop-filter:blur(8px);
 }
 
+body.best-mix-current-home .featured-campaign-card{
+  overflow:hidden;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease;
+}
+
+body.best-mix-current-home .featured-campaign-card img{
+  transform-origin:50% 50%;
+  transition:opacity .18s ease,transform .36s ease,filter .36s ease;
+  will-change:transform,opacity;
+}
+
+body.best-mix-current-home .featured-campaign-card:is(:hover,:focus-visible,.is-preview-cycling){
+  border-color:rgba(255,255,255,.32);
+  background:rgba(255,255,255,.32);
+  box-shadow:0 18px 38px rgba(0,0,0,.16);
+  transform:translateY(-2px);
+}
+
+body.best-mix-current-home .featured-campaign-card:is(:hover,.is-preview-cycling) img{
+  filter:saturate(1.08) contrast(1.04);
+  transform:scale(1.045);
+}
+
+body.best-mix-current-home .featured-campaign-card img.is-preview-swapping{
+  opacity:.35;
+  transform:scale(1.075);
+}
+
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]{
   --stack-shuffle-x:0px;
   --stack-shuffle-y:0px;
@@ -149,7 +177,7 @@ body.best-mix-current-home .cta .btn[aria-expanded="true"]{
 }
 
 body.best-mix-current-home [data-best-mix-section] .eyebrow,
-body.best-mix-current-home .home-discovery-head .gallery-status{
+body.best-mix-current-home .home-discovery-status-row .gallery-status{
   display:inline-flex;
   width:max-content;
   max-width:100%;
@@ -191,6 +219,7 @@ body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .
 body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-results,
 body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-keyboard-hint,
 body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .gallery-pagination-controls,
+body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-status-row,
 body.best-mix-current-home .home-discovery-panel.is-best-mix-section-collapsed .home-discovery-toggle{
   display:none;
 }
@@ -209,10 +238,6 @@ body.best-mix-current-home .home-discovery-actions{
   align-items:center;
   justify-content:flex-end;
   gap:12px;
-}
-
-body.best-mix-current-home .home-discovery-actions .gallery-status{
-  margin:0;
 }
 
 body.best-mix-current-home .home-discovery-toggle{
@@ -239,9 +264,21 @@ body.best-mix-current-home .home-discovery-panel:not(.is-discovery-collapsed) .h
   margin-top:16px;
 }
 
+body.best-mix-current-home .home-discovery-status-row{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+
+body.best-mix-current-home .home-discovery-status-row .gallery-status{
+  margin:0;
+  text-align:right;
+}
+
 body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-controls,
 body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-results,
 body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-keyboard-hint,
+body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .home-discovery-status-row,
 body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .gallery-pagination-controls{
   display:none;
 }
@@ -282,7 +319,11 @@ body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .gallery
     flex-direction:column;
   }
 
-  body.best-mix-current-home .home-discovery-actions .gallery-status{
+  body.best-mix-current-home .home-discovery-status-row{
+    justify-content:flex-start;
+  }
+
+  body.best-mix-current-home .home-discovery-status-row .gallery-status{
     text-align:left;
   }
 }
@@ -291,5 +332,10 @@ body.best-mix-current-home .home-discovery-panel.is-discovery-collapsed .gallery
   body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]{
     animation:none;
     opacity:1;
+  }
+
+  body.best-mix-current-home .featured-campaign-card,
+  body.best-mix-current-home .featured-campaign-card img{
+    transition:none;
   }
 }

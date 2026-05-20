@@ -95,6 +95,22 @@ body.best-mix-current-home .cta .btn[aria-expanded="true"]{
   box-shadow:0 14px 30px rgba(0,0,0,.2);
 }
 
+body.best-mix-current-home [data-best-mix-section] .eyebrow,
+body.best-mix-current-home .home-discovery-head .gallery-status{
+  display:inline-flex;
+  width:max-content;
+  max-width:100%;
+  align-items:center;
+  color:rgba(17,17,17,.92);
+  background:rgba(255,255,255,.34);
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:999px;
+  padding:5px 10px;
+  font-weight:900;
+  text-shadow:0 1px 14px rgba(255,255,255,.68);
+  backdrop-filter:blur(8px);
+}
+
 body.best-mix-current-home [data-best-mix-section].is-best-mix-section-collapsed{
   cursor:pointer;
   padding-block:clamp(18px,3dvh,30px);

@@ -1,0 +1,65 @@
+html,
+body.best-mix-current-home{
+  min-height:100%;
+  background:#111;
+}
+
+body.best-mix-current-home{
+  position:relative;
+  isolation:isolate;
+}
+
+body.best-mix-current-home::before,
+body.best-mix-current-home::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+}
+
+body.best-mix-current-home::before{
+  z-index:-2;
+  background:url("../../tmp/homepage-concepts/nerja-original-bg.jpg") center top / cover no-repeat;
+  filter:saturate(1.42) contrast(1.1) brightness(.86);
+}
+
+body.best-mix-current-home::after{
+  z-index:-1;
+  background:
+    linear-gradient(180deg,rgba(250,250,250,.24),rgba(250,250,250,.06) 40%,rgba(250,250,250,.3)),
+    linear-gradient(90deg,rgba(255,255,255,.34),rgba(255,255,255,.1) 54%,rgba(255,255,255,.03));
+}
+
+body.best-mix-current-home .topbar{
+  background:rgba(250,250,250,.34);
+  border-bottom-color:rgba(255,255,255,.24);
+  backdrop-filter:blur(10px);
+}
+
+body.best-mix-current-home .version-switch,
+body.best-mix-current-home .theme-toggle,
+body.best-mix-current-home .language-toggle,
+body.best-mix-current-home .site-version-badge,
+body.best-mix-current-home .btn.secondary{
+  background:rgba(255,255,255,.46);
+  border-color:rgba(255,255,255,.34);
+  backdrop-filter:blur(10px);
+}
+
+body.best-mix-current-home .photo-hero,
+body.best-mix-current-home .featured-campaigns,
+body.best-mix-current-home .home-discovery-panel,
+body.best-mix-current-home .photo-carousel-panel{
+  background:rgba(250,250,250,.38);
+  border-color:rgba(255,255,255,.24);
+  backdrop-filter:blur(10px);
+}
+
+body.best-mix-current-home .featured-campaign-card,
+body.best-mix-current-home .gallery-filter-bar label,
+body.best-mix-current-home .gallery-filter-bar input,
+body.best-mix-current-home .gallery-filter-bar select{
+  background:rgba(255,255,255,.52);
+  border-color:rgba(255,255,255,.34);
+  backdrop-filter:blur(8px);
+}

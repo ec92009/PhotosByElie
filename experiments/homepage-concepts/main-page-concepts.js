@@ -3,6 +3,10 @@ const conceptButtons = [...document.querySelectorAll('[data-concept-target]')];
 const conceptPages = [...document.querySelectorAll('.concept-page')];
 
 function showConcept(target) {
+  if (target === 'best-mix') {
+    window.location.href = './best-mix.html?fresh=1&t=' + Date.now();
+    return;
+  }
   root.dataset.concept = target;
   conceptButtons.forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.conceptTarget === target));
@@ -44,6 +48,8 @@ if (stage && !prefersReducedMotion.matches) {
 }
 
 const initialConcept = new URLSearchParams(window.location.search).get('concept');
-if (initialConcept && conceptPages.some((page) => page.id === initialConcept)) {
+if (initialConcept === 'best-mix') {
+  window.location.replace('./best-mix.html?fresh=1&t=' + Date.now());
+} else if (initialConcept && conceptPages.some((page) => page.id === initialConcept)) {
   showConcept(initialConcept);
 }

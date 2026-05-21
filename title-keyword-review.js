@@ -522,7 +522,7 @@
         blocked: blocked ? { photo_id: photoId, batch_id: rowBatchId, blocked: true } : null,
         approved,
         rejected,
-        blocked,
+        blockedSelected: blocked,
       };
     };
 

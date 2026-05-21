@@ -761,19 +761,24 @@ def _clear_stale_title_keyword_review_rows(repo_root: Path, conn) -> dict:
         return {"blocked": 0, "not_found": 0}
     catalog_ids = set(_catalog_rows_by_media_id(repo_root, media_ids))
     discarded_ids = _discarded_photo_ids(repo_root)
+    hidden_payload = _read_json_file(repo_root / HIDDEN_BLACKLIST_PATH, {})
+    hidden_ids = set()
+    if isinstance(hidden_payload, dict) and isinstance(hidden_payload.get("photo_ids"), list):
+        hidden_ids = {str(photo_id) for photo_id in hidden_payload["photo_ids"] if photo_id}
     by_batch: dict[str, dict[str, list[dict]]] = {}
     for row in rows:
         media_id = str(row["media_id"] or "").strip()
         if not media_id:
             continue
+        is_hidden = media_id in hidden_ids
         is_discarded = media_id in discarded_ids
         is_missing = media_id not in catalog_ids
-        if not is_discarded and not is_missing:
+        if not is_hidden and not is_discarded and not is_missing:
             continue
         batch_id = str(row["latest_proposed_batch_id"] or "stale-title-keyword-review").strip()
         bucket = by_batch.setdefault(batch_id, {"blocked": [], "not_found": []})
         item = {"photo_id": media_id, "batch_id": batch_id}
-        if is_discarded:
+        if is_hidden or is_discarded:
             bucket["blocked"].append({**item, "blocked": True})
         else:
             bucket["not_found"].append(item)
@@ -3999,7 +4004,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         normalized_blocked = []
         for item in blocked:
             if not isinstance(item, dict):
-                continue
+                raise ValueError("blocked items must be JSON objects")
             current_photo_id = str(item.get("photo_id") or "").strip()
             if not current_photo_id or item.get("blocked") is not True:
                 continue

@@ -80,6 +80,7 @@ export const createStripeWebhookSignature = async ({
 export const createStripeClient = ({
   secretKey,
   webhookSecret,
+  statementDescriptorSuffix = "ORDER",
   apiVersion,
   apiBase = STRIPE_API_BASE,
   fetchImpl = globalThis.fetch,
@@ -110,6 +111,7 @@ export const createStripeClient = ({
     appendParam(params, "metadata[order_id]", orderId);
     appendParam(params, "payment_intent_data[description]", receiptDescription);
     appendParam(params, "payment_intent_data[receipt_email]", buyerEmail);
+    appendParam(params, "payment_intent_data[statement_descriptor_suffix]", statementDescriptorSuffix);
     appendParam(params, "payment_intent_data[metadata][order_id]", orderId);
     appendLineItems(params, lineItems, currency);
 

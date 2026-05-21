@@ -324,6 +324,8 @@ test("real Stripe client creates hosted Checkout Sessions with order metadata", 
   assert.equal(stripeRequest.params.get("mode"), "payment");
   assert.equal(stripeRequest.params.get("client_reference_id"), "PBE-20260508-TEST");
   assert.equal(stripeRequest.params.get("metadata[order_id]"), "PBE-20260508-TEST");
+  assert.equal(stripeRequest.params.get("payment_intent_data[receipt_email]"), "buyer@example.com");
+  assert.equal(stripeRequest.params.get("payment_intent_data[statement_descriptor_suffix]"), "ORDER");
   assert.equal(stripeRequest.params.get("payment_intent_data[metadata][order_id]"), "PBE-20260508-TEST");
   assert.equal(stripeRequest.params.get("line_items[0][price_data][unit_amount]"), "5500");
   assert.equal(stripeRequest.params.get("line_items[0][price_data][product_data][metadata][photo_id]"), "photo-1");

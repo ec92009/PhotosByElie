@@ -64,6 +64,7 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `CHECKOUT_SESSION_TTL_DAYS`: optional KV retention for Checkout Session lookup entries; default is 90.
 - `DOWNLOAD_TOKEN_TTL_DAYS`: optional buyer download-token availability window; default is 30.
 - `DOWNLOAD_TOKEN_MAX_DOWNLOADS`: optional successful-download limit per token; default is 100.
+- `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX`: optional card statement descriptor suffix for Checkout PaymentIntents; default is `ORDER`. The Stripe Dashboard still owns the business descriptor prefix, logo, color, support details, and public receipt branding.
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 

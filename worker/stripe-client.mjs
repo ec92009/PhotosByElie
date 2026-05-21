@@ -109,6 +109,7 @@ export const createStripeClient = ({
     appendParam(params, "cancel_url", cancelUrl);
     appendParam(params, "metadata[order_id]", orderId);
     appendParam(params, "payment_intent_data[description]", receiptDescription);
+    appendParam(params, "payment_intent_data[receipt_email]", buyerEmail);
     appendParam(params, "payment_intent_data[metadata][order_id]", orderId);
     appendLineItems(params, lineItems, currency);
 

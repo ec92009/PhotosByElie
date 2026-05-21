@@ -4536,6 +4536,39 @@ body.detail-fullscreen-active{
   margin:0;
   color:var(--muted);
 }
+.order-lookup-form{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr)) auto;
+  gap:10px;
+  align-items:end;
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  padding:12px;
+}
+.order-lookup-form[hidden]{
+  display:none;
+}
+.order-lookup-form label{
+  display:grid;
+  gap:6px;
+  min-width:0;
+}
+.order-lookup-form span{
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.order-lookup-form input{
+  width:100%;
+  min-width:0;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  padding:10px 11px;
+  font:800 .92rem/1.25 inherit;
+}
 .order-phase-label{
   justify-self:start;
   border:1px solid color-mix(in srgb,#2d6b56 62%,var(--line));
@@ -5119,6 +5152,7 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .order-summary{
     grid-template-columns:1fr;
   }
+  .order-lookup-form,
   .order-detail-grid,
   .order-line{
     grid-template-columns:1fr;
@@ -5576,6 +5610,7 @@ html[data-theme="light"] .detail-preview.has-image::after{
 .real-estate-draft-position,
 .real-estate-draft-actions button,
 .order-email-draft,
+.order-lookup-form input,
 .order-copy-field textarea,
 .mock-checkout input{
   background:var(--glass-field-bg);

@@ -16,6 +16,9 @@ const refreshButton = document.querySelector("[data-order-refresh]");
 const embeddedWarning = document.querySelector("[data-embedded-browser-warning]");
 const openBrowserLink = document.querySelector("[data-open-browser-link]");
 const copyBrowserLink = document.querySelector("[data-copy-browser-link]");
+const orderLookup = document.querySelector("[data-order-lookup]");
+const orderLookupId = document.querySelector("[data-order-lookup-id]");
+const orderLookupEmail = document.querySelector("[data-order-lookup-email]");
 let currentZipPath = "";
 let currentDownloadHref = "";
 let refreshTimer = null;
@@ -71,9 +74,10 @@ const workerBaseUrl = () => {
   return configured || "http://localhost:8787";
 };
 
-const orderId = () => params.get("id") || checkoutState().orderId || "";
-const buyerEmail = () => params.get("email") || checkoutState().email || "";
-const checkoutSessionId = () => params.get("session_id") || checkoutState().checkoutSessionId || "";
+const currentParams = () => new URLSearchParams(window.location.search);
+const orderId = () => currentParams().get("id") || checkoutState().orderId || "";
+const buyerEmail = () => currentParams().get("email") || checkoutState().email || "";
+const checkoutSessionId = () => currentParams().get("session_id") || checkoutState().checkoutSessionId || "";
 const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
@@ -88,6 +92,19 @@ const bytesLabel = (value) => {
     unit += 1;
   }
   return `${amount >= 10 || unit === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[unit]}`;
+};
+
+const dateTimeLabel = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 };
 
 const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(workerBaseUrl());
@@ -119,6 +136,8 @@ const deliveryRowsFor = (order) => {
         downloadUrl: readyFile?.downloadUrl || "",
         bytes: readyFile?.bytes || 0,
         contentType: readyFile?.contentType || "application/octet-stream",
+        expiresAt: readyFile?.expiresAt || "",
+        downloadLimit: readyFile?.downloadLimit || null,
         ready: Boolean(readyFile?.downloadUrl),
       });
     }
@@ -167,6 +186,14 @@ const syncEmbeddedBrowserWarning = () => {
   if (!embeddedWarning || !embedded?.detected) return;
   embeddedWarning.hidden = false;
   if (openBrowserLink) openBrowserLink.href = embedded.externalUrl;
+};
+
+const syncOrderLookup = (visible) => {
+  if (!orderLookup) return;
+  orderLookup.hidden = !visible;
+  if (!visible) return;
+  if (orderLookupId && !orderLookupId.value) orderLookupId.value = orderId();
+  if (orderLookupEmail && !orderLookupEmail.value) orderLookupEmail.value = buyerEmail();
 };
 
 const statusText = {
@@ -233,6 +260,7 @@ const scheduleOrderRefresh = (order) => {
 
 const renderOrder = (order) => {
   syncEmbeddedBrowserWarning();
+  syncOrderLookup(false);
   currentDeliveryFiles = deliveryRowsFor(order);
   const copy = phaseCopy(order);
   heading.textContent = copy.heading || statusText[order.status] || order.status;
@@ -280,6 +308,7 @@ const renderOrder = (order) => {
               <strong>${escapeText(file.name)}</strong>
               <small>${escapeText(file.collection || "")}${file.collection ? " · " : ""}${escapeText(file.title || file.photoId || "")}</small>
               <small>${escapeText(file.productLabel || file.productId || "")}${file.bytes ? ` · ${escapeText(bytesLabel(file.bytes))}` : ""}</small>
+              ${file.expiresAt ? `<small>${escapeText(t("order.download_available_until", { date: dateTimeLabel(file.expiresAt) }))}</small>` : ""}
               <progress value="0" max="100" data-file-progress="${index}"></progress>
             </div>
             <output data-file-status="${index}">${escapeText(file.ready ? t("order.file_ready") : (order.status === "delivery_failed" ? t("order.file_needs_attention") : t("order.file_preparing")))}</output>
@@ -393,6 +422,7 @@ const loadOrder = async () => {
       status.textContent = t("order.refreshed");
       return;
     } catch (error) {
+      syncOrderLookup(true);
       heading.textContent = t("order.unavailable");
       message.textContent = error.message;
       setProgress("");
@@ -405,6 +435,7 @@ const loadOrder = async () => {
     }
   }
   if (!id || !email) {
+    syncOrderLookup(true);
     heading.textContent = t("order.details_needed");
     message.textContent = t("order.details_message");
     setProgress("");
@@ -428,6 +459,7 @@ const loadOrder = async () => {
       status.textContent = t("order.cached");
       return;
     }
+    syncOrderLookup(true);
     heading.textContent = t("order.unavailable");
     message.textContent = error.message;
     setProgress("");
@@ -440,6 +472,20 @@ const loadOrder = async () => {
 };
 
 refreshButton?.addEventListener("click", loadOrder);
+orderLookup?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const id = String(orderLookupId?.value || "").trim();
+  const email = String(orderLookupEmail?.value || "").trim();
+  if (!id || !email) {
+    status.textContent = t("order.lookup_required");
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("id", id);
+  url.searchParams.set("email", email);
+  url.searchParams.delete("session_id");
+  window.location.href = url.href;
+});
 copyBrowserLink?.addEventListener("click", async () => {
   const embedded = window.photosByElieEmbeddedBrowser;
   const copied = await embedded?.copyText?.(embedded.externalUrl);

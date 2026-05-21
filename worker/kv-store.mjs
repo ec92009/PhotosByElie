@@ -5,19 +5,31 @@ const jsonGet = async (namespace, key) => {
   return clone(value);
 };
 
-const jsonPut = async (namespace, key, value) => {
-  await namespace.put(key, JSON.stringify(value));
+const putOptions = (ttlSeconds) => {
+  const expirationTtl = Number(ttlSeconds || 0);
+  return Number.isFinite(expirationTtl) && expirationTtl >= 60
+    ? { expirationTtl: Math.floor(expirationTtl) }
+    : undefined;
+};
+
+const jsonPut = async (namespace, key, value, options = undefined) => {
+  await namespace.put(key, JSON.stringify(value), options);
   return clone(value);
 };
 
-export const createKvStore = ({ namespace, prefix = "pbe" } = {}) => {
+export const createKvStore = ({
+  namespace,
+  prefix = "pbe",
+  checkoutSessionTtlSeconds = 60 * 60 * 24 * 90,
+  downloadTtlSeconds = 60 * 60 * 24 * 31,
+} = {}) => {
   if (!namespace) throw new Error("createKvStore requires a KV namespace binding.");
 
   const key = (type, id) => `${prefix}:${type}:${id}`;
 
   const putOrder = async (order) => {
     await jsonPut(namespace, key("orders", order.id), order);
-    if (order.checkoutSessionId) await namespace.put(key("checkout", order.checkoutSessionId), order.id);
+    if (order.checkoutSessionId) await namespace.put(key("checkout", order.checkoutSessionId), order.id, putOptions(checkoutSessionTtlSeconds));
     return clone(order);
   };
 
@@ -35,7 +47,7 @@ export const createKvStore = ({ namespace, prefix = "pbe" } = {}) => {
     return putOrder(next);
   };
 
-  const putDownload = async (download) => jsonPut(namespace, key("downloads", download.token), download);
+  const putDownload = async (download) => jsonPut(namespace, key("downloads", download.token), download, putOptions(downloadTtlSeconds));
   const getDownload = async (token) => jsonGet(namespace, key("downloads", token));
 
   const recordDownload = async (token, downloadedAt) => {

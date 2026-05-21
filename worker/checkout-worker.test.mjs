@@ -437,6 +437,62 @@ test("download endpoint returns a mock signed R2 URL and allows repeat downloads
   assert.equal(repeatedResponse.status, 200);
 });
 
+test("download endpoint enforces token expiry and download limits", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  let currentNow = new Date("2026-05-07T12:00:00.000Z");
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => currentNow,
+    randomUUID,
+    downloadTokenTtlSeconds: 60,
+    downloadTokenMaxDownloads: 2,
+  });
+  const photoId = firstDeliverablePhotoId(catalog);
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  const paid = await payResponse.json();
+  const token = paid.order.delivery.downloadUrl.split("/").pop();
+
+  const firstDownloadResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
+  assert.equal(firstDownloadResponse.status, 200);
+  const firstDownload = await firstDownloadResponse.json();
+  assert.equal(firstDownload.download.expiresAt, "2026-05-07T12:01:00.000Z");
+  assert.equal((await worker.fetch(new Request(`https://worker.test/download/${token}`))).status, 200);
+  const limitedResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
+  assert.equal(limitedResponse.status, 429);
+
+  const expiringWorker = createPhotosByElieWorker({
+    catalog,
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    now: () => currentNow,
+    randomUUID,
+    downloadTokenTtlSeconds: 60,
+  });
+  const expiringCheckoutResponse = await expiringWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const expiringCheckout = await expiringCheckoutResponse.json();
+  const expiringPayResponse = await expiringWorker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: expiringCheckout.checkout.sessionId,
+  }));
+  const expiringPaid = await expiringPayResponse.json();
+  const expiringToken = expiringPaid.order.delivery.downloadUrl.split("/").pop();
+  currentNow = new Date("2026-05-07T12:01:01.000Z");
+  const expiredResponse = await expiringWorker.fetch(new Request(`https://worker.test/download/${expiringToken}`));
+  assert.equal(expiredResponse.status, 410);
+});
+
 test("local ZIP delivery creates a real ZIP from a developed source", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();

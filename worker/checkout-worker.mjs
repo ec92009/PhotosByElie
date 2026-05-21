@@ -3,6 +3,8 @@ import { createMockStripeClient } from "./mock-stripe.mjs";
 
 const ORDER_CURRENCY = "usd";
 const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
+const DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
+const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body, null, 2), {
   status,
@@ -305,6 +307,8 @@ const publicOrder = (order) => ({
       bytes: file.bytes || 0,
       contentType: file.contentType || "application/octet-stream",
       cacheHit: file.cacheHit,
+      expiresAt: file.expiresAt || null,
+      downloadLimit: Number(file.downloadLimit || 0) || null,
     })),
   } : null,
   deliveryError: order.deliveryError ? {
@@ -339,6 +343,63 @@ const defaultDelivery = ({ now, randomUUID } = {}) => ({
   },
 });
 
+const boundedPositiveInteger = (value, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : fallback;
+};
+
+const isoAfterSeconds = (date, seconds) =>
+  new Date(date.getTime() + (boundedPositiveInteger(seconds, 0) * 1000)).toISOString();
+
+const isExpiredAt = (value, nowDate) => {
+  if (!value) return false;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && timestamp <= nowDate.getTime();
+};
+
+const downloadLimitReached = (record) => {
+  const limit = Number(record?.downloadLimit || 0);
+  return Number.isFinite(limit) && limit > 0 && Number(record.downloadCount || 0) >= limit;
+};
+
+const withDownloadPolicy = (file, { expiresAt, downloadLimit }) => ({
+  ...file,
+  expiresAt,
+  downloadLimit,
+});
+
+const appendDownloadEvent = (order, record, downloadedAt) => {
+  const event = {
+    token: record.token,
+    photoId: record.photoId || null,
+    productId: record.productId || null,
+    filename: record.filename || null,
+    downloadedAt,
+    downloadCount: Number(record.downloadCount || 0) + 1,
+  };
+  const downloadEvents = [...(Array.isArray(order.downloadEvents) ? order.downloadEvents : []), event].slice(-100);
+  const next = {
+    ...order,
+    downloadEvents,
+    updatedAt: downloadedAt,
+  };
+  if (next.delivery?.files?.length && record.photoId && record.productId) {
+    next.delivery = {
+      ...next.delivery,
+      files: next.delivery.files.map((file) =>
+        file.photoId === record.photoId && file.productId === record.productId
+          ? {
+            ...file,
+            downloadCount: event.downloadCount,
+            lastDownloadAt: downloadedAt,
+          }
+          : file
+      ),
+    };
+  }
+  return next;
+};
+
 export const createPhotosByElieWorker = ({
   catalog,
   store = createMemoryStore(),
@@ -351,10 +412,20 @@ export const createPhotosByElieWorker = ({
   cancelUrl = "https://photosbyelie.com/basket.html?checkout=cancelled",
   mockStripeEnabled = true,
   realEstateOriginals = null,
+  downloadTokenTtlSeconds = DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS,
+  downloadTokenMaxDownloads = DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS,
 } = {}) => {
   if (!catalog) throw new Error("createPhotosByElieWorker requires a catalog index.");
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
   const stripeProvider = stripe.provider || "stripe";
+  const downloadPolicy = () => {
+    const nowDate = now();
+    const ttlSeconds = boundedPositiveInteger(downloadTokenTtlSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS);
+    return {
+      expiresAt: isoAfterSeconds(nowDate, ttlSeconds),
+      downloadLimit: boundedPositiveInteger(downloadTokenMaxDownloads, DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS),
+    };
+  };
 
   const createCheckout = async (request, checkoutMode) => {
     const payload = await parseJson(request);
@@ -380,11 +451,7 @@ export const createPhotosByElieWorker = ({
         updatedAt: createdAt,
       });
     }
-    const receiptDescription = [
-      `PhotosByElie order ${orderId}.`,
-      `Your download is usually ready within about 10 minutes at ${ordersUrl}.`,
-      `Use order number ${orderId} and the email used at checkout.`,
-    ].join(" ");
+    const receiptDescription = `Photos By Elie order ${orderId}. Download or recover files at ${ordersUrl} with this order number and checkout email.`;
 
     const checkoutSession = await stripe.createCheckoutSession({
       orderId,
@@ -480,6 +547,10 @@ export const createPhotosByElieWorker = ({
       throw error;
     }
     const readyAt = now().toISOString();
+    const policy = downloadPolicy();
+    const deliveryFiles = Array.isArray(deliveryResult.files)
+      ? deliveryResult.files.map((file) => withDownloadPolicy(file, policy))
+      : [];
     const ready = {
       ...preparing,
       status: "ready",
@@ -487,14 +558,14 @@ export const createPhotosByElieWorker = ({
         zipKey: deliveryResult.zipKey,
         downloadUrl: deliveryResult.downloadUrl,
         readyAt: deliveryResult.readyAt || readyAt,
-        files: deliveryResult.files || [],
+        files: deliveryFiles,
         items: deliveryResult.items || [],
       },
       updatedAt: readyAt,
     };
     await store.putOrder(ready);
-    if (Array.isArray(deliveryResult.files) && deliveryResult.files.length) {
-      await Promise.all(deliveryResult.files.map((file) => store.putDownload({
+    if (deliveryFiles.length) {
+      await Promise.all(deliveryFiles.map((file) => store.putDownload({
         token: file.token,
         orderId: ready.id,
         bucket: file.bucket,
@@ -505,6 +576,8 @@ export const createPhotosByElieWorker = ({
         photoId: file.photoId,
         productId: file.productId,
         createdAt: readyAt,
+        expiresAt: file.expiresAt,
+        downloadLimit: file.downloadLimit,
         downloadCount: 0,
       })));
     } else if (deliveryResult.token) {
@@ -513,6 +586,8 @@ export const createPhotosByElieWorker = ({
         orderId: ready.id,
         zipKey: deliveryResult.zipKey,
         createdAt: readyAt,
+        expiresAt: policy.expiresAt,
+        downloadLimit: policy.downloadLimit,
         downloadCount: 0,
       });
     }
@@ -601,19 +676,35 @@ export const createPhotosByElieWorker = ({
     const downloadRecord = await store.getDownload(token);
     if (!downloadRecord) return errorJson(404, "unknown_download", "Download link was not found.");
     const nowDate = now();
-    await store.recordDownload(token, nowDate.toISOString());
-    if (typeof deliveryClient.getDownloadResponse === "function") {
-      return deliveryClient.getDownloadResponse(downloadRecord);
+    if (isExpiredAt(downloadRecord.expiresAt, nowDate)) {
+      return errorJson(410, "download_expired", "This download link has expired. Use your order email and order number to request a fresh delivery link.");
     }
-    return json({
-      download: {
-        orderId: downloadRecord.orderId,
-        zipKey: downloadRecord.zipKey,
-        localZipPath: String(downloadRecord.zipKey || "").startsWith("/") ? downloadRecord.zipKey : null,
-        expiresInSeconds: 900,
-        mockSignedUrl: `mock-r2://${downloadRecord.zipKey}?token=${encodeURIComponent(token)}`,
-      },
-    });
+    if (downloadLimitReached(downloadRecord)) {
+      return errorJson(429, "download_limit_reached", "This download link has reached its download limit. Contact Photos By Elie for help with the order.");
+    }
+    let response;
+    if (typeof deliveryClient.getDownloadResponse === "function") {
+      response = await deliveryClient.getDownloadResponse(downloadRecord);
+    } else {
+      response = json({
+        download: {
+          orderId: downloadRecord.orderId,
+          zipKey: downloadRecord.zipKey,
+          localZipPath: String(downloadRecord.zipKey || "").startsWith("/") ? downloadRecord.zipKey : null,
+          expiresAt: downloadRecord.expiresAt || null,
+          expiresInSeconds: 900,
+          mockSignedUrl: `mock-r2://${downloadRecord.zipKey}?token=${encodeURIComponent(token)}`,
+        },
+      });
+    }
+    if (response.status < 400) {
+      const downloadedAt = nowDate.toISOString();
+      const updatedDownload = await store.recordDownload(token, downloadedAt);
+      if (updatedDownload?.orderId && typeof store.updateOrder === "function") {
+        await store.updateOrder(updatedDownload.orderId, (order) => appendDownloadEvent(order, downloadRecord, downloadedAt));
+      }
+    }
+    return response;
   };
 
   const createRealEstateOriginalsSession = async (request) => {

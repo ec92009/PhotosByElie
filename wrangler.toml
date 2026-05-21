@@ -6,6 +6,9 @@ compatibility_date = "2026-05-08"
 PUBLIC_SITE_URL = "https://ec92009.github.io/PhotosByElie"
 MOCK_STRIPE_ENABLED = "true"
 KV_PREFIX = "pbe"
+CHECKOUT_SESSION_TTL_DAYS = "90"
+DOWNLOAD_TOKEN_TTL_DAYS = "30"
+DOWNLOAD_TOKEN_MAX_DOWNLOADS = "100"
 
 [[kv_namespaces]]
 binding = "ORDERS_KV"

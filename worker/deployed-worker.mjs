@@ -13,6 +13,13 @@ const requiredBinding = (env, key) => {
   return env[key];
 };
 
+const positiveInt = (value, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : fallback;
+};
+
+const daysToSeconds = (value, fallbackDays) => positiveInt(value, fallbackDays) * 24 * 60 * 60;
+
 const cleanRealEstateGallery = (gallery = {}) => {
   const key = String(gallery.key || "").trim();
   if (!key) return null;
@@ -90,6 +97,8 @@ export default {
     }
 
     const publicSiteUrl = env.PUBLIC_SITE_URL || "https://ec92009.github.io/PhotosByElie";
+    const downloadTokenTtlSeconds = daysToSeconds(env.DOWNLOAD_TOKEN_TTL_DAYS, 30);
+    const downloadTokenMaxDownloads = positiveInt(env.DOWNLOAD_TOKEN_MAX_DOWNLOADS, 100);
     const realStripeEnabled = Boolean(env.STRIPE_SECRET_KEY);
     const stripe = realStripeEnabled
       ? createStripeClient({
@@ -104,6 +113,8 @@ export default {
     const store = createKvStore({
       namespace: requiredBinding(env, "ORDERS_KV"),
       prefix: env.KV_PREFIX || "pbe",
+      checkoutSessionTtlSeconds: daysToSeconds(env.CHECKOUT_SESSION_TTL_DAYS, 90),
+      downloadTtlSeconds: downloadTokenTtlSeconds + (24 * 60 * 60),
     });
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
     const worker = createPhotosByElieWorker({
@@ -123,6 +134,8 @@ export default {
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,
       cancelUrl: `${publicSiteUrl}/basket.html?checkout=cancelled`,
       mockStripeEnabled: !realStripeEnabled && env.MOCK_STRIPE_ENABLED !== "false",
+      downloadTokenTtlSeconds,
+      downloadTokenMaxDownloads,
     });
     return worker.fetch(request);
   },

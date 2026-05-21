@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v82.5`
+- Current visible build: `v82.7`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `297c572d photosbyelie: add title keyword review batch 2026-05-19-230413`, `49471506 photosbyelie: publish title keyword review updates`, and `6ec82489 photosbyelie: tighten title keyword review workflow`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
@@ -55,6 +55,7 @@ for remote execution.
 - `v82.1` keeps the documented Nerja Best Mix glass alpha/frosting recipe, harmonizes shared filter/control heights, and stabilizes the homepage photo-stack entrance animation.
 - `v82.2` changes the first-open gallery density fallback to 3 columns while preserving any saved user density choice.
 - `v82.5` publishes the latest Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and durable discarded-photo tombstones.
+- `v82.7` hardens buyer order recovery and delivery links: `order.html` can look up an order by order ID and checkout email, Worker download tokens carry expiry/limit metadata, successful downloads are recorded on the order, and Stripe Checkout receives the buyer email for receipts.
 
 ## First Commands On A Machine
 
@@ -94,9 +95,9 @@ cd /Users/ecohen/Dev/PhotosByElie
    - Test successful payment, 3D Secure/authentication-required payment, declined card, verified webhook, private R2 per-file delivery, order page download, and failure states.
 
 3. **Make checkout and delivery production-durable.**
-   - Choose D1 vs KV for order state.
+   - Choose D1 vs KV for longer-term order state.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
-   - Rate-limit downloads.
+   - Current KV defaults retain checkout-session lookup keys for 90 days, keep download tokens available for 30 days, and allow 100 successful downloads per token unless Worker environment values override them.
    - Make receipt/order/download copy explicit and trustworthy.
 
 4. **Package the buyer offer.**

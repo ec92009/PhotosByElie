@@ -6,7 +6,7 @@ Date: 2026-05-21
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v82.5`
+- Current visible build: `v82.7`
 - Local Owner page: `http://localhost:8000/owner.html?v=82.5`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
@@ -53,6 +53,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 31. A batch-summary preservation bug surfaced when no-change review marking overwrote the new batch's count row with zeros. `owner_state_db.py` now preserves existing nonzero batch counts when later decision-only/no-change writes touch the same batch, and the local row for `2026-05-20-185753-222Z` was repaired by re-importing the generated batch view.
 32. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,239` rows and moving `4,476` photo IDs into durable discarded state.
 33. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,019` rows and moving `4,696` photo IDs into durable discarded state.
+34. Handoff sweep prepared the checkout/order hardening work for handoff as `v82.7`: order recovery now accepts order ID plus checkout email on `order.html`, Worker download tokens expose expiry/limit metadata, successful downloads append order events, Stripe Checkout receives the buyer email for receipts, and Worker KV/token defaults are documented.
 
 ## Current Operational Notes
 
@@ -84,6 +85,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v82.1`, the Nerja glass treatment keeps the documented Best Mix alpha/frosting values, shared filter/control heights are normalized, and the homepage photo-stack entrance animation is stabilized so it does not restart midway or jiggle at the end.
 - In `v82.2`, the first-open gallery density fallback is 3 columns; saved owner/viewer density choices still win after a user changes the grid.
 - In `v82.5`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-photo tombstones reflect the latest Owner discard/tombstone state: `6,019` active public rows and `4,696` discarded photo IDs.
+- In `v82.7`, buyer order recovery and delivery links are more durable: the order page can look up an order by order ID and checkout email, per-file delivery rows show link availability when present, Worker download tokens enforce expiry/download limits, successful downloads are appended to the order event history, and Stripe receipt metadata includes the buyer email.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

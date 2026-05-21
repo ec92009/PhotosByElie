@@ -126,6 +126,7 @@ from owner_state_db import backfill_r2_object_metadata, connect as owner_db_conn
 from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db  # noqa: E402
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
+from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 
 
@@ -1174,6 +1175,48 @@ def _merge_title_keyword_review_record(repo_root: Path, batch_id: str, payload_o
     }
     _write_json_file(approvals_path, merged)
     return approvals_path, merged
+
+
+def _clear_title_keyword_review_block_record(
+    repo_root: Path,
+    batch_id: str,
+    photo_ids: list[str],
+    decided_at: str,
+) -> dict:
+    normalized_ids = {str(photo_id or "").strip() for photo_id in photo_ids}
+    normalized_ids.discard("")
+    approvals_path = repo_root / TITLE_KEYWORD_REVIEW_ROOT / f"approvals-{batch_id}.json"
+    existing = _read_json_file(approvals_path, {})
+    if not normalized_ids or not isinstance(existing, dict):
+        return {"path": approvals_path.relative_to(repo_root).as_posix(), "removed_count": 0, "wrote": False}
+    blocked = existing.get("blocked", [])
+    if not isinstance(blocked, list):
+        blocked = []
+    remaining = []
+    removed_count = 0
+    for item in blocked:
+        if not isinstance(item, dict):
+            remaining.append(item)
+            continue
+        photo_id = str(item.get("photo_id") or "").strip()
+        if photo_id in normalized_ids:
+            removed_count += 1
+            continue
+        remaining.append(item)
+    if not removed_count:
+        return {"path": approvals_path.relative_to(repo_root).as_posix(), "removed_count": 0, "wrote": False}
+    updated = {
+        **existing,
+        "batch_id": batch_id,
+        "blocked": remaining,
+        "updated_at": decided_at,
+    }
+    _write_json_file(approvals_path, updated)
+    return {
+        "path": approvals_path.relative_to(repo_root).as_posix(),
+        "removed_count": removed_count,
+        "wrote": True,
+    }
 
 
 def _record_country_assignments(repo_root: Path, target_slug: str, moved: list[dict], skipped: list[dict]) -> dict:
@@ -3871,6 +3914,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
+        "clear-title-keyword-review-block",
         "save-keyword-blacklist",
     }:
         raise ValueError("unsupported photo action")
@@ -4021,6 +4065,32 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
 
     if action == "save-keyword-blacklist":
         return _save_keyword_blacklist(repo_root, payload)
+
+    if action == "clear-title-keyword-review-block":
+        batch_id = str(payload.get("batch_id") or "").strip()
+        if not batch_id:
+            raise ValueError("batch_id must be a non-empty string")
+        now = datetime.now(timezone.utc).isoformat()
+        db_result = clear_title_keyword_review_blocks_db(
+            repo_root,
+            batch_id,
+            [photo_id],
+            decided_at=now,
+        )
+        record_result = _clear_title_keyword_review_block_record(repo_root, batch_id, [photo_id], now)
+        return {
+            "ok": True,
+            "action": action,
+            "photo_id": photo_id,
+            "batch_id": batch_id,
+            "db": db_result.get("db", ""),
+            "unblocked_count": db_result.get("unblocked", 0),
+            "missing_count": db_result.get("missing", 0),
+            "skipped_count": db_result.get("skipped", 0),
+            "decisions_deleted": db_result.get("decisions_deleted", 0),
+            "path": record_result.get("path", ""),
+            "record_removed_count": record_result.get("removed_count", 0),
+        }
 
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)

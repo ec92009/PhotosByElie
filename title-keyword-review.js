@@ -697,11 +697,74 @@
         return null;
       }
       savedTargets.forEach(({ card }) => {
+        const block = card.querySelector("[data-review-block]");
         card.classList.add("is-owner-actioned");
+        card.dataset.reviewBlockSaved = "1";
         setBlockedControlsDisabled(card, true);
+        if (block) {
+          block.checked = true;
+          block.disabled = false;
+        }
         setRowStatus(card, "Blocked", "saved");
       });
       return { count: savedTargets.length, result };
+    };
+
+    const isAlreadyUnhiddenError = (error) => /photo not found in Hidden/i.test(String(error?.message || ""));
+
+    const saveUnblockedTarget = async (photoId, card) => {
+      window.clearTimeout(rowSaveTimers.get(photoId));
+      setRowStatus(card, "Unblocking...", "saving");
+      const block = card.querySelector("[data-review-block]");
+      if (block) block.disabled = true;
+      let restoreResult = null;
+      let alreadyRestored = false;
+      try {
+        restoreResult = await postPhotoActionPayload({ action: "undo-hide", photo_id: photoId });
+      } catch (error) {
+        if (!isAlreadyUnhiddenError(error)) {
+          const message = error?.message || "Could not restore photo from the Waste Basket.";
+          if (block) {
+            block.checked = true;
+            block.disabled = false;
+          }
+          setRowStatus(card, "Unblock failed", "error", message);
+          throw error;
+        }
+        alreadyRestored = true;
+      }
+      if (!restoreResult && !alreadyRestored) {
+        setRowStatus(card, "Auth required", "error");
+        return null;
+      }
+      let result = null;
+      try {
+        result = await postPhotoActionPayload({
+          action: "clear-title-keyword-review-block",
+          photo_id: photoId,
+          batch_id: batchIdForCard(card),
+        });
+      } catch (error) {
+        const message = error?.message || "Could not reopen this review row.";
+        if (block) block.disabled = false;
+        setRowStatus(card, "Review reopen failed", "error", message);
+        throw error;
+      }
+      if (!result) {
+        if (block) block.disabled = false;
+        setRowStatus(card, "Auth required", "error");
+        return null;
+      }
+      card.classList.remove("is-owner-actioned");
+      delete card.dataset.reviewBlockSaved;
+      setBlockedControlsDisabled(card, false);
+      if (block) {
+        block.checked = false;
+        block.disabled = false;
+      }
+      setRowStatus(card, "Unblocked", "saved", "Restored from the Waste Basket and reopened in the title/keyword review queue.");
+      if (status) status.textContent = `${photoId} restored from the Waste Basket and reopened for review.`;
+      return { result, restoreResult };
     };
 
     const saveRowDecision = async (photoId, card) => {
@@ -1073,6 +1136,14 @@
           syncDecisionState();
           scheduleRowSave(photoId, card, 150);
         } else {
+          if (card.dataset.reviewBlockSaved === "1") {
+            saveUnblockedTarget(photoId, card).catch((error) => {
+              const message = error?.message || "Could not unblock photo.";
+              setRowStatus(card, "Unblock failed", "error", message);
+              if (status) status.textContent = message;
+            });
+            return;
+          }
           syncDecisionState();
           setRowStatus(card, "Not saved");
         }

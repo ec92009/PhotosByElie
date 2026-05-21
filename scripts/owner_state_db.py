@@ -1369,6 +1369,79 @@ def record_title_keyword_review_decisions(
             conn.close()
 
 
+def clear_title_keyword_review_blocks(
+    repo_root: Path,
+    batch_id: str,
+    photo_ids: list[str],
+    *,
+    decided_at: str = "",
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    decided_at = decided_at or now_iso()
+    normalized_ids: list[str] = []
+    for photo_id in photo_ids:
+        media_id = str(photo_id or "").strip()
+        if media_id and media_id not in normalized_ids:
+            normalized_ids.append(media_id)
+    try:
+        unblocked = 0
+        missing = 0
+        skipped = 0
+        decisions_deleted = 0
+        for media_id in normalized_ids:
+            row = conn.execute(
+                "SELECT review_state, latest_attempt FROM title_keyword_queue WHERE media_id = ?",
+                (media_id,),
+            ).fetchone()
+            if not row:
+                missing += 1
+                continue
+            if row["review_state"] != "blocked":
+                skipped += 1
+                continue
+            attempt = max(1, int(row["latest_attempt"] or 1))
+            result = conn.execute(
+                """
+                DELETE FROM title_keyword_decisions
+                WHERE media_id = ?
+                  AND attempt = ?
+                  AND decision_state = 'blocked'
+                """,
+                (media_id, attempt),
+            )
+            decisions_deleted += result.rowcount if result.rowcount is not None else 0
+            conn.execute(
+                """
+                UPDATE title_keyword_queue
+                SET review_state = 'proposed',
+                    reviewed_at = NULL,
+                    applied_at = NULL,
+                    rework_priority = 0,
+                    owner_comment = '',
+                    updated_at = ?
+                WHERE media_id = ?
+                """,
+                (decided_at, media_id),
+            )
+            unblocked += 1
+        _set_setting(conn, "title_keyword_review_dir", TITLE_KEYWORD_REVIEW_ROOT.as_posix())
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "batch_id": batch_id,
+            "unblocked": unblocked,
+            "missing": missing,
+            "skipped": skipped,
+            "decisions_deleted": decisions_deleted,
+        }
+    finally:
+        if owns_conn:
+            conn.close()
+
+
 def import_owner_actions(repo_root: Path, db_path: Path | None = None, *, force: bool = False) -> None:
     conn = connect(repo_root, db_path)
     try:

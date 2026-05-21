@@ -336,9 +336,6 @@ if (!photo) {
   preview.querySelector("[data-photo-preview-title]").textContent = t("detail.no_published");
   if (status) status.textContent = t("detail.rebuilding");
 } else {
-if (localModerationEnabled && !visibleCollectionPhotos().some((item) => item.id === photo.id) && navigateAfterHide()) {
-  // The currently requested photo is locally suppressed, so move to the next visible one immediately.
-} else {
 document.title = `Photos By Elie | ${photo.title}`;
 setCollectionNav();
 const titleTarget = document.querySelector("[data-photo-title]");
@@ -634,12 +631,31 @@ const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
 const isVideo = window.photosByElieIsVideo?.(photo) === true;
 let fullscreenPreview = null;
-const syncLandscapePreviewSize = () => {
-  if (!detailLayout?.classList.contains("is-landscape")) return;
+const syncDetailPreviewSize = () => {
+  if (!detailLayout || !preview) return;
   const ratio = Number(preview.style.getPropertyValue("--detail-ratio")) || 1.5;
   const maxWidth = detailLayout.clientWidth;
-  const maxHeight = Math.max(320, window.innerHeight - 240);
-  preview.style.setProperty("--detail-landscape-width", `${Math.min(maxWidth, maxHeight * ratio)}px`);
+  const previewTop = Math.max(0, preview.getBoundingClientRect().top);
+  const maxHeight = Math.max(280, window.innerHeight - previewTop - 24);
+  const fittedWidth = Math.min(maxWidth, maxHeight * ratio);
+  if (detailLayout.classList.contains("is-landscape")) {
+    preview.style.setProperty("--detail-landscape-width", `${fittedWidth}px`);
+    preview.style.removeProperty("--detail-portrait-width");
+    return;
+  }
+  if (detailLayout.classList.contains("is-portrait")) {
+    preview.style.setProperty("--detail-portrait-width", `${fittedWidth}px`);
+    preview.style.removeProperty("--detail-landscape-width");
+  }
+};
+const applyPreviewAspectRatio = (width, height) => {
+  if (!width || !height) return;
+  preview.style.setProperty("--detail-aspect", `${width} / ${height}`);
+  preview.style.setProperty("--detail-ratio", width / height);
+  detailLayout?.classList.toggle("is-landscape", width >= height);
+  detailLayout?.classList.toggle("is-portrait", width < height);
+  syncDetailPreviewSize();
+  window.requestAnimationFrame(syncDetailPreviewSize);
 };
 preview.classList.add(collection.accent, photo.className);
 const detailImageSrc = window.photosByElieMediaUrl?.(photo, "detail") || "";
@@ -653,23 +669,18 @@ if (detailImageSrc && isVideo) {
   video.preload = "metadata";
   const dimensions = window.photosByEliePreviewDimensions?.(photo);
   if (dimensions?.width && dimensions?.height) {
-    preview.style.setProperty("--detail-aspect", `${dimensions.width} / ${dimensions.height}`);
-    preview.style.setProperty("--detail-ratio", dimensions.width / dimensions.height);
-    detailLayout?.classList.toggle("is-landscape", dimensions.width >= dimensions.height);
-    detailLayout?.classList.toggle("is-portrait", dimensions.width < dimensions.height);
-    syncLandscapePreviewSize();
+    applyPreviewAspectRatio(dimensions.width, dimensions.height);
   }
+  const setVideoPreviewAspectRatio = () => applyPreviewAspectRatio(video.videoWidth, video.videoHeight);
+  video.addEventListener("loadedmetadata", setVideoPreviewAspectRatio);
+  if (video.readyState >= 1) setVideoPreviewAspectRatio();
   preview.prepend(video);
 } else if (detailImageSrc) {
   preview.classList.add("has-image");
   const img = document.createElement("img");
   const setPreviewAspectRatio = () => {
     if (!img.naturalWidth || !img.naturalHeight) return;
-    preview.style.setProperty("--detail-aspect", `${img.naturalWidth} / ${img.naturalHeight}`);
-    preview.style.setProperty("--detail-ratio", img.naturalWidth / img.naturalHeight);
-    detailLayout?.classList.toggle("is-landscape", img.naturalWidth >= img.naturalHeight);
-    detailLayout?.classList.toggle("is-portrait", img.naturalWidth < img.naturalHeight);
-    syncLandscapePreviewSize();
+    applyPreviewAspectRatio(img.naturalWidth, img.naturalHeight);
   };
   img.src = detailImageSrc;
   img.alt = photo.title;
@@ -677,7 +688,7 @@ if (detailImageSrc && isVideo) {
   if (img.complete) setPreviewAspectRatio();
   preview.prepend(img);
 }
-window.addEventListener("resize", syncLandscapePreviewSize);
+window.addEventListener("resize", syncDetailPreviewSize);
 const previewTitleTarget = preview.querySelector("[data-photo-preview-title]");
 previewTitleTarget?.removeAttribute("data-i18n");
 if (previewTitleTarget) previewTitleTarget.textContent = photo.title;
@@ -842,10 +853,6 @@ if (localModerationEnabled) {
       ? `${photo.title} moved back from Waste Basket.`
       : "No basketed photo to undo.";
   });
-
-  window.addEventListener("photosbyelie:hiddenchange", () => {
-    if (hiddenActions.has(photo.id)) navigateAwayFromBlockedPhoto();
-  });
 }
 
 const selectedIds = new Set((basketItemForPhoto()?.options || []).map((option) => option.id));
@@ -952,6 +959,5 @@ document.querySelectorAll("[data-print-frame]").forEach((input) => {
 });
 
 updateTotal();
-}
 }
 })());

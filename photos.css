@@ -4057,6 +4057,9 @@ html.is-local-owner .mock-photo.is-selected{
   aspect-ratio:var(--detail-aspect,3 / 2);
   background:var(--bg);
 }
+.detail-preview.has-image{
+  aspect-ratio:var(--detail-aspect,3 / 2);
+}
 .like-toggle{
   position:absolute;
   top:14px;
@@ -4167,6 +4170,10 @@ body.detail-fullscreen-active{
 .detail-layout.is-landscape .detail-preview{
   width:min(100%,var(--detail-landscape-width,100%));
   margin-inline:auto;
+}
+.detail-layout.is-portrait .detail-preview{
+  width:min(100%,var(--detail-portrait-width,100%));
+  justify-self:center;
 }
 .detail-layout.is-landscape .detail-panel{
   display:grid;

@@ -929,6 +929,116 @@ def _catalog_rows_by_media_id(repo_root: Path, media_ids: list[str]) -> dict[str
         catalog_conn.close()
 
 
+def _catalog_photo_for_hidden(repo_root: Path, media_id: str) -> tuple[str, dict] | None:
+    media_id = str(media_id or "").strip()
+    if not media_id:
+        return None
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        return None
+    catalog_conn = sqlite3.connect(catalog_path)
+    catalog_conn.row_factory = sqlite3.Row
+    try:
+        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+        row = catalog_conn.execute(
+            """
+            SELECT m.media_id, m.title, m.keyword_ids, m.captured_at,
+                   m.exposure, m.focal_length, m.location,
+                   c.slug AS gallery_key, c.title AS gallery_label,
+                   mt.code AS media_type, sf.filename, folder.source_folder,
+                   fmt.extension AS source_extension,
+                   full_asset.width AS full_width, full_asset.height AS full_height,
+                   full_asset.bytes AS full_bytes,
+                   full_asset.duration_seconds AS full_duration_seconds
+            FROM media_items AS m
+            JOIN collections AS c USING(collection_id)
+            JOIN media_types AS mt USING(media_type_id)
+            JOIN source_files AS sf USING(source_file_id)
+            LEFT JOIN source_folders AS folder
+              ON folder.source_folder_id = sf.source_folder_id
+            LEFT JOIN formats AS fmt
+              ON fmt.format_id = sf.format_id
+            LEFT JOIN asset_types AS full_type
+              ON full_type.code = 'full'
+            LEFT JOIN media_assets AS full_asset
+              ON full_asset.media_id = m.media_id
+             AND full_asset.asset_type_id = full_type.asset_type_id
+            WHERE m.media_id = ?
+            """,
+            (media_id,),
+        ).fetchone()
+        if not row:
+            return None
+        slug = str(row["gallery_key"] or "").strip()
+        if slug not in ORDER:
+            slug = "unknown"
+        title = str(row["title"] or media_id).strip() or media_id
+        source_folder = str(row["source_folder"] or "").strip("/")
+        filename = str(row["filename"] or "").strip()
+        source_path = "/".join(part for part in [source_folder, filename] if part)
+        extension = str(row["source_extension"] or Path(filename).suffix.lstrip(".") or "").upper()
+        if extension == "JPEG":
+            extension = "JPG"
+        if extension == "TIFF":
+            extension = "TIF"
+        media_type = str(row["media_type"] or "photo").strip().lower() or "photo"
+        full_width = int(row["full_width"] or 0)
+        full_height = int(row["full_height"] or 0)
+        megapixels = round((full_width * full_height / 1_000_000) * 10) / 10 if full_width and full_height else 0
+        keywords = _catalog_keywords(row["keyword_ids"], keyword_lookup)
+        captured_at = str(row["captured_at"] or "")
+        location = str(row["location"] or "")
+        gallery_label = str(row["gallery_label"] or slug or "Gallery")
+        metadata = [
+            {"label": "Metadata title", "value": title},
+            {"label": "Keywords", "value": ", ".join(keywords)},
+        ]
+        if captured_at:
+            metadata.append({"label": "Captured", "value": captured_at.replace("T", " ")})
+        if filename:
+            metadata.append({"label": "Original file", "value": filename})
+        if full_width and full_height:
+            metadata.append({"label": "Original size", "value": f"{extension or 'Source'} / {full_width} x {full_height} / {megapixels} MP"})
+        if location:
+            metadata.append({"label": "Location", "value": location})
+        public_preview = {
+            "allowed": True,
+            "galleryKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "gallery", media_type),
+            "detailKey": public_preview_key(DEFAULT_PUBLIC_PREFIX, media_id, "detail", media_type),
+        }
+        photo = {
+            "id": media_id,
+            "title": title,
+            "caption": " / ".join(part for part in [gallery_label, location, captured_at[:10]] if part),
+            "full": f"{extension or 'Source'} master",
+            "megapixels": megapixels,
+            "gallerySrc": "",
+            "imageSrc": "",
+            "metadata": metadata,
+            "media": {
+                "type": media_type,
+                "sourcePolicy": "developed-master",
+                "publicPreview": public_preview,
+            },
+            "sourceFiles": [
+                {
+                    "path": source_path,
+                    "type": extension or "SOURCE",
+                    "bytes": int(row["full_bytes"] or 0),
+                }
+            ] if source_path else [],
+            "keywords": keywords,
+        }
+        if media_type == "video":
+            duration = float(row["full_duration_seconds"] or 0)
+            if duration:
+                photo["duration"] = duration
+                photo["media"]["video"] = {"duration": duration}
+        return slug, photo
+    finally:
+        catalog_conn.close()
+
+
 def _json_text_list(value: object) -> list:
     if not value:
         return []
@@ -4193,9 +4303,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 if hidden_hit:
                     already_hidden.append(current_photo_id)
                     continue
-                not_found.append(current_photo_id)
-                continue
-            source_slug, source_photo = found
+                fallback = _catalog_photo_for_hidden(repo_root, current_photo_id)
+                if not fallback:
+                    not_found.append(current_photo_id)
+                    continue
+                source_slug, source_photo = fallback
+                source_state = "expo"
+            else:
+                source_slug, source_photo = found
             hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, hidden_at)
             _remove_existing(hidden_groups, current_photo_id)
             hidden_groups[source_slug].append(hidden_photo)
@@ -4504,8 +4619,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                     "r2_blacklist_task": r2_task,
                     "site": site_state,
                 }
-            raise ValueError(f"photo not found in Expo or Reserve: {photo_id}")
-        source_slug, source_photo = found
+            fallback = _catalog_photo_for_hidden(repo_root, photo_id)
+            if not fallback:
+                raise ValueError(f"photo not found in Expo, Reserve, or SQLite catalog: {photo_id}")
+            source_slug, source_photo = fallback
+            source_state = "expo"
+        else:
+            source_slug, source_photo = found
         hidden_photo = _hidden_review_photo(source_photo, source_slug, source_state, datetime.now(timezone.utc).isoformat())
         _remove_existing(hidden_groups, photo_id)
         hidden_groups[source_slug].append(hidden_photo)

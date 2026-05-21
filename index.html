@@ -20,9 +20,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=82.4"/>
-  <link rel="stylesheet" href="./styles.css?v=82.4"/>
-  <link rel="stylesheet" href="./photos.css?v=82.4"/>
+  <link rel="stylesheet" href="./shared.css?v=82.5"/>
+  <link rel="stylesheet" href="./styles.css?v=82.5"/>
+  <link rel="stylesheet" href="./photos.css?v=82.5"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -36,7 +36,7 @@
       <a class="is-active" href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a href="./real-estate.html?logout=1&client=elie">Client login</a>
     </nav>
-    <span class="site-version-badge">v82.4</span>
+    <span class="site-version-badge">v82.5</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -49,7 +49,7 @@
         <h1 id="page-title">Photos By Elie</h1>
         <div class="cta">
           <button class="btn primary" type="button" aria-controls="collections" aria-expanded="false" data-best-mix-section-trigger="collections">Collections</button>
-          <button class="btn secondary" type="button" aria-controls="discover" aria-expanded="false" data-best-mix-section-trigger="search">Search</button>
+          <a class="btn secondary" href="./gallery.html?gallery=selection" data-i18n="gallery.make_selection">Make your own selection</a>
           <button class="btn secondary" type="button" aria-controls="featured" aria-expanded="false" data-best-mix-section-trigger="featured">Featured</button>
         </div>
       </div>
@@ -79,85 +79,6 @@
             <small>10 photos from the shoot, plus nearby Paris finds</small>
           </span>
         </a>
-      </div>
-    </section>
-
-    <section class="panel home-discovery-panel is-best-mix-section-collapsed is-discovery-collapsed" id="discover" data-home-discovery data-best-mix-section="search" aria-labelledby="discover-title">
-      <div class="home-discovery-head">
-        <h2 id="discover-title" data-i18n="home.discover">Find photos</h2>
-        <div class="home-discovery-actions">
-          <button class="btn secondary home-discovery-toggle" type="button" aria-controls="best-mix-discovery-controls" aria-expanded="false" data-best-mix-discovery-toggle>
-            <span data-best-mix-discovery-toggle-label>Filters</span>
-          </button>
-        </div>
-      </div>
-      <form class="gallery-filter-bar home-discovery-controls" id="best-mix-discovery-controls" data-home-discovery-form aria-label="Photo search and filters" data-i18n-aria-label="a11y.gallery_filters">
-        <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-home-search data-i18n-placeholder="gallery.search_placeholder" placeholder="Title or keyword"/></label>
-        <label><span data-i18n="home.collection_filter">Collection</span><select data-home-filter="collection">
-          <option value="all" data-i18n="gallery.all">All</option>
-        </select></label>
-        <label><span data-i18n="gallery.date_from">Date from</span><input type="date" data-home-filter="dateFrom"/></label>
-        <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-home-filter="dateTo"/></label>
-        <label><span data-i18n="gallery.media">Media</span><select data-home-filter="mediaType">
-          <option value="all" data-i18n="gallery.all_media">All media</option>
-          <option value="photo" data-i18n="gallery.photos">Photos</option>
-          <option value="video" data-i18n="gallery.videos">Videos</option>
-        </select></label>
-        <label><span data-i18n="gallery.origin">Origin</span><select data-home-filter="origin">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="camera" data-i18n="origin.camera">Camera photo</option>
-          <option value="ai" data-i18n="origin.ai">AI image</option>
-        </select></label>
-        <label><span data-i18n="gallery.orientation">Orientation</span><select data-home-filter="orientation">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="pano" data-i18n="gallery.pano">Pano</option>
-          <option value="landscape" data-i18n="gallery.landscape">Landscape</option>
-          <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
-          <option value="square" data-i18n="gallery.square">Square</option>
-        </select></label>
-        <label><span data-i18n="gallery.min_size">Min size</span><select data-home-filter="minSize">
-          <option value="all" data-i18n="gallery.any_size">Any size</option>
-          <option value="1" data-i18n="gallery.size_1mp">1 MP+</option>
-          <option value="3" data-i18n="gallery.size_3mp">3 MP+</option>
-          <option value="6" data-i18n="gallery.size_6mp">6 MP+</option>
-          <option value="10" data-i18n="gallery.size_10mp">10 MP+</option>
-          <option value="20" data-i18n="gallery.size_20mp">20 MP+</option>
-        </select></label>
-        <label><span data-i18n="gallery.color_mood">Color mood</span><select data-home-filter="mood">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="warm" data-i18n="gallery.warm">Warm</option>
-          <option value="cool" data-i18n="gallery.cool">Cool</option>
-          <option value="neutral" data-i18n="gallery.neutral">Neutral</option>
-          <option value="vivid" data-i18n="gallery.vivid">Vivid</option>
-        </select></label>
-        <label><span data-i18n="gallery.subject">Subject</span><select data-home-filter="subject">
-          <option value="all" data-i18n="gallery.all">All</option>
-          <option value="architecture" data-i18n="gallery.architecture">Architecture</option>
-          <option value="water" data-i18n="gallery.water">Water/coast</option>
-          <option value="art" data-i18n="gallery.art">Art/museum</option>
-          <option value="people" data-i18n="gallery.people">People</option>
-          <option value="nature" data-i18n="gallery.nature">Nature</option>
-          <option value="city" data-i18n="gallery.city">City/travel</option>
-        </select></label>
-        <label class="gallery-sort-label"><span data-i18n="gallery.sort">Sort</span><select data-home-filter="sort">
-          <option value="newest" data-i18n="gallery.newest">Newest first</option>
-          <option value="oldest" data-i18n="gallery.oldest">Oldest first</option>
-          <option value="collection" data-i18n="gallery.collection_order">Collection order</option>
-          <option value="title" data-i18n="gallery.title">Title</option>
-          <option value="megapixels-desc" data-i18n="gallery.largest_mp">Largest MP</option>
-          <option value="megapixels-asc" data-i18n="gallery.smallest_mp">Smallest MP</option>
-          <option value="price-desc" data-i18n="gallery.highest_price">Highest price</option>
-          <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
-        </select></label>
-        <button class="btn secondary gallery-filter-clear" type="button" data-home-clear-filters data-i18n="gallery.clear">Clear</button>
-      </form>
-      <div class="home-discovery-status-row">
-        <p class="gallery-status" data-home-discovery-status aria-live="polite" data-i18n="home.loading_catalog">Loading catalog...</p>
-      </div>
-      <div class="home-discovery-results mock-gallery" data-home-discovery-results aria-label="Search results" data-i18n-aria-label="home.results" hidden></div>
-      <div class="gallery-pagination-controls">
-        <button class="btn secondary home-discovery-more gallery-more-button" type="button" data-home-discovery-more data-i18n="home.show_more" hidden>Show more</button>
-        <button class="btn secondary home-discovery-more gallery-more-button" type="button" data-home-discovery-show-all data-i18n="home.show_all" hidden>Show all</button>
       </div>
     </section>
 
@@ -661,16 +582,14 @@
 
   })();
   </script>
-  <script src="./media-config.js?v=82.4"></script>
-  <script src="./photos.js?v=82.4"></script>
-  <script src="./owner-auth.js?v=82.4"></script>
-  <script src="./site-version.js?v=82.4"></script>
-  <script src="./home-data.js?v=82.4"></script>
-  <script src="./hidden-actions.js?v=82.4"></script>
-  <script src="./owner-tools.js?v=82.4"></script>
-  <script src="./home-gallery-randomizer.js?v=82.4"></script>
-  <script src="./home-catalog-loader.js?v=82.4"></script>
-  <script src="./home-discovery.js?v=82.4"></script>
-  <script src="./home-best-mix.js?v=82.4"></script>
+  <script src="./media-config.js?v=82.5"></script>
+  <script src="./photos.js?v=82.5"></script>
+  <script src="./owner-auth.js?v=82.5"></script>
+  <script src="./site-version.js?v=82.5"></script>
+  <script src="./home-data.js?v=82.5"></script>
+  <script src="./hidden-actions.js?v=82.5"></script>
+  <script src="./owner-tools.js?v=82.5"></script>
+  <script src="./home-gallery-randomizer.js?v=82.5"></script>
+  <script src="./home-best-mix.js?v=82.5"></script>
 </body>
 </html>

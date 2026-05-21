@@ -6,11 +6,11 @@ Date: 2026-05-21
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v82.2`
-- Local Owner page: `http://localhost:8001/owner.html?v=82.2`
+- Current visible build: `v82.5`
+- Local Owner page: `http://localhost:8000/owner.html?v=82.5`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `6,239` public media rows in the SQLite catalog: France `255`, USA `166`, Spain `641`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `217`, Slovakia `2`.
+- Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is local SQLite in ignored `assets/owner-actions/Owner.sqlite`; generated review batch JSON is ignored/local and no longer tracked as deployable public metadata.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
@@ -52,6 +52,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 30. The improved generator then produced replacement batch `2026-05-20-185753-222Z` with `200` proposals: `100` Codex-backed rework rows, `100` ordinary local-rule rows, `0` model blockers, `0` keyword-target misses, and `74` `needs_owner_context` rows. Seven ordinary rows were marked reviewed as no-change.
 31. A batch-summary preservation bug surfaced when no-change review marking overwrote the new batch's count row with zeros. `owner_state_db.py` now preserves existing nonzero batch counts when later decision-only/no-change writes touch the same batch, and the local row for `2026-05-20-185753-222Z` was repaired by re-importing the generated batch view.
 32. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,239` rows and moving `4,476` photo IDs into durable discarded state.
+33. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,019` rows and moving `4,696` photo IDs into durable discarded state.
 
 ## Current Operational Notes
 
@@ -82,6 +83,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v82.0`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-media manifests reflect the latest Owner discard/tombstone state: `6,239` active public rows and `4,476` discarded photo IDs.
 - In `v82.1`, the Nerja glass treatment keeps the documented Best Mix alpha/frosting values, shared filter/control heights are normalized, and the homepage photo-stack entrance animation is stabilized so it does not restart midway or jiggle at the end.
 - In `v82.2`, the first-open gallery density fallback is 3 columns; saved owner/viewer density choices still win after a user changes the grid.
+- In `v82.5`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-photo tombstones reflect the latest Owner discard/tombstone state: `6,019` active public rows and `4,696` discarded photo IDs.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

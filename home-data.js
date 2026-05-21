@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 255,
+    "count": 123,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,12 +74,12 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 166,
+    "count": 159,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
-        "id": "img-0032-015b172a1c",
-        "title": "IMG 0032",
+        "id": "20190723-1419-16523-3d4da421c4",
+        "title": "El Capitan",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -87,14 +87,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0032-015b172a1c_900.jpg",
-            "detailKey": "expo/img-0032-015b172a1c_1800.jpg"
+            "galleryKey": "expo/20190723-1419-16523-3d4da421c4_900.jpg",
+            "detailKey": "expo/20190723-1419-16523-3d4da421c4_1800.jpg"
           }
         }
       },
       {
-        "id": "img-0031-c6a2f4747d",
-        "title": "IMG 0031",
+        "id": "20181113-1748-16886-f468becf95",
+        "title": "Encinitas Sunset",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -102,14 +102,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0031-c6a2f4747d_900.jpg",
-            "detailKey": "expo/img-0031-c6a2f4747d_1800.jpg"
+            "galleryKey": "expo/20181113-1748-16886-f468becf95_900.jpg",
+            "detailKey": "expo/20181113-1748-16886-f468becf95_1800.jpg"
           }
         }
       },
       {
-        "id": "img-0030-cc5739f870",
-        "title": "IMG 0030",
+        "id": "20181113-1729-19714-e408f3becb",
+        "title": "Del Mar Dog Beach",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -117,14 +117,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0030-cc5739f870_900.jpg",
-            "detailKey": "expo/img-0030-cc5739f870_1800.jpg"
+            "galleryKey": "expo/20181113-1729-19714-e408f3becb_900.jpg",
+            "detailKey": "expo/20181113-1729-19714-e408f3becb_1800.jpg"
           }
         }
       },
       {
-        "id": "img-0028-1a92da1863",
-        "title": "IMG 0028",
+        "id": "20181020-1143-19559-d29e8bb4b8",
+        "title": "Pacific Ocean Coast viewed from Del Mar",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -132,8 +132,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-0028-1a92da1863_900.jpg",
-            "detailKey": "expo/img-0028-1a92da1863_1800.jpg"
+            "galleryKey": "expo/20181020-1143-19559-d29e8bb4b8_900.jpg",
+            "detailKey": "expo/20181020-1143-19559-d29e8bb4b8_1800.jpg"
           }
         }
       }
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 641,
+    "count": 561,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -397,7 +397,7 @@ window.photosByElieHomeData = {
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 217,
+    "count": 216,
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {

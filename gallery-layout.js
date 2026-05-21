@@ -57,7 +57,7 @@
       const aspectRatio = dimensions?.width && dimensions?.height ? dimensions.width / dimensions.height : 1;
       const cardWidth = (metrics.columnWidth * spanColumns) + (metrics.columnGap * Math.max(0, spanColumns - 1));
       const imageHeight = cardWidth / Math.max(.2, aspectRatio);
-      const cardHeight = imageHeight + 4 + captionHeight + 2;
+      const cardHeight = imageHeight + 2 + captionHeight + 2;
       return Math.max(1, Math.ceil((cardHeight + metrics.rowGap) / metrics.spanUnit));
     };
 

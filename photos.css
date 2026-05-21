@@ -3452,7 +3452,7 @@ body[data-real-estate] main.shell{
   --gallery-masonry-row-height:8px;
   display:grid;
   grid-template-columns:repeat(var(--gallery-columns),minmax(0,1fr));
-  gap:12px 8px;
+  gap:7px 6px;
   background:var(--surface);
   border-top:1px solid var(--line);
   padding:0;
@@ -3749,7 +3749,7 @@ body.commerce-page[data-fixed-header] .basket-total-band{
   position:relative;
   display:grid;
   grid-template-rows:auto auto;
-  gap:4px;
+  gap:2px;
   align-self:start;
   min-width:0;
   color:inherit;
@@ -3909,15 +3909,22 @@ html[data-theme="light"] .mock-photo.has-image::after{
 }
 .mock-photo-caption{
   display:block;
+  justify-self:start;
   min-width:0;
+  width:fit-content;
   max-width:100%;
-  padding:0 0 2px;
-  color:var(--text);
+  padding:3px 6px 4px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.68);
+  color:#fff;
   font-size:clamp(.78rem,.85vw,.94rem);
   font-weight:750;
   line-height:1.18;
   overflow-wrap:anywhere;
   text-decoration:none;
+  text-shadow:0 1px 2px rgba(0,0,0,.72);
+  -webkit-box-decoration-break:clone;
+  box-decoration-break:clone;
 }
 .mock-photo-caption:hover{
   text-decoration:underline;
@@ -3932,7 +3939,8 @@ html[data-theme="light"] .mock-photo.has-image::after{
   text-underline-offset:3px;
 }
 .mock-photo-caption.is-owner-editable:hover{
-  color:var(--accent);
+  border-color:rgba(255,255,255,.36);
+  color:#fff;
 }
 .raw-source-badge{
   position:absolute;

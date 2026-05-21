@@ -3,13 +3,7 @@
   const defaultFitModeKey = "photosbyelie-gallery-fit-mode";
 
   const maxDensityColumns = () => (window.matchMedia("(max-width:760px)").matches ? 3 : 10);
-  const defaultDensityColumns = () => {
-    if (window.matchMedia("(min-width:1520px)").matches) return 8;
-    if (window.matchMedia("(min-width:1120px)").matches) return 6;
-    if (window.matchMedia("(min-width:860px)").matches) return 4;
-    if (window.matchMedia("(min-width:640px)").matches) return 3;
-    return 2;
-  };
+  const defaultDensityColumns = () => 3;
 
   const createMasonryController = ({
     root,
@@ -31,7 +25,8 @@
     };
 
     const preferredDensityColumns = () => {
-      const savedValue = Number(localStorage.getItem(densityKey));
+      const savedDensity = localStorage.getItem(densityKey);
+      const savedValue = savedDensity === null ? NaN : Number(savedDensity);
       return clampDensityColumns(Number.isInteger(savedValue) ? savedValue : defaultDensityColumns());
     };
 

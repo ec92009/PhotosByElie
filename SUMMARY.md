@@ -6,8 +6,8 @@ Date: 2026-05-21
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v82.1`
-- Local Owner page: `http://localhost:8001/owner.html?v=82.1`
+- Current visible build: `v82.2`
+- Local Owner page: `http://localhost:8001/owner.html?v=82.2`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,239` public media rows in the SQLite catalog: France `255`, USA `166`, Spain `641`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `217`, Slovakia `2`.
@@ -81,6 +81,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.21`, Camera, Apple Photos, AI/Leonardo, and Real Estate import lanes use the same Owner matrix renderer, matrix rows can show tiny localhost-only source thumbnails, and a sweep stopped by skipped source lanes displays the catalog export as blocked/needs attention instead of making later phases look like they are waiting forever.
 - In `v82.0`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-media manifests reflect the latest Owner discard/tombstone state: `6,239` active public rows and `4,476` discarded photo IDs.
 - In `v82.1`, the Nerja glass treatment keeps the documented Best Mix alpha/frosting values, shared filter/control heights are normalized, and the homepage photo-stack entrance animation is stabilized so it does not restart midway or jiggle at the end.
+- In `v82.2`, the first-open gallery density fallback is 3 columns; saved owner/viewer density choices still win after a user changes the grid.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

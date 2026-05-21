@@ -35,6 +35,7 @@
   };
   let activeSection = "";
   let stackShufflePlayed = false;
+  let stackShuffleTimer = 0;
 
   const removeHomeBasketRail = () => {
     page.querySelectorAll(".basket-rail").forEach((rail) => rail.remove());
@@ -51,9 +52,19 @@
       card.style.setProperty("--stack-final-transform", getComputedStyle(card).transform);
     });
     stack.classList.remove("is-stack-shuffling");
+    stack.classList.remove("has-stack-shuffled");
+    window.clearTimeout(stackShuffleTimer);
     window.requestAnimationFrame(() => {
       stack.classList.add("is-stack-shuffling");
-      window.setTimeout(() => stack.classList.remove("is-stack-shuffling"), 2800);
+      stackShuffleTimer = window.setTimeout(() => {
+        cards.forEach((card) => {
+          const finalTransform = card.style.getPropertyValue("--stack-final-transform");
+          if (finalTransform) card.style.transform = finalTransform;
+          card.style.removeProperty("--stack-final-transform");
+        });
+        stack.classList.remove("is-stack-shuffling");
+        stack.classList.add("has-stack-shuffled");
+      }, 2600);
     });
   };
 

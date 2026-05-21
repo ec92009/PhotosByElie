@@ -59,6 +59,8 @@
   color:inherit;
   cursor:pointer;
   text-decoration:none;
+  backface-visibility:hidden;
+  transform-style:preserve-3d;
 }
 .photo-print:focus-visible{
   outline:2px solid color-mix(in srgb,var(--brand) 75%,white 25%);
@@ -3672,21 +3674,29 @@ body.commerce-page[data-fixed-header] .basket-total-band{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
-  align-items:end;
+  align-items:stretch;
   margin-top:14px;
 }
 .gallery-filter-bar label{
-  display:flex;
+  display:grid;
   flex:1 1 124px;
-  flex-direction:column;
+  grid-template-rows:auto var(--control-block-size);
   gap:4px;
+  justify-content:stretch;
   max-width:190px;
   min-width:0;
-  color:var(--muted);
+  color:var(--text);
   font-size:.62rem;
   font-weight:800;
   letter-spacing:.07em;
   text-transform:uppercase;
+  text-shadow:var(--glass-copy-shadow);
+}
+.gallery-filter-bar label > span{
+  display:flex;
+  min-height:1.35em;
+  align-items:end;
+  color:inherit;
 }
 .gallery-filter-bar label:has(input[type="date"]){
   flex:0 1 146px;
@@ -3697,7 +3707,8 @@ body.commerce-page[data-fixed-header] .basket-total-band{
 .gallery-filter-bar select,
 .gallery-filter-bar input{
   width:100%;
-  min-height:34px;
+  height:var(--control-block-size);
+  min-height:var(--control-block-size);
   border:1px solid var(--line);
   border-radius:0;
   background:var(--bg);
@@ -3706,6 +3717,7 @@ body.commerce-page[data-fixed-header] .basket-total-band{
   font:inherit;
   font-size:.78rem;
   font-weight:700;
+  line-height:1.15;
   text-transform:none;
 }
 .gallery-filter-bar input{
@@ -3717,7 +3729,8 @@ body.commerce-page[data-fixed-header] .basket-total-band{
 }
 .gallery-filter-clear{
   flex:0 0 auto;
-  min-height:34px;
+  height:var(--control-block-size);
+  min-height:var(--control-block-size);
   padding:0 18px;
   align-self:end;
 }
@@ -5551,11 +5564,44 @@ html[data-theme="light"] .detail-preview.has-image::after{
 .order-copy-field textarea,
 .mock-checkout input{
   background:var(--glass-field-bg);
-  border-color:var(--glass-border);
+  border-color:color-mix(in srgb,var(--glass-border) 72%,var(--text) 28%);
   color:var(--text);
   text-shadow:none;
   backdrop-filter:blur(var(--glass-light-blur));
   -webkit-backdrop-filter:blur(var(--glass-light-blur));
+}
+.gallery-filter-bar label,
+.real-estate-filter-form label,
+.real-estate-pdf-setting label,
+.owner-number-control,
+.owner-keyword-blacklist-add label,
+.owner-metadata-editor label,
+.owner-metadata-modal label,
+.owner-real-estate-form label,
+.owner-price-field,
+.mock-checkout label,
+.order-copy-field label{
+  color:var(--text);
+  text-shadow:var(--glass-copy-shadow);
+}
+.gallery-filter-bar select,
+.gallery-filter-bar input,
+.real-estate-filter-form input,
+.real-estate-filter-form select,
+.real-estate-pdf-setting select,
+.real-estate-pdf-setting input,
+.real-estate-login-form input,
+.real-estate-title-field input,
+.real-estate-lightbox input,
+.real-estate-originals-form input,
+.owner-number-control input,
+.owner-number-control select,
+.owner-keyword-blacklist-add input,
+.owner-metadata-editor input,
+.owner-metadata-modal input,
+.owner-price-field input,
+.mock-checkout input{
+  min-height:var(--control-block-size);
 }
 .owner-tabs .owner-tab-button{
   background:rgb(var(--glass-control-rgb) / .42);
@@ -5754,6 +5800,9 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   transform-origin:50% 58%;
   will-change:transform,opacity;
 }
+body.best-mix-current-home [data-home-stack].has-stack-shuffled [data-home-stack-card]{
+  will-change:auto;
+}
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(1){--stack-shuffle-x:-110px;--stack-shuffle-y:42px;--stack-shuffle-rotate:-20deg;--stack-shuffle-delay:0ms}
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(2){--stack-shuffle-x:66px;--stack-shuffle-y:-78px;--stack-shuffle-rotate:18deg;--stack-shuffle-delay:200ms}
 body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack-card]:nth-child(3){--stack-shuffle-x:124px;--stack-shuffle-y:38px;--stack-shuffle-rotate:14deg;--stack-shuffle-delay:400ms}
@@ -5765,7 +5814,7 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
 @keyframes best-mix-stack-shuffle{
   0%{
     opacity:0;
-    transform:translate(var(--stack-shuffle-x),var(--stack-shuffle-y)) rotate(var(--stack-shuffle-rotate)) scale(.72);
+    transform:translate3d(var(--stack-shuffle-x),var(--stack-shuffle-y),0) rotate(var(--stack-shuffle-rotate)) scale(.72);
   }
   72%{
     opacity:1;

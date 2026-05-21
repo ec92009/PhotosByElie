@@ -16,6 +16,7 @@
   --page-gutter:clamp(12px,2.1vw,28px);
   --panel-inline:clamp(16px,2.2vw,28px);
   --panel-block:clamp(24px,5dvh,60px);
+  --control-block-size:42px;
   --hero-min-height:clamp(420px,calc(100dvh - 118px),760px);
   --glass-bg-image:url("./assets/backgrounds/nerja-cave-bg.jpg");
   --glass-bg-saturation:1.34;

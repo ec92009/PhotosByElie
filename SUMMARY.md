@@ -6,8 +6,8 @@ Date: 2026-05-22
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v82.7`
-- Local Owner page: `http://localhost:8000/owner.html?v=82.7`
+- Current visible build: `v83.0`
+- Local Owner page: `http://localhost:8000/owner.html?v=83.0`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -23,6 +23,8 @@ Date: 2026-05-22
 - Remaining live cutover blocker: install live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. These values must not be committed or written into docs.
 
 ## Latest Conversation Update
+
+The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`. Active public catalog scale remains `6,019` rows; the next product blocker is still live Cloudflare secret cutover for Stripe.
 
 The latest Stripe pass moved PhotosByElie from "test checkout works" to "live Stripe shell is configured, but live secrets are not yet installed in Cloudflare." Sandbox testing proved hosted Checkout, payment return, webhook handling, receipt contents, order lookup by order ID plus email, per-file downloads, and download-all behavior. Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery.
 
@@ -104,6 +106,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v82.2`, the first-open gallery density fallback is 3 columns; saved owner/viewer density choices still win after a user changes the grid.
 - In `v82.5`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-photo tombstones reflect the latest Owner discard/tombstone state: `6,019` active public rows and `4,696` discarded photo IDs.
 - In `v82.7`, buyer order recovery and delivery links are more durable: the order page can look up an order by order ID and checkout email, per-file delivery rows show link availability when present, Worker download tokens enforce expiry/download limits, successful downloads are appended to the order event history, and Stripe receipt metadata includes the buyer email.
+- In `v83.0`, Owner-approved title/keyword metadata is published into the buyer-facing SQLite catalog and Worker catalog, and the keyword blacklist compatibility export is refreshed while keeping active public rows at `6,019`.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

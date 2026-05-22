@@ -4,10 +4,11 @@ Last updated: 2026-05-22
 
 ## Current Facts
 
-- Current visible build: `v82.7`.
+- Current visible build: `v83.0`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=82.7`.
+- Local Owner page: `http://localhost:8000/owner.html?v=83.0`.
 - Current catalog scale: `6,019` public media rows in `assets/catalog/photosbyelie.sqlite`.
+- Latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker catalog without changing the active row count.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
 - Title/keyword review state is SQLite-backed in ignored local `assets/owner-actions/Owner.sqlite`.

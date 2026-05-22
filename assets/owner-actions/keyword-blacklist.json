@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-keyword-blacklist",
   "schema_version": 1,
-  "updated_at": "2026-05-19T18:20:15.657951Z",
+  "updated_at": "2026-05-22T06:44:28.783835Z",
   "keywords": [
     "AI",
     "AI art",
@@ -20,7 +20,6 @@
     "hack",
     "hacks",
     "hacks.",
-    "hacks.,",
     "high",
     "Illustration",
     "Image Color",
@@ -37,6 +36,8 @@
     "scaled_up",
     "style",
     "The",
+    "Travel archive",
+    "Travel photography",
     "unique",
     "with"
   ]

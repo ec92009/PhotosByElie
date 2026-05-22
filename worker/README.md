@@ -56,6 +56,16 @@ The current checkout Worker is live at:
 https://photosbyelie-checkout-mock.ec92009.workers.dev
 ```
 
+Stripe sandbox checkout has been manually proven against this Worker, including successful payment, declined card, 3D Secure/authentication-required payment, verified webhook delivery, order recovery, per-file downloads, and download-all behavior.
+
+Live Stripe dashboard state as of 2026-05-22:
+
+- Account: `acct_1TWCksPuO9o6fOp6`.
+- Successful-payment customer receipts are enabled; refund emails remain off.
+- Branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand color `#5B341E`, and accent color `#D86A3E`.
+- Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`.
+- Live checkout remains gated on Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Do not commit or document the secret values.
+
 Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Required Stripe configuration:
 
 - `STRIPE_SECRET_KEY`: test or live secret key used to create Checkout Sessions.
@@ -68,12 +78,14 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 
-Live payment is blocked until test mode proves the full flow:
+Live payment should not be opened until the live secrets are installed and a small live proof completes:
 
-- Successful card payment reaches `checkout.session.completed`.
-- 3D Secure/authentication-required payment returns to the order page cleanly.
-- Declined card does not mark the order paid.
-- A verified webhook records private R2 delivery files and exposes per-file download tokens.
+- Worker `/health` reports real Stripe and fixed `usd`.
+- A successful live card payment reaches `checkout.session.completed`.
+- The live webhook returns `200 OK`.
+- Stripe sends the successful-payment receipt.
+- The order page recovers by order ID and email.
+- Private R2 per-file downloads and download-all work.
 - Stripe receipts remain payment records only; PhotosByElie delivery links stay in the Worker/order flow.
 
 Stripe's standard successful test Visa is `4242 4242 4242 4242` with any future expiry and any 3-digit CVC. Use Stripe's current test-card list for 3D Secure and decline scenarios.

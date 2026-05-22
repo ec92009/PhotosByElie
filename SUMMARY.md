@@ -1,13 +1,13 @@
 # Conversation Summary
 
-Date: 2026-05-21
+Date: 2026-05-22
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
 - Current visible build: `v82.7`
-- Local Owner page: `http://localhost:8000/owner.html?v=82.5`
+- Local Owner page: `http://localhost:8000/owner.html?v=82.7`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -15,8 +15,20 @@ Date: 2026-05-21
 - Title/keyword review queue state is local SQLite in ignored `assets/owner-actions/Owner.sqlite`; generated review batch JSON is ignored/local and no longer tracked as deployable public metadata.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
 - Localhost Owner/helper workflows remain the mutation path for catalog edits, hidden/discarded state, imports, R2 maintenance, and Real Estate client management.
+- Stripe sandbox checkout proof is complete: successful card, declined-card, 3D Secure, webhook delivery, order recovery, per-file download, and download-all paths were manually verified.
+- Live Stripe account `acct_1TWCksPuO9o6fOp6` is onboarded enough for the current setup pass and showed no active account tasks after onboarding.
+- Live Stripe branding is saved with the new camera-tripod logo assets, brand color `#5B341E`, and accent color `#D86A3E`. The source assets are under `assets/branding/`.
+- Live Stripe customer email setting `Successful payments` is enabled; `Refunds` remains off.
+- Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
+- Remaining live cutover blocker: install live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. These values must not be committed or written into docs.
 
-## What This Conversation Covered
+## Latest Conversation Update
+
+The latest Stripe pass moved PhotosByElie from "test checkout works" to "live Stripe shell is configured, but live secrets are not yet installed in Cloudflare." Sandbox testing proved hosted Checkout, payment return, webhook handling, receipt contents, order lookup by order ID plus email, per-file downloads, and download-all behavior. Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery.
+
+The live account setup pass completed business/onboarding screens, saved the new brand treatment, enabled successful-payment receipts, and created the live webhook destination. The webhook display name stayed Stripe-generated as `charismatic-rhythm`, but its functional configuration is correct. The safe next step is secret cutover: install the live Stripe secret key and the live webhook signing secret in Cloudflare, deploy/smoke the Worker, then run one tiny live purchase and verify the receipt, webhook, order recovery, and downloads.
+
+## Earlier Conversation Context
 
 This conversation focused on getting the Owner side of Photos By Elie usable as an operations console, then tightening the title/keyword review pipeline and its operational safety. The earlier work started with the Real Estate owner extension and grew into a broader pass over imports, R2 coverage, hidden/discarded state, and local catalog rebuild safety. The latest work ran the David-only nightly title/keyword automation locally, produced a fresh 100-row review batch, and identified a moderate security/privacy risk from committing Owner review JSON into deployable assets.
 
@@ -54,6 +66,12 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 32. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,239` rows and moving `4,476` photo IDs into durable discarded state.
 33. Handoff sweep published the latest Owner discard/tombstone state into the buyer-facing catalog artifacts, reducing the active public catalog to `6,019` rows and moving `4,696` photo IDs into durable discarded state.
 34. Handoff sweep prepared the checkout/order hardening work for handoff as `v82.7`: order recovery now accepts order ID plus checkout email on `order.html`, Worker download tokens expose expiry/limit metadata, successful downloads append order events, Stripe Checkout receives the buyer email for receipts, and Worker KV/token defaults are documented.
+35. Sandbox Stripe checkout was verified end to end with successful payment, declined-card handling, 3D Secure, webhook delivery, receipt URL inspection, order recovery, per-file downloads, and download-all delivery.
+36. Live Stripe onboarding was completed far enough that the live dashboard showed no active account tasks.
+37. A new camera-tripod PhotosByElie brand asset was selected and committed under `assets/branding/`; live Stripe branding uses that logo/icon plus brand color `#5B341E` and accent color `#D86A3E`.
+38. Live Stripe successful-payment customer receipts were enabled; refunds remain disabled.
+39. A live Stripe webhook destination was created for `checkout.session.completed` at the deployed Worker endpoint, with destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`.
+40. Live checkout remains intentionally blocked until live Stripe and webhook secrets are installed in Cloudflare outside the repo.
 
 ## Current Operational Notes
 
@@ -130,4 +148,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: Owner-review batch `2026-05-20-185753-222Z`, verify public deploys no longer expose Owner review JSON, continue model/vision quality improvements, rehearse the Real Estate client lifecycle, then finish cloud Real Estate outputs, hidden/discarded lifecycle hardening, Owner state-table browsing, and commerce hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: install live Stripe secrets in Cloudflare, run a tiny live checkout proof, optionally rename the live webhook destination, package buyer-facing offer/support copy, decide whether to publish the new logo into the public site UI, then return to Owner title/keyword review, storefront curation, analytics, SEO, Real Estate production polish, and long-horizon Owner/media hardening.

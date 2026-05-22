@@ -9,6 +9,7 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - For Max/David machine handoff or ignored asset sync work, read [`HANDOFF.md`](./HANDOFF.md).
 - For "show me" requests, follow [`SHOW_ME_SOP.md`](./SHOW_ME_SOP.md).
 - For changes intended to be viewed externally, commit and push once complete unless the user asks not to.
+- Keep the active collaboration timelog in [`TIMELOG.md`](./TIMELOG.md) current according to the timelog SOP.
 
 ## Max/David Handoff Direction
 
@@ -45,6 +46,18 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - Update the version badge in the topbar for every user-visible build.
 - Also bump CSS and JS cache-bust query strings (`?v=X.Y`) on `shared.css`, `styles.css`, `photos.css`, and `photos.js` in every HTML file.
 - Keep `VERSION` as the source of the current visible version number without the leading `v`.
+
+## Timelog
+
+- Local SOP: [`docs/sops/TIMELOG_SOP.md`](./docs/sops/TIMELOG_SOP.md).
+- Count only the user's active project collaboration time, not Codex background work or idle gaps.
+- Treat explicit user clock instructions as authoritative: start, resume, pause, stop, or off-budget.
+- When the clock is paused, do not add active collaboration time until project work is clearly resumed.
+- Log time conservatively in one-minute increments.
+- Keep totals and remaining budget in `TIMELOG.md` accurate whenever countable time changes.
+- Use `TIMELOG.md` as the source of the current PhotosByElie clock state across threads in this repo.
+- When `TIMELOG.md` shows `running`, keep logging countable active project collaboration time until the user explicitly pauses, stops, or marks work off-budget.
+- No fixed PhotosByElie collaboration budget is currently set.
 
 ## Catalog Artifact Retention
 

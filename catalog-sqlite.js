@@ -260,6 +260,15 @@
     .filter(Boolean);
 
   const centsToDollars = (value) => Math.round(Number(value || 0)) / 100;
+  const nullableCentsToDollars = (value) => value == null ? null : centsToDollars(value);
+  const jsonValue = (value, fallback = null) => {
+    if (value == null || value === "") return fallback;
+    try {
+      return JSON.parse(String(value));
+    } catch {
+      return fallback;
+    }
+  };
 
   const mediaKey = (mediaId, assetCode, mediaType) => {
     if (assetCode === "still_900") return `expo/${mediaId}_900.jpg`;
@@ -338,6 +347,62 @@
       "min_duration_seconds",
       "max_duration_seconds",
       "price_cents",
+      "sort_order",
+    ], "index");
+    const podSettingRows = reader.table(roots, "pod_settings", ["setting_key", "setting_value"], "index");
+    const podSupplierRows = reader.table(roots, "pod_suppliers", [
+      "supplier_id",
+      "label",
+      "role",
+      "automation_status",
+      "api_base_url",
+      "api_docs_url",
+      "quote_support",
+      "order_support",
+      "webhook_support",
+      "sandbox_support",
+      "fulfillment_regions",
+      "notes",
+      "active",
+      "sort_order",
+    ], "index");
+    const podQualityTierRows = reader.table(roots, "pod_quality_tiers", [
+      "quality_tier_id",
+      "label",
+      "supplier_id",
+      "buyer_label",
+      "quality_position",
+      "print_profile",
+      "frame_profile",
+      "price_position",
+      "automation_status",
+      "notes",
+      "active",
+      "sort_order",
+    ], "index");
+    const podOptionRows = reader.table(roots, "pod_options", [
+      "pod_option_id",
+      "supplier_id",
+      "product_id",
+      "frame_id",
+      "market_region",
+      "currency",
+      "supplier_product_id",
+      "supplier_variant_id",
+      "supplier_sku",
+      "supplier_size",
+      "supplier_item_cost_cents",
+      "supplier_shipping_cents",
+      "supplier_total_cents",
+      "quote_supported",
+      "order_supported",
+      "requires_account",
+      "fulfillment_model",
+      "api_quote_mode",
+      "api_order_mode",
+      "source_url",
+      "notes",
+      "active",
       "sort_order",
     ], "index");
     const mediaItems = reader.table(roots, "media_items", [
@@ -429,6 +494,67 @@
             maxDurationSeconds: tier.max_duration_seconds == null ? null : Number(tier.max_duration_seconds),
           }])
       ),
+      podAutomation: Object.fromEntries(
+        podSettingRows.map((row) => [String(row.setting_key || ""), jsonValue(row.setting_value)])
+      ),
+      podSuppliers: [...podSupplierRows]
+        .filter((supplier) => Number(supplier.active) !== 0)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+        .map((supplier) => ({
+          id: String(supplier.supplier_id || ""),
+          label: supplier.label || "",
+          role: supplier.role || "",
+          automationStatus: supplier.automation_status || "",
+          apiBaseUrl: supplier.api_base_url || "",
+          apiDocsUrl: supplier.api_docs_url || "",
+          quoteSupport: supplier.quote_support || "",
+          orderSupport: supplier.order_support || "",
+          webhookSupport: supplier.webhook_support || "",
+          sandboxSupport: supplier.sandbox_support || "",
+          fulfillmentRegions: jsonValue(supplier.fulfillment_regions, []),
+          notes: supplier.notes || "",
+        })),
+      podQualityTiers: [...podQualityTierRows]
+        .filter((tier) => Number(tier.active) !== 0)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+        .map((tier) => ({
+          id: String(tier.quality_tier_id || ""),
+          label: tier.label || "",
+          supplierId: String(tier.supplier_id || ""),
+          buyerLabel: tier.buyer_label || "",
+          qualityPosition: tier.quality_position || "",
+          printProfile: tier.print_profile || "",
+          frameProfile: tier.frame_profile || "",
+          pricePosition: tier.price_position || "",
+          automationStatus: tier.automation_status || "",
+          notes: tier.notes || "",
+        })),
+      podOptions: [...podOptionRows]
+        .filter((option) => Number(option.active) !== 0)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+        .map((option) => ({
+          id: String(option.pod_option_id || ""),
+          supplierId: String(option.supplier_id || ""),
+          productId: String(option.product_id || ""),
+          frameId: String(option.frame_id || "none"),
+          marketRegion: String(option.market_region || ""),
+          currency: String(option.currency || ""),
+          supplierProductId: option.supplier_product_id == null ? null : String(option.supplier_product_id),
+          supplierVariantId: option.supplier_variant_id == null ? null : String(option.supplier_variant_id),
+          supplierSku: option.supplier_sku || "",
+          supplierSize: option.supplier_size || "",
+          supplierItemCost: nullableCentsToDollars(option.supplier_item_cost_cents),
+          supplierShippingCost: nullableCentsToDollars(option.supplier_shipping_cents),
+          supplierTotalCost: nullableCentsToDollars(option.supplier_total_cents),
+          quoteSupported: Number(option.quote_supported) === 1,
+          orderSupported: Number(option.order_supported) === 1,
+          requiresAccount: Number(option.requires_account) === 1,
+          fulfillmentModel: option.fulfillment_model || "",
+          apiQuoteMode: option.api_quote_mode || "",
+          apiOrderMode: option.api_order_mode || "",
+          sourceUrl: option.source_url || "",
+          notes: option.notes || "",
+        })),
     };
     const assetsByMediaId = new Map();
     for (const asset of mediaAssets) {
@@ -547,6 +673,9 @@
         mediaAssets: mediaAssets.length,
         products: products.length,
         priceTiers: priceTiers.length,
+        podSuppliers: podSupplierRows.length,
+        podQualityTiers: podQualityTierRows.length,
+        podOptions: podOptionRows.length,
       },
     };
   };

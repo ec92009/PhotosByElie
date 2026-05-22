@@ -47,8 +47,16 @@ Clock state: running
 | 2026-05-22 | 19:10 CEST | 19:12 CEST | 0:01 | Identified the existing homepage featured-social anchor for the Instagram profile link. |
 | 2026-05-22 | 19:12 CEST | 19:19 CEST | 0:07 | Added first-pass crawl files, documented the SEO baseline, and refreshed backlog notes. |
 | 2026-05-22 | 19:19 CEST | 19:38 CEST | 0:19 | Refreshed quiet-thread docs, created the daily social-post automation, and documented the updated backlog. |
+| 2026-05-22 | 21:01 CEST | 21:02 CEST | 0:01 | Requested US/EU POD print and frame supplier research; background research time excluded. |
+| 2026-05-22 | 21:07 CEST | 21:08 CEST | 0:01 | Clarified POD supplier shortlist needs API-first automation suitability. |
+| 2026-05-22 | 21:09 CEST | 21:10 CEST | 0:01 | Directed API-first POD wiring with localhost-only Owner preview and store closed. |
+| 2026-05-22 | 21:34 CEST | 21:35 CEST | 0:01 | Added future POD quality-tier direction with one supplier route per tier. |
+| 2026-05-22 | 22:16 CEST | 22:17 CEST | 0:01 | Checked the local Owner page POD preview changes for an off-desk summary. |
+| 2026-05-23 | 00:08 CEST | 00:09 CEST | 0:01 | Requested a printable PhotosByElie QR-code coaster 3MF. |
+| 2026-05-23 | 00:31 CEST | 00:32 CEST | 0:01 | Requested a recessed `byElie` mark on the coaster underside. |
+| 2026-05-23 | 00:43 CEST | 00:44 CEST | 0:01 | Inspected the Snapmaker Orca-saved `270` 3MF color metadata. |
 
 ## Totals
 
-Active collaboration time used: 3:20
+Active collaboration time used: 3:28
 Remaining budget: not set

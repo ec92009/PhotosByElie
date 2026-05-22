@@ -47,6 +47,16 @@ def dollars_to_cents(value: Any) -> int:
     return int(round(float(value or 0) * 100))
 
 
+def optional_dollars_to_cents(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    return dollars_to_cents(value)
+
+
+def json_text(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
 def load_product_pricing(repo_root: Path, path: Path = DEFAULT_PRODUCT_PRICING) -> dict[str, Any]:
     target = path if path.is_absolute() else repo_root / path
     with target.open("r", encoding="utf-8") as handle:
@@ -360,6 +370,73 @@ def create_schema(conn: sqlite3.Connection) -> None:
           sort_order            INTEGER NOT NULL CHECK (sort_order > 0)
         ) WITHOUT ROWID;
 
+        CREATE TABLE pod_settings (
+          setting_key   TEXT PRIMARY KEY CHECK (trim(setting_key) <> ''),
+          setting_value TEXT NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE pod_suppliers (
+          supplier_id         TEXT PRIMARY KEY CHECK (trim(supplier_id) <> ''),
+          label               TEXT NOT NULL CHECK (trim(label) <> ''),
+          role                TEXT NOT NULL CHECK (trim(role) <> ''),
+          automation_status   TEXT NOT NULL CHECK (trim(automation_status) <> ''),
+          api_base_url        TEXT,
+          api_docs_url        TEXT,
+          quote_support       TEXT,
+          order_support       TEXT,
+          webhook_support     TEXT,
+          sandbox_support     TEXT,
+          fulfillment_regions TEXT,
+          notes               TEXT,
+          active              INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+          sort_order          INTEGER NOT NULL CHECK (sort_order > 0)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE pod_quality_tiers (
+          quality_tier_id   TEXT PRIMARY KEY CHECK (trim(quality_tier_id) <> ''),
+          label             TEXT NOT NULL CHECK (trim(label) <> ''),
+          supplier_id       TEXT NOT NULL,
+          buyer_label       TEXT,
+          quality_position  TEXT,
+          print_profile     TEXT,
+          frame_profile     TEXT,
+          price_position    TEXT,
+          automation_status TEXT NOT NULL CHECK (trim(automation_status) <> ''),
+          notes             TEXT,
+          active            INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+          sort_order        INTEGER NOT NULL CHECK (sort_order > 0),
+          FOREIGN KEY (supplier_id) REFERENCES pod_suppliers(supplier_id) ON DELETE CASCADE
+        ) WITHOUT ROWID;
+
+        CREATE TABLE pod_options (
+          pod_option_id              TEXT PRIMARY KEY CHECK (trim(pod_option_id) <> ''),
+          supplier_id                TEXT NOT NULL,
+          product_id                 TEXT NOT NULL,
+          frame_id                   TEXT NOT NULL,
+          market_region              TEXT NOT NULL CHECK (trim(market_region) <> ''),
+          currency                   TEXT NOT NULL CHECK (trim(currency) <> ''),
+          supplier_product_id        TEXT,
+          supplier_variant_id        TEXT,
+          supplier_sku               TEXT,
+          supplier_size              TEXT,
+          supplier_item_cost_cents   INTEGER CHECK (supplier_item_cost_cents IS NULL OR supplier_item_cost_cents >= 0),
+          supplier_shipping_cents    INTEGER CHECK (supplier_shipping_cents IS NULL OR supplier_shipping_cents >= 0),
+          supplier_total_cents       INTEGER CHECK (supplier_total_cents IS NULL OR supplier_total_cents >= 0),
+          quote_supported            INTEGER NOT NULL DEFAULT 0 CHECK (quote_supported IN (0, 1)),
+          order_supported            INTEGER NOT NULL DEFAULT 0 CHECK (order_supported IN (0, 1)),
+          requires_account           INTEGER NOT NULL DEFAULT 1 CHECK (requires_account IN (0, 1)),
+          fulfillment_model          TEXT,
+          api_quote_mode             TEXT,
+          api_order_mode             TEXT,
+          source_url                 TEXT,
+          notes                      TEXT,
+          active                     INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+          sort_order                 INTEGER NOT NULL CHECK (sort_order > 0),
+          FOREIGN KEY (supplier_id) REFERENCES pod_suppliers(supplier_id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+          FOREIGN KEY (frame_id) REFERENCES frame_options(frame_id)
+        ) WITHOUT ROWID;
+
         CREATE TABLE media_items (
           media_id            TEXT PRIMARY KEY,
           collection_id       INTEGER NOT NULL,
@@ -621,9 +698,13 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
         products = sorted(pricing.get("products") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
         frames = sorted(pricing.get("frames") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
         video_price_tiers = sorted(pricing.get("videoPriceTiers") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+        pod_suppliers = sorted(pricing.get("podSuppliers") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+        pod_quality_tiers = sorted(pricing.get("podQualityTiers") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
+        pod_options = sorted(pricing.get("podOptions") or [], key=lambda item: (int(item.get("sortOrder") or 0), str(item.get("id") or "")))
 
         price_tier_ids = {str(tier.get("id") or "") for tier in price_tiers}
         product_ids = {str(product.get("id") or "") for product in products}
+        frame_ids = {str(frame.get("id") or "") for frame in frames}
         if not price_tier_ids:
             raise RuntimeError("product pricing requires at least one price tier")
         if not product_ids:
@@ -729,6 +810,107 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
                 )
                 for index, tier in enumerate(video_price_tiers, start=1)
             ],
+        )
+        pod_settings = pricing.get("podAutomation") or {}
+        conn.executemany(
+            "INSERT INTO pod_settings VALUES (?, ?)",
+            [(str(key), json_text(value)) for key, value in sorted(pod_settings.items())],
+        )
+        supplier_ids = {str(supplier.get("id") or "").strip() for supplier in pod_suppliers}
+        conn.executemany(
+            "INSERT INTO pod_suppliers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    str(supplier.get("id") or "").strip(),
+                    str(supplier.get("label") or "").strip(),
+                    str(supplier.get("role") or "").strip(),
+                    str(supplier.get("automationStatus") or "").strip(),
+                    supplier.get("apiBaseUrl"),
+                    supplier.get("apiDocsUrl"),
+                    supplier.get("quoteSupport"),
+                    supplier.get("orderSupport"),
+                    supplier.get("webhookSupport"),
+                    supplier.get("sandboxSupport"),
+                    json_text(supplier.get("fulfillmentRegions") or []),
+                    supplier.get("notes"),
+                    0 if supplier.get("active") is False else 1,
+                    int(supplier.get("sortOrder") or index),
+                )
+                for index, supplier in enumerate(pod_suppliers, start=1)
+            ],
+        )
+        pod_quality_tier_rows = []
+        for index, tier in enumerate(pod_quality_tiers, start=1):
+            tier_id = str(tier.get("id") or "").strip()
+            supplier_id = str(tier.get("supplierId") or "").strip()
+            if not tier_id:
+                raise RuntimeError("POD quality tier is missing an id")
+            if supplier_id not in supplier_ids:
+                raise RuntimeError(f"{tier_id}: unknown POD quality tier supplier {supplier_id!r}")
+            pod_quality_tier_rows.append(
+                (
+                    tier_id,
+                    str(tier.get("label") or "").strip(),
+                    supplier_id,
+                    tier.get("buyerLabel"),
+                    tier.get("qualityPosition"),
+                    tier.get("printProfile"),
+                    tier.get("frameProfile"),
+                    tier.get("pricePosition"),
+                    str(tier.get("automationStatus") or "").strip(),
+                    tier.get("notes"),
+                    0 if tier.get("active") is False else 1,
+                    int(tier.get("sortOrder") or index),
+                )
+            )
+        conn.executemany(
+            "INSERT INTO pod_quality_tiers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            pod_quality_tier_rows,
+        )
+        pod_option_rows = []
+        for index, option in enumerate(pod_options, start=1):
+            option_id = str(option.get("id") or "").strip()
+            supplier_id = str(option.get("supplierId") or "").strip()
+            product_id = str(option.get("productId") or "").strip()
+            frame_id = str(option.get("frameId") or "none").strip()
+            if not option_id:
+                raise RuntimeError("POD option is missing an id")
+            if supplier_id not in supplier_ids:
+                raise RuntimeError(f"{option_id}: unknown POD supplier {supplier_id!r}")
+            if product_id not in product_ids:
+                raise RuntimeError(f"{option_id}: unknown POD product {product_id!r}")
+            if frame_id not in frame_ids:
+                raise RuntimeError(f"{option_id}: unknown POD frame {frame_id!r}")
+            pod_option_rows.append(
+                (
+                    option_id,
+                    supplier_id,
+                    product_id,
+                    frame_id,
+                    str(option.get("marketRegion") or "").strip(),
+                    str(option.get("currency") or "").strip(),
+                    None if option.get("supplierProductId") is None else str(option.get("supplierProductId")),
+                    None if option.get("supplierVariantId") is None else str(option.get("supplierVariantId")),
+                    option.get("supplierSku"),
+                    option.get("supplierSize"),
+                    optional_dollars_to_cents(option.get("supplierItemCost")),
+                    optional_dollars_to_cents(option.get("supplierShippingCost")),
+                    optional_dollars_to_cents(option.get("supplierTotalCost")),
+                    1 if option.get("quoteSupported") is True else 0,
+                    1 if option.get("orderSupported") is True else 0,
+                    1 if option.get("requiresAccount") is not False else 0,
+                    option.get("fulfillmentModel"),
+                    option.get("apiQuoteMode"),
+                    option.get("apiOrderMode"),
+                    option.get("sourceUrl"),
+                    option.get("notes"),
+                    0 if option.get("active") is False else 1,
+                    int(option.get("sortOrder") or index),
+                )
+            )
+        conn.executemany(
+            "INSERT INTO pod_options VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            pod_option_rows,
         )
 
         conn.executemany(
@@ -924,6 +1106,10 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
                 "frame_prices",
                 "shipping_handling_prices",
                 "video_price_tiers",
+                "pod_settings",
+                "pod_suppliers",
+                "pod_quality_tiers",
+                "pod_options",
                 "keyword_terms",
                 "media_items",
                 "media_assets",

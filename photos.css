@@ -1333,6 +1333,11 @@ html[data-theme="light"] .photo-art.has-photo::after{
   border:1px solid var(--line);
   background:var(--surface);
 }
+.owner-pod-supplier-list{
+  overflow-x:auto;
+  border:1px solid var(--line);
+  background:var(--surface);
+}
 .owner-price-table{
   width:100%;
   min-width:620px;
@@ -1394,6 +1399,102 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-price-table tbody tr:last-child th,
 .owner-price-table tbody tr:last-child td{
   border-bottom:0;
+}
+.owner-card-pod-suppliers,
+.owner-card-pod-quality,
+.owner-card-pod-options,
+.owner-card-pod-schema{
+  grid-column:1 / -1;
+}
+.owner-pod-table{
+  min-width:1100px;
+}
+.owner-pod-table tbody th{
+  width:auto;
+}
+.owner-pod-table td:nth-child(3),
+.owner-pod-table td:nth-child(n+4){
+  white-space:normal;
+}
+.owner-pod-options-table{
+  min-width:1280px;
+  table-layout:fixed;
+}
+.owner-pod-tiers-table{
+  min-width:1180px;
+  table-layout:fixed;
+}
+.owner-pod-tiers-table th:nth-child(1),
+.owner-pod-tiers-table td:nth-child(1){
+  width:150px;
+}
+.owner-pod-tiers-table th:nth-child(2),
+.owner-pod-tiers-table td:nth-child(2){
+  width:150px;
+}
+.owner-pod-tiers-table th:nth-child(3),
+.owner-pod-tiers-table td:nth-child(3){
+  width:260px;
+}
+.owner-pod-tiers-table th:nth-child(4),
+.owner-pod-tiers-table td:nth-child(4){
+  width:300px;
+}
+.owner-pod-tiers-table th:nth-child(5),
+.owner-pod-tiers-table td:nth-child(5){
+  width:180px;
+}
+.owner-pod-options-table th:nth-child(1),
+.owner-pod-options-table td:nth-child(1){
+  width:90px;
+}
+.owner-pod-options-table th:nth-child(2),
+.owner-pod-options-table td:nth-child(2){
+  width:74px;
+}
+.owner-pod-options-table th:nth-child(3),
+.owner-pod-options-table td:nth-child(3){
+  width:220px;
+}
+.owner-pod-options-table th:nth-child(4),
+.owner-pod-options-table td:nth-child(4){
+  width:140px;
+}
+.owner-pod-options-table th:nth-child(5),
+.owner-pod-options-table td:nth-child(5){
+  width:190px;
+}
+.owner-pod-options-table th:nth-child(6),
+.owner-pod-options-table td:nth-child(6),
+.owner-pod-options-table th:nth-child(7),
+.owner-pod-options-table td:nth-child(7){
+  width:118px;
+}
+.owner-pod-table code{
+  display:block;
+  color:var(--text);
+  font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  white-space:normal;
+  word-break:normal;
+  overflow-wrap:anywhere;
+}
+.owner-pod-table small{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:700;
+}
+.owner-pod-status{
+  display:inline-block;
+  border:1px solid var(--line);
+  background:var(--bg);
+  color:var(--text);
+  font-size:.72rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  padding:3px 7px;
+  text-transform:uppercase;
 }
 .owner-sweep-phases{
   display:grid;

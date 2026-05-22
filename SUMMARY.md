@@ -6,8 +6,8 @@ Date: 2026-05-22
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.4`
-- Local Owner page: `http://localhost:8000/owner.html?v=83.4`
+- Current visible build: `v83.6`
+- Local Owner page: `http://localhost:8000/owner.html?v=83.6`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -25,7 +25,10 @@ Date: 2026-05-22
 - Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.
+- `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and schema preview panels in Owner Commerce; public print checkout remains gated off.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
+- Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
+- A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
@@ -47,6 +50,8 @@ The latest public-site pass added a conservative buyer trust path: basket/order 
 The latest social pass updates the homepage Featured section from Pinterest-only to social, adds the first Facebook Page Invalides feature card, and keeps the existing Pinterest campaign links.
 
 The latest autonomous repo-side strategy pass added a price/offer strategy draft. It recommends a digital-only launch, owner-approved support/refund posture, and a proposed real camera ladder of `$3 / $8 / $28 / $65` with lower AI pricing, while leaving the current live price files unchanged until owner approval.
+
+The latest POD preview pass keeps the storefront closed while modeling the first print sizes, supplier capabilities, quality-tier routing, and supplier SKU/cost placeholders in the catalog. Owner Commerce now shows supplier readiness, route tiers, option rows, and schema counts on localhost; public checkout still defaults to digital-only unless Owner deliberately enables physical items locally.
 
 The latest SEO/discovery pass added `robots.txt` and `sitemap.xml` for the homepage, core galleries, campaign pages, and support page while keeping owner/order/basket/real-estate/experiments/raw-social working pages out of crawler focus.
 
@@ -143,6 +148,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v83.2`, JPG 1 MP and 3 MP checkout tiers are $0.10 and $0.30, buyer prices render cents cleanly, orders below Stripe's $0.50 minimum receive only the needed top-up, and a Dock launcher opens localhost Owner in Safari.
 - In `v83.3`, basket/order pages show buyer trust notes, `support.html` documents payment, delivery recovery, license, and support expectations, and root public pages use the camera-tripod logo/favicon.
 - In `v83.4`, the homepage Featured section includes the first Facebook Page feature card alongside Pinterest campaign cards.
+- In `v83.6`, Owner Commerce exposes local-only POD automation preview data for supplier readiness, quality tiers, supplier option rows, and SQLite POD table shape while `pod_settings.storefrontEnabled` remains false.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

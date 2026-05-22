@@ -123,6 +123,11 @@
   );
   const refreshButtons = [...document.querySelectorAll("[data-owner-refresh]")];
   const productSettings = window.photosByElieProductSettings;
+  const podStoreStateRoot = document.querySelector("[data-owner-pod-store-state]");
+  const podSuppliersRoot = document.querySelector("[data-owner-pod-suppliers]");
+  const podQualityTiersRoot = document.querySelector("[data-owner-pod-quality-tiers]");
+  const podOptionsRoot = document.querySelector("[data-owner-pod-options]");
+  const podSchemaRoot = document.querySelector("[data-owner-pod-schema]");
   let r2PollTimer = null;
   let r2RepairLogToken = "";
   let r2RepairActive = false;
@@ -229,6 +234,7 @@
       setStatus("Owner controls unlocked on localhost.");
       refreshCountsFromSource();
       refreshBlockedSyncPanel();
+      renderPodCommerce();
       loadR2Coverage();
       loadCostEstimate();
       loadKeywordBlacklist();
@@ -568,6 +574,214 @@
         setStatus("Price list saved locally.");
       });
     });
+  };
+
+  const podAutomation = () => window.photosByEliePodAutomation || window.photosByElieProductCatalog?.podAutomation || {};
+  const podSuppliers = () => window.photosByEliePodSuppliers || window.photosByElieProductCatalog?.podSuppliers || [];
+  const podQualityTiers = () => window.photosByEliePodQualityTiers || window.photosByElieProductCatalog?.podQualityTiers || [];
+  const podOptions = () => window.photosByEliePodOptions || window.photosByElieProductCatalog?.podOptions || [];
+  const podMoney = (currency, value) => {
+    if (value == null || value === "") return "quote";
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return "quote";
+    const code = String(currency || "USD").toUpperCase();
+    const symbol = code === "EUR" ? "€" : "$";
+    return `${symbol}${amount.toFixed(amount % 1 ? 2 : 0)}`;
+  };
+  const podYesNo = (value) => value ? "yes" : "no";
+  const renderPodCommerce = () => {
+    const automation = podAutomation();
+    const suppliers = podSuppliers();
+    const qualityTiers = podQualityTiers();
+    const options = podOptions();
+    const productMap = new Map((window.photosByElieResolutions || []).map((option) => [option.id, option]));
+    const frameMap = new Map((window.photosByElieFrameOptions || []).map((frame) => [frame.id, frame]));
+    const supplierMap = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+    const physicalEnabled = productSettings?.physicalProductsEnabled?.() === true;
+    const storeState = automation.storefrontEnabled === true
+      ? "POD storefront flag is on in the catalog; do not deploy until checkout fulfillment is connected."
+      : `Storefront flag is off. POD choices are visible only on localhost${physicalEnabled ? " with the local toggle enabled" : ""}.`;
+    setText(podStoreStateRoot, storeState);
+
+    if (podSuppliersRoot) {
+      if (!suppliers.length) {
+        setHtml(podSuppliersRoot, "<p class=\"owner-card-note\">No POD suppliers are configured.</p>");
+      } else {
+        setHtml(podSuppliersRoot, `
+          <table class="owner-price-table owner-pod-table">
+            <thead>
+              <tr>
+                <th scope="col">Supplier</th>
+                <th scope="col">Role</th>
+                <th scope="col">API</th>
+                <th scope="col">Regions</th>
+                <th scope="col">Automation</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${suppliers.map((supplier) => `
+                <tr>
+                  <th scope="row">${escapeHtml(supplier.label || supplier.id)}</th>
+                  <td><span class="owner-pod-status">${escapeHtml(supplier.role || "")}</span><br>${escapeHtml(supplier.automationStatus || "")}</td>
+                  <td>
+                    <a href="${escapeHtml(supplier.apiDocsUrl || "#")}" target="_blank" rel="noreferrer">docs</a><br>
+                    <code>${escapeHtml(supplier.apiBaseUrl || "")}</code>
+                  </td>
+                  <td>${escapeHtml((supplier.fulfillmentRegions || []).join(", "))}</td>
+                  <td>
+                    <strong>Quote:</strong> ${escapeHtml(supplier.quoteSupport || "")}<br>
+                    <strong>Order:</strong> ${escapeHtml(supplier.orderSupport || "")}<br>
+                    <strong>Hooks:</strong> ${escapeHtml(supplier.webhookSupport || "")}
+                  </td>
+                  <td>${escapeHtml(supplier.notes || "")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `);
+      }
+    }
+
+    if (podQualityTiersRoot) {
+      if (!qualityTiers.length) {
+        setHtml(podQualityTiersRoot, "<p class=\"owner-card-note\">No POD quality tiers are configured.</p>");
+      } else {
+        setHtml(podQualityTiersRoot, `
+          <table class="owner-price-table owner-pod-table owner-pod-tiers-table">
+            <thead>
+              <tr>
+                <th scope="col">Tier</th>
+                <th scope="col">Supplier</th>
+                <th scope="col">Buyer position</th>
+                <th scope="col">Print/frame profile</th>
+                <th scope="col">Price stance</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${qualityTiers.map((tier) => {
+                const supplier = supplierMap.get(tier.supplierId) || { label: tier.supplierId };
+                return `
+                  <tr>
+                    <th scope="row">${escapeHtml(tier.label || tier.id)}</th>
+                    <td>
+                      ${escapeHtml(supplier.label || tier.supplierId)}<br>
+                      <small>${escapeHtml(supplier.role || "")}</small>
+                    </td>
+                    <td>
+                      ${escapeHtml(tier.buyerLabel || "")}<br>
+                      <small>${escapeHtml(tier.qualityPosition || "")}</small>
+                    </td>
+                    <td>
+                      <strong>Print:</strong> ${escapeHtml(tier.printProfile || "")}<br>
+                      <strong>Frame:</strong> ${escapeHtml(tier.frameProfile || "")}
+                    </td>
+                    <td>${escapeHtml(tier.pricePosition || "")}</td>
+                    <td>
+                      <span class="owner-pod-status">${escapeHtml(tier.automationStatus || "")}</span><br>
+                      <small>${escapeHtml(tier.notes || "")}</small>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        `);
+      }
+    }
+
+    if (podOptionsRoot) {
+      if (!options.length) {
+        setHtml(podOptionsRoot, "<p class=\"owner-card-note\">No POD supplier options are configured.</p>");
+      } else {
+        setHtml(podOptionsRoot, `
+          <table class="owner-price-table owner-pod-table owner-pod-options-table">
+            <thead>
+              <tr>
+                <th scope="col">Supplier</th>
+                <th scope="col">Market</th>
+                <th scope="col">Product</th>
+                <th scope="col">Frame</th>
+                <th scope="col">API IDs</th>
+                <th scope="col">Supplier cost</th>
+                <th scope="col">Automation</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${options.map((option) => {
+                const product = productMap.get(option.productId) || { id: option.productId, label: option.productId };
+                const frame = frameMap.get(option.frameId) || { id: option.frameId, label: option.frameId };
+                const supplier = supplierMap.get(option.supplierId) || { label: option.supplierId };
+                const ids = [
+                  option.supplierProductId && `product ${option.supplierProductId}`,
+                  option.supplierVariantId && `variant ${option.supplierVariantId}`,
+                  option.supplierSku,
+                ].filter(Boolean).join(" / ");
+                return `
+                  <tr>
+                    <th scope="row">${escapeHtml(supplier.label || option.supplierId)}</th>
+                    <td>${escapeHtml(String(option.marketRegion || "").toUpperCase())}</td>
+                    <td>
+                      ${escapeHtml(productLabel(product))}<br>
+                      <small>${escapeHtml(option.supplierSize || product.detail || "")}</small>
+                    </td>
+                    <td>${escapeHtml(frame.label || option.frameId)}</td>
+                    <td><code>${escapeHtml(ids || "quote lookup")}</code></td>
+                    <td>
+                      Item ${escapeHtml(podMoney(option.currency, option.supplierItemCost))}<br>
+                      Ship ${escapeHtml(podMoney(option.currency, option.supplierShippingCost))}<br>
+                      Total ${escapeHtml(podMoney(option.currency, option.supplierTotalCost))}
+                    </td>
+                    <td>
+                      Quote ${escapeHtml(podYesNo(option.quoteSupported))}<br>
+                      Order ${escapeHtml(podYesNo(option.orderSupported))}<br>
+                      Account ${escapeHtml(podYesNo(option.requiresAccount))}
+                    </td>
+                    <td>${escapeHtml(option.notes || option.fulfillmentModel || "")}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        `);
+      }
+    }
+
+    if (podSchemaRoot) {
+      const printProducts = (window.photosByElieResolutions || []).filter((product) => product.type === "print").length;
+      const schemaRows = [
+        ["pod_settings", "setting_key, setting_value", "Storefront gate and supplier recommendation", Object.keys(automation).length],
+        ["pod_suppliers", "supplier_id", "API capability and supplier role", suppliers.length],
+        ["pod_quality_tiers", "quality_tier_id", "One-supplier routing for future buyer quality tiers", qualityTiers.length],
+        ["pod_options", "pod_option_id", "Supplier SKU/variant mappings and cost rows", options.length],
+        ["products", "product_id", "Customer-facing print sizes, still localhost-gated", printProducts],
+        ["frame_options", "frame_id", "Frame choices shared across suppliers", (window.photosByElieFrameOptions || []).length],
+      ];
+      setHtml(podSchemaRoot, `
+        <table class="owner-price-table owner-pod-table">
+          <thead>
+            <tr>
+              <th scope="col">Table</th>
+              <th scope="col">Key</th>
+              <th scope="col">Purpose</th>
+              <th scope="col">Rows</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${schemaRows.map(([table, key, purpose, count]) => `
+              <tr>
+                <th scope="row"><code>${escapeHtml(table)}</code></th>
+                <td><code>${escapeHtml(key)}</code></td>
+                <td>${escapeHtml(purpose)}</td>
+                <td>${escapeHtml(formatCount(count))}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `);
+    }
   };
 
   const renderCostEstimate = (estimate = null) => {
@@ -2997,6 +3211,7 @@
 
   if (controls) controls.hidden = true;
   renderPriceList();
+  renderPodCommerce();
   renderCostEstimate();
 
     window.addEventListener("photosbyelie:ownerauthchange", (event) => {
@@ -3031,6 +3246,7 @@
       ? "Physical print and frame products are visible on localhost."
       : "Physical print and frame products are hidden; the site is digital-only."
     );
+    renderPodCommerce();
   });
 
   syncCountryKeywordsButton?.addEventListener("click", async () => {

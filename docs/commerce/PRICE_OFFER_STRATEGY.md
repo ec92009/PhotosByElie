@@ -44,6 +44,28 @@ Video:
 
 The current `$0.10` and `$0.30` low tiers are useful for proof-of-flow testing and very small promotion experiments, but they should not be the default public launch posture unless the owner explicitly wants ultra-low-friction discovery pricing.
 
+## Local POD Preview
+
+The inactive/local-only POD model now uses these starter sizes:
+
+| Product ID | Size | Proposed customer print | Proposed frame add-on | Supplier automation |
+| --- | --- | ---: | ---: | --- |
+| `print-12x16` | 12 x 16 in / 30 x 40 cm | $48 | $70 | Prodigi primary, Printful fallback, Gelato API proof |
+| `print-16x20` | 16 x 20 in / 40 x 50 cm | $68 | $90 | Prodigi primary, Printful fallback, Gelato API proof |
+| `print-18x24` | 18 x 24 in / 45 x 60 cm | $82 | $105 | Prodigi primary, Printful fallback, Gelato API proof |
+
+Quality-tier routing is modeled separately from size/frame products so the later storefront can offer buyer-facing tiers without duplicating every product row:
+
+| Tier | Supplier route | Use |
+| --- | --- | --- |
+| Value POD | Prodigi | Lowest landed cost and first automation path, including the frame-it-yourself option. |
+| Standard POD | Printful | Finished framed print path when the buyer should receive an assembled framed product. |
+| Gallery premium | theprintspace | Fine-art/photo paper and gallery framing candidate; sample and API setup required. |
+
+Gelato stays in the catalog as an API-proof/global-routing supplier until product UIDs, live quote behavior, and account billing are verified.
+
+`pod_settings.storefrontEnabled` is `false`; the browser only reveals print/frame choices when running on localhost and the Owner Commerce toggle is enabled. Supplier-cost rows live in `pod_suppliers`, `pod_quality_tiers`, and `pod_options` so the future Worker integration can quote/order by supplier SKU or variant id without opening public checkout yet.
+
 ## Bundles and Promotions
 
 Do not add bundle logic before the first clean paid traffic pass. Add it only after single-photo checkout behavior is proven against real visitors.
@@ -90,5 +112,7 @@ When the owner approves the launch ladder:
 - Approve or revise the proposed `$3 / $8 / $28 / $65` camera ladder.
 - Decide whether AI images should stay meaningfully cheaper than camera photos.
 - Decide whether full-resolution sales need an explicit commercial-use prompt before checkout.
+- Approve or revise the local POD starter sizes, quality-tier names, supplier route per tier, and margin before samples are ordered.
+- Confirm whether Prodigi's frame-it-yourself framed product is acceptable for customers or should be EU-only/testing-only.
 - Decide whether the support email remains `ec92009@gmail.com` for launch or moves to a branded address later.
 - Decide when social campaign pages are strong enough to send paid or public traffic.

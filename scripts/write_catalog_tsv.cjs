@@ -71,6 +71,10 @@ const runtimeParser = `(() => {
     window.photosByElieFrameOptions = (catalog.frameOptions || catalog.frames || []).map((frame) => ({ ...frame }));
     window.photosByElieShippingHandlingPrices = { ...(catalog.shippingHandlingPrices || {}) };
     window.photosByElieVideoPriceTiers = normalizeVideoPriceTiers(catalog.videoPriceTiers || {});
+    window.photosByEliePodAutomation = { ...(catalog.podAutomation || {}) };
+    window.photosByEliePodSuppliers = (catalog.podSuppliers || []).map((supplier) => ({ ...supplier }));
+    window.photosByEliePodQualityTiers = (catalog.podQualityTiers || []).map((tier) => ({ ...tier }));
+    window.photosByEliePodOptions = (catalog.podOptions || []).map((option) => ({ ...option }));
   };
 
   const finishCatalogLoad = (source, data, owner, productCatalog) => {

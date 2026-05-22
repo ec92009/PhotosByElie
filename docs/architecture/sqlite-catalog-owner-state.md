@@ -49,30 +49,38 @@ frame_options
 frame_prices
 shipping_handling_prices
 video_price_tiers
+pod_settings
+pod_suppliers
+pod_quality_tiers
+pod_options
 ```
 
 The populated compact-id database currently contains:
 
 ```text
 collections:     8
-cameras:         12
-lenses:          18
+cameras:         13
+lenses:          22
 media_types:     2
 source_origins:  2
 formats:         6
 asset_types:     7
-keyword_terms:   3,112
-source_folders:  128
-source_files:    5,827
-media_items:     5,827
-media_assets:    34,962
+keyword_terms:   3,521
+source_folders:  144
+source_files:    6,019
+media_items:     6,019
+media_assets:    35,724
 price_tiers:     2
-products:        8
+products:        7
 product_prices:  8
-frame_options:   3
-frame_prices:    8
-shipping_prices: 4
+frame_options:   4
+frame_prices:    9
+shipping_prices: 3
 video_tiers:     5
+pod_settings:    9
+pod_suppliers:   4
+pod_quality_tiers: 3
+pod_options:     24
 ```
 
 Historical size check from the compact-id rebuild:
@@ -265,6 +273,83 @@ CREATE TABLE video_price_tiers (
   max_duration_seconds  REAL CHECK (max_duration_seconds IS NULL OR max_duration_seconds > min_duration_seconds),
   price_cents           INTEGER NOT NULL CHECK (price_cents >= 0),
   sort_order            INTEGER NOT NULL CHECK (sort_order > 0)
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE pod_settings (
+  setting_key   TEXT PRIMARY KEY CHECK (trim(setting_key) <> ''),
+  setting_value TEXT NOT NULL
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE pod_suppliers (
+  supplier_id         TEXT PRIMARY KEY CHECK (trim(supplier_id) <> ''),
+  label               TEXT NOT NULL CHECK (trim(label) <> ''),
+  role                TEXT NOT NULL CHECK (trim(role) <> ''),
+  automation_status   TEXT NOT NULL CHECK (trim(automation_status) <> ''),
+  api_base_url        TEXT,
+  api_docs_url        TEXT,
+  quote_support       TEXT,
+  order_support       TEXT,
+  webhook_support     TEXT,
+  sandbox_support     TEXT,
+  fulfillment_regions TEXT,
+  notes               TEXT,
+  active              INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  sort_order          INTEGER NOT NULL CHECK (sort_order > 0)
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE pod_quality_tiers (
+  quality_tier_id   TEXT PRIMARY KEY CHECK (trim(quality_tier_id) <> ''),
+  label             TEXT NOT NULL CHECK (trim(label) <> ''),
+  supplier_id       TEXT NOT NULL,
+  buyer_label       TEXT,
+  quality_position  TEXT,
+  print_profile     TEXT,
+  frame_profile     TEXT,
+  price_position    TEXT,
+  automation_status TEXT NOT NULL CHECK (trim(automation_status) <> ''),
+  notes             TEXT,
+  active            INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  sort_order        INTEGER NOT NULL CHECK (sort_order > 0),
+
+  FOREIGN KEY (supplier_id) REFERENCES pod_suppliers(supplier_id) ON DELETE CASCADE
+) WITHOUT ROWID;
+```
+
+```sql
+CREATE TABLE pod_options (
+  pod_option_id              TEXT PRIMARY KEY CHECK (trim(pod_option_id) <> ''),
+  supplier_id                TEXT NOT NULL,
+  product_id                 TEXT NOT NULL,
+  frame_id                   TEXT NOT NULL,
+  market_region              TEXT NOT NULL CHECK (trim(market_region) <> ''),
+  currency                   TEXT NOT NULL CHECK (trim(currency) <> ''),
+  supplier_product_id        TEXT,
+  supplier_variant_id        TEXT,
+  supplier_sku               TEXT,
+  supplier_size              TEXT,
+  supplier_item_cost_cents   INTEGER CHECK (supplier_item_cost_cents IS NULL OR supplier_item_cost_cents >= 0),
+  supplier_shipping_cents    INTEGER CHECK (supplier_shipping_cents IS NULL OR supplier_shipping_cents >= 0),
+  supplier_total_cents       INTEGER CHECK (supplier_total_cents IS NULL OR supplier_total_cents >= 0),
+  quote_supported            INTEGER NOT NULL DEFAULT 0 CHECK (quote_supported IN (0, 1)),
+  order_supported            INTEGER NOT NULL DEFAULT 0 CHECK (order_supported IN (0, 1)),
+  requires_account           INTEGER NOT NULL DEFAULT 1 CHECK (requires_account IN (0, 1)),
+  fulfillment_model          TEXT,
+  api_quote_mode             TEXT,
+  api_order_mode             TEXT,
+  source_url                 TEXT,
+  notes                      TEXT,
+  active                     INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  sort_order                 INTEGER NOT NULL CHECK (sort_order > 0),
+
+  FOREIGN KEY (supplier_id) REFERENCES pod_suppliers(supplier_id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+  FOREIGN KEY (frame_id) REFERENCES frame_options(frame_id)
 ) WITHOUT ROWID;
 ```
 

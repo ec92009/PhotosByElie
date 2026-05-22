@@ -7,9 +7,9 @@
   <meta name="description" content="Local owner controls for Photos By Elie."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=83.4"/>
-  <link rel="stylesheet" href="./styles.css?v=83.4"/>
-  <link rel="stylesheet" href="./photos.css?v=83.4"/>
+  <link rel="stylesheet" href="./shared.css?v=83.6"/>
+  <link rel="stylesheet" href="./styles.css?v=83.6"/>
+  <link rel="stylesheet" href="./photos.css?v=83.6"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
       <a href="./">Photos</a> <span>|</span>
       <a class="is-active" href="./owner.html">Owner</a>
     </nav>
-    <span class="site-version-badge">v83.4</span>
+    <span class="site-version-badge">v83.6</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle data-owner-english-only title="Owner tools stay in English">English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light">Night</span><span class="mode-dark">Day</span></button>
@@ -226,7 +226,31 @@
             <input type="checkbox" data-owner-physical-products/>
             <span>Show print and frame options locally</span>
           </label>
-          <p>Off by default; the public site stays digital-only.</p>
+          <p data-owner-pod-store-state>Off by default; the public site stays digital-only.</p>
+        </article>
+        <article class="owner-card owner-card-wide owner-card-pod-suppliers" data-owner-tab="commerce">
+          <p class="eyebrow">POD automation</p>
+          <h2>Supplier API readiness</h2>
+          <p>Prodigi is primary for value, Printful is standard, theprintspace is a premium candidate, and Gelato is kept for API-key proof before pricing is trusted.</p>
+          <div class="owner-pod-supplier-list" data-owner-pod-suppliers></div>
+        </article>
+        <article class="owner-card owner-card-wide owner-card-pod-quality" data-owner-tab="commerce">
+          <p class="eyebrow">POD tiers</p>
+          <h2>Quality tier routing</h2>
+          <p>Future buyer-facing tiers pick one supplier route per tier while print sizes and frame choices stay shared.</p>
+          <div class="owner-price-list" data-owner-pod-quality-tiers></div>
+        </article>
+        <article class="owner-card owner-card-wide owner-card-pod-options" data-owner-tab="commerce">
+          <p class="eyebrow">POD options</p>
+          <h2>Print and frame supplier matrix</h2>
+          <p>Local catalog rows for API mapping, supplier SKUs, and supplier-side costs. These rows do not submit orders.</p>
+          <div class="owner-price-list" data-owner-pod-options></div>
+        </article>
+        <article class="owner-card owner-card-wide owner-card-pod-schema" data-owner-tab="commerce">
+          <p class="eyebrow">Catalog DB</p>
+          <h2>POD table shape</h2>
+          <p>Preview of the SQLite tables added for supplier automation without enabling the storefront.</p>
+          <div class="owner-price-list" data-owner-pod-schema></div>
         </article>
         <article class="owner-card owner-card-wide owner-card-cost" data-owner-cost-card data-owner-tab="cloud">
           <div class="owner-card-titlebar">
@@ -350,15 +374,15 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=83.4"></script>
-  <script src="./photos.js?v=83.4"></script>
-  <script src="./owner-auth.js?v=83.4"></script>
-  <script src="./owner-tools.js?v=83.4"></script>
-  <script src="./site-version.js?v=83.4"></script>
-  <script src="./catalog-sqlite.js?v=83.4"></script>
-  <script src="./photos-data.js?v=83.4"></script>
-  <script src="./hidden-actions.js?v=83.4"></script>
-  <script src="./reserve-store.js?v=83.4"></script>
-  <script src="./owner.js?v=83.4"></script>
+  <script src="./media-config.js?v=83.6"></script>
+  <script src="./photos.js?v=83.6"></script>
+  <script src="./owner-auth.js?v=83.6"></script>
+  <script src="./owner-tools.js?v=83.6"></script>
+  <script src="./site-version.js?v=83.6"></script>
+  <script src="./catalog-sqlite.js?v=83.6"></script>
+  <script src="./photos-data.js?v=83.6"></script>
+  <script src="./hidden-actions.js?v=83.6"></script>
+  <script src="./reserve-store.js?v=83.6"></script>
+  <script src="./owner.js?v=83.6"></script>
 </body>
 </html>

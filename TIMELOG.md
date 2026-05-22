@@ -38,8 +38,15 @@ Clock state: running
 | 2026-05-22 | 18:32 CEST | 18:40 CEST | 0:02 | Shared the new Photos By Elie Facebook Page from Elie Cohen's personal account. |
 | 2026-05-22 | 18:40 CEST | 18:50 CEST | 0:10 | Packaged the homepage Facebook feature as v83.4 with docs, validation, and browser checks. |
 | 2026-05-22 | 18:50 CEST | 18:51 CEST | 0:01 | Checked Instagram handle options, verified the new `ec92009` watermarked Invalides post, and noted that dedicated Instagram account creation still needs signup credentials/verification. |
+| 2026-05-22 | 18:51 CEST | 18:59 CEST | 0:03 | Added context comments to the Instagram Invalides post and opened the Instagram create dialog for a separate Valencia carousel. |
+| 2026-05-22 | 18:59 CEST | 19:02 CEST | 0:03 | Drafted the launch price and offer strategy, refreshed backlog/docs, and kept live prices unchanged pending owner approval. |
+| 2026-05-22 | 19:02 CEST | 19:03 CEST | 0:01 | Clarified the Instagram profile-link workflow for making the Valencia campaign URL clickable. |
+| 2026-05-22 | 19:03 CEST | 19:06 CEST | 0:01 | Confirmed Instagram web blocks profile link edits and redirected the link-in-bio change to the mobile app workflow. |
+| 2026-05-22 | 19:06 CEST | 19:08 CEST | 0:01 | Verified the Instagram profile now exposes the Valencia campaign URL as a clickable profile link. |
+| 2026-05-22 | 19:08 CEST | 19:10 CEST | 0:02 | Renamed the live Stripe webhook destination to `PhotosByElie Worker checkout` and refreshed handoff/backlog notes. |
+| 2026-05-22 | 19:10 CEST | 19:12 CEST | 0:01 | Identified the existing homepage featured-social anchor for the Instagram profile link. |
 
 ## Totals
 
-Active collaboration time used: 2:42
+Active collaboration time used: 2:54
 Remaining budget: not set

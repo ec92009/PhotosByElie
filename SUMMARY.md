@@ -20,11 +20,12 @@ Date: 2026-05-22
 - Live Stripe branding is saved with the new camera-tripod logo assets, brand color `#5B341E`, and accent color `#D86A3E`. The source assets are under `assets/branding/`.
 - Live Stripe customer email setting `Successful payments` is enabled; `Refunds` remains off.
 - Live Checkout card statement descriptor suffix is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
-- Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
+- Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, display name `PhotosByElie Worker checkout`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Secret values are not committed or written into docs.
 - Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.
+- Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 
 ## Latest Conversation Update
 
@@ -32,7 +33,7 @@ The latest handoff sweep published Owner-approved title/keyword metadata into th
 
 The latest Stripe pass completed live cutover. Cloudflare now has live Stripe and live webhook secrets installed outside git, `/health` reports real Stripe with USD, and a live Checkout Session used a `cs_live_...` id. The first real purchase was order `PBE-20260522-BA062E956C` for one JPG 1 MP Versailles photo. Stripe showed `$7.47` incoming from the `$8.00` charge, the live webhook moved the Worker order to `ready`, and the private download token served the expected JPEG.
 
-Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery. The webhook display name stayed Stripe-generated as `charismatic-rhythm`, but its functional configuration is correct.
+Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery. The live webhook destination has been renamed from Stripe's generated label to `PhotosByElie Worker checkout`; endpoint, event, and API version remain unchanged.
 
 The Worker was redeployed after the first live proof so future Checkout PaymentIntents use statement descriptor suffix `DOWNLOAD` instead of `ORDER`.
 
@@ -41,6 +42,8 @@ The live checkout Worker was also redeployed as version `143f9f7f-ab55-4f82-9a68
 The latest public-site pass added a conservative buyer trust path: basket/order notes explain Stripe receipts versus PhotosByElie delivery, `support.html` covers recovery, personal-use license, commercial-use approval, support email, and case-by-case refund handling, and the public favicon/topbar now use the selected camera-tripod brand mark.
 
 The latest social pass updates the homepage Featured section from Pinterest-only to social, adds the first Facebook Page Invalides feature card, and keeps the existing Pinterest campaign links.
+
+The latest autonomous repo-side strategy pass added a price/offer strategy draft. It recommends a digital-only launch, owner-approved support/refund posture, and a proposed real camera ladder of `$3 / $8 / $28 / $65` with lower AI pricing, while leaving the current live price files unchanged until owner approval.
 
 ## Earlier Conversation Context
 
@@ -84,12 +87,13 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 36. Live Stripe onboarding was completed far enough that the live dashboard showed no active account tasks.
 37. A new camera-tripod PhotosByElie brand asset was selected and committed under `assets/branding/`; live Stripe branding uses that logo/icon plus brand color `#5B341E` and accent color `#D86A3E`.
 38. Live Stripe successful-payment customer receipts were enabled; refunds remain disabled.
-39. A live Stripe webhook destination was created for `checkout.session.completed` at the deployed Worker endpoint, with destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`.
+39. A live Stripe webhook destination was created for `checkout.session.completed` at the deployed Worker endpoint, with destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`; its display name is now `PhotosByElie Worker checkout`.
 40. Live Stripe secrets were installed in Cloudflare outside git, and the Worker created live Checkout Sessions.
 41. Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming in Stripe balance, order status `ready`, one private JPEG delivery file, and a verified Worker download of `401,035` bytes.
 42. The deployed Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` now uses `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX=DOWNLOAD`, so future card statements should show `PHOTOSELIE* DOWNLOAD` with the current Stripe prefix.
 43. `v83.3` adds public buyer trust/support copy and publishes the camera-tripod mark as the public site logo/favicon.
 44. `v83.4` updates the homepage Featured section to show the first Facebook Page feature beside Pinterest features.
+45. A repo-side price/offer strategy draft now lives at `docs/commerce/PRICE_OFFER_STRATEGY.md`; it documents the proposed launch ladder, bundle timing, refund/support draft, and implementation checklist without changing live prices.
 
 ## Current Operational Notes
 
@@ -171,4 +175,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: optionally rename the live webhook destination, review/tune the `v83.3` buyer support/refund/license wording, publish the price/offer strategy, curate the first sellable storefront, then return to analytics, SEO, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review/tune the `v83.3` buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, then return to analytics, SEO, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.

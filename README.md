@@ -57,6 +57,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations, including versioning, active collaboration timelog tracking, and Lightroom image ingestion
+- `docs/commerce/PRICE_OFFER_STRATEGY.md`: launch price, bundle, refund/support, and implementation strategy draft for owner approval
 - `assets/branding/`: PhotosByElie brand assets used by Stripe and the public site favicon/topbar logo
 - `assets/`: publish metadata, tiny placeholders, and ignored localhost compatibility/Waste Basket working data
 - `assets/owner-actions/Owner.sqlite`: ignored local Owner workflow database for review queues, decisions, blacklist, country assignment state, and trusted R2 object lifecycle state
@@ -149,7 +150,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `assets/private-delivery-manifest.json` tracks private master/render coverage for catalog photos.
 - `assets/discarded/discarded-photo-ids.json` is the durable owner discard tombstone list. `assets/discarded-media-manifest.json` is the generated R2 cleanup record; Owner.sqlite imports those historical R2 keys as `deleted_confirmed` so routine cleanup trusts the DB and only checks newly marked leftovers unless a deep R2 inventory is needed.
 - Product choices are digital-only by default. Owner can deliberately enable physical print/frame options on localhost with the Physical items toggle for local review.
-- Published digital prices keep separate camera/AI defaults for higher tiers, with JPG 1 MP at $0.10, JPG 3 MP at $0.30, camera full resolution at $65, and AI full resolution at $25. Checkout shows Stripe's $0.50 minimum charge and adds only the difference when a digital order is below that minimum.
+- Published digital prices keep separate camera/AI defaults for higher tiers, with JPG 1 MP at $0.10, JPG 3 MP at $0.30, camera full resolution at $65, and AI full resolution at $25. Checkout shows Stripe's $0.50 minimum charge and adds only the difference when a digital order is below that minimum. The proposed real launch ladder is documented in `docs/commerce/PRICE_OFFER_STRATEGY.md` and should not be deployed until owner-approved.
 - Owner shows an editable local price-list table for the current camera/AI digital resolution tiers, print sizes, frame add-ons, and mock S&H amounts.
 - Physical print defaults are open-edition launch prices: $12 for 4x6, $18 for 5x7, $32 for 8x10, and $48 for 11x14 before optional framing.
 - Print offers infer the preferred measurement system from browser locale, showing inches first for US-style locales and centimeters first for metric locales while keeping both units visible.

@@ -65,9 +65,10 @@ for remote execution.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
 - Live Checkout card statement descriptor suffix is `DOWNLOAD`, so future charges should display like `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
-- Live Stripe webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`. The display name may still be Stripe-generated as `charismatic-rhythm`, but the functional endpoint is correct.
+- Live Stripe webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` is named `PhotosByElie Worker checkout` and posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order status `ready`, and one private JPEG download verified at `401,035` bytes.
+- Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
 
 ## First Commands On A Machine
 
@@ -102,8 +103,8 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 2. **Review checkout trust and buyer support wording.**
    - `v83.3` ships conservative support/license defaults; owner should approve or adjust refund, delivery-refresh, and commercial-use language before heavier launch traffic.
+   - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft before editing public copy.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
-   - Optionally rename the live webhook display name from `charismatic-rhythm` to `PhotosByElie Worker checkout`.
 
 3. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for longer-term order state.
@@ -116,9 +117,10 @@ cd /Users/ecohen/Dev/PhotosByElie
    - Decide first public offer: digital-only single assets, bundles, or collection packs.
    - Rephrase basket/order language around draft/review/availability so it builds confidence.
 
-5. **Publish a real price and offer strategy.**
-   - Move local Owner prices into a published price list shared by public basket and Worker validation.
-   - Add launch pricing, bundles, collection packs, buy-all-liked, and later promo-code hooks.
+5. **Approve and deploy the real price and offer strategy.**
+   - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`.
+   - After approval, change `assets/catalog/product-pricing.json`, regenerate catalog and Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
+   - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
 6. **Curate the first sellable storefront.**
    - Review visible catalog before paid traffic or launch outreach.
@@ -235,10 +237,11 @@ zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 - Public Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Real Stripe is wired behind Worker configuration; mock Stripe remains the local/default path unless Stripe secrets are configured.
 - Sandbox Stripe and live Stripe are both manually proven. Live Cloudflare secrets are installed outside git.
-- Live webhook destination: `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, event `checkout.session.completed`, API version `2026-04-22.dahlia`.
+- Live webhook destination: `we_1TZmoVPuO9o6fOp6JkBENiyV`, display name `PhotosByElie Worker checkout`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, event `checkout.session.completed`, API version `2026-04-22.dahlia`.
 - Live Stripe receipt branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand `#5B341E`, and accent `#D86A3E`.
 - Live card statement descriptor suffix is `DOWNLOAD`.
 - Live proof order: `PBE-20260522-BA062E956C`, `cs_live_...`, `pi_3TZtviPuO9o6fOp62QXLbvMF`, `$8.00` paid, order `ready`, one `jpg-1mp` private JPEG delivered.
+- Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Checkout is guest-first and USD-only.
 - Worker owns order ID, buyer email, USD total, basket snapshot, status, delivery file metadata, and signed-link-style download tokens.
 - Routes currently implemented:
@@ -259,20 +262,19 @@ npm run validate
 
 ## Fresh Backlog
 
-1. Optionally rename the live webhook destination from `charismatic-rhythm`.
-2. Review and tune the `v83.3` buyer support/refund/license wording.
-3. Publish a real price and offer strategy.
-4. Curate the first sellable storefront.
-5. Add conversion analytics.
-6. Improve public discovery and SEO.
-7. Create marketing landing pages and launch outreach.
-8. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
-9. Continue model/vision improvements for thin title/keyword rows.
-10. Rehearse the Real Estate client lifecycle.
-11. Polish Real Estate production outputs and access model.
-12. Replace temporary `r2.dev` media URL with a custom media domain.
-13. Parameterize gallery routes and split gallery/catalog data by collection.
-14. Improve gallery merchandising layout.
-15. Decide when physical goods return.
-16. Extend Owner operations dashboard and state-table browsing.
-17. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.
+1. Review and tune the `v83.3` buyer support/refund/license wording.
+2. Approve and deploy the real price and offer strategy.
+3. Curate the first sellable storefront.
+4. Add conversion analytics.
+5. Improve public discovery and SEO.
+6. Create marketing landing pages and launch outreach.
+7. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
+8. Continue model/vision improvements for thin title/keyword rows.
+9. Rehearse the Real Estate client lifecycle.
+10. Polish Real Estate production outputs and access model.
+11. Replace temporary `r2.dev` media URL with a custom media domain.
+12. Parameterize gallery routes and split gallery/catalog data by collection.
+13. Improve gallery merchandising layout.
+14. Decide when physical goods return.
+15. Extend Owner operations dashboard and state-table browsing.
+16. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.

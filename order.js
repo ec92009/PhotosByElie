@@ -276,6 +276,8 @@ const renderOrder = (order) => {
     <div><dt>${t("basket.order_id")}</dt><dd>${escapeText(order.id)}</dd></div>
     <div><dt>${t("order.status")}</dt><dd>${escapeText(order.status)}</dd></div>
     <div><dt>${t("order.email")}</dt><dd>${escapeText(order.buyerEmail)}</dd></div>
+    ${order.minimumChargeAdjustment ? `<div><dt>${t("basket.draft_total")}</dt><dd>${moneyFromCents(order.subtotalAmount, order.currency)}</dd></div>` : ""}
+    ${order.minimumChargeAdjustment ? `<div><dt>${t("basket.minimum_adjustment")}</dt><dd>+${moneyFromCents(order.minimumChargeAdjustment, order.currency)}</dd></div>` : ""}
     <div><dt>${t("order.total")}</dt><dd>${moneyFromCents(order.amountExpected, order.currency)}</dd></div>
     <div><dt>${t("order.paid")}</dt><dd>${moneyFromCents(order.amountPaid, order.currency)}</dd></div>
     <div><dt>${t("order.mode")}</dt><dd>${escapeText(order.checkoutMode)}</dd></div>

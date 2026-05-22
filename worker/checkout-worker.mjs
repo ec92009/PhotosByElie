@@ -2,6 +2,8 @@ import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 
 const ORDER_CURRENCY = "usd";
+const MINIMUM_CHARGE_AMOUNT = 50;
+const MINIMUM_CHARGE_PRODUCT_ID = "minimum-charge-adjustment";
 const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 const DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
@@ -98,6 +100,9 @@ const checkoutLineName = (title, label, maxLength = 180) => {
   const value = `${title || "Photo"} - ${label || "Digital asset"}`.replace(/\s+/g, " ").trim();
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
 };
+
+const minimumChargeAdjustmentFor = (subtotalAmount) =>
+  subtotalAmount > 0 && subtotalAmount < MINIMUM_CHARGE_AMOUNT ? MINIMUM_CHARGE_AMOUNT - subtotalAmount : 0;
 
 const originalSize = (photo) => {
   const fromMetadata = (photo?.metadata || []).find((item) => item.label === "Original size")?.value;
@@ -279,6 +284,8 @@ const publicOrder = (order) => ({
   checkoutMode: order.checkoutMode,
   buyerEmail: order.buyerEmail,
   currency: order.currency,
+  subtotalAmount: order.subtotalAmount ?? order.amountExpected,
+  minimumChargeAdjustment: order.minimumChargeAdjustment || 0,
   amountExpected: order.amountExpected,
   amountPaid: order.amountPaid || 0,
   items: order.items.map((item) => ({
@@ -435,7 +442,9 @@ export const createPhotosByElieWorker = ({
     }
 
     const items = normalizeOrderItems(catalog, payload.items || payload.basket || []);
-    const amountExpected = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const subtotalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const minimumChargeAdjustment = minimumChargeAdjustmentFor(subtotalAmount);
+    const amountExpected = subtotalAmount + minimumChargeAdjustment;
     const createdAt = now().toISOString();
     const orderId = createOrderId(now, randomUUID);
     if (typeof deliveryClient.validateOrder === "function") {
@@ -444,6 +453,8 @@ export const createPhotosByElieWorker = ({
         checkoutMode,
         buyerEmail,
         currency: ORDER_CURRENCY,
+        subtotalAmount,
+        minimumChargeAdjustment,
         amountExpected,
         amountPaid: 0,
         items,
@@ -453,18 +464,29 @@ export const createPhotosByElieWorker = ({
     }
     const receiptDescription = `Photos By Elie order ${orderId}. Download or recover files at ${ordersUrl} with this order number and checkout email.`;
 
+    const lineItems = items.flatMap((item) => item.products.map((product) => ({
+      photoId: item.photoId,
+      name: checkoutLineName(item.title, product.label),
+      quantity: 1,
+      unit_amount: product.unitAmount,
+      amount: product.amount,
+    })));
+    if (minimumChargeAdjustment) {
+      lineItems.push({
+        photoId: MINIMUM_CHARGE_PRODUCT_ID,
+        name: "Photos By Elie - Minimum checkout charge",
+        quantity: 1,
+        unit_amount: minimumChargeAdjustment,
+        amount: minimumChargeAdjustment,
+      });
+    }
+
     const checkoutSession = await stripe.createCheckoutSession({
       orderId,
       buyerEmail,
       amountTotal: amountExpected,
       currency: ORDER_CURRENCY,
-      lineItems: items.flatMap((item) => item.products.map((product) => ({
-        photoId: item.photoId,
-        name: checkoutLineName(item.title, product.label),
-        quantity: 1,
-        unit_amount: product.unitAmount,
-        amount: product.amount,
-      }))),
+      lineItems,
       successUrl: successUrl.replace("{ORDER_ID}", encodeURIComponent(orderId)),
       cancelUrl,
       receiptDescription,
@@ -476,6 +498,8 @@ export const createPhotosByElieWorker = ({
       checkoutMode,
       buyerEmail,
       currency: ORDER_CURRENCY,
+      subtotalAmount,
+      minimumChargeAdjustment,
       amountExpected,
       amountPaid: 0,
       items,

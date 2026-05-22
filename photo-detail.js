@@ -8,6 +8,15 @@ if (window.photosByElieHidden?.enabled) {
 }
 await window.photosByElieHiddenBlacklistReady;
 window.photosByElieProductSettings?.applyPriceOverrides?.();
+const formatMoney = (value) => {
+  const amount = Number(value) || 0;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: amount % 1 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
 const params = new URLSearchParams(window.location.search);
 const photoId = params.get("id") || "france-1";
 const collections = window.photosByElieData || {};
@@ -314,7 +323,7 @@ const updateTotal = () => {
   const totalTarget = document.querySelector("[data-selection-total]");
   if (!totalTarget) return;
   const total = selectedOptions().reduce((sum, option) => sum + (window.photosByElieOptionTotal?.(option) || option.price), 0);
-  totalTarget.textContent = `$${total}`;
+  totalTarget.textContent = formatMoney(total);
 };
 
 const basketItemForPhoto = () => basketStore.read().find((item) => item.photoId === photo.id);
@@ -882,7 +891,7 @@ const printConfigMarkup = (option) => {
         ${frameOptions().map((frame) => `
           <label>
             <input type="radio" name="frame-${option.id}" data-print-frame="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-            <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+            <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +${formatMoney(framePriceFor(frame, option))}` : ""}</span>
           </label>
         `).join("")}
       </fieldset>
@@ -898,7 +907,7 @@ document.querySelector("[data-resolution-list]").innerHTML = availableResolution
         <strong>${productLabel(option)}</strong>
         <small>${productDetail(option)}</small>
       </span>
-      <b>$${option.price}</b>
+      <b>${formatMoney(option.price)}</b>
     </label>
     ${printConfigMarkup(option)}
   </div>

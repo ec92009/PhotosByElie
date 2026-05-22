@@ -425457,11 +425457,11 @@ export const resolutions = [
     "minMegapixels": 3,
     "deliveryAssetType": "jpeg_3mp",
     "prices": {
-      "original": 16,
-      "ai": 8
+      "original": 0.3,
+      "ai": 0.3
     },
     "sortOrder": 3,
-    "price": 16
+    "price": 0.3
   },
   {
     "id": "jpg-1mp",
@@ -425471,11 +425471,11 @@ export const resolutions = [
     "minMegapixels": 1,
     "deliveryAssetType": "jpeg_1mp",
     "prices": {
-      "original": 8,
-      "ai": 4
+      "original": 0.1,
+      "ai": 0.1
     },
     "sortOrder": 4,
-    "price": 8
+    "price": 0.1
   },
   {
     "id": "print-4x6",

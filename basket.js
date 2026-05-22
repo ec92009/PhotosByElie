@@ -1,6 +1,23 @@
 ((async () => {
 await window.photosByElieCatalogReady;
-const formatMoney = (value) => `$${value}`;
+const formatMoney = (value) => {
+  const amount = Number(value) || 0;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: amount % 1 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+const CHECKOUT_MINIMUM_CENTS = 50;
+const centsFor = (value) => Math.round((Number(value) || 0) * 100);
+const dollarsForCents = (value) => Number(value || 0) / 100;
+const checkoutMinimumAdjustment = (total) => {
+  const subtotalCents = centsFor(total);
+  return subtotalCents > 0 && subtotalCents < CHECKOUT_MINIMUM_CENTS
+    ? dollarsForCents(CHECKOUT_MINIMUM_CENTS - subtotalCents)
+    : 0;
+};
 const allCollections = window.photosByElieData || {};
 window.photosByElieProductSettings?.applyPriceOverrides?.();
 const resolutionOptions = window.photosByElieResolutions || [];
@@ -278,6 +295,8 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
   if (!orderIntent || !orderSummary) return;
   orderIntent.hidden = items.length === 0;
   if (!items.length) return;
+  const minimumAdjustment = checkoutMinimumAdjustment(total);
+  const payableTotal = total + minimumAdjustment;
 
   const collectionCounts = items.reduce((counts, item) => {
     const key = item.collection || "Collection";
@@ -297,6 +316,9 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
     ${shippingHandlingTotal ? `<div><dt>S&H</dt><dd>+${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
     ${shippingHandlingTotal ? `<div><dt>Limited-time discount</dt><dd>-${formatMoney(shippingHandlingTotal)}</dd></div>` : ""}
     <div><dt>${t("basket.draft_total")}</dt><dd>${formatMoney(total)}</dd></div>
+    <div><dt>${t("basket.minimum_charge")}</dt><dd>${formatMoney(dollarsForCents(CHECKOUT_MINIMUM_CENTS))}</dd></div>
+    ${minimumAdjustment ? `<div><dt>${t("basket.minimum_adjustment")}</dt><dd>+${formatMoney(minimumAdjustment)}</dd></div>` : ""}
+    <div><dt>${t("basket.payable_total")}</dt><dd>${formatMoney(payableTotal)}</dd></div>
     <div><dt>${t("basket.collections")}</dt><dd>${escapeText(collectionText)}</dd></div>
   `;
 
@@ -312,6 +334,9 @@ const syncOrderIntent = (items, assetCount, total, shippingHandlingTotal) => {
       `Limited-time S&H discount: -${formatMoney(shippingHandlingTotal)}`,
     ] : []),
     `Draft total: ${formatMoney(total)}`,
+    `Stripe minimum charge: ${formatMoney(dollarsForCents(CHECKOUT_MINIMUM_CENTS))}`,
+    ...(minimumAdjustment ? [`Minimum charge adjustment: +${formatMoney(minimumAdjustment)}`] : []),
+    `Payable total: ${formatMoney(payableTotal)}`,
     "",
     ...items.flatMap((item, index) => {
       const { photo } = photoForItem(item);
@@ -608,7 +633,7 @@ const renderBasket = () => {
   basketTotal.textContent = t("basket.assets_total", {
     count: assetCount,
     assetWord: t(assetCount === 1 ? "basket.asset_singular" : "basket.asset_plural"),
-    total,
+    total: formatMoney(total),
   });
   emptyState.hidden = items.length !== 0;
   syncOrderIntent(items, assetCount, total, shippingHandlingTotal);
@@ -649,7 +674,7 @@ const renderBasket = () => {
             ${frameOptions().map((frame) => `
               <label>
                 <input type="radio" name="basket-frame-${index}-${option.id}" data-basket-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-                <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+                <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +${formatMoney(framePriceFor(frame, option))}` : ""}</span>
               </label>
             `).join("")}
           </fieldset>

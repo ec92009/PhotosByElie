@@ -147,9 +147,31 @@ test("guest checkout creates a pending order and mock Stripe session", async () 
   assert.match(body.order.id, /^PBE-20260507-/);
   assert.equal(body.order.status, "pending_payment");
   assert.equal(body.order.currency, "usd");
-  assert.equal(body.order.amountExpected, 8100);
+  assert.equal(body.order.amountExpected, 6530);
   assert.equal(body.order.items[0].products.length, 2);
   assert.match(body.checkout.url, /^https:\/\/mock\.stripe\.local\/checkout\/cs_mock_/);
+});
+
+test("guest checkout tops up orders below the Stripe minimum charge", async () => {
+  const catalog = loadCatalog();
+  const { worker, stripe } = testWorker();
+  const photoId = firstDeliverablePhotoId(catalog);
+
+  const response = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  assert.equal(response.status, 201);
+
+  const body = await response.json();
+  assert.equal(body.order.subtotalAmount, 10);
+  assert.equal(body.order.minimumChargeAdjustment, 40);
+  assert.equal(body.order.amountExpected, 50);
+  const session = stripe._debug.sessions.get(body.checkout.sessionId);
+  assert.equal(session.amount_total, 50);
+  assert.equal(session.line_items.length, 2);
+  assert.equal(session.line_items[1].photoId, "minimum-charge-adjustment");
+  assert.equal(session.line_items[1].unit_amount, 40);
 });
 
 test("AI collection digital products use the AI price tier", async () => {
@@ -169,7 +191,7 @@ test("AI collection digital products use the AI price tier", async () => {
     },
     resolutions: [
       { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
-      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 0.1, prices: { original: 0.1, ai: 0.1 }, minMegapixels: 1 },
     ],
   });
   const randomUUID = deterministicIds();
@@ -190,9 +212,9 @@ test("AI collection digital products use the AI price tier", async () => {
 
   const body = await response.json();
   assert.equal(body.order.items[0].collection, "AI");
-  assert.equal(body.order.amountExpected, 2900);
+  assert.equal(body.order.amountExpected, 2510);
   assert.equal(body.order.items[0].products.find((item) => item.id === "full").amount, 2500);
-  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 400);
+  assert.equal(body.order.items[0].products.find((item) => item.id === "jpg-1mp").amount, 10);
 });
 
 test("sourceOrigin controls digital pricing independently of collection", async () => {
@@ -212,7 +234,7 @@ test("sourceOrigin controls digital pricing independently of collection", async 
     },
     resolutions: [
       { id: "full", type: "digital", label: "Full resolution", price: 65, prices: { original: 65, ai: 25 } },
-      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 8, prices: { original: 8, ai: 4 }, minMegapixels: 1 },
+      { id: "jpg-1mp", type: "digital", label: "JPG 1 MP", price: 0.1, prices: { original: 0.1, ai: 0.1 }, minMegapixels: 1 },
     ],
   });
   const randomUUID = deterministicIds();
@@ -233,7 +255,7 @@ test("sourceOrigin controls digital pricing independently of collection", async 
 
   const body = await response.json();
   assert.equal(body.order.items[0].collection, "France");
-  assert.equal(body.order.amountExpected, 2900);
+  assert.equal(body.order.amountExpected, 2510);
 });
 
 test("video checkout uses the shared flat video price tier", async () => {

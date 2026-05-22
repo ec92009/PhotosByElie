@@ -1,6 +1,14 @@
 ((async () => {
 await window.photosByElieCatalogReady;
-const formatMoney = (value) => `$${value}`;
+const formatMoney = (value) => {
+  const amount = Number(value) || 0;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: amount % 1 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
 const allCollections = window.photosByElieData || {};
 window.photosByElieProductSettings?.applyPriceOverrides?.();
 const resolutionOptions = window.photosByElieResolutions || [];
@@ -206,7 +214,7 @@ const renderLiked = () => {
   likedTotal.textContent = t("basket.assets_total", {
     count: assetCount,
     assetWord: t(assetCount === 1 ? "basket.asset_singular" : "basket.asset_plural"),
-    total,
+    total: formatMoney(total),
   });
   emptyState.hidden = likedItems.length !== 0;
   syncBulkResolutionButtons(likedItems, basketByPhoto);
@@ -245,7 +253,7 @@ const renderLiked = () => {
             ${frameOptions().map((frame) => `
               <label>
                 <input type="radio" name="liked-frame-${index}-${option.id}" data-liked-print-frame="${index}" data-option-id="${option.id}" value="${frame.id}" ${frame.id === selectedFrameId ? "checked" : ""}/>
-                <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +$${framePriceFor(frame, option)}` : ""}</span>
+                <span>${frameLabel(frame)}${framePriceFor(frame, option) ? ` +${formatMoney(framePriceFor(frame, option))}` : ""}</span>
               </label>
             `).join("")}
           </fieldset>

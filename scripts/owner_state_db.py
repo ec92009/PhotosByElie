@@ -238,6 +238,35 @@ def _keywords_text(value: Any) -> str:
     return str(value or "").strip()
 
 
+REJECTED_PROPOSAL_COMMENT_MARKER = "Rejected proposal:"
+
+
+def _strip_rejected_proposal_comment_context(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    marker = f"\n\n{REJECTED_PROPOSAL_COMMENT_MARKER}".casefold()
+    index = text.casefold().find(marker)
+    return (text[:index] if index >= 0 else text).strip()
+
+
+def _rejection_comment_with_proposal_context(comment: Any, title: Any, keywords: Any) -> str:
+    owner_comment = _strip_rejected_proposal_comment_context(comment)
+    if not owner_comment:
+        return ""
+    clean_title = str(title or "").strip()
+    clean_keywords = _normalized_keywords(keywords)
+    if not clean_title and not clean_keywords:
+        return owner_comment
+    return "\n".join([
+        owner_comment,
+        "",
+        REJECTED_PROPOSAL_COMMENT_MARKER,
+        f"Title: {clean_title or '(blank)'}",
+        f"Keywords: {', '.join(clean_keywords) if clean_keywords else '(none)'}",
+    ])
+
+
 def _normalized_keywords(value: Any) -> list[str]:
     source = value if isinstance(value, list) else str(value or "").replace(";", ",").split(",")
     seen: set[str] = set()
@@ -1354,7 +1383,19 @@ def record_title_keyword_review_decisions(
                 insert_decision(str(item.get("photo_id") or ""), "accepted", str(item.get("title") or ""), item.get("keywords") or "", "")
         for item in rejections:
             if isinstance(item, dict):
-                insert_decision(str(item.get("photo_id") or ""), "rejected", str(item.get("title") or ""), item.get("keywords") or "", str(item.get("comment") or ""))
+                rejected_title = str(item.get("title") or "")
+                rejected_keywords = item.get("keywords") or ""
+                insert_decision(
+                    str(item.get("photo_id") or ""),
+                    "rejected",
+                    rejected_title,
+                    rejected_keywords,
+                    _rejection_comment_with_proposal_context(
+                        item.get("comment"),
+                        rejected_title,
+                        rejected_keywords,
+                    ),
+                )
         for item in blocked:
             if isinstance(item, dict):
                 insert_decision(str(item.get("photo_id") or ""), "blocked", "", "", "blocked by Owner review")

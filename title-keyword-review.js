@@ -127,6 +127,28 @@
       return !blacklist.has(normalized) && !stateKeywordFlags.has(normalized);
     });
 
+  const rejectedProposalCommentMarker = "Rejected proposal:";
+  const stripRejectedProposalContext = (value) => {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const index = text.toLowerCase().indexOf(`\n\n${rejectedProposalCommentMarker.toLowerCase()}`);
+    return (index >= 0 ? text.slice(0, index) : text).trim();
+  };
+  const commentWithRejectedProposalContext = ({ comment, title, keywords }) => {
+    const ownerComment = stripRejectedProposalContext(comment);
+    if (!ownerComment) return "";
+    const cleanTitle = String(title || "").trim();
+    const cleanKeywords = uniqueKeywords(keywords || []);
+    if (!cleanTitle && !cleanKeywords.length) return ownerComment;
+    return [
+      ownerComment,
+      "",
+      rejectedProposalCommentMarker,
+      `Title: ${cleanTitle || "(blank)"}`,
+      `Keywords: ${cleanKeywords.join(", ") || "(none)"}`,
+    ].join("\n");
+  };
+
   const cleanModelName = (value) => String(value || "").trim();
 
   const rejectReasonCheckboxesHtml = (selectedValue = "") => rejectReasons
@@ -416,7 +438,7 @@
       const currentKeywordList = normalizeKeywords(currentKeywords, blacklist);
       const currentKeywordsHtml = currentKeywordMarkup(item);
       const proposedTitle = String(item?.proposed?.title || title || "");
-      const previousRejectComment = String(
+      const previousRejectComment = stripRejectedProposalContext(String(
         item?.state?.rework_comment
         || item?.state?.reworkComment
         || item?.state?.latest_rejection_comment
@@ -424,7 +446,7 @@
         || item?.state?.owner_comment
         || item?.state?.ownerComment
         || "",
-      ).trim();
+      ));
       const previousRejectReason = rejectReasonValueForComment(previousRejectComment);
       const rawProposedKeywords = normalizeKeywords(
         Array.isArray(item?.proposed?.keywords) ? item.proposed.keywords.join(", ") : currentKeywords,
@@ -518,7 +540,14 @@
       const approved = !blocked && Boolean(card.querySelector("[data-review-approve]")?.checked) && !rejected;
       return {
         approval: approved ? { photo_id: photoId, batch_id: rowBatchId, approved: true, title, keywords } : null,
-        rejection: rejected ? { photo_id: photoId, batch_id: rowBatchId, rejected: true, title, keywords, comment } : null,
+        rejection: rejected ? {
+          photo_id: photoId,
+          batch_id: rowBatchId,
+          rejected: true,
+          title,
+          keywords,
+          comment: commentWithRejectedProposalContext({ comment, title, keywords }),
+        } : null,
         blocked: blocked ? { photo_id: photoId, batch_id: rowBatchId, blocked: true } : null,
         approved,
         rejected,

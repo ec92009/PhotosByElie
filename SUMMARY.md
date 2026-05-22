@@ -6,8 +6,8 @@ Date: 2026-05-22
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `codex/homepage-concepts`
-- Current visible build: `v83.0`
-- Local Owner page: `http://localhost:8000/owner.html?v=83.0`
+- Current visible build: `v83.1`
+- Local Owner page: `http://localhost:8000/owner.html?v=83.1`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -107,6 +107,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v82.5`, the public SQLite catalog, Expo manifest, homepage data, Worker catalog, and discarded-photo tombstones reflect the latest Owner discard/tombstone state: `6,019` active public rows and `4,696` discarded photo IDs.
 - In `v82.7`, buyer order recovery and delivery links are more durable: the order page can look up an order by order ID and checkout email, per-file delivery rows show link availability when present, Worker download tokens enforce expiry/download limits, successful downloads are appended to the order event history, and Stripe receipt metadata includes the buyer email.
 - In `v83.0`, Owner-approved title/keyword metadata is published into the buyer-facing SQLite catalog and Worker catalog, and the keyword blacklist compatibility export is refreshed while keeping active public rows at `6,019`.
+- In `v83.1`, rejected title/keyword review comments now carry the rejected proposal title and keywords as attached context for the next AI rework rung.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

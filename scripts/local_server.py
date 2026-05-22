@@ -1690,6 +1690,35 @@ def _unique_keywords(values: list[str]) -> list[str]:
     return unique
 
 
+REJECTED_PROPOSAL_COMMENT_MARKER = "Rejected proposal:"
+
+
+def _strip_rejected_proposal_comment_context(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    marker = f"\n\n{REJECTED_PROPOSAL_COMMENT_MARKER}".casefold()
+    index = text.casefold().find(marker)
+    return (text[:index] if index >= 0 else text).strip()
+
+
+def _rejection_comment_with_proposal_context(comment: object, title: object, keywords: object) -> str:
+    owner_comment = _strip_rejected_proposal_comment_context(comment)
+    if not owner_comment:
+        return ""
+    clean_title = str(title or "").strip()
+    clean_keywords = _unique_keywords(_split_keyword_text(keywords))
+    if not clean_title and not clean_keywords:
+        return owner_comment
+    return "\n".join([
+        owner_comment,
+        "",
+        REJECTED_PROPOSAL_COMMENT_MARKER,
+        f"Title: {clean_title or '(blank)'}",
+        f"Keywords: {', '.join(clean_keywords) if clean_keywords else '(none)'}",
+    ])
+
+
 def _record_title_keyword_rejections(repo_root: Path, batch_id: str, rejections: list[dict]) -> dict:
     if not rejections:
         return {"path": "", "rejected": []}
@@ -4098,14 +4127,20 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             current_photo_id = str(item.get("photo_id") or "").strip()
             if not current_photo_id or item.get("rejected") is not True:
                 continue
+            rejected_title = str(item.get("title") or "").strip()
+            rejected_keywords = _review_keywords(repo_root, item.get("keywords"))
             normalized_rejections.append(
                 {
                     "photo_id": current_photo_id,
                     "batch_id": _review_item_batch_id(item, batch_id),
                     "rejected": True,
-                    "title": str(item.get("title") or "").strip(),
-                    "keywords": _review_keywords(repo_root, item.get("keywords")),
-                    "comment": str(item.get("comment") or "").strip(),
+                    "title": rejected_title,
+                    "keywords": rejected_keywords,
+                    "comment": _rejection_comment_with_proposal_context(
+                        item.get("comment"),
+                        rejected_title,
+                        rejected_keywords,
+                    ),
                 }
             )
         rejected_ids = {item["photo_id"] for item in normalized_rejections}
@@ -4421,14 +4456,20 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             current_photo_id = str(item.get("photo_id") or "").strip()
             if not current_photo_id or item.get("rejected") is not True:
                 continue
+            rejected_title = str(item.get("title") or "").strip()
+            rejected_keywords = _review_keywords(repo_root, item.get("keywords"))
             normalized_rejections.append(
                 {
                     "photo_id": current_photo_id,
                     "batch_id": _review_item_batch_id(item, batch_id),
                     "rejected": True,
-                    "title": str(item.get("title") or "").strip(),
-                    "keywords": _review_keywords(repo_root, item.get("keywords")),
-                    "comment": str(item.get("comment") or "").strip(),
+                    "title": rejected_title,
+                    "keywords": rejected_keywords,
+                    "comment": _rejection_comment_with_proposal_context(
+                        item.get("comment"),
+                        rejected_title,
+                        rejected_keywords,
+                    ),
                 }
             )
         rejected_ids = {item["photo_id"] for item in normalized_rejections}

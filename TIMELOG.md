@@ -6,7 +6,7 @@ Tracking rule: See `docs/sops/TIMELOG_SOP.md`.
 
 Started tracking: 2026-05-22 06:55 CEST
 
-Clock state: paused
+Clock state: running
 
 ## Sessions
 
@@ -16,8 +16,9 @@ Clock state: paused
 | 2026-05-22 | 07:03 CEST | 08:32 CEST | 0:39 | Guided live Stripe setup, customer email settings, and branding/logo decisions; background generation and tooling time excluded. |
 | 2026-05-22 | 08:32 CEST | 08:55 CEST | 0:08 | Created the live Stripe webhook, received backlog direction, and refreshed the handoff/docs checkpoint; independent editing time excluded. |
 | 2026-05-22 | 08:55 CEST | 08:55 CEST | 0:00 | Paused after inactivity for automated handoff sweep; background sweep time excluded. |
+| 2026-05-22 | 15:15 CEST | 15:16 CEST | 0:01 | Resumed project direction and requested title/keyword rejection comments carry rejected proposal context for AI rework. |
 
 ## Totals
 
-Active collaboration time used: 0:48
+Active collaboration time used: 0:49
 Remaining budget: not set

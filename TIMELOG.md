@@ -23,9 +23,23 @@ Clock state: running
 | 2026-05-22 | 16:25 CEST | 16:35 CEST | 0:10 | Refreshed live Stripe proof docs, handoff notes, and backlog before commit; secret values excluded. |
 | 2026-05-22 | 17:15 CEST | 17:19 CEST | 0:04 | Changed and deployed live Stripe card statement suffix from ORDER to DOWNLOAD. |
 | 2026-05-22 | 17:19 CEST | 17:20 CEST | 0:01 | Redeployed the live checkout Worker so Stripe Checkout uses the v83.2 low-tier prices and minimum-charge top-up. |
+| 2026-05-22 | 17:42 CEST | 17:43 CEST | 0:01 | Opened Facebook in the visible in-app browser for PhotosByElie social access. |
+| 2026-05-22 | 17:43 CEST | 17:47 CEST | 0:01 | Recovered the Facebook/social promotion plan and ready post drafts from handoff notes. |
+| 2026-05-22 | 17:47 CEST | 17:50 CEST | 0:01 | Posted the Les Invalides campaign link to Facebook using the recovered social draft. |
+| 2026-05-22 | 17:58 CEST | 17:59 CEST | 0:01 | Clarified Instagram is not yet a verified live channel and removed the premature homepage claim. |
+| 2026-05-22 | 18:00 CEST | 18:02 CEST | 0:01 | Checked the existing `photosbyelie` Instagram handle and parked Instagram until Facebook is settled. |
 | 2026-05-22 | 17:48 CEST | 18:03 CEST | 0:15 | Added buyer trust/support copy, support page, public camera-tripod branding, and v83.3 docs. |
+| 2026-05-22 | 18:04 CEST | 18:08 CEST | 0:01 | Created the Facebook Page as `Photos By Elie` without an apostrophe. |
+| 2026-05-22 | 18:08 CEST | 18:16 CEST | 0:01 | Handed off Facebook Page detail completion to the user after opening the address editor. |
+| 2026-05-22 | 18:16 CEST | 18:17 CEST | 0:01 | Checked Facebook Page readiness for profile, cover, and page photo uploads. |
+| 2026-05-22 | 18:17 CEST | 18:23 CEST | 0:02 | Located the watermarked Pinterest-ready Invalides and Valencia photo sets for Facebook albums. |
+| 2026-05-22 | 18:23 CEST | 18:27 CEST | 0:01 | Confirmed the two Facebook albums are created for Invalides and Valencia. |
+| 2026-05-22 | 18:27 CEST | 18:32 CEST | 0:02 | Published a first Facebook Page post introducing the Invalides and Valencia albums with collection links. |
+| 2026-05-22 | 18:32 CEST | 18:40 CEST | 0:02 | Shared the new Photos By Elie Facebook Page from Elie Cohen's personal account. |
+| 2026-05-22 | 18:40 CEST | 18:50 CEST | 0:10 | Packaged the homepage Facebook feature as v83.4 with docs, validation, and browser checks. |
+| 2026-05-22 | 18:50 CEST | 18:51 CEST | 0:01 | Checked Instagram handle options, verified the new `ec92009` watermarked Invalides post, and noted that dedicated Instagram account creation still needs signup credentials/verification. |
 
 ## Totals
 
-Active collaboration time used: 2:16
+Active collaboration time used: 2:42
 Remaining budget: not set

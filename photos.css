@@ -199,6 +199,21 @@
   display:grid;
   gap:8px;
 }
+.featured-campaign-platform{
+  width:max-content;
+  max-width:100%;
+  color:var(--text);
+  background:var(--glass-pill-bg);
+  border:1px solid var(--glass-border);
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:.72rem;
+  font-style:normal;
+  font-weight:900;
+  letter-spacing:.06em;
+  line-height:1;
+  text-transform:uppercase;
+}
 .featured-campaign-card strong{
   font-size:clamp(1.2rem,2vw,1.6rem);
   line-height:1.05;

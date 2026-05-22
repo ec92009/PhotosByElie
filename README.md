@@ -6,12 +6,12 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v83.3`
+- Current visible version: `v83.4`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
 
-- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, Slovakia, and Featured on Pinterest entries
+- `index.html`: one-page photo hub with France, USA, Spain, Mexico, AI, Italy, Portugal, Slovakia, and Featured social/Pinterest entries
 - `campaign.html`: first-party social/Pinterest mini-collection landing page that keeps visitors on Photos By Elie instead of a single-photo dead end
 - `gallery.html`: shared gallery shell that reads the active collection from `?gallery=<slug>`
 - `owner-review.html`: shared localhost-only Owner review shell for Unknown classification, Waste Basket review, and Title/Keywords review
@@ -75,7 +75,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Unknown classification assigns every loaded unknown photo from the same capture day when one photo is assigned to a country, then removes assigned photos from the visible queue.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or basketed no longer reduce unrelated counts.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
-- The homepage includes a Featured on Pinterest section. These campaigns are durable first-party landing pages for Pinterest/social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
+- The homepage includes a Featured social section. These campaigns are durable first-party landing pages for Facebook, Pinterest, and other social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `6,019` media rows.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
@@ -93,6 +93,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers the JPG 1 MP and 3 MP digital checkout tiers to $0.10 and $0.30, formats cents throughout buyer pricing UI, and adds a Stripe $0.50 minimum-charge top-up when needed.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo and adds buyer trust notes plus `support.html` for payment, delivery recovery, license, and support expectations.
+- `v83.4` promotes the first Photos By Elie Facebook Page post alongside Pinterest features on the homepage.
 - On the localhost Title/Keywords review page, Owner can review the current proposal batch, single-click to select a row, double-click for detail, approve with `A`, reject with mutually exclusive horizontal reason checkboxes or `R`, block with the visible Block choice or `H`/`X`, and propagate the current approve/reject/block decision plus reject note with `P`. Individual approvals autosave and advance the selected row to the next photo. Reject reasons fill the note while keeping it editable, and previous reject notes load unchanged for further edits. Video rows show the usual play-triangle overlay on the preview. Rows autosave through the helper server; approved rows apply title/keyword values to generated catalog metadata/state files and add `Title_Keywords_Reviewed`, rejected rows record rework state/comment in `Owner.sqlite`, and blocked rows move to the Waste Basket while showing `Blocked` in the current session. The queue generator uses that stored rejection context to escalate rework attempts from local rules to the configured Codex model ladder, records blocker/exhaustion details when a stronger proposal cannot be produced, uses a larger Owner-state subprocess buffer, and emits proposal quality counts before writing/importing. Batch `2026-05-20-181058-181Z` was rejected for rework after audit because it consisted of weak local-rule internal-marker titles; replacement batch `2026-05-20-185753-222Z` contains 100 Codex-backed rework proposals and 100 ordinary local proposals with no model blockers or keyword-target misses. Batch JSON under `assets/owner-actions/title-keyword-review-queue/` is ignored/local review-page view data; public deploys should load approved metadata only from the catalog SQLite artifacts. Saved rows remain visible during the current session and disappear after leaving/reloading. Source-file embedded metadata, public previews, private masters, and private render files are left untouched.
 - The authoritative useless-keyword list is `Owner.sqlite:keyword_blacklist`; `assets/owner-actions/keyword-blacklist.json` is only a UI compatibility export. Import and export scripts omit those strings from generated keyword metadata and keyword indexes only; the list must not block media, discard media, or rewrite source-file metadata.
 - Basketed photos do not re-upload public preview objects while they are blacklisted.

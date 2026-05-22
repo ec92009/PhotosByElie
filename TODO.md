@@ -4,9 +4,9 @@ Last updated: 2026-05-22
 
 ## Current Facts
 
-- Current visible build: `v83.3`.
+- Current visible build: `v83.4`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=83.3`.
+- Local Owner page: `http://localhost:8000/owner.html?v=83.4`.
 - Current catalog scale: `6,019` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker catalog without changing the active row count.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -29,6 +29,7 @@ Last updated: 2026-05-22
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git; secret values must never be committed or written into docs.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order `ready`, and one private JPEG download verified.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery, recovery, license, and support expectations.
+- `v83.4` promotes the first Facebook Page feature in the homepage Featured section alongside Pinterest features.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 

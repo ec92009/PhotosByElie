@@ -27,6 +27,8 @@ Date: 2026-05-22
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
+- Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
+- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
 
 ## Latest Conversation Update
 
@@ -47,6 +49,10 @@ The latest social pass updates the homepage Featured section from Pinterest-only
 The latest autonomous repo-side strategy pass added a price/offer strategy draft. It recommends a digital-only launch, owner-approved support/refund posture, and a proposed real camera ladder of `$3 / $8 / $28 / $65` with lower AI pricing, while leaving the current live price files unchanged until owner approval.
 
 The latest SEO/discovery pass added `robots.txt` and `sitemap.xml` for the homepage, core galleries, campaign pages, and support page while keeping owner/order/basket/real-estate/experiments/raw-social working pages out of crawler focus.
+
+This checkpoint refreshed the durable docs after the user reported all threads quiet. No public version, catalog, Worker, Stripe, price, or site behavior changed; the work is just the SUMMARY/HANDOFF/TODO/README/TIMELOG state refresh and the fresh backlog rollup.
+
+The latest automation setup added `pbe-daily-social-posts`, a daily 09:00 local automation for Facebook, Instagram, and Pinterest. It is instructed to use only public watermarked R2/social assets, avoid secrets/private downloads/Owner metadata, choose three distinct themes with 5-10 images per platform post, publish when already authenticated, and otherwise leave ready-to-publish packages.
 
 ## Earlier Conversation Context
 
@@ -98,6 +104,8 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 44. `v83.4` updates the homepage Featured section to show the first Facebook Page feature beside Pinterest features.
 45. A repo-side price/offer strategy draft now lives at `docs/commerce/PRICE_OFFER_STRATEGY.md`; it documents the proposed launch ladder, bundle timing, refund/support draft, and implementation checklist without changing live prices.
 46. First-pass public crawl files now exist: `robots.txt` and `sitemap.xml`.
+47. A docs-only quiet-thread checkpoint refreshed SUMMARY/HANDOFF/TODO/README/TIMELOG and kept `TODO.md` as the numbered backlog source of truth.
+48. Daily automation `pbe-daily-social-posts` now prepares daily Facebook, Instagram, and Pinterest post packages from watermarked public assets.
 
 ## Current Operational Notes
 
@@ -143,27 +151,21 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 
 ## Recent Relevant Commits
 
-- `5178700d photosbyelie: repair hidden detail shortcut`
-- `3bcc875c photosbyelie: add title keyword review batch 2026-05-19-170500`
-- `681be32d photosbyelie: use run-scoped title keyword batches`
-- `6ec82489 photosbyelie: tighten title keyword review workflow`
-- `be836a78 photosbyelie: add database schema excalidraw`
-- `eb2c1918 photosbyelie: enforce owner sqlite state`
-- `aa2438e1 photosbyelie: document owner sqlite source of truth`
-- `0ae220d8 photosbyelie: repair local hide catalog rebuild`
-- `05964532 photosbyelie: restore recovered ai catalog`
-- `76bd2321 photosbyelie: block partial catalog exports`
-- `d8e23954 photosbyelie: make gap fill eager`
-- `2a312e22 photosbyelie: fold triplet repair into gap fill`
-- `34df827e photosbyelie: clarify lost triplets phase`
-- `80484d76 photosbyelie: add import pipeline planner`
-- `76f73a53 photosbyelie: refine real estate owner clients`
+- `e6c49772 photosbyelie: add crawl discovery files`
+- `c7776899 photosbyelie: document launch offer strategy`
+- `a8902dd2 photosbyelie: promote facebook feature`
+- `bc48acf8 photosbyelie: add buyer support page`
+- `e4496040 photosbyelie: record deployed descriptor suffix`
+- `8e6787ab photosbyelie: align live checkout worker`
+- `85b361d8 photosbyelie: record live stripe proof`
+- `d53de85f photosbyelie: log public site update`
 
 ## Verification Notes
 
 Recent implementation cycles ran:
 
 ```text
+node --check photos.js basket.js order.js
 node --check hidden-actions.js
 node --check photo-detail.js
 node --check owner.js
@@ -171,6 +173,7 @@ node --check title-keyword-review.js
 python3 -m py_compile scripts/local_server.py
 python3 -m py_compile scripts/owner_state_db.py
 python3 -m py_compile scripts/build_lightroom_thumbnails.py
+python3 XML parse check for sitemap.xml
 npm test
 npm run validate
 git diff --check
@@ -179,4 +182,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review/tune the `v83.3` buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, then return to analytics, richer SEO/discovery, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review/tune the `v83.3` buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, add analytics, deepen SEO/discovery, review daily social automation output/launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.

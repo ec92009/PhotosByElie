@@ -32,6 +32,8 @@ Last updated: 2026-05-22
 - `v83.4` promotes the first Facebook Page feature in the homepage Featured section alongside Pinterest features.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
+- Latest quiet-thread checkpoint is docs-only; this file remains the numbered backlog source of truth.
+- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
@@ -58,6 +60,7 @@ Last updated: 2026-05-22
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
 
 6. **Create marketing landing pages and launch outreach.**
+   - Daily social-post automation is active; review its output after the first run for theme quality, post safety, and platform-login blockers.
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
 7. **Owner decision pass for batch `2026-05-20-185753-222Z`.**

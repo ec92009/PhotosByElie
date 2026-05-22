@@ -26,7 +26,7 @@ for remote execution.
 - Local owner preview: `python3 scripts/local_server.py 8000`
 - Current visible build: `v83.4`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
-- Recent baseline commits include: `297c572d photosbyelie: add title keyword review batch 2026-05-19-230413`, `49471506 photosbyelie: publish title keyword review updates`, and `6ec82489 photosbyelie: tighten title keyword review workflow`.
+- Recent baseline commits include: `e6c49772 photosbyelie: add crawl discovery files`, `c7776899 photosbyelie: document launch offer strategy`, `a8902dd2 photosbyelie: promote facebook feature`, and `bc48acf8 photosbyelie: add buyer support page`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `6,019` publishable media rows: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite` is the active plain payload, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract. Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -70,6 +70,8 @@ for remote execution.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order status `ready`, and one private JPEG download verified at `401,035` bytes.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
+- Latest quiet-thread checkpoint is docs-only; `TODO.md` remains the numbered backlog source of truth.
+- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
 
 ## First Commands On A Machine
 
@@ -136,6 +138,8 @@ cd /Users/ecohen/Dev/PhotosByElie
 - The wrapper uses `.review-logs/cloud-media-sweep.lock`; if a manual run is still active, the scheduled run exits without starting a second uploader.
 - Daily automation: `Photos By Elie R2 master-chain repair`
 - It runs `node scripts/repair_r2_master_chain.mjs --repair --prune` through the app automation. The pass reads live R2 masters first, restores missing catalog masters from Saturn/local sources, repairs private render triplets, prunes derivative ghosts, and refreshes the private-delivery/public-preview inventory manifests.
+- Daily automation: `PBE Daily Social Posts`
+- It runs as automation id `pbe-daily-social-posts` at 09:00 local time. The run should pick three distinct themes, collect 5-10 watermarked public R2/social images per platform post, publish only when Facebook/Instagram/Pinterest are already authenticated, and otherwise leave exact ready-to-publish captions, image lists, and manual steps. It must not use private masters, unwatermarked private renders, buyer downloads, Owner-only metadata, or secrets.
 - A manual run can be started with:
 
 ```bash

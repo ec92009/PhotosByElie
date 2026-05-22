@@ -31,6 +31,7 @@ Last updated: 2026-05-22
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery, recovery, license, and support expectations.
 - `v83.4` promotes the first Facebook Page feature in the homepage Featured section alongside Pinterest features.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
+- First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
@@ -53,7 +54,8 @@ Last updated: 2026-05-22
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
 5. **Improve public discovery and SEO.**
-   - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, sitemap, and structured data without Owner-only metadata.
+   - `robots.txt` and `sitemap.xml` are in place.
+   - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
 
 6. **Create marketing landing pages and launch outreach.**
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.

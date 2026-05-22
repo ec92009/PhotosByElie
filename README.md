@@ -47,6 +47,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photos.css`: photo-specific layout and carousel styles
 - `photos.js`: shared theme, translation dictionary, language toggles, media helpers, video duration formatting, and reusable public-page filter/sort logic
 - `site-version.js`: appends the current visible version to same-site page navigation to avoid stale cached HTML
+- `robots.txt` / `sitemap.xml`: public crawl guidance and first-pass sitemap for homepage, core galleries, campaign pages, and support
 - `scripts/catalog_tsv.cjs`: legacy-named shared Node catalog loader that now reads the public SQLite catalog for tools and tests
 - `scripts/write_catalog_tsv.cjs`: legacy wrapper that rewrites the browser bootstrap and rebuilds the public SQLite catalog artifacts
 - `scripts/build_public_catalog_db.py`: rebuilds the compact public SQLite catalog at `assets/catalog/photosbyelie.sqlite`
@@ -77,6 +78,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - Owner Unknown counts show only photos that still need a country assignment; photos already assigned or basketed no longer reduce unrelated counts.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Featured social section. These campaigns are durable first-party landing pages for Facebook, Pinterest, and other social traffic, starting with `campaign.html?c=pinterest-invalides-2026-05-14`.
+- `robots.txt` points crawlers at `sitemap.xml` and keeps owner, basket, order, real-estate, experiments, and raw social working pages out of search results.
 - Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Current active public catalog count is `6,019` media rows.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.

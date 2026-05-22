@@ -69,6 +69,7 @@ for remote execution.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order status `ready`, and one private JPEG download verified at `401,035` bytes.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
+- First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 
 ## First Commands On A Machine
 
@@ -266,7 +267,7 @@ npm run validate
 2. Approve and deploy the real price and offer strategy.
 3. Curate the first sellable storefront.
 4. Add conversion analytics.
-5. Improve public discovery and SEO.
+5. Improve public discovery and SEO beyond the first-pass `robots.txt` and `sitemap.xml`.
 6. Create marketing landing pages and launch outreach.
 7. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
 8. Continue model/vision improvements for thin title/keyword rows.

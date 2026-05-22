@@ -26,6 +26,7 @@ Date: 2026-05-22
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
+- First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 
 ## Latest Conversation Update
 
@@ -44,6 +45,8 @@ The latest public-site pass added a conservative buyer trust path: basket/order 
 The latest social pass updates the homepage Featured section from Pinterest-only to social, adds the first Facebook Page Invalides feature card, and keeps the existing Pinterest campaign links.
 
 The latest autonomous repo-side strategy pass added a price/offer strategy draft. It recommends a digital-only launch, owner-approved support/refund posture, and a proposed real camera ladder of `$3 / $8 / $28 / $65` with lower AI pricing, while leaving the current live price files unchanged until owner approval.
+
+The latest SEO/discovery pass added `robots.txt` and `sitemap.xml` for the homepage, core galleries, campaign pages, and support page while keeping owner/order/basket/real-estate/experiments/raw-social working pages out of crawler focus.
 
 ## Earlier Conversation Context
 
@@ -94,6 +97,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 43. `v83.3` adds public buyer trust/support copy and publishes the camera-tripod mark as the public site logo/favicon.
 44. `v83.4` updates the homepage Featured section to show the first Facebook Page feature beside Pinterest features.
 45. A repo-side price/offer strategy draft now lives at `docs/commerce/PRICE_OFFER_STRATEGY.md`; it documents the proposed launch ladder, bundle timing, refund/support draft, and implementation checklist without changing live prices.
+46. First-pass public crawl files now exist: `robots.txt` and `sitemap.xml`.
 
 ## Current Operational Notes
 
@@ -175,4 +179,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review/tune the `v83.3` buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, then return to analytics, SEO, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review/tune the `v83.3` buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, then return to analytics, richer SEO/discovery, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.

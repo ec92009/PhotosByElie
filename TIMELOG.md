@@ -18,8 +18,9 @@ Clock state: running
 | 2026-05-22 | 08:55 CEST | 08:55 CEST | 0:00 | Paused after inactivity for automated handoff sweep; background sweep time excluded. |
 | 2026-05-22 | 15:15 CEST | 15:16 CEST | 0:01 | Resumed project direction and requested title/keyword rejection comments carry rejected proposal context for AI rework. |
 | 2026-05-22 | 15:16 CEST | 16:07 CEST | 0:51 | Lowered digital 1 MP and 3 MP pricing, added Stripe minimum-charge handling, created the Owner Dock launcher, and verified checkout display. |
+| 2026-05-22 | 16:19 CEST | 16:20 CEST | 0:01 | Published the v83.2 pricing and minimum-charge update to the public site branch. |
 
 ## Totals
 
-Active collaboration time used: 1:40
+Active collaboration time used: 1:41
 Remaining budget: not set

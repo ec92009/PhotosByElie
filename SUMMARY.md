@@ -34,7 +34,7 @@ Stripe's own successful-payment receipt is now intentionally part of the buyer e
 
 The Worker was redeployed after the first live proof so future Checkout PaymentIntents use statement descriptor suffix `DOWNLOAD` instead of `ORDER`.
 
-The live checkout Worker was also redeployed as version `2a26d117-a306-44ab-b38e-ac42a945130a` after the `v83.2` site publish; hosted Stripe Checkout now receives the updated low-tier line items and minimum-charge adjustment instead of stale $16/$8 prices.
+The live checkout Worker was also redeployed as version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb`; hosted Stripe Checkout now receives the updated low-tier line items, minimum-charge adjustment, and `DOWNLOAD` statement descriptor suffix.
 
 ## Earlier Conversation Context
 
@@ -81,7 +81,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 39. A live Stripe webhook destination was created for `checkout.session.completed` at the deployed Worker endpoint, with destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`.
 40. Live Stripe secrets were installed in Cloudflare outside git, and the Worker created live Checkout Sessions.
 41. Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming in Stripe balance, order status `ready`, one private JPEG delivery file, and a verified Worker download of `401,035` bytes.
-42. The deployed Worker now uses `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX=DOWNLOAD`, so future card statements should show `PHOTOSELIE* DOWNLOAD` with the current Stripe prefix.
+42. The deployed Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` now uses `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX=DOWNLOAD`, so future card statements should show `PHOTOSELIE* DOWNLOAD` with the current Stripe prefix.
 
 ## Current Operational Notes
 

@@ -19,8 +19,10 @@ Clock state: running
 | 2026-05-22 | 15:15 CEST | 15:16 CEST | 0:01 | Resumed project direction and requested title/keyword rejection comments carry rejected proposal context for AI rework. |
 | 2026-05-22 | 15:16 CEST | 16:07 CEST | 0:51 | Lowered digital 1 MP and 3 MP pricing, added Stripe minimum-charge handling, created the Owner Dock launcher, and verified checkout display. |
 | 2026-05-22 | 16:19 CEST | 16:20 CEST | 0:01 | Published the v83.2 pricing and minimum-charge update to the public site branch. |
+| 2026-05-22 | 16:20 CEST | 16:25 CEST | 0:05 | Completed live Stripe secret cutover and first live checkout/download proof; secret values excluded. |
+| 2026-05-22 | 16:25 CEST | 16:35 CEST | 0:10 | Refreshed live Stripe proof docs, handoff notes, and backlog before commit; secret values excluded. |
 
 ## Totals
 
-Active collaboration time used: 1:41
+Active collaboration time used: 1:56
 Remaining budget: not set

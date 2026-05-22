@@ -5,7 +5,7 @@ Date: 2026-05-22
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
-- Branch: `codex/homepage-concepts`
+- Branch: `main`
 - Current visible build: `v83.2`
 - Local Owner page: `http://localhost:8000/owner.html?v=83.2`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
@@ -20,15 +20,16 @@ Date: 2026-05-22
 - Live Stripe branding is saved with the new camera-tripod logo assets, brand color `#5B341E`, and accent color `#D86A3E`. The source assets are under `assets/branding/`.
 - Live Stripe customer email setting `Successful payments` is enabled; `Refunds` remains off.
 - Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
-- Remaining live cutover blocker: install live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. These values must not be committed or written into docs.
+- Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Secret values are not committed or written into docs.
+- Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
 
 ## Latest Conversation Update
 
-The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`. Active public catalog scale remains `6,019` rows; the next product blocker is still live Cloudflare secret cutover for Stripe.
+The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`; the later pricing/minimum-charge work brought the visible build to `v83.2`. Active public catalog scale remains `6,019` rows.
 
-The latest Stripe pass moved PhotosByElie from "test checkout works" to "live Stripe shell is configured, but live secrets are not yet installed in Cloudflare." Sandbox testing proved hosted Checkout, payment return, webhook handling, receipt contents, order lookup by order ID plus email, per-file downloads, and download-all behavior. Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery.
+The latest Stripe pass completed live cutover. Cloudflare now has live Stripe and live webhook secrets installed outside git, `/health` reports real Stripe with USD, and a live Checkout Session used a `cs_live_...` id. The first real purchase was order `PBE-20260522-BA062E956C` for one JPG 1 MP Versailles photo. Stripe showed `$7.47` incoming from the `$8.00` charge, the live webhook moved the Worker order to `ready`, and the private download token served the expected JPEG.
 
-The live account setup pass completed business/onboarding screens, saved the new brand treatment, enabled successful-payment receipts, and created the live webhook destination. The webhook display name stayed Stripe-generated as `charismatic-rhythm`, but its functional configuration is correct. The safe next step is secret cutover: install the live Stripe secret key and the live webhook signing secret in Cloudflare, deploy/smoke the Worker, then run one tiny live purchase and verify the receipt, webhook, order recovery, and downloads.
+Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery. The webhook display name stayed Stripe-generated as `charismatic-rhythm`, but its functional configuration is correct.
 
 ## Earlier Conversation Context
 
@@ -73,7 +74,8 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 37. A new camera-tripod PhotosByElie brand asset was selected and committed under `assets/branding/`; live Stripe branding uses that logo/icon plus brand color `#5B341E` and accent color `#D86A3E`.
 38. Live Stripe successful-payment customer receipts were enabled; refunds remain disabled.
 39. A live Stripe webhook destination was created for `checkout.session.completed` at the deployed Worker endpoint, with destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`.
-40. Live checkout remains intentionally blocked until live Stripe and webhook secrets are installed in Cloudflare outside the repo.
+40. Live Stripe secrets were installed in Cloudflare outside git, and the Worker created live Checkout Sessions.
+41. Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming in Stripe balance, order status `ready`, one private JPEG delivery file, and a verified Worker download of `401,035` bytes.
 
 ## Current Operational Notes
 
@@ -153,4 +155,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: install live Stripe secrets in Cloudflare, run a tiny live checkout proof, optionally rename the live webhook destination, package buyer-facing offer/support copy, decide whether to publish the new logo into the public site UI, then return to Owner title/keyword review, storefront curation, analytics, SEO, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: optionally rename the live webhook destination, package buyer-facing offer/support copy, decide whether to publish the new logo into the public site UI, publish the price/offer strategy, curate the first sellable storefront, then return to analytics, SEO, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.

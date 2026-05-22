@@ -4,9 +4,9 @@ Last updated: 2026-05-22
 
 ## Current Facts
 
-- Current visible build: `v83.0`.
+- Current visible build: `v83.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=83.0`.
+- Local Owner page: `http://localhost:8000/owner.html?v=83.2`.
 - Current catalog scale: `6,019` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker catalog without changing the active row count.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -25,93 +25,86 @@ Last updated: 2026-05-22
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
 - Stripe sandbox checkout is proven end to end: successful card, declined-card behavior, 3D Secure, verified webhook, order recovery, per-file download, and download-all were manually checked.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` has branding saved, successful-payment customer receipts enabled, and live webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posting `checkout.session.completed` to the deployed Worker.
-- Live checkout remains gated on Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`; secret values must never be committed or written into docs.
+- Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git; secret values must never be committed or written into docs.
+- Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order `ready`, and one private JPEG download verified.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
 ## Numbered Backlog
 
-1. **Install live Stripe secrets in Cloudflare and smoke the Worker.**
-   - Install live `STRIPE_SECRET_KEY` and live `STRIPE_WEBHOOK_SECRET` with `wrangler secret put`; never commit or document the secret values.
-   - Confirm the deployed Worker `/health` still reports real Stripe mode and fixed `usd`.
-
-2. **Run one tiny live checkout proof.**
-   - Use a small live basket, complete real card payment, and verify Stripe receipt email, webhook `200 OK`, order recovery by order ID plus email, per-file download, and download-all.
-   - Keep Stripe receipts as payment records only; PhotosByElie remains the source for delivery links.
-
-3. **Clean up the live webhook presentation.**
+1. **Clean up the live webhook presentation.**
    - Optionally rename Stripe destination `we_1TZmoVPuO9o6fOp6JkBENiyV` from the generated name `charismatic-rhythm` to `PhotosByElie Worker checkout`.
    - Leave the endpoint, event, and API version untouched unless a live proof exposes a problem.
 
-4. **Package buyer-facing offer and support copy.**
+2. **Package buyer-facing offer and support copy.**
    - Explain resolution tiers, personal-use license, commercial/contact path, delivery window, download recovery, refund expectations, and support email.
    - Align Stripe receipt description, basket copy, order page copy, and public policy/help text.
 
-5. **Decide whether to publish the new camera-tripod branding into the public site.**
+3. **Decide whether to publish the new camera-tripod branding into the public site.**
    - If yes, update the visible site logo/favicon/social image treatment and apply the versioning SOP.
    - Keep the committed Stripe-ready branding assets under `assets/branding/` either way.
 
-6. **Publish a real price and offer strategy.**
+4. **Publish a real price and offer strategy.**
    - Move local Owner prices into a published price list shared by public basket and Worker validation.
    - Decide launch bundles, collection packs, buy-all-liked, and promo-code hooks.
 
-7. **Curate the first sellable storefront.**
+5. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial sets first.
 
-8. **Add conversion analytics.**
+6. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-9. **Improve public discovery and SEO.**
+7. **Improve public discovery and SEO.**
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, sitemap, and structured data without Owner-only metadata.
 
-10. **Create marketing landing pages and launch outreach.**
-    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
+8. **Create marketing landing pages and launch outreach.**
+   - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
-11. **Owner decision pass for batch `2026-05-20-185753-222Z`.**
-    - Open `owner-review.html?view=title-keywords` locally and review the 200 pending proposals.
-    - Pay special attention to the 74 `needs_owner_context` rows and the 100 Codex-backed rework rows from the rejected family-travel batch.
+9. **Owner decision pass for batch `2026-05-20-185753-222Z`.**
+   - Open `owner-review.html?view=title-keywords` locally and review the 200 pending proposals.
+   - Pay special attention to the 74 `needs_owner_context` rows and the 100 Codex-backed rework rows from the rejected family-travel batch.
 
-12. **Verify Owner-private artifact separation after deploy.**
-    - Confirm public GitHub Pages no longer serves title/keyword batch or approval JSON.
-    - Keep `Owner.sqlite` and generated review JSON local/ignored; use SQLite/helper output for localhost review.
+10. **Verify Owner-private artifact separation after deploy.**
+   - Confirm public GitHub Pages no longer serves title/keyword batch or approval JSON.
+   - Keep `Owner.sqlite` and generated review JSON local/ignored; use SQLite/helper output for localhost review.
 
-13. **Run the next generator pass after the current batch is resolved.**
-    - Use the improved local keyword floor, larger subprocess buffer, and batch-summary preservation fix.
-    - Compare keyword-target misses, `source_context`, and `needs_owner_context` counts against `2026-05-20-185753-222Z`.
+11. **Run the next generator pass after the current batch is resolved.**
+   - Use the improved local keyword floor, larger subprocess buffer, and batch-summary preservation fix.
+   - Compare keyword-target misses, `source_context`, and `needs_owner_context` counts against `2026-05-20-185753-222Z`.
 
-14. **Escalate thin ordinary title/keyword rows to stronger context.**
-    - Use vision/model passes for photos where source path and existing keywords are too thin.
-    - Keep conservative titles and mark uncertainty instead of inventing landmarks.
+12. **Escalate thin ordinary title/keyword rows to stronger context.**
+   - Use vision/model passes for photos where source path and existing keywords are too thin.
+   - Keep conservative titles and mark uncertainty instead of inventing landmarks.
 
-15. **Run a full Real Estate client lifecycle rehearsal.**
-    - Pick one client folder on Saturn, use discovered properties, import previews, publish context, run upload dry-run, and prepare the Worker secret.
-    - Check local and public review URLs before any real upload.
+13. **Run a full Real Estate client lifecycle rehearsal.**
+   - Pick one client folder on Saturn, use discovered properties, import previews, publish context, run upload dry-run, and prepare the Worker secret.
+   - Check local and public review URLs before any real upload.
 
-16. **Polish Real Estate production outputs and access.**
-    - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
-    - Choose Worker/D1, Cloudflare Access, or another server-side gate for client auth.
+14. **Polish Real Estate production outputs and access.**
+   - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
+   - Choose Worker/D1, Cloudflare Access, or another server-side gate for client auth.
 
-17. **Harden hidden/discarded lifecycle.**
-    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
-    - Avoid publishing partial hidden/discarded state.
+15. **Harden hidden/discarded lifecycle.**
+   - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
+   - Avoid publishing partial hidden/discarded state.
 
-18. **Add Owner state-table browsing.**
-    - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
+16. **Add Owner state-table browsing.**
+   - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
 
-19. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
-    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
+17. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+   - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-20. **Parameterize gallery routes and split gallery/catalog data by collection.**
-    - Reduce first-load catalog weight only after measuring current SQLite fetch/decode and gallery scan costs.
+18. **Parameterize gallery routes and split gallery/catalog data by collection.**
+   - Reduce first-load catalog weight only after measuring current SQLite fetch/decode and gallery scan costs.
 
-21. **Improve gallery merchandising layout.**
-    - Add curated collection ordering, stronger visual entry points, and buyer-friendly browse paths.
+19. **Improve gallery merchandising layout.**
+   - Add curated collection ordering, stronger visual entry points, and buyer-friendly browse paths.
 
-22. **Add frontend smoke tests for buyer and client paths.**
-    - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
+20. **Add frontend smoke tests for buyer and client paths.**
+   - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
 
-23. **Keep physical products behind Owner review.**
-    - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
+21. **Keep physical products behind Owner review.**
+   - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
 
-24. **Keep repo and media cleanup deliberate.**
-    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.
+22. **Keep repo and media cleanup deliberate.**
+   - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

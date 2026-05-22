@@ -64,7 +64,8 @@ Live Stripe dashboard state as of 2026-05-22:
 - Successful-payment customer receipts are enabled; refund emails remain off.
 - Branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand color `#5B341E`, and accent color `#D86A3E`.
 - Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`.
-- Live checkout remains gated on Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Do not commit or document the secret values.
+- Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Do not commit or document the secret values.
+- Live proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, order status `ready`, and a private R2 JPEG download of `401,035` bytes.
 
 Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Required Stripe configuration:
 
@@ -78,12 +79,12 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
 
-Live payment should not be opened until the live secrets are installed and a small live proof completes:
+Live payment proof checklist completed on 2026-05-22:
 
 - Worker `/health` reports real Stripe and fixed `usd`.
 - A successful live card payment reaches `checkout.session.completed`.
 - The live webhook returns `200 OK`.
-- Stripe sends the successful-payment receipt.
+- Successful-payment receipts are enabled and the Stripe receipt is available from the payment record.
 - The order page recovers by order ID and email.
 - Private R2 per-file downloads and download-all work.
 - Stripe receipts remain payment records only; PhotosByElie delivery links stay in the Worker/order flow.

@@ -62,7 +62,8 @@ for remote execution.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
 - Live Stripe webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`. The display name may still be Stripe-generated as `charismatic-rhythm`, but the functional endpoint is correct.
-- Live checkout is not cut over until live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git.
+- Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git.
+- Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order status `ready`, and one private JPEG download verified at `401,035` bytes.
 
 ## First Commands On A Machine
 
@@ -95,12 +96,11 @@ cd /Users/ecohen/Dev/PhotosByElie
    - Commit tracked manifest changes only when they represent durable R2/catalog state.
    - Keep unrelated local edits out of feature commits.
 
-2. **Cut over live Stripe secrets and run a tiny live proof.**
-   - Install live Cloudflare secrets: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
-   - Do not commit, paste into docs, or expose either secret.
-   - Deploy or smoke the Worker and confirm `/health` reports real Stripe and `usd`.
-   - Run one small live purchase, then verify Stripe receipt email, live webhook `200 OK`, order recovery by order ID and email, per-file download, and download-all.
-   - After the proof, decide whether to keep the live webhook display name as-is or rename it from `charismatic-rhythm` to `PhotosByElie Worker checkout`.
+2. **Package checkout trust and buyer support.**
+   - Keep Stripe receipts as payment records and PhotosByElie order pages as delivery/recovery records.
+   - Clarify usage rights, resolution labels, delivery window, refund expectations, custom-license contact, and support email.
+   - Align Stripe receipt description, basket copy, order page copy, and public policy/help text.
+   - Optionally rename the live webhook display name from `charismatic-rhythm` to `PhotosByElie Worker checkout`.
 
 3. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for longer-term order state.
@@ -231,9 +231,10 @@ zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 - Worker prototype lives in `worker/`.
 - Public Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Real Stripe is wired behind Worker configuration; mock Stripe remains the local/default path unless Stripe secrets are configured.
-- Sandbox Stripe has been manually proven. Live Stripe dashboard setup now exists, but live Cloudflare secrets are still the cutover gate.
+- Sandbox Stripe and live Stripe are both manually proven. Live Cloudflare secrets are installed outside git.
 - Live webhook destination: `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, event `checkout.session.completed`, API version `2026-04-22.dahlia`.
 - Live Stripe receipt branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand `#5B341E`, and accent `#D86A3E`.
+- Live proof order: `PBE-20260522-BA062E956C`, `cs_live_...`, `pi_3TZtviPuO9o6fOp62QXLbvMF`, `$8.00` paid, order `ready`, one `jpg-1mp` private JPEG delivered.
 - Checkout is guest-first and USD-only.
 - Worker owns order ID, buyer email, USD total, basket snapshot, status, delivery file metadata, and signed-link-style download tokens.
 - Routes currently implemented:
@@ -254,23 +255,21 @@ npm run validate
 
 ## Fresh Backlog
 
-1. Install live Stripe secrets in Cloudflare and smoke the Worker.
-2. Run one tiny live checkout proof and verify receipt, webhook, order recovery, and downloads.
-3. Optionally rename the live webhook destination from `charismatic-rhythm`.
-4. Package buyer-facing offer, support, delivery, rights, refund, and contact copy.
-5. Decide whether to publish the new camera-tripod brand into the public site UI.
-6. Publish a real price and offer strategy.
-7. Curate the first sellable storefront.
-8. Add conversion analytics.
-9. Improve public discovery and SEO.
-10. Create marketing landing pages and launch outreach.
-11. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
-12. Continue model/vision improvements for thin title/keyword rows.
-13. Rehearse the Real Estate client lifecycle.
-14. Polish Real Estate production outputs and access model.
-15. Replace temporary `r2.dev` media URL with a custom media domain.
-16. Parameterize gallery routes and split gallery/catalog data by collection.
-17. Improve gallery merchandising layout.
-18. Decide when physical goods return.
-19. Extend Owner operations dashboard and state-table browsing.
-20. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.
+1. Optionally rename the live webhook destination from `charismatic-rhythm`.
+2. Package buyer-facing offer, support, delivery, rights, refund, and contact copy.
+3. Decide whether to publish the new camera-tripod brand into the public site UI.
+4. Publish a real price and offer strategy.
+5. Curate the first sellable storefront.
+6. Add conversion analytics.
+7. Improve public discovery and SEO.
+8. Create marketing landing pages and launch outreach.
+9. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
+10. Continue model/vision improvements for thin title/keyword rows.
+11. Rehearse the Real Estate client lifecycle.
+12. Polish Real Estate production outputs and access model.
+13. Replace temporary `r2.dev` media URL with a custom media domain.
+14. Parameterize gallery routes and split gallery/catalog data by collection.
+15. Improve gallery merchandising layout.
+16. Decide when physical goods return.
+17. Extend Owner operations dashboard and state-table browsing.
+18. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.

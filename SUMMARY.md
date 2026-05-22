@@ -6,8 +6,8 @@ Date: 2026-05-22
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.2`
-- Local Owner page: `http://localhost:8000/owner.html?v=83.2`
+- Current visible build: `v83.3`
+- Local Owner page: `http://localhost:8000/owner.html?v=83.3`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -23,10 +23,11 @@ Date: 2026-05-22
 - Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Secret values are not committed or written into docs.
 - Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
+- `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
 
 ## Latest Conversation Update
 
-The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`; the later pricing/minimum-charge work brought the visible build to `v83.2`. Active public catalog scale remains `6,019` rows.
+The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`; the later pricing/minimum-charge work brought the visible build to `v83.2`. The autonomous buyer-trust pass brought the visible build to `v83.3` without changing catalog scale. Active public catalog scale remains `6,019` rows.
 
 The latest Stripe pass completed live cutover. Cloudflare now has live Stripe and live webhook secrets installed outside git, `/health` reports real Stripe with USD, and a live Checkout Session used a `cs_live_...` id. The first real purchase was order `PBE-20260522-BA062E956C` for one JPG 1 MP Versailles photo. Stripe showed `$7.47` incoming from the `$8.00` charge, the live webhook moved the Worker order to `ready`, and the private download token served the expected JPEG.
 
@@ -35,6 +36,8 @@ Stripe's own successful-payment receipt is now intentionally part of the buyer e
 The Worker was redeployed after the first live proof so future Checkout PaymentIntents use statement descriptor suffix `DOWNLOAD` instead of `ORDER`.
 
 The live checkout Worker was also redeployed as version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb`; hosted Stripe Checkout now receives the updated low-tier line items, minimum-charge adjustment, and `DOWNLOAD` statement descriptor suffix.
+
+The latest public-site pass added a conservative buyer trust path: basket/order notes explain Stripe receipts versus PhotosByElie delivery, `support.html` covers recovery, personal-use license, commercial-use approval, support email, and case-by-case refund handling, and the public favicon/topbar now use the selected camera-tripod brand mark.
 
 ## Earlier Conversation Context
 
@@ -82,6 +85,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 40. Live Stripe secrets were installed in Cloudflare outside git, and the Worker created live Checkout Sessions.
 41. Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming in Stripe balance, order status `ready`, one private JPEG delivery file, and a verified Worker download of `401,035` bytes.
 42. The deployed Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` now uses `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX=DOWNLOAD`, so future card statements should show `PHOTOSELIE* DOWNLOAD` with the current Stripe prefix.
+43. `v83.3` adds public buyer trust/support copy and publishes the camera-tripod mark as the public site logo/favicon.
 
 ## Current Operational Notes
 
@@ -117,6 +121,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v83.0`, Owner-approved title/keyword metadata is published into the buyer-facing SQLite catalog and Worker catalog, and the keyword blacklist compatibility export is refreshed while keeping active public rows at `6,019`.
 - In `v83.1`, rejected title/keyword review comments now carry the rejected proposal title and keywords as attached context for the next AI rework rung.
 - In `v83.2`, JPG 1 MP and 3 MP checkout tiers are $0.10 and $0.30, buyer prices render cents cleanly, orders below Stripe's $0.50 minimum receive only the needed top-up, and a Dock launcher opens localhost Owner in Safari.
+- In `v83.3`, basket/order pages show buyer trust notes, `support.html` documents payment, delivery recovery, license, and support expectations, and root public pages use the camera-tripod logo/favicon.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.
@@ -161,4 +166,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: optionally rename the live webhook destination, package buyer-facing offer/support copy, decide whether to publish the new logo into the public site UI, publish the price/offer strategy, curate the first sellable storefront, then return to analytics, SEO, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: optionally rename the live webhook destination, review/tune the `v83.3` buyer support/refund/license wording, publish the price/offer strategy, curate the first sellable storefront, then return to analytics, SEO, launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.

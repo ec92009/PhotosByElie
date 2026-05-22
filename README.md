@@ -6,7 +6,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v83.2`
+- Current visible version: `v83.3`
 - Versioning follows the canonical MailAssist SOP at `/Users/ecohen/Dev/MailAssist/docs/sops/VERSIONING_SOP.md`, with the local PhotosByElie adaptation in `docs/sops/VERSIONING_SOP.md`.
 
 ## Structure
@@ -18,6 +18,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `photo.html`: reusable photo detail page; product checkboxes sync directly to the basket and the preview adapts to image orientation
 - `basket.html`: localStorage-backed static basket page with fixed commerce header controls and a pinned total band
 - `liked.html`: localStorage-backed liked photos page with fixed commerce header controls; basketed photos are automatically liked
+- `support.html`: buyer-facing payment, delivery recovery, license, refund-expectation, and support notes for digital checkout
 - `real-estate.html`: private real-estate review wizard that loads a public-safe client context on GitHub Pages or an ignored local import bundle on localhost, conditionally starts with property selection, supports click and Shift-click media selection from the full shared pool, selected-title cleanup, one-line drag ordering, browser-open PDF/video outputs, selection-table resume, masked password entry, and selected-original ZIP delivery through the Worker
 - `owner.html`: tabbed localhost-only owner controls for live review actions, Unknown classification, Waste Basket review, metadata sync, Real Estate client credential/import/publish/upload actions, commerce settings, and R2 maintenance
 - `owner-auth.js`: localhost helper availability client for catalog and cloud maintenance actions
@@ -56,8 +57,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `SHOW_ME_SOP.md`: preview/reporting workflow
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations, including versioning, active collaboration timelog tracking, and Lightroom image ingestion
-- `assets/branding/`: PhotosByElie brand assets prepared for Stripe and future public-site branding
-- `assets/`: shared By Elie logo asset, publish metadata, tiny placeholders, and ignored localhost compatibility/Waste Basket working data
+- `assets/branding/`: PhotosByElie brand assets used by Stripe and the public site favicon/topbar logo
+- `assets/`: publish metadata, tiny placeholders, and ignored localhost compatibility/Waste Basket working data
 - `assets/owner-actions/Owner.sqlite`: ignored local Owner workflow database for review queues, decisions, blacklist, country assignment state, and trusted R2 object lifecycle state
 - `assets/owner-actions/real-estate-clients.local.json`: ignored local Real Estate client credential and import settings file used by the Owner dashboard
 - Owner-action JSON files are compatibility views, handoff files, audit files, or local config. `Owner.sqlite` is the local Owner source of truth; `assets/catalog/photosbyelie.sqlite` is the active public catalog source of truth. Title/keyword review batch JSON is ignored/local and regenerated from SQLite for localhost review pages, not committed as deployable public metadata.
@@ -91,6 +92,7 @@ Use the GitHub Pages URL above after pushing to `main`.
 - `v83.0` publishes the latest Owner-approved title/keyword catalog metadata into the buyer-facing SQLite catalog and Worker catalog while keeping public catalog scale unchanged at `6,019` rows.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers the JPG 1 MP and 3 MP digital checkout tiers to $0.10 and $0.30, formats cents throughout buyer pricing UI, and adds a Stripe $0.50 minimum-charge top-up when needed.
+- `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo and adds buyer trust notes plus `support.html` for payment, delivery recovery, license, and support expectations.
 - On the localhost Title/Keywords review page, Owner can review the current proposal batch, single-click to select a row, double-click for detail, approve with `A`, reject with mutually exclusive horizontal reason checkboxes or `R`, block with the visible Block choice or `H`/`X`, and propagate the current approve/reject/block decision plus reject note with `P`. Individual approvals autosave and advance the selected row to the next photo. Reject reasons fill the note while keeping it editable, and previous reject notes load unchanged for further edits. Video rows show the usual play-triangle overlay on the preview. Rows autosave through the helper server; approved rows apply title/keyword values to generated catalog metadata/state files and add `Title_Keywords_Reviewed`, rejected rows record rework state/comment in `Owner.sqlite`, and blocked rows move to the Waste Basket while showing `Blocked` in the current session. The queue generator uses that stored rejection context to escalate rework attempts from local rules to the configured Codex model ladder, records blocker/exhaustion details when a stronger proposal cannot be produced, uses a larger Owner-state subprocess buffer, and emits proposal quality counts before writing/importing. Batch `2026-05-20-181058-181Z` was rejected for rework after audit because it consisted of weak local-rule internal-marker titles; replacement batch `2026-05-20-185753-222Z` contains 100 Codex-backed rework proposals and 100 ordinary local proposals with no model blockers or keyword-target misses. Batch JSON under `assets/owner-actions/title-keyword-review-queue/` is ignored/local review-page view data; public deploys should load approved metadata only from the catalog SQLite artifacts. Saved rows remain visible during the current session and disappear after leaving/reloading. Source-file embedded metadata, public previews, private masters, and private render files are left untouched.
 - The authoritative useless-keyword list is `Owner.sqlite:keyword_blacklist`; `assets/owner-actions/keyword-blacklist.json` is only a UI compatibility export. Import and export scripts omit those strings from generated keyword metadata and keyword indexes only; the list must not block media, discard media, or rewrite source-file metadata.
 - Basketed photos do not re-upload public preview objects while they are blacklisted.

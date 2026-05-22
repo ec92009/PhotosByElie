@@ -4,9 +4,9 @@ Last updated: 2026-05-22
 
 ## Current Facts
 
-- Current visible build: `v83.2`.
+- Current visible build: `v83.3`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=83.2`.
+- Local Owner page: `http://localhost:8000/owner.html?v=83.3`.
 - Current catalog scale: `6,019` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker catalog without changing the active row count.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -28,6 +28,7 @@ Last updated: 2026-05-22
 - Live Checkout card statement descriptor suffix is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git; secret values must never be committed or written into docs.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order `ready`, and one private JPEG download verified.
+- `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery, recovery, license, and support expectations.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
@@ -37,75 +38,71 @@ Last updated: 2026-05-22
    - Optionally rename Stripe destination `we_1TZmoVPuO9o6fOp6JkBENiyV` from the generated name `charismatic-rhythm` to `PhotosByElie Worker checkout`.
    - Leave the endpoint, event, and API version untouched unless a live proof exposes a problem.
 
-2. **Package buyer-facing offer and support copy.**
-   - Explain resolution tiers, personal-use license, commercial/contact path, delivery window, download recovery, refund expectations, and support email.
-   - Align Stripe receipt description, basket copy, order page copy, and public policy/help text.
+2. **Review and tune buyer support/refund wording.**
+   - `v83.3` has conservative defaults; owner should approve or adjust commercial-use, delivery-refresh, and refund language before heavier launch traffic.
+   - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-3. **Decide whether to publish the new camera-tripod branding into the public site.**
-   - If yes, update the visible site logo/favicon/social image treatment and apply the versioning SOP.
-   - Keep the committed Stripe-ready branding assets under `assets/branding/` either way.
-
-4. **Publish a real price and offer strategy.**
+3. **Publish a real price and offer strategy.**
    - Move local Owner prices into a published price list shared by public basket and Worker validation.
    - Decide launch bundles, collection packs, buy-all-liked, and promo-code hooks.
 
-5. **Curate the first sellable storefront.**
+4. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial sets first.
 
-6. **Add conversion analytics.**
+5. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-7. **Improve public discovery and SEO.**
+6. **Improve public discovery and SEO.**
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, sitemap, and structured data without Owner-only metadata.
 
-8. **Create marketing landing pages and launch outreach.**
+7. **Create marketing landing pages and launch outreach.**
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
-9. **Owner decision pass for batch `2026-05-20-185753-222Z`.**
+8. **Owner decision pass for batch `2026-05-20-185753-222Z`.**
    - Open `owner-review.html?view=title-keywords` locally and review the 200 pending proposals.
    - Pay special attention to the 74 `needs_owner_context` rows and the 100 Codex-backed rework rows from the rejected family-travel batch.
 
-10. **Verify Owner-private artifact separation after deploy.**
+9. **Verify Owner-private artifact separation after deploy.**
    - Confirm public GitHub Pages no longer serves title/keyword batch or approval JSON.
    - Keep `Owner.sqlite` and generated review JSON local/ignored; use SQLite/helper output for localhost review.
 
-11. **Run the next generator pass after the current batch is resolved.**
+10. **Run the next generator pass after the current batch is resolved.**
    - Use the improved local keyword floor, larger subprocess buffer, and batch-summary preservation fix.
    - Compare keyword-target misses, `source_context`, and `needs_owner_context` counts against `2026-05-20-185753-222Z`.
 
-12. **Escalate thin ordinary title/keyword rows to stronger context.**
+11. **Escalate thin ordinary title/keyword rows to stronger context.**
    - Use vision/model passes for photos where source path and existing keywords are too thin.
    - Keep conservative titles and mark uncertainty instead of inventing landmarks.
 
-13. **Run a full Real Estate client lifecycle rehearsal.**
+12. **Run a full Real Estate client lifecycle rehearsal.**
    - Pick one client folder on Saturn, use discovered properties, import previews, publish context, run upload dry-run, and prepare the Worker secret.
    - Check local and public review URLs before any real upload.
 
-14. **Polish Real Estate production outputs and access.**
+13. **Polish Real Estate production outputs and access.**
    - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
    - Choose Worker/D1, Cloudflare Access, or another server-side gate for client auth.
 
-15. **Harden hidden/discarded lifecycle.**
+14. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-16. **Add Owner state-table browsing.**
+15. **Add Owner state-table browsing.**
    - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
 
-17. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+16. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-18. **Parameterize gallery routes and split gallery/catalog data by collection.**
+17. **Parameterize gallery routes and split gallery/catalog data by collection.**
    - Reduce first-load catalog weight only after measuring current SQLite fetch/decode and gallery scan costs.
 
-19. **Improve gallery merchandising layout.**
+18. **Improve gallery merchandising layout.**
    - Add curated collection ordering, stronger visual entry points, and buyer-friendly browse paths.
 
-20. **Add frontend smoke tests for buyer and client paths.**
+19. **Add frontend smoke tests for buyer and client paths.**
    - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
 
-21. **Keep physical products behind Owner review.**
+20. **Keep physical products behind Owner review.**
    - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
 
-22. **Keep repo and media cleanup deliberate.**
+21. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

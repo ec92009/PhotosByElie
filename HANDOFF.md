@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v83.2`
+- Current visible build: `v83.3`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `297c572d photosbyelie: add title keyword review batch 2026-05-19-230413`, `49471506 photosbyelie: publish title keyword review updates`, and `6ec82489 photosbyelie: tighten title keyword review workflow`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
@@ -59,6 +59,7 @@ for remote execution.
 - `v83.0` publishes Owner-approved title/keyword metadata into the buyer-facing SQLite catalog and Worker catalog, and refreshes the keyword blacklist compatibility export.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers JPG 1 MP and 3 MP checkout tiers to $0.10 and $0.30, formats buyer pricing in cents, adds the Stripe $0.50 minimum-charge top-up, and adds a Dock launcher for localhost Owner.
+- `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, and support expectations.
 - Live checkout Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` is deployed with the `v83.2` price/minimum-charge catalog and `DOWNLOAD` card statement descriptor suffix.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
@@ -98,10 +99,9 @@ cd /Users/ecohen/Dev/PhotosByElie
    - Commit tracked manifest changes only when they represent durable R2/catalog state.
    - Keep unrelated local edits out of feature commits.
 
-2. **Package checkout trust and buyer support.**
-   - Keep Stripe receipts as payment records and PhotosByElie order pages as delivery/recovery records.
-   - Clarify usage rights, resolution labels, delivery window, refund expectations, custom-license contact, and support email.
-   - Align Stripe receipt description, basket copy, order page copy, and public policy/help text.
+2. **Review checkout trust and buyer support wording.**
+   - `v83.3` ships conservative support/license defaults; owner should approve or adjust refund, delivery-refresh, and commercial-use language before heavier launch traffic.
+   - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
    - Optionally rename the live webhook display name from `charismatic-rhythm` to `PhotosByElie Worker checkout`.
 
 3. **Make checkout and delivery production-durable.**
@@ -259,20 +259,19 @@ npm run validate
 ## Fresh Backlog
 
 1. Optionally rename the live webhook destination from `charismatic-rhythm`.
-2. Package buyer-facing offer, support, delivery, rights, refund, and contact copy.
-3. Decide whether to publish the new camera-tripod brand into the public site UI.
-4. Publish a real price and offer strategy.
-5. Curate the first sellable storefront.
-6. Add conversion analytics.
-7. Improve public discovery and SEO.
-8. Create marketing landing pages and launch outreach.
-9. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
-10. Continue model/vision improvements for thin title/keyword rows.
-11. Rehearse the Real Estate client lifecycle.
-12. Polish Real Estate production outputs and access model.
-13. Replace temporary `r2.dev` media URL with a custom media domain.
-14. Parameterize gallery routes and split gallery/catalog data by collection.
-15. Improve gallery merchandising layout.
-16. Decide when physical goods return.
-17. Extend Owner operations dashboard and state-table browsing.
-18. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.
+2. Review and tune the `v83.3` buyer support/refund/license wording.
+3. Publish a real price and offer strategy.
+4. Curate the first sellable storefront.
+5. Add conversion analytics.
+6. Improve public discovery and SEO.
+7. Create marketing landing pages and launch outreach.
+8. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
+9. Continue model/vision improvements for thin title/keyword rows.
+10. Rehearse the Real Estate client lifecycle.
+11. Polish Real Estate production outputs and access model.
+12. Replace temporary `r2.dev` media URL with a custom media domain.
+13. Parameterize gallery routes and split gallery/catalog data by collection.
+14. Improve gallery merchandising layout.
+15. Decide when physical goods return.
+16. Extend Owner operations dashboard and state-table browsing.
+17. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.

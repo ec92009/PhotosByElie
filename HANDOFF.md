@@ -59,8 +59,10 @@ for remote execution.
 - `v83.0` publishes Owner-approved title/keyword metadata into the buyer-facing SQLite catalog and Worker catalog, and refreshes the keyword blacklist compatibility export.
 - `v83.1` saves rejected title/keyword review comments with the rejected proposal title and keywords attached for the next AI rework rung.
 - `v83.2` lowers JPG 1 MP and 3 MP checkout tiers to $0.10 and $0.30, formats buyer pricing in cents, adds the Stripe $0.50 minimum-charge top-up, and adds a Dock launcher for localhost Owner.
+- Live checkout Worker version `2a26d117-a306-44ab-b38e-ac42a945130a` is deployed with the `v83.2` price/minimum-charge catalog; a 3 MP + 1 MP checkout now reaches Stripe as $0.30 + $0.10 + $0.10 minimum top-up = $0.50.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
+- Live Checkout card statement descriptor suffix is `DOWNLOAD`, so future charges should display like `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
 - Live Stripe webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`. The display name may still be Stripe-generated as `charismatic-rhythm`, but the functional endpoint is correct.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git.
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order status `ready`, and one private JPEG download verified at `401,035` bytes.
@@ -234,6 +236,7 @@ zsh -lc './scripts/run_cloud_media_sweep.zsh --push'
 - Sandbox Stripe and live Stripe are both manually proven. Live Cloudflare secrets are installed outside git.
 - Live webhook destination: `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, event `checkout.session.completed`, API version `2026-04-22.dahlia`.
 - Live Stripe receipt branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand `#5B341E`, and accent `#D86A3E`.
+- Live card statement descriptor suffix is `DOWNLOAD`.
 - Live proof order: `PBE-20260522-BA062E956C`, `cs_live_...`, `pi_3TZtviPuO9o6fOp62QXLbvMF`, `$8.00` paid, order `ready`, one `jpg-1mp` private JPEG delivered.
 - Checkout is guest-first and USD-only.
 - Worker owns order ID, buyer email, USD total, basket snapshot, status, delivery file metadata, and signed-link-style download tokens.

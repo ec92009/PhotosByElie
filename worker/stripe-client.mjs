@@ -80,7 +80,7 @@ export const createStripeWebhookSignature = async ({
 export const createStripeClient = ({
   secretKey,
   webhookSecret,
-  statementDescriptorSuffix = "ORDER",
+  statementDescriptorSuffix = "DOWNLOAD",
   apiVersion,
   apiBase = STRIPE_API_BASE,
   fetchImpl = globalThis.fetch,

@@ -104,7 +104,7 @@ export default {
       ? createStripeClient({
         secretKey: env.STRIPE_SECRET_KEY,
         webhookSecret: env.STRIPE_WEBHOOK_SECRET,
-        statementDescriptorSuffix: env.STRIPE_STATEMENT_DESCRIPTOR_SUFFIX || "ORDER",
+        statementDescriptorSuffix: env.STRIPE_STATEMENT_DESCRIPTOR_SUFFIX || "DOWNLOAD",
         apiVersion: env.STRIPE_API_VERSION,
       })
       : createMockStripeClient({

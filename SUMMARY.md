@@ -19,6 +19,7 @@ Date: 2026-05-22
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is onboarded enough for the current setup pass and showed no active account tasks after onboarding.
 - Live Stripe branding is saved with the new camera-tripod logo assets, brand color `#5B341E`, and accent color `#D86A3E`. The source assets are under `assets/branding/`.
 - Live Stripe customer email setting `Successful payments` is enabled; `Refunds` remains off.
+- Live Checkout card statement descriptor suffix is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current Stripe descriptor prefix.
 - Live Stripe webhook destination is created for `checkout.session.completed`: destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`, endpoint `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook`, API version `2026-04-22.dahlia`.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Secret values are not committed or written into docs.
 - Live Stripe checkout proof is complete: order `PBE-20260522-BA062E956C` charged `$8.00`, Stripe showed `$7.47` incoming after fees, the Worker marked the order `ready`, and a private R2 JPEG download returned `401,035` bytes with a valid JPEG header.
@@ -30,6 +31,10 @@ The latest handoff sweep published Owner-approved title/keyword metadata into th
 The latest Stripe pass completed live cutover. Cloudflare now has live Stripe and live webhook secrets installed outside git, `/health` reports real Stripe with USD, and a live Checkout Session used a `cs_live_...` id. The first real purchase was order `PBE-20260522-BA062E956C` for one JPG 1 MP Versailles photo. Stripe showed `$7.47` incoming from the `$8.00` charge, the live webhook moved the Worker order to `ready`, and the private download token served the expected JPEG.
 
 Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery. The webhook display name stayed Stripe-generated as `charismatic-rhythm`, but its functional configuration is correct.
+
+The Worker was redeployed after the first live proof so future Checkout PaymentIntents use statement descriptor suffix `DOWNLOAD` instead of `ORDER`.
+
+The live checkout Worker was also redeployed as version `2a26d117-a306-44ab-b38e-ac42a945130a` after the `v83.2` site publish; hosted Stripe Checkout now receives the updated low-tier line items and minimum-charge adjustment instead of stale $16/$8 prices.
 
 ## Earlier Conversation Context
 
@@ -76,6 +81,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 39. A live Stripe webhook destination was created for `checkout.session.completed` at the deployed Worker endpoint, with destination ID `we_1TZmoVPuO9o6fOp6JkBENiyV`.
 40. Live Stripe secrets were installed in Cloudflare outside git, and the Worker created live Checkout Sessions.
 41. Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming in Stripe balance, order status `ready`, one private JPEG delivery file, and a verified Worker download of `401,035` bytes.
+42. The deployed Worker now uses `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX=DOWNLOAD`, so future card statements should show `PHOTOSELIE* DOWNLOAD` with the current Stripe prefix.
 
 ## Current Operational Notes
 

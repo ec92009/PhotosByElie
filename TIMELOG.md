@@ -21,8 +21,10 @@ Clock state: running
 | 2026-05-22 | 16:19 CEST | 16:20 CEST | 0:01 | Published the v83.2 pricing and minimum-charge update to the public site branch. |
 | 2026-05-22 | 16:20 CEST | 16:25 CEST | 0:05 | Completed live Stripe secret cutover and first live checkout/download proof; secret values excluded. |
 | 2026-05-22 | 16:25 CEST | 16:35 CEST | 0:10 | Refreshed live Stripe proof docs, handoff notes, and backlog before commit; secret values excluded. |
+| 2026-05-22 | 17:15 CEST | 17:19 CEST | 0:04 | Changed and deployed live Stripe card statement suffix from ORDER to DOWNLOAD. |
+| 2026-05-22 | 17:19 CEST | 17:20 CEST | 0:01 | Redeployed the live checkout Worker so Stripe Checkout uses the v83.2 low-tier prices and minimum-charge top-up. |
 
 ## Totals
 
-Active collaboration time used: 1:56
+Active collaboration time used: 2:01
 Remaining budget: not set

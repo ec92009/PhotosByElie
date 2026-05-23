@@ -149,6 +149,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v83.3`, basket/order pages show buyer trust notes, `support.html` documents payment, delivery recovery, license, and support expectations, and root public pages use the camera-tripod logo/favicon.
 - In `v83.4`, the homepage Featured section includes the first Facebook Page feature card alongside Pinterest campaign cards.
 - In `v83.6`, Owner Commerce exposes local-only POD automation preview data for supplier readiness, quality tiers, supplier option rows, and SQLite POD table shape while `pod_settings.storefrontEnabled` remains false.
+- On 2026-05-23, the QR coaster 3MF assets were refreshed after print/underside review, the title/keyword blacklist added date/noise terms such as `2018`, `May 2018`, and `Sony?`, and the daily social package for Facebook, Instagram, and Pinterest was generated as ready-to-publish Owner output.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

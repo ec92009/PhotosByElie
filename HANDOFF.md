@@ -74,6 +74,8 @@ for remote execution.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest quiet-thread checkpoint is docs-only; `TODO.md` remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
+- The 2026-05-23 daily social package is prepared only, not auto-published: Facebook Page target is blocked/ambiguous, Instagram is authenticated to `@ec92009` but needs final account/post confirmation, and Pinterest is authenticated to `@photosbyelie` but still needs final publish confirmation.
+- The tracked QR coaster 3MF assets were refreshed after print/underside review. Treat them as current printable project files unless a newer slicer/export pass replaces them.
 
 ## First Commands On A Machine
 

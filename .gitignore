@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 node_modules/
 tmp/
+output/
 .env.stripe-test.local
 
 # Local/generated photo workspaces.

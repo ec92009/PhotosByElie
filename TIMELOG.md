@@ -6,7 +6,7 @@ Tracking rule: See `docs/sops/TIMELOG_SOP.md`.
 
 Started tracking: 2026-05-22 06:55 CEST
 
-Clock state: running
+Clock state: paused
 
 ## Sessions
 
@@ -60,8 +60,13 @@ Clock state: running
 | 2026-05-23 | 08:01 CEST | 08:02 CEST | 0:01 | Checked the first parked photo title and keyword proposal history. |
 | 2026-05-23 | 08:08 CEST | 08:09 CEST | 0:01 | Added date/noise terms to the title/keyword blacklist and scrubbed active proposals. |
 | 2026-05-23 | 08:33 CEST | 08:34 CEST | 0:01 | Diagnosed the Owner title/keyword save failure as localhost-only helper access. |
+| 2026-05-23 | 11:42 CEST | 11:43 CEST | 0:01 | Opened Facebook in Chrome and staged the prepared Facebook image/caption package for manual Page publishing. |
+| 2026-05-23 | 11:47 CEST | 11:47 CEST | 0:01 | Deferred Facebook publishing until Magali work finishes and noted the two-screen workflow need. |
+| 2026-05-23 | 11:58 CEST | 11:59 CEST | 0:01 | Removed the stuck PhotosByElie Owner Dock item and quit its launcher/helper processes. |
+| 2026-05-23 | 12:20 CEST | 12:25 CEST | 0:01 | Checked the prepared Facebook package against the open browser and stopped before posting because the visible result was not the Photos By Elie Page. |
+| 2026-05-23 | 12:26 CEST | 12:26 CEST | 0:00 | Paused the PhotosByElie clock at the user's request. |
 
 ## Totals
 
-Active collaboration time used: 3:33
+Active collaboration time used: 3:37
 Remaining budget: not set

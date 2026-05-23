@@ -32,6 +32,7 @@ Date: 2026-05-22
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
+- PhotosByElie active collaboration time is paused as of 2026-05-23 12:26 CEST. Generated browser screenshots under `output/` are local-only and ignored.
 
 ## Latest Conversation Update
 

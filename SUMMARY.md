@@ -1,6 +1,6 @@
 # Conversation Summary
 
-Date: 2026-05-22
+Date: 2026-05-23
 
 ## Current State
 
@@ -32,7 +32,8 @@ Date: 2026-05-22
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
-- PhotosByElie active collaboration time is paused as of 2026-05-23 12:26 CEST. Generated browser screenshots under `output/` are local-only and ignored.
+- The 2026-05-23 Facebook Page daily package was manually published and verified from the visible personal Chrome session. Instagram still needs final account/post confirmation, and Pinterest is authenticated to `@photosbyelie` but still needs final publish confirmation.
+- PhotosByElie active collaboration time is paused as of 2026-05-23 20:31 CEST. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
@@ -59,6 +60,8 @@ The latest SEO/discovery pass added `robots.txt` and `sitemap.xml` for the homep
 This checkpoint refreshed the durable docs after the user reported all threads quiet. No public version, catalog, Worker, Stripe, price, or site behavior changed; the work is just the SUMMARY/HANDOFF/TODO/README/TIMELOG state refresh and the fresh backlog rollup.
 
 The latest automation setup added `pbe-daily-social-posts`, a daily 09:00 local automation for Facebook, Instagram, and Pinterest. It is instructed to use only public watermarked R2/social assets, avoid secrets/private downloads/Owner metadata, choose three distinct themes with 5-10 images per platform post, publish when already authenticated, and otherwise leave ready-to-publish packages.
+
+The latest Facebook publishing pass resumed the Page workflow, used the visible personal Chrome session, and published plus verified the Paris interior light post from the 2026-05-23 daily package. The run left browser/debug captures local-only, paused the project clock after inactivity, and did not change public site version, catalog, Worker, Stripe, or price behavior.
 
 ## Earlier Conversation Context
 
@@ -150,7 +153,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v83.3`, basket/order pages show buyer trust notes, `support.html` documents payment, delivery recovery, license, and support expectations, and root public pages use the camera-tripod logo/favicon.
 - In `v83.4`, the homepage Featured section includes the first Facebook Page feature card alongside Pinterest campaign cards.
 - In `v83.6`, Owner Commerce exposes local-only POD automation preview data for supplier readiness, quality tiers, supplier option rows, and SQLite POD table shape while `pod_settings.storefrontEnabled` remains false.
-- On 2026-05-23, the QR coaster 3MF assets were refreshed after print/underside review, the title/keyword blacklist added date/noise terms such as `2018`, `May 2018`, and `Sony?`, and the daily social package for Facebook, Instagram, and Pinterest was generated as ready-to-publish Owner output.
+- On 2026-05-23, the QR coaster 3MF assets were refreshed after print/underside review, the title/keyword blacklist added date/noise terms such as `2018`, `May 2018`, and `Sony?`, the daily social package for Facebook, Instagram, and Pinterest was generated as ready-to-publish Owner output, and the Facebook Page post was manually published and verified.
 - Current local coverage reports zero missing active masters, triplets, or previews.
 - The local helper is serving port `8000`.
 - The ignored local hidden files can change during Owner actions and are not tracked by git.

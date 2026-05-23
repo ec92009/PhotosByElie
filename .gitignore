@@ -6,6 +6,8 @@ __pycache__/
 node_modules/
 tmp/
 output/
+facebook-built-in-*.md
+facebook-built-in-*.png
 .env.stripe-test.local
 
 # Local/generated photo workspaces.

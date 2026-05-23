@@ -1,12 +1,12 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-22
+Last updated: 2026-05-23
 
 ## Current Facts
 
-- Current visible build: `v83.4`.
+- Current visible build: `v83.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=83.4`.
+- Local Owner page: `http://localhost:8000/owner.html?v=83.6`.
 - Current catalog scale: `6,019` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker catalog without changing the active row count.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -30,10 +30,12 @@ Last updated: 2026-05-22
 - Live checkout proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, Worker order `ready`, and one private JPEG download verified.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery, recovery, license, and support expectations.
 - `v83.4` promotes the first Facebook Page feature in the homepage Featured section alongside Pinterest features.
+- `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest quiet-thread checkpoint is docs-only; this file remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
+- The 2026-05-23 Facebook Page daily package was manually published and verified; Instagram and Pinterest still need final per-platform publish confirmation.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 
@@ -60,7 +62,7 @@ Last updated: 2026-05-22
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
 
 6. **Create marketing landing pages and launch outreach.**
-   - Daily social-post automation is active; review its output after the first run for theme quality, post safety, and platform-login blockers.
+   - Daily social-post automation is active; the 2026-05-23 Facebook Page post is published and verified, while Instagram and Pinterest still need final publish confirmation.
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
 7. **Owner decision pass for batch `2026-05-20-185753-222Z`.**

@@ -32,8 +32,8 @@ Date: 2026-05-23
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
-- The 2026-05-23 Facebook Page daily package was manually published and verified from the visible personal Chrome session. Instagram still needs final account/post confirmation, and Pinterest is authenticated to `@photosbyelie` but still needs final publish confirmation.
-- PhotosByElie active collaboration time is paused as of 2026-05-23 20:31 CEST. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
+- The 2026-05-23 social package is now partly live on two channels: the Facebook Page Paris interior light post was manually published and verified from the visible personal Chrome session, and the Lisbon/Carmo Pinterest carousel was prepared and published from visible Chrome with the ad-capable Pin flow confirmed. Instagram still needs final account/post confirmation.
+- PhotosByElie active collaboration time is paused with `4:24` used as of 2026-05-23. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
@@ -62,6 +62,8 @@ This checkpoint refreshed the durable docs after the user reported all threads q
 The latest automation setup added `pbe-daily-social-posts`, a daily 09:00 local automation for Facebook, Instagram, and Pinterest. It is instructed to use only public watermarked R2/social assets, avoid secrets/private downloads/Owner metadata, choose three distinct themes with 5-10 images per platform post, publish when already authenticated, and otherwise leave ready-to-publish packages.
 
 The latest Facebook publishing pass resumed the Page workflow, used the visible personal Chrome session, and published plus verified the Paris interior light post from the 2026-05-23 daily package. The run left browser/debug captures local-only, paused the project clock after inactivity, and did not change public site version, catalog, Worker, Stripe, or price behavior.
+
+The latest Pinterest pass prepared and published the Lisbon/Carmo carousel from visible Chrome, confirming the current Pinterest path can create ad-capable Pins. A follow-up Owner state check reviewed the latest title/keyword queue state from local SQLite. No public site version, catalog, Worker, Stripe, or price behavior changed.
 
 ## Earlier Conversation Context
 
@@ -115,6 +117,7 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 46. First-pass public crawl files now exist: `robots.txt` and `sitemap.xml`.
 47. A docs-only quiet-thread checkpoint refreshed SUMMARY/HANDOFF/TODO/README/TIMELOG and kept `TODO.md` as the numbered backlog source of truth.
 48. Daily automation `pbe-daily-social-posts` now prepares daily Facebook, Instagram, and Pinterest post packages from watermarked public assets.
+49. The Lisbon/Carmo Pinterest carousel from the 2026-05-23 social package was published through visible Chrome, and the latest Owner title/keyword queue state was reviewed from local SQLite.
 
 ## Current Operational Notes
 

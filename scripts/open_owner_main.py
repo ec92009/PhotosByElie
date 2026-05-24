@@ -29,9 +29,9 @@ def notify(title: str, message: str) -> None:
     subprocess.run(["osascript", "-e", script], check=False)
 
 
-def server_ready(port: int) -> bool:
+def helper_ready(port: int) -> bool:
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/owner.html", timeout=0.5) as response:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/__photosbyelie/owner-session", timeout=0.5) as response:
             return 200 <= response.status < 500
     except (OSError, urllib.error.URLError):
         return False
@@ -80,15 +80,22 @@ def main() -> int:
     with LOG_PATH.open("a", encoding="utf-8") as log:
         log.write(f"\n--- Photos By Elie Owner launch {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
         for port in range(PORT_START, PORT_LIMIT):
+            if helper_ready(port):
+                log.write(f"Opened existing Owner helper at http://localhost:{port}/owner.html\n")
+                log.flush()
+                open_safari(port)
+                return 0
+
+        for port in range(PORT_START, PORT_LIMIT):
             server = launch_helper(port, log)
             for _attempt in range(40):
                 if server.poll() is not None:
                     break
-                if server_ready(port):
+                if helper_ready(port):
                     log.write(f"Opened Owner at http://localhost:{port}/owner.html\n")
                     log.flush()
                     open_safari(port)
-                    return server.wait()
+                    return 0
                 time.sleep(0.25)
             if server.poll() is None:
                 server.terminate()

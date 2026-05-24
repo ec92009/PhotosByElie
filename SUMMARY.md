@@ -10,7 +10,8 @@ Date: 2026-05-24
 - Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.22`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `6,016` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
+- Current catalog scale: `2,415` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `664`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
+- The latest cloud-media checkpoint regenerated public catalog/homepage/Worker artifacts after the import work. The repo artifacts are internally consistent, but the public row count dropped from the earlier `6,016` baseline, so the next technical priority is an explicit catalog-baseline audit before launch/publishing work continues.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local. Title/keyword batch JSON is compatibility/audit output and must not be treated as authoritative public catalog state.
 - 2026-05-24 hourly handoff sweep verified the local David `Owner.sqlite` with `PRAGMA integrity_check` = `ok` and uploaded a private R2 snapshot to `photosbyelie-private/owner-sync/snapshots/david/Owner-latest.sqlite.gz`. Local and downloaded gzip SHA-256 both matched `345359cd9eb0ac8bc37a2f6c691fa263a31a1b2b3e924bf724f6271ef6f0073f`; the compressed snapshot is `3.9M`. Per `docs/sops/MAX_DAVID_SYNC_SOP.md`, `Owner.sqlite` itself remains uncommitted.
@@ -66,6 +67,12 @@ Repo cleanup found one meaningful tracked change after the UI work: `assets/owne
 This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.22`, records the implemented import-source/maintenance UI, the `New...` folder-picker behavior, the simplified thumbnail/name import rows, corrected waiting-count math, removed per-photo queue summary strip, parallel import worker pool, replacement stats panel, failure-aware current-run stat, Owner tab strip inset, and the Expo/Real Estate import split. No Stripe setting or price behavior changed in this pass.
 
 The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
+
+The later import-stat screenshots showed why the counts felt off during parallel runs: `Processed this run` was stable only after counting completed attempts, while the tile note needed to show the successful completions as well as failures, active workers, and waiting rows. `v83.22` fixed that display and also routed sweep Python calls through `/usr/bin/python3` by default because the Homebrew Python used by the GUI path lacked Pillow. The importer now preflights Pillow before queueing photos, preventing another per-photo failure storm.
+
+The Owner decided that re-export identity needs to be stricter than the old import behavior: use the full source pathname plus the source modified date as the anchor. When only the modified date changes for an existing source path, the newly exported photo should overwrite the old generated forms instead of creating duplicate catalog/media rows. There may be duplicates from today's imports, so the cleanup must start with an audit and reversible plan before deleting anything.
+
+The current docs refresh records that the UI now looks much better, leaves runtime Owner state unstaged, and raises one important new risk: the latest committed catalog artifacts now describe `2,415` public media rows, down from the earlier `6,016` baseline. That may be an expected selected-source checkpoint or an accidental narrowed export, but it should be audited before the next launch-facing step.
 
 ## Earlier Conversation Context
 
@@ -167,14 +174,14 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 
 ## Recent Relevant Commits
 
+- `6dffc1ff photosbyelie: checkpoint cloud media sweep`
+- `bf124442 photosbyelie: checkpoint cloud media sweep`
+- `c812736e photosbyelie: clarify import counts and python preflight`
+- `1ce9f8b4 photosbyelie: stabilize owner import stats`
+- `bae0ed6c photosbyelie: split expo and real estate imports`
+- `5fca6852 photosbyelie: checkpoint cloud media sweep`
 - `eafac300 photosbyelie: record owner r2 lifecycle state`
 - `e87dbacb photosbyelie: add import source menu backlog`
-- `a04dedb9 photosbyelie: polish owner import progress`
-- `3891f05d photosbyelie: fix owner launcher reuse`
-- `736fe76b photosbyelie: publish owner discard state`
-- `011ff4f0 photosbyelie: choose import source folder`
-- `0b67f6dd photosbyelie: nightly title keyword review batch`
-- `e4ea5464 photosbyelie: refresh social handoff log`
 
 ## Verification Notes
 
@@ -198,4 +205,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: add import source history management, review/tune buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, add analytics, deepen SEO/discovery, launch outreach pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: audit the current catalog baseline, implement source re-export de-duplication and clean today's duplicates, add import source history management, make the Real Estate import control unmistakable and rehearse the RE lifecycle, finish import dependency preflights, then resume buyer support/pricing/storefront/analytics/SEO/marketing and longer-horizon Owner/media hardening.

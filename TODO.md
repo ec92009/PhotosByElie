@@ -129,6 +129,8 @@ Last updated: 2026-05-24
 
 16. **Polish Real Estate production outputs and access.**
    - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
+   - Add optional background music for Real Estate video outputs, with client-safe defaults and an easy off switch.
+   - Add Ken Burns-style pan/zoom motion for slideshow outputs so still-photo presentations feel alive without manual video editing.
    - Choose Worker/D1, Cloudflare Access, or another server-side gate for client auth.
 
 17. **Harden hidden/discarded lifecycle.**

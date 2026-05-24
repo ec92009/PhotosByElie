@@ -318,7 +318,7 @@ npm run validate
 12. Review the current Owner title/keyword queue, starting with batch `2026-05-24-000237-818Z`.
 13. Verify Owner-private artifact separation after deploy.
 14. Run the next generator pass after the current batch is resolved.
-15. Polish Real Estate production outputs and access model.
+15. Polish Real Estate production outputs and access model, including optional music for RE videos and Ken Burns-style motion for slideshows.
 16. Harden hidden/discarded lifecycle.
 17. Extend Owner operations dashboard and state-table browsing.
 18. Replace temporary `r2.dev` media URL with a custom media domain.

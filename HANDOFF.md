@@ -24,7 +24,7 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v83.10`
+- Current visible build: `v83.11`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `eafac300 photosbyelie: record owner r2 lifecycle state`, `e87dbacb photosbyelie: add import source menu backlog`, `a04dedb9 photosbyelie: polish owner import progress`, and `3891f05d photosbyelie: fix owner launcher reuse`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
@@ -66,6 +66,7 @@ for remote execution.
 - `v83.8` publishes the latest Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones, reducing active public rows to `6,016`.
 - `v83.9` keeps selected-folder imports focused on import phases, avoids banned-photo cleanup noise in that path, caches import thumbnails, and gives the per-photo import matrix visible working states.
 - `v83.10` makes the active/next import matrix state obvious with an inferred active worker row, animated next-queued row, and live dots inside unchecked cells.
+- `v83.11` adds the Owner import source pulldown, remembered source storage/discovery, explicit maintenance buttons, and truthful task-scoped progress stacks.
 - Live checkout Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` is deployed with the `v83.2` price/minimum-charge catalog and `DOWNLOAD` card statement descriptor suffix.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
@@ -76,7 +77,7 @@ for remote execution.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
 - Local POD preview draft: first print sizes are 12x16, 16x20, and 18x24; Prodigi is the primary/value route, Printful is the standard fallback route, theprintspace is the premium candidate, and Gelato stays as API-proof/global-routing candidate. `pod_settings.storefrontEnabled` remains false.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.10`; Owner import matrix state is visibly active/queued, and `TODO.md` remains the numbered backlog source of truth.
+- Latest checkpoint is `v83.11`; Owner imports now use a remembered source selector, optional maintenance actions have their own task buttons, task stacks show only meaningful phases, and `TODO.md` remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
 - The 2026-05-24 daily social package is prepared only: Facebook, Instagram, and Pinterest all need final manual publish/account confirmation before anything is posted from that package.
 - The tracked QR coaster 3MF assets were refreshed after print/underside review. Treat them as current printable project files unless a newer slicer/export pass replaces them.
@@ -107,10 +108,9 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 ## Current Priority
 
-1. **Add the Owner import source menu.**
-   - Replace the immediate Start Import button behavior with a pulldown of remembered source folders.
-   - Include `All` for the broad automation-style sweep and `New...` for native folder selection.
-   - Store remembered source roots durably in `Owner.sqlite` and show enough path context to distinguish similar folder names.
+1. **Add import source history management.**
+   - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
+   - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
 
 2. **Keep Owner/generated state handoff-ready.**
    - Review local approval/proposal/discard/catalog state before each generated-data commit.
@@ -280,7 +280,7 @@ npm run validate
 
 ## Fresh Backlog
 
-1. Add the Owner import source menu with remembered folders, `All`, and `New...`.
+1. Add import source history management for stale/missing remembered folders.
 2. Review and tune buyer support/refund/license wording.
 3. Approve and deploy the real price and offer strategy.
 4. Curate the first sellable storefront.

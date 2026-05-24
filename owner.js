@@ -84,7 +84,9 @@
   const r2CoverageMissing = document.querySelector("[data-owner-r2-coverage-missing]");
   const r2CoverageNote = document.querySelector("[data-owner-r2-coverage-note]");
   const r2FixButton = document.querySelector("[data-owner-r2-fix]");
+  const importSourceSelect = document.querySelector("[data-owner-import-source-select]");
   const r2FillGapsButtons = [...document.querySelectorAll("[data-owner-r2-fill-gaps]")];
+  const r2MaintenanceButtons = [...document.querySelectorAll("[data-owner-r2-maintenance]")];
   const r2Card = document.querySelector("[data-owner-r2-card]");
   const r2Summary = document.querySelector("[data-owner-r2-summary]");
   const r2Phases = document.querySelector("[data-owner-r2-phases]");
@@ -132,6 +134,9 @@
   let r2RepairLogToken = "";
   let r2RepairActive = false;
   let r2GapFillActive = false;
+  let r2MaintenanceActive = false;
+  let activeR2MaintenanceKey = "";
+  let importSourceOptions = [];
   let r2CoverageOk = false;
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
@@ -225,6 +230,12 @@
   const SWEEP_PHASE_ALIASES = new Map([
     ["catalog-blocked", "catalog"],
   ]);
+  const R2_MAINTENANCE_LABELS = new Map([
+    ["banned-cleanup", "Banned cleanup"],
+    ["final-cleanup", "Final cleanup"],
+    ["storage", "Storage estimate"],
+    ["validate", "Validate publish"],
+  ]);
   const normalizeSweepPhaseKey = (phaseKey = "") => (
     SWEEP_PHASE_ALIASES.get(String(phaseKey || "")) || String(phaseKey || "")
   );
@@ -239,6 +250,7 @@
       refreshCountsFromSource();
       refreshBlockedSyncPanel();
       renderPodCommerce();
+      loadImportSources();
       loadR2Coverage();
       loadCostEstimate();
       loadKeywordBlacklist();
@@ -1580,7 +1592,7 @@
 
   const r2GapStatusText = () => {
     if (!window.photosByElieR2Coverage) return "Coverage is still loading.";
-    if (r2CoverageOk) return "Current catalog coverage is up to date; Start Import opens a folder chooser for new files.";
+    if (r2CoverageOk) return "Current catalog coverage is up to date; choose an import source before starting new files.";
     const gaps = r2GapCounts();
     if (gaps.photos) {
       return `${formatCount(gaps.photos)} incomplete photos: ${formatCount(gaps.masters)} need masters, ${formatCount(gaps.triplets)} need private JPG triplets, ${formatCount(gaps.previews)} need public previews.`;
@@ -1589,15 +1601,73 @@
     return missing ? `Coverage still has gaps: ${missing}.` : "Coverage still has gaps.";
   };
 
+  const importSourceByPath = (path) => importSourceOptions.find((source) => source.path === path) || null;
+
+  const importSourceChoiceLabel = () => {
+    const value = importSourceSelect?.value || "new";
+    if (value === "all") return "All fixed source folders";
+    if (value === "new") return "New folder";
+    const source = importSourceByPath(value);
+    return source?.label || value.split(/[\\/]/).filter(Boolean).at(-1) || value;
+  };
+
+  const renderImportSourceOptions = (sources = []) => {
+    if (!importSourceSelect) return;
+    const previous = importSourceSelect.value;
+    importSourceOptions = sources
+      .map((source) => ({
+        path: String(source?.path || "").trim(),
+        label: String(source?.label || "").trim(),
+        exists: source?.exists !== false,
+        discovered: Boolean(source?.discovered),
+      }))
+      .filter((source) => source.path);
+    importSourceSelect.textContent = "";
+    const addOption = (value, label, title = "") => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (title) option.title = title;
+      importSourceSelect.append(option);
+    };
+    importSourceOptions.forEach((source) => {
+      const label = `${source.label || source.path}${source.exists ? "" : " (missing)"}`;
+      addOption(source.path, label, source.path);
+    });
+    addOption("all", "All");
+    addOption("new", "New...");
+    const values = new Set([...importSourceSelect.options].map((option) => option.value));
+    importSourceSelect.value = values.has(previous)
+      ? previous
+      : importSourceOptions[0]?.path || "new";
+    syncR2ActionButtons();
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
+  };
+
+  const loadImportSources = async () => {
+    if (!importSourceSelect) return;
+    try {
+      const response = await fetch("/__photosbyelie/import-sources", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load import sources.");
+      renderImportSourceOptions(Array.isArray(payload.sources) ? payload.sources : []);
+    } catch {
+      renderImportSourceOptions([]);
+    }
+  };
+
   const syncR2ActionButtons = () => {
-    const busy = r2RepairActive || r2GapFillActive;
+    const busy = r2RepairActive || r2GapFillActive || r2MaintenanceActive;
     if (r2FixButton) {
       r2FixButton.disabled = busy;
       r2FixButton.textContent = busy
-        ? "Imports running"
-        : "Start Import";
-      r2FixButton.title = "Choose one local source folder to import";
+        ? "Task running"
+        : "Start import";
+      r2FixButton.title = `Start import from ${importSourceChoiceLabel()}`;
     }
+    if (importSourceSelect) importSourceSelect.disabled = busy;
     const gapCount = r2GapPhotoCount();
     r2FillGapsButtons.forEach((button) => {
       button.disabled = r2CoverageOk || busy || gapCount === 0;
@@ -1605,6 +1675,19 @@
       button.title = gapCount
         ? `Render and upload missing media for ${formatCount(gapCount)} incomplete photos`
         : "No incomplete upload photos are listed";
+    });
+    r2MaintenanceButtons.forEach((button) => {
+      const key = button.dataset.ownerR2Maintenance || "";
+      if (!button.dataset.ownerDefaultLabel) {
+        button.dataset.ownerDefaultLabel = button.textContent || R2_MAINTENANCE_LABELS.get(key) || "Maintenance";
+      }
+      button.disabled = busy;
+      button.textContent = r2MaintenanceActive && activeR2MaintenanceKey === key
+        ? "Running..."
+        : button.dataset.ownerDefaultLabel;
+      button.title = busy
+        ? "Another import or maintenance task is running"
+        : `Start ${button.dataset.ownerDefaultLabel}`;
     });
     if (r2CoverageNote && r2RepairActive) {
       setText(r2CoverageNote, "Background work is running. Banned photos stay banned; this only removes their old R2 objects.");
@@ -2458,8 +2541,14 @@
 
   const phaseListForTask = (task) => {
     if (task?.operation === "gap-fill") return SWEEP_PHASES.filter((phase) => phase.key === "gap-fill");
+    if (task?.operation === "maintenance") {
+      const keys = Array.isArray(task?.phaseScopeKeys) ? task.phaseScopeKeys.map(normalizeSweepPhaseKey).filter(Boolean) : [];
+      return keys.length
+        ? keys.map((key) => SWEEP_PHASES.find((phase) => phase.key === key) || { key, label: key })
+        : SWEEP_PHASES.filter((phase) => phase.key === normalizeSweepPhaseKey(task?.currentPhaseKey || ""));
+    }
     if (task?.operation === "imports-idle") {
-      return SWEEP_PHASES.filter((phase) => SELECTED_IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key));
+      return [];
     }
     const selectedFolderSweep = Boolean(String(task?.sourceRoot || "").trim())
       || normalizeSweepPhaseKey(task?.currentPhaseKey || "") === "selected-folder";
@@ -2476,17 +2565,45 @@
     || ""
   );
 
+  const visiblePhaseList = (phaseList, task, activeKey, active, failed, complete, logSummary, detailRowsByPhase, matrixRowsByPhase) => {
+    if (task?.operation === "imports-idle") return [];
+    const doneKeys = logSummary?.doneKeys instanceof Set ? logSummary.doneKeys : new Set();
+    const logSkippedKeys = logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set();
+    const skippedKeys = new Set([
+      ...[...logSkippedKeys],
+      ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
+    ]);
+    const visibleKeys = new Set();
+    if (activeKey) visibleKeys.add(activeKey);
+    if (failed && activeKey) visibleKeys.add(activeKey);
+    [...doneKeys, ...skippedKeys].forEach((key) => key && visibleKeys.add(key));
+    if (detailRowsByPhase instanceof Map) [...detailRowsByPhase.keys()].forEach((key) => visibleKeys.add(normalizeSweepPhaseKey(key)));
+    if (matrixRowsByPhase instanceof Map) [...matrixRowsByPhase.keys()].forEach((key) => visibleKeys.add(normalizeSweepPhaseKey(key)));
+    if (task?.operation === "maintenance" && active) {
+      (Array.isArray(task.phaseScopeKeys) ? task.phaseScopeKeys : [])
+        .map(normalizeSweepPhaseKey)
+        .filter(Boolean)
+        .forEach((key) => visibleKeys.add(key));
+    }
+    if (complete && !visibleKeys.size && phaseList.length) visibleKeys.add(phaseList.at(-1).key);
+    const base = phaseList.filter((phase) => visibleKeys.has(phase.key));
+    const knownKeys = new Set(base.map((phase) => phase.key));
+    const extra = [...visibleKeys]
+      .filter((key) => key && !knownKeys.has(key))
+      .map((key) => ({ key, label: phaseLabelForKey(key, task) || key }));
+    return [...base, ...extra];
+  };
+
   const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map(), matrixRowsByPhase = new Map()) => {
     if (!r2Phases) return;
-    if (!task || !["repair", "gap-fill", "imports-idle"].includes(task.operation)) {
+    if (!task || !["repair", "gap-fill", "maintenance", "imports-idle"].includes(task.operation)) {
       r2PhaseRenderSnapshot = null;
       setHtml(r2Phases, "");
       return;
     }
-    const phaseList = phaseListForTask(task);
-    r2PhaseRenderSnapshot = { task, logSummary, detailRowsByPhase, matrixRowsByPhase };
+    const fullPhaseList = phaseListForTask(task);
     const active = task.state === "queued" || task.state === "running";
-    const coverageIncomplete = task.operation !== "gap-fill" && !active && task.state === "done" && r2CoverageOk === false;
+    const coverageIncomplete = task.operation === "repair" && !active && task.state === "done" && r2CoverageOk === false;
     const failed = Number(task.failed || 0) > 0 || task.state === "failed" || coverageIncomplete;
     const complete = !active && !failed && task.state === "done";
     const taskPhaseKey = normalizeSweepPhaseKey(task?.currentPhaseKey || "");
@@ -2496,6 +2613,12 @@
       : active
       ? (taskPhaseKey || logPhaseKey || "prepare")
       : (logPhaseKey || taskPhaseKey || "prepare");
+    const phaseList = visiblePhaseList(fullPhaseList, task, activeKey, active, failed, complete, logSummary, detailRowsByPhase, matrixRowsByPhase);
+    r2PhaseRenderSnapshot = { task, logSummary, detailRowsByPhase, matrixRowsByPhase };
+    if (!phaseList.length) {
+      setHtml(r2Phases, "");
+      return;
+    }
     const activeIndex = Math.max(0, phaseList.findIndex((phase) => phase.key === activeKey));
     const doneKeys = logSummary?.doneKeys || new Set();
     const skippedKeys = new Set([
@@ -2563,7 +2686,8 @@
   const renderR2RepairProgress = (latest, logSummary = null) => {
     const active = latest.state === "queued" || latest.state === "running";
     const gapFill = latest.operation === "gap-fill";
-    const coverageIncomplete = !gapFill && !active && latest.state === "done" && r2CoverageOk === false;
+    const maintenance = latest.operation === "maintenance";
+    const coverageIncomplete = latest.operation === "repair" && !active && latest.state === "done" && r2CoverageOk === false;
     const failureCount = Number(latest.failed || 0);
     const failed = failureCount > 0 || latest.state === "failed" || coverageIncomplete;
     const latestPhaseKey = normalizeSweepPhaseKey(latest.currentPhaseKey || "");
@@ -2593,6 +2717,8 @@
       } else {
         setText(r2Summary, gapFill
           ? `${activePhaseLabel}: completing the missing upload matrix.`
+          : maintenance
+          ? `${activePhaseLabel}: ${latest.label || "maintenance"} is running.`
           : activePhaseLabel
           ? `${activePhaseLabel}.`
           : "Running the lock-guarded cloud media sweep.");
@@ -2600,6 +2726,8 @@
     } else if (failed) {
       setText(r2Summary, gapFill
         ? "Fill in gaps stopped before all missing uploads completed."
+        : maintenance
+        ? `${latest.label || "Maintenance"} needs attention.`
         : coverageIncomplete
         ? `R2 repair finished, but coverage is still missing (${coverageMissingDetail()}).`
         : catalogBlocked
@@ -2608,7 +2736,11 @@
         ? "R2 coverage repair needs attention."
         : "R2 coverage repair stopped before completion.");
     } else {
-      setText(r2Summary, gapFill ? "Last upload gap fill finished." : "Last R2 coverage repair finished.");
+      setText(r2Summary, gapFill
+        ? "Last upload gap fill finished."
+        : maintenance
+        ? `Last ${latest.label || "maintenance task"} finished.`
+        : "Last R2 coverage repair finished.");
     }
     const detailRowsByPhase = new Map();
     const matrixRowsByPhase = new Map();
@@ -2885,7 +3017,7 @@
     if (!r2Card || !r2Summary || !r2Counts) return;
     if (r2Card.hidden) r2Card.hidden = false;
     setText(r2Summary, r2CoverageOk
-        ? "No import job is running. Current catalog coverage is up to date; Start Import will ask for one local source folder."
+        ? "No import job is running. Current catalog coverage is up to date."
         : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
     );
     const gaps = r2GapCounts();
@@ -2895,21 +3027,15 @@
       ["Source scan", "Not running"],
       ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
       ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
-      ["Import source", "Choose folder when starting"],
+      ["Import source", importSourceChoiceLabel()],
     ];
     setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Import source"])));
-    renderSweepPhases({
-      id: "imports-idle",
-      operation: "imports-idle",
-      state: "idle",
-      currentPhaseKey: "selected-folder",
-      failed: 0,
-    });
+    renderSweepPhases(null);
     renderR2PhotoPreview("");
   };
 
   const loadR2RepairLog = async (task) => {
-    if (!task?.id || !["repair", "gap-fill"].includes(task.operation)) return;
+    if (!task?.id || !["repair", "gap-fill", "maintenance"].includes(task.operation)) return;
     const logUrl = logUrlForTask(task);
     if (!logUrl) return;
     const token = `${task.id}:${task.updated_at || ""}:${task.state || ""}`;
@@ -3037,10 +3163,14 @@
     if (!r2Card || !r2Summary || !r2Counts) return;
     r2RepairActive = tasks.some((task) => task?.operation === "repair" && (task.state === "queued" || task.state === "running"));
     r2GapFillActive = tasks.some((task) => task?.operation === "gap-fill" && (task.state === "queued" || task.state === "running"));
-    const latest = tasks.find((task) => task?.operation === "repair" || task?.operation === "gap-fill");
+    r2MaintenanceActive = tasks.some((task) => task?.operation === "maintenance" && (task.state === "queued" || task.state === "running"));
+    activeR2MaintenanceKey = tasks.find((task) => task?.operation === "maintenance" && (task.state === "queued" || task.state === "running"))?.maintenanceKey || "";
+    const latest = tasks.find((task) => task?.operation === "repair" || task?.operation === "gap-fill" || task?.operation === "maintenance");
     if (!latest) {
       r2RepairActive = false;
       r2GapFillActive = false;
+      r2MaintenanceActive = false;
+      activeR2MaintenanceKey = "";
       r2RepairLogTaskId = "";
       r2RepairLogSummary = null;
       renderImportDashboardIdle();
@@ -3055,10 +3185,11 @@
     const isDelete = latest.operation === "delete";
     const isRepair = latest.operation === "repair";
     const isGapFill = latest.operation === "gap-fill";
+    const isMaintenance = latest.operation === "maintenance";
     syncR2ActionButtons();
     const activeVerb = isRepair ? "Repairing" : isDelete ? "Deleting" : "Uploading";
     const noun = isRepair ? "repair" : isDelete ? "delete" : "upload";
-    if (isRepair || isGapFill) {
+    if (isRepair || isGapFill || isMaintenance) {
       renderR2RepairProgress(latest, latest.id === r2RepairLogTaskId ? r2RepairLogSummary : null);
       return;
     }
@@ -3171,7 +3302,7 @@
     if (blockedPreviewCountRoot) blockedPreviewCountRoot.textContent = formatCount(blockedCloudMediaCountFromCoverage());
     if (latestR2ProgressTasks.length) renderWasteBasketProgress(latestR2ProgressTasks);
     if (r2FixButton) r2FixButton.dataset.coverageOk = coverage.ok ? "true" : "false";
-    if (!latestR2ProgressTasks.some((task) => task?.operation === "repair" || task?.operation === "gap-fill")) {
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
       renderImportDashboardIdle();
     }
     if (r2FixButton || r2FillGapsButtons.length) {
@@ -3203,7 +3334,7 @@
         lastWasteCoverageRefreshAt = Date.now();
         loadR2Coverage().then(refreshBlockedSyncPanel).then(() => renderWasteBasketProgress(tasks)).catch(() => {});
       }
-      const repairLikeTask = tasks.find((task) => task?.operation === "repair" || task?.operation === "gap-fill");
+      const repairLikeTask = tasks.find((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation));
       if (repairLikeTask) await loadR2RepairLog(repairLikeTask);
       return tasks;
     } catch {
@@ -3226,7 +3357,7 @@
         await withTimeout(loadR2Coverage(), 12000, "R2 coverage refresh");
         setStatus("R2 catalog coverage refreshed.");
       } else if (kind === "progress") {
-        await withTimeout(loadR2Progress(), 12000, "Import dashboard refresh");
+        await withTimeout(Promise.all([loadImportSources(), loadR2Progress()]), 12000, "Import dashboard refresh");
         setStatus("Import dashboard refreshed.");
       } else if (kind === "cost") {
         await withTimeout(loadCostEstimate(), 12000, "Cloud cost refresh");
@@ -3442,38 +3573,58 @@
       setStatus("Loading current catalog coverage before starting imports...");
       await loadR2Coverage();
     }
-    setStatus("Choose the folder to import...");
+    const choice = importSourceSelect?.value || "new";
     let selectedFolder = null;
-    try {
-      selectedFolder = await chooseImportFolder();
-    } catch (error) {
-      setStatus(error?.message || "Could not choose an import folder.");
-      return;
+    if (choice === "new") {
+      setStatus("Choose the folder to import...");
+      try {
+        selectedFolder = await chooseImportFolder();
+      } catch (error) {
+        setStatus(error?.message || "Could not choose an import folder.");
+        return;
+      }
+      if (!selectedFolder) {
+        setStatus("Import cancelled before choosing a folder.");
+        return;
+      }
+    } else if (choice !== "all") {
+      const source = importSourceByPath(choice);
+      selectedFolder = {
+        path: choice,
+        name: source?.label || choice.split(/[\\/]/).filter(Boolean).at(-1) || choice,
+      };
     }
-    if (!selectedFolder) {
-      setStatus("Import cancelled before choosing a folder.");
-      return;
-    }
-    const ok = window.confirm(`Start the lock-guarded import from "${selectedFolder.name}" now?\n\nThe sweep scans only this selected folder, imports all developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`);
+    const confirmText = selectedFolder
+      ? `Start the lock-guarded import from "${selectedFolder.name}" now?\n\nThe sweep scans this selected folder, imports developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`
+      : "Start the broad lock-guarded import from all fixed source folders now?\n\nThis scans Camera, Apple Photos, AI, and Real Estate sources, then refreshes manifests, validates, commits, and pushes changes.";
+    const ok = window.confirm(confirmText);
     if (!ok) return;
     r2FixButton.disabled = true;
-    setStatus(`Starting import from ${selectedFolder.name}...`);
+    setStatus(selectedFolder ? `Starting import from ${selectedFolder.name}...` : "Starting broad import from all fixed source folders...");
     try {
       const response = await fetch("/__photosbyelie/r2-fix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceRoot: selectedFolder.path,
-          sourceSelect: "all",
-        }),
+        body: JSON.stringify(selectedFolder
+          ? {
+              sourceRoot: selectedFolder.path,
+              sourceSelect: "all",
+            }
+          : {
+              sourceSelect: "all",
+            }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start imports.");
-      r2RepairActive = true;
+      const task = payload.task || {};
+      r2RepairActive = task.operation === "repair";
       syncR2ActionButtons();
-      setStatus(`Import started from ${selectedFolder.name}.`);
+      setStatus(task.operation === "repair"
+        ? (selectedFolder ? `Import started from ${selectedFolder.name}.` : "Broad import started.")
+        : "Another import or maintenance task is already running.");
       setOwnerTab("imports");
-      renderR2Progress([payload.task]);
+      loadImportSources();
+      renderR2Progress([task]);
       loadR2Progress();
     } catch (error) {
       r2RepairActive = false;
@@ -3503,11 +3654,14 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start R2 upload gap fill.");
-      r2GapFillActive = true;
+      const task = payload.task || {};
+      r2GapFillActive = task.operation === "gap-fill";
       syncR2ActionButtons();
-      setStatus("R2 upload gap fill started.");
+      setStatus(task.operation === "gap-fill"
+        ? "R2 upload gap fill started."
+        : "Another import or maintenance task is already running.");
       setOwnerTab("imports");
-      renderR2Progress([payload.task]);
+      renderR2Progress([task]);
       loadR2Progress();
     } catch (error) {
       r2GapFillActive = false;
@@ -3519,6 +3673,51 @@
 
   r2FillGapsButtons.forEach((button) => {
     button.addEventListener("click", () => startR2GapFill(button));
+  });
+
+  const startR2MaintenanceTask = async (maintenanceKey, triggerButton = null) => {
+    const label = R2_MAINTENANCE_LABELS.get(maintenanceKey) || triggerButton?.textContent || "Maintenance";
+    const authorized = await ownerAuth?.requireAuth?.(`Start the local Photos By Elie server to run ${label}.`);
+    if (ownerAuth?.enabled && !authorized) return;
+    const ok = window.confirm(`Start ${label} now?`);
+    if (!ok) return;
+    if (triggerButton) triggerButton.disabled = true;
+    setStatus(`Starting ${label}...`);
+    try {
+      const response = await fetch("/__photosbyelie/r2-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maintenanceTask: maintenanceKey }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || `Could not start ${label}.`);
+      const task = payload.task || {};
+      r2MaintenanceActive = task.operation === "maintenance";
+      activeR2MaintenanceKey = task.operation === "maintenance" ? maintenanceKey : "";
+      syncR2ActionButtons();
+      setStatus(task.operation === "maintenance"
+        ? `${label} started.`
+        : "Another import or maintenance task is already running.");
+      setOwnerTab("imports");
+      renderR2Progress([task]);
+      loadR2Progress();
+    } catch (error) {
+      r2MaintenanceActive = false;
+      activeR2MaintenanceKey = "";
+      syncR2ActionButtons();
+      setStatus(error?.message || `Could not start ${label}.`);
+    }
+  };
+
+  r2MaintenanceButtons.forEach((button) => {
+    button.addEventListener("click", () => startR2MaintenanceTask(button.dataset.ownerR2Maintenance || "", button));
+  });
+
+  importSourceSelect?.addEventListener("change", () => {
+    syncR2ActionButtons();
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
   });
 
   r2Phases?.addEventListener("click", async (event) => {
@@ -3573,6 +3772,7 @@
   if (ownerAuth?.state?.available) {
     refreshCountsFromSource();
     refreshBlockedSyncPanel();
+    loadImportSources();
     loadR2Coverage();
     loadCostEstimate();
     loadKeywordBlacklist();

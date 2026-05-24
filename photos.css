@@ -519,6 +519,40 @@ html[data-theme="light"] .photo-art.has-photo::after{
   padding:7px 12px;
   white-space:normal;
 }
+.owner-import-source-control{
+  display:grid;
+  gap:3px;
+  min-width:min(260px, 100%);
+  color:var(--muted);
+  font-size:.7rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.owner-import-source-control select{
+  width:100%;
+  min-height:36px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface-2);
+  color:var(--text);
+  font:inherit;
+  font-size:.82rem;
+  font-weight:800;
+  letter-spacing:0;
+  padding:7px 34px 7px 10px;
+  text-transform:none;
+}
+.owner-maintenance-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.owner-maintenance-actions .btn{
+  min-height:34px;
+  padding:6px 10px;
+}
 .owner-refresh-button{
   display:inline-grid;
   width:36px;

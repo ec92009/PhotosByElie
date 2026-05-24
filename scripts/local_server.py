@@ -34,6 +34,7 @@ R2_FIX_PATH = "/__photosbyelie/r2-fix"
 R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
 R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
 SELECT_IMPORT_FOLDER_PATH = "/__photosbyelie/select-import-folder"
+IMPORT_SOURCES_PATH = "/__photosbyelie/import-sources"
 IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
@@ -82,11 +83,66 @@ R2_SWEEP_SKIPPABLE_PHASES = {
     "test",
     "validate",
 }
+IMPORT_SOURCE_SETTINGS_KEY = "import_source_roots"
+IMPORT_SOURCE_HISTORY_LIMIT = 40
 IMPORT_SOURCE_ROOTS = {
     "camera": Path("/Volumes/Saturn/Pictures/LR/Camera"),
     "apple-photo-albums": Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
     "leonardo": Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
     "real-estate": REAL_ESTATE_SOURCE_ROOT,
+}
+R2_MAINTENANCE_TASKS = {
+    "banned-cleanup": {
+        "label": "Banned-photo cleanup",
+        "phases": [
+            (
+                "discard-start",
+                "Double-check banned R2 cleanup",
+                [
+                    "node",
+                    "scripts/delete_discarded_r2_media.mjs",
+                    "--delete",
+                    "--discarded-tombstone",
+                    "assets/discarded/discarded-photo-ids.json",
+                    "--request-timeout-ms",
+                    "180000",
+                    "--retries",
+                    "4",
+                ],
+            ),
+        ],
+    },
+    "final-cleanup": {
+        "label": "Final banned-photo cleanup",
+        "phases": [
+            (
+                "discard-final",
+                "Final banned R2 cleanup double-check",
+                [
+                    "node",
+                    "scripts/delete_discarded_r2_media.mjs",
+                    "--delete",
+                    "--discarded-tombstone",
+                    "assets/discarded/discarded-photo-ids.json",
+                    "--request-timeout-ms",
+                    "180000",
+                    "--retries",
+                    "4",
+                ],
+            ),
+        ],
+    },
+    "storage": {
+        "label": "Storage estimate",
+        "phases": [("storage", "Refresh storage estimate", ["node", "scripts/write_storage_estimate.mjs"])],
+    },
+    "validate": {
+        "label": "Catalog validation",
+        "phases": [
+            ("test", "Run tests", ["npm", "test"]),
+            ("validate", "Validate publish", ["npm", "run", "validate"]),
+        ],
+    },
 }
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
@@ -184,6 +240,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_COVERAGE_PATH:
             self._handle_r2_coverage()
             return
+        if path == IMPORT_SOURCES_PATH:
+            self._handle_import_sources()
+            return
         if path == IMPORT_SOURCE_THUMB_PATH:
             self._handle_import_source_thumb()
             return
@@ -271,6 +330,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, {"ok": True, "coverage": _r2_coverage_summary(Path.cwd(), resolve_sources=False)})
 
+    def _handle_import_sources(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            sources = _import_source_history(Path.cwd())
+        except sqlite3.Error as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "sources": sources})
+
     def _handle_import_source_thumb(self) -> None:
         if not self._is_loopback_request():
             self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
@@ -304,13 +374,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_optional_json_body()
+            maintenance_key = _normalize_r2_maintenance_task(payload.get("maintenanceTask"))
             skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases"))
             source_root = _normalize_import_source_root(payload.get("sourceRoot"))
             source_select = _normalize_import_select(payload.get("sourceSelect"))
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
-        task = _start_cloud_media_sweep(Path.cwd(), skip_phases, source_root=source_root, source_select=source_select)
+        if maintenance_key:
+            task = _start_r2_maintenance_task(Path.cwd(), maintenance_key)
+        else:
+            task = _start_cloud_media_sweep(Path.cwd(), skip_phases, source_root=source_root, source_select=source_select)
+            if source_root and task.get("sourceRoot") == str(source_root):
+                _remember_import_source_root(Path.cwd(), source_root)
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
 
     def _handle_select_import_folder(self) -> None:
@@ -2302,6 +2378,107 @@ def _start_r2_delete_task(photo_id: str, items: list[UploadItem], kind: str = "h
     return _start_r2_task(photo_id, items, kind, "delete")
 
 
+def _active_r2_work_task() -> dict | None:
+    active_states = {"queued", "running"}
+    with R2_BACKGROUND_LOCK:
+        return next(
+            (
+                dict(task)
+                for task in R2_BACKGROUND_TASKS.values()
+                if task.get("operation") in {"repair", "gap-fill", "maintenance"}
+                and task.get("state") in active_states
+            ),
+            None,
+        )
+
+
+def _maintenance_phase_scope(maintenance_key: str) -> list[str]:
+    task = R2_MAINTENANCE_TASKS[maintenance_key]
+    return [phase_key for phase_key, _label, _command in task["phases"]]
+
+
+def _run_r2_maintenance_task(task_id: str, repo_root: Path, maintenance_key: str, log_path: Path) -> None:
+    definition = R2_MAINTENANCE_TASKS[maintenance_key]
+    phases = definition["phases"]
+    started_at = datetime.now(timezone.utc).isoformat()
+    first_phase = phases[0][0] if phases else ""
+    _update_r2_task(task_id, state="running", started_at=started_at, currentPhaseKey=first_phase)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    completed = 0
+    return_code = 0
+    errors: list[str] = []
+    with log_path.open("ab") as log:
+        for phase_key, phase_label, command in phases:
+            _update_r2_task(task_id, currentPhaseKey=phase_key)
+            log.write(f"SWEEP_PHASE {phase_key} {phase_label}\n".encode("utf-8"))
+            log.flush()
+            process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
+            return_code = process.returncode
+            if process.returncode != 0:
+                errors.append(f"{phase_label} exited {process.returncode}")
+                break
+            completed += 1
+            log.write(f"SWEEP_DONE {phase_key}\n".encode("utf-8"))
+            log.flush()
+            _update_r2_task(task_id, completed=completed)
+    failed = return_code != 0
+    completed_at = datetime.now(timezone.utc).isoformat()
+    with R2_BACKGROUND_LOCK:
+        task = R2_BACKGROUND_TASKS.get(task_id)
+        if not task:
+            return
+        task["completed"] = completed
+        task["state"] = "failed" if failed else "done"
+        task["failed"] = 1 if failed else 0
+        task["return_code"] = return_code
+        task["errors"] = errors
+        task["completed_at"] = completed_at
+        task["updated_at"] = completed_at
+
+
+def _start_r2_maintenance_task(repo_root: Path, maintenance_key: str) -> dict:
+    external = _external_cloud_media_sweep_task(repo_root)
+    if external:
+        return external
+    existing = _active_r2_work_task()
+    if existing:
+        return existing
+    definition = R2_MAINTENANCE_TASKS[maintenance_key]
+    phase_scope = _maintenance_phase_scope(maintenance_key)
+    task_id = uuid.uuid4().hex
+    queued_at = datetime.now(timezone.utc).isoformat()
+    log_path = repo_root / ".review-logs" / f"owner-r2-maintenance-{maintenance_key}-{task_id}.log"
+    commands = [" ".join(command) for _phase_key, _label, command in definition["phases"]]
+    task = {
+        "id": task_id,
+        "kind": f"r2-maintenance-{maintenance_key}",
+        "operation": "maintenance",
+        "maintenanceKey": maintenance_key,
+        "label": definition["label"],
+        "photo_id": "catalog",
+        "state": "queued",
+        "queued_at": queued_at,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": queued_at,
+        "total": len(phase_scope),
+        "completed": 0,
+        "failed": 0,
+        "bytes_total": 0,
+        "bytes_done": 0,
+        "currentPhaseKey": phase_scope[0] if phase_scope else "",
+        "phaseScopeKeys": phase_scope,
+        "items": [{"command": command, "log": str(log_path)} for command in commands],
+        "errors": [],
+        "log": str(log_path),
+    }
+    with R2_BACKGROUND_LOCK:
+        R2_BACKGROUND_TASKS[task_id] = task
+    worker = threading.Thread(target=_run_r2_maintenance_task, args=(task_id, repo_root, maintenance_key, log_path), daemon=True)
+    worker.start()
+    return dict(task)
+
+
 def _record_r2_item_lifecycle(item: UploadItem, lifecycle_state: str, source: str) -> None:
     try:
         conn = owner_db_connect(Path.cwd())
@@ -2324,6 +2501,10 @@ def _record_r2_item_lifecycle(item: UploadItem, lifecycle_state: str, source: st
 def _import_source_allowed_roots() -> list[Path]:
     roots = [root for root in IMPORT_SOURCE_ROOTS.values()]
     roots.extend(SOURCE_ROOT_CANDIDATES)
+    try:
+        roots.extend(Path(entry["path"]) for entry in _read_import_source_setting(Path.cwd()) if entry.get("path"))
+    except sqlite3.Error:
+        pass
     manifest = _read_json_file(Path.cwd() / "tmp/import-cache/manifest.json", {})
     if isinstance(manifest, dict) and manifest.get("source_root_hint"):
         roots.append(Path(str(manifest["source_root_hint"])))
@@ -2497,6 +2678,161 @@ def _normalize_import_select(value: object) -> str:
     if mode not in {"all", "lightroom"}:
         raise ValueError("sourceSelect must be all or lightroom")
     return mode
+
+
+def _normalize_r2_maintenance_task(value: object) -> str:
+    key = str(value or "").strip()
+    if not key:
+        return ""
+    if key not in R2_MAINTENANCE_TASKS:
+        raise ValueError(f"unsupported R2 maintenance task: {key}")
+    return key
+
+
+def _import_source_label(path: Path) -> str:
+    name = path.name or str(path)
+    parent = path.parent.name
+    return f"{name} ({parent})" if parent else name
+
+
+def _import_source_entry(path: Path, *, last_used_at: str = "", use_count: int = 0, discovered: bool = False) -> dict:
+    try:
+        resolved = path.expanduser().resolve()
+    except OSError:
+        resolved = path.expanduser()
+    return {
+        "path": str(resolved),
+        "label": _import_source_label(resolved),
+        "lastUsedAt": str(last_used_at or ""),
+        "useCount": max(0, int(use_count or 0)),
+        "exists": resolved.is_dir(),
+        "discovered": bool(discovered),
+    }
+
+
+def _read_import_source_setting(repo_root: Path) -> list[dict]:
+    conn = owner_db_connect(repo_root)
+    try:
+        row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (IMPORT_SOURCE_SETTINGS_KEY,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return []
+    try:
+        payload = json.loads(row["setting_value"] or "[]")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    entries: list[dict] = []
+    for item in payload:
+        if isinstance(item, str):
+            path = item
+            last_used_at = ""
+            use_count = 0
+        elif isinstance(item, dict):
+            path = str(item.get("path") or "")
+            last_used_at = str(item.get("lastUsedAt") or "")
+            use_count = int(item.get("useCount") or 0)
+        else:
+            continue
+        path = path.strip()
+        if not path:
+            continue
+        entries.append(_import_source_entry(Path(path), last_used_at=last_used_at, use_count=use_count))
+    return entries
+
+
+def _write_import_source_setting(repo_root: Path, entries: list[dict]) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    payload = [
+        {
+            "path": entry["path"],
+            "label": entry.get("label") or _import_source_label(Path(entry["path"])),
+            "lastUsedAt": entry.get("lastUsedAt") or "",
+            "useCount": int(entry.get("useCount") or 0),
+        }
+        for entry in entries[:IMPORT_SOURCE_HISTORY_LIMIT]
+        if entry.get("path")
+    ]
+    conn = owner_db_connect(repo_root)
+    try:
+        conn.execute(
+            """
+            INSERT INTO owner_settings (setting_key, setting_value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(setting_key) DO UPDATE SET
+              setting_value = excluded.setting_value,
+              updated_at = excluded.updated_at
+            """,
+            (IMPORT_SOURCE_SETTINGS_KEY, json.dumps(payload, ensure_ascii=True), now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _discover_import_sources_from_logs(repo_root: Path) -> list[dict]:
+    log_root = repo_root / ".review-logs"
+    try:
+        logs = sorted(log_root.glob("owner-r2-fix-*.log"), key=lambda path: path.stat().st_mtime, reverse=True)[:25]
+    except OSError:
+        return []
+    entries: dict[str, dict] = {}
+    for log_path in logs:
+        try:
+            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            if "PBE_IMPORT_PHOTO " not in line or '"sourcePath"' not in line:
+                continue
+            _, _, raw_payload = line.partition("PBE_IMPORT_PHOTO ")
+            try:
+                payload = json.loads(raw_payload)
+            except json.JSONDecodeError:
+                continue
+            source_path = str(payload.get("sourcePath") or "").strip()
+            if not source_path:
+                continue
+            parent = Path(source_path).expanduser().parent
+            if not str(parent):
+                continue
+            entry = _import_source_entry(parent, discovered=True)
+            entries.setdefault(entry["path"], entry)
+    return list(entries.values())
+
+
+def _import_source_history(repo_root: Path) -> list[dict]:
+    merged: dict[str, dict] = {}
+    for entry in _discover_import_sources_from_logs(repo_root):
+        merged[entry["path"]] = entry
+    for entry in _read_import_source_setting(repo_root):
+        existing = merged.get(entry["path"], {})
+        merged[entry["path"]] = {**existing, **entry, "discovered": bool(existing.get("discovered"))}
+    entries = list(merged.values())
+    recent = sorted(
+        (entry for entry in entries if entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("lastUsedAt") or ""),
+        reverse=True,
+    )
+    discovered = sorted(
+        (entry for entry in entries if not entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("label") or entry.get("path") or "").casefold(),
+    )
+    return [*recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
+
+
+def _remember_import_source_root(repo_root: Path, source_root: Path) -> None:
+    entry = _import_source_entry(source_root, last_used_at=datetime.now(timezone.utc).isoformat(), use_count=1)
+    entries = [item for item in _import_source_history(repo_root) if item.get("path") != entry["path"]]
+    previous = next((item for item in _read_import_source_setting(repo_root) if item.get("path") == entry["path"]), None)
+    if previous:
+        entry["useCount"] = int(previous.get("useCount") or 0) + 1
+    _write_import_source_setting(repo_root, [entry, *entries])
 
 
 def _select_import_folder() -> Path | None:
@@ -3074,16 +3410,7 @@ def _start_cloud_media_sweep(
     if external:
         return external
     skip_phases = list(skip_phases or [])
-    active_states = {"queued", "running"}
-    with R2_BACKGROUND_LOCK:
-        existing = next(
-            (
-                dict(task)
-                for task in R2_BACKGROUND_TASKS.values()
-                if task.get("operation") in {"repair", "gap-fill"} and task.get("state") in active_states
-            ),
-            None,
-        )
+    existing = _active_r2_work_task()
     if existing:
         return existing
     task_id = uuid.uuid4().hex
@@ -3109,6 +3436,11 @@ def _start_cloud_media_sweep(
         "sourceRoot": str(source_root) if source_root else "",
         "sourceSelect": source_select,
         "currentPhaseKey": "selected-folder" if source_root else None,
+        "phaseScopeKeys": (
+            ["prepare", "import-cache", "selected-folder", "catalog", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
+            if source_root
+            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "real-estate", "catalog", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
+        ),
         "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],
         "log": str(log_path),
@@ -3157,16 +3489,7 @@ def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: 
 
 
 def _start_r2_gap_fill(repo_root: Path, limit: int = 0) -> dict:
-    active_states = {"queued", "running"}
-    with R2_BACKGROUND_LOCK:
-        existing = next(
-            (
-                dict(task)
-                for task in R2_BACKGROUND_TASKS.values()
-                if task.get("operation") in {"repair", "gap-fill"} and task.get("state") in active_states
-            ),
-            None,
-        )
+    existing = _active_r2_work_task()
     if existing:
         return existing
     coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)

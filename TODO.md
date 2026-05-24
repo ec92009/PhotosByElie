@@ -4,9 +4,9 @@ Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v83.10`.
+- Current visible build: `v83.11`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8001/owner.html?v=83.10`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8001/owner.html?v=83.11`.
 - Current catalog scale: `6,016` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -20,8 +20,8 @@ Last updated: 2026-05-24
 - Batch `2026-05-24-000237-818Z` is the latest generated review snapshot: `101` batch rows in `title_keyword_batches`, `101` currently proposed queue rows, and tracked `latest.json`/batch JSON compatibility snapshots.
 - The generator now uses a larger Owner-state subprocess buffer, filters internal marker keywords like `NotMyPhoto`, expands safe local keyword floors, and reports proposal quality counts before write/import.
 - Real Estate owner clients can save/edit/delete, discover media-bearing property folders, import available configured properties with count/total progress, publish sanitized contexts, dry-run/upload R2 objects, and prepare the Worker secret payload.
-- Start Import opens a local folder chooser and scans only the selected folder. The automation sweep can still scan the fixed anchors: Camera, Apple Photos, Leonardo, and Real Estate. It must not treat clean catalog coverage as proof that no new source files exist, and changed source files must re-render/re-upload even when their R2 keys already exist.
-- Import source lanes share the same Owner matrix/progress renderer. Skipped source lanes are unfinished, and a blocked catalog export is shown as the needs-attention phase rather than as silent downstream waiting.
+- The Owner Imports tab has a source pulldown before `Start import`: remembered folders from `Owner.sqlite`/recent import logs, `All` for fixed source anchors, and `New...` for the native folder chooser. Successful selected-folder imports are recorded back into `Owner.sqlite`.
+- Import source lanes share the same Owner matrix/progress renderer. Skipped source lanes are unfinished, a blocked catalog export is shown as the needs-attention phase rather than as silent downstream waiting, and idle/future sweep phases stay hidden until they are current, queued for the active task, recently finished, skipped, or blocked.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
 - Stripe sandbox checkout is proven end to end: successful card, declined-card behavior, 3D Secure, verified webhook, order recovery, per-file download, and download-all were manually checked.
@@ -36,9 +36,10 @@ Last updated: 2026-05-24
 - `v83.8` removes three newly discarded Museo Ruso Malaga photos from buyer-facing catalog/homepage state and keeps durable deletion tombstones for their R2 keys.
 - `v83.9` keeps selected-folder imports focused on import phases, avoids banned-photo cleanup noise in that path, caches import thumbnails, and gives the per-photo import matrix visible working states.
 - `v83.10` makes the active/next import matrix state visible: an inferred active worker row turns blue, the next queued row animates, and unchecked cells show a live dot instead of static beige boxes.
+- `v83.11` adds the Owner import source pulldown, remembered source storage/discovery, explicit maintenance buttons, and truthful task-scoped progress stacks.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.10`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v83.11`; this file remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
 - The 2026-05-24 Facebook, Instagram, and Pinterest daily package is prepared only; each platform still needs final manual publish/account confirmation.
 - Apple Photos with faces remains off limits.
@@ -46,47 +47,35 @@ Last updated: 2026-05-24
 
 ## Numbered Backlog
 
-1. **Make the Owner progress stack truthful and action-based.**
-   - Goal: stop showing a long, dead-looking stack of every possible sweep phase when only one import or maintenance task is actually happening.
-   - Inputs/assumptions: selected-folder imports, broad automation sweeps, banned-photo/R2 cleanup, catalog export, validation, and storage checks are related operational tools but should not all look queued during a simple import.
-   - Scope: show progress bars only for phases that are currently running, actually queued, recently finished, blocked, or explicitly selected for the current task.
-   - Add separate buttons for unrelated cleanup/maintenance tasks, such as banned-photo R2 cleanup double-check, final cleanup sweep, storage estimate refresh, catalog/export validation, or any other task that should not imply it is part of the current import.
-   - Deliverables: a clearer Imports/Cloud task launcher, truthful current/queued task stack, explicit maintenance buttons, and copy that distinguishes import work from optional cleanup work.
-   - Validation/definition of done: starting a selected-folder import shows only selected-folder import work plus real downstream blockers; unrelated cleanup phases stay hidden until started; maintenance buttons start their own visibly separate tasks; skipped or interrupted work is shown as blocked/unfinished without implying all later phases are waiting.
+1. **Add import source history management.**
+   - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
+   - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
 
-2. **Add an Owner import source menu.**
-   - Goal: replace the immediate `Start Import` action with a pulldown that makes the import source explicit before work begins.
-   - Inputs/assumptions: `Start Import` currently opens a native folder chooser for a selected-folder import; automation sweeps can still run the broad fixed-anchor path.
-   - Scope: list every remembered imported source folder, include `All` for broad source sweep, include `New...` for native folder selection, and record successful source roots durably in `Owner.sqlite`.
-   - Deliverables: Owner UI pulldown, helper endpoint/storage for remembered roots, clear path labels for folders with similar names, tests/syntax checks, and browser verification on `owner.html?tab=imports`.
-   - Validation/definition of done: existing selected-folder import still works, `All` triggers the broad automation-style sweep, `New...` records the chosen folder after a successful start, remembered folders persist across reloads, and the import matrix keeps the `v83.10` visible progress behavior.
-   - Decisions still needed: whether remembered folders should be removable from the menu immediately or handled later through state-table browsing.
-
-3. **Review and tune buyer support/refund wording.**
+2. **Review and tune buyer support/refund wording.**
    - `v83.3` has conservative defaults; owner should approve or adjust commercial-use, delivery-refresh, and refund language before heavier launch traffic.
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft before editing public copy.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-4. **Approve and deploy the real price and offer strategy.**
+3. **Approve and deploy the real price and offer strategy.**
    - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`, especially the proposed `$3 / $8 / $28 / $65` camera ladder and lower AI ladder.
    - After approval, update `assets/catalog/product-pricing.json`, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
    - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
-5. **Curate the first sellable storefront.**
+4. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial sets first.
 
-6. **Add conversion analytics.**
+5. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-7. **Improve public discovery and SEO.**
+6. **Improve public discovery and SEO.**
    - `robots.txt` and `sitemap.xml` are in place.
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
 
-8. **Create marketing landing pages and launch outreach.**
+7. **Create marketing landing pages and launch outreach.**
    - Daily social-post automation is active; the 2026-05-23 Facebook Page post is published and verified, while Instagram and Pinterest still need final publish confirmation.
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
-9. **Owner decision pass for the current title/keyword queue.**
+8. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Pay special attention to the `84` rejected rows waiting for the next rework path and the `62` parked rows that need owner context.
 

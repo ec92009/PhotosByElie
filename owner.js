@@ -208,6 +208,7 @@
     ["apple-photo-albums", "Import Apple Photos"],
     ["leonardo", "Import AI sources"],
     ["catalog", "Export catalog"],
+    ["eligibility", "Force Camera eligibility"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
     ["gap-fill", "Fill in gaps"],
@@ -3904,10 +3905,10 @@
         body: JSON.stringify(selectedFolder
           ? {
               sourceRoot: selectedFolder.path,
-              sourceSelect: "all",
+              sourceSelect: "auto",
             }
           : {
-              sourceSelect: "all",
+              sourceSelect: "auto",
             }),
       });
       const payload = await response.json().catch(() => ({}));

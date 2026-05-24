@@ -2,7 +2,7 @@
 
 ## Lightroom Thumbnail Builder
 
-`build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them.
+`build_lightroom_thumbnails.py` scans developed photo/video exports, keeps Lightroom green label/rating 4+ files for Camera sources, infers a country bucket, and writes watermarked preview derivatives plus a resumable local import-cache manifest. RAW/DNG/NEF files are owner-local source material only; export developed JPG/TIFF/MOV/MP4/M4V masters before importing them.
 
 Required tools: `python3`, `exiftool`, `sips`, `ffmpeg`, `ffprobe`, and Pillow. Pillow is used to normalize rotated source photos and bake the repeating preview watermark. Install it with `python3 -m pip install --user pillow`.
 
@@ -50,6 +50,8 @@ python3 scripts/build_lightroom_thumbnails.py \
   --select all \
   --batch-size 50
 ```
+
+The Owner Expo helper uses `sourceSelect: auto`: Camera paths become `--select lightroom`, while Apple Photo Albums and AI/Leonardo paths become `--select all`. AI imports should stay tombstone-driven rather than using the Camera Green/4-star gate.
 
 For Real Estate customer handoffs, first export rendered/current Apple Photos album versions to a customer folder on the Saturn drive. Do not export RAW/DNG/NEF originals:
 
@@ -108,7 +110,7 @@ By default the import metadata omits owner-blacklisted keyword strings from `ass
 
 ## Public Catalog Export
 
-`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into the public SQLite catalog artifacts and leaves `photos-data.js` as a small bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Waste Basket and discarded/tombstone ids are kept out of public metadata so the site never points at intentionally deleted R2 previews. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
+`export_photos_data.py` promotes a publishable catalog subset from the local import-cache manifest into the public SQLite catalog artifacts and leaves `photos-data.js` as a small bootstrap for existing static pages. It also writes the tiny homepage manifest to `home-data.js`. In the current GitHub-code/R2-media model, use `--external-media` so Git tracks metadata and public media keys rather than preview files. RAW-origin rows are kept out of public media because they do not have uploadable developed masters yet. Waste Basket and discarded/tombstone ids are kept out of public metadata so the site never points at intentionally deleted R2 previews. Camera rows are also filtered by the same Green + 4-star eligibility policy used at import time; Apple Photo Albums and AI/Leonardo rows are not filtered by that Lightroom rule. Public R2 preview keys include photo `expo/<photo-id>_900.jpg` and `expo/<photo-id>_1800.jpg`, plus video `expo/<photo-id>_900.jpg` and `expo/<photo-id>_short_5s_720p.mp4`. Country/gallery origin stays in catalog metadata and `assets/media-sidecar.json`, not in the object key.
 
 Product and pricing data comes from `assets/catalog/product-pricing.json`. `scripts/build_public_catalog_db.py` materializes that file into the public SQLite product tables and the local-only POD supplier tables. The browser and Worker still see the existing `photosByElieResolutions`, frame, shipping, and video-tier globals, but those values are reconstructed from shared catalog data instead of hand-authored generated JS constants. POD automation preview data is exposed as `photosByEliePodAutomation`, `photosByEliePodSuppliers`, `photosByEliePodQualityTiers`, and `photosByEliePodOptions` for Owner Commerce inspection while the public storefront flag remains off.
 
@@ -143,6 +145,8 @@ python3 scripts/export_photos_data.py --external-media
 ```
 
 Public catalog export also applies the `Owner.sqlite` keyword blacklist to keyword metadata, so regenerating from an older import manifest will not reintroduce blacklisted keyword strings. It does not use the keyword blacklist to decide which photos are published.
+
+Use `scripts/audit_import_eligibility.py` to report Camera rows that remain in the raw import-cache manifest but no longer satisfy the Green + 4-star policy. With `--write-delete-plan`, it writes a temporary R2 delete plan for the sweep wrapper's eligibility phase; that cleanup deliberately uses the R2 delete tool's `--no-history` mode so Camera eligibility cleanup does not become a permanent tombstone record.
 
 After changing the generated catalog, refresh the media sidecar so each flat public key keeps its original source and legacy country-prefixed provenance:
 

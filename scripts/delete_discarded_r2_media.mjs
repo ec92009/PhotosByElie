@@ -25,6 +25,7 @@ const publicPreviewIdsPath = valueFor("--public-preview-ids", ".review-logs/r2-p
 const dryRun = !hasFlag("--delete");
 const ignoreOwnerDb = hasFlag("--ignore-owner-db");
 const deepInventory = hasFlag("--deep-inventory") || ignoreOwnerDb;
+const useHistory = !hasFlag("--no-history");
 const requestTimeoutMs = Number(valueFor("--request-timeout-ms", "180000")) || 180000;
 const retries = Number(valueFor("--retries", "4")) || 0;
 
@@ -220,10 +221,10 @@ const currentDiscardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombst
   .map((photo) => photo?.id)
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => currentDiscardedIds.add(id));
-const historicalDiscardedIds = new Set((Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
+const historicalDiscardedIds = new Set((useHistory && Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
   .filter((id) => typeof id === "string" && id));
 const discardedIds = new Set(currentDiscardedIds);
-(Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
+(useHistory && Array.isArray(previousManifest.discardedPhotoIds) ? previousManifest.discardedPhotoIds : [])
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => discardedIds.add(id));
 (Array.isArray(tombstone.photos) ? tombstone.photos : [])
@@ -245,7 +246,7 @@ if (!discardedIds.size) {
 
 const publicKeys = new Set((Array.isArray(tombstone.public_preview_keys) ? tombstone.public_preview_keys : [])
   .filter((key) => typeof key === "string" && key));
-(Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : [])
+(useHistory && Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : [])
   .filter((key) => typeof key === "string" && key)
   .forEach((key) => publicKeys.add(key));
 for (const id of discardedIds) {
@@ -284,15 +285,15 @@ const privateKeys = new Set([...masterKeys, ...renderKeys].filter((key) => disca
 (Array.isArray(tombstone.private_keys) ? tombstone.private_keys : [])
   .filter((key) => typeof key === "string" && key)
   .forEach((key) => privateKeys.add(key));
-(Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : [])
+(useHistory && Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : [])
   .filter((key) => typeof key === "string" && key)
   .filter((key) => discardedIds.has(keyPhotoId(key)))
   .forEach((key) => privateKeys.add(key));
 
 const deletedConfirmedKeys = readOwnerDbDeletedKeys();
 const alreadyDeleted = (bucket, key) => deletedConfirmedKeys.has(`${bucket}\t${key}`);
-const recordedPublicKeys = new Set((Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : []).filter((key) => typeof key === "string" && key));
-const recordedPrivateKeys = new Set((Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : []).filter((key) => typeof key === "string" && key));
+const recordedPublicKeys = new Set((useHistory && Array.isArray(previousManifest.publicKeys) ? previousManifest.publicKeys : []).filter((key) => typeof key === "string" && key));
+const recordedPrivateKeys = new Set((useHistory && Array.isArray(previousManifest.privateKeys) ? previousManifest.privateKeys : []).filter((key) => typeof key === "string" && key));
 const publicDeleteCandidates = [...publicKeys].sort().filter((key) => !alreadyDeleted(publicBucket, key));
 const privateDeleteCandidates = [...privateKeys].sort().filter((key) => !alreadyDeleted(privateBucket, key));
 const ownerDbConfirmedCount = (publicKeys.size + privateKeys.size) - (publicDeleteCandidates.length + privateDeleteCandidates.length);

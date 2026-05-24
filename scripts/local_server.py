@@ -76,6 +76,7 @@ R2_SWEEP_SKIPPABLE_PHASES = {
     "camera",
     "apple-photo-albums",
     "leonardo",
+    "eligibility",
     "real-estate",
     "gap-fill",
     "private",
@@ -166,6 +167,7 @@ from asset_state import (  # noqa: E402
     write_reserve_data_from_site,
 )
 from media_keys import legacy_private_master_key, private_master_key, private_render_key, public_preview_key  # noqa: E402
+from import_eligibility import import_select_for_source_root  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
     DEFAULT_PRIVATE_BUCKET,
@@ -2761,9 +2763,9 @@ def _normalize_import_source_root(value: object) -> Path | None:
 
 
 def _normalize_import_select(value: object) -> str:
-    mode = str(value or "all").strip().lower()
-    if mode not in {"all", "lightroom"}:
-        raise ValueError("sourceSelect must be all or lightroom")
+    mode = str(value or "auto").strip().lower()
+    if mode not in {"auto", "all", "lightroom", "green"}:
+        raise ValueError("sourceSelect must be auto, all, green, or lightroom")
     return mode
 
 
@@ -2843,6 +2845,8 @@ def _read_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURC
         path = path.strip()
         if not path:
             continue
+        if setting_key == IMPORT_SOURCE_SETTINGS_KEY and not last_used_at and use_count <= 0:
+            continue
         entries.append(_import_source_entry(Path(path), last_used_at=last_used_at, use_count=use_count))
     return entries
 
@@ -2855,6 +2859,7 @@ def _write_import_source_setting(repo_root: Path, entries: list[dict], setting_k
             "label": entry.get("label") or _import_source_label(Path(entry["path"])),
             "lastUsedAt": entry.get("lastUsedAt") or "",
             "useCount": int(entry.get("useCount") or 0),
+            "rememberedBy": "owner",
         }
         for entry in entries[:IMPORT_SOURCE_HISTORY_LIMIT]
         if entry.get("path")
@@ -2909,15 +2914,11 @@ def _discover_import_sources_from_logs(repo_root: Path) -> list[dict]:
 
 def _import_source_history(repo_root: Path) -> list[dict]:
     merged: dict[str, dict] = {}
-    for entry in _discover_import_sources_from_logs(repo_root):
-        if _is_real_estate_import_source(Path(entry["path"])):
-            continue
-        merged[entry["path"]] = entry
     for entry in _read_import_source_setting(repo_root):
         if _is_real_estate_import_source(Path(entry["path"])):
             continue
         existing = merged.get(entry["path"], {})
-        merged[entry["path"]] = {**existing, **entry, "discovered": bool(existing.get("discovered"))}
+        merged[entry["path"]] = {**existing, **entry, "discovered": False}
     entries = list(merged.values())
     recent = sorted(
         (entry for entry in entries if entry.get("lastUsedAt")),
@@ -2933,7 +2934,7 @@ def _import_source_history(repo_root: Path) -> list[dict]:
 
 def _remember_import_source_root(repo_root: Path, source_root: Path) -> None:
     entry = _import_source_entry(source_root, last_used_at=datetime.now(timezone.utc).isoformat(), use_count=1)
-    entries = [item for item in _import_source_history(repo_root) if item.get("path") != entry["path"]]
+    entries = [item for item in _read_import_source_setting(repo_root) if item.get("path") != entry["path"]]
     previous = next((item for item in _read_import_source_setting(repo_root) if item.get("path") == entry["path"]), None)
     if previous:
         entry["useCount"] = int(previous.get("useCount") or 0) + 1
@@ -3512,6 +3513,14 @@ def _cloud_media_sweep_command(source_root: Path | None, source_select: str, ski
     return command
 
 
+def _effective_import_select(source_root: Path | None, source_select: str) -> str:
+    if source_select != "auto":
+        return source_select
+    if not source_root:
+        return "auto"
+    return import_select_for_source_root(source_root)
+
+
 def _run_cloud_media_sweep_task(
     task_id: str,
     repo_root: Path,
@@ -3590,12 +3599,12 @@ def _start_cloud_media_sweep(
         "bytes_done": 0,
         "skipPhases": skip_phases,
         "sourceRoot": str(source_root) if source_root else "",
-        "sourceSelect": source_select,
+        "sourceSelect": _effective_import_select(source_root, source_select),
         "currentPhaseKey": "selected-folder" if source_root else None,
         "phaseScopeKeys": (
-            ["prepare", "import-cache", "selected-folder", "catalog", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
+            ["prepare", "import-cache", "selected-folder", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
             if source_root
-            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
+            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "eligibility", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
         ),
         "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],

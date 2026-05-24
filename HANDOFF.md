@@ -24,11 +24,11 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v83.23`
+- Current visible build: `v83.24`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
-- Recent baseline commits include: `bf936ee2 photosbyelie: checkpoint cloud media sweep`, `8cd776b0 photosbyelie: refresh import backlog docs`, `6dffc1ff photosbyelie: checkpoint cloud media sweep`, and `c812736e photosbyelie: clarify import counts and python preflight`.
+- Recent baseline commits include: `8cd776b0 photosbyelie: refresh import backlog docs`, `6dffc1ff photosbyelie: checkpoint cloud media sweep`, `c812736e photosbyelie: clarify import counts and python preflight`, and `4edde36a photosbyelie: block tombstoned source reimports`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
-- Public Expo catalog: `2,921` publishable media rows after the latest cloud-media checkpoint: France `269`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`. This is internally consistent across generated artifacts, but the drop from the earlier `6,016`-row baseline should be audited before launch-facing work continues.
+- Public Expo catalog: `3,824` publishable media rows after the latest cloud-media checkpoint: France `315`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `2,106`, Italy `0`, Portugal `216`, Slovakia `2`. This is internally consistent across generated artifacts, but the drop from the earlier `6,016`-row baseline should be audited before launch-facing work continues.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite` is the active plain payload, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract. Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - Waste Basket is the Owner-facing model for unwanted photos. Basketed photos are live-blacklisted and can be put back; emptying the basket deletes public previews, private masters, and private render triplets, then leaves durable tombstones so those masters do not return.
 - Waste Basket purge was intentionally paused during catalog migration. Resume only when ready to monitor the `Cloud media left` progress.
@@ -79,6 +79,7 @@ for remote execution.
 - `v83.21` makes Processed this run count completed photo attempts, including failed attempts, so the tile remains stable while failures stay visible in the note.
 - `v83.22` makes the Processed this run note include successful completions, runs sweep Python calls through the Pillow-capable interpreter, and preflights Pillow before queuing photos.
 - `v83.23` makes discarded/Waste Basket source paths participate in import and export filtering, records source paths in new tombstones, and adds a read-only audit for source-path tombstone dodgers in current manifests/R2 state.
+- `v83.24` stops the Expo source pulldown from mining import-log subfolders, restores the Green + 4-star eligibility gate only for Camera imports/exports, leaves AI imports tombstone-driven, and adds an R2 audit/delete pass for ineligible Camera rows.
 - Live checkout Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` is deployed with the `v83.2` price/minimum-charge catalog and `DOWNLOAD` card statement descriptor suffix.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
@@ -89,7 +90,7 @@ for remote execution.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
 - Local POD preview draft: first print sizes are 12x16, 16x20, and 18x24; Prodigi is the primary/value route, Printful is the standard fallback route, theprintspace is the premium candidate, and Gelato stays as API-proof/global-routing candidate. `pod_settings.storefrontEnabled` remains false.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.23`; Owner Expo imports now skip known discarded/Waste Basket source paths, not only old media IDs, so a selected-folder import cannot resurrect a tombstoned file under a new relative-path-derived ID. The source-path dodger audit currently reports `0` manifest dodgers and `0` current R2 dodgers. The next import hardening pass should finish same-path newer re-export overwrite behavior instead of creating duplicate media rows.
+- Latest checkpoint is `v83.24`; Owner Expo imports now skip known discarded/Waste Basket source paths, only show Owner-remembered source folders in the Expo pulldown, and auto-apply Green + 4-star selection only to Camera paths. AI/Leonardo stays tombstone-driven. The source-path dodger audit reports `0` manifest dodgers and `0` current R2 dodgers, and the Camera eligibility audit reports `10` ineligible raw import-cache rows with `0` current R2 objects after cleanup. The next import hardening pass should finish same-path newer re-export overwrite behavior instead of creating duplicate media rows.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it and otherwise leaves ready-to-publish packages.
 - The 2026-05-24 daily social package is prepared only: Facebook, Instagram, and Pinterest all need final manual publish/account confirmation before anything is posted from that package.
 - The tracked QR coaster 3MF assets were refreshed after print/underside review. Treat them as current printable project files unless a newer slicer/export pass replaces them.
@@ -121,8 +122,8 @@ cd /Users/ecohen/Dev/PhotosByElie
 ## Current Priority
 
 1. **Audit the current catalog baseline.**
-   - Compare the latest `2,921`-row catalog checkpoint with the earlier `6,016`-row baseline.
-   - Decide whether the shrink is expected selected-source behavior or an accidental narrowed export, especially Italy `0` and AI/Leonardo `1,249`.
+   - Compare the latest `3,824`-row catalog checkpoint with the earlier `6,016`-row baseline.
+   - Decide whether the shrink is expected selected-source behavior or an accidental narrowed export, especially Italy `0` and AI/Leonardo `2,106`.
    - Validate that `assets/catalog/photosbyelie.sqlite`, `home-data.js`, `assets/expo-manifest.json`, and `worker/photos-catalog.generated.mjs` agree before public launch work.
 
 2. **Finish import re-export de-duplication and clean today's duplicates.**
@@ -132,6 +133,7 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 3. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
+   - Include a one-time review of any legacy entries saved before `v83.24`, because log-discovered folders are no longer added automatically but older remembered rows may still exist locally.
    - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
 
 4. **Keep Owner/generated state handoff-ready.**
@@ -302,7 +304,7 @@ npm run validate
 
 ## Fresh Backlog
 
-1. Audit the current `2,921`-row catalog baseline against the earlier `6,016`-row public inventory.
+1. Audit the current `3,824`-row catalog baseline against the earlier `6,016`-row public inventory.
 2. Finish full-path plus modified-date re-export overwrite behavior, then audit and clean today's duplicate imports reversibly.
 3. Add import source history management for stale/missing remembered folders.
 4. Make the Real Estate import control unmistakable and rehearse one full client lifecycle.

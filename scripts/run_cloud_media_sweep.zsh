@@ -15,7 +15,7 @@ PUSH=0
 SKIP_PHASES=()
 SKIPPED_PHASES=()
 SELECTED_IMPORT_SOURCE_ROOT=""
-SELECTED_IMPORT_SELECT="all"
+SELECTED_IMPORT_SELECT="auto"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="$(command -v python3)"
@@ -71,13 +71,26 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$SELECTED_IMPORT_SELECT" in
-  all|lightroom)
+  auto|all|lightroom|green)
     ;;
   *)
     echo "Unsupported import source selection mode: $SELECTED_IMPORT_SELECT"
     exit 2
     ;;
 esac
+
+effective_selected_import_select() {
+  if [[ "$SELECTED_IMPORT_SELECT" != "auto" ]]; then
+    echo "$SELECTED_IMPORT_SELECT"
+    return
+  fi
+  local root_lc="${(L)SELECTED_IMPORT_SOURCE_ROOT}"
+  if [[ "$root_lc" == *"/lr/camera"* || "$root_lc" == *"/pictures/lr/camera"* ]]; then
+    echo "lightroom"
+    return
+  fi
+  echo "all"
+}
 
 if [[ -n "${PBE_SWEEP_SKIP_PHASES:-}" ]]; then
   for key in ${(s:,:)PBE_SWEEP_SKIP_PHASES}; do
@@ -269,7 +282,7 @@ if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
     "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
     --source-root "$SELECTED_IMPORT_SOURCE_ROOT" \
     --output-root "$IMPORT_CACHE_ROOT" \
-    --select "$SELECTED_IMPORT_SELECT" \
+    --select "$(effective_selected_import_select)" \
     --r2-upload both \
     --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
@@ -322,6 +335,19 @@ phase catalog "Export catalog"
   --external-media \
   --review-snapshot assets/hidden/hidden-blacklist.json
 done_phase catalog
+
+run_skippable_phase eligibility "Force Camera import eligibility on R2" \
+  zsh -lc '
+    "$1" scripts/audit_import_eligibility.py \
+      --write-delete-plan .review-logs/import-eligibility-r2-delete-plan.json &&
+    node scripts/delete_discarded_r2_media.mjs \
+      --delete \
+      --no-history \
+      --discarded-tombstone .review-logs/import-eligibility-r2-delete-plan.json \
+      --output .review-logs/import-eligibility-r2-delete-manifest.json \
+      --request-timeout-ms 180000 \
+      --retries 4
+  ' _ "$PYTHON_BIN"
 
 phase worker "Write worker catalog"
 node scripts/write_worker_catalog.mjs

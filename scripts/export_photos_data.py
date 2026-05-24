@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
+from import_eligibility import row_import_eligible
 from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms
 
 LABELS = {
@@ -802,6 +803,8 @@ def write_photos_data(
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
             if row_source_path_is_blocked(row, blacklist_source_paths, blacklist_source_suffixes):
+                continue
+            if not row_import_eligible(row)[0]:
                 continue
             if not derivative_files_available(repo_root, row, mode, uploaded_public_keys):
                 continue

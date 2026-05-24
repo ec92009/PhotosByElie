@@ -6,12 +6,12 @@ Date: 2026-05-24
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.23`
-- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.23`.
+- Current visible build: `v83.24`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.24`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `2,921` public media rows in the SQLite catalog: France `269`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
-- The latest cloud-media checkpoint regenerated public catalog/homepage/Worker artifacts after the import work. The repo artifacts are internally consistent, but the public row count dropped from the earlier `6,016` baseline, so the next technical priority is an explicit catalog-baseline audit before launch/publishing work continues.
+- Current catalog scale: `3,824` public media rows in the SQLite catalog: France `315`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `2,106`, Italy `0`, Portugal `216`, Slovakia `2`.
+- The latest cloud-media checkpoint regenerated public catalog/homepage/Worker artifacts after the import work. The repo artifacts are internally consistent, but the public row count remains below the earlier `6,016` baseline, so a catalog-baseline audit still belongs before launch/publishing work continues.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local. Title/keyword batch JSON is compatibility/audit output and must not be treated as authoritative public catalog state.
 - 2026-05-24 hourly handoff sweep verified the local David `Owner.sqlite` with `PRAGMA integrity_check` = `ok` and uploaded a private R2 snapshot to `photosbyelie-private/owner-sync/snapshots/david/Owner-latest.sqlite.gz`. Local and downloaded gzip SHA-256 both matched `345359cd9eb0ac8bc37a2f6c691fa263a31a1b2b3e924bf724f6271ef6f0073f`; the compressed snapshot is `3.9M`. Per `docs/sops/MAX_DAVID_SYNC_SOP.md`, `Owner.sqlite` itself remains uncommitted.
@@ -46,18 +46,19 @@ Date: 2026-05-24
 - `v83.21` makes Processed this run count completed photo attempts, including failed attempts, so the tile remains stable while failures stay visible in the note.
 - `v83.22` makes the Processed this run note include successful completions, runs sweep Python calls through the Pillow-capable interpreter, and preflights Pillow before queuing photos.
 - `v83.23` makes discarded/Waste Basket source paths participate in import and export filtering, records source paths in new tombstones, and adds a read-only audit for source-path tombstone dodgers in current manifests/R2 state.
+- `v83.24` stops the Expo source pulldown from mining import-log subfolders, restores the Green + 4-star eligibility gate only for Camera imports/exports, leaves AI imports tombstone-driven, and adds an R2 audit/delete pass for ineligible Camera rows.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.23`: Owner Expo imports now skip known discarded/Waste Basket source paths, not only old media IDs, so a selected-folder import cannot resurrect a tombstoned file under a new relative-path-derived ID. The source-path dodger audit currently reports `0` manifest dodgers and `0` current R2 dodgers.
+- Latest checkpoint is `v83.24`: Owner Expo imports now show only Owner-remembered source folders rather than log-discovered subfolders, selected Camera folders auto-use Lightroom Green + 4-star selection, AI/Leonardo folders remain governed by tombstones, and the Camera eligibility audit reports `10` ineligible raw import-cache rows with `0` current R2 objects after cleanup.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it.
 - The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
 - PhotosByElie active collaboration time is paused with `4:43` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
-This conversation centered on making the Owner import path feel like a real local mini app instead of a brittle fixed-source automation panel. `v83.7` changed `Start Import` so it opens a native folder selection dialog and scans only the selected folder, while keeping the broad fixed-anchor sweep available for automation. `v83.11` replaces the immediate button flow with a source pulldown of remembered folders plus `All` and `New...`; selected-folder starts are recorded durably in `Owner.sqlite`, and recent import logs seed the first remembered-source list. `v83.19` splits that surface cleanly: Expo handles gallery imports, and Real Estate handles RE imports from its own tab-local source pulldown and `RE import` button.
+This conversation centered on making the Owner import path feel like a real local mini app instead of a brittle fixed-source automation panel. `v83.7` changed `Start Import` so it opens a native folder selection dialog and scans only the selected folder, while keeping the broad fixed-anchor sweep available for automation. `v83.11` replaces the immediate button flow with a source pulldown of remembered folders plus `All` and `New...`; selected-folder starts are recorded durably in `Owner.sqlite`. `v83.19` splits that surface cleanly: Expo handles gallery imports, and Real Estate handles RE imports from its own tab-local source pulldown and `RE import` button. `v83.24` stops Expo from seeding that pulldown from import logs, so nested folders encountered during a scan no longer pretend to be owner-selected sources.
 
 The Owner Dock launcher was repaired so launching the mini app starts `scripts/local_server.py` only when needed, reuses whichever helper is already alive on a nearby `8000-8099` port, opens Safari to `owner.html`, and exits instead of leaving a no-window app process swallowing later launches. The active local helper for the latest Owner checks is on port `8000`.
 
@@ -65,7 +66,7 @@ The import progress UI was polished in `v83.9`, `v83.10`, `v83.11`, simplified i
 
 Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.23`, records the source-path blacklist/tombstone guard, and notes that the current source-path dodger audit found no manifest or current-R2 offenders. No Stripe setting or price behavior changed in this pass.
+This refresh updates the durable summary/backlog/README/handoff state through `v83.24`, records the Camera-only eligibility guard, and notes that the current Camera eligibility audit found no current-R2 offenders after cleanup. No Stripe setting or price behavior changed in this pass.
 
 The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
 
@@ -75,7 +76,9 @@ The Owner decided that re-export identity needs to be stricter than the old impo
 
 The blacklist investigation confirmed the suspicion behind the user's question: the old import guard was ID-based, not full-path based. Since selected-folder imports can change the relative path used to derive a media ID, a discarded file could theoretically come back under a fresh ID. `v83.23` adds source-path extraction from tombstones and historical import manifests, skips those source paths during import planning/rendering, applies the same guard during public export, writes source paths into new tombstones, and adds `scripts/audit_tombstone_source_dodgers.py`. The current audit wrote `.review-logs/tombstone-source-dodgers.json` and found `0` manifest dodgers, `0` current R2 dodgers, `4,699` discarded IDs, and `301` recovered discarded source paths.
 
-The current docs refresh also records one important remaining risk: the latest committed catalog artifacts now describe `2,921` public media rows, down from the earlier `6,016` baseline. That may be an expected selected-source checkpoint or an accidental narrowed export, but it should be audited before the next launch-facing step.
+The import eligibility follow-up restored the older Lightroom constraint only where it belongs now: Camera paths require Green label plus rating 4+, while Apple Photo Albums and AI/Leonardo folders are accepted by folder membership and protected by tombstones. The new `scripts/audit_import_eligibility.py` found `10` ineligible Camera rows still present in raw `tmp/import-cache/manifest.json`; the cleanup pass deleted their current R2 objects without writing permanent tombstones, and a post-cleanup audit reports `0` current R2 objects for those rows.
+
+The current docs refresh also records one important remaining risk: the latest committed catalog artifacts now describe `3,824` public media rows, down from the earlier `6,016` baseline. That may be an expected selected-source checkpoint or an accidental narrowed export, but it should be audited before the next launch-facing step.
 
 ## Earlier Conversation Context
 

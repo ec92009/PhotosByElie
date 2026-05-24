@@ -35,6 +35,7 @@ from typing import Any
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key, public_preview_key_for_reference
 from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS, RAW_IMAGE_EXTENSIONS
+from import_eligibility import green_selected, lightroom_selected, normalize_rating
 from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, upsert_r2_object_state
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, append_upload_state, first_env, s3_put, wrangler_command
 
@@ -236,9 +237,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-rating", type=float, default=4)
     parser.add_argument(
         "--select",
-        choices=("lightroom", "all"),
+        choices=("lightroom", "green", "all"),
         default="lightroom",
-        help="Require Lightroom rating/label metadata, or select every developed photo/video file.",
+        help="Require Green + rating metadata, require Green label only, or select every developed photo/video file.",
     )
     parser.add_argument(
         "--force-country",
@@ -606,25 +607,12 @@ def run_exiftool_tags(target: Path, tags: list[str]) -> dict[str, Any]:
     return rows[0] if rows else {}
 
 
-def normalize_rating(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def metadata_label(meta: dict[str, Any]) -> str:
-    return str(meta.get("Label") or meta.get("ColorLabel") or "").strip().lower()
-
-
-def is_selected(meta: dict[str, Any], expected_label: str, min_rating: float) -> bool:
-    return normalize_rating(meta.get("Rating")) >= min_rating and metadata_label(meta) == expected_label.lower()
-
-
 def selected_by_args(meta: dict[str, Any], args: argparse.Namespace) -> bool:
     if args.select == "all":
         return True
-    return is_selected(meta, args.label, args.min_rating)
+    if args.select == "green":
+        return green_selected(meta, args.label, args.min_rating)
+    return lightroom_selected(meta, args.label, args.min_rating)
 
 
 def compact_metadata(meta: dict[str, Any]) -> dict[str, Any]:

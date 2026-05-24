@@ -4,11 +4,11 @@ Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v83.23`.
+- Current visible build: `v83.24`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=83.23`.
-- Current catalog scale: `2,921` public media rows in `assets/catalog/photosbyelie.sqlite`: France `269`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
-- The latest cloud-media checkpoint regenerated public catalog/homepage/worker artifacts after the import work. That makes the current repo internally consistent, but the drop from the earlier `6,016`-row baseline needs an explicit catalog-baseline audit before more launch/publishing work.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=83.24`.
+- Current catalog scale: `3,824` public media rows in `assets/catalog/photosbyelie.sqlite`: France `315`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `2,106`, Italy `0`, Portugal `216`, Slovakia `2`.
+- The latest cloud-media checkpoint regenerated public catalog/homepage/worker artifacts after the import work. That makes the current repo internally consistent, but the drop from the earlier `6,016`-row baseline still needs an explicit catalog-baseline audit before more launch/publishing work.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
 - Title/keyword review state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local.
@@ -20,7 +20,7 @@ Last updated: 2026-05-24
 - Batch `2026-05-24-000237-818Z` is the latest generated review snapshot: `101` batch rows in `title_keyword_batches`, `101` currently proposed queue rows, and tracked `latest.json`/batch JSON compatibility snapshots.
 - The generator now uses a larger Owner-state subprocess buffer, filters internal marker keywords like `NotMyPhoto`, expands safe local keyword floors, and reports proposal quality counts before write/import.
 - Real Estate owner clients can save/edit/delete, discover media-bearing property folders, import available configured properties with count/total progress, publish sanitized contexts, dry-run/upload R2 objects, and prepare the Worker secret payload.
-- The Owner Expo tab has a source pulldown before `Start Expo import`: remembered gallery folders from `Owner.sqlite`/recent import logs, `All` for fixed Expo source anchors, and `New...` opens the native folder chooser immediately. Real Estate has its own source pulldown plus `RE import` button inside the Real Estate tab. Successful selected-folder imports are recorded back into the appropriate Owner source history.
+- The Owner Expo tab has a source pulldown before `Start Expo import`: remembered gallery folders from `Owner.sqlite`, `All` for fixed Expo source anchors, and `New...` opens the native folder chooser immediately. Import-log subfolders are no longer auto-discovered into the pulldown. Real Estate has its own source pulldown plus `RE import` button inside the Real Estate tab. Successful selected-folder imports are recorded back into the appropriate Owner source history.
 - Import source lanes share the same Owner progress renderer. Skipped source lanes are unfinished, a blocked catalog export is shown as the needs-attention phase rather than as silent downstream waiting, idle/future sweep phases stay hidden until relevant, and per-photo progress is now one thumbnail/name row rather than step checkboxes.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
@@ -49,11 +49,12 @@ Last updated: 2026-05-24
 - `v83.21` makes Processed this run count completed photo attempts, including failed attempts, so the tile remains stable while failures stay visible in the note.
 - `v83.22` makes the Processed this run note include successful completions, runs sweep Python calls through the Pillow-capable interpreter, and preflights Pillow before queuing photos.
 - `v83.23` makes discarded/Waste Basket source paths participate in import and export filtering, records source paths in new tombstones, and adds a read-only audit for source-path tombstone dodgers in current manifests/R2 state.
+- `v83.24` stops the Expo source pulldown from mining import-log subfolders, restores the Green + 4-star eligibility gate only for Camera imports/exports, leaves AI imports tombstone-driven, and adds an R2 audit/delete pass for ineligible Camera rows.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.23`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v83.24`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
-- Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths.
+- Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it and otherwise leaves ready-to-publish packages.
 - The 2026-05-24 Facebook, Instagram, and Pinterest daily package is prepared only; each platform still needs final manual publish/account confirmation.
 - Apple Photos with faces remains off limits.
@@ -62,8 +63,8 @@ Last updated: 2026-05-24
 ## Numbered Backlog
 
 1. **Audit the current catalog baseline before more launch work.**
-   - Compare the latest `2,921`-row catalog checkpoint against the earlier `6,016`-row baseline and identify whether the selected-folder import path accidentally narrowed generated public inventory.
-   - Confirm whether Italy should really be `0`, why AI/Leonardo is now `1,249`, and whether Spain's increase to `1,024` is expected from the recent imports.
+   - Compare the latest `3,824`-row catalog checkpoint against the earlier `6,016`-row baseline and identify whether the selected-folder import path accidentally narrowed generated public inventory.
+   - Confirm whether Italy should really be `0`, why AI/Leonardo is now `2,106`, and whether Spain's increase to `1,024` is expected from the recent imports.
    - Deliverables: a short catalog delta report, a proposed restore/fix plan if the shrink is accidental, and validation that `assets/catalog/photosbyelie.sqlite`, `home-data.js`, `assets/expo-manifest.json`, and `worker/photos-catalog.generated.mjs` agree.
 
 2. **Finish source re-export de-duplication and clean today's duplicates.**
@@ -73,6 +74,7 @@ Last updated: 2026-05-24
 
 3. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
+   - Include a one-time review of any legacy entries saved before `v83.24`, because log-discovered folders are no longer added automatically but older remembered rows may still exist locally.
    - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
 
 4. **Make the Real Estate import control unmistakable and run a full RE rehearsal.**

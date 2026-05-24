@@ -4,9 +4,9 @@ Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v83.21`.
+- Current visible build: `v83.22`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=83.21`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=83.22`.
 - Current catalog scale: `6,016` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -47,9 +47,10 @@ Last updated: 2026-05-24
 - `v83.19` renames Owner Imports to Expo, moves Expo before Real Estate, keeps Expo imports gallery-only, and gives Real Estate its own source pulldown plus `RE import` folder-picker flow inside the Real Estate tab.
 - `v83.20` defaults the Real Estate source pulldown to the selected client's current source so `New...` remains an explicit choice.
 - `v83.21` makes Processed this run count completed photo attempts, including failed attempts, so the tile remains stable while failures stay visible in the note.
+- `v83.22` makes the Processed this run note include successful completions, runs sweep Python calls through the Pillow-capable interpreter, and preflights Pillow before queuing photos.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.21`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v83.22`; this file remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
 - The 2026-05-24 Facebook, Instagram, and Pinterest daily package is prepared only; each platform still needs final manual publish/account confirmation.
 - Apple Photos with faces remains off limits.

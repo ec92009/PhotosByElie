@@ -10,11 +10,16 @@ REPO_ROOT="${PBE_REPO_ROOT:-/Users/ecohen/Dev/photosByElie}"
 LOCK_DIR="$REPO_ROOT/.review-logs/cloud-media-sweep.lock"
 LOG_ROOT="$REPO_ROOT/.review-logs"
 IMPORT_CACHE_ROOT="${PBE_IMPORT_CACHE_ROOT:-tmp/import-cache}"
+PYTHON_BIN="${PBE_SWEEP_PYTHON:-/usr/bin/python3}"
 PUSH=0
 SKIP_PHASES=()
 SKIPPED_PHASES=()
 SELECTED_IMPORT_SOURCE_ROOT=""
 SELECTED_IMPORT_SELECT="all"
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="$(command -v python3)"
+fi
 
 append_skip_phase() {
   local key="$1"
@@ -261,7 +266,7 @@ if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
     exit 2
   fi
   selected_import_args=(
-    python3 scripts/build_lightroom_thumbnails.py \
+    "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
     --source-root "$SELECTED_IMPORT_SOURCE_ROOT" \
     --output-root "$IMPORT_CACHE_ROOT" \
     --select "$SELECTED_IMPORT_SELECT" \
@@ -276,7 +281,7 @@ if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
   run_skippable_phase selected-folder "Import selected folder" "${selected_import_args[@]}"
 else
   run_skippable_phase camera "Import Camera sources" \
-    python3 scripts/build_lightroom_thumbnails.py \
+    "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
     --source-root /Volumes/Saturn/Pictures/LR/Camera \
     --output-root "$IMPORT_CACHE_ROOT" \
     --r2-upload both \
@@ -287,7 +292,7 @@ else
   APPLE_PHOTO_ALBUMS_ROOT="/Volumes/Saturn/Pictures/LR/Apple Photo Albums"
   if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
     run_skippable_phase apple-photo-albums "Import Apple Photos album sources" \
-      python3 scripts/build_lightroom_thumbnails.py \
+      "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
       --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
       --output-root "$IMPORT_CACHE_ROOT" \
       --select all \
@@ -298,7 +303,7 @@ else
   fi
 
   run_skippable_phase leonardo "Import Leonardo sources" \
-    python3 scripts/build_lightroom_thumbnails.py \
+    "$PYTHON_BIN" scripts/build_lightroom_thumbnails.py \
     --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
     --output-root "$IMPORT_CACHE_ROOT" \
     --select all \
@@ -312,7 +317,7 @@ fi
 abort_if_catalog_sources_incomplete
 
 phase catalog "Export catalog"
-python3 scripts/export_photos_data.py \
+"$PYTHON_BIN" scripts/export_photos_data.py \
   --selection newest \
   --external-media \
   --review-snapshot assets/hidden/hidden-blacklist.json
@@ -326,7 +331,7 @@ node scripts/write_media_sidecar.mjs
 done_phase sidecar
 
 run_skippable_phase gap-fill "Fill in gaps" \
-  python3 scripts/fill_r2_coverage_gaps.py
+  "$PYTHON_BIN" scripts/fill_r2_coverage_gaps.py
 
 if [[ -z "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
   run_skippable_phase discard-final "Final banned R2 cleanup double-check" \

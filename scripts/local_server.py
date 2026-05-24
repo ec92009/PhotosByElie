@@ -2629,7 +2629,7 @@ def _r2_task_snapshot() -> list[dict]:
         tasks,
         key=lambda task: (
             0 if task.get("state") in active_states else 1,
-            str(task.get("queued_at") or ""),
+            -_iso_to_timestamp(str(task.get("updated_at") or task.get("queued_at") or "")),
         ),
     )
 

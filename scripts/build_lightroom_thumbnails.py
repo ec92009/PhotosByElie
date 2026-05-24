@@ -381,6 +381,16 @@ def require_tool(name: str) -> str:
     return path
 
 
+def require_python_package(module_name: str, package_name: str) -> None:
+    try:
+        __import__(module_name)
+    except ImportError as exc:
+        raise SystemExit(
+            f"Missing required Python package: {package_name} for {sys.executable}. "
+            f"Install it for this interpreter or set PBE_SWEEP_PYTHON to a Python that has it."
+        ) from exc
+
+
 def choose_font() -> str:
     for candidate in FONT_CANDIDATES:
         if Path(candidate).exists():
@@ -2438,6 +2448,7 @@ def main() -> int:
     year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")
+    require_python_package("PIL", "Pillow")
     require_tool("exiftool")
     require_tool("sips")
     require_tool("ffmpeg")

@@ -2336,7 +2336,9 @@
     const processedThisRun = Math.max(0, Number(progress.processedThisRun ?? progress.completed ?? 0));
     const attemptedThisRun = Math.max(0, Number(progress.attemptedThisRun ?? progress.completed ?? 0));
     const failedThisRun = Math.max(0, Number(progress.failedThisRun || 0));
+    const succeededThisRun = Math.max(0, processedThisRun - failedThisRun);
     const currentRunNote = [
+      succeededThisRun ? `${formatCount(succeededThisRun)} ok` : "",
       failedThisRun ? `${formatCount(failedThisRun)} failed` : "",
       activeItems ? `${formatCount(activeItems)} active` : "",
       waiting ? `${formatCount(waiting)} waiting` : "",

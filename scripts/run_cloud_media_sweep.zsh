@@ -1,6 +1,11 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+for tool_dir in /opt/homebrew/bin /usr/local/bin /opt/homebrew/sbin /usr/local/sbin; do
+  [[ -d "$tool_dir" ]] && PATH="$tool_dir:$PATH"
+done
+export PATH
+
 REPO_ROOT="${PBE_REPO_ROOT:-/Users/ecohen/Dev/photosByElie}"
 LOCK_DIR="$REPO_ROOT/.review-logs/cloud-media-sweep.lock"
 LOG_ROOT="$REPO_ROOT/.review-logs"

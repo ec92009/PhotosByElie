@@ -6,8 +6,8 @@ Date: 2026-05-24
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.11`
-- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8001/owner.html?v=83.11`.
+- Current visible build: `v83.12`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.12`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,016` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -32,14 +32,15 @@ Date: 2026-05-24
 - `v83.9` keeps selected-folder imports focused on import phases, avoids banned-photo cleanup noise in that path, caches import thumbnails, and gives the per-photo import matrix visible working states.
 - `v83.10` makes the active/next import matrix state obvious with an inferred active worker row, animated next-queued row, and live dots inside unchecked cells.
 - `v83.11` adds the Owner import source pulldown, remembered source storage/discovery, explicit maintenance buttons, and truthful task-scoped progress stacks.
+- `v83.12` makes GUI/Dock-launched imports see Homebrew tools such as `exiftool`, `ffmpeg`, and `ffprobe` so selected-folder imports do not fail on a stripped Safari helper PATH.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.11`: Owner imports now use a remembered source selector, optional maintenance actions have their own task buttons, task stacks show only meaningful phases, and the current backlog remains in `TODO.md`.
+- Latest checkpoint is `v83.12`: Owner imports now see Homebrew tools from GUI-launched helpers, use a remembered source selector, optional maintenance actions have their own task buttons, task stacks show only meaningful phases, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
 - The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
-- PhotosByElie active collaboration time is paused with `4:34` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
+- PhotosByElie active collaboration time is paused with `4:35` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
@@ -51,7 +52,9 @@ The import progress UI was polished in `v83.9`, `v83.10`, and `v83.11`: selected
 
 Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-This refresh updates the durable summary/backlog/README/handoff/timelog state to `v83.11`, records the implemented import-source/maintenance UI, and leaves import source history management as the next small Owner backlog item. No catalog count, Worker behavior, Stripe setting, or price behavior changed in this pass.
+This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.12`, records the implemented import-source/maintenance UI, and leaves import source history management as the next small Owner backlog item. No catalog count, Worker behavior, Stripe setting, or price behavior changed in this pass.
+
+The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
 
 ## Earlier Conversation Context
 

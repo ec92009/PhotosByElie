@@ -67,6 +67,12 @@ DEFAULT_PRIVATE_DELIVERY_MANIFEST = Path("assets/private-delivery-manifest.json"
 DEFAULT_PUBLIC_PREVIEW_IDS = Path(".review-logs/r2-public-preview-ids.json")
 DEFAULT_PRIVATE_INVENTORY = Path(".review-logs/r2-private-inventory.json")
 DEFAULT_KEYWORD_BLACKLIST = Path("assets/owner-actions/keyword-blacklist.json")
+LOCAL_TOOL_DIRS = (
+    Path("/opt/homebrew/bin"),
+    Path("/usr/local/bin"),
+    Path("/opt/homebrew/sbin"),
+    Path("/usr/local/sbin"),
+)
 PRIVATE_RENDER_PRODUCTS = {
     "jpg-6mp": 6,
     "jpg-3mp": 3,
@@ -349,6 +355,11 @@ def parse_year_filter(value: str) -> tuple[int, int] | None:
 def require_tool(name: str) -> str:
     path = shutil.which(name)
     if not path:
+        for tool_dir in LOCAL_TOOL_DIRS:
+            candidate = tool_dir / name
+            if candidate.exists() and os.access(candidate, os.X_OK):
+                os.environ["PATH"] = f"{tool_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+                return str(candidate)
         raise SystemExit(f"Missing required tool: {name}")
     return path
 

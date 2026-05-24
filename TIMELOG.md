@@ -78,8 +78,9 @@ Clock state: paused
 | 2026-05-24 | 11:54 CEST | 12:02 CEST | 0:02 | Requested docs/backlog refresh and corrected the Owner import matrix visual-state direction from screenshot feedback; background implementation time excluded. |
 | 2026-05-24 | 12:12 CEST | 12:12 CEST | 0:01 | Added backlog direction for truthful Owner progress stacks and separate cleanup task buttons. |
 | 2026-05-24 | 12:13 CEST | 12:31 CEST | 0:01 | Directed implementation of the Owner import source selector, task-scoped progress stacks, and explicit maintenance buttons; background implementation time excluded. |
+| 2026-05-24 | 12:41 CEST | 12:45 CEST | 0:01 | Diagnosed the selected-folder import failure as a GUI helper PATH issue and requested the Homebrew tool bootstrap fix; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 4:34
+Active collaboration time used: 4:35
 Remaining budget: not set

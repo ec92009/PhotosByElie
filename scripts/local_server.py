@@ -214,6 +214,12 @@ HIDDEN_BLACKLIST_R2_KEY = "hidden-blacklist.json"
 DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
 PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
+LOCAL_TOOL_DIRS = (
+    Path("/opt/homebrew/bin"),
+    Path("/usr/local/bin"),
+    Path("/opt/homebrew/sbin"),
+    Path("/usr/local/sbin"),
+)
 
 
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
@@ -587,6 +593,7 @@ def main() -> int:
     parser.add_argument("--bind", default="127.0.0.1", help="Address to bind. Defaults to 127.0.0.1.")
     parser.add_argument("--allow-lan-owner", action="store_true", help="Allow owner helper endpoints from private LAN clients.")
     args = parser.parse_args()
+    _bootstrap_local_tool_path()
 
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
     server.allow_lan_owner = args.allow_lan_owner
@@ -604,6 +611,14 @@ def main() -> int:
     finally:
         server.server_close()
     return 0
+
+
+def _bootstrap_local_tool_path() -> None:
+    path_parts = os.environ.get("PATH", "").split(os.pathsep)
+    for tool_dir in reversed(LOCAL_TOOL_DIRS):
+        if tool_dir.is_dir() and str(tool_dir) not in path_parts:
+            path_parts.insert(0, str(tool_dir))
+    os.environ["PATH"] = os.pathsep.join(part for part in path_parts if part)
 
 
 def _is_private_lan_address(value: str) -> bool:

@@ -254,9 +254,24 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 2106,
+    "count": 4921,
     "href": "./gallery.html?gallery=ai",
     "photos": [
+      {
+        "id": "bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11",
+        "title": "bronze statue of a horse, Remington style",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11_900.jpg",
+            "detailKey": "expo/bronze-statue-of-a-horse-remington-style-2-upscale-a742f72b-50ba-4c69-9e70-368d269d8e6c-edit-b35b742f11_1800.jpg"
+          }
+        }
+      },
       {
         "id": "beyrouth-630240f1ea",
         "title": "Beyrouth",
@@ -276,8 +291,8 @@ window.photosByElieHomeData = {
         }
       },
       {
-        "id": "road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717",
-        "title": "Road Trips - Adventure, car rental, scenic highways, landscapes, gas stations, motels, pit-stops, route maps, vintage ve",
+        "id": "a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e",
+        "title": "a Japanese fishing village at sunset, cut paper style",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -285,14 +300,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717_900.jpg",
-            "detailKey": "expo/road-trips-adventure-car-rental-scenic-highways-landsca-1-upscale-bae9ac87-a293-4f64-a57c-7b480da71942-jpgx2-fff867b717_1800.jpg"
+            "galleryKey": "expo/a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e_900.jpg",
+            "detailKey": "expo/a-japanese-fishing-village-at-sunset-cut-paper-style-0-upscale-8559e581-2ffd-4ede-9e38-6d99444db9b3-jpgx2-fde7ed000e_1800.jpg"
           }
         }
       },
       {
-        "id": "city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37",
-        "title": "City Breaks - Skyscrapers, street signs, public transport, local attractions, shopping, dining, parks, historical landma",
+        "id": "a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1",
+        "title": "a Japanese fishing village at sunset, cut paper style",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -300,23 +315,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37_900.jpg",
-            "detailKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-2-upscale-79b98256-2211-4ab3-8443-f1e187d685d3-jpgx2-9a7775fb37_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96",
-        "title": "City Breaks - Skyscrapers, street signs, public transport, local attractions, shopping, dining, parks, historical landma",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96_900.jpg",
-            "detailKey": "expo/city-breaks-skyscrapers-street-signs-public-transport-l-0-upscale-065423b2-cfff-420f-ae3f-15b2ff825a97-jpgx2-114ce39d96_1800.jpg"
+            "galleryKey": "expo/a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1_900.jpg",
+            "detailKey": "expo/a-japanese-fishing-village-at-sunset-cut-paper-style-1-upscale-9ffd39ce-7231-45fa-a49b-e7fc73cef2b7-jpgx2-f710d988d1_1800.jpg"
           }
         }
       }

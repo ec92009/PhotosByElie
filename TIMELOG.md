@@ -76,8 +76,9 @@ Clock state: paused
 | 2026-05-24 | 11:44 CEST | 11:44 CEST | 0:01 | Added backlog direction for a remembered import source menu with All and New options. |
 | 2026-05-24 | 11:45 CEST | 11:47 CEST | 0:02 | Audited repo cleanup state and prepared Owner SQLite R2 lifecycle state for commit. |
 | 2026-05-24 | 11:54 CEST | 12:02 CEST | 0:02 | Requested docs/backlog refresh and corrected the Owner import matrix visual-state direction from screenshot feedback; background implementation time excluded. |
+| 2026-05-24 | 12:12 CEST | 12:12 CEST | 0:01 | Added backlog direction for truthful Owner progress stacks and separate cleanup task buttons. |
 
 ## Totals
 
-Active collaboration time used: 4:32
+Active collaboration time used: 4:33
 Remaining budget: not set

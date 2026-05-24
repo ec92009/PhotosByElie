@@ -46,7 +46,15 @@ Last updated: 2026-05-24
 
 ## Numbered Backlog
 
-1. **Add an Owner import source menu.**
+1. **Make the Owner progress stack truthful and action-based.**
+   - Goal: stop showing a long, dead-looking stack of every possible sweep phase when only one import or maintenance task is actually happening.
+   - Inputs/assumptions: selected-folder imports, broad automation sweeps, banned-photo/R2 cleanup, catalog export, validation, and storage checks are related operational tools but should not all look queued during a simple import.
+   - Scope: show progress bars only for phases that are currently running, actually queued, recently finished, blocked, or explicitly selected for the current task.
+   - Add separate buttons for unrelated cleanup/maintenance tasks, such as banned-photo R2 cleanup double-check, final cleanup sweep, storage estimate refresh, catalog/export validation, or any other task that should not imply it is part of the current import.
+   - Deliverables: a clearer Imports/Cloud task launcher, truthful current/queued task stack, explicit maintenance buttons, and copy that distinguishes import work from optional cleanup work.
+   - Validation/definition of done: starting a selected-folder import shows only selected-folder import work plus real downstream blockers; unrelated cleanup phases stay hidden until started; maintenance buttons start their own visibly separate tasks; skipped or interrupted work is shown as blocked/unfinished without implying all later phases are waiting.
+
+2. **Add an Owner import source menu.**
    - Goal: replace the immediate `Start Import` action with a pulldown that makes the import source explicit before work begins.
    - Inputs/assumptions: `Start Import` currently opens a native folder chooser for a selected-folder import; automation sweeps can still run the broad fixed-anchor path.
    - Scope: list every remembered imported source folder, include `All` for broad source sweep, include `New...` for native folder selection, and record successful source roots durably in `Owner.sqlite`.
@@ -54,75 +62,75 @@ Last updated: 2026-05-24
    - Validation/definition of done: existing selected-folder import still works, `All` triggers the broad automation-style sweep, `New...` records the chosen folder after a successful start, remembered folders persist across reloads, and the import matrix keeps the `v83.10` visible progress behavior.
    - Decisions still needed: whether remembered folders should be removable from the menu immediately or handled later through state-table browsing.
 
-2. **Review and tune buyer support/refund wording.**
+3. **Review and tune buyer support/refund wording.**
    - `v83.3` has conservative defaults; owner should approve or adjust commercial-use, delivery-refresh, and refund language before heavier launch traffic.
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft before editing public copy.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-3. **Approve and deploy the real price and offer strategy.**
+4. **Approve and deploy the real price and offer strategy.**
    - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`, especially the proposed `$3 / $8 / $28 / $65` camera ladder and lower AI ladder.
    - After approval, update `assets/catalog/product-pricing.json`, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
    - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
-4. **Curate the first sellable storefront.**
+5. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial sets first.
 
-5. **Add conversion analytics.**
+6. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-6. **Improve public discovery and SEO.**
+7. **Improve public discovery and SEO.**
    - `robots.txt` and `sitemap.xml` are in place.
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
 
-7. **Create marketing landing pages and launch outreach.**
+8. **Create marketing landing pages and launch outreach.**
    - Daily social-post automation is active; the 2026-05-23 Facebook Page post is published and verified, while Instagram and Pinterest still need final publish confirmation.
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
-8. **Owner decision pass for the current title/keyword queue.**
+9. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Pay special attention to the `84` rejected rows waiting for the next rework path and the `62` parked rows that need owner context.
 
-9. **Verify Owner-private artifact separation after deploy.**
+10. **Verify Owner-private artifact separation after deploy.**
    - Confirm public GitHub Pages no longer serves title/keyword batch or approval JSON.
    - Keep `Owner.sqlite` as the durable source of truth; treat title/keyword JSON as compatibility/audit output, not public source of truth.
 
-10. **Run the next generator pass after the current batch is resolved.**
+11. **Run the next generator pass after the current batch is resolved.**
    - Use the improved local keyword floor, larger subprocess buffer, and batch-summary preservation fix.
    - Compare keyword-target misses, `source_context`, and `needs_owner_context` counts against `2026-05-24-000237-818Z`.
 
-11. **Escalate thin ordinary title/keyword rows to stronger context.**
+12. **Escalate thin ordinary title/keyword rows to stronger context.**
    - Use vision/model passes for photos where source path and existing keywords are too thin.
    - Keep conservative titles and mark uncertainty instead of inventing landmarks.
 
-12. **Run a full Real Estate client lifecycle rehearsal.**
+13. **Run a full Real Estate client lifecycle rehearsal.**
    - Pick one client folder on Saturn, use discovered properties, import previews, publish context, run upload dry-run, and prepare the Worker secret.
    - Check local and public review URLs before any real upload.
 
-13. **Polish Real Estate production outputs and access.**
+14. **Polish Real Estate production outputs and access.**
    - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
    - Choose Worker/D1, Cloudflare Access, or another server-side gate for client auth.
 
-14. **Harden hidden/discarded lifecycle.**
+15. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-15. **Add Owner state-table browsing.**
+16. **Add Owner state-table browsing.**
    - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
 
-16. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+17. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-17. **Parameterize gallery routes and split gallery/catalog data by collection.**
+18. **Parameterize gallery routes and split gallery/catalog data by collection.**
    - Reduce first-load catalog weight only after measuring current SQLite fetch/decode and gallery scan costs.
 
-18. **Improve gallery merchandising layout.**
+19. **Improve gallery merchandising layout.**
    - Add curated collection ordering, stronger visual entry points, and buyer-friendly browse paths.
 
-19. **Add frontend smoke tests for buyer and client paths.**
+20. **Add frontend smoke tests for buyer and client paths.**
    - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
 
-20. **Keep physical products behind Owner review.**
+21. **Keep physical products behind Owner review.**
    - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
 
-21. **Keep repo and media cleanup deliberate.**
+22. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

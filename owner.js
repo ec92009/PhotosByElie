@@ -2146,7 +2146,6 @@
     add("Current file", details.currentFile);
     add("Current photo", details.currentPhoto);
     add("Scanner", details.scanner);
-    add("Already current before run", details.alreadyCurrent);
     add("Planner", details.planner);
     add("Worker pool", details.workerPool);
     add("Queue", details.queue);
@@ -2171,10 +2170,40 @@
     return parts.length ? parts.join(", ") : "no waiting photos";
   };
 
-  const importAlreadyCurrentText = (progress = {}) => {
-    const count = Math.max(0, Number(progress.alreadySelected || 0));
-    if (!count) return "";
-    return `${formatCount(count)} source photos were already current before this run and were not queued for reprocessing.`;
+  const importStatsTimeLeft = (progress = {}) => {
+    const value = String(progress.countdown || "").trim();
+    if (!value || value === "Estimating") return "Estimating";
+    if (value === "Scanner is still building the queue") return "Building queue";
+    return value;
+  };
+
+  const importStatsRows = (progress = {}) => {
+    const eligiblePhotosFound = Number(progress.alreadySelected || 0) + Number(progress.selected || 0);
+    const photosFound = eligiblePhotosFound || Number(progress.scannedFiles || 0);
+    const waiting = Math.max(0, Number(progress.queueDepth || 0));
+    const activeItems = Math.max(0, Number(progress.activeItemCount || 0));
+    return [
+      {
+        label: "Photos found",
+        value: formatCount(photosFound),
+        note: eligiblePhotosFound ? (progress.scanDone ? "eligible" : "eligible so far") : progress.scanDone ? "scan complete" : "scanning",
+      },
+      {
+        label: "Processed before",
+        value: formatCount(Math.max(0, Number(progress.alreadySelected || 0))),
+        note: "already current",
+      },
+      {
+        label: "Processed this run",
+        value: formatCount(Math.max(0, Number(progress.completed || 0))),
+        note: [activeItems ? `${formatCount(activeItems)} active` : "", waiting ? `${formatCount(waiting)} waiting` : ""].filter(Boolean).join(" / ") || "none waiting",
+      },
+      {
+        label: "Time left",
+        value: importStatsTimeLeft(progress),
+        note: progress.scanningForMore ? "current queue" : "estimate",
+      },
+    ];
   };
 
   const sourceImportProgressDetail = (progress, phaseKey = "camera") => {
@@ -2416,6 +2445,21 @@
     </div>
   `).join("");
 
+  const ownerImportStatsHtml = (rows = []) => {
+    if (!Array.isArray(rows) || !rows.length) return "";
+    return `
+      <dl class="owner-import-stats" aria-label="Import stats">
+        ${rows.map((row) => `
+          <div>
+            <dt>${escapeHtml(row.label)}</dt>
+            <dd>${escapeHtml(row.value)}</dd>
+            ${row.note ? `<span>${escapeHtml(row.note)}</span>` : ""}
+          </div>
+        `).join("")}
+      </dl>
+    `;
+  };
+
   const importMatrixStepComplete = (step = {}) => {
     if (step.status === "skipped") return false;
     if (step.status === "done") return true;
@@ -2604,7 +2648,7 @@
     return [...base, ...extra];
   };
 
-  const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map(), matrixRowsByPhase = new Map()) => {
+  const renderSweepPhases = (task, logSummary = null, detailRowsByPhase = new Map(), matrixRowsByPhase = new Map(), statsRowsByPhase = new Map()) => {
     if (!r2Phases) return;
     if (!task || !["repair", "gap-fill", "maintenance", "imports-idle"].includes(task.operation)) {
       r2PhaseRenderSnapshot = null;
@@ -2624,7 +2668,7 @@
       ? (taskPhaseKey || logPhaseKey || "prepare")
       : (logPhaseKey || taskPhaseKey || "prepare");
     const phaseList = visiblePhaseList(fullPhaseList, task, activeKey, active, failed, complete, logSummary, detailRowsByPhase, matrixRowsByPhase);
-    r2PhaseRenderSnapshot = { task, logSummary, detailRowsByPhase, matrixRowsByPhase };
+    r2PhaseRenderSnapshot = { task, logSummary, detailRowsByPhase, matrixRowsByPhase, statsRowsByPhase };
     if (!phaseList.length) {
       setHtml(r2Phases, "");
       return;
@@ -2635,7 +2679,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Already done", "Already current before run", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Worker pool", "Progress bar counts", "Progress summary", "Upload progress", "Photo rows", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Worker pool", "Progress bar counts", "Progress summary", "Upload progress", "Photo rows", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, phaseList.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -2655,15 +2699,17 @@
             : { percent: 0, detail: state === "skipped" ? "Unfinished" : "Waiting" };
       const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
       const matrixRows = matrixRowsByPhase instanceof Map ? (matrixRowsByPhase.get(phase.key) || []) : [];
+      const statsRows = statsRowsByPhase instanceof Map ? (statsRowsByPhase.get(phase.key) || []) : [];
       const hasProgressNote = Boolean(progress.detail && !genericProgressDetails.has(progress.detail));
-      const canExpand = (state === "done" || state === "failed" || state === "skipped") && (phaseRows.length || matrixRows.length || hasProgressNote);
+      const canExpand = (state === "done" || state === "failed" || state === "skipped") && (phaseRows.length || matrixRows.length || statsRows.length || hasProgressNote);
       const showPhaseDetails = state === "running" || (canExpand && expandedSweepPhaseKeys.has(phase.key));
+      const statsHtml = showPhaseDetails && statsRows.length ? ownerImportStatsHtml(statsRows) : "";
       const matrixHtml = showPhaseDetails && matrixRows.length ? importMatrixHtml(matrixRows, phase.key) : "";
       const hasMatrix = Boolean(matrixHtml);
       const detailHtml = showPhaseDetails && phaseRows.length
         ? `<dl class="owner-counts owner-sweep-details">${ownerCountRowsHtml(phaseRows, wideLabels)}</dl>`
         : "";
-      const progressNote = showPhaseDetails && hasProgressNote
+      const progressNote = showPhaseDetails && hasProgressNote && !statsHtml
         ? `<p class="owner-sweep-progress-note">${escapeHtml(progress.detail)}</p>`
         : "";
       const canSkipCurrent = state === "running" && SWEEP_SKIPPABLE_KEYS.has(phase.key);
@@ -2685,6 +2731,7 @@
               <span style="width:${progress.percent}%"></span>
             </div>
             ${progressNote}
+            ${statsHtml}
             ${matrixHtml}
             ${detailHtml}
           </div>
@@ -2754,9 +2801,13 @@
     }
     const detailRowsByPhase = new Map();
     const matrixRowsByPhase = new Map();
+    const statsRowsByPhase = new Map();
     const addPhaseRow = (phaseKey, label, value) => {
       if (!detailRowsByPhase.has(phaseKey)) detailRowsByPhase.set(phaseKey, []);
       detailRowsByPhase.get(phaseKey).push([label, value]);
+    };
+    const setPhaseStats = (phaseKey, rows) => {
+      if (phaseKey && Array.isArray(rows) && rows.length) statsRowsByPhase.set(phaseKey, rows);
     };
     let lastPhotoId = "";
     if (active && latest.external_pid) addPhaseRow(activePhaseKey, "Sweep PID", latest.external_pid);
@@ -2785,6 +2836,7 @@
       const sourceProgress = PHOTO_IMPORT_PHASES.has(matrixPhaseKey)
         ? sourceLaneProgress(matrixPhaseKey, logSummary, latest)
         : null;
+      if (sourceProgress) setPhaseStats(matrixPhaseKey, importStatsRows(sourceProgress));
       if (visibleMatrixRows.length) matrixRowsByPhase.set(matrixPhaseKey, logSummary.importPhotoRows);
       addPhaseRow(
         matrixPhaseKey,
@@ -2899,6 +2951,7 @@
     }
     if (logMatchesActivePhase && sourceLaneHasQueueProgress(logSummary) && !logSummary?.upload) {
       const progress = sourceLaneProgress(activePhaseKey, logSummary, latest);
+      if (PHOTO_IMPORT_PHASES.has(activePhaseKey)) setPhaseStats(activePhaseKey, importStatsRows(progress));
       if (progress.selected) {
         const gapSummary = coverageRepairGapSummary();
         const scanner = progress.scanDone
@@ -2912,29 +2965,22 @@
           coverageGaps: gapSummary,
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
           scanner,
-          alreadyCurrent: importAlreadyCurrentText(progress),
           planner,
           workerPool: progress.workers > 1 ? `${formatCount(progress.workers)} parallel render/upload workers` : "",
           queue,
-          progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
-          progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} queued photos processed this run`,
-          finishedSummary: `${formatCount(progress.completed)} synced, ${formatCount(progress.remaining)} left in the known queue`,
           notes: "Not found at the current expected R2 key; a file can still exist under an older or wrong-place key.",
         });
       } else {
         mergeSourceLaneDetails({
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
           scanner: `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`,
-          alreadyCurrent: importAlreadyCurrentText(progress),
           planner: progress.plannerActive || progress.planQueueDepth
             ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
             : "Planner is waiting for source batches.",
           workerPool: progress.workers > 1 ? `${formatCount(progress.workers)} parallel render/upload workers` : "",
           queue: "No needed photos queued yet.",
-          progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
         });
       }
-      if (active && progress.selected > progress.completed) mergeSourceLaneDetails({ timeLeft: progress.countdown });
       if (logSummary?.imported) {
         mergeSourceLaneDetails({
           uploadProgress: `${logSummary.imported.match[5]} private renders`,
@@ -2971,7 +3017,7 @@
     }
     if (!active) addPhaseRow(activePhaseKey, "Result", coverageIncomplete ? "coverage still missing" : failed ? `${failureCount || 1} failed` : "complete");
     if (!detailRowsByPhase.size) addPhaseRow(activePhaseKey, "State", latest.state || "queued");
-    renderSweepPhases(latest, logSummary, detailRowsByPhase, matrixRowsByPhase);
+    renderSweepPhases(latest, logSummary, detailRowsByPhase, matrixRowsByPhase, statsRowsByPhase);
     setHtml(r2Counts, "");
     renderR2PhotoPreview(lastPhotoId);
   };
@@ -2988,6 +3034,7 @@
       r2PhaseRenderSnapshot.logSummary,
       r2PhaseRenderSnapshot.detailRowsByPhase,
       r2PhaseRenderSnapshot.matrixRowsByPhase,
+      r2PhaseRenderSnapshot.statsRowsByPhase,
     );
   };
 

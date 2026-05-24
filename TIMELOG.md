@@ -83,8 +83,9 @@ Clock state: paused
 | 2026-05-24 | 14:30 CEST | 14:31 CEST | 0:01 | Reported inconsistent Owner import waiting counts during failed selected-folder rows; background implementation time excluded. |
 | 2026-05-24 | 14:42 CEST | 14:43 CEST | 0:01 | Requested Owner import prior-run skip counts and removal of the per-photo queue summary strip; background implementation time excluded. |
 | 2026-05-24 | 14:50 CEST | 14:51 CEST | 0:01 | Requested parallel import render/upload workers using half the machine CPUs by default; background implementation time excluded. |
+| 2026-05-24 | 15:08 CEST | 15:09 CEST | 0:01 | Requested the Owner import prose progress line be replaced by a four-tile stats panel; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 4:39
+Active collaboration time used: 4:40
 Remaining budget: not set

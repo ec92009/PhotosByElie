@@ -326,9 +326,9 @@ renders/<photo-id>_1mp.jpg
 
 using R2's S3-compatible `CopyObject`, then verifies the destination with `HEAD`. It keeps old keys unless `--delete-old` is explicitly supplied. Do not use `--delete-old` until checkout/Worker delivery and manifests no longer reference the old keys.
 
-The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports Camera, Apple Photos, Leonardo, and configured Real Estate sources from Saturn, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
+The wrapper sources `~/.zshrc`, pulls latest `main`, deletes discarded media from R2, imports selected media, regenerates catalogs/sidecars, backfills missing private render triplets, validates, commits, and pushes. In automation mode it still imports the fixed Camera, Apple Photos, Leonardo, and configured Real Estate Saturn sources. In Owner UI mode, Start Import opens a local folder chooser and passes that folder to the wrapper as `--source-root`, so only that selected folder is scanned. It uses `.review-logs/cloud-media-sweep.lock`; a scheduled automation will exit if a manual sweep is still active.
 
-The Owner dashboard Fix it button starts this same wrapper through the local helper server when the tracked R2 coverage counts do not match policy.
+The Owner dashboard Start Import button starts this same wrapper through the local helper server after the owner chooses a folder.
 
 The stricter master-chain repair checks live R2 rather than cached manifests. It lists private masters first, derives the allowed private render triplets and public previews, restores missing catalog masters from Saturn/local source roots before cleanup, regenerates missing private render triplets, removes derivative ghosts only when `--prune` is set, and rewrites the private-delivery/public-preview inventory manifests when `--repair`, `--prune`, or `--write-manifests` is used:
 

@@ -8,6 +8,8 @@ IMPORT_CACHE_ROOT="${PBE_IMPORT_CACHE_ROOT:-tmp/import-cache}"
 PUSH=0
 SKIP_PHASES=()
 SKIPPED_PHASES=()
+SELECTED_IMPORT_SOURCE_ROOT=""
+SELECTED_IMPORT_SELECT="all"
 
 append_skip_phase() {
   local key="$1"
@@ -34,11 +36,38 @@ while [[ $# -gt 0 ]]; do
       append_skip_phase "${1#--skip-phase=}"
       shift
       ;;
+    --source-root)
+      shift
+      [[ $# -gt 0 ]] && SELECTED_IMPORT_SOURCE_ROOT="$1"
+      shift || true
+      ;;
+    --source-root=*)
+      SELECTED_IMPORT_SOURCE_ROOT="${1#--source-root=}"
+      shift
+      ;;
+    --source-select)
+      shift
+      [[ $# -gt 0 ]] && SELECTED_IMPORT_SELECT="$1"
+      shift || true
+      ;;
+    --source-select=*)
+      SELECTED_IMPORT_SELECT="${1#--source-select=}"
+      shift
+      ;;
     *)
       shift
       ;;
   esac
 done
+
+case "$SELECTED_IMPORT_SELECT" in
+  all|lightroom)
+    ;;
+  *)
+    echo "Unsupported import source selection mode: $SELECTED_IMPORT_SELECT"
+    exit 2
+    ;;
+esac
 
 if [[ -n "${PBE_SWEEP_SKIP_PHASES:-}" ]]; then
   for key in ${(s:,:)PBE_SWEEP_SKIP_PHASES}; do
@@ -178,7 +207,7 @@ catalog_source_phase_was_skipped() {
   local key
   for key in "${SKIPPED_PHASES[@]}"; do
     case "$key" in
-      camera|apple-photo-albums|leonardo|real-estate)
+      camera|apple-photo-albums|leonardo|real-estate|selected-folder)
         return 0
         ;;
     esac
@@ -219,41 +248,62 @@ phase import-cache "Prepare import cache"
 mkdir -p "$IMPORT_CACHE_ROOT"
 done_phase import-cache
 
-run_skippable_phase camera "Import Camera sources" \
-  python3 scripts/build_lightroom_thumbnails.py \
-  --source-root /Volumes/Saturn/Pictures/LR/Camera \
-  --output-root "$IMPORT_CACHE_ROOT" \
-  --r2-upload both \
-  --r2-private-renders \
-  --hidden-blacklist assets/hidden/hidden-blacklist.json \
-  --discarded-tombstone assets/discarded/discarded-photo-ids.json
-
-APPLE_PHOTO_ALBUMS_ROOT="/Volumes/Saturn/Pictures/LR/Apple Photo Albums"
-if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
-  run_skippable_phase apple-photo-albums "Import Apple Photos album sources" \
+if [[ -n "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
+  if [[ ! -d "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
+    echo "Selected import source folder does not exist: $SELECTED_IMPORT_SOURCE_ROOT"
+    exit 2
+  fi
+  selected_import_args=(
     python3 scripts/build_lightroom_thumbnails.py \
-    --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
+    --source-root "$SELECTED_IMPORT_SOURCE_ROOT" \
     --output-root "$IMPORT_CACHE_ROOT" \
-    --select all \
+    --select "$SELECTED_IMPORT_SELECT" \
     --r2-upload both \
     --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
+  )
+  if [[ "${(L)SELECTED_IMPORT_SOURCE_ROOT}" == *leonardo* ]]; then
+    selected_import_args+=(--force-country ai)
+  fi
+  run_skippable_phase selected-folder "Import selected folder" "${selected_import_args[@]}"
+else
+  run_skippable_phase camera "Import Camera sources" \
+    python3 scripts/build_lightroom_thumbnails.py \
+    --source-root /Volumes/Saturn/Pictures/LR/Camera \
+    --output-root "$IMPORT_CACHE_ROOT" \
+    --r2-upload both \
+    --r2-private-renders \
+    --hidden-blacklist assets/hidden/hidden-blacklist.json \
+    --discarded-tombstone assets/discarded/discarded-photo-ids.json
+
+  APPLE_PHOTO_ALBUMS_ROOT="/Volumes/Saturn/Pictures/LR/Apple Photo Albums"
+  if [[ -d "$APPLE_PHOTO_ALBUMS_ROOT" ]]; then
+    run_skippable_phase apple-photo-albums "Import Apple Photos album sources" \
+      python3 scripts/build_lightroom_thumbnails.py \
+      --source-root "$APPLE_PHOTO_ALBUMS_ROOT" \
+      --output-root "$IMPORT_CACHE_ROOT" \
+      --select all \
+      --r2-upload both \
+      --r2-private-renders \
+      --hidden-blacklist assets/hidden/hidden-blacklist.json \
+      --discarded-tombstone assets/discarded/discarded-photo-ids.json
+  fi
+
+  run_skippable_phase leonardo "Import Leonardo sources" \
+    python3 scripts/build_lightroom_thumbnails.py \
+    --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
+    --output-root "$IMPORT_CACHE_ROOT" \
+    --select all \
+    --force-country ai \
+    --r2-upload both \
+    --r2-private-renders \
+    --hidden-blacklist assets/hidden/hidden-blacklist.json \
+    --discarded-tombstone assets/discarded/discarded-photo-ids.json
+
+  run_skippable_phase real-estate "Import Real Estate sources" \
+    python3 scripts/sync_real_estate_clients.py --publish --upload --scope both
 fi
-
-run_skippable_phase leonardo "Import Leonardo sources" \
-  python3 scripts/build_lightroom_thumbnails.py \
-  --source-root "/Volumes/Saturn/Pictures/LR/_All Leonardo" \
-  --output-root "$IMPORT_CACHE_ROOT" \
-  --select all \
-  --force-country ai \
-  --r2-upload both \
-  --r2-private-renders \
-  --hidden-blacklist assets/hidden/hidden-blacklist.json \
-  --discarded-tombstone assets/discarded/discarded-photo-ids.json
-
-run_skippable_phase real-estate "Import Real Estate sources" \
-  python3 scripts/sync_real_estate_clients.py --publish --upload --scope both
 
 abort_if_catalog_sources_incomplete
 

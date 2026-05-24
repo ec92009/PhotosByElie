@@ -171,12 +171,14 @@
   };
 
   const PHOTO_IMPORT_PHASES = new Map([
+    ["selected-folder", "Selected folder"],
     ["camera", "Camera"],
     ["apple-photo-albums", "Apple Photos"],
     ["leonardo", "AI"],
     ["real-estate", "RE"],
   ]);
-  const IMPORT_DASHBOARD_PHASE_KEYS = ["camera", "apple-photo-albums", "leonardo", "real-estate"];
+  const SELECTED_IMPORT_DASHBOARD_PHASE_KEYS = ["selected-folder"];
+  const FIXED_IMPORT_DASHBOARD_PHASE_KEYS = ["camera", "apple-photo-albums", "leonardo", "real-estate"];
   const IMPORT_MATRIX_STEPS = [
     ["master_uploaded", "Master"],
     ["triplets_created", "Triplets made"],
@@ -190,6 +192,7 @@
     ["prepare", "Prepare workspace"],
     ["discard-start", "Double-check banned R2 cleanup"],
     ["import-cache", "Prepare import cache"],
+    ["selected-folder", "Import selected folder"],
     ["camera", "Import Camera sources"],
     ["apple-photo-albums", "Import Apple Photos"],
     ["leonardo", "Import AI sources"],
@@ -208,6 +211,7 @@
   ].map(([key, label, options]) => ({ key, label, ...(options || {}) }));
   const SWEEP_SKIPPABLE_KEYS = new Set([
     "discard-start",
+    "selected-folder",
     "camera",
     "apple-photo-albums",
     "leonardo",
@@ -1576,7 +1580,7 @@
 
   const r2GapStatusText = () => {
     if (!window.photosByElieR2Coverage) return "Coverage is still loading.";
-    if (r2CoverageOk) return "Current catalog coverage is up to date; Start Imports still scans source anchors for new files.";
+    if (r2CoverageOk) return "Current catalog coverage is up to date; Start Import opens a folder chooser for new files.";
     const gaps = r2GapCounts();
     if (gaps.photos) {
       return `${formatCount(gaps.photos)} incomplete photos: ${formatCount(gaps.masters)} need masters, ${formatCount(gaps.triplets)} need private JPG triplets, ${formatCount(gaps.previews)} need public previews.`;
@@ -1591,8 +1595,8 @@
       r2FixButton.disabled = busy;
       r2FixButton.textContent = busy
         ? "Imports running"
-        : "Start Imports";
-      r2FixButton.title = "Scan Camera, Apple Photos, Leonardo, and Real Estate import anchors";
+        : "Start Import";
+      r2FixButton.title = "Choose one local source folder to import";
     }
     const gapCount = r2GapPhotoCount();
     r2FillGapsButtons.forEach((button) => {
@@ -2427,9 +2431,15 @@
   const phaseListForTask = (task) => {
     if (task?.operation === "gap-fill") return SWEEP_PHASES.filter((phase) => phase.key === "gap-fill");
     if (task?.operation === "imports-idle") {
-      return SWEEP_PHASES.filter((phase) => IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key));
+      return SWEEP_PHASES.filter((phase) => SELECTED_IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key));
     }
-    return SWEEP_PHASES.filter((phase) => phase.key !== "private" || task?.currentPhaseKey === "private");
+    const selectedFolderSweep = Boolean(String(task?.sourceRoot || "").trim())
+      || normalizeSweepPhaseKey(task?.currentPhaseKey || "") === "selected-folder";
+    return SWEEP_PHASES.filter((phase) => {
+      if (phase.key === "private" && task?.currentPhaseKey !== "private") return false;
+      if (selectedFolderSweep) return !FIXED_IMPORT_DASHBOARD_PHASE_KEYS.includes(phase.key);
+      return phase.key !== "selected-folder";
+    });
   };
 
   const phaseLabelForKey = (phaseKey, task = null) => (
@@ -2585,7 +2595,7 @@
       if (skippedSourceLanes.length) {
         addPhaseRow("catalog", "Unfinished source lanes", skippedSourceLanes.map((key) => importSourceLabel(key)).join(", "));
       }
-      addPhaseRow("catalog", "What happens", "Start Imports refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
+      addPhaseRow("catalog", "What happens", "Start Import refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
     }
     if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
       const visibleMatrixInfo = importMatrixVisibleInfo(logSummary.importPhotoRows);
@@ -2835,7 +2845,7 @@
     if (!r2Card || !r2Summary || !r2Counts) return;
     if (r2Card.hidden) r2Card.hidden = false;
     setText(r2Summary, r2CoverageOk
-        ? "No import job is running. Current catalog coverage is up to date; Start Imports still scans every source anchor for new files."
+        ? "No import job is running. Current catalog coverage is up to date; Start Import will ask for one local source folder."
         : `No import job is running. Not up to date yet: ${r2GapStatusText()}`
     );
     const gaps = r2GapCounts();
@@ -2845,14 +2855,14 @@
       ["Source scan", "Not running"],
       ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
       ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
-      ["Import anchors", "Camera, Apple Photos, Leonardo, Real Estate"],
+      ["Import source", "Choose folder when starting"],
     ];
-    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Import anchors"])));
+    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Import source"])));
     renderSweepPhases({
       id: "imports-idle",
       operation: "imports-idle",
       state: "idle",
-      currentPhaseKey: "camera",
+      currentPhaseKey: "selected-folder",
       failed: 0,
     });
     renderR2PhotoPreview("");
@@ -3099,7 +3109,7 @@
         ${importMatrixHtml(missingImportPhotos, "gap-fill")}
       ` : missingPrivateDelivery.length ? `
           <h3>Missing private delivery files</h3>
-          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Imports runs the Saturn-backed sweep, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
+          <p>${escapeHtml(formatCount(missingPrivateDelivery.length))} shown. Start Import asks for a local source folder, uploads missing masters when the source file exists, and rebuilds missing photo JPG triplets.</p>
           <div class="owner-coverage-missing-list">
             ${missingPrivateDelivery.slice(0, 12).map((item) => `
               <div class="owner-coverage-missing-row">
@@ -3368,26 +3378,60 @@
     }
   });
 
+  const chooseImportFolder = async () => {
+    const response = await fetch("/__photosbyelie/select-import-folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not choose an import folder.");
+    if (payload.cancelled) return null;
+    const path = String(payload.path || "").trim();
+    if (!path) throw new Error("No import folder was selected.");
+    return {
+      path,
+      name: String(payload.name || "").trim() || path.split(/[\\/]/).filter(Boolean).at(-1) || path,
+    };
+  };
+
   r2FixButton?.addEventListener("click", async () => {
-    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to scan import sources.");
+    const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to scan an import folder.");
     if (ownerAuth?.enabled && !authorized) return;
     if (!window.photosByElieR2Coverage) {
       setStatus("Loading current catalog coverage before starting imports...");
       await loadR2Coverage();
     }
-    const ok = window.confirm("Start the full lock-guarded import sweep now? This scans the Camera, Apple Photos, Leonardo, and Real Estate source anchors for new files, then renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.");
+    setStatus("Choose the folder to import...");
+    let selectedFolder = null;
+    try {
+      selectedFolder = await chooseImportFolder();
+    } catch (error) {
+      setStatus(error?.message || "Could not choose an import folder.");
+      return;
+    }
+    if (!selectedFolder) {
+      setStatus("Import cancelled before choosing a folder.");
+      return;
+    }
+    const ok = window.confirm(`Start the lock-guarded import from "${selectedFolder.name}" now?\n\nThe sweep scans only this selected folder, imports all developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`);
     if (!ok) return;
     r2FixButton.disabled = true;
-    setStatus("Starting full import source scan...");
+    setStatus(`Starting import from ${selectedFolder.name}...`);
     try {
       const response = await fetch("/__photosbyelie/r2-fix", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceRoot: selectedFolder.path,
+          sourceSelect: "all",
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start imports.");
       r2RepairActive = true;
       syncR2ActionButtons();
-      setStatus("Import source scan started.");
+      setStatus(`Import started from ${selectedFolder.name}.`);
       setOwnerTab("imports");
       renderR2Progress([payload.task]);
       loadR2Progress();

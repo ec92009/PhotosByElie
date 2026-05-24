@@ -33,6 +33,7 @@ R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
 R2_FILL_GAPS_PATH = "/__photosbyelie/r2-fill-gaps"
 R2_SKIP_PHASE_PATH = "/__photosbyelie/r2-skip-phase"
+SELECT_IMPORT_FOLDER_PATH = "/__photosbyelie/select-import-folder"
 IMPORT_SOURCE_THUMB_PATH = "/__photosbyelie/import-source-thumb"
 REAL_ESTATE_OWNER_PATH = "/__photosbyelie/real-estate-owner"
 REAL_ESTATE_IMPORT_PROGRESS_PATH = "/__photosbyelie/real-estate-import-progress"
@@ -70,6 +71,7 @@ R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
 R2_SWEEP_SKIPPABLE_PHASES = {
     "discard-start",
+    "selected-folder",
     "camera",
     "apple-photo-albums",
     "leonardo",
@@ -210,6 +212,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == R2_SKIP_PHASE_PATH:
             self._handle_r2_skip_phase()
             return
+        if path == SELECT_IMPORT_FOLDER_PATH:
+            self._handle_select_import_folder()
+            return
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
             return
@@ -300,11 +305,27 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_optional_json_body()
             skip_phases = _normalize_r2_sweep_skip_phases(payload.get("skipPhases"))
+            source_root = _normalize_import_source_root(payload.get("sourceRoot"))
+            source_select = _normalize_import_select(payload.get("sourceSelect"))
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
-        task = _start_cloud_media_sweep(Path.cwd(), skip_phases)
+        task = _start_cloud_media_sweep(Path.cwd(), skip_phases, source_root=source_root, source_select=source_select)
         self._send_json(HTTPStatus.OK, {"ok": True, "task": task})
+
+    def _handle_select_import_folder(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            folder = _select_import_folder()
+        except OSError as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        if not folder:
+            self._send_json(HTTPStatus.OK, {"ok": True, "cancelled": True})
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "path": str(folder), "name": folder.name or str(folder)})
 
     def _handle_r2_fill_gaps(self) -> None:
         if not self._is_loopback_request():
@@ -2303,6 +2324,14 @@ def _record_r2_item_lifecycle(item: UploadItem, lifecycle_state: str, source: st
 def _import_source_allowed_roots() -> list[Path]:
     roots = [root for root in IMPORT_SOURCE_ROOTS.values()]
     roots.extend(SOURCE_ROOT_CANDIDATES)
+    manifest = _read_json_file(Path.cwd() / "tmp/import-cache/manifest.json", {})
+    if isinstance(manifest, dict) and manifest.get("source_root_hint"):
+        roots.append(Path(str(manifest["source_root_hint"])))
+    with R2_BACKGROUND_LOCK:
+        for task in R2_BACKGROUND_TASKS.values():
+            source_root = task.get("sourceRoot")
+            if source_root:
+                roots.append(Path(str(source_root)))
     return roots
 
 
@@ -2449,6 +2478,53 @@ def _normalize_r2_sweep_skip_phases(value: object) -> list[str]:
         seen.add(key)
         result.append(key)
     return result
+
+
+def _normalize_import_source_root(value: object) -> Path | None:
+    if value is None:
+        return None
+    source = str(value or "").strip()
+    if not source:
+        return None
+    path = Path(source).expanduser().resolve()
+    if not path.is_dir():
+        raise ValueError(f"import source folder not found: {path}")
+    return path
+
+
+def _normalize_import_select(value: object) -> str:
+    mode = str(value or "all").strip().lower()
+    if mode not in {"all", "lightroom"}:
+        raise ValueError("sourceSelect must be all or lightroom")
+    return mode
+
+
+def _select_import_folder() -> Path | None:
+    osascript = shutil.which("osascript")
+    if not osascript:
+        raise OSError("macOS folder selection is unavailable: osascript was not found")
+    result = subprocess.run(
+        [
+            osascript,
+            "-e",
+            'POSIX path of (choose folder with prompt "Select the Photos By Elie import folder")',
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = (result.stderr or result.stdout or "").strip()
+        if "User canceled" in message or "-128" in message:
+            return None
+        raise OSError(message or f"folder selection failed with exit code {result.returncode}")
+    selected = result.stdout.strip()
+    if not selected:
+        return None
+    path = Path(selected).expanduser().resolve()
+    if not path.is_dir():
+        raise OSError(f"selected import folder is not readable: {path}")
+    return path
 
 
 def _read_cloud_media_sweep_skip_phases(repo_root: Path) -> list[str]:
@@ -2935,12 +3011,32 @@ def _r2_coverage_summary(
     }
 
 
-def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path, skip_phases: list[str]) -> None:
-    _update_r2_task(task_id, state="running", started_at=datetime.now(timezone.utc).isoformat())
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+def _cloud_media_sweep_command(source_root: Path | None, source_select: str, skip_phases: list[str]) -> list[str]:
     command = ["zsh", "scripts/run_cloud_media_sweep.zsh", "--push"]
+    if source_root:
+        command.extend(["--source-root", str(source_root), "--source-select", source_select])
     for phase_key in skip_phases:
         command.extend(["--skip-phase", phase_key])
+    return command
+
+
+def _run_cloud_media_sweep_task(
+    task_id: str,
+    repo_root: Path,
+    log_path: Path,
+    skip_phases: list[str],
+    source_root: Path | None,
+    source_select: str,
+) -> None:
+    current_phase = "selected-folder" if source_root else None
+    _update_r2_task(
+        task_id,
+        state="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        **({"currentPhaseKey": current_phase} if current_phase else {}),
+    )
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    command = _cloud_media_sweep_command(source_root, source_select, skip_phases)
     with log_path.open("ab") as log:
         process = subprocess.run(command, cwd=repo_root, stdout=log, stderr=subprocess.STDOUT)
     coverage = _r2_coverage_summary(repo_root, resolve_sources=False, private_missing_limit=0, import_missing_limit=0)
@@ -2967,7 +3063,13 @@ def _run_cloud_media_sweep_task(task_id: str, repo_root: Path, log_path: Path, s
         task["updated_at"] = task["completed_at"]
 
 
-def _start_cloud_media_sweep(repo_root: Path, skip_phases: list[str] | None = None) -> dict:
+def _start_cloud_media_sweep(
+    repo_root: Path,
+    skip_phases: list[str] | None = None,
+    *,
+    source_root: Path | None = None,
+    source_select: str = "all",
+) -> dict:
     external = _external_cloud_media_sweep_task(repo_root)
     if external:
         return external
@@ -2987,9 +3089,7 @@ def _start_cloud_media_sweep(repo_root: Path, skip_phases: list[str] | None = No
     task_id = uuid.uuid4().hex
     queued_at = datetime.now(timezone.utc).isoformat()
     log_path = repo_root / ".review-logs" / f"owner-r2-fix-{task_id}.log"
-    command = ["zsh", "scripts/run_cloud_media_sweep.zsh", "--push"]
-    for phase_key in skip_phases:
-        command.extend(["--skip-phase", phase_key])
+    command = _cloud_media_sweep_command(source_root, source_select, skip_phases)
     task = {
         "id": task_id,
         "kind": "cloud-media-sweep",
@@ -3006,13 +3106,20 @@ def _start_cloud_media_sweep(repo_root: Path, skip_phases: list[str] | None = No
         "bytes_total": 0,
         "bytes_done": 0,
         "skipPhases": skip_phases,
+        "sourceRoot": str(source_root) if source_root else "",
+        "sourceSelect": source_select,
+        "currentPhaseKey": "selected-folder" if source_root else None,
         "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],
         "log": str(log_path),
     }
     with R2_BACKGROUND_LOCK:
         R2_BACKGROUND_TASKS[task_id] = task
-    worker = threading.Thread(target=_run_cloud_media_sweep_task, args=(task_id, repo_root, log_path, skip_phases), daemon=True)
+    worker = threading.Thread(
+        target=_run_cloud_media_sweep_task,
+        args=(task_id, repo_root, log_path, skip_phases, source_root, source_select),
+        daemon=True,
+    )
     worker.start()
     return dict(task)
 

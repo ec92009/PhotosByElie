@@ -2062,23 +2062,29 @@
     const selectedFromScan = numberFromLog(logSummary?.scan?.match?.[3]);
     const queued = Number(scanPayload.queued ?? queuePayload.queued ?? 0);
     const processed = Number(queuePayload.processed ?? scanPayload.processed ?? 0);
-    const activeItemCount = Number(queuePayload.active ?? scanPayload.active ?? (runningRow ? 1 : 0));
-    const queueDepth = Number(queuePayload.queueDepth ?? scanPayload.queueDepth ?? Math.max(0, queued - processed - activeItemCount));
+    const rawActiveItemCount = Math.max(0, Number(queuePayload.active ?? scanPayload.active ?? (runningRow ? 1 : 0)));
+    const rawQueueDepth = Math.max(0, Number(queuePayload.queueDepth ?? scanPayload.queueDepth ?? Math.max(0, queued - processed - rawActiveItemCount)));
     const planQueueDepth = Number(queuePayload.planQueueDepth ?? scanPayload.planQueueDepth ?? 0);
     const plannerActive = Number(queuePayload.plannerActive ?? scanPayload.plannerActive ?? 0);
     const alreadySelected = Number(scanPayload.alreadySelected ?? queuePayload.alreadySelected ?? 0);
     const scannedFiles = Number(scanPayload.seen ?? queuePayload.seen ?? numberFromLog(logSummary?.scan?.match?.[1]) ?? 0);
     const inspectedFiles = Number(scanPayload.inspected ?? queuePayload.inspected ?? numberFromLog(logSummary?.scan?.match?.[2]) ?? 0);
     const scanDone = Boolean(logSummary?.importScanDonePayload);
-    const selected = Math.max(queued, processed + queueDepth + activeItemCount, selectedFromScan, rows.length);
+    const selected = Math.max(queued, processed + rawQueueDepth + rawActiveItemCount, selectedFromScan, rows.length);
     const completed = Math.max(rows.length ? finishedRows : 0, processed, numberFromLog(logSummary?.imported?.match?.[1]));
+    const activeItemCount = selected
+      ? Math.min(rawActiveItemCount, Math.max(0, selected - completed))
+      : rawActiveItemCount;
+    const queueDepth = selected
+      ? Math.max(0, selected - completed - activeItemCount)
+      : rawQueueDepth;
     const startedIndex = rows.length
       ? completed + (runningRow ? 1 : 0)
       : numberFromLog(logSummary?.started?.match?.[1]);
     const current = Math.max(completed + (activeItemCount ? 1 : 0), startedIndex);
     const active = task?.state === "queued" || task?.state === "running";
     const scanningForMore = Boolean(active && (hasQueueEvents ? !scanDone : selected && completed >= selected));
-    const scanDraining = Boolean(active && scanDone && queueDepth > 0);
+    const scanDraining = Boolean(active && scanDone && (queueDepth > 0 || activeItemCount > 0));
     const elapsedSeconds = secondsSinceIso(task?.started_at || task?.queued_at || "");
     const secondsLeft = completed >= 5 && selected > completed && elapsedSeconds > 0
       ? ((selected - completed) / completed) * elapsedSeconds
@@ -2099,6 +2105,7 @@
       found: rows.length,
       queued,
       queueDepth,
+      rawQueueDepth,
       planQueueDepth,
       plannerActive,
       alreadySelected,
@@ -2150,6 +2157,16 @@
     return rows;
   };
 
+  const importQueueStatusText = (progress = {}) => {
+    const waiting = Math.max(0, Number(progress.queueDepth || 0));
+    const activeItems = Math.max(0, Number(progress.activeItemCount || 0));
+    const parts = [
+      waiting ? `${formatCount(waiting)} waiting` : "",
+      activeItems ? `${formatCount(activeItems)} active` : "",
+    ].filter(Boolean);
+    return parts.length ? parts.join(", ") : "no waiting photos";
+  };
+
   const sourceImportProgressDetail = (progress, phaseKey = "camera") => {
     const sourceLabel = importSourceLabel(phaseKey);
     const gapSummary = coverageRepairGapSummary();
@@ -2168,14 +2185,14 @@
       : `rough time left ${progress.countdown}`;
     if (progress.scanningForMore) {
       const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
-      const queue = `${formatCount(progress.queueDepth)} waiting to render/upload`;
+      const queue = importQueueStatusText(progress);
       const planner = progress.plannerActive || progress.planQueueDepth
         ? ` Planner has ${formatCount(progress.planQueueDepth)} scan batches waiting.`
         : "";
       return `${sourceLabel} queue: ${completed} / ${selected} photos processed, ${queue}; scanner is still adding any newly discovered work.${inspected}${planner}`;
     }
     if (progress.scanDraining) {
-      return `${sourceLabel} scan is complete; draining the queue oldest-first: ${completed} / ${selected} photos processed, ${formatCount(progress.queueDepth)} waiting; ${timeLeft}.`;
+      return `${sourceLabel} scan is complete; draining the queue oldest-first: ${completed} / ${selected} photos processed, ${importQueueStatusText(progress)}; ${timeLeft}.`;
     }
     if (progress.completed >= progress.selected) {
       return `${sourceLabel} queue finished: ${completed} / ${selected} photos processed for the current expected R2 keys; ${timeLeft}.`;
@@ -2306,10 +2323,10 @@
     }
     if (progress.scanningForMore) {
       const inspected = progress.inspectedFiles ? ` ${formatCount(progress.inspectedFiles)} source files inspected so far.` : "";
-      return `${sourceLabel} queue: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed so far, ${formatCount(progress.queueDepth)} waiting; scanner is still looking for more work.${inspected}`;
+      return `${sourceLabel} queue: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed so far, ${importQueueStatusText(progress)}; scanner is still looking for more work.${inspected}`;
     }
     if (progress.scanDraining) {
-      return `${sourceLabel} scan complete; queue drain: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed, ${formatCount(progress.queueDepth)} waiting.`;
+      return `${sourceLabel} scan complete; queue drain: ${formatCount(progress.completed)} / ${formatCount(progress.selected)} photos processed, ${importQueueStatusText(progress)}.`;
     }
     const current = Math.min(Math.max(Number(progress.current || 0), Number(progress.completed || 0)), Number(progress.selected || 0));
     return `${sourceLabel} queue: ${formatCount(current)} / ${formatCount(progress.selected)} photos processed; ${formatCount(progress.completed)} finished.`;
@@ -2888,7 +2905,7 @@
         const planner = progress.plannerActive || progress.planQueueDepth
           ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
           : "Planner is caught up.";
-        const queue = `${formatCount(progress.completed)} processed, ${formatCount(progress.queueDepth)} waiting${progress.activeItemCount ? ", 1 active" : ""}, ${formatCount(progress.selected)} queued so far.`;
+        const queue = `${formatCount(progress.completed)} processed, ${importQueueStatusText(progress)}, ${formatCount(progress.selected)} queued so far.`;
         mergeSourceLaneDetails({
           coverageGaps: gapSummary,
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",

@@ -1,35 +1,35 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-24T14:59:10.805Z",
+  "updatedAt": "2026-05-24T15:27:58.073Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
   },
   "catalog": {
-    "photos": 2310,
-    "sourceBytes": 33105475252
+    "photos": 2415,
+    "sourceBytes": 33697843969
   },
   "current": {
-    "publicPreviewObjects": 23795,
-    "publicPreviewBytes": 7340463280,
+    "publicPreviewObjects": 24013,
+    "publicPreviewBytes": 7407482101,
     "privateMasterObjects": 12688,
     "privateMasterBytes": 200237875755,
     "privateRenderObjects": 37537,
     "privateRenderBytes": 32432251146,
-    "totalBytes": 240010590181
+    "totalBytes": 240077609002
   },
   "blocked": {
     "photoIds": 4476,
     "publicPreviewObjects": 22245,
-    "publicPreviewBytesEstimate": 6862307445,
+    "publicPreviewBytesEstimate": 6862093005,
     "privateMasterObjects": 126,
     "privateMasterBytes": 0,
     "privateRenderObjects": 294,
     "privateRenderBytesEstimate": 254018218,
-    "totalBytesEstimate": 7116325663
+    "totalBytesEstimate": 7116111223
   },
   "noCleanup": {
-    "totalBytesEstimate": 247126915844
+    "totalBytesEstimate": 247193720225
   },
   "pricing": {
     "provider": "Cloudflare R2 Standard storage",
@@ -56,25 +56,25 @@
     ]
   },
   "cost": {
-    "currentMonthlyUsd": 3.6002,
-    "currentMonthlyUsdAfterFreeTier": 3.4502,
-    "noCleanupMonthlyUsdEstimate": 3.7069,
-    "noCleanupMonthlyUsdEstimateAfterFreeTier": 3.5569,
+    "currentMonthlyUsd": 3.6012,
+    "currentMonthlyUsdAfterFreeTier": 3.4512,
+    "noCleanupMonthlyUsdEstimate": 3.7079,
+    "noCleanupMonthlyUsdEstimateAfterFreeTier": 3.5579,
     "avoidedMonthlyUsdEstimate": 0.1067
   },
   "billing": {
-    "generatedAt": "2026-05-24T14:59:10.772Z",
+    "generatedAt": "2026-05-24T15:27:58.043Z",
     "month": "May 2026",
     "nextMonth": "Jun 2026",
-    "elapsedMonthRatio": 0.764767,
+    "elapsedMonthRatio": 0.765411,
     "measuredStorageOnly": {
-      "consumedMonthToDateUsd": 2.6386,
-      "expectedThisMonthUsd": 3.4502,
-      "expectedNextMonthUsdAtCurrentRate": 3.4502
+      "consumedMonthToDateUsd": 2.6416,
+      "expectedThisMonthUsd": 3.4512,
+      "expectedNextMonthUsdAtCurrentRate": 3.4512
     },
     "withWorkersPaidBaseIfEnabled": {
-      "expectedThisMonthUsd": 8.4502,
-      "expectedNextMonthUsdAtCurrentRate": 8.4502
+      "expectedThisMonthUsd": 8.4512,
+      "expectedNextMonthUsdAtCurrentRate": 8.4512
     },
     "unmeasuredLineItems": [
       "R2 Class A/Class B operations",

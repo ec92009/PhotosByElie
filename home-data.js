@@ -4,9 +4,24 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 269,
+    "count": 315,
     "href": "./gallery.html?gallery=france",
     "photos": [
+      {
+        "id": "img-6236-bc42218145",
+        "title": "IMG 6236",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-6236-bc42218145_900.jpg",
+            "detailKey": "expo/img-6236-bc42218145_1800.jpg"
+          }
+        }
+      },
       {
         "id": "img-6236-5c34056e1e",
         "title": "IMG 6236",
@@ -38,8 +53,8 @@ window.photosByElieHomeData = {
         }
       },
       {
-        "id": "img-6234-07e82ae534",
-        "title": "IMG 6234",
+        "id": "img-6235-1d89dce3af",
+        "title": "IMG 6235",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -47,23 +62,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/img-6234-07e82ae534_900.jpg",
-            "detailKey": "expo/img-6234-07e82ae534_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-6233-04aa884861",
-        "title": "IMG 6233",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-6233-04aa884861_900.jpg",
-            "detailKey": "expo/img-6233-04aa884861_1800.jpg"
+            "galleryKey": "expo/img-6235-1d89dce3af_900.jpg",
+            "detailKey": "expo/img-6235-1d89dce3af_1800.jpg"
           }
         }
       }
@@ -254,7 +254,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 1249,
+    "count": 2106,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {

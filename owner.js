@@ -2049,7 +2049,9 @@
 
   const sourceImportProgress = (logSummary, task = null) => {
     const rows = Array.isArray(logSummary?.importPhotoRows) ? logSummary.importPhotoRows : [];
-    const finishedRows = rows.filter((row) => row.status === "done" || row.status === "error").length;
+    const succeededRows = rows.filter((row) => row.status === "done").length;
+    const failedRows = rows.filter((row) => row.status === "error").length;
+    const finishedRows = succeededRows + failedRows;
     const runningRow = rows.find((row) => row.status !== "done" && row.status !== "error") || null;
     const scanPayload = logSummary?.importScanDonePayload || logSummary?.importScanProgressPayload || {};
     const queuePayload = logSummary?.importQueueProgressPayload || logSummary?.importQueueStartPayload || {};
@@ -2062,6 +2064,8 @@
     const selectedFromScan = numberFromLog(logSummary?.scan?.match?.[3]);
     const queued = Number(scanPayload.queued ?? queuePayload.queued ?? 0);
     const processed = Number(queuePayload.processed ?? scanPayload.processed ?? 0);
+    const succeeded = Math.max(succeededRows, Number(queuePayload.succeeded ?? scanPayload.succeeded ?? 0));
+    const failed = Math.max(failedRows, Number(queuePayload.failed ?? scanPayload.failed ?? 0));
     const rawActiveItemCount = Math.max(0, Number(queuePayload.active ?? scanPayload.active ?? (runningRow ? 1 : 0)));
     const rawQueueDepth = Math.max(0, Number(queuePayload.queueDepth ?? scanPayload.queueDepth ?? Math.max(0, queued - processed - rawActiveItemCount)));
     const planQueueDepth = Number(queuePayload.planQueueDepth ?? scanPayload.planQueueDepth ?? 0);
@@ -2115,6 +2119,9 @@
       inspectedFiles,
       completed,
       processed,
+      processedThisRun: succeeded,
+      failedThisRun: failed,
+      attemptedThisRun: completed,
       activeItemCount,
       current,
       startedIndex,
@@ -2182,6 +2189,15 @@
     const photosFound = eligiblePhotosFound || Number(progress.scannedFiles || 0);
     const waiting = Math.max(0, Number(progress.queueDepth || 0));
     const activeItems = Math.max(0, Number(progress.activeItemCount || 0));
+    const processedThisRun = Math.max(0, Number(progress.processedThisRun ?? progress.completed ?? 0));
+    const attemptedThisRun = Math.max(0, Number(progress.attemptedThisRun ?? progress.completed ?? 0));
+    const failedThisRun = Math.max(0, Number(progress.failedThisRun || 0));
+    const currentRunNote = [
+      failedThisRun ? `${formatCount(failedThisRun)} failed` : "",
+      activeItems ? `${formatCount(activeItems)} active` : "",
+      waiting ? `${formatCount(waiting)} waiting` : "",
+      !failedThisRun && !activeItems && !waiting ? "none waiting" : "",
+    ].filter(Boolean).join(" / ");
     return [
       {
         label: "Photos found",
@@ -2195,8 +2211,10 @@
       },
       {
         label: "Processed this run",
-        value: formatCount(Math.max(0, Number(progress.completed || 0))),
-        note: [activeItems ? `${formatCount(activeItems)} active` : "", waiting ? `${formatCount(waiting)} waiting` : ""].filter(Boolean).join(" / ") || "none waiting",
+        value: formatCount(processedThisRun),
+        note: attemptedThisRun > processedThisRun && !failedThisRun
+          ? `${formatCount(attemptedThisRun)} checked`
+          : currentRunNote,
       },
       {
         label: "Time left",

@@ -2203,6 +2203,7 @@ def process_import_item(
     }
     result: dict[str, Any] = {
         "completed": 0,
+        "failed": 0,
         "rendered": 0,
         "manifest": {},
         "gps_manifest": {},
@@ -2328,6 +2329,7 @@ def process_import_item(
         append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
         emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="error", error=str(exc))
         result["completed"] = 1
+        result["failed"] = 1
         print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
     return result
 
@@ -2464,7 +2466,17 @@ def main() -> int:
 
     plan_queue: queue.Queue[list[dict[str, Any]] | None] = queue.Queue()
     work_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
-    counters = {"seen": 0, "inspected": 0, "queued": 0, "alreadySelected": 0, "processed": 0, "active": 0, "plannerActive": 0}
+    counters = {
+        "seen": 0,
+        "inspected": 0,
+        "queued": 0,
+        "alreadySelected": 0,
+        "processed": 0,
+        "succeeded": 0,
+        "failed": 0,
+        "active": 0,
+        "plannerActive": 0,
+    }
     counters_lock = threading.Lock()
     data_lock = threading.Lock()
     scan_errors: list[BaseException] = []
@@ -2715,6 +2727,8 @@ def main() -> int:
                     failures,
                 )
             add_counter("processed", int(result.get("completed") or 0))
+            add_counter("succeeded", int(result.get("rendered") or 0))
+            add_counter("failed", int(result.get("failed") or 0))
         finally:
             add_counter("active", -1)
             emit_queue_event("QUEUE_PROGRESS")

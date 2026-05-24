@@ -24,11 +24,11 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v83.6`
+- Current visible build: `v83.8`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
 - Recent baseline commits include: `e6c49772 photosbyelie: add crawl discovery files`, `c7776899 photosbyelie: document launch offer strategy`, `a8902dd2 photosbyelie: promote facebook feature`, and `bc48acf8 photosbyelie: add buyer support page`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
-- Public Expo catalog: `6,019` publishable media rows: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
+- Public Expo catalog: `6,016` publishable media rows: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite` is the active plain payload, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract. Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - Waste Basket is the Owner-facing model for unwanted photos. Basketed photos are live-blacklisted and can be put back; emptying the basket deletes public previews, private masters, and private render triplets, then leaves durable tombstones so those masters do not return.
 - Waste Basket purge was intentionally paused during catalog migration. Resume only when ready to monitor the `Cloud media left` progress.
@@ -62,6 +62,8 @@ for remote execution.
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, and support expectations.
 - `v83.4` promotes the first Photos By Elie Facebook Page post alongside Pinterest features on the homepage.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.
+- `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.
+- `v83.8` publishes the latest Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones, reducing active public rows to `6,016`.
 - Live checkout Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` is deployed with the `v83.2` price/minimum-charge catalog and `DOWNLOAD` card statement descriptor suffix.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
@@ -74,7 +76,7 @@ for remote execution.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest quiet-thread checkpoint is docs-only; `TODO.md` remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
-- The 2026-05-23 daily social package is partially published: the Facebook Page Paris interior light post was manually published and verified from the visible personal Chrome session; Instagram is authenticated to `@ec92009` but needs final account/post confirmation, and Pinterest is authenticated to `@photosbyelie` but still needs final publish confirmation.
+- The 2026-05-24 daily social package is prepared only: Facebook, Instagram, and Pinterest all need final manual publish/account confirmation before anything is posted from that package.
 - The tracked QR coaster 3MF assets were refreshed after print/underside review. Treat them as current printable project files unless a newer slicer/export pass replaces them.
 
 ## First Commands On A Machine

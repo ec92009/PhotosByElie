@@ -70,8 +70,10 @@ Clock state: paused
 | 2026-05-23 | 20:31 CEST | 20:31 CEST | 0:00 | Paused after inactivity for automated handoff sweep; background sweep time excluded. |
 | 2026-05-23 | 20:44 CEST | 21:18 CEST | 0:34 | Prepared and published the Lisbon/Carmo Pinterest carousel from visible Chrome, confirming the working Pinterest ad-capable Pin flow. |
 | 2026-05-23 | 21:24 CEST | 21:25 CEST | 0:01 | Reviewed the latest title/keyword Owner queue run state from local SQLite. |
+| 2026-05-24 | 08:21 CEST | 08:22 CEST | 0:01 | Restored the PhotosByElie Owner Dock launcher and verified the local Owner helper. |
+| 2026-05-24 | 09:53 CEST | 09:54 CEST | 0:01 | Requested Owner import flow choose a local source folder instead of fixed import anchors; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 4:24
+Active collaboration time used: 4:26
 Remaining budget: not set

@@ -5,7 +5,7 @@
   "privateRenderKeyScheme": "renders/<photo-id>_<1|3|6>mp.jpg",
   "legacyPrivateMasterKeyScheme": "masters/<photo-id>/<original-file>",
   "legacyPrivateRenderKeyScheme": "renders/<photo-id>/<original-file>-<product-id>.jpg",
-  "photosCount": 6019,
+  "photosCount": 6016,
   "photos": {
     "20220506-160631-03403-51426edaac": {
       "id": "20220506-160631-03403-51426edaac",
@@ -9877,41 +9877,6 @@
         }
       }
     },
-    "d5h-2939-68cb5ce5b2": {
-      "id": "d5h-2939-68cb5ce5b2",
-      "collectionKey": "spain",
-      "collectionTitle": "Spain",
-      "sourcePath": "2026 Malaga, Colleccion del Museo Ruso/D5H_2939.JPG",
-      "sourceFile": {
-        "path": "2026 Malaga, Colleccion del Museo Ruso/D5H_2939.JPG",
-        "type": "JPG",
-        "bytes": 3662696
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/d5h-2939-68cb5ce5b2_900.jpg",
-        "detailKey": "expo/d5h-2939-68cb5ce5b2_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/d5h-2939-68cb5ce5b2.jpg",
-        "legacyMasterKey": "masters/d5h-2939-68cb5ce5b2/D5H_2939.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/d5h-2939-68cb5ce5b2_6mp.jpg",
-          "jpg-3mp": "renders/d5h-2939-68cb5ce5b2_3mp.jpg",
-          "jpg-1mp": "renders/d5h-2939-68cb5ce5b2_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/d5h-2939-68cb5ce5b2/D5H_2939.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/d5h-2939-68cb5ce5b2/D5H_2939.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/d5h-2939-68cb5ce5b2/D5H_2939.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
     "d5h-2938-cc0cb9487b": {
       "id": "d5h-2938-cc0cb9487b",
       "collectionKey": "spain",
@@ -9944,41 +9909,6 @@
           "jpg-6mp": "renders/d5h-2938-cc0cb9487b/D5H_2938.JPG-jpg-6mp.jpg",
           "jpg-3mp": "renders/d5h-2938-cc0cb9487b/D5H_2938.JPG-jpg-3mp.jpg",
           "jpg-1mp": "renders/d5h-2938-cc0cb9487b/D5H_2938.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
-    "d5h-2937-dade9e30bf": {
-      "id": "d5h-2937-dade9e30bf",
-      "collectionKey": "spain",
-      "collectionTitle": "Spain",
-      "sourcePath": "2026 Malaga, Colleccion del Museo Ruso/D5H_2937.JPG",
-      "sourceFile": {
-        "path": "2026 Malaga, Colleccion del Museo Ruso/D5H_2937.JPG",
-        "type": "JPG",
-        "bytes": 3433130
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/d5h-2937-dade9e30bf_900.jpg",
-        "detailKey": "expo/d5h-2937-dade9e30bf_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/d5h-2937-dade9e30bf.jpg",
-        "legacyMasterKey": "masters/d5h-2937-dade9e30bf/D5H_2937.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/d5h-2937-dade9e30bf_6mp.jpg",
-          "jpg-3mp": "renders/d5h-2937-dade9e30bf_3mp.jpg",
-          "jpg-1mp": "renders/d5h-2937-dade9e30bf_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/d5h-2937-dade9e30bf/D5H_2937.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/d5h-2937-dade9e30bf/D5H_2937.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/d5h-2937-dade9e30bf/D5H_2937.JPG-jpg-1mp.jpg"
         }
       }
     },
@@ -28634,41 +28564,6 @@
           "jpg-6mp": "renders/d5h-2940-befff5a7e8/D5H_2940.jpeg-jpg-6mp.jpg",
           "jpg-3mp": "renders/d5h-2940-befff5a7e8/D5H_2940.jpeg-jpg-3mp.jpg",
           "jpg-1mp": "renders/d5h-2940-befff5a7e8/D5H_2940.jpeg-jpg-1mp.jpg"
-        }
-      }
-    },
-    "d5h-2938-e9e2bb0480": {
-      "id": "d5h-2938-e9e2bb0480",
-      "collectionKey": "spain",
-      "collectionTitle": "Spain",
-      "sourcePath": "2026 Malaga, Colleccion del Museo Ruso/D5H_2938.jpeg",
-      "sourceFile": {
-        "path": "2026 Malaga, Colleccion del Museo Ruso/D5H_2938.jpeg",
-        "type": "JPG",
-        "bytes": 23909424
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "spain",
-        "label": "Spain",
-        "source": "review-snapshot"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/d5h-2938-e9e2bb0480_900.jpg",
-        "detailKey": "expo/d5h-2938-e9e2bb0480_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/d5h-2938-e9e2bb0480.jpg",
-        "legacyMasterKey": "masters/d5h-2938-e9e2bb0480/D5H_2938.jpeg",
-        "renderKeys": {
-          "jpg-6mp": "renders/d5h-2938-e9e2bb0480_6mp.jpg",
-          "jpg-3mp": "renders/d5h-2938-e9e2bb0480_3mp.jpg",
-          "jpg-1mp": "renders/d5h-2938-e9e2bb0480_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/d5h-2938-e9e2bb0480/D5H_2938.jpeg-jpg-6mp.jpg",
-          "jpg-3mp": "renders/d5h-2938-e9e2bb0480/D5H_2938.jpeg-jpg-3mp.jpg",
-          "jpg-1mp": "renders/d5h-2938-e9e2bb0480/D5H_2938.jpeg-jpg-1mp.jpg"
         }
       }
     },

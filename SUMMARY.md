@@ -1,16 +1,16 @@
 # Conversation Summary
 
-Date: 2026-05-23
+Date: 2026-05-24
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.6`
-- Local Owner page: `http://localhost:8000/owner.html?v=83.6`
+- Current visible build: `v83.8`
+- Local Owner page: `http://localhost:8000/owner.html?v=83.8`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `6,019` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `561`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
+- Current catalog scale: `6,016` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is local SQLite in ignored `assets/owner-actions/Owner.sqlite`; generated review batch JSON is ignored/local and no longer tracked as deployable public metadata.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
@@ -26,18 +26,20 @@ Date: 2026-05-23
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery recovery, license, refund-expectation, and support notes.
 - `v83.4` promotes the first Photos By Elie Facebook Page post in the homepage Featured section alongside Pinterest features.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and schema preview panels in Owner Commerce; public print checkout remains gated off.
+- `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.
+- `v83.8` publishes the latest Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones, reducing active public rows to `6,016`.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
-- The 2026-05-23 social package is now partly live on two channels: the Facebook Page Paris interior light post was manually published and verified from the visible personal Chrome session, and the Lisbon/Carmo Pinterest carousel was prepared and published from visible Chrome with the ad-capable Pin flow confirmed. Instagram still needs final account/post confirmation.
+- The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
 - PhotosByElie active collaboration time is paused with `4:24` used as of 2026-05-23. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
-The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`; the later pricing/minimum-charge work brought the visible build to `v83.2`. The autonomous buyer-trust pass brought the visible build to `v83.3`, and the social-feature pass brought it to `v83.4` without changing catalog scale. Active public catalog scale remains `6,019` rows.
+The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`; the later pricing/minimum-charge work brought the visible build to `v83.2`. The autonomous buyer-trust pass brought the visible build to `v83.3`, the social-feature pass brought it to `v83.4`, and the latest Owner discard/tombstone handoff brings the active public catalog scale to `6,016` rows.
 
 The latest Stripe pass completed live cutover. Cloudflare now has live Stripe and live webhook secrets installed outside git, `/health` reports real Stripe with USD, and a live Checkout Session used a `cs_live_...` id. The first real purchase was order `PBE-20260522-BA062E956C` for one JPG 1 MP Versailles photo. Stripe showed `$7.47` incoming from the `$8.00` charge, the live webhook moved the Worker order to `ready`, and the private download token served the expected JPEG.
 
@@ -63,7 +65,7 @@ The latest automation setup added `pbe-daily-social-posts`, a daily 09:00 local 
 
 The latest Facebook publishing pass resumed the Page workflow, used the visible personal Chrome session, and published plus verified the Paris interior light post from the 2026-05-23 daily package. The run left browser/debug captures local-only, paused the project clock after inactivity, and did not change public site version, catalog, Worker, Stripe, or price behavior.
 
-The latest Pinterest pass prepared and published the Lisbon/Carmo carousel from visible Chrome, confirming the current Pinterest path can create ad-capable Pins. A follow-up Owner state check reviewed the latest title/keyword queue state from local SQLite. No public site version, catalog, Worker, Stripe, or price behavior changed.
+The latest Pinterest pass prepared and published the Lisbon/Carmo carousel from visible Chrome, confirming the current Pinterest path can create ad-capable Pins. A follow-up Owner state check reviewed the latest title/keyword queue state from local SQLite. The latest Owner catalog handoff then removed three newly discarded Museo Ruso Malaga photos from buyer-facing catalog/homepage state and prepared the 2026-05-24 social package without posting it.
 
 ## Earlier Conversation Context
 

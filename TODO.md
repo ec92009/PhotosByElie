@@ -1,14 +1,14 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v83.6`.
+- Current visible build: `v83.8`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=83.6`.
-- Current catalog scale: `6,019` public media rows in `assets/catalog/photosbyelie.sqlite`.
-- Latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker catalog without changing the active row count.
+- Local Owner page: `http://localhost:8000/owner.html?v=83.8`.
+- Current catalog scale: `6,016` public media rows in `assets/catalog/photosbyelie.sqlite`.
+- Latest handoff sweep published Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
 - Title/keyword review state is SQLite-backed in ignored local `assets/owner-actions/Owner.sqlite`.
@@ -31,11 +31,13 @@ Last updated: 2026-05-23
 - `v83.3` publishes the camera-tripod mark as the public favicon/topbar logo, adds buyer trust notes to basket/order, and adds `support.html` for payment, delivery, recovery, license, and support expectations.
 - `v83.4` promotes the first Facebook Page feature in the homepage Featured section alongside Pinterest features.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.
+- `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.
+- `v83.8` removes three newly discarded Museo Ruso Malaga photos from buyer-facing catalog/homepage state and keeps durable deletion tombstones for their R2 keys.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest quiet-thread checkpoint is docs-only; this file remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
-- The 2026-05-23 Facebook Page daily package was manually published and verified; Instagram and Pinterest still need final per-platform publish confirmation.
+- The 2026-05-24 Facebook, Instagram, and Pinterest daily package is prepared only; each platform still needs final manual publish/account confirmation.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
 

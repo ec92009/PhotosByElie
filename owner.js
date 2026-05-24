@@ -1652,6 +1652,13 @@
     const phaseMarker = lastMatch(/^SWEEP_PHASE\s+(\S+)\s+(.+)/);
     const rawPhaseKey = phaseMarker?.match?.[1] || "";
     const importPhaseKey = normalizeSweepPhaseKey(rawPhaseKey);
+    const lastImportPhaseKey = (() => {
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const key = normalizeSweepPhaseKey(lines[index].match(/^SWEEP_PHASE\s+(\S+)/)?.[1]);
+        if (PHOTO_IMPORT_PHASES.has(key)) return key;
+      }
+      return PHOTO_IMPORT_PHASES.has(importPhaseKey) ? importPhaseKey : "";
+    })();
     const scopedImport = PHOTO_IMPORT_PHASES.has(importPhaseKey);
     const importStartIndex = scopedImport ? phaseMarker.index + 1 : 0;
     const scanPattern = /^(?:Processing (?:final )?batch after scanning|Scanned) ([0-9,]+) files[;,] inspected ([0-9,]+), selected ([0-9,]+)/;
@@ -1697,7 +1704,7 @@
           index: importPhotoRows.length + 1,
           relativePath: "",
           sourcePath: "",
-          phaseKey: importPhaseKey,
+          phaseKey: lastImportPhaseKey || importPhaseKey,
           country: "",
           mediaType: "",
           status: "running",
@@ -1711,7 +1718,7 @@
       if (payload.index) row.index = Number(payload.index) || row.index;
       if (payload.relativePath) row.relativePath = String(payload.relativePath);
       if (payload.sourcePath) row.sourcePath = String(payload.sourcePath);
-      if (importPhaseKey) row.phaseKey = importPhaseKey;
+      if (lastImportPhaseKey || importPhaseKey) row.phaseKey = lastImportPhaseKey || importPhaseKey;
       if (payload.country) row.country = String(payload.country);
       if (payload.mediaType) row.mediaType = String(payload.mediaType);
       if (payload.status) {
@@ -1743,6 +1750,15 @@
       if (event[1] === "PHOTO_DONE") {
         row.status = String(payload.status || "done");
         row.doneEventIndex = index;
+      }
+    }
+    const activeImportCount = Number((importQueueProgressPayload || importQueueStartPayload || {}).active || 0);
+    if (activeImportCount > 0 && !importPhotoRows.some((row) => row.status === "running")) {
+      const activeRow = importPhotoRows.find((row) => row.status === "queued")
+        || importPhotoRows.find((row) => row.status !== "done" && row.status !== "error");
+      if (activeRow) {
+        activeRow.status = "running";
+        activeRow.inferredActive = true;
       }
     }
     const doneKeys = new Set(lines
@@ -1783,6 +1799,7 @@
       phase,
       phaseKey,
       rawPhaseKey,
+      lastImportPhaseKey,
       doneKeys,
       skippedKeys,
       deleted,
@@ -2318,6 +2335,8 @@
     return info.rows;
   };
 
+  const importMatrixRowQueued = (photo = {}) => !["running", "done", "error"].includes(String(photo.status || ""));
+
   const importMatrixCellHtml = (photo, stepKey, stepLabel) => {
     const step = photo.steps?.[stepKey] || {};
     const skipped = step.status === "skipped";
@@ -2372,6 +2391,7 @@
     const visibleInfo = importMatrixVisibleInfo(photos);
     const visibleRows = visibleInfo.rows;
     if (!visibleRows.length) return "";
+    const nextQueuedId = visibleRows.find((photo) => importMatrixRowQueued(photo))?.id || "";
     const meta = [
       visibleInfo.runningCount ? `${formatCount(visibleInfo.runningCount)} working` : "",
       visibleInfo.visibleQueuedCount ? `${formatCount(visibleInfo.visibleQueuedCount)} next queued` : "",
@@ -2391,7 +2411,7 @@
           </thead>
           <tbody>
             ${visibleRows.map((photo) => `
-              <tr class="owner-import-matrix-photo-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
+              <tr class="owner-import-matrix-photo-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}${photo.id === nextQueuedId ? " is-next" : ""}">
                 <th scope="rowgroup" colspan="${IMPORT_MATRIX_STEPS.length + 1}">
                   <div class="owner-import-photo-label">
                     ${importMatrixThumbHtml(photo, phaseKey)}
@@ -2402,8 +2422,8 @@
                   </div>
                 </th>
               </tr>
-              <tr class="owner-import-matrix-step-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}">
-                <th scope="row">${escapeHtml(photo.status === "queued" ? "Next up" : photo.status === "running" ? "Working" : photo.status === "done" ? "Finished" : photo.status === "error" ? "Needs attention" : "Steps")}</th>
+              <tr class="owner-import-matrix-step-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}${photo.id === nextQueuedId ? " is-next" : ""}">
+                <th scope="row">${escapeHtml(importMatrixRowQueued(photo) ? "Next up" : photo.status === "running" ? "Working" : photo.status === "done" ? "Finished" : photo.status === "error" ? "Needs attention" : "Steps")}</th>
                 ${IMPORT_MATRIX_STEPS.map(([stepKey, label]) => importMatrixCellHtml(photo, stepKey, label)).join("")}
               </tr>
             `).join("")}
@@ -2503,7 +2523,7 @@
       const phaseRows = detailRowsByPhase instanceof Map ? (detailRowsByPhase.get(phase.key) || []) : [];
       const matrixRows = matrixRowsByPhase instanceof Map ? (matrixRowsByPhase.get(phase.key) || []) : [];
       const hasProgressNote = Boolean(progress.detail && !genericProgressDetails.has(progress.detail));
-      const canExpand = (state === "done" || state === "failed") && (phaseRows.length || matrixRows.length || hasProgressNote);
+      const canExpand = (state === "done" || state === "failed" || state === "skipped") && (phaseRows.length || matrixRows.length || hasProgressNote);
       const showPhaseDetails = state === "running" || (canExpand && expandedSweepPhaseKeys.has(phase.key));
       const matrixHtml = showPhaseDetails && matrixRows.length ? importMatrixHtml(matrixRows, phase.key) : "";
       const hasMatrix = Boolean(matrixHtml);
@@ -2605,22 +2625,34 @@
       }
       addPhaseRow("catalog", "What happens", "Start Import refuses to publish a new catalog after skipped source lanes unless partial publishing is explicitly allowed.");
     }
-    if (logMatchesActivePhase && (PHOTO_IMPORT_PHASES.has(activePhaseKey) || activePhaseKey === "gap-fill") && logSummary?.importPhotoRows?.length) {
+    const matrixPhaseKey = PHOTO_IMPORT_PHASES.has(activePhaseKey)
+      ? activePhaseKey
+      : PHOTO_IMPORT_PHASES.has(logSummary?.lastImportPhaseKey)
+      ? logSummary.lastImportPhaseKey
+      : activePhaseKey === "gap-fill"
+      ? "gap-fill"
+      : "";
+    const shouldShowImportMatrix = Boolean(
+      matrixPhaseKey
+      && logSummary?.importPhotoRows?.length
+      && (logMatchesActivePhase || catalogBlocked || latest.state === "failed")
+    );
+    if (shouldShowImportMatrix) {
       const visibleMatrixInfo = importMatrixVisibleInfo(logSummary.importPhotoRows);
       const visibleMatrixRows = visibleMatrixInfo.rows;
-      const sourceProgress = PHOTO_IMPORT_PHASES.has(activePhaseKey)
-        ? sourceLaneProgress(activePhaseKey, logSummary, latest)
+      const sourceProgress = PHOTO_IMPORT_PHASES.has(matrixPhaseKey)
+        ? sourceLaneProgress(matrixPhaseKey, logSummary, latest)
         : null;
-      if (visibleMatrixRows.length) matrixRowsByPhase.set(activePhaseKey, logSummary.importPhotoRows);
+      if (visibleMatrixRows.length) matrixRowsByPhase.set(matrixPhaseKey, logSummary.importPhotoRows);
       addPhaseRow(
-        activePhaseKey,
+        matrixPhaseKey,
         "Upload matrix",
         visibleMatrixInfo.runningCount || visibleMatrixInfo.visibleQueuedCount
           ? `${formatCount(visibleMatrixInfo.runningCount)} working, ${formatCount(visibleMatrixInfo.visibleQueuedCount)} next queued shown${visibleMatrixInfo.hiddenQueuedCount ? `, ${formatCount(visibleMatrixInfo.hiddenQueuedCount)} more queued hidden` : ""}${visibleMatrixInfo.doneCount ? `, ${formatCount(visibleMatrixInfo.doneCount)} just finished` : ""}`
           : visibleMatrixInfo.doneCount
           ? `${formatCount(visibleMatrixInfo.doneCount)} just finished`
           : sourceProgress?.scanningForMore
-          ? `No active rows right now; scanning for more ${importSourceLabel(activePhaseKey)} work`
+          ? `No active rows right now; scanning for more ${importSourceLabel(matrixPhaseKey)} work`
           : "No active rows",
       );
     }

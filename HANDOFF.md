@@ -2,7 +2,7 @@
 
 Use this when moving work between Max, David, or the laptop.
 
-For ignored Owner DB state and other sensitive Max/David handoffs, follow
+For Owner DB state and other sensitive Max/David handoffs, follow
 [`docs/sops/MAX_DAVID_SYNC_SOP.md`](./docs/sops/MAX_DAVID_SYNC_SOP.md).
 GitHub carries code, safe metadata, SOPs, and handoff notes; private Owner DB
 snapshots and client artifacts move through private R2; SSH/Codex Remote SSH is
@@ -24,9 +24,9 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v83.8`
+- Current visible build: `v83.10`
 - Social/Pinterest Visit Website destinations should point to first-party campaign mini-collections, currently `campaign.html?c=pinterest-invalides-2026-05-14`, so buyers can browse related photos and escape embedded browsers before checkout/download.
-- Recent baseline commits include: `e6c49772 photosbyelie: add crawl discovery files`, `c7776899 photosbyelie: document launch offer strategy`, `a8902dd2 photosbyelie: promote facebook feature`, and `bc48acf8 photosbyelie: add buyer support page`.
+- Recent baseline commits include: `eafac300 photosbyelie: record owner r2 lifecycle state`, `e87dbacb photosbyelie: add import source menu backlog`, `a04dedb9 photosbyelie: polish owner import progress`, and `3891f05d photosbyelie: fix owner launcher reuse`.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `6,016` publishable media rows: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite` is the active plain payload, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract. Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -64,6 +64,8 @@ for remote execution.
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.
 - `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.
 - `v83.8` publishes the latest Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones, reducing active public rows to `6,016`.
+- `v83.9` keeps selected-folder imports focused on import phases, avoids banned-photo cleanup noise in that path, caches import thumbnails, and gives the per-photo import matrix visible working states.
+- `v83.10` makes the active/next import matrix state obvious with an inferred active worker row, animated next-queued row, and live dots inside unchecked cells.
 - Live checkout Worker version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb` is deployed with the `v83.2` price/minimum-charge catalog and `DOWNLOAD` card statement descriptor suffix.
 - Stripe sandbox checkout is proven end to end: success, decline, 3D Secure, webhook delivery, order recovery, per-file download, and download-all were manually verified.
 - Live Stripe account `acct_1TWCksPuO9o6fOp6` is configured with the camera-tripod branding, brand color `#5B341E`, accent color `#D86A3E`, successful-payment customer receipts enabled, and refund emails off.
@@ -74,7 +76,7 @@ for remote execution.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
 - Local POD preview draft: first print sizes are 12x16, 16x20, and 18x24; Prodigi is the primary/value route, Printful is the standard fallback route, theprintspace is the premium candidate, and Gelato stays as API-proof/global-routing candidate. `pod_settings.storefrontEnabled` remains false.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest quiet-thread checkpoint is docs-only; `TODO.md` remains the numbered backlog source of truth.
+- Latest checkpoint is `v83.10`; Owner import matrix state is visibly active/queued, and `TODO.md` remains the numbered backlog source of truth.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
 - The 2026-05-24 daily social package is prepared only: Facebook, Instagram, and Pinterest all need final manual publish/account confirmation before anything is posted from that package.
 - The tracked QR coaster 3MF assets were refreshed after print/underside review. Treat them as current printable project files unless a newer slicer/export pass replaces them.
@@ -105,33 +107,38 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 ## Current Priority
 
-1. **Keep Owner/generated state handoff-ready.**
+1. **Add the Owner import source menu.**
+   - Replace the immediate Start Import button behavior with a pulldown of remembered source folders.
+   - Include `All` for the broad automation-style sweep and `New...` for native folder selection.
+   - Store remembered source roots durably in `Owner.sqlite` and show enough path context to distinguish similar folder names.
+
+2. **Keep Owner/generated state handoff-ready.**
    - Review local approval/proposal/discard/catalog state before each generated-data commit.
    - Commit tracked manifest changes only when they represent durable R2/catalog state.
    - Keep unrelated local edits out of feature commits.
 
-2. **Review checkout trust and buyer support wording.**
+3. **Review checkout trust and buyer support wording.**
    - `v83.3` ships conservative support/license defaults; owner should approve or adjust refund, delivery-refresh, and commercial-use language before heavier launch traffic.
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft before editing public copy.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-3. **Make checkout and delivery production-durable.**
+4. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for longer-term order state.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
    - Current KV defaults retain checkout-session lookup keys for 90 days, keep download tokens available for 30 days, and allow 100 successful downloads per token unless Worker environment values override them.
    - Make receipt/order/download copy explicit and trustworthy.
 
-4. **Package the buyer offer.**
+5. **Package the buyer offer.**
    - Clarify usage rights, resolution labels, what Full resolution means, AI-origin handling, delivery expectations, refunds, and contact.
    - Decide first public offer: digital-only single assets, bundles, or collection packs.
    - Rephrase basket/order language around draft/review/availability so it builds confidence.
 
-5. **Approve and deploy the real price and offer strategy.**
+6. **Approve and deploy the real price and offer strategy.**
    - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`.
    - After approval, change `assets/catalog/product-pricing.json`, regenerate catalog and Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
    - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
-6. **Curate the first sellable storefront.**
+7. **Curate the first sellable storefront.**
    - Review visible catalog before paid traffic or launch outreach.
    - Block photos that should not be sold or shown.
    - Pick featured collections and hero images.
@@ -181,7 +188,7 @@ The sweep:
 - `assets/media-sidecar.json`: provenance and public/private key mapping.
 - `assets/private-delivery-manifest.json`: private master/render coverage.
 - `assets/discarded/discarded-photo-ids.json`: durable owner discard tombstones.
-- `assets/discarded-media-manifest.json`: generated discarded-media R2 cleanup record; ignored `Owner.sqlite` keeps trusted R2 object lifecycle state (`current`, `marked_for_delete`, `deleted_confirmed`) for routine cleanup.
+- `assets/discarded-media-manifest.json`: generated discarded-media R2 cleanup record; tracked `Owner.sqlite` keeps trusted R2 object lifecycle state (`current`, `marked_for_delete`, `deleted_confirmed`) for routine cleanup.
 - `assets/hidden/hidden-blacklist.json`: current blocked-photo blacklist.
 - `assets/owner-actions/keyword-blacklist.json`: SQLite-derived compatibility export for the metadata-only keyword blacklist in `Owner.sqlite`; it removes useless keyword strings but does not filter photos or rewrite JPG/source metadata.
 - `assets/owner-actions/country-assignments.jsonl`: SQLite-derived/audit Unknown-to-country move log.
@@ -273,19 +280,19 @@ npm run validate
 
 ## Fresh Backlog
 
-1. Review and tune the `v83.3` buyer support/refund/license wording.
-2. Approve and deploy the real price and offer strategy.
-3. Curate the first sellable storefront.
-4. Add conversion analytics.
-5. Improve public discovery and SEO beyond the first-pass `robots.txt` and `sitemap.xml`.
-6. Create marketing landing pages and launch outreach.
-7. Review Owner title/keyword batch `2026-05-20-185753-222Z`.
-8. Continue model/vision improvements for thin title/keyword rows.
-9. Rehearse the Real Estate client lifecycle.
-10. Polish Real Estate production outputs and access model.
-11. Replace temporary `r2.dev` media URL with a custom media domain.
-12. Parameterize gallery routes and split gallery/catalog data by collection.
-13. Improve gallery merchandising layout.
-14. Decide when physical goods return.
-15. Extend Owner operations dashboard and state-table browsing.
-16. Keep hidden/discarded lifecycle, Owner identity, publish validation, and long-horizon media cleanup deliberate.
+1. Add the Owner import source menu with remembered folders, `All`, and `New...`.
+2. Review and tune buyer support/refund/license wording.
+3. Approve and deploy the real price and offer strategy.
+4. Curate the first sellable storefront.
+5. Add conversion analytics.
+6. Improve public discovery and SEO beyond the first-pass `robots.txt` and `sitemap.xml`.
+7. Create marketing landing pages and launch outreach.
+8. Review the current Owner title/keyword queue, starting with batch `2026-05-24-000237-818Z`.
+9. Verify Owner-private artifact separation after deploy.
+10. Run the next generator pass after the current batch is resolved.
+11. Rehearse the Real Estate client lifecycle.
+12. Polish Real Estate production outputs and access model.
+13. Harden hidden/discarded lifecycle.
+14. Extend Owner operations dashboard and state-table browsing.
+15. Replace temporary `r2.dev` media URL with a custom media domain.
+16. Keep physical products and long-horizon media cleanup deliberate.

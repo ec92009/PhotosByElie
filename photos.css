@@ -1808,6 +1808,28 @@ html[data-theme="light"] .photo-art.has-photo::after{
   border-color:#8a6a20;
   background:color-mix(in srgb,#f0c04d 18%,var(--bg));
 }
+.owner-import-matrix-step-row.is-next td.is-pending::before{
+  opacity:.5;
+  transform:scaleX(1);
+  background:linear-gradient(90deg,transparent,#d39a19,transparent);
+  animation:owner-import-next-sweep 1.4s ease-in-out infinite;
+}
+.owner-import-matrix-step-row.is-next td.is-pending input{
+  border-color:#a56f00;
+  background:color-mix(in srgb,#f3b12f 28%,var(--bg));
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb,var(--surface) 62%,var(--bg)),
+    0 0 0 4px color-mix(in srgb,#d39a19 16%,transparent);
+  animation:owner-import-next-pulse 1.4s ease-in-out infinite;
+}
+.owner-import-matrix-step-row.is-next td.is-pending input::after{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:#a56f00;
+  opacity:.72;
+}
 .owner-import-matrix td.is-working::before{
   opacity:.86;
 }
@@ -1818,6 +1840,15 @@ html[data-theme="light"] .photo-art.has-photo::after{
     inset 0 0 0 2px color-mix(in srgb,var(--surface) 70%,var(--bg)),
     0 0 0 4px color-mix(in srgb,#2d72d9 14%,transparent);
   animation:owner-import-working-pulse 1.35s ease-in-out infinite;
+}
+.owner-import-matrix td.is-working input::after{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:#2d72d9;
+  box-shadow:0 0 0 4px color-mix(in srgb,#2d72d9 18%,transparent);
+  animation:owner-import-working-dot .75s ease-in-out infinite alternate;
 }
 .owner-import-matrix td.is-skipped input{
   border-color:color-mix(in srgb,var(--muted) 68%,var(--line));
@@ -1851,6 +1882,18 @@ html[data-theme="light"] .photo-art.has-photo::after{
 @keyframes owner-import-working-pulse{
   0%,100%{transform:scale(1)}
   45%{transform:scale(1.08)}
+}
+@keyframes owner-import-working-dot{
+  from{opacity:.45;transform:scale(.72)}
+  to{opacity:1;transform:scale(1.08)}
+}
+@keyframes owner-import-next-pulse{
+  0%,100%{transform:scale(1)}
+  45%{transform:scale(1.05)}
+}
+@keyframes owner-import-next-sweep{
+  0%,100%{opacity:.22}
+  45%{opacity:.72}
 }
 .owner-card-cloud-progress .owner-counts{
   grid-template-columns:repeat(3,minmax(0,1fr));

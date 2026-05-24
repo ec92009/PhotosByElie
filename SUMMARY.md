@@ -6,13 +6,14 @@ Date: 2026-05-24
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.8`
-- Local Owner page: `http://localhost:8000/owner.html?v=83.8`
+- Current visible build: `v83.10`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8001/owner.html?v=83.10`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,016` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
-- Title/keyword review queue state is local SQLite in ignored `assets/owner-actions/Owner.sqlite`; generated review batch JSON is ignored/local and no longer tracked as deployable public metadata.
+- Title/keyword review queue state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local. Title/keyword batch JSON is compatibility/audit output and must not be treated as authoritative public catalog state.
+- Latest generated title/keyword review batch is `2026-05-24-000237-818Z`; current queue states are applied `1776`, approved `20`, proposed `214`, rejected `84`, blocked `210`, parked `62`.
 - Public previews are served from public R2 media. Private sellable files, Real Estate originals, and full video originals are delivered through Worker-created private download tokens.
 - Localhost Owner/helper workflows remain the mutation path for catalog edits, hidden/discarded state, imports, R2 maintenance, and Real Estate client management.
 - Stripe sandbox checkout proof is complete: successful card, declined-card, 3D Secure, webhook delivery, order recovery, per-file download, and download-all paths were manually verified.
@@ -28,44 +29,28 @@ Date: 2026-05-24
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and schema preview panels in Owner Commerce; public print checkout remains gated off.
 - `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.
 - `v83.8` publishes the latest Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones, reducing active public rows to `6,016`.
+- `v83.9` keeps selected-folder imports focused on import phases, avoids banned-photo cleanup noise in that path, caches import thumbnails, and gives the per-photo import matrix visible working states.
+- `v83.10` makes the active/next import matrix state obvious with an inferred active worker row, animated next-queued row, and live dots inside unchecked cells.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is docs-only: all active threads were quiet, `main` was clean against `origin/main`, and the current backlog remains in `TODO.md`.
+- Latest checkpoint is `v83.10`: Owner import matrix state is visibly active/queued, durable docs are refreshed, and the current backlog remains in `TODO.md`.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
 - The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
-- PhotosByElie active collaboration time is paused with `4:24` used as of 2026-05-23. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
+- PhotosByElie active collaboration time is paused with `4:32` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
-The latest handoff sweep published Owner-approved title/keyword metadata into the public SQLite catalog and Worker checkout catalog, refreshed the keyword blacklist compatibility export, and bumped the visible build to `v83.0`; the later pricing/minimum-charge work brought the visible build to `v83.2`. The autonomous buyer-trust pass brought the visible build to `v83.3`, the social-feature pass brought it to `v83.4`, and the latest Owner discard/tombstone handoff brings the active public catalog scale to `6,016` rows.
+This conversation centered on making the Owner import path feel like a real local mini app instead of a brittle fixed-source automation panel. `v83.7` changed `Start Import` so it opens a native folder selection dialog and scans only the selected folder, while keeping the broad fixed-anchor sweep available for automation. The next import UX backlog item is now to replace the single immediate button with a pulldown of remembered folders plus `All` and `New...`.
 
-The latest Stripe pass completed live cutover. Cloudflare now has live Stripe and live webhook secrets installed outside git, `/health` reports real Stripe with USD, and a live Checkout Session used a `cs_live_...` id. The first real purchase was order `PBE-20260522-BA062E956C` for one JPG 1 MP Versailles photo. Stripe showed `$7.47` incoming from the `$8.00` charge, the live webhook moved the Worker order to `ready`, and the private download token served the expected JPEG.
+The Owner Dock launcher was repaired so launching the mini app starts `scripts/local_server.py` only when needed, reuses whichever helper is already alive on a nearby `8000-8099` port, opens Safari to `owner.html`, and exits instead of leaving a no-window app process swallowing later launches. The active local helper during this pass was on port `8001`.
 
-Stripe's own successful-payment receipt is now intentionally part of the buyer experience, while PhotosByElie still owns the actual delivery links and order recovery. The live webhook destination has been renamed from Stripe's generated label to `PhotosByElie Worker checkout`; endpoint, event, and API version remain unchanged.
+The import progress UI was polished in `v83.9` and `v83.10`: selected-folder imports no longer run banned-photo cleanup phases, import thumbnails are cached through the local helper, more source rows stay visible, inferred active worker rows turn blue, the next queued row animates, and unchecked cells show live dots instead of static beige boxes.
 
-The Worker was redeployed after the first live proof so future Checkout PaymentIntents use statement descriptor suffix `DOWNLOAD` instead of `ORDER`.
+Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-The live checkout Worker was also redeployed as version `143f9f7f-ab55-4f82-9a68-88e4ab663cdb`; hosted Stripe Checkout now receives the updated low-tier line items, minimum-charge adjustment, and `DOWNLOAD` statement descriptor suffix.
-
-The latest public-site pass added a conservative buyer trust path: basket/order notes explain Stripe receipts versus PhotosByElie delivery, `support.html` covers recovery, personal-use license, commercial-use approval, support email, and case-by-case refund handling, and the public favicon/topbar now use the selected camera-tripod brand mark.
-
-The latest social pass updates the homepage Featured section from Pinterest-only to social, adds the first Facebook Page Invalides feature card, and keeps the existing Pinterest campaign links.
-
-The latest autonomous repo-side strategy pass added a price/offer strategy draft. It recommends a digital-only launch, owner-approved support/refund posture, and a proposed real camera ladder of `$3 / $8 / $28 / $65` with lower AI pricing, while leaving the current live price files unchanged until owner approval.
-
-The latest POD preview pass keeps the storefront closed while modeling the first print sizes, supplier capabilities, quality-tier routing, and supplier SKU/cost placeholders in the catalog. Owner Commerce now shows supplier readiness, route tiers, option rows, and schema counts on localhost; public checkout still defaults to digital-only unless Owner deliberately enables physical items locally.
-
-The latest SEO/discovery pass added `robots.txt` and `sitemap.xml` for the homepage, core galleries, campaign pages, and support page while keeping owner/order/basket/real-estate/experiments/raw-social working pages out of crawler focus.
-
-This checkpoint refreshed the durable docs after the user reported all threads quiet. No public version, catalog, Worker, Stripe, price, or site behavior changed; the work is just the SUMMARY/HANDOFF/TODO/README/TIMELOG state refresh and the fresh backlog rollup.
-
-The latest automation setup added `pbe-daily-social-posts`, a daily 09:00 local automation for Facebook, Instagram, and Pinterest. It is instructed to use only public watermarked R2/social assets, avoid secrets/private downloads/Owner metadata, choose three distinct themes with 5-10 images per platform post, publish when already authenticated, and otherwise leave ready-to-publish packages.
-
-The latest Facebook publishing pass resumed the Page workflow, used the visible personal Chrome session, and published plus verified the Paris interior light post from the 2026-05-23 daily package. The run left browser/debug captures local-only, paused the project clock after inactivity, and did not change public site version, catalog, Worker, Stripe, or price behavior.
-
-The latest Pinterest pass prepared and published the Lisbon/Carmo carousel from visible Chrome, confirming the current Pinterest path can create ad-capable Pins. A follow-up Owner state check reviewed the latest title/keyword queue state from local SQLite. The latest Owner catalog handoff then removed three newly discarded Museo Ruso Malaga photos from buyer-facing catalog/homepage state and prepared the 2026-05-24 social package without posting it.
+This refresh updates the durable summary/backlog/README/handoff/timelog state to `v83.10`, records the latest title/keyword and Owner SQLite counts, and promotes the remembered import source menu to the first actionable backlog item. No catalog count, Worker behavior, Stripe setting, or price behavior changed in this pass.
 
 ## Earlier Conversation Context
 
@@ -138,8 +123,8 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 - In `v81.10`, 53 approved title/keyword rows from batch `2026-05-20-093025-705Z` are published into the buyer-facing SQLite catalog, compressed catalog, homepage data, Worker catalog, and tracked approval audit export.
 - Codex-backed title/keyword rework escalation is implemented: rejected rows carry prior proposal context from `Owner.sqlite`, select the next configured model ladder level, invoke the actual selected Codex model, record model attempts/preview paths, and export explicit model-blocked or ladder-exhausted details instead of silently recycling weak local proposals.
 - Owner rejection patterns from this run should now feed the next model/tooling iteration. Rejects caused by insufficient visual understanding, missing landmark/context clues, or weak nearby-shoot inference are not a reason to weaken the workflow; they are the backlog signal for better picture recognition and richer per-photo context.
-- Current title/keyword queue counts are accepted `1076`, proposed/submitted-unchecked `418`, rejected `0`, blocked `27`, parked `62`.
-- Latest generated title/keyword review batch is `2026-05-20-185753-222Z`, with `200` proposals: `100` Codex-backed rework rows and `100` ordinary local-rule rows.
+- Current title/keyword queue states are applied `1776`, approved `20`, proposed `214`, rejected `84`, blocked `210`, parked `62`.
+- Latest generated title/keyword review batch is `2026-05-24-000237-818Z`; current queue states are applied `1776`, approved `20`, proposed `214`, rejected `84`, blocked `210`, parked `62`.
 - Owner review JSON under `assets/owner-actions/title-keyword-review-queue/` is now ignored/local. The helper and generator should keep treating it as derived localhost review-page/audit output, with `Owner.sqlite` as durable state.
 - In `v81.15`, the title/keyword generator has a durable buffer fix and local proposal-quality improvements, while the Real Estate owner UI can use discovered property folders and the client review output step summarizes selected projects.
 - In `v81.18`, public catalog loading and helper rebuilds use the plain SQLite catalog directly and stop generating or preferring the Brotli-compressed `.sqlite.br` artifact.
@@ -167,14 +152,14 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 
 ## Recent Relevant Commits
 
-- `e6c49772 photosbyelie: add crawl discovery files`
-- `c7776899 photosbyelie: document launch offer strategy`
-- `a8902dd2 photosbyelie: promote facebook feature`
-- `bc48acf8 photosbyelie: add buyer support page`
-- `e4496040 photosbyelie: record deployed descriptor suffix`
-- `8e6787ab photosbyelie: align live checkout worker`
-- `85b361d8 photosbyelie: record live stripe proof`
-- `d53de85f photosbyelie: log public site update`
+- `eafac300 photosbyelie: record owner r2 lifecycle state`
+- `e87dbacb photosbyelie: add import source menu backlog`
+- `a04dedb9 photosbyelie: polish owner import progress`
+- `3891f05d photosbyelie: fix owner launcher reuse`
+- `736fe76b photosbyelie: publish owner discard state`
+- `011ff4f0 photosbyelie: choose import source folder`
+- `0b67f6dd photosbyelie: nightly title keyword review batch`
+- `e4ea5464 photosbyelie: refresh social handoff log`
 
 ## Verification Notes
 
@@ -198,4 +183,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: review/tune the `v83.3` buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, add analytics, deepen SEO/discovery, review daily social automation output/launch pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: add the Owner remembered import source menu, review/tune buyer support/refund/license wording, approve/deploy the price/offer strategy, curate the first sellable storefront, add analytics, deepen SEO/discovery, launch outreach pages, Owner title/keyword review, Real Estate production polish, and long-horizon Owner/media hardening.

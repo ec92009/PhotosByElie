@@ -73,8 +73,9 @@ Clock state: paused
 | 2026-05-24 | 08:21 CEST | 08:22 CEST | 0:01 | Restored the PhotosByElie Owner Dock launcher and verified the local Owner helper. |
 | 2026-05-24 | 09:53 CEST | 09:54 CEST | 0:01 | Requested Owner import flow choose a local source folder instead of fixed import anchors; background implementation time excluded. |
 | 2026-05-24 | 11:40 CEST | 11:42 CEST | 0:01 | Adjusted Owner import dashboard direction for focused import phases and livelier per-photo progress. |
+| 2026-05-24 | 11:44 CEST | 11:44 CEST | 0:01 | Added backlog direction for a remembered import source menu with All and New options. |
 
 ## Totals
 
-Active collaboration time used: 4:27
+Active collaboration time used: 4:28
 Remaining budget: not set

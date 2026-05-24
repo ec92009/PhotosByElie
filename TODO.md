@@ -4,9 +4,9 @@ Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v83.8`.
+- Current visible build: `v83.9`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: `http://localhost:8000/owner.html?v=83.8`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8001/owner.html?v=83.9`.
 - Current catalog scale: `6,016` public media rows in `assets/catalog/photosbyelie.sqlite`.
 - Latest handoff sweep published Owner discard/tombstone state into the public SQLite catalog, Expo manifest, homepage data, and durable discarded-photo tombstones.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -19,7 +19,7 @@ Last updated: 2026-05-24
 - Batch `2026-05-20-181058-181Z` had `100` weak local-rule proposals and all `100` were rejected for rework; replacement batch `2026-05-20-185753-222Z` has `200` proposals: `100` Codex-backed rework rows, `100` ordinary local rows, `0` model blockers, `0` keyword-target misses, and `74` `needs_owner_context` rows.
 - The generator now uses a larger Owner-state subprocess buffer, filters internal marker keywords like `NotMyPhoto`, expands safe local keyword floors, and reports proposal quality counts before write/import.
 - Real Estate owner clients can save/edit/delete, discover media-bearing property folders, import available configured properties with count/total progress, publish sanitized contexts, dry-run/upload R2 objects, and prepare the Worker secret payload.
-- Start Imports scans the full fixed import anchors every time: Camera, Apple Photos, Leonardo, and Real Estate. It must not treat clean catalog coverage as proof that no new source files exist, and changed source files must re-render/re-upload even when their R2 keys already exist.
+- Start Import opens a local folder chooser and scans only the selected folder. The automation sweep can still scan the fixed anchors: Camera, Apple Photos, Leonardo, and Real Estate. It must not treat clean catalog coverage as proof that no new source files exist, and changed source files must re-render/re-upload even when their R2 keys already exist.
 - Import source lanes share the same Owner matrix/progress renderer. Skipped source lanes are unfinished, and a blocked catalog export is shown as the needs-attention phase rather than as silent downstream waiting.
 - Public previews are R2-backed. Public Photos By Elie previews are watermarked; Real Estate public previews remain unwatermarked and are only watermarked at PDF generation time.
 - Private sellable files, private Real Estate originals, and full video originals are R2-backed and delivered through Worker-created private download tokens.
@@ -33,6 +33,7 @@ Last updated: 2026-05-24
 - `v83.6` adds localhost-only POD supplier readiness, quality-tier routing, supplier option, and catalog schema preview panels in Owner Commerce while keeping public print checkout gated off.
 - `v83.7` lets the Owner import flow choose a local source folder instead of depending only on fixed source anchors.
 - `v83.8` removes three newly discarded Museo Ruso Malaga photos from buyer-facing catalog/homepage state and keeps durable deletion tombstones for their R2 keys.
+- `v83.9` keeps selected-folder imports focused on import phases, avoids banned-photo cleanup noise in that path, caches import thumbnails, and gives the per-photo import matrix visible working states.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
 - Latest quiet-thread checkpoint is docs-only; this file remains the numbered backlog source of truth.
@@ -95,23 +96,28 @@ Last updated: 2026-05-24
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-14. **Add Owner state-table browsing.**
+14. **Add an Owner import source menu.**
+   - Replace the immediate `Start Import` action with a pulldown that lists every source folder previously imported.
+   - Include `All` to run the broad automation-style source sweep and `New...` to open the native folder selection dialog.
+   - Store remembered source roots durably, preferably in Owner SQLite, and show enough path context to distinguish folders with similar names.
+
+15. **Add Owner state-table browsing.**
    - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
 
-15. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+16. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-16. **Parameterize gallery routes and split gallery/catalog data by collection.**
+17. **Parameterize gallery routes and split gallery/catalog data by collection.**
    - Reduce first-load catalog weight only after measuring current SQLite fetch/decode and gallery scan costs.
 
-17. **Improve gallery merchandising layout.**
+18. **Improve gallery merchandising layout.**
    - Add curated collection ordering, stronger visual entry points, and buyer-friendly browse paths.
 
-18. **Add frontend smoke tests for buyer and client paths.**
+19. **Add frontend smoke tests for buyer and client paths.**
    - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
 
-19. **Keep physical products behind Owner review.**
+20. **Keep physical products behind Owner review.**
    - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
 
-20. **Keep repo and media cleanup deliberate.**
+21. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

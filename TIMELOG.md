@@ -85,8 +85,9 @@ Clock state: paused
 | 2026-05-24 | 14:50 CEST | 14:51 CEST | 0:01 | Requested parallel import render/upload workers using half the machine CPUs by default; background implementation time excluded. |
 | 2026-05-24 | 15:08 CEST | 15:09 CEST | 0:01 | Requested the Owner import prose progress line be replaced by a four-tile stats panel; background implementation time excluded. |
 | 2026-05-24 | 15:29 CEST | 15:30 CEST | 0:01 | Reported that restart behavior made Processed before look wrong because failed attempts were counted as current-run progress; background implementation time excluded. |
+| 2026-05-24 | 16:18 CEST | 16:21 CEST | 0:02 | Directed the Owner import split: Expo stays gallery-only, Real Estate gets its own source pulldown and `RE import` flow inside the Real Estate tab. |
 
 ## Totals
 
-Active collaboration time used: 4:41
+Active collaboration time used: 4:43
 Remaining budget: not set

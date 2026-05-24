@@ -119,6 +119,7 @@
   const realEstateAlbumCountRoot = document.querySelector("[data-owner-re-album-count]");
   const realEstateLocalLink = document.querySelector("[data-owner-re-local-link]");
   const realEstatePublicLink = document.querySelector("[data-owner-re-public-link]");
+  const realEstateImportSourceSelect = document.querySelector("[data-owner-re-import-source-select]");
   const realEstateComputed = Object.fromEntries(
     [...document.querySelectorAll("[data-owner-re-computed]")]
       .map((field) => [field.dataset.ownerReComputed, field])
@@ -137,6 +138,7 @@
   let r2MaintenanceActive = false;
   let activeR2MaintenanceKey = "";
   let importSourceOptions = [];
+  let realEstateImportSourceOptions = [];
   let r2CoverageOk = false;
   let r2RepairLogSummary = null;
   let r2RepairLogTaskId = "";
@@ -149,7 +151,9 @@
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
   let importSourceDialogOpen = false;
+  let realEstateImportSourceDialogOpen = false;
   let lastImportSourceValue = "new";
+  let lastRealEstateImportSourceValue = "";
   let realEstateClients = [];
   let selectedRealEstateClientId = "";
   let realEstateBusy = false;
@@ -185,7 +189,7 @@
     ["real-estate", "RE"],
   ]);
   const SELECTED_IMPORT_DASHBOARD_PHASE_KEYS = ["selected-folder"];
-  const FIXED_IMPORT_DASHBOARD_PHASE_KEYS = ["camera", "apple-photo-albums", "leonardo", "real-estate"];
+  const FIXED_IMPORT_DASHBOARD_PHASE_KEYS = ["camera", "apple-photo-albums", "leonardo"];
   const IMPORT_MATRIX_STEPS = [
     ["master_uploaded", "Master"],
     ["triplets_created", "Triplets made"],
@@ -203,7 +207,6 @@
     ["camera", "Import Camera sources"],
     ["apple-photo-albums", "Import Apple Photos"],
     ["leonardo", "Import AI sources"],
-    ["real-estate", "Import RE sources", { optional: true }],
     ["catalog", "Export catalog"],
     ["worker", "Write worker catalog"],
     ["sidecar", "Write media sidecar"],
@@ -1006,7 +1009,7 @@
   const setRealEstateBusy = (busy) => {
     realEstateBusy = busy;
     if (realEstateCard) {
-      realEstateCard.querySelectorAll("button, input, textarea").forEach((control) => {
+      realEstateCard.querySelectorAll("button, input, textarea, select").forEach((control) => {
         if (control.dataset.ownerReAction === "new-client") {
           control.disabled = false;
           return;
@@ -1072,13 +1075,18 @@
     const selected = selectedRealEstateClient();
     updateRealEstateComputed(selected || blankRealEstateClient());
     updateRealEstateLinks(selected && !selected.isDraft ? selected : null);
+    renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
     return selected;
   };
 
-  const realEstateConventionsFor = (clientName) => {
-    const name = String(clientName || "").trim();
+  const realEstateConventionsFor = (clientNameOrClient) => {
+    const client = typeof clientNameOrClient === "object" && clientNameOrClient
+      ? clientNameOrClient
+      : null;
+    const name = String(client ? client.customer : clientNameOrClient || "").trim();
+    const defaultSourceRoot = name ? `/Volumes/Saturn/Pictures/RE/${name}` : "/Volumes/Saturn/Pictures/RE/<Client>";
     return {
-      sourceRoot: name ? `/Volumes/Saturn/Pictures/RE/${name}` : "/Volumes/Saturn/Pictures/RE/<Client>",
+      sourceRoot: String(client?.sourceRoot || "").trim() || defaultSourceRoot,
       username: name || "<Client>",
       slug: name || "<Client>",
       galleryKey: name ? `${name}-gallery` : "<Client>-gallery",
@@ -1089,10 +1097,7 @@
   };
 
   const updateRealEstateComputed = (clientNameOrClient) => {
-    const clientName = typeof clientNameOrClient === "string"
-      ? clientNameOrClient
-      : (clientNameOrClient?.customer || "");
-    const conventions = realEstateConventionsFor(clientName);
+    const conventions = realEstateConventionsFor(clientNameOrClient);
     Object.entries(conventions).forEach(([key, value]) => {
       if (realEstateComputed[key]) realEstateComputed[key].textContent = value;
     });
@@ -1106,6 +1111,7 @@
     maxItems: 300,
     properties: [],
     effectiveProperties: [],
+    sourceRoot: "",
   });
 
   const fillRealEstateForm = (client) => {
@@ -1113,6 +1119,7 @@
     selectedRealEstateClientId = client.id || "";
     updateRealEstateComputed(client);
     updateRealEstateLinks(client && !client.isDraft ? client : null);
+    renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
   };
 
   const realEstateCellInput = (client, field, value, options = {}) => {
@@ -1211,6 +1218,7 @@
         selectedRealEstateClientId = realEstateClients[0]?.id || "";
       }
       renderRealEstateClients();
+      loadRealEstateImportSources();
       const selected = selectedRealEstateClient();
       setRealEstateStatus(selected
         ? `${selected.customer}: ${formatCount(selected.stats?.photoCount || 0)} photos, ${selected.passwordSet ? "password set" : "password needed"}.`
@@ -1228,6 +1236,7 @@
     accessCode: client?.accessCode || "",
     properties: realEstatePropertiesFor(client).join("\n"),
     maxItems: client?.maxItems || 300,
+    sourceRoot: client?.sourceRoot || "",
   });
 
   const updateRealEstateClientFromControl = (control) => {
@@ -1260,13 +1269,13 @@
     return payload;
   };
 
-  const realEstateImportProgressMessage = (clientName, progress = {}) => {
+  const realEstateImportProgressMessage = (clientName, progress = {}, fallbackSourceRoot = "") => {
     const total = Number(progress.total || 0);
     const completed = Number(progress.completed || 0);
     const skipped = Array.isArray(progress.skippedProperties) ? progress.skippedProperties : [];
     const currentAlbum = progress.album ? ` (${progress.album})` : "";
     const skippedText = skipped.length ? ` Skipping missing: ${skipped.join(", ")}.` : "";
-    const sourceRoot = `/Volumes/Saturn/Pictures/RE/${clientName}`;
+    const sourceRoot = String(progress.sourceRoot || fallbackSourceRoot || `/Volumes/Saturn/Pictures/RE/${clientName}`).trim();
     if (total > 0) {
       return `Real Estate import from ${sourceRoot}: ${formatCount(completed)} / ${formatCount(total)} media${currentAlbum}.${skippedText}`;
     }
@@ -1280,7 +1289,7 @@
     }
   };
 
-  const startRealEstateImportProgress = (operationId, clientName) => {
+  const startRealEstateImportProgress = (operationId, clientName, sourceRoot = "") => {
     stopRealEstateImportProgress();
     if (!operationId) return;
     const refresh = async () => {
@@ -1289,7 +1298,7 @@
         const payload = await response.json().catch(() => ({}));
         const progress = payload?.progress;
         if (!response.ok || !progress) return;
-        setRealEstateStatus(realEstateImportProgressMessage(clientName, progress));
+        setRealEstateStatus(realEstateImportProgressMessage(clientName, progress, sourceRoot));
         if (progress.state === "done" || progress.state === "failed") stopRealEstateImportProgress();
       } catch {
         // The import request itself will report any hard failure.
@@ -1409,9 +1418,16 @@
       const ok = window.confirm("Upload public previews and private masters for this real estate client?");
       if (!ok) return;
     }
+    let realEstateImportSource = null;
+    if (action === "import-client") {
+      realEstateImportSource = await realEstateImportSourceForRun(selected);
+      if (!realEstateImportSource?.path) return;
+    }
     setRealEstateBusy(true);
     const labels = {
-      "import-client": "Importing previews...",
+      "import-client": realEstateImportSource?.name
+        ? `Importing previews from ${realEstateImportSource.name}...`
+        : "Importing previews...",
       "discover-properties": "Discovering property folders...",
       "publish-client": "Publishing context...",
       "upload-dry-run": "Checking upload inventory...",
@@ -1422,12 +1438,13 @@
     const operationId = action === "import-client"
       ? `re-import-${selected.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`
       : "";
-    if (operationId) startRealEstateImportProgress(operationId, selected.customer || selected.id);
+    if (operationId) startRealEstateImportProgress(operationId, selected.customer || selected.id, realEstateImportSource?.path || "");
     try {
       const payload = await postRealEstateOwnerAction({
         action,
         id: selected.id,
         operationId,
+        ...(realEstateImportSource?.path ? { sourceRoot: realEstateImportSource.path } : {}),
       });
       if (payload.client) {
         const byId = new Map(realEstateClients.map((client) => [client.id, client]));
@@ -1448,7 +1465,7 @@
         const skipped = Array.isArray(importProgress?.skippedProperties) ? importProgress.skippedProperties : [];
         const doneLabels = {
           "import-client": importProgress
-            ? `${clientName} previews imported: ${formatCount(importProgress.completed || 0)} / ${formatCount(importProgress.total || 0)} media.${skipped.length ? ` Skipped missing: ${skipped.join(", ")}.` : ""}`
+            ? `${clientName} RE previews imported from ${realEstateImportSource?.name || "selected source"}: ${formatCount(importProgress.completed || 0)} / ${formatCount(importProgress.total || 0)} media.${skipped.length ? ` Skipped missing: ${skipped.join(", ")}.` : ""}`
             : `${clientName} previews imported.`,
           "discover-properties": `${clientName} properties updated from ${formatCount(payload.properties?.length || 0)} discovered folders.`,
           "publish-client": `${clientName} context published.`,
@@ -1456,6 +1473,7 @@
           "upload-client": `${clientName} upload complete.`,
         };
         setRealEstateStatus(doneLabels[action] || "Real estate action complete.");
+        if (action === "import-client") loadRealEstateImportSources();
       }
     } catch (error) {
       setRealEstateStatus(error?.message || "Real estate action failed.");
@@ -1603,22 +1621,24 @@
     return missing ? `Coverage still has gaps: ${missing}.` : "Coverage still has gaps.";
   };
 
+  const folderNameFromPath = (path) => String(path || "").split(/[\\/]/).filter(Boolean).at(-1) || String(path || "");
+
   const importSourceByPath = (path) => importSourceOptions.find((source) => source.path === path) || null;
 
   const importSourceChoiceLabel = () => {
     const value = importSourceSelect?.value || "new";
-    if (value === "all") return "All fixed source folders";
+    if (value === "all") return "All Expo source folders";
     if (value === "new") return "New folder";
     const source = importSourceByPath(value);
     const optionLabel = importSourceSelect?.selectedOptions?.[0]?.textContent?.trim() || "";
-    return source?.label || optionLabel || value.split(/[\\/]/).filter(Boolean).at(-1) || value;
+    return source?.label || optionLabel || folderNameFromPath(value) || value;
   };
 
   const selectImportSourceFolder = (folder = {}) => {
     if (!importSourceSelect) return null;
     const path = String(folder.path || "").trim();
     if (!path) return null;
-    const label = String(folder.name || folder.label || "").trim() || path.split(/[\\/]/).filter(Boolean).at(-1) || path;
+    const label = String(folder.name || folder.label || "").trim() || folderNameFromPath(path) || path;
     const existingOption = [...importSourceSelect.options].find((option) => option.value === path);
     if (!existingOption) {
       const option = document.createElement("option");
@@ -1644,6 +1664,130 @@
       renderImportDashboardIdle();
     }
     return { path, name: label };
+  };
+
+  const realEstateImportSourceByPath = (path) => (
+    realEstateImportSourceOptions.find((source) => source.path === path) || null
+  );
+
+  const currentRealEstateSourceRoot = (client = selectedRealEstateClient()) => {
+    if (!client || client.isDraft) return "";
+    return String(client.sourceRoot || realEstateConventionsFor(client).sourceRoot || "").trim();
+  };
+
+  const realEstateImportSourceLabel = (path) => {
+    const source = realEstateImportSourceByPath(path);
+    const optionLabel = realEstateImportSourceSelect?.selectedOptions?.[0]?.textContent?.trim() || "";
+    return source?.label || optionLabel || folderNameFromPath(path) || path;
+  };
+
+  const selectRealEstateImportSourceFolder = (folder = {}) => {
+    if (!realEstateImportSourceSelect) return null;
+    const path = String(folder.path || "").trim();
+    if (!path) return null;
+    const label = String(folder.name || folder.label || "").trim() || folderNameFromPath(path) || path;
+    const existingOption = [...realEstateImportSourceSelect.options].find((option) => option.value === path);
+    if (!existingOption) {
+      const option = document.createElement("option");
+      option.value = path;
+      option.textContent = label;
+      option.title = path;
+      const newOption = [...realEstateImportSourceSelect.options].find((item) => item.value === "new");
+      realEstateImportSourceSelect.insertBefore(option, newOption || null);
+    } else {
+      existingOption.textContent = existingOption.textContent || label;
+      existingOption.title = existingOption.title || path;
+    }
+    if (!realEstateImportSourceByPath(path)) {
+      realEstateImportSourceOptions = [
+        { path, label, exists: true, discovered: false },
+        ...realEstateImportSourceOptions.filter((source) => source.path !== path),
+      ];
+    }
+    realEstateImportSourceSelect.value = path;
+    lastRealEstateImportSourceValue = path;
+    return { path, name: label };
+  };
+
+  const renderRealEstateImportSourceOptions = (sources = []) => {
+    if (!realEstateImportSourceSelect) return;
+    const selected = selectedRealEstateClient();
+    const previous = realEstateImportSourceSelect.value || lastRealEstateImportSourceValue;
+    realEstateImportSourceOptions = sources
+      .map((source) => ({
+        path: String(source?.path || "").trim(),
+        label: String(source?.label || "").trim(),
+        exists: source?.exists !== false,
+        discovered: Boolean(source?.discovered),
+      }))
+      .filter((source) => source.path);
+    realEstateImportSourceSelect.textContent = "";
+    const addOption = (value, label, title = "") => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (title) option.title = title;
+      realEstateImportSourceSelect.append(option);
+    };
+    const clientSourceRoot = currentRealEstateSourceRoot(selected);
+    if (clientSourceRoot) {
+      addOption(clientSourceRoot, `Current: ${folderNameFromPath(clientSourceRoot)}`, clientSourceRoot);
+    }
+    realEstateImportSourceOptions.forEach((source) => {
+      if (source.path === clientSourceRoot) return;
+      const label = `${source.label || source.path}${source.exists ? "" : " (missing)"}`;
+      addOption(source.path, label, source.path);
+    });
+    addOption("new", "New...");
+    const values = new Set([...realEstateImportSourceSelect.options].map((option) => option.value));
+    const preferredPrevious = previous === "new" && clientSourceRoot ? "" : previous;
+    realEstateImportSourceSelect.value = values.has(preferredPrevious)
+      ? previous
+      : (clientSourceRoot || realEstateImportSourceOptions[0]?.path || "new");
+    lastRealEstateImportSourceValue = realEstateImportSourceSelect.value;
+    realEstateImportSourceSelect.disabled = realEstateBusy || !selected || selected.isDraft;
+  };
+
+  const loadRealEstateImportSources = async () => {
+    if (!realEstateImportSourceSelect) return;
+    try {
+      const response = await fetch("/__photosbyelie/import-sources?kind=real-estate", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load real estate import sources.");
+      renderRealEstateImportSourceOptions(Array.isArray(payload.sources) ? payload.sources : []);
+    } catch {
+      renderRealEstateImportSourceOptions([]);
+    }
+  };
+
+  const realEstateImportSourceForRun = async (selected) => {
+    if (!realEstateImportSourceSelect) {
+      const path = currentRealEstateSourceRoot(selected);
+      return path ? { path, name: folderNameFromPath(path) || path } : null;
+    }
+    const choice = realEstateImportSourceSelect.value || "new";
+    if (choice === "new") {
+      if (realEstateImportSourceDialogOpen) return null;
+      realEstateImportSourceDialogOpen = true;
+      realEstateImportSourceSelect.disabled = true;
+      setRealEstateStatus("Choose the real estate source folder...");
+      try {
+        const selectedFolder = await chooseImportFolder();
+        if (!selectedFolder) {
+          renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
+          setRealEstateStatus("Real Estate import folder selection cancelled.");
+          return null;
+        }
+        return selectRealEstateImportSourceFolder(selectedFolder);
+      } finally {
+        realEstateImportSourceDialogOpen = false;
+        renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
+      }
+    }
+    return {
+      path: choice,
+      name: realEstateImportSourceLabel(choice),
+    };
   };
 
   const renderImportSourceOptions = (sources = []) => {
@@ -1700,8 +1844,8 @@
       r2FixButton.disabled = busy;
       r2FixButton.textContent = busy
         ? "Task running"
-        : "Start import";
-      r2FixButton.title = `Start import from ${importSourceChoiceLabel()}`;
+        : "Start Expo import";
+      r2FixButton.title = `Start Expo import from ${importSourceChoiceLabel()}`;
     }
     if (importSourceSelect) importSourceSelect.disabled = busy;
     const gapCount = r2GapPhotoCount();
@@ -3106,9 +3250,9 @@
       ["Source scan", "Not running"],
       ["Incomplete photos", window.photosByElieR2Coverage ? formatCount(gaps.photos) : "Checking"],
       ["Missing work", window.photosByElieR2Coverage ? r2GapStatusText() : "Checking R2 coverage"],
-      ["Import source", importSourceChoiceLabel()],
+      ["Expo source", importSourceChoiceLabel()],
     ];
-    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Import source"])));
+    setHtml(r2Counts, ownerCountRowsHtml(rows, new Set(["Missing work", "Expo source"])));
     renderSweepPhases(null);
     renderR2PhotoPreview("");
   };
@@ -3645,6 +3789,40 @@
     };
   };
 
+  realEstateImportSourceSelect?.addEventListener("change", async () => {
+    const selected = selectedRealEstateClient();
+    const fallback = [...realEstateImportSourceSelect.options].some((option) => option.value === lastRealEstateImportSourceValue)
+      ? lastRealEstateImportSourceValue
+      : (currentRealEstateSourceRoot(selected) || realEstateImportSourceOptions[0]?.path || "new");
+    if ((realEstateImportSourceSelect.value || "new") !== "new") {
+      lastRealEstateImportSourceValue = realEstateImportSourceSelect.value;
+      setRealEstateStatus(`Selected RE import source: ${realEstateImportSourceLabel(realEstateImportSourceSelect.value)}. Press RE import when ready.`);
+      return;
+    }
+    if (realEstateImportSourceDialogOpen) return;
+    realEstateImportSourceDialogOpen = true;
+    realEstateImportSourceSelect.disabled = true;
+    setRealEstateStatus("Choose the real estate source folder...");
+    try {
+      const selectedFolder = await chooseImportFolder();
+      if (!selectedFolder) {
+        realEstateImportSourceSelect.value = fallback;
+        lastRealEstateImportSourceValue = fallback;
+        setRealEstateStatus("Real Estate import folder selection cancelled.");
+        return;
+      }
+      const source = selectRealEstateImportSourceFolder(selectedFolder);
+      setRealEstateStatus(`Selected RE import source: ${source?.name || selectedFolder.name}. Press RE import when ready.`);
+    } catch (error) {
+      realEstateImportSourceSelect.value = fallback;
+      lastRealEstateImportSourceValue = fallback;
+      setRealEstateStatus(error?.message || "Could not choose a real estate import folder.");
+    } finally {
+      realEstateImportSourceDialogOpen = false;
+      renderRealEstateImportSourceOptions(realEstateImportSourceOptions);
+    }
+  });
+
   importSourceSelect?.addEventListener("change", async () => {
     const choice = importSourceSelect.value || "new";
     if (choice !== "new") {
@@ -3711,12 +3889,12 @@
       };
     }
     const confirmText = selectedFolder
-      ? `Start the lock-guarded import from "${selectedFolder.name}" now?\n\nThe sweep scans this selected folder, imports developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`
-      : "Start the broad lock-guarded import from all fixed source folders now?\n\nThis scans Camera, Apple Photos, AI, and Real Estate sources, then refreshes manifests, validates, commits, and pushes changes.";
+      ? `Start the lock-guarded Expo import from "${selectedFolder.name}" now?\n\nThe sweep scans this selected gallery folder, imports developed photo/video files it needs, renders/uploads missing media, refreshes manifests, validates, commits, and pushes changes.`
+      : "Start the broad lock-guarded Expo import from all gallery source folders now?\n\nThis scans Camera, Apple Photos, and AI sources, then refreshes manifests, validates, commits, and pushes changes. Real Estate imports live in the Real Estate tab.";
     const ok = window.confirm(confirmText);
     if (!ok) return;
     r2FixButton.disabled = true;
-    setStatus(selectedFolder ? `Starting import from ${selectedFolder.name}...` : "Starting broad import from all fixed source folders...");
+    setStatus(selectedFolder ? `Starting Expo import from ${selectedFolder.name}...` : "Starting broad Expo import from all gallery source folders...");
     try {
       const response = await fetch("/__photosbyelie/r2-fix", {
         method: "POST",
@@ -3736,7 +3914,7 @@
       r2RepairActive = task.operation === "repair";
       syncR2ActionButtons();
       setStatus(task.operation === "repair"
-        ? (selectedFolder ? `Import started from ${selectedFolder.name}.` : "Broad import started.")
+        ? (selectedFolder ? `Expo import started from ${selectedFolder.name}.` : "Broad Expo import started.")
         : "Another import or maintenance task is already running.");
       setOwnerTab("imports");
       loadImportSources();

@@ -212,7 +212,7 @@ catalog_source_phase_was_skipped() {
   local key
   for key in "${SKIPPED_PHASES[@]}"; do
     case "$key" in
-      camera|apple-photo-albums|leonardo|real-estate|selected-folder)
+      camera|apple-photo-albums|leonardo|selected-folder)
         return 0
         ;;
     esac
@@ -307,9 +307,6 @@ else
     --r2-private-renders \
     --hidden-blacklist assets/hidden/hidden-blacklist.json \
     --discarded-tombstone assets/discarded/discarded-photo-ids.json
-
-  run_skippable_phase real-estate "Import Real Estate sources" \
-    python3 scripts/sync_real_estate_clients.py --publish --upload --scope both
 fi
 
 abort_if_catalog_sources_incomplete

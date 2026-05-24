@@ -6,8 +6,8 @@ Date: 2026-05-24
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.17`
-- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.17`.
+- Current visible build: `v83.20`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.20`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,016` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `558`, Mexico `2`, AI/Leonardo `4,921`, Italy `35`, Portugal `216`, Slovakia `2`.
@@ -39,18 +39,21 @@ Date: 2026-05-24
 - `v83.15` surfaces the already-current import count so Owner can see photos skipped before the current run, removes the noisy per-photo queue summary strip above import thumbnails, and runs import render/upload work with a half-CPU parallel worker pool by default.
 - `v83.16` replaces import progress prose with a four-tile stats panel: photos found, processed before, processed this run, and time left.
 - `v83.17` makes the stats panel restart-honest by counting only successful imports under Processed this run and surfacing failed attempts in the tile note.
+- `v83.18` adds breathing room between the Owner tab strip buttons and the panel frame.
+- `v83.19` renames Owner Imports to Expo, moves Expo before Real Estate, keeps Expo imports gallery-only, and gives Real Estate its own source pulldown plus `RE import` folder-picker flow inside the Real Estate tab.
+- `v83.20` defaults the Real Estate source pulldown to the selected client's current source so `New...` remains an explicit choice.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.17`: Owner imports now see Homebrew tools from GUI-launched helpers, use a remembered source selector whose `New...` option opens the native folder chooser, show one thumbnail/name row per import photo, show import stats as four clear tiles, count successful current-run imports separately from failures, and run render/upload work in parallel.
+- Latest checkpoint is `v83.20`: Owner Expo imports now see Homebrew tools from GUI-launched helpers, use a remembered source selector whose `New...` option opens the native folder chooser, show one thumbnail/name row per import photo, show import stats as four clear tiles, count successful current-run imports separately from failures, run render/upload work in parallel, keep the Owner tab strip inset from the panel frame, and leave Real Estate imports to the Real Estate tab's separate source pulldown/`RE import` flow.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
 - The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
-- PhotosByElie active collaboration time is paused with `4:40` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
+- PhotosByElie active collaboration time is paused with `4:43` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
 ## Latest Conversation Update
 
-This conversation centered on making the Owner import path feel like a real local mini app instead of a brittle fixed-source automation panel. `v83.7` changed `Start Import` so it opens a native folder selection dialog and scans only the selected folder, while keeping the broad fixed-anchor sweep available for automation. `v83.11` replaces the immediate button flow with a source pulldown of remembered folders plus `All` and `New...`; selected-folder starts are recorded durably in `Owner.sqlite`, and recent import logs seed the first remembered-source list.
+This conversation centered on making the Owner import path feel like a real local mini app instead of a brittle fixed-source automation panel. `v83.7` changed `Start Import` so it opens a native folder selection dialog and scans only the selected folder, while keeping the broad fixed-anchor sweep available for automation. `v83.11` replaces the immediate button flow with a source pulldown of remembered folders plus `All` and `New...`; selected-folder starts are recorded durably in `Owner.sqlite`, and recent import logs seed the first remembered-source list. `v83.19` splits that surface cleanly: Expo handles gallery imports, and Real Estate handles RE imports from its own tab-local source pulldown and `RE import` button.
 
 The Owner Dock launcher was repaired so launching the mini app starts `scripts/local_server.py` only when needed, reuses whichever helper is already alive on a nearby `8000-8099` port, opens Safari to `owner.html`, and exits instead of leaving a no-window app process swallowing later launches. The active local helper during this pass was on port `8001`.
 
@@ -58,7 +61,7 @@ The import progress UI was polished in `v83.9`, `v83.10`, `v83.11`, simplified i
 
 Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.17`, records the implemented import-source/maintenance UI, the `New...` folder-picker behavior, the simplified thumbnail/name import rows, corrected waiting-count math, removed per-photo queue summary strip, parallel import worker pool, replacement stats panel, and failure-aware current-run stat. No catalog count, Worker behavior, Stripe setting, or price behavior changed in this pass.
+This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.20`, records the implemented import-source/maintenance UI, the `New...` folder-picker behavior, the simplified thumbnail/name import rows, corrected waiting-count math, removed per-photo queue summary strip, parallel import worker pool, replacement stats panel, failure-aware current-run stat, Owner tab strip inset, and the Expo/Real Estate import split. No catalog count, Worker behavior, Stripe setting, or price behavior changed in this pass.
 
 The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
 

@@ -440,7 +440,7 @@ html[data-theme="light"] .photo-art.has-photo::after{
   background:rgb(var(--glass-surface-rgb) / .24);
   backdrop-filter:blur(var(--glass-light-blur));
   -webkit-backdrop-filter:blur(var(--glass-light-blur));
-  padding:10px 0;
+  padding:10px clamp(16px,2vw,24px);
 }
 .owner-tab-button{
   min-height:38px;
@@ -1258,6 +1258,10 @@ html[data-theme="light"] .photo-art.has-photo::after{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
+  align-items:flex-end;
+}
+.owner-real-estate-import-source-control{
+  min-width:min(320px, 100%);
 }
 .owner-real-estate-links .btn[aria-disabled="true"]{
   pointer-events:none;

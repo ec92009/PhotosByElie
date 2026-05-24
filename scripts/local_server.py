@@ -84,12 +84,12 @@ R2_SWEEP_SKIPPABLE_PHASES = {
     "validate",
 }
 IMPORT_SOURCE_SETTINGS_KEY = "import_source_roots"
+REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY = "real_estate_import_source_roots"
 IMPORT_SOURCE_HISTORY_LIMIT = 40
 IMPORT_SOURCE_ROOTS = {
     "camera": Path("/Volumes/Saturn/Pictures/LR/Camera"),
     "apple-photo-albums": Path("/Volumes/Saturn/Pictures/LR/Apple Photo Albums"),
     "leonardo": Path("/Volumes/Saturn/Pictures/LR/_All Leonardo"),
-    "real-estate": REAL_ESTATE_SOURCE_ROOT,
 }
 R2_MAINTENANCE_TASKS = {
     "banned-cleanup": {
@@ -341,7 +341,13 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
-            sources = _import_source_history(Path.cwd())
+            query = parse_qs(urlparse(self.path).query)
+            kind = (query.get("kind") or [""])[0].strip().lower()
+            sources = (
+                _real_estate_import_source_history(Path.cwd())
+                if kind in {"real-estate", "real_estate", "re"}
+                else _import_source_history(Path.cwd())
+            )
         except sqlite3.Error as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return
@@ -386,6 +392,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             source_select = _normalize_import_select(payload.get("sourceSelect"))
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
+        if source_root and _is_real_estate_import_source(source_root):
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"ok": False, "error": "Use the Real Estate tab for real-estate source folders."},
+            )
             return
         if maintenance_key:
             task = _start_r2_maintenance_task(Path.cwd(), maintenance_key)
@@ -2725,12 +2737,26 @@ def _import_source_entry(path: Path, *, last_used_at: str = "", use_count: int =
     }
 
 
-def _read_import_source_setting(repo_root: Path) -> list[dict]:
+def _path_is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        resolved_path = path.expanduser().resolve()
+        resolved_root = root.expanduser().resolve()
+    except OSError:
+        resolved_path = path.expanduser()
+        resolved_root = root.expanduser()
+    return resolved_path == resolved_root or resolved_root in resolved_path.parents
+
+
+def _is_real_estate_import_source(path: Path) -> bool:
+    return _path_is_relative_to(path, REAL_ESTATE_SOURCE_ROOT)
+
+
+def _read_import_source_setting(repo_root: Path, setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> list[dict]:
     conn = owner_db_connect(repo_root)
     try:
         row = conn.execute(
             "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
-            (IMPORT_SOURCE_SETTINGS_KEY,),
+            (setting_key,),
         ).fetchone()
     finally:
         conn.close()
@@ -2761,7 +2787,7 @@ def _read_import_source_setting(repo_root: Path) -> list[dict]:
     return entries
 
 
-def _write_import_source_setting(repo_root: Path, entries: list[dict]) -> None:
+def _write_import_source_setting(repo_root: Path, entries: list[dict], setting_key: str = IMPORT_SOURCE_SETTINGS_KEY) -> None:
     now = datetime.now(timezone.utc).isoformat()
     payload = [
         {
@@ -2783,7 +2809,7 @@ def _write_import_source_setting(repo_root: Path, entries: list[dict]) -> None:
               setting_value = excluded.setting_value,
               updated_at = excluded.updated_at
             """,
-            (IMPORT_SOURCE_SETTINGS_KEY, json.dumps(payload, ensure_ascii=True), now),
+            (setting_key, json.dumps(payload, ensure_ascii=True), now),
         )
         conn.commit()
     finally:
@@ -2824,8 +2850,12 @@ def _discover_import_sources_from_logs(repo_root: Path) -> list[dict]:
 def _import_source_history(repo_root: Path) -> list[dict]:
     merged: dict[str, dict] = {}
     for entry in _discover_import_sources_from_logs(repo_root):
+        if _is_real_estate_import_source(Path(entry["path"])):
+            continue
         merged[entry["path"]] = entry
     for entry in _read_import_source_setting(repo_root):
+        if _is_real_estate_import_source(Path(entry["path"])):
+            continue
         existing = merged.get(entry["path"], {})
         merged[entry["path"]] = {**existing, **entry, "discovered": bool(existing.get("discovered"))}
     entries = list(merged.values())
@@ -2848,6 +2878,57 @@ def _remember_import_source_root(repo_root: Path, source_root: Path) -> None:
     if previous:
         entry["useCount"] = int(previous.get("useCount") or 0) + 1
     _write_import_source_setting(repo_root, [entry, *entries])
+
+
+def _real_estate_import_source_history(repo_root: Path) -> list[dict]:
+    merged: dict[str, dict] = {}
+    try:
+        saved_sources = _read_import_source_setting(repo_root, REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY)
+    except sqlite3.Error:
+        saved_sources = []
+    for entry in saved_sources:
+        merged[entry["path"]] = entry
+    try:
+        state = _read_real_estate_client_payload(repo_root)
+    except Exception:
+        state = {}
+    for client in state.get("clients") or []:
+        if not isinstance(client, dict):
+            continue
+        source_root = str(client.get("sourceRoot") or "").strip()
+        if not source_root:
+            continue
+        path = Path(source_root)
+        entry = _import_source_entry(path, discovered=True)
+        client_name = str(client.get("customer") or client.get("id") or "").strip()
+        if client_name:
+            entry["label"] = f"{client_name}: {entry['label']}"
+        existing = merged.get(entry["path"], {})
+        merged[entry["path"]] = {**entry, **existing, "discovered": bool(existing.get("discovered") or entry.get("discovered"))}
+    entries = list(merged.values())
+    recent = sorted(
+        (entry for entry in entries if entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("lastUsedAt") or ""),
+        reverse=True,
+    )
+    discovered = sorted(
+        (entry for entry in entries if not entry.get("lastUsedAt")),
+        key=lambda entry: str(entry.get("label") or entry.get("path") or "").casefold(),
+    )
+    return [*recent, *discovered][:IMPORT_SOURCE_HISTORY_LIMIT]
+
+
+def _remember_real_estate_import_source_root(repo_root: Path, source_root: Path) -> None:
+    entry = _import_source_entry(source_root, last_used_at=datetime.now(timezone.utc).isoformat(), use_count=1)
+    entries = [item for item in _real_estate_import_source_history(repo_root) if item.get("path") != entry["path"]]
+    previous = next((
+        item
+        for item in _read_import_source_setting(repo_root, REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY)
+        if item.get("path") == entry["path"]
+    ), None)
+    if previous:
+        entry["useCount"] = int(previous.get("useCount") or 0) + 1
+    _write_import_source_setting(repo_root, [entry, *entries], REAL_ESTATE_IMPORT_SOURCE_SETTINGS_KEY)
 
 
 def _select_import_folder() -> Path | None:
@@ -3454,7 +3535,7 @@ def _start_cloud_media_sweep(
         "phaseScopeKeys": (
             ["prepare", "import-cache", "selected-folder", "catalog", "worker", "sidecar", "gap-fill", "storage", "test", "validate", "commit"]
             if source_root
-            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "real-estate", "catalog", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
+            else ["prepare", "discard-start", "import-cache", "camera", "apple-photo-albums", "leonardo", "catalog", "worker", "sidecar", "gap-fill", "discard-final", "storage", "test", "validate", "commit"]
         ),
         "items": [{"command": " ".join(command), "log": str(log_path)}],
         "errors": [],
@@ -3982,6 +4063,7 @@ def _normalize_real_estate_client(incoming: dict, existing: dict | None = None, 
         )
     )
     properties = _normalize_album_list(properties_source)
+    source_root = str(incoming.get("sourceRoot") or existing.get("sourceRoot") or convention["sourceRoot"]).strip()
     return {
         **existing,
         "id": client_id,
@@ -3990,7 +4072,7 @@ def _normalize_real_estate_client(incoming: dict, existing: dict | None = None, 
         "username": convention["username"],
         "accessCode": access_code,
         "accessCodeSalt": str(existing.get("accessCodeSalt") or incoming.get("accessCodeSalt") or uuid.uuid4().hex),
-        "sourceRoot": convention["sourceRoot"],
+        "sourceRoot": source_root or convention["sourceRoot"],
         "outputSlug": convention["outputSlug"],
         "publicSlug": convention["publicSlug"],
         "galleryKey": convention["galleryKey"],
@@ -4290,6 +4372,9 @@ def _persist_real_estate_client_update(repo_root: Path, state: dict, client: dic
 
 def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
     state, client = _real_estate_client_for_action(repo_root, payload)
+    source_root_override = _normalize_import_source_root(payload.get("sourceRoot"))
+    if source_root_override:
+        client["sourceRoot"] = str(source_root_override)
     source_root = Path(str(client.get("sourceRoot") or "")).expanduser()
     if not source_root.is_dir():
         raise ValueError(f"source root not found: {source_root}")
@@ -4320,6 +4405,7 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         client=str(client.get("customer") or ""),
         total=total_media,
         completed=0,
+        sourceRoot=str(source_root),
         skippedProperties=missing_properties,
         properties=import_properties,
     )
@@ -4360,6 +4446,7 @@ def _import_real_estate_client(repo_root: Path, payload: dict) -> dict:
         raise OSError(result["output"] or "real-estate import failed")
     client["lastImportedAt"] = datetime.now(timezone.utc).isoformat()
     _persist_real_estate_client_update(repo_root, state, client)
+    _remember_real_estate_import_source_root(repo_root, source_root)
     import_progress = _real_estate_import_progress(operation_id) or {
         "total": total_media,
         "completed": total_media,

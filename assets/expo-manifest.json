@@ -5,7 +5,7 @@
   "publish_scope": "all-eligible",
   "selection_mode": "newest",
   "seed": null,
-  "photos_count": 2299,
+  "photos_count": 2310,
   "reserve_counts": {
     "ai": 0,
     "france": 0,
@@ -24094,6 +24094,20 @@
       }
     },
     {
+      "id": "corporate-teamwork-and-leadership-teamwork-leadership-col-0-upscale-e4021780-d155-49b0-adc4-1eb73389e4f5-jpgx2-db9a2229d9",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate teamwork and leadership, Teamwork, Leadership, Col-0-UPSCALE_e4021780-d155-49b0-adc4-1eb73389e4f5.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-teamwork-and-leadership-teamwork-leadership-col-0-upscale-e4021780-d155-49b0-adc4-1eb73389e4f5-jpgx2-db9a2229d9_900.jpg",
+        "detail": "expo/corporate-teamwork-and-leadership-teamwork-leadership-col-0-upscale-e4021780-d155-49b0-adc4-1eb73389e4f5-jpgx2-db9a2229d9_1800.jpg"
+      }
+    },
+    {
       "id": "corporate-social-responsibility-sustainability-ethical-bu-3-upscale-faa89e89-71dd-41a4-b77a-13e4ab691808-jpgx2-996caf3135",
       "relative_path": "2023/06/08/UPSCALE/Scaled/Corporate social responsibility - sustainability, ethical bu-3-UPSCALE_faa89e89-71dd-41a4-b77a-13e4ab691808.jpgx2.jpg",
       "gallery_country": {
@@ -24259,6 +24273,146 @@
       "derivatives": {
         "gallery": "expo/corporate-social-responsibility-sustainability-ethical-bu-0-upscale-020b9130-f6e3-4b3d-a20b-48aa8610de18-jpgx2-3860d4fcbe_900.jpg",
         "detail": "expo/corporate-social-responsibility-sustainability-ethical-bu-0-upscale-020b9130-f6e3-4b3d-a20b-48aa8610de18-jpgx2-3860d4fcbe_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-3-upscale-e0704925-e58f-4b62-bb11-de5ec464edb5-jpgx2-5b3fb0d662",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-3-UPSCALE_e0704925-e58f-4b62-bb11-de5ec464edb5.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-e0704925-e58f-4b62-bb11-de5ec464edb5-jpgx2-5b3fb0d662_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-e0704925-e58f-4b62-bb11-de5ec464edb5-jpgx2-5b3fb0d662_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-3-upscale-ac718232-dcab-49a7-9c61-0ceb4042f800-jpgx2-f8a56a641d",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-3-UPSCALE_ac718232-dcab-49a7-9c61-0ceb4042f800.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-ac718232-dcab-49a7-9c61-0ceb4042f800-jpgx2-f8a56a641d_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-ac718232-dcab-49a7-9c61-0ceb4042f800-jpgx2-f8a56a641d_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-3-upscale-1258b26a-12e9-40ee-8686-eb34c89bd806-jpgx2-27c6aafe08",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-3-UPSCALE_1258b26a-12e9-40ee-8686-eb34c89bd806.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-1258b26a-12e9-40ee-8686-eb34c89bd806-jpgx2-27c6aafe08_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-1258b26a-12e9-40ee-8686-eb34c89bd806-jpgx2-27c6aafe08_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-3-upscale-0da8325e-0fb9-49c3-a31a-6093b8825fdb-jpgx2-a6563962a7",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-3-UPSCALE_0da8325e-0fb9-49c3-a31a-6093b8825fdb.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-0da8325e-0fb9-49c3-a31a-6093b8825fdb-jpgx2-a6563962a7_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-3-upscale-0da8325e-0fb9-49c3-a31a-6093b8825fdb-jpgx2-a6563962a7_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-2-upscale-bd432c2e-9f84-4405-a1a2-76ad83685ded-jpgx2-ab5fdda92b",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-2-UPSCALE_bd432c2e-9f84-4405-a1a2-76ad83685ded.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-bd432c2e-9f84-4405-a1a2-76ad83685ded-jpgx2-ab5fdda92b_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-bd432c2e-9f84-4405-a1a2-76ad83685ded-jpgx2-ab5fdda92b_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-2-upscale-b4e3438b-b078-49c6-92f0-576699090c3e-jpgx2-b64b902e68",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-2-UPSCALE_b4e3438b-b078-49c6-92f0-576699090c3e.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-b4e3438b-b078-49c6-92f0-576699090c3e-jpgx2-b64b902e68_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-b4e3438b-b078-49c6-92f0-576699090c3e-jpgx2-b64b902e68_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-2-upscale-8605e227-46a0-439a-a3a7-65343268fd39-jpgx2-c10da4920d",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-2-UPSCALE_8605e227-46a0-439a-a3a7-65343268fd39.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-8605e227-46a0-439a-a3a7-65343268fd39-jpgx2-c10da4920d_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-8605e227-46a0-439a-a3a7-65343268fd39-jpgx2-c10da4920d_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-2-upscale-12c3de64-345e-472d-bed6-40115ae98216-jpgx2-f4f62ab75c",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-2-UPSCALE_12c3de64-345e-472d-bed6-40115ae98216.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-12c3de64-345e-472d-bed6-40115ae98216-jpgx2-f4f62ab75c_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-2-upscale-12c3de64-345e-472d-bed6-40115ae98216-jpgx2-f4f62ab75c_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-1-upscale-bb3b302a-6a7b-4a8d-90b1-63b134b1e9fc-jpgx2-f93aa3f2c0",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-1-UPSCALE_bb3b302a-6a7b-4a8d-90b1-63b134b1e9fc.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-1-upscale-bb3b302a-6a7b-4a8d-90b1-63b134b1e9fc-jpgx2-f93aa3f2c0_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-1-upscale-bb3b302a-6a7b-4a8d-90b1-63b134b1e9fc-jpgx2-f93aa3f2c0_1800.jpg"
+      }
+    },
+    {
+      "id": "corporate-social-responsibility-social-responsibility-sust-1-upscale-6337e3b1-2852-4249-86ff-223b71029f9b-jpgx2-f8a5dd2d99",
+      "relative_path": "2023/05/23/UPSCALE/Scaled/Corporate social responsibility, Social responsibility, Sust-1-UPSCALE_6337e3b1-2852-4249-86ff-223b71029f9b.jpgx2.jpg",
+      "gallery_country": {
+        "slug": "ai",
+        "label": "AI",
+        "source": "forced"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/corporate-social-responsibility-social-responsibility-sust-1-upscale-6337e3b1-2852-4249-86ff-223b71029f9b-jpgx2-f8a5dd2d99_900.jpg",
+        "detail": "expo/corporate-social-responsibility-social-responsibility-sust-1-upscale-6337e3b1-2852-4249-86ff-223b71029f9b-jpgx2-f8a5dd2d99_1800.jpg"
       }
     },
     {

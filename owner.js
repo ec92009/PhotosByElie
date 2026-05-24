@@ -2067,6 +2067,7 @@
     const planQueueDepth = Number(queuePayload.planQueueDepth ?? scanPayload.planQueueDepth ?? 0);
     const plannerActive = Number(queuePayload.plannerActive ?? scanPayload.plannerActive ?? 0);
     const alreadySelected = Number(scanPayload.alreadySelected ?? queuePayload.alreadySelected ?? 0);
+    const workers = Math.max(1, Number(queuePayload.workers ?? scanPayload.workers ?? 1));
     const scannedFiles = Number(scanPayload.seen ?? queuePayload.seen ?? numberFromLog(logSummary?.scan?.match?.[1]) ?? 0);
     const inspectedFiles = Number(scanPayload.inspected ?? queuePayload.inspected ?? numberFromLog(logSummary?.scan?.match?.[2]) ?? 0);
     const scanDone = Boolean(logSummary?.importScanDonePayload);
@@ -2109,6 +2110,7 @@
       planQueueDepth,
       plannerActive,
       alreadySelected,
+      workers,
       scannedFiles,
       inspectedFiles,
       completed,
@@ -2129,7 +2131,7 @@
   const importSourceLabel = (phaseKey) => PHOTO_IMPORT_PHASES.get(phaseKey) || "Camera";
 
   const sourceLaneAction = () => (
-    "Pipeline: scanner finds source files, planner checks metadata and trusted R2 coverage, worker only creates/uploads missing boxes."
+    "Pipeline: scanner finds source files, planner checks metadata and trusted R2 coverage, render/upload workers only create missing boxes."
   );
 
   const sourceLaneDetailRows = (phaseKey, details = {}) => {
@@ -2144,7 +2146,9 @@
     add("Current file", details.currentFile);
     add("Current photo", details.currentPhoto);
     add("Scanner", details.scanner);
+    add("Already current before run", details.alreadyCurrent);
     add("Planner", details.planner);
+    add("Worker pool", details.workerPool);
     add("Queue", details.queue);
     add("Progress bar counts", details.progressCounts);
     add("Coverage gaps", details.coverageGaps);
@@ -2165,6 +2169,12 @@
       activeItems ? `${formatCount(activeItems)} active` : "",
     ].filter(Boolean);
     return parts.length ? parts.join(", ") : "no waiting photos";
+  };
+
+  const importAlreadyCurrentText = (progress = {}) => {
+    const count = Math.max(0, Number(progress.alreadySelected || 0));
+    if (!count) return "";
+    return `${formatCount(count)} source photos were already current before this run and were not queued for reprocessing.`;
   };
 
   const sourceImportProgressDetail = (progress, phaseKey = "camera") => {
@@ -2499,16 +2509,8 @@
     const visibleInfo = importMatrixVisibleInfo(photos);
     const visibleRows = visibleInfo.rows;
     if (!visibleRows.length) return "";
-    const meta = [
-      visibleInfo.runningCount ? `${formatCount(visibleInfo.runningCount)} working` : "",
-      visibleInfo.visibleQueuedCount ? `${formatCount(visibleInfo.visibleQueuedCount)} next queued` : "",
-      visibleInfo.doneCount ? `${formatCount(visibleInfo.doneCount)} just finished` : "",
-      visibleInfo.hiddenQueuedCount ? `${formatCount(visibleInfo.hiddenQueuedCount)} more queued hidden` : "",
-      visibleInfo.errorCount ? `${formatCount(visibleInfo.errorCount)} needs attention` : "",
-    ].filter(Boolean).join(" · ");
     return `
       <div class="owner-import-matrix-wrap" aria-label="Per-photo import progress">
-        ${meta ? `<div class="owner-import-matrix-meta">${escapeHtml(meta)}</div>` : ""}
         <div class="owner-import-photo-list">
           ${visibleRows.map((photo) => `
             <div class="owner-import-photo-row ${photo.status === "running" ? "is-running" : photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : importMatrixRowQueued(photo) ? "is-next" : ""}">
@@ -2633,7 +2635,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Progress bar counts", "Progress summary", "Upload progress", "Photo rows", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Already current before run", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Worker pool", "Progress bar counts", "Progress summary", "Upload progress", "Photo rows", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, phaseList.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -2910,7 +2912,9 @@
           coverageGaps: gapSummary,
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
           scanner,
+          alreadyCurrent: importAlreadyCurrentText(progress),
           planner,
+          workerPool: progress.workers > 1 ? `${formatCount(progress.workers)} parallel render/upload workers` : "",
           queue,
           progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
           progressSummary: `${formatCount(Math.min(progress.current, progress.selected))} / ${formatCount(progress.selected)} queued photos processed this run`,
@@ -2921,9 +2925,11 @@
         mergeSourceLaneDetails({
           currentPhoto: progress.completed < progress.selected ? progress.photo : "",
           scanner: `Scanning: ${formatCount(progress.scannedFiles)} source files seen, ${formatCount(progress.inspectedFiles)} inspected so far.`,
+          alreadyCurrent: importAlreadyCurrentText(progress),
           planner: progress.plannerActive || progress.planQueueDepth
             ? `Planning metadata and R2 coverage: ${formatCount(progress.planQueueDepth)} scan batches waiting${progress.plannerActive ? ", 1 active" : ""}.`
             : "Planner is waiting for source batches.",
+          workerPool: progress.workers > 1 ? `${formatCount(progress.workers)} parallel render/upload workers` : "",
           queue: "No needed photos queued yet.",
           progressCounts: sourceLaneProgressCountText(activePhaseKey, progress),
         });

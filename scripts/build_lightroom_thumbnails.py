@@ -80,6 +80,7 @@ PRIVATE_RENDER_PRODUCTS = {
 }
 R2_COVERED_KEYS_CACHE: set[str] | None = None
 R2_UPLOAD_STATE_LOCK = threading.Lock()
+IMPORT_STATE_LOCK = threading.Lock()
 COUNTRY_ALIASES = {
     "fr": ("france", "France"),
     "france": ("france", "France"),
@@ -204,6 +205,16 @@ FONT_CANDIDATES = [
 FFMPEG_FILTERS: set[str] | None = None
 
 
+def default_import_workers() -> int:
+    configured = os.environ.get("PBE_IMPORT_WORKERS")
+    if configured:
+        try:
+            return max(1, int(configured))
+        except ValueError:
+            pass
+    return max(1, (os.cpu_count() or 2) // 2)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create watermarked import previews from developed photo/video exports."
@@ -246,6 +257,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--limit", type=int, default=0, help="Stop after N selected media rows; useful for tests.")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=default_import_workers(),
+        help="Parallel render/upload workers. Defaults to half the logical CPU count.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Scan and checkpoint, but do not render files.")
     parser.add_argument("--force", action="store_true", help="Ignore checkpoints and rebuild existing derivatives.")
     parser.add_argument("--clean-missing", action="store_true", help="Drop manifest rows whose derivatives are missing.")
@@ -485,12 +502,13 @@ def load_latest_state(path: Path) -> dict[str, dict[str, Any]]:
 
 
 def append_state(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    row = {"updated_at": now_iso(), **row}
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
-        handle.flush()
-        os.fsync(handle.fileno())
+    with IMPORT_STATE_LOCK:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        row = {"updated_at": now_iso(), **row}
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
 
 
 def now_iso() -> str:
@@ -515,20 +533,21 @@ def emit_import_step(row: dict[str, Any], step: str, status: str = "done", **pay
 
 
 def record_r2_object_current(item: UploadItem, source: str) -> None:
-    repo_root = Path.cwd()
-    conn = owner_db_connect(repo_root)
-    try:
-        upsert_r2_object_state(
-            conn,
-            bucket=item.bucket,
-            object_key=item.key,
-            lifecycle_state="current",
-            source=source,
-            bytes_value=item.path.stat().st_size if item.path.exists() else None,
-        )
-        conn.commit()
-    finally:
-        conn.close()
+    with R2_UPLOAD_STATE_LOCK:
+        repo_root = Path.cwd()
+        conn = owner_db_connect(repo_root)
+        try:
+            upsert_r2_object_state(
+                conn,
+                bucket=item.bucket,
+                object_key=item.key,
+                lifecycle_state="current",
+                source=source,
+                bytes_value=item.path.stat().st_size if item.path.exists() else None,
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
 
 def record_r2_upload_success(item: UploadItem, source: str) -> None:
@@ -2142,6 +2161,177 @@ def discover_images(source_root: Path, year_filter: tuple[int, int] | None = Non
                 yield path
 
 
+def apply_import_result(
+    result: dict[str, Any],
+    manifest: dict[str, dict[str, Any]],
+    gps_manifest: dict[str, dict[str, Any]],
+    failures: dict[str, dict[str, Any]],
+) -> None:
+    for relative_path in result.get("discarded") or []:
+        manifest.pop(relative_path, None)
+        gps_manifest.pop(relative_path, None)
+        failures.pop(relative_path, None)
+    for relative_path, row in (result.get("manifest") or {}).items():
+        manifest[relative_path] = row
+    for relative_path, row in (result.get("gps_manifest") or {}).items():
+        gps_manifest[relative_path] = row
+    for relative_path in result.get("clear_failures") or []:
+        failures.pop(relative_path, None)
+    for relative_path, row in (result.get("failures") or {}).items():
+        failures[relative_path] = row
+
+
+def process_import_item(
+    item: dict[str, Any],
+    args: argparse.Namespace,
+    state_path: Path,
+    font: str,
+    item_index: int,
+) -> dict[str, Any]:
+    relative_path = item["relative_path"]
+    source = item["source_path"]
+    metadata_path = item["metadata_path"]
+    meta = item.get("metadata")
+    if not isinstance(meta, dict):
+        metadata_rows = run_exiftool([metadata_path])
+        meta = metadata_rows[0] if metadata_rows else {}
+    base_state = {
+        "relative_path": relative_path,
+        "checkpoint": item["checkpoint"],
+        "source_path_hint": str(source),
+        "metadata_path_hint": str(metadata_path),
+    }
+    result: dict[str, Any] = {
+        "completed": 0,
+        "rendered": 0,
+        "manifest": {},
+        "gps_manifest": {},
+        "failures": {},
+        "discarded": [],
+        "clear_failures": [],
+    }
+
+    slug = slug_for(relative_path)
+    if not selected_by_args(meta, args):
+        append_state(state_path, {**base_state, "status": "skipped"})
+        emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
+        result["completed"] = 1
+        return result
+
+    try:
+        if slug in getattr(args, "discarded_photo_ids", set()):
+            result["discarded"].append(relative_path)
+            append_state(state_path, {**base_state, "status": "discarded"})
+            emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
+            result["completed"] = 1
+            return result
+        selected_metadata = merged_selected_metadata(source, metadata_path, args, relative_path)
+        gallery_country = selected_metadata["gallery_country"]
+        media_type = "video" if is_video(source) else "photo"
+        gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug, media_type)
+        artifact_plan = item.get("artifact_plan") if isinstance(item.get("artifact_plan"), dict) else artifact_plan_for_source(args, slug, source)
+        row = {
+            "id": slug,
+            "relative_path": relative_path,
+            "media_type": media_type,
+            "source_path_hint": str(source),
+            "metadata_path_hint": str(metadata_path),
+            "source_checkpoint": item["checkpoint"],
+            "gallery_country": gallery_country,
+            "derivatives": {
+                "gallery": gallery_path.relative_to(args.output_root).as_posix(),
+                "detail": detail_path.relative_to(args.output_root).as_posix(),
+            },
+        }
+        row["rating"] = selected_metadata["rating"]
+        row["label"] = selected_metadata["label"]
+        row["keywords"] = selected_metadata["keywords"]
+        row["capture"] = selected_metadata["capture"]
+        row["dimensions"] = selected_metadata["dimensions"]
+        row["location"] = selected_metadata["location"]
+        row["source_file"] = source_file_facts(source)
+        row["metadata"] = selected_metadata["display"]
+        row["raw_metadata"] = selected_metadata["raw"]
+        row["selection_metadata"] = compact_metadata(meta)
+        if item.get("source_changed"):
+            row["_force_reimport"] = True
+            force_artifact_plan_reimport(artifact_plan)
+        print(f"START {item_index}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
+        emit_import_event(
+            "PHOTO",
+            index=item_index,
+            photoId=slug,
+            relativePath=relative_path,
+            sourcePath=str(source),
+            country=gallery_country["slug"],
+            mediaType=media_type,
+            status="running",
+        )
+        emit_import_plan_steps(row, artifact_plan)
+        if selected_metadata["gps"]:
+            result["gps_manifest"][relative_path] = {
+                "id": slug,
+                "relative_path": relative_path,
+                "source_path_hint": str(source),
+                "gps": selected_metadata["gps"],
+            }
+        if not args.dry_run:
+            source_orientation = selected_metadata["raw"].get("Orientation")
+            row["_font"] = font
+            row["_source_orientation"] = source_orientation
+            row["derivative_files"] = {
+                "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
+                "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
+                "generated_at": now_iso(),
+            }
+            r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source, artifact_plan)
+            if r2_assets:
+                removed_tmp = cleanup_uploaded_tmp_previews(args, r2_assets, [gallery_path, detail_path])
+                row["r2"] = {
+                    "uploaded_at": now_iso(),
+                    **r2_assets,
+                }
+                if removed_tmp:
+                    row["tmp_removed_after_upload"] = removed_tmp
+            row.pop("_font", None)
+            row.pop("_source_orientation", None)
+            row.pop("_force_reimport", None)
+            row["derivative_files"] = {
+                "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
+                "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
+                "generated_at": now_iso(),
+            }
+        row.pop("_force_reimport", None)
+        result["manifest"][relative_path] = row
+        result["clear_failures"].append(relative_path)
+        append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
+        result["completed"] = 1
+        result["rendered"] = 1
+        if args.dry_run:
+            print(f"{item_index}: {slug} selected {gallery_country['slug']}", flush=True)
+        else:
+            public_count = len((row.get("r2") or {}).get("public_previews") or [])
+            private_render_count = len((row.get("r2") or {}).get("private_renders") or [])
+            print(
+                f"{item_index}: {slug} rendered {gallery_country['slug']} "
+                f"public {public_count} private-renders {private_render_count}",
+                flush=True,
+            )
+        emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
+    except Exception as exc:
+        result["failures"][relative_path] = {
+            **base_state,
+            "status": "error",
+            "error": str(exc),
+            "failed_at": now_iso(),
+        }
+        append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
+        emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="error", error=str(exc))
+        result["completed"] = 1
+        print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
+    return result
+
+
 def process_batch(
     batch: list[dict[str, Any]],
     args: argparse.Namespace,
@@ -2153,142 +2343,14 @@ def process_batch(
     selection_limit: int | None = None,
     index_offset: int = 0,
 ) -> int:
-    if all(isinstance(item.get("metadata"), dict) for item in batch):
-        by_source = {}
-    else:
-        metadata_rows = run_exiftool([item["metadata_path"] for item in batch])
-        by_source = {Path(row.get("SourceFile", "")).resolve(): row for row in metadata_rows}
     rendered_count = 0
     for item in batch:
-        relative_path = item["relative_path"]
-        source = item["source_path"]
-        metadata_path = item["metadata_path"]
-        meta = item.get("metadata") if isinstance(item.get("metadata"), dict) else by_source.get(metadata_path.resolve(), {})
-        base_state = {
-            "relative_path": relative_path,
-            "checkpoint": item["checkpoint"],
-            "source_path_hint": str(source),
-            "metadata_path_hint": str(metadata_path),
-        }
-        if not selected_by_args(meta, args):
-            append_state(state_path, {**base_state, "status": "skipped"})
-            continue
-
-        photo_slug = ""
-        try:
-            slug = slug_for(relative_path)
-            photo_slug = slug
-            if slug in getattr(args, "discarded_photo_ids", set()):
-                manifest.pop(relative_path, None)
-                gps_manifest.pop(relative_path, None)
-                failures.pop(relative_path, None)
-                append_state(state_path, {**base_state, "status": "discarded"})
-                continue
-            selected_metadata = merged_selected_metadata(source, metadata_path, args, relative_path)
-            gallery_country = selected_metadata["gallery_country"]
-            media_type = "video" if is_video(source) else "photo"
-            gallery_path, detail_path = derivative_paths(args.output_root, gallery_country["slug"], slug, media_type)
-            artifact_plan = item.get("artifact_plan") if isinstance(item.get("artifact_plan"), dict) else artifact_plan_for_source(args, slug, source)
-            row = {
-                "id": slug,
-                "relative_path": relative_path,
-                "media_type": media_type,
-                "source_path_hint": str(source),
-                "metadata_path_hint": str(metadata_path),
-                "source_checkpoint": item["checkpoint"],
-                "gallery_country": gallery_country,
-                "derivatives": {
-                    "gallery": gallery_path.relative_to(args.output_root).as_posix(),
-                    "detail": detail_path.relative_to(args.output_root).as_posix(),
-                },
-            }
-            row["rating"] = selected_metadata["rating"]
-            row["label"] = selected_metadata["label"]
-            row["keywords"] = selected_metadata["keywords"]
-            row["capture"] = selected_metadata["capture"]
-            row["dimensions"] = selected_metadata["dimensions"]
-            row["location"] = selected_metadata["location"]
-            row["source_file"] = source_file_facts(source)
-            row["metadata"] = selected_metadata["display"]
-            row["raw_metadata"] = selected_metadata["raw"]
-            row["selection_metadata"] = compact_metadata(meta)
-            if item.get("source_changed"):
-                row["_force_reimport"] = True
-                force_artifact_plan_reimport(artifact_plan)
-            item_index = index_offset + rendered_count + 1
-            print(f"START {item_index}: {slug} {gallery_country['slug']} {relative_path}", flush=True)
-            emit_import_event(
-                "PHOTO",
-                index=item_index,
-                photoId=slug,
-                relativePath=relative_path,
-                sourcePath=str(source),
-                country=gallery_country["slug"],
-                mediaType=media_type,
-                status="running",
-            )
-            emit_import_plan_steps(row, artifact_plan)
-            if selected_metadata["gps"]:
-                gps_manifest[relative_path] = {
-                    "id": slug,
-                    "relative_path": relative_path,
-                    "source_path_hint": str(source),
-                    "gps": selected_metadata["gps"],
-            }
-            if not args.dry_run:
-                source_orientation = selected_metadata["raw"].get("Orientation")
-                row["_font"] = font
-                row["_source_orientation"] = source_orientation
-                row["derivative_files"] = {
-                    "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
-                    "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
-                    "generated_at": now_iso(),
-                }
-                r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source, artifact_plan)
-                if r2_assets:
-                    removed_tmp = cleanup_uploaded_tmp_previews(args, r2_assets, [gallery_path, detail_path])
-                    row["r2"] = {
-                        "uploaded_at": now_iso(),
-                        **r2_assets,
-                    }
-                    if removed_tmp:
-                        row["tmp_removed_after_upload"] = removed_tmp
-                row.pop("_font", None)
-                row.pop("_source_orientation", None)
-                row.pop("_force_reimport", None)
-                row["derivative_files"] = {
-                    "gallery": derivative_facts(args.output_root, row["derivatives"]["gallery"]),
-                    "detail": derivative_facts(args.output_root, row["derivatives"]["detail"]),
-                    "generated_at": now_iso(),
-                }
-            row.pop("_force_reimport", None)
-            manifest[relative_path] = row
-            failures.pop(relative_path, None)
-            append_state(state_path, {**base_state, "status": "rendered" if not args.dry_run else "selected"})
-            rendered_count += 1
-            if args.dry_run:
-                print(f"{rendered_count}: {slug} selected {gallery_country['slug']}", flush=True)
-            else:
-                public_count = len((row.get("r2") or {}).get("public_previews") or [])
-                private_render_count = len((row.get("r2") or {}).get("private_renders") or [])
-                print(
-                    f"{rendered_count}: {slug} rendered {gallery_country['slug']} "
-                    f"public {public_count} private-renders {private_render_count}",
-                    flush=True,
-                )
-                emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
-            if selection_limit and rendered_count >= selection_limit:
-                break
-        except Exception as exc:
-            failures[relative_path] = {
-                **base_state,
-                "status": "error",
-                "error": str(exc),
-                "failed_at": now_iso(),
-            }
-            append_state(state_path, {**base_state, "status": "error", "error": str(exc)})
-            emit_import_event("PHOTO_DONE", photoId=photo_slug, relativePath=relative_path, sourcePath=str(source), status="error", error=str(exc))
-            print(f"ERROR {relative_path}: {exc}", file=sys.stderr)
+        item_index = int(item.get("queue_index") or (index_offset + rendered_count + 1))
+        result = process_import_item(item, args, state_path, font, item_index)
+        apply_import_result(result, manifest, gps_manifest, failures)
+        rendered_count += int(result.get("rendered") or 0)
+        if selection_limit and rendered_count >= selection_limit:
+            break
     return rendered_count
 
 
@@ -2359,6 +2421,7 @@ def write_import_outputs(
 
 def main() -> int:
     args = parse_args()
+    args.workers = max(1, int(args.workers or 1))
     source_root = resolve_source_root(args.source_root)
     args.source_root = source_root
     args.developed_root = args.developed_root.expanduser().resolve() if args.developed_root else None
@@ -2405,6 +2468,8 @@ def main() -> int:
     counters_lock = threading.Lock()
     data_lock = threading.Lock()
     scan_errors: list[BaseException] = []
+    worker_errors: list[BaseException] = []
+    worker_count = args.workers
 
     def counter_snapshot() -> dict[str, int]:
         with counters_lock:
@@ -2429,6 +2494,7 @@ def main() -> int:
         payload = counter_snapshot()
         payload["queueDepth"] = max(0, payload["queued"] - payload["processed"] - payload["active"])
         payload["planQueueDepth"] = plan_queue.qsize()
+        payload["workers"] = worker_count
         emit_import_event(kind, **payload)
 
     def queue_scan_batch(batch_items: list[dict[str, Any]]) -> None:
@@ -2472,6 +2538,7 @@ def main() -> int:
                 force_artifact_plan_reimport(plan)
             selected_item["artifact_plan"] = plan
             queued_index = add_counter("queued")
+            selected_item["queue_index"] = queued_index
             plan_row = {
                 "id": photo_id,
                 "relative_path": relative_path,
@@ -2487,7 +2554,9 @@ def main() -> int:
                 status="queued",
             )
             emit_import_plan_steps(plan_row, plan)
-            if plan.get("complete") and relative_path in manifest:
+            with data_lock:
+                manifest_has_row = relative_path in manifest
+            if plan.get("complete") and manifest_has_row:
                 emit_import_event("PHOTO_DONE", photoId=photo_id, relativePath=relative_path, status="done")
                 add_counter("processed")
                 emit_queue_event("QUEUE_PROGRESS")
@@ -2511,7 +2580,8 @@ def main() -> int:
             scan_errors.append(error)
             print(f"ERROR planner: {error}", file=sys.stderr, flush=True)
         finally:
-            work_queue.put(None)
+            for _ in range(worker_count):
+                work_queue.put(None)
 
     def scan_sources() -> None:
         batch: list[dict[str, Any]] = []
@@ -2540,7 +2610,10 @@ def main() -> int:
                     )
                     continue
                 prior = state.get(relative_path)
-                manifest_row = manifest.get(relative_path) if isinstance(manifest.get(relative_path), dict) else None
+                with data_lock:
+                    manifest_entry = manifest.get(relative_path)
+                    manifest_row = manifest_entry if isinstance(manifest_entry, dict) else None
+                    manifest_has_row = relative_path in manifest
                 prior_matches = should_skip_metadata(prior, stamp, args.force)
                 manifest_checkpoint = manifest_row.get("source_checkpoint") if manifest_row else None
                 manifest_matches = bool(manifest_checkpoint and manifest_checkpoint == stamp)
@@ -2553,7 +2626,7 @@ def main() -> int:
                     and not source_known_current
                     and not args.force
                 )
-                if not args.force and relative_path in manifest and not source_changed:
+                if not args.force and manifest_has_row and not source_changed:
                     coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
                     if coverage_plan.get("complete"):
                         add_counter("alreadySelected")
@@ -2565,9 +2638,9 @@ def main() -> int:
                     if prior_status == "skipped":
                         continue
                     if prior_status in {"rendered", "selected"}:
-                        if relative_path in manifest:
+                        if manifest_has_row:
                             coverage_plan = artifact_plan_for_source(args, slug_for(relative_path), source)
-                            if args.dry_run or manifest_derivatives_exist(args.output_root, manifest.get(relative_path)) or coverage_plan.get("complete"):
+                            if args.dry_run or manifest_derivatives_exist(args.output_root, manifest_row) or coverage_plan.get("complete"):
                                 add_counter("alreadySelected")
                                 if args.limit and counter_snapshot()["alreadySelected"] >= args.limit:
                                     break
@@ -2610,37 +2683,26 @@ def main() -> int:
         finally:
             plan_queue.put(None)
 
-    scanner = threading.Thread(target=scan_sources, name="source-scan", daemon=True)
-    planner = threading.Thread(target=plan_sources, name="source-plan", daemon=True)
-    scanner.start()
-    planner.start()
-    print("Pipeline started: scanner feeds planner; planner feeds oldest-first render/upload work.", flush=True)
-    emit_queue_event("QUEUE_START")
-    while True:
-        item = work_queue.get()
-        if item is None:
-            break
-        snapshot = counter_snapshot()
+    def process_work_item(item: dict[str, Any]) -> None:
+        item_index = int(item.get("queue_index") or 0)
         add_counter("active")
         emit_queue_event("QUEUE_PROGRESS")
+        snapshot = counter_snapshot()
         print(
-            f"Processing queued photo {snapshot['processed'] + 1}; "
-            f"queue depth {max(0, snapshot['queued'] - snapshot['processed'] - 1)}",
+            f"Processing queued photo {item_index or snapshot['processed'] + 1}; "
+            f"queue depth {max(0, snapshot['queued'] - snapshot['processed'] - snapshot['active'])}",
             flush=True,
         )
         try:
+            result = process_import_item(
+                item,
+                args,
+                state_path,
+                font,
+                item_index or snapshot["processed"] + 1,
+            )
             with data_lock:
-                processed_now = process_batch(
-                    [item],
-                    args,
-                    state_path,
-                    manifest,
-                    gps_manifest,
-                    failures,
-                    font,
-                    1,
-                    index_offset=snapshot["processed"],
-                )
+                apply_import_result(result, manifest, gps_manifest, failures)
                 write_import_outputs(
                     args,
                     manifest_path,
@@ -2652,15 +2714,51 @@ def main() -> int:
                     gps_manifest,
                     failures,
                 )
-            add_counter("processed", processed_now)
+            add_counter("processed", int(result.get("completed") or 0))
         finally:
             add_counter("active", -1)
             emit_queue_event("QUEUE_PROGRESS")
 
+    def render_worker(worker_index: int) -> None:
+        try:
+            while True:
+                item = work_queue.get()
+                try:
+                    if item is None:
+                        return
+                    process_work_item(item)
+                finally:
+                    work_queue.task_done()
+        except BaseException as error:  # noqa: BLE001 - report worker failure after the queue drains.
+            worker_errors.append(error)
+            print(f"ERROR worker {worker_index}: {error}", file=sys.stderr, flush=True)
+
+    scanner = threading.Thread(target=scan_sources, name="source-scan", daemon=True)
+    planner = threading.Thread(target=plan_sources, name="source-plan", daemon=True)
+    workers = [
+        threading.Thread(target=render_worker, args=(index + 1,), name=f"source-render-{index + 1}", daemon=True)
+        for index in range(worker_count)
+    ]
+    scanner.start()
+    planner.start()
+    for worker in workers:
+        worker.start()
+    print(
+        f"Pipeline started: scanner feeds planner; planner feeds {worker_count} parallel render/upload worker"
+        f"{'' if worker_count == 1 else 's'}.",
+        flush=True,
+    )
+    emit_queue_event("QUEUE_START")
+    work_queue.join()
+
     scanner.join()
     planner.join()
+    for worker in workers:
+        worker.join()
     if scan_errors:
         raise scan_errors[0]
+    if worker_errors:
+        raise worker_errors[0]
 
     write_import_outputs(
         args,

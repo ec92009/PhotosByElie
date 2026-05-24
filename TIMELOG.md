@@ -81,8 +81,10 @@ Clock state: paused
 | 2026-05-24 | 12:41 CEST | 12:45 CEST | 0:01 | Diagnosed the selected-folder import failure as a GUI helper PATH issue and requested the Homebrew tool bootstrap fix; background implementation time excluded. |
 | 2026-05-24 | 14:14 CEST | 14:17 CEST | 0:01 | Requested simplified Owner import photo rows and immediate `New...` source folder picker behavior; background implementation time excluded. |
 | 2026-05-24 | 14:30 CEST | 14:31 CEST | 0:01 | Reported inconsistent Owner import waiting counts during failed selected-folder rows; background implementation time excluded. |
+| 2026-05-24 | 14:42 CEST | 14:43 CEST | 0:01 | Requested Owner import prior-run skip counts and removal of the per-photo queue summary strip; background implementation time excluded. |
+| 2026-05-24 | 14:50 CEST | 14:51 CEST | 0:01 | Requested parallel import render/upload workers using half the machine CPUs by default; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 4:37
+Active collaboration time used: 4:39
 Remaining budget: not set

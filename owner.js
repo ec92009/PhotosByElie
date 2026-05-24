@@ -186,8 +186,8 @@
     ["previews_created", "Previews made"],
     ["previews_uploaded", "Previews up"],
   ];
-  const IMPORT_MATRIX_QUEUE_PREVIEW_LIMIT = 5;
-  const IMPORT_MATRIX_RECENT_DONE_LIMIT = 1;
+  const IMPORT_MATRIX_QUEUE_PREVIEW_LIMIT = 8;
+  const IMPORT_MATRIX_RECENT_DONE_LIMIT = 6;
   const SWEEP_PHASES = [
     ["prepare", "Prepare workspace"],
     ["discard-start", "Double-check banned R2 cleanup"],
@@ -2270,6 +2270,11 @@
     return IMPORT_MATRIX_STEPS.every(([stepKey]) => importMatrixStepSettled(photo.steps?.[stepKey] || {}));
   };
 
+  const importMatrixNextStepKey = (photo = {}) => {
+    const next = IMPORT_MATRIX_STEPS.find(([stepKey]) => !importMatrixStepSettled(photo.steps?.[stepKey] || {}));
+    return next?.[0] || "";
+  };
+
   const importMatrixVisibleInfo = (photos = []) => {
     const incompleteRows = photos.filter((photo) => !importMatrixRowComplete(photo));
     const sortByQueueIndex = (left, right) => Number(left.index || 0) - Number(right.index || 0);
@@ -2319,14 +2324,17 @@
     const checked = importMatrixStepComplete(step);
     const total = Number(step.total || 0);
     const completed = Number(step.completed || 0);
+    const working = !checked && !skipped && photo.status === "running" && importMatrixNextStepKey(photo) === stepKey;
+    const progress = total > 0 && !skipped ? Math.max(0, Math.min(100, Math.round((completed / total) * 100))) : 0;
     const count = total > 1 && !skipped ? `<span>${formatCount(Math.min(completed, total))}/${formatCount(total)}</span>` : "";
-    const label = `${stepLabel}: ${photo.id}`;
+    const label = `${stepLabel}: ${photo.id} ${checked ? "done" : skipped ? "not applicable" : working ? "working" : "waiting"}`;
     const classes = [
       checked ? "is-checked" : "is-pending",
+      working ? "is-working" : "",
       skipped ? "is-skipped" : "",
     ].filter(Boolean).join(" ");
     return `
-      <td class="${classes}">
+      <td class="${classes}" style="--step-progress:${progress}%">
         <input type="checkbox" disabled ${checked ? "checked" : ""} aria-label="${escapeHtml(label)}">
         ${skipped ? "<span>n/a</span>" : count}
       </td>
@@ -2354,7 +2362,7 @@
     if (!url) return `<span class="owner-import-thumb owner-import-thumb-empty">${escapeHtml(fallback)}</span>`;
     return `
       <span class="owner-import-thumb">
-        <img src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.owner-import-thumb')?.classList.add('owner-import-thumb-empty');this.remove();">
+        <img src="${escapeHtml(url)}" alt="" loading="eager" decoding="async" onerror="this.closest('.owner-import-thumb')?.classList.add('owner-import-thumb-empty');this.remove();">
       </span>
     `;
   };

@@ -241,8 +241,10 @@ if [[ ! -d node_modules ]]; then
 fi
 done_phase prepare
 
-run_skippable_phase discard-start "Double-check banned R2 cleanup" \
-  node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
+if [[ -z "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
+  run_skippable_phase discard-start "Double-check banned R2 cleanup" \
+    node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
+fi
 
 phase import-cache "Prepare import cache"
 mkdir -p "$IMPORT_CACHE_ROOT"
@@ -324,8 +326,10 @@ done_phase sidecar
 run_skippable_phase gap-fill "Fill in gaps" \
   python3 scripts/fill_r2_coverage_gaps.py
 
-run_skippable_phase discard-final "Final banned R2 cleanup double-check" \
-  node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
+if [[ -z "$SELECTED_IMPORT_SOURCE_ROOT" ]]; then
+  run_skippable_phase discard-final "Final banned R2 cleanup double-check" \
+    node scripts/delete_discarded_r2_media.mjs --delete --discarded-tombstone assets/discarded/discarded-photo-ids.json --request-timeout-ms 180000 --retries 4
+fi
 phase storage "Refresh storage estimate"
 node scripts/write_storage_estimate.mjs
 done_phase storage

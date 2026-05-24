@@ -54,7 +54,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220506-145942-03357-6183b42671",
-        "title": "Church, Invalides",
+        "title": "20220506 145942 03357",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -79,7 +79,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20190723-1419-16523-3d4da421c4",
-        "title": "El Capitan",
+        "title": "20190723 1419 16523",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -94,7 +94,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20181113-1748-16886-f468becf95",
-        "title": "Encinitas Sunset",
+        "title": "20181113 1748 16886",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -109,7 +109,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20181113-1729-19714-e408f3becb",
-        "title": "Del Mar Dog Beach",
+        "title": "20181113 1729 19714",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -124,7 +124,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20181020-1143-19559-d29e8bb4b8",
-        "title": "Pacific Ocean Coast viewed from Del Mar",
+        "title": "20181020 1143 19559",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -144,12 +144,12 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 558,
+    "count": 559,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
         "id": "d5h-2938-cc0cb9487b",
-        "title": "Museo Ruso, Malaga",
+        "title": "D5H 2938",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -164,7 +164,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "d5h-2933-5320e9f76b",
-        "title": "Museo Ruso, Malaga",
+        "title": "D5H 2933",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -179,7 +179,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "d5h-2924-7782398889",
-        "title": "Museo Ruso, Malaga",
+        "title": "D5H 2924",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -194,7 +194,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "d5h-2923-5cdb3a529c",
-        "title": "Museo Ruso, Malaga",
+        "title": "D5H 2923",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -254,7 +254,7 @@ window.photosByElieHomeData = {
     "title": "AI",
     "description": "Leonardo archive selections prepared from the Saturn Lightroom AI source.",
     "accent": "ai-gallery",
-    "count": 4921,
+    "count": 1238,
     "href": "./gallery.html?gallery=ai",
     "photos": [
       {
@@ -271,7 +271,7 @@ window.photosByElieHomeData = {
             "detailKey": "expo/beyrouth-630240f1ea_short_5s_720p.mp4"
           },
           "video": {
-            "duration": 43
+            "duration": 43.0
           }
         }
       },
@@ -327,70 +327,9 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 35,
+    "count": 0,
     "href": "./gallery.html?gallery=italy",
-    "photos": [
-      {
-        "id": "img-1219-570b09bebb",
-        "title": "Leaning Tower of Pisa",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1219-570b09bebb_900.jpg",
-            "detailKey": "expo/img-1219-570b09bebb_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1218-fe487846d6",
-        "title": "Leaning Tower of Pisa",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1218-fe487846d6_900.jpg",
-            "detailKey": "expo/img-1218-fe487846d6_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1213-7276413ecc",
-        "title": "Leaning Tower of Pisa",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1213-7276413ecc_900.jpg",
-            "detailKey": "expo/img-1213-7276413ecc_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1212-96505e7356",
-        "title": "Leaning Tower of Pisa",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1212-96505e7356_900.jpg",
-            "detailKey": "expo/img-1212-96505e7356_1800.jpg"
-          }
-        }
-      }
-    ]
+    "photos": []
   },
   "portugal": {
     "number": "07",
@@ -402,7 +341,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20220802-130003-00136-pano-052608ca90",
-        "title": "Bacalhoa Buddha Eden, Jardim Do Eden",
+        "title": "20220802 130003 00136 Pano",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -417,7 +356,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-145332-04573-0742e2b77c",
-        "title": "Castelo De Sao Jorge, Fortress",
+        "title": "20220521 145332 04573",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -432,7 +371,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-145324-04568-1c242c532c",
-        "title": "Castelo De Sao Jorge, Fortress",
+        "title": "20220521 145324 04568",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -447,7 +386,7 @@ window.photosByElieHomeData = {
       },
       {
         "id": "20220521-144639-04546-3394e60cbe",
-        "title": "Castelo De Sao Jorge, Fortress",
+        "title": "20220521 144639 04546",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -472,7 +411,7 @@ window.photosByElieHomeData = {
     "photos": [
       {
         "id": "20190624-1827-16232-feef5b78f4",
-        "title": "Bratislava, Slovakia",
+        "title": "20190624 1827 16232",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {

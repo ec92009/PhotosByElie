@@ -7,7 +7,7 @@ import random
 import re
 import subprocess
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
@@ -557,6 +557,81 @@ def discarded_ids_from_current_state(repo_root: Path) -> set[str]:
     return discarded_ids
 
 
+def normalize_source_path_value(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return Path(text).expanduser().resolve(strict=False).as_posix()
+    except OSError:
+        return Path(text).expanduser().as_posix()
+
+
+def source_path_values_from_object(value: object) -> set[str]:
+    paths: set[str] = set()
+    if isinstance(value, dict):
+        for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile", "path"):
+            normalized = normalize_source_path_value(value.get(key))
+            if normalized:
+                paths.add(normalized)
+        for key in ("source_paths", "sourcePaths", "sourceFiles", "source_files"):
+            paths.update(source_path_values_from_object(value.get(key)))
+        source_file = value.get("source_file")
+        if isinstance(source_file, dict):
+            paths.update(source_path_values_from_object(source_file))
+    elif isinstance(value, list):
+        for item in value:
+            paths.update(source_path_values_from_object(item))
+    elif isinstance(value, str):
+        normalized = normalize_source_path_value(value)
+        if normalized:
+            paths.add(normalized)
+    return paths
+
+
+def discarded_source_paths_from_payload(payload: object) -> set[str]:
+    return source_path_values_from_object(payload)
+
+
+def discarded_source_paths_from_current_state(repo_root: Path, discarded_ids: set[str]) -> set[str]:
+    paths: set[str] = set()
+    for relative_path in (DISCARDED_TOMBSTONE_PATH, DISCARDED_MEDIA_MANIFEST_PATH):
+        paths.update(discarded_source_paths_from_payload(load_json(repo_root / relative_path, {})))
+    tmp_root = repo_root / "tmp"
+    if discarded_ids and tmp_root.exists():
+        for manifest_path in tmp_root.glob("**/manifest.json"):
+            payload = load_json(manifest_path, {})
+            rows = payload.get("photos") if isinstance(payload, dict) else None
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if isinstance(row, dict) and str(row.get("id") or "") in discarded_ids:
+                    paths.update(source_path_values_from_object(row))
+    return paths
+
+
+def source_path_suffixes(paths: set[str]) -> set[str]:
+    suffixes = set()
+    for value in paths:
+        text = PurePosixPath(value).as_posix().strip("/")
+        if "/" in text:
+            suffixes.add(text)
+    return suffixes
+
+
+def row_source_path_is_blocked(row: dict, blocked_paths: set[str], blocked_suffixes: set[str]) -> bool:
+    for value in source_path_values_from_object(row):
+        if value in blocked_paths:
+            return True
+        candidate = PurePosixPath(value).as_posix().strip("/")
+        for suffix in blocked_suffixes:
+            if candidate == suffix or candidate.endswith(f"/{suffix}"):
+                return True
+    return False
+
+
 def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
     value = payload.get("expo_state")
     if not isinstance(value, dict):
@@ -716,13 +791,18 @@ def write_photos_data(
     reserve_only_ids: set[str] | None = None,
     country_assignments: dict[str, str] | None = None,
     keyword_blacklist: set[str] | None = None,
+    blacklist_source_paths: set[str] | None = None,
 ) -> Path:
     groups: dict[str, list[tuple[dict, str]]] = defaultdict(list)
     country_assignments = country_assignments or {}
     keyword_blacklist = keyword_blacklist or set()
+    blacklist_source_paths = blacklist_source_paths or set()
+    blacklist_source_suffixes = source_path_suffixes(blacklist_source_paths)
     uploaded_public_keys = load_uploaded_public_keys(repo_root)
     for path, mode in existing_manifest_specs(repo_root):
         for row in json.loads(path.read_text())["photos"]:
+            if row_source_path_is_blocked(row, blacklist_source_paths, blacklist_source_suffixes):
+                continue
             if not derivative_files_available(repo_root, row, mode, uploaded_public_keys):
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
@@ -982,6 +1062,7 @@ if __name__ == "__main__":
         | discarded_ids_from_current_state(repo_root)
         | blacklist_ids_from_payload(review_payload)
     )
+    hidden_source_paths = discarded_source_paths_from_current_state(repo_root, hidden_ids)
     country_assignments = country_assignments_from_owner_index(repo_root)
     country_assignments.update(country_assignments_from_payload(review_payload))
     keyword_blacklist = load_keyword_blacklist(repo_root / args.keyword_blacklist)
@@ -997,5 +1078,6 @@ if __name__ == "__main__":
         reserve_only_ids=reserve_only_ids_from_payload(review_payload),
         country_assignments=country_assignments,
         keyword_blacklist=keyword_blacklist,
+        blacklist_source_paths=hidden_source_paths,
     )
     print(result)

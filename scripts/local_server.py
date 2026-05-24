@@ -724,6 +724,56 @@ def _photo_asset_paths(photo: dict) -> dict[str, str]:
     }
 
 
+def _source_paths_from_manifest_rows(repo_root: Path, photo_id: str) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+    tmp_root = repo_root / "tmp"
+    if not tmp_root.exists():
+        return paths
+    for manifest_path in tmp_root.glob("**/manifest.json"):
+        payload = _read_json_file(manifest_path, {})
+        rows = payload.get("photos") if isinstance(payload, dict) else None
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict) or str(row.get("id") or "") != photo_id:
+                continue
+            for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile"):
+                value = str(row.get(key) or "").strip()
+                if value and value not in seen:
+                    seen.add(value)
+                    paths.append(value)
+    return paths
+
+
+def _photo_source_paths(repo_root: Path, photo: dict) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: object) -> None:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            return
+        seen.add(text)
+        paths.append(text)
+
+    for source in photo.get("sourceFiles") or []:
+        if not isinstance(source, dict):
+            continue
+        raw_path = str(source.get("path") or "").strip()
+        if raw_path:
+            for candidate in _source_candidates(repo_root, raw_path):
+                if candidate.exists():
+                    add(candidate.resolve())
+                    break
+            add(raw_path)
+    photo_id = str(photo.get("id") or "").strip()
+    if photo_id:
+        for path in _source_paths_from_manifest_rows(repo_root, photo_id):
+            add(path)
+    return paths
+
+
 def _existing_preview_rel(repo_root: Path, photo_id: str, derivative: str, preferred_slug: str) -> tuple[str, str, str] | None:
     suffix = "900" if derivative == "gallery" else "1800"
     slugs = [preferred_slug] + [slug for slug in ORDER if slug != preferred_slug]
@@ -1563,6 +1613,7 @@ def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[d
 
 
 def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[dict]:
+    repo_root = Path.cwd()
     entries: list[dict] = []
     for slug, photos in hidden_groups.items():
         for photo in photos:
@@ -1579,6 +1630,7 @@ def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[
                     "from_slug": slug,
                     "source_slug": original_slug,
                     "asset_paths": _photo_asset_paths(photo),
+                    "source_paths": _photo_source_paths(repo_root, photo),
                     "public_preview_keys": _hidden_public_preview_keys(photo, original_slug),
                     "private_keys": _discarded_private_keys(photo),
                 }
@@ -1622,6 +1674,11 @@ def _read_discarded_tombstone(repo_root: Path) -> dict:
         "version": 1,
         "updated_at": payload.get("updated_at"),
         "photo_ids": sorted(photo_ids),
+        "source_paths": sorted({
+            path
+            for path in payload.get("source_paths") or []
+            if isinstance(path, str) and path
+        }),
         "public_preview_keys": sorted({
             key
             for key in payload.get("public_preview_keys") or []
@@ -1699,6 +1756,7 @@ def _write_discarded_tombstones(repo_root: Path, discarded_photos: list[dict] | 
         if isinstance(photo, dict) and photo.get("id")
     }
     photo_ids = set(payload.get("photo_ids") or [])
+    source_paths = set(payload.get("source_paths") or [])
     public_preview_keys = set(payload.get("public_preview_keys") or [])
     private_keys = set(payload.get("private_keys") or [])
     for discarded_photo in discarded_photos or []:
@@ -1707,9 +1765,11 @@ def _write_discarded_tombstones(repo_root: Path, discarded_photos: list[dict] | 
             continue
         photos_by_id[photo_id] = discarded_photo
         photo_ids.add(photo_id)
+        source_paths.update(discarded_photo.get("source_paths") or [])
         public_preview_keys.update(discarded_photo.get("public_preview_keys") or [])
         private_keys.update(discarded_photo.get("private_keys") or [])
     payload["photo_ids"] = sorted(photo_id for photo_id in photo_ids if isinstance(photo_id, str) and photo_id)
+    payload["source_paths"] = sorted(path for path in source_paths if isinstance(path, str) and path)
     payload["public_preview_keys"] = sorted(key for key in public_preview_keys if isinstance(key, str) and key)
     payload["private_keys"] = sorted(key for key in private_keys if isinstance(key, str) and key)
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -5153,6 +5213,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "from_slug": source_slug,
             "source_slug": original_slug,
             "asset_paths": source_assets,
+            "source_paths": _photo_source_paths(repo_root, source_photo),
             "public_preview_keys": public_preview_keys,
             "private_keys": private_keys,
         }

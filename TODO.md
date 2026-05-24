@@ -4,10 +4,10 @@ Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v83.22`.
+- Current visible build: `v83.23`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=83.22`.
-- Current catalog scale: `2,415` public media rows in `assets/catalog/photosbyelie.sqlite`: France `123`, USA `159`, Spain `664`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=83.23`.
+- Current catalog scale: `2,921` public media rows in `assets/catalog/photosbyelie.sqlite`: France `269`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
 - The latest cloud-media checkpoint regenerated public catalog/homepage/worker artifacts after the import work. That makes the current repo internally consistent, but the drop from the earlier `6,016`-row baseline needs an explicit catalog-baseline audit before more launch/publishing work.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
@@ -48,11 +48,13 @@ Last updated: 2026-05-24
 - `v83.20` defaults the Real Estate source pulldown to the selected client's current source so `New...` remains an explicit choice.
 - `v83.21` makes Processed this run count completed photo attempts, including failed attempts, so the tile remains stable while failures stay visible in the note.
 - `v83.22` makes the Processed this run note include successful completions, runs sweep Python calls through the Pillow-capable interpreter, and preflights Pillow before queuing photos.
+- `v83.23` makes discarded/Waste Basket source paths participate in import and export filtering, records source paths in new tombstones, and adds a read-only audit for source-path tombstone dodgers in current manifests/R2 state.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.22`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v83.23`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
-- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post, publishing only when existing authentication allows it and otherwise leaving ready-to-publish packages.
+- Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths.
+- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it and otherwise leaves ready-to-publish packages.
 - The 2026-05-24 Facebook, Instagram, and Pinterest daily package is prepared only; each platform still needs final manual publish/account confirmation.
 - Apple Photos with faces remains off limits.
 - `npm test`, `npm run validate`, syntax checks, browser checks, and `git diff --check` remain mandatory before publishing public-site changes.
@@ -60,14 +62,14 @@ Last updated: 2026-05-24
 ## Numbered Backlog
 
 1. **Audit the current catalog baseline before more launch work.**
-   - Compare the latest `2,415`-row catalog checkpoint against the earlier `6,016`-row baseline and identify whether the selected-folder import path accidentally narrowed generated public inventory.
-   - Confirm whether Italy should really be `0`, why AI/Leonardo is now `1,249`, and whether Spain's increase to `664` is expected from the recent imports.
+   - Compare the latest `2,921`-row catalog checkpoint against the earlier `6,016`-row baseline and identify whether the selected-folder import path accidentally narrowed generated public inventory.
+   - Confirm whether Italy should really be `0`, why AI/Leonardo is now `1,249`, and whether Spain's increase to `1,024` is expected from the recent imports.
    - Deliverables: a short catalog delta report, a proposed restore/fix plan if the shrink is accidental, and validation that `assets/catalog/photosbyelie.sqlite`, `home-data.js`, `assets/expo-manifest.json`, and `worker/photos-catalog.generated.mjs` agree.
 
-2. **Implement source re-export de-duplication and clean today's duplicates.**
+2. **Finish source re-export de-duplication and clean today's duplicates.**
    - Use full source pathname plus modified date as the import anchor.
    - If the same source path is re-exported with a newer modified date, overwrite the prior generated master, public previews, and private JPG triplets instead of creating a second photo identity.
-   - Audit imports created today for duplicates from the old anchor behavior and propose a reversible cleanup before deleting anything.
+   - Import/export now filters known tombstoned source paths; the remaining work is overwriting same-path newer re-exports instead of allocating fresh IDs, then auditing imports created today for duplicates from the old anchor behavior before deleting anything.
 
 3. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.

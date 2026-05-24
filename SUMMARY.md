@@ -6,11 +6,11 @@ Date: 2026-05-24
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v83.22`
-- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.22`.
+- Current visible build: `v83.23`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=83.23`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `2,415` public media rows in the SQLite catalog: France `123`, USA `159`, Spain `664`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
+- Current catalog scale: `2,921` public media rows in the SQLite catalog: France `269`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `1,249`, Italy `0`, Portugal `216`, Slovakia `2`.
 - The latest cloud-media checkpoint regenerated public catalog/homepage/Worker artifacts after the import work. The repo artifacts are internally consistent, but the public row count dropped from the earlier `6,016` baseline, so the next technical priority is an explicit catalog-baseline audit before launch/publishing work continues.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local. Title/keyword batch JSON is compatibility/audit output and must not be treated as authoritative public catalog state.
@@ -45,12 +45,13 @@ Date: 2026-05-24
 - `v83.20` defaults the Real Estate source pulldown to the selected client's current source so `New...` remains an explicit choice.
 - `v83.21` makes Processed this run count completed photo attempts, including failed attempts, so the tile remains stable while failures stay visible in the note.
 - `v83.22` makes the Processed this run note include successful completions, runs sweep Python calls through the Pillow-capable interpreter, and preflights Pillow before queuing photos.
+- `v83.23` makes discarded/Waste Basket source paths participate in import and export filtering, records source paths in new tombstones, and adds a read-only audit for source-path tombstone dodgers in current manifests/R2 state.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price changes have been made from that draft.
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v83.22`: Owner Expo imports now see Homebrew tools from GUI-launched helpers, use a remembered source selector whose `New...` option opens the native folder chooser, show one thumbnail/name row per import photo, show import stats as four clear tiles, count completed current-run attempts stably while surfacing successful and failed completions in the note, run render/upload work in parallel, keep the Owner tab strip inset from the panel frame, and leave Real Estate imports to the Real Estate tab's separate source pulldown/`RE import` flow.
-- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest with 5-10 watermarked public images per post and publishes only when existing authentication allows it.
+- Latest checkpoint is `v83.23`: Owner Expo imports now skip known discarded/Waste Basket source paths, not only old media IDs, so a selected-folder import cannot resurrect a tombstoned file under a new relative-path-derived ID. The source-path dodger audit currently reports `0` manifest dodgers and `0` current R2 dodgers.
+- Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it.
 - The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
 - PhotosByElie active collaboration time is paused with `4:43` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
 
@@ -64,7 +65,7 @@ The import progress UI was polished in `v83.9`, `v83.10`, `v83.11`, simplified i
 
 Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.22`, records the implemented import-source/maintenance UI, the `New...` folder-picker behavior, the simplified thumbnail/name import rows, corrected waiting-count math, removed per-photo queue summary strip, parallel import worker pool, replacement stats panel, failure-aware current-run stat, Owner tab strip inset, and the Expo/Real Estate import split. No Stripe setting or price behavior changed in this pass.
+This refresh updates the durable summary/backlog/README/handoff/timelog state through `v83.23`, records the source-path blacklist/tombstone guard, and notes that the current source-path dodger audit found no manifest or current-R2 offenders. No Stripe setting or price behavior changed in this pass.
 
 The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
 
@@ -72,7 +73,9 @@ The later import-stat screenshots showed why the counts felt off during parallel
 
 The Owner decided that re-export identity needs to be stricter than the old import behavior: use the full source pathname plus the source modified date as the anchor. When only the modified date changes for an existing source path, the newly exported photo should overwrite the old generated forms instead of creating duplicate catalog/media rows. There may be duplicates from today's imports, so the cleanup must start with an audit and reversible plan before deleting anything.
 
-The current docs refresh records that the UI now looks much better, leaves runtime Owner state unstaged, and raises one important new risk: the latest committed catalog artifacts now describe `2,415` public media rows, down from the earlier `6,016` baseline. That may be an expected selected-source checkpoint or an accidental narrowed export, but it should be audited before the next launch-facing step.
+The blacklist investigation confirmed the suspicion behind the user's question: the old import guard was ID-based, not full-path based. Since selected-folder imports can change the relative path used to derive a media ID, a discarded file could theoretically come back under a fresh ID. `v83.23` adds source-path extraction from tombstones and historical import manifests, skips those source paths during import planning/rendering, applies the same guard during public export, writes source paths into new tombstones, and adds `scripts/audit_tombstone_source_dodgers.py`. The current audit wrote `.review-logs/tombstone-source-dodgers.json` and found `0` manifest dodgers, `0` current R2 dodgers, `4,699` discarded IDs, and `301` recovered discarded source paths.
+
+The current docs refresh also records one important remaining risk: the latest committed catalog artifacts now describe `2,921` public media rows, down from the earlier `6,016` baseline. That may be an expected selected-source checkpoint or an accidental narrowed export, but it should be audited before the next launch-facing step.
 
 ## Earlier Conversation Context
 
@@ -174,8 +177,9 @@ This conversation focused on getting the Owner side of Photos By Elie usable as 
 
 ## Recent Relevant Commits
 
+- `bf936ee2 photosbyelie: checkpoint cloud media sweep`
+- `8cd776b0 photosbyelie: refresh import backlog docs`
 - `6dffc1ff photosbyelie: checkpoint cloud media sweep`
-- `bf124442 photosbyelie: checkpoint cloud media sweep`
 - `c812736e photosbyelie: clarify import counts and python preflight`
 - `1ce9f8b4 photosbyelie: stabilize owner import stats`
 - `bae0ed6c photosbyelie: split expo and real estate imports`
@@ -195,7 +199,8 @@ node --check owner.js
 node --check title-keyword-review.js
 python3 -m py_compile scripts/local_server.py
 python3 -m py_compile scripts/owner_state_db.py
-python3 -m py_compile scripts/build_lightroom_thumbnails.py
+python3 -m py_compile scripts/build_lightroom_thumbnails.py scripts/local_server.py scripts/export_photos_data.py scripts/audit_tombstone_source_dodgers.py
+python3 scripts/audit_tombstone_source_dodgers.py
 python3 XML parse check for sitemap.xml
 npm test
 npm run validate
@@ -205,4 +210,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: audit the current catalog baseline, implement source re-export de-duplication and clean today's duplicates, add import source history management, make the Real Estate import control unmistakable and rehearse the RE lifecycle, finish import dependency preflights, then resume buyer support/pricing/storefront/analytics/SEO/marketing and longer-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: audit the current catalog baseline, finish source re-export overwrite behavior and clean today's duplicates, add import source history management, make the Real Estate import control unmistakable and rehearse the RE lifecycle, finish import dependency preflights, then resume buyer support/pricing/storefront/analytics/SEO/marketing and longer-horizon Owner/media hardening.

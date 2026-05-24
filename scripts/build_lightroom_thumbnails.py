@@ -30,7 +30,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key, public_preview_key_for_reference
@@ -2006,6 +2006,119 @@ def load_discarded_photo_ids(path: Path) -> set[str]:
     return {value for value in values or [] if isinstance(value, str) and value}
 
 
+def normalize_source_path_value(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return Path(text).expanduser().resolve(strict=False).as_posix()
+    except OSError:
+        return Path(text).expanduser().as_posix()
+
+
+def source_path_values_from_object(value: Any) -> set[str]:
+    paths: set[str] = set()
+    if isinstance(value, dict):
+        for key in ("source_path_hint", "sourcePath", "source_path", "sourceFile", "path"):
+            normalized = normalize_source_path_value(value.get(key))
+            if normalized:
+                paths.add(normalized)
+        for key in ("source_paths", "sourcePaths"):
+            paths.update(source_path_values_from_object(value.get(key)))
+        for key in ("sourceFiles", "source_files"):
+            paths.update(source_path_values_from_object(value.get(key)))
+        source_file = value.get("source_file")
+        if isinstance(source_file, dict):
+            paths.update(source_path_values_from_object(source_file))
+    elif isinstance(value, list):
+        for item in value:
+            paths.update(source_path_values_from_object(item))
+    elif isinstance(value, str):
+        normalized = normalize_source_path_value(value)
+        if normalized:
+            paths.add(normalized)
+    return paths
+
+
+def load_discarded_source_paths(path: Path) -> set[str]:
+    if not path.exists():
+        return set()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return set()
+    return source_path_values_from_object(payload)
+
+
+def source_paths_from_manifest_rows(rows: Any, blocked_photo_ids: set[str]) -> set[str]:
+    paths: set[str] = set()
+    if not blocked_photo_ids:
+        return paths
+    if isinstance(rows, dict):
+        iterable = rows.values()
+    elif isinstance(rows, list):
+        iterable = rows
+    else:
+        return paths
+    for row in iterable:
+        if not isinstance(row, dict):
+            continue
+        photo_id = str(row.get("id") or "")
+        if photo_id and photo_id in blocked_photo_ids:
+            paths.update(source_path_values_from_object(row))
+    return paths
+
+
+def load_manifest_source_paths_for_ids(path: Path, blocked_photo_ids: set[str]) -> set[str]:
+    if not path.exists() or not blocked_photo_ids:
+        return set()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return set()
+    if isinstance(payload, dict):
+        return source_paths_from_manifest_rows(payload.get("photos") or [], blocked_photo_ids)
+    return set()
+
+
+def load_historical_discarded_source_paths(blocked_photo_ids: set[str]) -> set[str]:
+    paths: set[str] = set()
+    if not blocked_photo_ids:
+        return paths
+    tmp_root = Path("tmp")
+    if not tmp_root.exists():
+        return paths
+    for manifest_path in tmp_root.glob("**/manifest.json"):
+        paths.update(load_manifest_source_paths_for_ids(manifest_path, blocked_photo_ids))
+    return paths
+
+
+def discarded_source_suffixes(paths: set[str]) -> set[str]:
+    suffixes = set()
+    for value in paths:
+        path = PurePosixPath(value)
+        text = path.as_posix().strip("/")
+        if "/" in text:
+            suffixes.add(text)
+    return suffixes
+
+
+def source_path_is_discarded(source_path: Path, args: argparse.Namespace) -> bool:
+    normalized = normalize_source_path_value(str(source_path))
+    if not normalized:
+        return False
+    blocked_paths = getattr(args, "discarded_source_paths", set())
+    if normalized in blocked_paths:
+        return True
+    candidate = PurePosixPath(normalized).as_posix().strip("/")
+    for suffix in getattr(args, "discarded_source_suffixes", set()):
+        if candidate.endswith(f"/{suffix}") or candidate == suffix:
+            return True
+    return False
+
+
 def write_gps_manifest(path: Path, rows: dict[str, dict[str, Any]], args: argparse.Namespace) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -2223,6 +2336,12 @@ def process_import_item(
     }
 
     slug = slug_for(relative_path)
+    if source_path_is_discarded(source, args):
+        result["discarded"].append(relative_path)
+        append_state(state_path, {**base_state, "status": "discarded", "reason": "discarded source path"})
+        emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
+        result["completed"] = 1
+        return result
     if not selected_by_args(meta, args):
         append_state(state_path, {**base_state, "status": "skipped"})
         emit_import_event("PHOTO_DONE", photoId=slug, relativePath=relative_path, sourcePath=str(source), status="done")
@@ -2394,7 +2513,7 @@ def select_batch(
             append_state(state_path, {**base_state, "status": "skipped"})
             continue
         slug = slug_for(relative_path)
-        if slug in getattr(args, "discarded_photo_ids", set()):
+        if slug in getattr(args, "discarded_photo_ids", set()) or source_path_is_discarded(source, args):
             if data_lock:
                 with data_lock:
                     manifest.pop(relative_path, None)
@@ -2445,6 +2564,13 @@ def main() -> int:
         | load_discarded_photo_ids(args.discarded_tombstone.expanduser())
         | load_discarded_photo_ids(Path("assets/discarded-media-manifest.json"))
     )
+    args.discarded_source_paths = (
+        load_discarded_source_paths(args.hidden_blacklist.expanduser())
+        | load_discarded_source_paths(args.discarded_tombstone.expanduser())
+        | load_discarded_source_paths(Path("assets/discarded-media-manifest.json"))
+        | load_historical_discarded_source_paths(args.discarded_photo_ids)
+    )
+    args.discarded_source_suffixes = discarded_source_suffixes(args.discarded_source_paths)
     year_filter = parse_year_filter(args.years)
     if not source_root.exists():
         raise SystemExit(f"Source root does not exist: {source_root}")
@@ -2619,6 +2745,23 @@ def main() -> int:
                 sidecar = sidecar_for(source)
                 metadata_path = sidecar or source
                 stamp = checkpoint_key(source, sidecar)
+                if source_path_is_discarded(source, args):
+                    append_state(
+                        state_path,
+                        {
+                            "relative_path": relative_path,
+                            "checkpoint": stamp,
+                            "source_path_hint": str(source),
+                            "metadata_path_hint": str(metadata_path),
+                            "status": "discarded",
+                            "reason": "discarded source path",
+                        },
+                    )
+                    with data_lock:
+                        manifest.pop(relative_path, None)
+                        gps_manifest.pop(relative_path, None)
+                        failures.pop(relative_path, None)
+                    continue
                 if source.stat().st_size == 0:
                     append_state(
                         state_path,

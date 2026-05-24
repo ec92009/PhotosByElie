@@ -148,6 +148,8 @@
   let latestR2ProgressTasks = [];
   let currentCostEstimate = null;
   let keywordBlacklistTerms = [];
+  let importSourceDialogOpen = false;
+  let lastImportSourceValue = "new";
   let realEstateClients = [];
   let selectedRealEstateClientId = "";
   let realEstateBusy = false;
@@ -1608,7 +1610,40 @@
     if (value === "all") return "All fixed source folders";
     if (value === "new") return "New folder";
     const source = importSourceByPath(value);
-    return source?.label || value.split(/[\\/]/).filter(Boolean).at(-1) || value;
+    const optionLabel = importSourceSelect?.selectedOptions?.[0]?.textContent?.trim() || "";
+    return source?.label || optionLabel || value.split(/[\\/]/).filter(Boolean).at(-1) || value;
+  };
+
+  const selectImportSourceFolder = (folder = {}) => {
+    if (!importSourceSelect) return null;
+    const path = String(folder.path || "").trim();
+    if (!path) return null;
+    const label = String(folder.name || folder.label || "").trim() || path.split(/[\\/]/).filter(Boolean).at(-1) || path;
+    const existingOption = [...importSourceSelect.options].find((option) => option.value === path);
+    if (!existingOption) {
+      const option = document.createElement("option");
+      option.value = path;
+      option.textContent = label;
+      option.title = path;
+      const allOption = [...importSourceSelect.options].find((item) => item.value === "all");
+      importSourceSelect.insertBefore(option, allOption || null);
+    } else {
+      existingOption.textContent = existingOption.textContent || label;
+      existingOption.title = existingOption.title || path;
+    }
+    if (!importSourceByPath(path)) {
+      importSourceOptions = [
+        { path, label, exists: true, discovered: false },
+        ...importSourceOptions.filter((source) => source.path !== path),
+      ];
+    }
+    importSourceSelect.value = path;
+    lastImportSourceValue = path;
+    syncR2ActionButtons();
+    if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+      renderImportDashboardIdle();
+    }
+    return { path, name: label };
   };
 
   const renderImportSourceOptions = (sources = []) => {
@@ -1639,7 +1674,8 @@
     const values = new Set([...importSourceSelect.options].map((option) => option.value));
     importSourceSelect.value = values.has(previous)
       ? previous
-      : importSourceOptions[0]?.path || "new";
+      : importSourceOptions[0]?.path || "all";
+    lastImportSourceValue = importSourceSelect.value;
     syncR2ActionButtons();
     if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
       renderImportDashboardIdle();
@@ -2370,11 +2406,6 @@
     return IMPORT_MATRIX_STEPS.every(([stepKey]) => importMatrixStepSettled(photo.steps?.[stepKey] || {}));
   };
 
-  const importMatrixNextStepKey = (photo = {}) => {
-    const next = IMPORT_MATRIX_STEPS.find(([stepKey]) => !importMatrixStepSettled(photo.steps?.[stepKey] || {}));
-    return next?.[0] || "";
-  };
-
   const importMatrixVisibleInfo = (photos = []) => {
     const incompleteRows = photos.filter((photo) => !importMatrixRowComplete(photo));
     const sortByQueueIndex = (left, right) => Number(left.index || 0) - Number(right.index || 0);
@@ -2420,29 +2451,6 @@
 
   const importMatrixRowQueued = (photo = {}) => !["running", "done", "error"].includes(String(photo.status || ""));
 
-  const importMatrixCellHtml = (photo, stepKey, stepLabel) => {
-    const step = photo.steps?.[stepKey] || {};
-    const skipped = step.status === "skipped";
-    const checked = importMatrixStepComplete(step);
-    const total = Number(step.total || 0);
-    const completed = Number(step.completed || 0);
-    const working = !checked && !skipped && photo.status === "running" && importMatrixNextStepKey(photo) === stepKey;
-    const progress = total > 0 && !skipped ? Math.max(0, Math.min(100, Math.round((completed / total) * 100))) : 0;
-    const count = total > 1 && !skipped ? `<span>${formatCount(Math.min(completed, total))}/${formatCount(total)}</span>` : "";
-    const label = `${stepLabel}: ${photo.id} ${checked ? "done" : skipped ? "not applicable" : working ? "working" : "waiting"}`;
-    const classes = [
-      checked ? "is-checked" : "is-pending",
-      working ? "is-working" : "",
-      skipped ? "is-skipped" : "",
-    ].filter(Boolean).join(" ");
-    return `
-      <td class="${classes}" style="--step-progress:${progress}%">
-        <input type="checkbox" disabled ${checked ? "checked" : ""} aria-label="${escapeHtml(label)}">
-        ${skipped ? "<span>n/a</span>" : count}
-      </td>
-    `;
-  };
-
   const importMatrixStillImagePath = (photo = {}) => (
     /\.(jpe?g|png|tiff?|heic|heif|webp)$/i.test(String(photo.sourcePath || photo.relativePath || ""))
   );
@@ -2474,7 +2482,6 @@
     const visibleInfo = importMatrixVisibleInfo(photos);
     const visibleRows = visibleInfo.rows;
     if (!visibleRows.length) return "";
-    const nextQueuedId = visibleRows.find((photo) => importMatrixRowQueued(photo))?.id || "";
     const meta = [
       visibleInfo.runningCount ? `${formatCount(visibleInfo.runningCount)} working` : "",
       visibleInfo.visibleQueuedCount ? `${formatCount(visibleInfo.visibleQueuedCount)} next queued` : "",
@@ -2485,33 +2492,17 @@
     return `
       <div class="owner-import-matrix-wrap" aria-label="Per-photo import progress">
         ${meta ? `<div class="owner-import-matrix-meta">${escapeHtml(meta)}</div>` : ""}
-        <table class="owner-import-matrix">
-          <thead>
-            <tr>
-              <th>Step</th>
-              ${IMPORT_MATRIX_STEPS.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${visibleRows.map((photo) => `
-              <tr class="owner-import-matrix-photo-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}${photo.id === nextQueuedId ? " is-next" : ""}">
-                <th scope="rowgroup" colspan="${IMPORT_MATRIX_STEPS.length + 1}">
-                  <div class="owner-import-photo-label">
-                    ${importMatrixThumbHtml(photo, phaseKey)}
-                    <span class="owner-import-photo-copy">
-                      <strong>${escapeHtml(photo.id)}</strong>
-                      <span>${escapeHtml(photo.relativePath || photo.country || "")}</span>
-                    </span>
-                  </div>
-                </th>
-              </tr>
-              <tr class="owner-import-matrix-step-row ${photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : ""}${photo.id === nextQueuedId ? " is-next" : ""}">
-                <th scope="row">${escapeHtml(importMatrixRowQueued(photo) ? "Next up" : photo.status === "running" ? "Working" : photo.status === "done" ? "Finished" : photo.status === "error" ? "Needs attention" : "Steps")}</th>
-                ${IMPORT_MATRIX_STEPS.map(([stepKey, label]) => importMatrixCellHtml(photo, stepKey, label)).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
+        <div class="owner-import-photo-list">
+          ${visibleRows.map((photo) => `
+            <div class="owner-import-photo-row ${photo.status === "running" ? "is-running" : photo.status === "done" ? "is-done" : photo.status === "error" ? "is-error" : importMatrixRowQueued(photo) ? "is-next" : ""}">
+              ${importMatrixThumbHtml(photo, phaseKey)}
+              <span class="owner-import-photo-copy">
+                <strong>${escapeHtml(photo.id)}</strong>
+                <span>${escapeHtml(photo.relativePath || photo.country || "")}</span>
+              </span>
+            </div>
+          `).join("")}
+        </div>
       </div>
     `;
   };
@@ -2625,7 +2616,7 @@
       ...([...((logSummary?.skippedKeys instanceof Set ? logSummary.skippedKeys : new Set()))]),
       ...((Array.isArray(task?.skipPhases) ? task.skipPhases : []).map(normalizeSweepPhaseKey).filter(Boolean)),
     ]);
-    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Progress bar counts", "Progress summary", "Upload progress", "Upload matrix", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
+    const wideLabels = new Set(["Already done", "Cleanup record", "Current phase", "Current file", "Current photo", "Source group", "Owner DB trusted", "Progress bar counts", "Progress summary", "Upload progress", "Photo rows", "Coverage gaps", "Needs attention", "Notes", "Safe skip", "Skip", "What happens", "Last photo", "Last synced", "Latest error", "Latest log"]);
     const genericProgressDetails = new Set(["Waiting", "Running", "Done", "Satisfied", "Needs attention"]);
     setHtml(r2Phases, phaseList.map((phase, index) => {
       const explicitDone = doneKeys.has(phase.key);
@@ -2716,7 +2707,7 @@
           : `Cloud media sweep is already running with pid ${latest.external_pid}.`);
       } else {
         setText(r2Summary, gapFill
-          ? `${activePhaseLabel}: completing the missing upload matrix.`
+          ? `${activePhaseLabel}: completing the visible photo rows.`
           : maintenance
           ? `${activePhaseLabel}: ${latest.label || "maintenance"} is running.`
           : activePhaseLabel
@@ -2778,7 +2769,7 @@
       if (visibleMatrixRows.length) matrixRowsByPhase.set(matrixPhaseKey, logSummary.importPhotoRows);
       addPhaseRow(
         matrixPhaseKey,
-        "Upload matrix",
+        "Photo rows",
         visibleMatrixInfo.runningCount || visibleMatrixInfo.visibleQueuedCount
           ? `${formatCount(visibleMatrixInfo.runningCount)} working, ${formatCount(visibleMatrixInfo.visibleQueuedCount)} next queued shown${visibleMatrixInfo.hiddenQueuedCount ? `, ${formatCount(visibleMatrixInfo.hiddenQueuedCount)} more queued hidden` : ""}${visibleMatrixInfo.doneCount ? `, ${formatCount(visibleMatrixInfo.doneCount)} just finished` : ""}`
           : visibleMatrixInfo.doneCount
@@ -3565,6 +3556,43 @@
       name: String(payload.name || "").trim() || path.split(/[\\/]/).filter(Boolean).at(-1) || path,
     };
   };
+
+  importSourceSelect?.addEventListener("change", async () => {
+    const choice = importSourceSelect.value || "new";
+    if (choice !== "new") {
+      lastImportSourceValue = choice;
+      syncR2ActionButtons();
+      if (!latestR2ProgressTasks.some((task) => ["repair", "gap-fill", "maintenance"].includes(task?.operation))) {
+        renderImportDashboardIdle();
+      }
+      return;
+    }
+    if (importSourceDialogOpen) return;
+    const fallback = [...importSourceSelect.options].some((option) => option.value === lastImportSourceValue)
+      ? lastImportSourceValue
+      : importSourceOptions[0]?.path || "all";
+    importSourceDialogOpen = true;
+    importSourceSelect.disabled = true;
+    setStatus("Choose the folder to import...");
+    try {
+      const selectedFolder = await chooseImportFolder();
+      if (!selectedFolder) {
+        importSourceSelect.value = fallback;
+        lastImportSourceValue = fallback;
+        setStatus("Import folder selection cancelled.");
+        return;
+      }
+      selectImportSourceFolder(selectedFolder);
+      setStatus(`Selected import folder: ${selectedFolder.name}. Press Start import when ready.`);
+    } catch (error) {
+      importSourceSelect.value = fallback;
+      lastImportSourceValue = fallback;
+      setStatus(error?.message || "Could not choose an import folder.");
+    } finally {
+      importSourceDialogOpen = false;
+      syncR2ActionButtons();
+    }
+  });
 
   r2FixButton?.addEventListener("click", async () => {
     const authorized = await ownerAuth?.requireAuth?.("Start the local Photos By Elie server to scan an import folder.");

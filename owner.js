@@ -2263,7 +2263,7 @@
       inspectedFiles,
       completed,
       processed,
-      processedThisRun: succeeded,
+      processedThisRun: completed,
       failedThisRun: failed,
       attemptedThisRun: completed,
       activeItemCount,

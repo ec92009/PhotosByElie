@@ -4,12 +4,12 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 123,
+    "count": 269,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
-        "id": "20220506-160631-03403-51426edaac",
-        "title": "Les Invalides, Paris",
+        "id": "img-6236-5c34056e1e",
+        "title": "IMG 6236",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -17,14 +17,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-160631-03403-51426edaac_900.jpg",
-            "detailKey": "expo/20220506-160631-03403-51426edaac_1800.jpg"
+            "galleryKey": "expo/img-6236-5c34056e1e_900.jpg",
+            "detailKey": "expo/img-6236-5c34056e1e_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-154558-03388-a887904b4b",
-        "title": "Eglise des Invalides, Paris",
+        "id": "img-6235-b7ffbc497f",
+        "title": "IMG 6235",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -32,14 +32,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-154558-03388-a887904b4b_900.jpg",
-            "detailKey": "expo/20220506-154558-03388-a887904b4b_1800.jpg"
+            "galleryKey": "expo/img-6235-b7ffbc497f_900.jpg",
+            "detailKey": "expo/img-6235-b7ffbc497f_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-151024-03375-3e4d581417",
-        "title": "Les Invalides",
+        "id": "img-6234-07e82ae534",
+        "title": "IMG 6234",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -47,14 +47,14 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-151024-03375-3e4d581417_900.jpg",
-            "detailKey": "expo/20220506-151024-03375-3e4d581417_1800.jpg"
+            "galleryKey": "expo/img-6234-07e82ae534_900.jpg",
+            "detailKey": "expo/img-6234-07e82ae534_1800.jpg"
           }
         }
       },
       {
-        "id": "20220506-145942-03357-6183b42671",
-        "title": "20220506 145942 03357",
+        "id": "img-6233-04aa884861",
+        "title": "IMG 6233",
         "gallerySrc": "",
         "imageSrc": "",
         "media": {
@@ -62,8 +62,8 @@ window.photosByElieHomeData = {
           "sourcePolicy": "developed-master",
           "publicPreview": {
             "allowed": true,
-            "galleryKey": "expo/20220506-145942-03357-6183b42671_900.jpg",
-            "detailKey": "expo/20220506-145942-03357-6183b42671_1800.jpg"
+            "galleryKey": "expo/img-6233-04aa884861_900.jpg",
+            "detailKey": "expo/img-6233-04aa884861_1800.jpg"
           }
         }
       }
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 664,
+    "count": 1024,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {

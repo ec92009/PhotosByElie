@@ -1,6 +1,6 @@
 {
   "schema": "photosbyelie.storage-estimate.v1",
-  "updatedAt": "2026-05-24T14:01:28.847Z",
+  "updatedAt": "2026-05-24T14:05:23.625Z",
   "buckets": {
     "public": "photosbyelie-public",
     "private": "photosbyelie-private"
@@ -63,12 +63,12 @@
     "avoidedMonthlyUsdEstimate": 0.1067
   },
   "billing": {
-    "generatedAt": "2026-05-24T14:01:28.823Z",
+    "generatedAt": "2026-05-24T14:05:23.615Z",
     "month": "May 2026",
     "nextMonth": "Jun 2026",
-    "elapsedMonthRatio": 0.763474,
+    "elapsedMonthRatio": 0.763562,
     "measuredStorageOnly": {
-      "consumedMonthToDateUsd": 2.6234,
+      "consumedMonthToDateUsd": 2.6237,
       "expectedThisMonthUsd": 3.4361,
       "expectedNextMonthUsdAtCurrentRate": 3.4361
     },

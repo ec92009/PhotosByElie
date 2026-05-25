@@ -3259,6 +3259,40 @@ body[data-real-estate] main.shell{
 .real-estate-output-actions{
   grid-template-columns:repeat(auto-fit,minmax(160px,max-content));
 }
+.real-estate-output-progress{
+  display:grid;
+  gap:8px;
+  max-width:720px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  padding:12px 14px;
+}
+.real-estate-output-progress[hidden]{
+  display:none!important;
+}
+.real-estate-output-progress-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.real-estate-output-progress-head strong,
+.real-estate-output-progress-head span,
+.real-estate-output-progress small{
+  line-height:1.25;
+}
+.real-estate-output-progress-head span,
+.real-estate-output-progress small{
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:760;
+}
+.real-estate-output-progress progress{
+  width:100%;
+  height:12px;
+  border:0;
+  accent-color:var(--re-accent);
+}
 .real-estate-shell[data-re-step="0"] .real-estate-workbench,
 .real-estate-shell[data-re-step="1"] .real-estate-workbench,
 .real-estate-shell[data-re-step="2"] .real-estate-workbench{
@@ -5913,6 +5947,58 @@ html[data-theme="light"] .detail-preview.has-image::after{
 .site-footer .footer-nav a{
   color:var(--text);
   font-weight:700;
+}
+
+body[data-real-estate]{
+  --glass-panel-bg:color-mix(in srgb,var(--bg) 96%,transparent);
+  --glass-card-bg:color-mix(in srgb,var(--surface) 98%,transparent);
+  --glass-card-hover-bg:color-mix(in srgb,var(--surface) 100%,transparent);
+  --glass-border:color-mix(in srgb,var(--text) 18%,transparent);
+  --glass-copy-shadow:none;
+}
+body[data-real-estate] .real-estate-login,
+body[data-real-estate] .real-estate-hero,
+body[data-real-estate] .real-estate-wizard,
+body[data-real-estate] .real-estate-workbench,
+body[data-real-estate] .real-estate-output-panel,
+body[data-real-estate] .real-estate-action-bar{
+  background:color-mix(in srgb,var(--bg) 97%,transparent);
+  text-shadow:none;
+}
+body[data-real-estate] .real-estate-hero{
+  background:
+    linear-gradient(130deg,color-mix(in srgb,var(--re-accent) 9%,transparent),transparent 46%),
+    color-mix(in srgb,var(--bg) 97%,transparent);
+}
+body[data-real-estate] .real-estate-deliverables,
+body[data-real-estate] .real-estate-login-card,
+body[data-real-estate] .real-estate-control-group,
+body[data-real-estate] .real-estate-photo-card,
+body[data-real-estate] .real-estate-draft-item,
+body[data-real-estate] .real-estate-output-choice,
+body[data-real-estate] .real-estate-output-progress,
+body[data-real-estate] .real-estate-empty-state,
+body[data-real-estate] .real-estate-deliverable,
+body[data-real-estate] .real-estate-lightbox,
+body[data-real-estate] .real-estate-help{
+  background:color-mix(in srgb,var(--surface) 98%,transparent);
+  text-shadow:none;
+}
+body[data-real-estate] .real-estate-hero h1,
+body[data-real-estate] .real-estate-hero .lead,
+body[data-real-estate] .real-estate-stats dd,
+body[data-real-estate] .real-estate-step-head,
+body[data-real-estate] .real-estate-deliverables{
+  color:var(--text);
+}
+body[data-real-estate] .real-estate-hero .eyebrow,
+body[data-real-estate] .real-estate-stats dt,
+body[data-real-estate] .real-estate-muted,
+body[data-real-estate] .real-estate-deliverable span,
+body[data-real-estate] .real-estate-output-choice small,
+body[data-real-estate] .real-estate-output-progress-head span,
+body[data-real-estate] .real-estate-output-progress small{
+  color:color-mix(in srgb,var(--text) 66%,var(--muted));
 }
 
 body.best-mix-current-home main.shell{

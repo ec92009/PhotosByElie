@@ -81,8 +81,8 @@ Manual steps:
 
 - Account/status: Prepared for `@photosbyelie` Pinterest publishing.
 - Destination: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=usa
-- Image count: 9
-- Campaign note: A dedicated California coast campaign page would materially help Pinterest. Recommended future campaign: `pinterest-california-coast-2026-05-24`; not created during this run to avoid unreviewed public-site/version changes.
+- Image count: 5
+- Campaign note: A dedicated California coast campaign page would materially help Pinterest. Recommended future campaign: `pinterest-california-coast-2026-05-24`; not created during this run to avoid unreviewed public-site/version changes. Pinterest accepts only 5 photos at a time, so this package is capped at 5 images.
 
 Title: California Coast and Sunset
 
@@ -99,15 +99,11 @@ Selected media:
 | 1 | `20180130-1807-00056-ce796ea795` | Del Mar Dog Beach at Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1807-00056-ce796ea795_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1807-00056-ce796ea795 | none - public R2 preview only |
 | 2 | `20180130-1809-00057-5d56be5106` | Del Mar Dog Beach at Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1809-00057-5d56be5106_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1809-00057-5d56be5106 | none - public R2 preview only |
 | 3 | `20180130-1810-00058-16dcf3e4ea` | Del Mar Dog Beach at Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1810-00058-16dcf3e4ea_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1810-00058-16dcf3e4ea | none - public R2 preview only |
-| 4 | `20180130-1810-00059-44eb6fd278` | Del Mar Dog Beach at Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1810-00059-44eb6fd278_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1810-00059-44eb6fd278 | none - public R2 preview only |
-| 5 | `20180130-1811-00060-1-a085d7d522` | Del Mar Dog Beach at Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1811-00060-1-a085d7d522_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1811-00060-1-a085d7d522 | none - public R2 preview only |
-| 6 | `20180130-1813-00061-f38fd1051d` | Del Mar Dog Beach at Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1813-00061-f38fd1051d_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1813-00061-f38fd1051d | none - public R2 preview only |
-| 7 | `20180304-1733-00110-843be79aa4` | Solana Beach Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00110-843be79aa4_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1733-00110-843be79aa4 | none - public R2 preview only |
-| 8 | `20180304-1736-00113-a4774c8167` | Solana Beach Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1736-00113-a4774c8167_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1736-00113-a4774c8167 | none - public R2 preview only |
-| 9 | `20180414-152504-00097-9494439789` | Ocean Beach Pier and Waves | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180414-152504-00097-9494439789_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180414-152504-00097-9494439789 | none - public R2 preview only |
+| 4 | `20180304-1733-00110-843be79aa4` | Solana Beach Sunset | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00110-843be79aa4_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1733-00110-843be79aa4 | none - public R2 preview only |
+| 5 | `20180414-152504-00097-9494439789` | Ocean Beach Pier and Waves | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180414-152504-00097-9494439789_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180414-152504-00097-9494439789 | none - public R2 preview only |
 
 Manual steps:
 
 - Open Pinterest `@photosbyelie` > Create > Pin or carousel-capable post flow.
-- Upload the 9 listed public preview images; set the destination to the USA gallery URL.
+- Upload the 5 listed public preview images; set the destination to the USA gallery URL.
 - Paste the title/caption and save to a California, USA, or coast/travel photography board.

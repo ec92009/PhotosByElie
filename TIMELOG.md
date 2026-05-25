@@ -86,8 +86,9 @@ Clock state: paused
 | 2026-05-24 | 15:08 CEST | 15:09 CEST | 0:01 | Requested the Owner import prose progress line be replaced by a four-tile stats panel; background implementation time excluded. |
 | 2026-05-24 | 15:29 CEST | 15:30 CEST | 0:01 | Reported that restart behavior made Processed before look wrong because failed attempts were counted as current-run progress; background implementation time excluded. |
 | 2026-05-24 | 16:18 CEST | 16:21 CEST | 0:02 | Directed the Owner import split: Expo stays gallery-only, Real Estate gets its own source pulldown and `RE import` flow inside the Real Estate tab. |
+| 2026-05-25 | 18:55 CEST | 18:59 CEST | 0:04 | Refreshed social-package docs, summarized the Threads/Pinterest automation updates, and reprioritized the backlog around first-party social springboards. |
 
 ## Totals
 
-Active collaboration time used: 4:43
+Active collaboration time used: 4:47
 Remaining budget: not set

@@ -167,7 +167,7 @@
       "title": "California Coast and Sunset",
       "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=usa",
       "caption": "Del Mar, Solana Beach, and Ocean Beach in one coastal set: low sun, water, pier lines, and Pacific color. Browse more on Photos By Elie: https://ec92009.github.io/PhotosByElie/gallery.html?gallery=usa",
-      "campaign_note": "Recommended future campaign: pinterest-california-coast-2026-05-24. Not created during this run to avoid unreviewed public-site/version changes.",
+      "campaign_note": "Recommended future campaign: pinterest-california-coast-2026-05-24. Not created during this run to avoid unreviewed public-site/version changes. Pinterest accepts only 5 photos at a time, so this package is capped at 5 images.",
       "manual_steps": [
         "Open Pinterest @photosbyelie > Create > Pin or carousel-capable post flow.",
         "Upload the listed public preview images; set the destination to the USA gallery URL.",
@@ -196,38 +196,10 @@
           "local_source_path_used": null
         },
         {
-          "media_id": "20180130-1810-00059-44eb6fd278",
-          "title": "Del Mar Dog Beach at Sunset",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1810-00059-44eb6fd278_1800.jpg",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1810-00059-44eb6fd278",
-          "local_source_path_used": null
-        },
-        {
-          "media_id": "20180130-1811-00060-1-a085d7d522",
-          "title": "Del Mar Dog Beach at Sunset",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1811-00060-1-a085d7d522_1800.jpg",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1811-00060-1-a085d7d522",
-          "local_source_path_used": null
-        },
-        {
-          "media_id": "20180130-1813-00061-f38fd1051d",
-          "title": "Del Mar Dog Beach at Sunset",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180130-1813-00061-f38fd1051d_1800.jpg",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180130-1813-00061-f38fd1051d",
-          "local_source_path_used": null
-        },
-        {
           "media_id": "20180304-1733-00110-843be79aa4",
           "title": "Solana Beach Sunset",
           "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1733-00110-843be79aa4_1800.jpg",
           "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1733-00110-843be79aa4",
-          "local_source_path_used": null
-        },
-        {
-          "media_id": "20180304-1736-00113-a4774c8167",
-          "title": "Solana Beach Sunset",
-          "public_asset_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180304-1736-00113-a4774c8167_1800.jpg",
-          "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180304-1736-00113-a4774c8167",
           "local_source_path_used": null
         },
         {
@@ -241,8 +213,9 @@
     }
   ],
   "validation": {
-    "public_r2_http_200_count": 26,
+    "public_r2_http_200_count": 22,
     "private_or_owner_sources_used": false,
-    "repeated_2026_05_23_theme": false
+    "repeated_2026_05_23_theme": false,
+    "pinterest_image_cap": "5 images maximum; current package uses 5"
   }
 }

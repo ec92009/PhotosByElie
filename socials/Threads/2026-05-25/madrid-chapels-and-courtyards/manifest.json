@@ -1,0 +1,39 @@
+{
+  "date": "2026-05-25",
+  "platform": "Threads",
+  "status": "artifact_set_ready",
+  "account": "new Threads account via Instagram login; confirm profile/account before posting",
+  "post_type": "image_post",
+  "title": "Madrid Chapels and Courtyards",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/gallery.html?gallery=spain",
+  "caption": "Madrid details in a quiet carousel: chapel interiors, arched passages, courtyards, and old stone geometry from the Spain archive.\n\nMore Spain work is on Photos By Elie:\nhttps://ec92009.github.io/PhotosByElie/gallery.html?gallery=spain\n\n#PhotosByElie #Madrid #SpainTravel #ArchitecturePhotography",
+  "recommended_upload_set": "images",
+  "available_count": 4,
+  "notes": [
+    "Uses four public watermarked images copied from the Instagram Madrid carousel set.",
+    "Confirm Threads profile privacy/account before completing onboarding.",
+    "Stop before the final public post unless owner confirms publishing."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "image": "images/01-20180521-1833-00759-89403bba93-20180521-1833-00759.jpg",
+      "source_instagram_file": "socials/Instagram/2026-05-25/madrid-chapels-and-courtyards/images/01-20180521-1833-00759-89403bba93-20180521-1833-00759.jpg"
+    },
+    {
+      "order": 2,
+      "image": "images/02-20180521-1835-00761-e9ae763063-20180521-1835-00761.jpg",
+      "source_instagram_file": "socials/Instagram/2026-05-25/madrid-chapels-and-courtyards/images/03-20180521-1835-00761-e9ae763063-20180521-1835-00761.jpg"
+    },
+    {
+      "order": 3,
+      "image": "images/03-20180521-1842-00764-94dc3d924e-20180521-1842-00764.jpg",
+      "source_instagram_file": "socials/Instagram/2026-05-25/madrid-chapels-and-courtyards/images/05-20180521-1842-00764-94dc3d924e-20180521-1842-00764.jpg"
+    },
+    {
+      "order": 4,
+      "image": "images/04-20180521-1849-00767-061b255c0f-20180521-1849-00767.jpg",
+      "source_instagram_file": "socials/Instagram/2026-05-25/madrid-chapels-and-courtyards/images/08-20180521-1849-00767-061b255c0f-20180521-1849-00767.jpg"
+    }
+  ]
+}

@@ -709,8 +709,8 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-view" ? "Building PDF..." : "View PDF";
-      button.title = "View project PDFs in the browser; selected videos appear as stills from 10% in";
+      button.textContent = outputBusy && kind === "pdf-view" ? "Building PDF..." : "Preview PDF";
+      button.title = "Preview project PDFs in a mobile-safe browser page; selected videos appear as stills from 10% in";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
@@ -1670,7 +1670,7 @@
   };
 
   const reserveOutputWindow = (label) => {
-    const popup = window.open("about:blank", "_blank", "noopener");
+    const popup = window.open("about:blank", "_blank");
     if (!popup) return null;
     try {
       popup.document.title = label || "Preparing output";
@@ -1705,6 +1705,32 @@
       URL.revokeObjectURL(url);
     }
     return { method: "download", ...(await downloadBlob(blob, filename)) };
+  };
+
+  const openHtmlInBrowser = async (html, filename, reservedWindow = null) => {
+    const writeWindow = (target) => {
+      try {
+        target.document.open();
+        target.document.write(html);
+        target.document.close();
+        target.document.title = filename || "Photos By Elie preview";
+        try {
+          target.opener = null;
+        } catch {}
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (reservedWindow && !reservedWindow.closed && writeWindow(reservedWindow)) {
+      return { method: "open", filename, bytes: new Blob([html], { type: "text/html" }).size };
+    }
+    const opened = window.open("about:blank", "_blank");
+    if (opened && writeWindow(opened)) {
+      return { method: "open", filename, bytes: new Blob([html], { type: "text/html" }).size };
+    }
+    const blob = new Blob([html], { type: "text/html" });
+    return openBlobInBrowser(blob, filename, reservedWindow);
   };
 
   const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true }) => {
@@ -1795,8 +1821,10 @@
     try {
       const batch = buildSlideshowManifest(selected, true);
       updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
-      const blob = new Blob([slideshowHtmlFor(batch)], { type: "text/html" });
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
+      if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename });
+      const html = slideshowHtmlFor(batch);
+      const blob = new Blob([html], { type: "text/html" });
       updateOutputProgress({
         title,
         detail: mode === "view" ? "Opening browser video view..." : "Sending video file to Downloads...",
@@ -1804,7 +1832,7 @@
         total: 3,
       });
       const saved = mode === "view"
-        ? await openBlobInBrowser(blob, filename, reservedWindow || reserveOutputWindow("Building video preview"))
+        ? await openHtmlInBrowser(html, filename, reservedWindow || reserveOutputWindow("Building video preview"))
         : { method: "download", ...(await downloadBlob(blob, filename)) };
       if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
       if (saved.method === "open" || saved.method === "open-current") {
@@ -2328,8 +2356,54 @@
     };
   };
 
-  const buildPdfBlob = async (images, onPageRendered = null) => {
-    const rendered = await renderPdfPages(images, onPageRendered);
+  const bytesToBase64 = (bytes) => {
+    const parts = [];
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      parts.push(String.fromCharCode(...bytes.subarray(index, index + chunkSize)));
+    }
+    return btoa(parts.join(""));
+  };
+
+  const pdfPreviewHtmlFor = ({ projectTitle = "", filename = "", rendered = null } = {}) => {
+    const pages = Array.isArray(rendered?.pages) ? rendered.pages : [];
+    const dateLabel = new Date().toLocaleString();
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(projectTitle || "PDF preview")}</title>
+  <style>
+    :root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#e8eaed;color:#111}
+    body{margin:0;background:#e8eaed;color:#111}
+    header{position:sticky;top:0;z-index:2;background:rgba(255,255,255,.96);border-bottom:1px solid rgba(0,0,0,.14);padding:12px 14px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+    h1{margin:0;font-size:clamp(1.1rem,5vw,1.6rem);line-height:1.1}
+    p{margin:4px 0 0;color:#444;font-size:.9rem;font-weight:650}
+    main{display:grid;gap:14px;width:min(100%,980px);margin:0 auto;padding:14px 10px 28px}
+    figure{margin:0;display:grid;gap:6px}
+    figcaption{color:#555;font-size:.78rem;font-weight:750;text-align:center}
+    img{display:block;width:100%;height:auto;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+    .empty{background:#fff;border:1px solid rgba(0,0,0,.14);padding:20px;text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>${escapeHtml(projectTitle || "PDF preview")}</h1>
+    <p>${escapeHtml(filename)}${filename ? " / " : ""}${pages.length} page${pages.length === 1 ? "" : "s"} / ${escapeHtml(dateLabel)}</p>
+  </header>
+  <main>
+    ${pages.length ? pages.map((page, index) => `
+    <figure>
+      <img alt="PDF page ${index + 1}" src="data:image/jpeg;base64,${bytesToBase64(page.bytes)}"/>
+      <figcaption>Page ${index + 1} of ${pages.length}</figcaption>
+    </figure>`).join("") : '<div class="empty">No preview pages were rendered.</div>'}
+  </main>
+</body>
+</html>`;
+  };
+
+  const buildPdfBlobFromRendered = (rendered) => {
     const encoder = new TextEncoder();
     const objects = [];
     const setObject = (id, parts) => {
@@ -2394,6 +2468,11 @@
     return new Blob(chunks, { type: "application/pdf" });
   };
 
+  const buildPdfBlob = async (images, onPageRendered = null) => {
+    const rendered = await renderPdfPages(images, onPageRendered);
+    return buildPdfBlobFromRendered(rendered);
+  };
+
   const downloadPdf = async ({ mode = "download", reservedWindows = [], recordProduct = true, progressKind = "" } = {}) => {
     if (!requireUnlocked() || state.pdfBusy || state.outputBusy) return;
     const photos = activeSelectedPhotos();
@@ -2407,13 +2486,16 @@
     const batch = buildBatchManifest(photos, true);
     const batchId = batch.batchId;
     const paper = paperFormatFor();
+    const shelfFilename = projects.length === 1
+      ? `${state.gallery?.key || "real-estate"}-${fileSlug(projects[0]?.projectTitle)}-${paper.key}-${batchId}.pdf`
+      : `${state.gallery?.key || "real-estate"}-${batchId}-project-pdfs.pdf`;
     const summary = selectedMediaSummary(photos);
     const videoNote = summary.videos ? `; ${summary.videos} video${summary.videos === 1 ? "" : "s"} will use 10% stills` : "";
     const plannedPages = projects.reduce((sum, project) => (
       sum + paginatePdfImages(project.photos.map((photo) => ({ dimensions: pdfDimensionsFor(photo), photo }))).length
     ), 0);
     const totalSteps = Math.max(1, photos.length + plannedPages + projects.length);
-    const progressTitle = mode === "view" ? "Preparing PDF view" : "Preparing PDF download";
+    const progressTitle = mode === "view" ? "Preparing PDF preview" : "Preparing PDF download";
     let progressStep = 0;
     const updatePdfStep = (detail) => {
       progressStep += 1;
@@ -2432,6 +2514,7 @@
       total: totalSteps,
       kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
     });
+    if (recordProduct) saveLocalDeliverable({ type: "pdf", batch, filename: shelfFilename });
     let savedProjectCount = 0;
     let totalSavedBytes = 0;
     let lastFilename = "";
@@ -2440,19 +2523,25 @@
         const images = await fetchPdfImages(project.photos, ({ index: imageIndex, total, photo }) => {
           updatePdfStep(`Loaded image ${imageIndex + 1}/${total} for ${project.projectTitle}: ${titleFor(photo)}`);
         });
-        const blob = await buildPdfBlob(images, ({ pageIndex, total }) => {
+        const rendered = await renderPdfPages(images, ({ pageIndex, total }) => {
           updatePdfStep(`Rendered PDF page ${pageIndex + 1}/${total} for ${project.projectTitle}`);
         });
+        const blob = buildPdfBlobFromRendered(rendered);
         const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
+        const previewFilename = filename.replace(/\.pdf$/i, "-preview.html");
+        const previewHtml = mode === "view"
+          ? pdfPreviewHtmlFor({ projectTitle: project.projectTitle, filename, rendered })
+          : "";
         const saved = mode === "view"
-          ? await openBlobInBrowser(blob, filename, outputWindows[index] || null)
+          ? await openHtmlInBrowser(previewHtml, previewFilename, outputWindows[index] || null)
           : { method: "download", ...(await downloadBlob(blob, filename)) };
         savedProjectCount += 1;
-        totalSavedBytes += Number(saved.bytes) || 0;
-        lastFilename = saved.filename || filename;
-        updatePdfStep(`${saved.method === "open" || saved.method === "open-current" ? "Opened" : "Downloaded"} ${saved.filename || filename}`);
+        totalSavedBytes += Number(blob.size) || Number(saved.bytes) || 0;
+        lastFilename = filename;
+        const displayFilename = mode === "view" ? filename : (saved.filename || filename);
+        updatePdfStep(`${saved.method === "open" || saved.method === "open-current" ? "Opened preview for" : "Downloaded"} ${displayFilename}`);
         if (saved.method === "open" || saved.method === "open-current") {
-          setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
+          setStatus(`Viewing ${displayFilename}. ${deliverableActionNote}`);
         } else {
           setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
         }
@@ -2461,7 +2550,7 @@
         saveLocalDeliverable({
           type: "pdf",
           batch,
-          filename: projects.length === 1 ? lastFilename : `${state.gallery?.key || "real-estate"}-${batchId}-project-pdfs.pdf`,
+          filename: projects.length === 1 ? lastFilename : shelfFilename,
           bytes: totalSavedBytes,
         });
       }
@@ -2775,7 +2864,8 @@
         total: 2,
         kind: mode === "view" ? "video-view" : "video-download",
       });
-      const blob = new Blob([slideshowHtmlFor(batch)], { type: "text/html" });
+      const html = slideshowHtmlFor(batch);
+      const blob = new Blob([html], { type: "text/html" });
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId || timestampId()}-slideshow.html`;
       updateOutputProgress({
         title,
@@ -2784,7 +2874,7 @@
         total: 2,
       });
       const saved = mode === "view"
-        ? await openBlobInBrowser(blob, filename, reserveOutputWindow("Building video preview"))
+        ? await openHtmlInBrowser(html, filename, reserveOutputWindow("Building video preview"))
         : { method: "download", ...(await downloadBlob(blob, filename)) };
       if (saved.method === "open" || saved.method === "open-current") {
         setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);

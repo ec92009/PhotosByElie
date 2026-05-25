@@ -4,10 +4,10 @@ Last updated: 2026-05-25
 
 ## Current Facts
 
-- Current visible build: `v86.6`.
+- Current visible build: `v86.7`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=86.6`.
-- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=86.6`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=86.7`.
+- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=86.7`.
 - Current catalog scale: `6,664` public media rows in `assets/catalog/photosbyelie.sqlite`: AI/Leonardo `4,921`, France `315`, Italy `25`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
 - The catalog baseline audit is complete. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the current catalog is `+648` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `25` instead of `35`; USA, Portugal, Mexico, and Slovakia are unchanged. The Italy `0` state was caused by missing Italy path/GPS hints, which left Florence, San Gimignano, and Pisa rows as `unknown` and therefore excluded from public export.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -59,9 +59,10 @@ Last updated: 2026-05-25
 - `v86.4` saves those ten single-guitar cues as the Real Estate slideshow music pool, picks one at random for each slideshow manifest, keeps generated music at 0 dB, lowers source video audio by 20 dB, and adds local proof-video generation with randomized Ken Burns motion.
 - `v86.5` makes the Real Estate client landing page a produced-product shelf first, with Create new product plus View, Download, and Edit controls for PDF/video deliverables, and keeps output generation offering both view-now and download-file choices.
 - `v86.6` improves Real Estate contrast/opacity, adds immediate output progress with ETA hints, and stores browser-generated PDF/video products on the client shelf for repeat view/download/edit flows.
+- `v86.7` makes Real Estate PDF preview phone-safe by opening rendered pages in an HTML proof instead of a raw PDF blob, and saves the shelf product as soon as output generation starts.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v86.6`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v86.7`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 restored rows come from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows present in the old `736fe76b` baseline but absent now came from the phone-export folder `Pisa, 12 May 2025`; do not bulk-import that folder until same-path overwrite/de-dupe is implemented, because a selected-root subfolder import can derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.

@@ -744,9 +744,9 @@
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
       const mobileOpen = shouldOpenHtmlVideoDownloadsInBrowser();
-      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : (mobileOpen ? "Open video" : "Download video");
+      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : (mobileOpen ? "Save video" : "Download video");
       button.title = mobileOpen
-        ? "Open the video output in the browser; use your phone share controls if needed"
+        ? "Open the phone share/save controls for the slideshow video file; falls back to browser view if saving is unavailable"
         : "Download the video output with random single-guitar music; selected videos keep duration and play 20 dB under the music";
       button.disabled = outputBusy || noActiveSelection;
     });
@@ -1124,7 +1124,7 @@
           : `<a class="btn secondary" href="${escapeHtml(item.downloadUrl)}" ${item.filename ? `download="${escapeHtml(item.filename)}"` : "download"}>Download</a>`
         : item.batch
           ? openVideoDownload
-            ? `<button class="btn secondary" type="button" data-re-view-deliverable="${escapeHtml(item.id)}">Open</button>`
+            ? `<button class="btn secondary" type="button" data-re-download-deliverable="${escapeHtml(item.id)}">Save</button>`
             : `<button class="btn secondary" type="button" data-re-download-deliverable="${escapeHtml(item.id)}">Download</button>`
         : `<button class="btn secondary" type="button" disabled>Download</button>`;
       const edit = (item.editUrl || item.batch)
@@ -2088,9 +2088,23 @@
     return openBlobInBrowser(blob, filename, reservedWindow);
   };
 
-  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true }) => {
-    const canCreateFile = typeof File === "function";
-    const file = canCreateFile ? new File([blob], filename, { type: blob.type || "text/html" }) : null;
+  const fileForShare = (blob, filename) => (
+    typeof File === "function"
+      ? new File([blob], filename, { type: blob.type || "text/html" })
+      : null
+  );
+
+  const canShareFile = (filename, mimeType = "text/html") => {
+    if (typeof File !== "function" || !navigator.share || !navigator.canShare) return false;
+    try {
+      return navigator.canShare({ files: [new File([""], filename, { type: mimeType })] });
+    } catch {
+      return false;
+    }
+  };
+
+  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true, reservedWindow = null }) => {
+    const file = fileForShare(blob, filename);
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({
@@ -2098,20 +2112,18 @@
           text,
           files: [file],
         });
+        if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
         return { method: "share", filename, bytes: Number(blob.size) || 0 };
       } catch (error) {
-        if (error?.name === "AbortError") throw error;
+        if (error?.name === "AbortError") {
+          if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
+          throw error;
+        }
       }
     }
 
     if (openFallback) {
-      const url = URL.createObjectURL(blob);
-      const opened = window.open(url, "_blank", "noopener");
-      if (opened) {
-        window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
-        return { method: "open", filename, bytes: Number(blob.size) || 0 };
-      }
-      URL.revokeObjectURL(url);
+      return openBlobInBrowser(blob, filename, reservedWindow);
     }
     return { method: "download", ...(await downloadBlob(blob, filename)) };
   };
@@ -2166,8 +2178,12 @@
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
-    const openInBrowser = mode === "view" || shouldOpenHtmlVideoDownloadsInBrowser();
-    const title = openInBrowser ? "Preparing video view" : "Preparing video download";
+    const mobileSave = mode === "download" && shouldOpenHtmlVideoDownloadsInBrowser();
+    const openInBrowser = mode === "view";
+    const title = openInBrowser ? "Preparing video view" : mobileSave ? "Preparing video save" : "Preparing video download";
+    const fallbackWindow = (openInBrowser || (mobileSave && !canShareFile("slideshow.html", "text/html")))
+      ? (reservedWindow || reserveOutputWindow(openInBrowser ? "Building video preview" : "Preparing video save"))
+      : null;
     startOutputProgress({
       title,
       detail: "Building slideshow manifest...",
@@ -2182,15 +2198,30 @@
       const html = slideshowHtmlFor(batch);
       updateOutputProgress({
         title,
-        detail: openInBrowser ? "Opening browser video view..." : "Sending video file to Downloads...",
+        detail: openInBrowser
+          ? "Opening browser video view..."
+          : mobileSave
+            ? "Opening phone save controls..."
+            : "Sending video file to Downloads...",
         current: 2,
         total: 3,
       });
+      const blob = new Blob([html], { type: "text/html" });
       const saved = openInBrowser
-        ? await openHtmlInBrowser(html, filename, reservedWindow || reserveOutputWindow("Building video preview"))
-        : { method: "download", ...(await downloadBlob(new Blob([html], { type: "text/html" }), filename)) };
+        ? await openHtmlInBrowser(html, filename, fallbackWindow)
+        : mobileSave
+          ? await shareOrOpenBlob({
+            blob,
+            filename,
+            title: "Photos By Elie video",
+            text: "Photos By Elie slideshow video file",
+            reservedWindow: fallbackWindow,
+          })
+          : { method: "download", ...(await downloadBlob(blob, filename)) };
       if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
-      if (saved.method === "open" || saved.method === "open-current") {
+      if (saved.method === "share") {
+        setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
+      } else if (saved.method === "open" || saved.method === "open-current") {
         setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
@@ -3297,8 +3328,12 @@
         });
         return;
       }
-      const openInBrowser = mode === "view" || shouldOpenHtmlVideoDownloadsInBrowser();
-      const title = openInBrowser ? "Preparing video view" : "Preparing video download";
+      const mobileSave = mode === "download" && shouldOpenHtmlVideoDownloadsInBrowser();
+      const openInBrowser = mode === "view";
+      const title = openInBrowser ? "Preparing video view" : mobileSave ? "Preparing video save" : "Preparing video download";
+      const fallbackWindow = (openInBrowser || (mobileSave && !canShareFile("slideshow.html", "text/html")))
+        ? reserveOutputWindow(openInBrowser ? "Building video preview" : "Preparing video save")
+        : null;
       startOutputProgress({
         title,
         detail: "Loading saved video product...",
@@ -3309,14 +3344,29 @@
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId || timestampId()}-slideshow.html`;
       updateOutputProgress({
         title,
-        detail: openInBrowser ? "Opening saved video view..." : "Sending saved video file to Downloads...",
+        detail: openInBrowser
+          ? "Opening saved video view..."
+          : mobileSave
+            ? "Opening phone save controls..."
+            : "Sending saved video file to Downloads...",
         current: 1,
         total: 2,
       });
+      const blob = new Blob([html], { type: "text/html" });
       const saved = openInBrowser
-        ? await openHtmlInBrowser(html, filename, reserveOutputWindow("Building video preview"))
-        : { method: "download", ...(await downloadBlob(new Blob([html], { type: "text/html" }), filename)) };
-      if (saved.method === "open" || saved.method === "open-current") {
+        ? await openHtmlInBrowser(html, filename, fallbackWindow)
+        : mobileSave
+          ? await shareOrOpenBlob({
+            blob,
+            filename,
+            title: "Photos By Elie video",
+            text: "Photos By Elie slideshow video file",
+            reservedWindow: fallbackWindow,
+          })
+          : { method: "download", ...(await downloadBlob(blob, filename)) };
+      if (saved.method === "share") {
+        setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
+      } else if (saved.method === "open" || saved.method === "open-current") {
         setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);

@@ -1655,6 +1655,17 @@
     .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(255,255,255,.14);background:#171717;padding:14px}
     button{min-height:42px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#242424;color:#fff;padding:8px 18px;font:inherit;font-weight:800;cursor:pointer}
     button:hover{background:#303030}
+    @media (max-width:700px){
+      main{display:block;min-height:100dvh}
+      .stage{min-height:calc(100dvh - 70px)}
+      .photo-slide{padding:calc(env(safe-area-inset-top,0px) + 12px) 12px clamp(132px,24dvh,190px)}
+      .frame video{padding:calc(env(safe-area-inset-top,0px) + 12px) 12px clamp(132px,24dvh,190px)}
+      .caption{bottom:clamp(18px,5dvh,48px)}
+      .caption h1{font-size:clamp(1.35rem,8vw,2.5rem)}
+      .caption p{font-size:.78rem}
+      .controls{position:sticky;bottom:0;z-index:5;padding:10px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
+      button{min-height:38px;padding:7px 14px}
+    }
     .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;width:min(1120px,100%);margin:0 auto;padding:16px}
     .meta div{border:1px solid rgba(255,255,255,.14);background:#141414;padding:10px}
     .meta dt{color:#aaa;font-size:.72rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}

@@ -1501,7 +1501,7 @@
     </section>
     <div class="controls">
       <button type="button" data-prev>Previous</button>
-      <button type="button" data-play>Pause</button>
+      <button type="button" data-play>${musicTrack?.absoluteSrc || musicTrack?.src ? "Play with sound" : "Pause"}</button>
       <button type="button" data-next>Next</button>
     </div>
     <dl class="meta">
@@ -1549,16 +1549,17 @@
       let index = 0;
       let timer = 0;
       let playing = true;
+      let soundBlocked = Boolean(music);
       const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
       const musicVolume = Math.pow(10, Number(musicTrack?.musicGainDb ?? ${previewMusicGainDb}) / 20);
       const effectStyle = (effect, durationMs) => {
         const presets = {
-          "slow-zoom-in": [1.02, 1.13, "0%", "0%", "0%", "0%"],
-          "slow-zoom-out": [1.13, 1.03, "0%", "0%", "0%", "0%"],
-          "pan-left": [1.09, 1.1, "2.5%", "0%", "-2.5%", "0%"],
-          "pan-right": [1.09, 1.1, "-2.5%", "0%", "2.5%", "0%"],
-          "rise-up": [1.08, 1.11, "0%", "2%", "0%", "-2%"],
-          "drift-down": [1.08, 1.11, "0%", "-2%", "0%", "2%"],
+          "slow-zoom-in": [1.005, 1.045, "0%", "0%", "0%", "0%"],
+          "slow-zoom-out": [1.045, 1.01, "0%", "0%", "0%", "0%"],
+          "pan-left": [1.03, 1.04, "1.1%", "0%", "-1.1%", "0%"],
+          "pan-right": [1.03, 1.04, "-1.1%", "0%", "1.1%", "0%"],
+          "rise-up": [1.025, 1.04, "0%", "0.9%", "0%", "-0.9%"],
+          "drift-down": [1.025, 1.04, "0%", "-0.9%", "0%", "0.9%"],
         };
         const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["slow-zoom-in"];
         return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
@@ -1568,10 +1569,27 @@
         if (timer) window.clearTimeout(timer);
         timer = 0;
       };
-      const playMusic = () => {
-        if (!music) return;
+      const syncPlayButton = () => {
+        if (!playButton) return;
+        playButton.textContent = soundBlocked ? "Play with sound" : (playing ? "Pause" : "Play");
+      };
+      const playMusic = async () => {
+        if (!music) {
+          soundBlocked = false;
+          syncPlayButton();
+          return true;
+        }
         music.volume = musicVolume;
-        music.play().catch(() => {});
+        try {
+          await music.play();
+          soundBlocked = false;
+          syncPlayButton();
+          return true;
+        } catch {
+          soundBlocked = true;
+          syncPlayButton();
+          return false;
+        }
       };
       const pauseMusic = () => {
         if (music) music.pause();
@@ -1615,9 +1633,17 @@
       };
       document.querySelector("[data-next]")?.addEventListener("click", next);
       document.querySelector("[data-prev]")?.addEventListener("click", prev);
-      playButton?.addEventListener("click", () => {
+      playButton?.addEventListener("click", async () => {
+        if (soundBlocked) {
+          playing = true;
+          await playMusic();
+          const video = frame.querySelector("video");
+          if (video) video.play().catch(() => {});
+          render();
+          return;
+        }
         playing = !playing;
-        playButton.textContent = playing ? "Pause" : "Play";
+        syncPlayButton();
         const video = frame.querySelector("video");
         if (video) {
           if (playing) {
@@ -1634,6 +1660,7 @@
         }
         render();
       });
+      syncPlayButton();
       render();
     </script>
   </main>
@@ -2169,9 +2196,13 @@
     return { width, height };
   };
 
+  const pdfPhotoFor = (entry) => entry?.photo || entry;
+  const pdfTitleFor = (entry) => entry?.title || titleFor(pdfPhotoFor(entry));
+
   const fetchPdfImages = async (photos, onProgress = null) => {
     const images = [];
-    for (const [index, photo] of photos.entries()) {
+    for (const [index, entry] of photos.entries()) {
+      const photo = pdfPhotoFor(entry);
       const imageUrl = imageFor(photo, "detail");
       const response = await fetch(imageUrl);
       if (!response.ok) throw new Error(`Could not load ${titleFor(photo)}`);
@@ -2180,8 +2211,9 @@
         blob,
         dimensions: pdfDimensionsFor(photo),
         photo,
+        title: pdfTitleFor(entry),
       });
-      onProgress?.({ index, total: photos.length, photo });
+      onProgress?.({ index, total: photos.length, photo, title: pdfTitleFor(entry) });
     }
     return images;
   };
@@ -2314,7 +2346,7 @@
           context.textAlign = "left";
           context.textBaseline = "middle";
           context.fillText(
-            fittedCanvasText(context, titleFor(item.photo), slot.width),
+            fittedCanvasText(context, item.title || titleFor(item.photo), slot.width),
             slot.x,
             slot.y + 13
           );
@@ -2473,28 +2505,61 @@
     return buildPdfBlobFromRendered(rendered);
   };
 
-  const downloadPdf = async ({ mode = "download", reservedWindows = [], recordProduct = true, progressKind = "" } = {}) => {
+  const pdfProjectsForBatch = (batch) => {
+    const sourceProjects = Array.isArray(batch?.projects) && batch.projects.length
+      ? batch.projects
+      : [{
+        projectId: activeProjectId(),
+        projectTitle: selectedPropertyTitle(),
+        sortIndex: 1,
+        items: Array.isArray(batch?.items) ? batch.items : [],
+      }];
+    return sourceProjects.map((project, index) => ({
+      projectId: project.projectId || `project-${index + 1}`,
+      projectTitle: project.projectTitle || `Project ${index + 1}`,
+      projectIndex: Number(project.sortIndex) || index + 1,
+      photos: (Array.isArray(project.items) ? project.items : [])
+        .map((item) => {
+          const photo = state.photosById.get(item?.photoId);
+          return photo ? { photo, title: item?.title || titleFor(photo) } : null;
+        })
+        .filter(Boolean),
+    })).filter((project) => project.photos.length);
+  };
+
+  const downloadPdf = async ({
+    mode = "download",
+    reservedWindows = [],
+    recordProduct = true,
+    progressKind = "",
+    batchOverride = null,
+    projectsOverride = null,
+  } = {}) => {
     if (!requireUnlocked() || state.pdfBusy || state.outputBusy) return;
-    const photos = activeSelectedPhotos();
-    if (!photos.length) {
+    const photos = batchOverride ? [] : activeSelectedPhotos();
+    const projects = Array.isArray(projectsOverride) ? projectsOverride : projectGroupsFor(photos, true);
+    const selectedCount = projects.reduce((sum, project) => sum + project.photos.length, 0);
+    if (!selectedCount) {
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} project PDFs`);
       return;
     }
-    const projects = projectGroupsFor(photos, true);
     const outputWindows = mode === "view" ? [...reservedWindows] : [];
     while (mode === "view" && outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
-    const batch = buildBatchManifest(photos, true);
+    const batch = batchOverride || buildBatchManifest(photos, true);
     const batchId = batch.batchId;
     const paper = paperFormatFor();
     const shelfFilename = projects.length === 1
       ? `${state.gallery?.key || "real-estate"}-${fileSlug(projects[0]?.projectTitle)}-${paper.key}-${batchId}.pdf`
       : `${state.gallery?.key || "real-estate"}-${batchId}-project-pdfs.pdf`;
-    const summary = selectedMediaSummary(photos);
+    const summary = batchOverride?.mediaSummary || selectedMediaSummary(photos);
     const videoNote = summary.videos ? `; ${summary.videos} video${summary.videos === 1 ? "" : "s"} will use 10% stills` : "";
     const plannedPages = projects.reduce((sum, project) => (
-      sum + paginatePdfImages(project.photos.map((photo) => ({ dimensions: pdfDimensionsFor(photo), photo }))).length
+      sum + paginatePdfImages(project.photos.map((entry) => {
+        const photo = pdfPhotoFor(entry);
+        return { dimensions: pdfDimensionsFor(photo), photo };
+      })).length
     ), 0);
-    const totalSteps = Math.max(1, photos.length + plannedPages + projects.length);
+    const totalSteps = Math.max(1, selectedCount + plannedPages + projects.length);
     const progressTitle = mode === "view" ? "Preparing PDF preview" : "Preparing PDF download";
     let progressStep = 0;
     const updatePdfStep = (detail) => {
@@ -2510,7 +2575,7 @@
     state.pdfBusy = true;
     startOutputProgress({
       title: progressTitle,
-      detail: `Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${photos.length} selected media${videoNote}...`,
+      detail: `Building ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} from ${selectedCount} selected media${videoNote}...`,
       total: totalSteps,
       kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
     });
@@ -2520,8 +2585,8 @@
     let lastFilename = "";
     try {
       for (const [index, project] of projects.entries()) {
-        const images = await fetchPdfImages(project.photos, ({ index: imageIndex, total, photo }) => {
-          updatePdfStep(`Loaded image ${imageIndex + 1}/${total} for ${project.projectTitle}: ${titleFor(photo)}`);
+        const images = await fetchPdfImages(project.photos, ({ index: imageIndex, total, photo, title }) => {
+          updatePdfStep(`Loaded image ${imageIndex + 1}/${total} for ${project.projectTitle}: ${title || titleFor(photo)}`);
         });
         const rendered = await renderPdfPages(images, ({ pageIndex, total }) => {
           updatePdfStep(`Rendered PDF page ${pageIndex + 1}/${total} for ${project.projectTitle}`);
@@ -2554,7 +2619,7 @@
           bytes: totalSavedBytes,
         });
       }
-      setStatus(`${mode === "view" ? "Viewing" : "Downloaded"} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} media${videoNote}. ${deliverableActionNote}`);
+      setStatus(`${mode === "view" ? "Viewing" : "Downloaded"} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${selectedCount} media${videoNote}. ${deliverableActionNote}`);
       completeOutputProgress(`${mode === "view" ? "Viewing" : "Downloaded"} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} (${formatBytes(totalSavedBytes)})`);
     } catch (error) {
       let message = "";
@@ -2849,11 +2914,13 @@
     try {
       const batch = await deliverableBatchFor(item);
       if (item.type === "pdf") {
-        applyBatchManifest(batch, { statusPrefix: mode === "view" ? "Viewing" : "Downloading", editMode: false });
+        const projects = pdfProjectsForBatch(batch);
         await downloadPdf({
           mode,
           recordProduct: false,
           progressKind: mode === "view" ? "pdf-view" : "pdf-download",
+          batchOverride: batch,
+          projectsOverride: projects,
         });
         return;
       }

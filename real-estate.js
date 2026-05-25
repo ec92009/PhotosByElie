@@ -651,6 +651,14 @@
     return `${value} bytes`;
   };
   const deliverableActionNote = "View on mobile, or download on a computer. Capture or share whatever you are seeing with your device tools.";
+  const shouldOpenHtmlVideoDownloadsInBrowser = () => {
+    const userAgent = String(navigator.userAgent || "");
+    const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+    const iPadDesktopUserAgent = /Macintosh/i.test(userAgent) && Number(navigator.maxTouchPoints || 0) > 1;
+    const coarsePointer = Boolean(window.matchMedia?.("(pointer: coarse)")?.matches);
+    const narrowViewport = Boolean(window.matchMedia?.("(max-width: 900px)")?.matches);
+    return mobileUserAgent || iPadDesktopUserAgent || (coarsePointer && narrowViewport);
+  };
   const outputProgressEta = (current, total) => {
     if (!state.outputProgressStartedAt || !current || !total || current >= total) return "";
     const elapsed = (Date.now() - state.outputProgressStartedAt) / 1000;
@@ -735,8 +743,11 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : "Download video";
-      button.title = "Download the video output with random single-guitar music; selected videos keep duration and play 20 dB under the music";
+      const mobileOpen = shouldOpenHtmlVideoDownloadsInBrowser();
+      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : (mobileOpen ? "Open video" : "Download video");
+      button.title = mobileOpen
+        ? "Open the video output in the browser; use your phone share controls if needed"
+        : "Download the video output with random single-guitar music; selected videos keep duration and play 20 dB under the music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
@@ -1106,10 +1117,15 @@
         : item.batch
           ? `<button class="btn secondary" type="button" data-re-view-deliverable="${escapeHtml(item.id)}">View</button>`
         : `<button class="btn secondary" type="button" disabled>View</button>`;
+      const openVideoDownload = item.type === "video" && shouldOpenHtmlVideoDownloadsInBrowser();
       const download = item.downloadUrl
-        ? `<a class="btn secondary" href="${escapeHtml(item.downloadUrl)}" ${item.filename ? `download="${escapeHtml(item.filename)}"` : "download"}>Download</a>`
+        ? openVideoDownload
+          ? `<a class="btn secondary" href="${escapeHtml(item.viewUrl || item.downloadUrl)}" target="_blank" rel="noopener">Open</a>`
+          : `<a class="btn secondary" href="${escapeHtml(item.downloadUrl)}" ${item.filename ? `download="${escapeHtml(item.filename)}"` : "download"}>Download</a>`
         : item.batch
-          ? `<button class="btn secondary" type="button" data-re-download-deliverable="${escapeHtml(item.id)}">Download</button>`
+          ? openVideoDownload
+            ? `<button class="btn secondary" type="button" data-re-view-deliverable="${escapeHtml(item.id)}">Open</button>`
+            : `<button class="btn secondary" type="button" data-re-download-deliverable="${escapeHtml(item.id)}">Download</button>`
         : `<button class="btn secondary" type="button" disabled>Download</button>`;
       const edit = (item.editUrl || item.batch)
         ? `<button class="btn secondary" type="button" data-re-edit-deliverable="${escapeHtml(item.id)}">Edit</button>`
@@ -2150,7 +2166,8 @@
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
-    const title = mode === "view" ? "Preparing video view" : "Preparing video download";
+    const openInBrowser = mode === "view" || shouldOpenHtmlVideoDownloadsInBrowser();
+    const title = openInBrowser ? "Preparing video view" : "Preparing video download";
     startOutputProgress({
       title,
       detail: "Building slideshow manifest...",
@@ -2163,16 +2180,15 @@
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
       if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename });
       const html = slideshowHtmlFor(batch);
-      const blob = new Blob([html], { type: "text/html" });
       updateOutputProgress({
         title,
-        detail: mode === "view" ? "Opening browser video view..." : "Sending video file to Downloads...",
+        detail: openInBrowser ? "Opening browser video view..." : "Sending video file to Downloads...",
         current: 2,
         total: 3,
       });
-      const saved = mode === "view"
+      const saved = openInBrowser
         ? await openHtmlInBrowser(html, filename, reservedWindow || reserveOutputWindow("Building video preview"))
-        : { method: "download", ...(await downloadBlob(blob, filename)) };
+        : { method: "download", ...(await downloadBlob(new Blob([html], { type: "text/html" }), filename)) };
       if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
       if (saved.method === "open" || saved.method === "open-current") {
         setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
@@ -3281,7 +3297,8 @@
         });
         return;
       }
-      const title = mode === "view" ? "Preparing video view" : "Preparing video download";
+      const openInBrowser = mode === "view" || shouldOpenHtmlVideoDownloadsInBrowser();
+      const title = openInBrowser ? "Preparing video view" : "Preparing video download";
       startOutputProgress({
         title,
         detail: "Loading saved video product...",
@@ -3289,17 +3306,16 @@
         kind: mode === "view" ? "video-view" : "video-download",
       });
       const html = slideshowHtmlFor(batch);
-      const blob = new Blob([html], { type: "text/html" });
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId || timestampId()}-slideshow.html`;
       updateOutputProgress({
         title,
-        detail: mode === "view" ? "Opening saved video view..." : "Sending saved video file to Downloads...",
+        detail: openInBrowser ? "Opening saved video view..." : "Sending saved video file to Downloads...",
         current: 1,
         total: 2,
       });
-      const saved = mode === "view"
+      const saved = openInBrowser
         ? await openHtmlInBrowser(html, filename, reserveOutputWindow("Building video preview"))
-        : { method: "download", ...(await downloadBlob(blob, filename)) };
+        : { method: "download", ...(await downloadBlob(new Blob([html], { type: "text/html" }), filename)) };
       if (saved.method === "open" || saved.method === "open-current") {
         setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
       } else {

@@ -5,7 +5,7 @@
   "privateRenderKeyScheme": "renders/<photo-id>_<1|3|6>mp.jpg",
   "legacyPrivateMasterKeyScheme": "masters/<photo-id>/<original-file>",
   "legacyPrivateRenderKeyScheme": "renders/<photo-id>/<original-file>-<product-id>.jpg",
-  "photosCount": 6672,
+  "photosCount": 6666,
   "photos": {
     "img-6236-bc42218145": {
       "id": "img-6236-bc42218145",
@@ -357,41 +357,6 @@
         }
       }
     },
-    "img-6231-d4b5beec59": {
-      "id": "img-6231-d4b5beec59",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6231.JPG",
-      "sourceFile": {
-        "path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6231.JPG",
-        "type": "JPG",
-        "bytes": 2032078
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/img-6231-d4b5beec59_900.jpg",
-        "detailKey": "expo/img-6231-d4b5beec59_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/img-6231-d4b5beec59.jpg",
-        "legacyMasterKey": "masters/img-6231-d4b5beec59/IMG_6231.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/img-6231-d4b5beec59_6mp.jpg",
-          "jpg-3mp": "renders/img-6231-d4b5beec59_3mp.jpg",
-          "jpg-1mp": "renders/img-6231-d4b5beec59_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/img-6231-d4b5beec59/IMG_6231.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/img-6231-d4b5beec59/IMG_6231.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/img-6231-d4b5beec59/IMG_6231.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
     "img-6231-85f0820f25": {
       "id": "img-6231-85f0820f25",
       "collectionKey": "france",
@@ -672,41 +637,6 @@
         }
       }
     },
-    "img-6224-0c5bc9f27e": {
-      "id": "img-6224-0c5bc9f27e",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6224.JPG",
-      "sourceFile": {
-        "path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6224.JPG",
-        "type": "JPG",
-        "bytes": 3601047
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/img-6224-0c5bc9f27e_900.jpg",
-        "detailKey": "expo/img-6224-0c5bc9f27e_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/img-6224-0c5bc9f27e.jpg",
-        "legacyMasterKey": "masters/img-6224-0c5bc9f27e/IMG_6224.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/img-6224-0c5bc9f27e_6mp.jpg",
-          "jpg-3mp": "renders/img-6224-0c5bc9f27e_3mp.jpg",
-          "jpg-1mp": "renders/img-6224-0c5bc9f27e_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/img-6224-0c5bc9f27e/IMG_6224.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/img-6224-0c5bc9f27e/IMG_6224.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/img-6224-0c5bc9f27e/IMG_6224.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
     "img-6222-d88a2f15a0": {
       "id": "img-6222-d88a2f15a0",
       "collectionKey": "france",
@@ -774,41 +704,6 @@
           "jpg-6mp": "renders/img-6222-0aca40b373/IMG_6222.JPG-jpg-6mp.jpg",
           "jpg-3mp": "renders/img-6222-0aca40b373/IMG_6222.JPG-jpg-3mp.jpg",
           "jpg-1mp": "renders/img-6222-0aca40b373/IMG_6222.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
-    "img-6221-ac8b4850f0": {
-      "id": "img-6221-ac8b4850f0",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6221.JPG",
-      "sourceFile": {
-        "path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6221.JPG",
-        "type": "JPG",
-        "bytes": 3021507
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/img-6221-ac8b4850f0_900.jpg",
-        "detailKey": "expo/img-6221-ac8b4850f0_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/img-6221-ac8b4850f0.jpg",
-        "legacyMasterKey": "masters/img-6221-ac8b4850f0/IMG_6221.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/img-6221-ac8b4850f0_6mp.jpg",
-          "jpg-3mp": "renders/img-6221-ac8b4850f0_3mp.jpg",
-          "jpg-1mp": "renders/img-6221-ac8b4850f0_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/img-6221-ac8b4850f0/IMG_6221.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/img-6221-ac8b4850f0/IMG_6221.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/img-6221-ac8b4850f0/IMG_6221.JPG-jpg-1mp.jpg"
         }
       }
     },
@@ -1789,41 +1684,6 @@
           "jpg-6mp": "renders/img-6205-f47f0e6b31/IMG_6205.JPG-jpg-6mp.jpg",
           "jpg-3mp": "renders/img-6205-f47f0e6b31/IMG_6205.JPG-jpg-3mp.jpg",
           "jpg-1mp": "renders/img-6205-f47f0e6b31/IMG_6205.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
-    "img-6205-16fe23e825": {
-      "id": "img-6205-16fe23e825",
-      "collectionKey": "france",
-      "collectionTitle": "France",
-      "sourcePath": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6205.JPG",
-      "sourceFile": {
-        "path": "2024 Rueil Malmaison, Musee de la Malmaison/IMG_6205.JPG",
-        "type": "JPG",
-        "bytes": 3085154
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "france",
-        "label": "France",
-        "source": "gps_hint"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/img-6205-16fe23e825_900.jpg",
-        "detailKey": "expo/img-6205-16fe23e825_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/img-6205-16fe23e825.jpg",
-        "legacyMasterKey": "masters/img-6205-16fe23e825/IMG_6205.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/img-6205-16fe23e825_6mp.jpg",
-          "jpg-3mp": "renders/img-6205-16fe23e825_3mp.jpg",
-          "jpg-1mp": "renders/img-6205-16fe23e825_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/img-6205-16fe23e825/IMG_6205.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/img-6205-16fe23e825/IMG_6205.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/img-6205-16fe23e825/IMG_6205.JPG-jpg-1mp.jpg"
         }
       }
     },
@@ -225582,41 +225442,6 @@
         }
       }
     },
-    "img-1150-3541f17aa7": {
-      "id": "img-1150-3541f17aa7",
-      "collectionKey": "italy",
-      "collectionTitle": "Italy",
-      "sourcePath": "2025 Florence/IMG_1150.JPG",
-      "sourceFile": {
-        "path": "2025 Florence/IMG_1150.JPG",
-        "type": "JPG",
-        "bytes": 5009632
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "path_hint"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/img-1150-3541f17aa7_900.jpg",
-        "detailKey": "expo/img-1150-3541f17aa7_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/img-1150-3541f17aa7.jpg",
-        "legacyMasterKey": "masters/img-1150-3541f17aa7/IMG_1150.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/img-1150-3541f17aa7_6mp.jpg",
-          "jpg-3mp": "renders/img-1150-3541f17aa7_3mp.jpg",
-          "jpg-1mp": "renders/img-1150-3541f17aa7_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/img-1150-3541f17aa7/IMG_1150.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/img-1150-3541f17aa7/IMG_1150.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/img-1150-3541f17aa7/IMG_1150.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
     "img-1149-ae6b096d6f": {
       "id": "img-1149-ae6b096d6f",
       "collectionKey": "italy",
@@ -225684,41 +225509,6 @@
           "jpg-6mp": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-6mp.jpg",
           "jpg-3mp": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-3mp.jpg",
           "jpg-1mp": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-1mp.jpg"
-        }
-      }
-    },
-    "img-1140-5f0e42d7e3": {
-      "id": "img-1140-5f0e42d7e3",
-      "collectionKey": "italy",
-      "collectionTitle": "Italy",
-      "sourcePath": "2025 Florence/IMG_1140.JPG",
-      "sourceFile": {
-        "path": "2025 Florence/IMG_1140.JPG",
-        "type": "JPG",
-        "bytes": 1466865
-      },
-      "sourceMode": "import-cache",
-      "originalGalleryCountry": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "path_hint"
-      },
-      "publicPreview": {
-        "galleryKey": "expo/img-1140-5f0e42d7e3_900.jpg",
-        "detailKey": "expo/img-1140-5f0e42d7e3_1800.jpg"
-      },
-      "privateDelivery": {
-        "masterKey": "masters/img-1140-5f0e42d7e3.jpg",
-        "legacyMasterKey": "masters/img-1140-5f0e42d7e3/IMG_1140.JPG",
-        "renderKeys": {
-          "jpg-6mp": "renders/img-1140-5f0e42d7e3_6mp.jpg",
-          "jpg-3mp": "renders/img-1140-5f0e42d7e3_3mp.jpg",
-          "jpg-1mp": "renders/img-1140-5f0e42d7e3_1mp.jpg"
-        },
-        "legacyRenderKeys": {
-          "jpg-6mp": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-6mp.jpg",
-          "jpg-3mp": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-3mp.jpg",
-          "jpg-1mp": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-1mp.jpg"
         }
       }
     },

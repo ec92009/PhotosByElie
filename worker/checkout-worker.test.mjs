@@ -115,6 +115,9 @@ const createFakeR2 = (initial = {}) => {
         customMetadata: options.customMetadata || {},
       });
     },
+    delete: async (key) => {
+      values.delete(key);
+    },
     list: async ({ prefix = "", limit = 1000 } = {}) => {
       const objects = [...values.entries()]
         .filter(([key]) => key.startsWith(prefix))
@@ -808,6 +811,26 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   assert.equal(listed.count, 1);
   assert.equal(listed.deliverables[0].id, deliverable.id);
   assert.equal(listed.deliverables[0].filename, deliverable.filename);
+
+  const deleteResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/delete", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    id: deliverable.id,
+  }));
+  assert.equal(deleteResponse.status, 200);
+  const deleted = await deleteResponse.json();
+  assert.equal(deleted.id, deliverable.id);
+  assert.equal(deleted.deleted, true);
+
+  const afterDeleteResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }));
+  assert.equal(afterDeleteResponse.status, 200);
+  const afterDelete = await afterDeleteResponse.json();
+  assert.equal(afterDelete.count, 0);
 
   const wrongPassword = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",

@@ -201,5 +201,25 @@ export const createRealEstateDeliverables = ({
     return record;
   };
 
-  return { listDeliverables, putDeliverable };
+  const deleteDeliverable = async (payload = {}) => {
+    const gallery = galleryFor(payload);
+    authorize(gallery, payload);
+    const id = safeRecordId(payload.id || payload.deliverableId || payload.deliverable?.id || "");
+    const key = keyFor(gallery, id);
+    const existing = await privateBucket.get(key);
+    if (typeof privateBucket.delete !== "function") {
+      throw Object.assign(new Error("Real-estate product storage cannot delete records."), {
+        status: 503,
+        code: "real_estate_deliverables_unavailable",
+      });
+    }
+    await privateBucket.delete(key);
+    return {
+      galleryKey: gallery.key,
+      id,
+      deleted: Boolean(existing),
+    };
+  };
+
+  return { listDeliverables, putDeliverable, deleteDeliverable };
 };

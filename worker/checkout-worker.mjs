@@ -759,6 +759,15 @@ export const createPhotosByElieWorker = ({
     return json({ deliverable }, 201);
   };
 
+  const deleteRealEstateDeliverable = async (request) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.deleteDeliverable !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
+    }
+    const payload = await parseJson(request);
+    const result = await realEstateDeliverables.deleteDeliverable(payload);
+    return json(result);
+  };
+
   const fetch = async (request) => {
     if (request.method === "OPTIONS") return json({ ok: true });
     const url = new URL(request.url);
@@ -775,6 +784,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
       if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
+      if (request.method === "POST" && path === "/real-estate/deliverables/delete") return await deleteRealEstateDeliverable(request);
       const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
       if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);

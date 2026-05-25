@@ -837,11 +837,16 @@
     };
   };
 
+  const deliverableRowsFor = (rows, source) => (Array.isArray(rows) ? rows : []).map((row) => ({
+    ...(row && typeof row === "object" ? row : {}),
+    __deliverableSource: source,
+  }));
+
   const rawDeliverables = () => [
-    ...(Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : []),
-    ...(Array.isArray(state.localDeliverables) ? state.localDeliverables : []),
-    ...(Array.isArray(state.payload?.deliverables) ? state.payload.deliverables : []),
-    ...(Array.isArray(state.gallery?.deliverables) ? state.gallery.deliverables : []),
+    ...deliverableRowsFor(state.cloudDeliverables, "cloud"),
+    ...deliverableRowsFor(state.localDeliverables, "local"),
+    ...deliverableRowsFor(state.payload?.deliverables, "payload"),
+    ...deliverableRowsFor(state.gallery?.deliverables, "gallery"),
   ];
 
   const normalizeDeliverable = (row, index) => {
@@ -863,6 +868,7 @@
       editUrl,
       batch: row?.batch || row?.manifest || row?.selection || null,
       filename: String(row?.filename || row?.fileName || ""),
+      source: String(row?.__deliverableSource || ""),
     };
   };
 
@@ -980,6 +986,67 @@
     return saved;
   };
 
+  const removeLocalDeliverable = (deliverableId) => {
+    const before = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
+    state.localDeliverables = before.filter((item) => String(item?.id || "") !== deliverableId);
+    writeJson(localDeliverablesStoreKey(), state.localDeliverables);
+  };
+
+  const removeCloudDeliverableState = (deliverableId) => {
+    const before = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
+    state.cloudDeliverables = before.filter((item) => String(item?.id || "") !== deliverableId);
+  };
+
+  const deleteCloudDeliverable = async (deliverableId, { promptIfMissing = false } = {}) => {
+    const baseUrl = workerBaseUrl();
+    if (!state.gallery?.key || !baseUrl || !state.unlocked) {
+      if (promptIfMissing) throw new Error("Cloud products are unavailable.");
+      return null;
+    }
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing });
+    if (!credentials) {
+      if (promptIfMissing) throw new Error("Client password is needed to delete this cloud product.");
+      return null;
+    }
+    const response = await fetch(`${baseUrl}/real-estate/deliverables/delete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        accessCode: credentials.accessCode,
+        id: deliverableId,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body?.error?.message || "Cloud product could not be deleted.");
+    }
+    return body;
+  };
+
+  const deleteProducedDeliverable = async (deliverableId) => {
+    if (!requireUnlocked()) return;
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    if (!item || !["cloud", "local"].includes(item.source)) return;
+    const confirmed = window.confirm(`Delete ${item.title || item.label || "this product"} from saved products?`);
+    if (!confirmed) return;
+
+    setStatus(`Deleting ${item.title || item.label || "product"}...`);
+    if (item.source === "cloud") {
+      await deleteCloudDeliverable(deliverableId, { promptIfMissing: true });
+    } else {
+      deleteCloudDeliverable(deliverableId, { promptIfMissing: false }).catch((error) => {
+        state.cloudDeliverablesError = error?.message || "Cloud product could not be deleted.";
+        renderProducedDeliverables();
+      });
+    }
+    removeLocalDeliverable(deliverableId);
+    removeCloudDeliverableState(deliverableId);
+    renderProducedDeliverables();
+    setStatus(`Deleted ${item.title || item.label || "product"} from saved products.`);
+  };
+
   const saveLocalDeliverable = ({ type = "file", batch = null, filename = "", bytes = 0 } = {}) => {
     if (!batch?.batchId) return null;
     const normalizedType = String(type || "file").toLowerCase();
@@ -1047,6 +1114,9 @@
       const edit = (item.editUrl || item.batch)
         ? `<button class="btn secondary" type="button" data-re-edit-deliverable="${escapeHtml(item.id)}">Edit</button>`
         : `<button class="btn secondary" type="button" disabled>Edit</button>`;
+      const remove = ["cloud", "local"].includes(item.source)
+        ? `<button class="btn danger" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}">Delete</button>`
+        : `<button class="btn secondary" type="button" disabled>Delete</button>`;
       return `
         <article class="real-estate-deliverable">
           <div>
@@ -1057,6 +1127,7 @@
             ${edit}
             ${view}
             ${download}
+            ${remove}
           </div>
         </article>
       `;
@@ -3502,7 +3573,7 @@
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
-      const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-sync-deliverables]");
+      const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
       if (!button) return;
       if (button.matches("[data-re-sync-deliverables]")) {
         fetchCloudDeliverables({ promptIfMissing: true, quiet: false }).catch(() => {});
@@ -3510,6 +3581,10 @@
       }
       if (button.matches("[data-re-edit-deliverable]")) {
         editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
+        return;
+      }
+      if (button.matches("[data-re-delete-deliverable]")) {
+        deleteProducedDeliverable(button.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
         return;
       }
       const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";

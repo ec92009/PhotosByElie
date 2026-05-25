@@ -144,6 +144,11 @@ COUNTRY_HINTS = {
     "sevilla": ("spain", "Spain"),
     "bratislava": ("slovakia", "Slovakia"),
     "valencia": ("spain", "Spain"),
+    "florence": ("italy", "Italy"),
+    "firenze": ("italy", "Italy"),
+    "pisa": ("italy", "Italy"),
+    "san gimignano": ("italy", "Italy"),
+    "tuscany": ("italy", "Italy"),
 }
 GPS_COUNTRY_BOUNDS = {
     "usa": ((24.0, 49.5), (-125.0, -66.0), "United States"),
@@ -151,6 +156,7 @@ GPS_COUNTRY_BOUNDS = {
     "spain": ((27.0, 44.5), (-18.5, 4.9), "Spain"),
     "portugal": ((30.0, 42.5), (-10.5, -6.0), "Portugal"),
     "france": ((41.0, 51.8), (-5.7, 9.8), "France"),
+    "italy": ((35.4, 47.2), (6.6, 18.8), "Italy"),
     "slovakia": ((47.5, 49.7), (16.8, 22.7), "Slovakia"),
 }
 PRIVATE_KEYWORD_PATTERN = re.compile(

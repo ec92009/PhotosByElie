@@ -31,6 +31,13 @@ PUBLIC_ORDER = [slug for slug in ORDER if slug != "unknown"]
 OWNER_ORDER = ["unknown"]
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 AI_SOURCE_MODE_HINTS = {"ai", "leonardo"}
+EXPORT_COUNTRY_HINTS = {
+    "florence": ("italy", "Italy"),
+    "firenze": ("italy", "Italy"),
+    "pisa": ("italy", "Italy"),
+    "san gimignano": ("italy", "Italy"),
+    "tuscany": ("italy", "Italy"),
+}
 DEFAULT_REGULAR_CAP = None
 DEFAULT_SELECTION_MODE = "random"
 DIVERSITY_BUCKET_MINUTES = 10
@@ -633,6 +640,26 @@ def row_source_path_is_blocked(row: dict, blocked_paths: set[str], blocked_suffi
     return False
 
 
+def apply_export_country_hints(row: dict) -> dict:
+    gallery_country = row.get("gallery_country") or {}
+    slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country or "")
+    if slug and slug != "unknown":
+        return row
+    haystack_values = [
+        str(row.get("relative_path") or row.get("relativePath") or ""),
+        *source_path_values_from_object(row),
+    ]
+    haystack = " ".join(haystack_values).casefold()
+    if "leonardo" in haystack:
+        return row
+    for hint, (target_slug, label) in EXPORT_COUNTRY_HINTS.items():
+        if hint in haystack:
+            row = dict(row)
+            row["gallery_country"] = {"slug": target_slug, "label": label, "source": "path_hint"}
+            return row
+    return row
+
+
 def expo_state_from_payload(payload: dict) -> dict[str, list[str]]:
     value = payload.get("expo_state")
     if not isinstance(value, dict):
@@ -809,6 +836,7 @@ def write_photos_data(
             if not derivative_files_available(repo_root, row, mode, uploaded_public_keys):
                 continue
             row = apply_country_assignment(row, country_assignments.get(row.get("id")))
+            row = apply_export_country_hints(row)
             row = sanitize_keyword_metadata(row, keyword_blacklist)
             gallery_country = row.get("gallery_country") or {}
             slug = gallery_country.get("slug") if isinstance(gallery_country, dict) else str(gallery_country)

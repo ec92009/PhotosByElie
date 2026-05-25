@@ -442154,7 +442154,1742 @@ export const collections = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "photos": []
+    "photos": [
+      {
+        "id": "img-1205-4ca5e788f0",
+        "className": "p1",
+        "title": "IMG 1205",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1205"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:32:06"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/5348, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1205.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1205-4ca5e788f0_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1205-4ca5e788f0_900.jpg",
+            "detailKey": "expo/img-1205-4ca5e788f0_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Pisa/IMG_1205.JPG",
+            "type": "JPG",
+            "bytes": 5884983
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1204-1d710fba81",
+        "className": "p2",
+        "title": "IMG 1204",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1204"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:31:41"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1299, f/2.2, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "2.2 mm / 14 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1204.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1204-1d710fba81_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1204-1d710fba81_900.jpg",
+            "detailKey": "expo/img-1204-1d710fba81_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Pisa/IMG_1204.JPG",
+            "type": "JPG",
+            "bytes": 4364821
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1184-adad54985d",
+        "className": "p3",
+        "title": "IMG 1184",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1184"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 14:21:58"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/5814, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1184.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1184-adad54985d_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1184-adad54985d_900.jpg",
+            "detailKey": "expo/img-1184-adad54985d_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1184.JPG",
+            "type": "JPG",
+            "bytes": 5877981
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1182-5aa2cfd683",
+        "className": "p4",
+        "title": "IMG 1182",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1182"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 13:39:10"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/2141, f/1.6, ISO 40"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 52 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1182.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1182-5aa2cfd683_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1182-5aa2cfd683_900.jpg",
+            "detailKey": "expo/img-1182-5aa2cfd683_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1182.JPG",
+            "type": "JPG",
+            "bytes": 4155239
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1181-a12bca4639",
+        "className": "p5",
+        "title": "IMG 1181",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1181"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 13:39:04"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1751, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1181.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1181-a12bca4639_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1181-a12bca4639_900.jpg",
+            "detailKey": "expo/img-1181-a12bca4639_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1181.JPG",
+            "type": "JPG",
+            "bytes": 9994214
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1180-fe3d9faa8d",
+        "className": "p1",
+        "title": "IMG 1180",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1180"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 13:38:51"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1364, f/1.6, ISO 64"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1180.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1180-fe3d9faa8d_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1180-fe3d9faa8d_900.jpg",
+            "detailKey": "expo/img-1180-fe3d9faa8d_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1180.JPG",
+            "type": "JPG",
+            "bytes": 10048659
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1179-73dc1ce59c",
+        "className": "p2",
+        "title": "IMG 1179",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1179"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 13:38:46"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1064, f/1.6, ISO 64"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1179.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1179-73dc1ce59c_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1179-73dc1ce59c_900.jpg",
+            "detailKey": "expo/img-1179-73dc1ce59c_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1179.JPG",
+            "type": "JPG",
+            "bytes": 10441416
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1177-ed6ca580f8",
+        "className": "p3",
+        "title": "IMG 1177",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1177"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 13:38:24"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/4630, f/1.6, ISO 25"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 266 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1177.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1177-ed6ca580f8_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1177-ed6ca580f8_900.jpg",
+            "detailKey": "expo/img-1177-ed6ca580f8_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1177.JPG",
+            "type": "JPG",
+            "bytes": 1357319
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1166-5254d26291",
+        "className": "p4",
+        "title": "IMG 1166",
+        "caption": "Italy / 2025-05-12",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1166"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 10:47:44"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Focal length",
+            "value": "14"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1166.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1166-5254d26291_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1166-5254d26291_900.jpg",
+            "detailKey": "expo/img-1166-5254d26291_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 5.84
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1166.MOV",
+            "type": "MOV",
+            "bytes": 7021034
+          }
+        ],
+        "keywords": [],
+        "duration": 5.84
+      },
+      {
+        "id": "img-1165-7f280d668b",
+        "className": "p5",
+        "title": "IMG 1165",
+        "caption": "Italy / 2025-05-12",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1165"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 10:47:36"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Focal length",
+            "value": "14"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1165.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1165-7f280d668b_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1165-7f280d668b_900.jpg",
+            "detailKey": "expo/img-1165-7f280d668b_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 5.07
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1165.MOV",
+            "type": "MOV",
+            "bytes": 5847261
+          }
+        ],
+        "keywords": [],
+        "duration": 5.07
+      },
+      {
+        "id": "img-1164-ff3aa85aa6",
+        "className": "p1",
+        "title": "IMG 1164",
+        "caption": "Italy / 2025-05-12",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1164"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 10:47:00"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Focal length",
+            "value": "26"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1164.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1164-ff3aa85aa6_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1164-ff3aa85aa6_900.jpg",
+            "detailKey": "expo/img-1164-ff3aa85aa6_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 10.03
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1164.MOV",
+            "type": "MOV",
+            "bytes": 17353928
+          }
+        ],
+        "keywords": [],
+        "duration": 10.03
+      },
+      {
+        "id": "img-1163-865c215612",
+        "className": "p2",
+        "title": "IMG 1163",
+        "caption": "Italy / 2025-05-12",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1163"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 10:35:04"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Focal length",
+            "value": "14"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1163.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1163-865c215612_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1163-865c215612_900.jpg",
+            "detailKey": "expo/img-1163-865c215612_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 0.7
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1163.MOV",
+            "type": "MOV",
+            "bytes": 870964
+          }
+        ],
+        "keywords": [],
+        "duration": 0.7
+      },
+      {
+        "id": "img-1162-8d5f189d84",
+        "className": "p3",
+        "title": "IMG 1162",
+        "caption": "Italy / 2025-05-12",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1162"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 10:34:56"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Focal length",
+            "value": "14"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1162.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1162-8d5f189d84_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1162-8d5f189d84_900.jpg",
+            "detailKey": "expo/img-1162-8d5f189d84_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 6.71
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 San Gimignano/IMG_1162.MOV",
+            "type": "MOV",
+            "bytes": 7782050
+          }
+        ],
+        "keywords": [],
+        "duration": 6.71
+      },
+      {
+        "id": "img-1151-9cde6756a2",
+        "className": "p4",
+        "title": "IMG 1151",
+        "caption": "Italy / 2025-05-11",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1151"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:11 20:22:27"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/25, f/1.6, ISO 500"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1151.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1151-9cde6756a2_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1151-9cde6756a2_900.jpg",
+            "detailKey": "expo/img-1151-9cde6756a2_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1151.JPG",
+            "type": "JPG",
+            "bytes": 5649715
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1150-3541f17aa7",
+        "className": "p5",
+        "title": "IMG 1150",
+        "caption": "Italy / 2025-05-11",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1150"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:11 20:22:24"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/25, f/1.6, ISO 500"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1150.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1150-3541f17aa7_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1150-3541f17aa7_900.jpg",
+            "detailKey": "expo/img-1150-3541f17aa7_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1150.JPG",
+            "type": "JPG",
+            "bytes": 5009632
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1149-ae6b096d6f",
+        "className": "p1",
+        "title": "IMG 1149",
+        "caption": "Italy / 2025-05-11",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1149"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:11 20:22:17"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/25, f/1.6, ISO 640"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1149.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1149-ae6b096d6f_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1149-ae6b096d6f_900.jpg",
+            "detailKey": "expo/img-1149-ae6b096d6f_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1149.JPG",
+            "type": "JPG",
+            "bytes": 6224894
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1141-e7e66ca045",
+        "className": "p2",
+        "title": "IMG 1141",
+        "caption": "Italy / 2025-05-11",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1141"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:11 19:40:31"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/33, f/2.2, ISO 800"
+          },
+          {
+            "label": "Focal length",
+            "value": "2.2 mm / 14 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1141.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1141-e7e66ca045_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1141-e7e66ca045_900.jpg",
+            "detailKey": "expo/img-1141-e7e66ca045_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1141.JPG",
+            "type": "JPG",
+            "bytes": 2764521
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1140-5f0e42d7e3",
+        "className": "p3",
+        "title": "IMG 1140",
+        "caption": "Italy / 2025-05-11",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1140"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:11 19:30:50"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1880, f/2.2, ISO 32"
+          },
+          {
+            "label": "Focal length",
+            "value": "2.2 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1140.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1140-5f0e42d7e3_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1140-5f0e42d7e3_900.jpg",
+            "detailKey": "expo/img-1140-5f0e42d7e3_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1140.JPG",
+            "type": "JPG",
+            "bytes": 1466865
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1142-7b199b33ad",
+        "className": "p4",
+        "title": "IMG 1142",
+        "caption": "Italy / 2025-05-11",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1142"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:11 17:40:38"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Focal length",
+            "value": "14"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1142.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1142-7b199b33ad_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1142-7b199b33ad_900.jpg",
+            "detailKey": "expo/img-1142-7b199b33ad_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 7.37
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1142.MOV",
+            "type": "MOV",
+            "bytes": 14716541
+          }
+        ],
+        "keywords": [],
+        "duration": 7.37
+      },
+      {
+        "id": "img-1124-a67a48ee91",
+        "className": "p5",
+        "title": "IMG 1124",
+        "caption": "Italy / 2025-05-10",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1124"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:10 16:12:29"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/4630, f/1.6, ISO 32"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 52 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1124.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4032 x 3024 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1124-a67a48ee91_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1124-a67a48ee91_900.jpg",
+            "detailKey": "expo/img-1124-a67a48ee91_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1124.JPG",
+            "type": "JPG",
+            "bytes": 3070529
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1123-807c7c6a80",
+        "className": "p1",
+        "title": "IMG 1123",
+        "caption": "Italy / 2025-05-10",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1123"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:10 16:12:26"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/3831, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1123.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1123-807c7c6a80_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1123-807c7c6a80_900.jpg",
+            "detailKey": "expo/img-1123-807c7c6a80_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1123.JPG",
+            "type": "JPG",
+            "bytes": 6343836
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1122-38b4360e54",
+        "className": "p2",
+        "title": "IMG 1122",
+        "caption": "Italy / 2025-05-10",
+        "full": "JPG master",
+        "megapixels": 3.6,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1122"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:10 15:44:06"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1122.JPG"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 1290 x 2796 / 3.6 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1122-38b4360e54_1800.jpg / 830 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1122-38b4360e54_900.jpg",
+            "detailKey": "expo/img-1122-38b4360e54_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1122.JPG",
+            "type": "JPG",
+            "bytes": 1026833
+          }
+        ],
+        "keywords": []
+      },
+      {
+        "id": "img-1112-482e0b08e3",
+        "className": "p3",
+        "title": "IMG 1112",
+        "caption": "Italy / 2025-05-10",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1112"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:10 11:45:32"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Focal length",
+            "value": "26"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1112.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1112-482e0b08e3_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1112-482e0b08e3_900.jpg",
+            "detailKey": "expo/img-1112-482e0b08e3_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 8.27
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1112.MOV",
+            "type": "MOV",
+            "bytes": 9337840
+          }
+        ],
+        "keywords": [],
+        "duration": 8.27
+      },
+      {
+        "id": "img-1111-3e8483bc6f",
+        "className": "p4",
+        "title": "IMG 1111",
+        "caption": "Italy / 2025-05-10",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1111"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:10 11:45:24"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Focal length",
+            "value": "26"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1111.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1111-3e8483bc6f_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1111-3e8483bc6f_900.jpg",
+            "detailKey": "expo/img-1111-3e8483bc6f_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 6.03
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1111.MOV",
+            "type": "MOV",
+            "bytes": 6968843
+          }
+        ],
+        "keywords": [],
+        "duration": 6.03
+      },
+      {
+        "id": "img-1110-d9679b1131",
+        "className": "p5",
+        "title": "IMG 1110",
+        "caption": "Italy / 2025-05-10",
+        "full": "MOV master",
+        "megapixels": 2.1,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1110"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:10 11:44:56"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Focal length",
+            "value": "26"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1110.MOV"
+          },
+          {
+            "label": "Original size",
+            "value": "MOV / 1920 x 1080 / 2.1 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1110-d9679b1131_short_5s_720p.mp4 / 1280 x 720 / MP4"
+          }
+        ],
+        "media": {
+          "type": "video",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1110-d9679b1131_900.jpg",
+            "detailKey": "expo/img-1110-d9679b1131_short_5s_720p.mp4"
+          },
+          "video": {
+            "duration": 4.57
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2025 Florence/IMG_1110.MOV",
+            "type": "MOV",
+            "bytes": 5604378
+          }
+        ],
+        "keywords": [],
+        "duration": 4.57
+      }
+    ]
   },
   "portugal": {
     "number": "07",

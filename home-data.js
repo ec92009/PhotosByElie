@@ -327,9 +327,70 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 0,
+    "count": 25,
     "href": "./gallery.html?gallery=italy",
-    "photos": []
+    "photos": [
+      {
+        "id": "img-1205-4ca5e788f0",
+        "title": "IMG 1205",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1205-4ca5e788f0_900.jpg",
+            "detailKey": "expo/img-1205-4ca5e788f0_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1204-1d710fba81",
+        "title": "IMG 1204",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1204-1d710fba81_900.jpg",
+            "detailKey": "expo/img-1204-1d710fba81_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1184-adad54985d",
+        "title": "IMG 1184",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1184-adad54985d_900.jpg",
+            "detailKey": "expo/img-1184-adad54985d_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "img-1182-5aa2cfd683",
+        "title": "IMG 1182",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1182-5aa2cfd683_900.jpg",
+            "detailKey": "expo/img-1182-5aa2cfd683_1800.jpg"
+          }
+        }
+      }
+    ]
   },
   "portugal": {
     "number": "07",

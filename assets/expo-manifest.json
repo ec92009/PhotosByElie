@@ -5,10 +5,11 @@
   "publish_scope": "all-eligible",
   "selection_mode": "newest",
   "seed": null,
-  "photos_count": 6639,
+  "photos_count": 6664,
   "reserve_counts": {
     "ai": 0,
     "france": 0,
+    "italy": 0,
     "mexico": 0,
     "portugal": 0,
     "slovakia": 0,
@@ -19,6 +20,7 @@
   "hidden_counts": {
     "ai": 0,
     "france": 0,
+    "italy": 0,
     "mexico": 0,
     "portugal": 0,
     "slovakia": 0,
@@ -89919,6 +89921,356 @@
       "derivatives": {
         "gallery": "expo/1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-jpgx2-5ff0ea7341_900.jpg",
         "detail": "expo/1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-jpgx2-5ff0ea7341_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1205-4ca5e788f0",
+      "relative_path": "2025 Pisa/IMG_1205.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1205-4ca5e788f0_900.jpg",
+        "detail": "expo/img-1205-4ca5e788f0_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1204-1d710fba81",
+      "relative_path": "2025 Pisa/IMG_1204.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1204-1d710fba81_900.jpg",
+        "detail": "expo/img-1204-1d710fba81_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1184-adad54985d",
+      "relative_path": "2025 San Gimignano/IMG_1184.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1184-adad54985d_900.jpg",
+        "detail": "expo/img-1184-adad54985d_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1182-5aa2cfd683",
+      "relative_path": "2025 San Gimignano/IMG_1182.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1182-5aa2cfd683_900.jpg",
+        "detail": "expo/img-1182-5aa2cfd683_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1181-a12bca4639",
+      "relative_path": "2025 San Gimignano/IMG_1181.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1181-a12bca4639_900.jpg",
+        "detail": "expo/img-1181-a12bca4639_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1180-fe3d9faa8d",
+      "relative_path": "2025 San Gimignano/IMG_1180.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1180-fe3d9faa8d_900.jpg",
+        "detail": "expo/img-1180-fe3d9faa8d_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1179-73dc1ce59c",
+      "relative_path": "2025 San Gimignano/IMG_1179.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1179-73dc1ce59c_900.jpg",
+        "detail": "expo/img-1179-73dc1ce59c_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1177-ed6ca580f8",
+      "relative_path": "2025 San Gimignano/IMG_1177.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1177-ed6ca580f8_900.jpg",
+        "detail": "expo/img-1177-ed6ca580f8_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1166-5254d26291",
+      "relative_path": "2025 San Gimignano/IMG_1166.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1166-5254d26291_900.jpg",
+        "detail": "expo/img-1166-5254d26291_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1165-7f280d668b",
+      "relative_path": "2025 San Gimignano/IMG_1165.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1165-7f280d668b_900.jpg",
+        "detail": "expo/img-1165-7f280d668b_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1164-ff3aa85aa6",
+      "relative_path": "2025 San Gimignano/IMG_1164.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1164-ff3aa85aa6_900.jpg",
+        "detail": "expo/img-1164-ff3aa85aa6_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1163-865c215612",
+      "relative_path": "2025 San Gimignano/IMG_1163.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1163-865c215612_900.jpg",
+        "detail": "expo/img-1163-865c215612_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1162-8d5f189d84",
+      "relative_path": "2025 San Gimignano/IMG_1162.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1162-8d5f189d84_900.jpg",
+        "detail": "expo/img-1162-8d5f189d84_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1151-9cde6756a2",
+      "relative_path": "2025 Florence/IMG_1151.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1151-9cde6756a2_900.jpg",
+        "detail": "expo/img-1151-9cde6756a2_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1150-3541f17aa7",
+      "relative_path": "2025 Florence/IMG_1150.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1150-3541f17aa7_900.jpg",
+        "detail": "expo/img-1150-3541f17aa7_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1149-ae6b096d6f",
+      "relative_path": "2025 Florence/IMG_1149.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1149-ae6b096d6f_900.jpg",
+        "detail": "expo/img-1149-ae6b096d6f_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1141-e7e66ca045",
+      "relative_path": "2025 Florence/IMG_1141.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1141-e7e66ca045_900.jpg",
+        "detail": "expo/img-1141-e7e66ca045_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1140-5f0e42d7e3",
+      "relative_path": "2025 Florence/IMG_1140.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1140-5f0e42d7e3_900.jpg",
+        "detail": "expo/img-1140-5f0e42d7e3_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1142-7b199b33ad",
+      "relative_path": "2025 Florence/IMG_1142.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1142-7b199b33ad_900.jpg",
+        "detail": "expo/img-1142-7b199b33ad_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1124-a67a48ee91",
+      "relative_path": "2025 Florence/IMG_1124.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1124-a67a48ee91_900.jpg",
+        "detail": "expo/img-1124-a67a48ee91_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1123-807c7c6a80",
+      "relative_path": "2025 Florence/IMG_1123.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1123-807c7c6a80_900.jpg",
+        "detail": "expo/img-1123-807c7c6a80_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1122-38b4360e54",
+      "relative_path": "2025 Florence/IMG_1122.JPG",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1122-38b4360e54_900.jpg",
+        "detail": "expo/img-1122-38b4360e54_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1112-482e0b08e3",
+      "relative_path": "2025 Florence/IMG_1112.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1112-482e0b08e3_900.jpg",
+        "detail": "expo/img-1112-482e0b08e3_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1111-3e8483bc6f",
+      "relative_path": "2025 Florence/IMG_1111.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1111-3e8483bc6f_900.jpg",
+        "detail": "expo/img-1111-3e8483bc6f_short_5s_720p.mp4"
+      }
+    },
+    {
+      "id": "img-1110-d9679b1131",
+      "relative_path": "2025 Florence/IMG_1110.MOV",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1110-d9679b1131_900.jpg",
+        "detail": "expo/img-1110-d9679b1131_short_5s_720p.mp4"
       }
     },
     {

@@ -1,15 +1,15 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-24
+Last updated: 2026-05-25
 
 ## Current Facts
 
-- Current visible build: `v86.0`.
+- Current visible build: `v86.1`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=86.0`.
-- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=86.0`.
-- Current catalog scale: `3,824` public media rows in `assets/catalog/photosbyelie.sqlite`: France `315`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `2,106`, Italy `0`, Portugal `216`, Slovakia `2`.
-- The latest cloud-media checkpoint regenerated public catalog/homepage/worker artifacts after the import work. That makes the current repo internally consistent, but the drop from the earlier `6,016`-row baseline still needs an explicit catalog-baseline audit before more launch/publishing work.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=86.1`.
+- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=86.1`.
+- Current catalog scale: `6,664` public media rows in `assets/catalog/photosbyelie.sqlite`: AI/Leonardo `4,921`, France `315`, Italy `25`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
+- The catalog baseline audit is complete. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the current catalog is `+648` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `25` instead of `35`; USA, Portugal, Mexico, and Slovakia are unchanged. The Italy `0` state was caused by missing Italy path/GPS hints, which left Florence, San Gimignano, and Pisa rows as `unknown` and therefore excluded from public export.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
 - A normalized SQL-shaped JSON catalog may be viable later, but only after measuring whether SQLite decode/rebuild costs are actually material.
 - Title/keyword review state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local.
@@ -53,10 +53,12 @@ Last updated: 2026-05-24
 - `v83.24` stops the Expo source pulldown from mining import-log subfolders, restores the Green + 4-star eligibility gate only for Camera imports/exports, leaves AI imports tombstone-driven, and adds an R2 audit/delete pass for ineligible Camera rows.
 - `v85.0` adds a public slideshow music mini-app with eleven original subdued Spanish-style guitar cues, each under two minutes, plus play/pause, seeking, MP3 links, and volume controls.
 - `v86.0` adds ten more classical-guitar-leaning cues with more variety: tremolo studies, waltz, Phrygian lullaby, salon miniature, counterpoint, and nocturne.
+- `v86.1` restores Italy rows to the public catalog by adding Florence/Firenze, Pisa, San Gimignano, and Tuscany country hints to import/export inference; generated SQLite, homepage, Expo manifest, and Worker catalog artifacts now agree on `6,664` active rows with Italy at `25`.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v86.0`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v86.1`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
+- Italy audit detail: the 25 restored rows come from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows present in the old `736fe76b` baseline but absent now came from the phone-export folder `Pisa, 12 May 2025`; do not bulk-import that folder until same-path overwrite/de-dupe is implemented, because a selected-root subfolder import can derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it and otherwise leaves ready-to-publish packages.
 - The 2026-05-24 Facebook, Instagram, and Pinterest daily package is prepared only; each platform still needs final manual publish/account confirmation.
@@ -65,98 +67,94 @@ Last updated: 2026-05-24
 
 ## Numbered Backlog
 
-1. **Audit the current catalog baseline before more launch work.**
-   - Compare the latest `3,824`-row catalog checkpoint against the earlier `6,016`-row baseline and identify whether the selected-folder import path accidentally narrowed generated public inventory.
-   - Confirm whether Italy should really be `0`, why AI/Leonardo is now `2,106`, and whether Spain's increase to `1,024` is expected from the recent imports.
-   - Deliverables: a short catalog delta report, a proposed restore/fix plan if the shrink is accidental, and validation that `assets/catalog/photosbyelie.sqlite`, `home-data.js`, `assets/expo-manifest.json`, and `worker/photos-catalog.generated.mjs` agree.
-
-2. **Finish source re-export de-duplication and clean today's duplicates.**
+1. **Finish source re-export de-duplication and clean today's duplicates.**
    - Use full source pathname plus modified date as the import anchor.
    - If the same source path is re-exported with a newer modified date, overwrite the prior generated master, public previews, and private JPG triplets instead of creating a second photo identity.
-   - Import/export now filters known tombstoned source paths; the remaining work is overwriting same-path newer re-exports instead of allocating fresh IDs, then auditing imports created today for duplicates from the old anchor behavior before deleting anything.
+   - The Italy audit proved the failure mode: importing a selected subfolder can derive fresh IDs for already-known source files. Fix the anchor first, then audit today's imports and prepare a reversible duplicate cleanup plan before deleting anything.
+   - Import/export already filters known tombstoned source paths; the remaining work is overwriting same-path newer re-exports instead of allocating fresh IDs.
 
-3. **Add import source history management.**
+2. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
    - Include a one-time review of any legacy entries saved before `v83.24`, because log-discovered folders are no longer added automatically but older remembered rows may still exist locally.
    - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
 
-4. **Make the Real Estate import control unmistakable and run a full RE rehearsal.**
+3. **Make the Real Estate import control unmistakable and run a full RE rehearsal.**
    - Keep the import control inside the Real Estate tab, near the RE source selector, with the same remembered-source and `New...` folder-picker behavior as Expo.
    - Pick one client folder on Saturn, use discovered properties, import previews, publish context, run upload dry-run, and prepare the Worker secret.
    - Check local and public review URLs before any real upload.
 
-5. **Preflight import dependencies before starting photo work.**
+4. **Preflight import dependencies before starting photo work.**
    - Check Pillow, `exiftool`, `ffmpeg`/`ffprobe`, R2 upload configuration, and source readability before queuing photos.
    - Surface one actionable Owner status instead of letting missing dependencies create per-photo failure storms.
    - Show stopped/skipped imports separately from true task failures so manual stops are less alarming.
 
-6. **Review and tune buyer support/refund wording.**
+5. **Review and tune buyer support/refund wording.**
    - `v83.3` has conservative defaults; owner should approve or adjust commercial-use, delivery-refresh, and refund language before heavier launch traffic.
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft before editing public copy.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-7. **Approve and deploy the real price and offer strategy.**
+6. **Approve and deploy the real price and offer strategy.**
    - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`, especially the proposed `$3 / $8 / $28 / $65` camera ladder and lower AI ladder.
    - After approval, update `assets/catalog/product-pricing.json`, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
    - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
-8. **Curate the first sellable storefront.**
+7. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial sets first.
 
-9. **Add conversion analytics.**
+8. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-10. **Improve public discovery and SEO.**
+9. **Improve public discovery and SEO.**
    - `robots.txt` and `sitemap.xml` are in place.
    - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
 
-11. **Create marketing landing pages and launch outreach.**
+10. **Create marketing landing pages and launch outreach.**
    - Daily social-post automation is active; the 2026-05-23 Facebook Page post is published and verified, while Instagram and Pinterest still need final publish confirmation.
    - Build first-party campaign pages for strongest collections and prepare social/Pinterest/launch destinations that escape embedded browsers before checkout.
 
-12. **Owner decision pass for the current title/keyword queue.**
+11. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
    - Pay special attention to the `84` rejected rows waiting for the next rework path and the `62` parked rows that need owner context.
 
-13. **Verify Owner-private artifact separation after deploy.**
+12. **Verify Owner-private artifact separation after deploy.**
    - Confirm public GitHub Pages no longer serves title/keyword batch or approval JSON.
    - Keep `Owner.sqlite` as the durable source of truth; treat title/keyword JSON as compatibility/audit output, not public source of truth.
 
-14. **Run the next generator pass after the current batch is resolved.**
+13. **Run the next generator pass after the current batch is resolved.**
    - Use the improved local keyword floor, larger subprocess buffer, and batch-summary preservation fix.
    - Compare keyword-target misses, `source_context`, and `needs_owner_context` counts against `2026-05-24-000237-818Z`.
 
-15. **Escalate thin ordinary title/keyword rows to stronger context.**
+14. **Escalate thin ordinary title/keyword rows to stronger context.**
    - Use vision/model passes for photos where source path and existing keywords are too thin.
    - Keep conservative titles and mark uncertainty instead of inventing landmarks.
 
-16. **Polish Real Estate production outputs and access.**
+15. **Polish Real Estate production outputs and access.**
    - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
    - Add optional background music for Real Estate video outputs, with client-safe defaults and an easy off switch.
    - Add Ken Burns-style pan/zoom motion for slideshow outputs so still-photo presentations feel alive without manual video editing.
    - Choose Worker/D1, Cloudflare Access, or another server-side gate for client auth.
 
-17. **Harden hidden/discarded lifecycle.**
+16. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-18. **Add Owner state-table browsing.**
+17. **Add Owner state-table browsing.**
    - Browse public and Owner SQLite tables in a localhost-only UI with filters, sort, copy/export, and photo-aware jumps.
 
-19. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+18. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-20. **Parameterize gallery routes and split gallery/catalog data by collection.**
+19. **Parameterize gallery routes and split gallery/catalog data by collection.**
    - Reduce first-load catalog weight only after measuring current SQLite fetch/decode and gallery scan costs.
 
-21. **Improve gallery merchandising layout.**
+20. **Improve gallery merchandising layout.**
    - Add curated collection ordering, stronger visual entry points, and buyer-friendly browse paths.
 
-22. **Add frontend smoke tests for buyer and client paths.**
+21. **Add frontend smoke tests for buyer and client paths.**
    - Cover search/filter, detail, like, basket, checkout draft, Real Estate login, selection, PDF/slideshow draft, originals ZIP, and mobile controls.
 
-23. **Keep physical products behind Owner review.**
+22. **Keep physical products behind Owner review.**
    - Re-enable print/frame products only after samples, fulfillment, pricing, shipping, refunds, and support are settled.
 
-24. **Keep repo and media cleanup deliberate.**
+23. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

@@ -5,7 +5,7 @@
   "privateRenderKeyScheme": "renders/<photo-id>_<1|3|6>mp.jpg",
   "legacyPrivateMasterKeyScheme": "masters/<photo-id>/<original-file>",
   "legacyPrivateRenderKeyScheme": "renders/<photo-id>/<original-file>-<product-id>.jpg",
-  "photosCount": 6639,
+  "photosCount": 6664,
   "photos": {
     "img-6236-bc42218145": {
       "id": "img-6236-bc42218145",
@@ -224739,6 +224739,881 @@
           "jpg-6mp": "renders/1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-jpgx2-5ff0ea7341/1-Enchanted-forest--Create-a-picture-that-captures-the-mysti-0-UPSCALE_bb8bcad4-29ef-4642-afda-c7132dd3a420.jpgx2.jpg-jpg-6mp.jpg",
           "jpg-3mp": "renders/1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-jpgx2-5ff0ea7341/1-Enchanted-forest--Create-a-picture-that-captures-the-mysti-0-UPSCALE_bb8bcad4-29ef-4642-afda-c7132dd3a420.jpgx2.jpg-jpg-3mp.jpg",
           "jpg-1mp": "renders/1-enchanted-forest-create-a-picture-that-captures-the-mysti-0-upscale-bb8bcad4-29ef-4642-afda-c7132dd3a420-jpgx2-5ff0ea7341/1-Enchanted-forest--Create-a-picture-that-captures-the-mysti-0-UPSCALE_bb8bcad4-29ef-4642-afda-c7132dd3a420.jpgx2.jpg-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1205-4ca5e788f0": {
+      "id": "img-1205-4ca5e788f0",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Pisa/IMG_1205.JPG",
+      "sourceFile": {
+        "path": "2025 Pisa/IMG_1205.JPG",
+        "type": "JPG",
+        "bytes": 5884983
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1205-4ca5e788f0_900.jpg",
+        "detailKey": "expo/img-1205-4ca5e788f0_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1205-4ca5e788f0.jpg",
+        "legacyMasterKey": "masters/img-1205-4ca5e788f0/IMG_1205.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1205-4ca5e788f0_6mp.jpg",
+          "jpg-3mp": "renders/img-1205-4ca5e788f0_3mp.jpg",
+          "jpg-1mp": "renders/img-1205-4ca5e788f0_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1205-4ca5e788f0/IMG_1205.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1205-4ca5e788f0/IMG_1205.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1205-4ca5e788f0/IMG_1205.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1204-1d710fba81": {
+      "id": "img-1204-1d710fba81",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Pisa/IMG_1204.JPG",
+      "sourceFile": {
+        "path": "2025 Pisa/IMG_1204.JPG",
+        "type": "JPG",
+        "bytes": 4364821
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1204-1d710fba81_900.jpg",
+        "detailKey": "expo/img-1204-1d710fba81_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1204-1d710fba81.jpg",
+        "legacyMasterKey": "masters/img-1204-1d710fba81/IMG_1204.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1204-1d710fba81_6mp.jpg",
+          "jpg-3mp": "renders/img-1204-1d710fba81_3mp.jpg",
+          "jpg-1mp": "renders/img-1204-1d710fba81_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1204-1d710fba81/IMG_1204.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1204-1d710fba81/IMG_1204.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1204-1d710fba81/IMG_1204.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1184-adad54985d": {
+      "id": "img-1184-adad54985d",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1184.JPG",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1184.JPG",
+        "type": "JPG",
+        "bytes": 5877981
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1184-adad54985d_900.jpg",
+        "detailKey": "expo/img-1184-adad54985d_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1184-adad54985d.jpg",
+        "legacyMasterKey": "masters/img-1184-adad54985d/IMG_1184.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1184-adad54985d_6mp.jpg",
+          "jpg-3mp": "renders/img-1184-adad54985d_3mp.jpg",
+          "jpg-1mp": "renders/img-1184-adad54985d_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1184-adad54985d/IMG_1184.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1184-adad54985d/IMG_1184.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1184-adad54985d/IMG_1184.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1182-5aa2cfd683": {
+      "id": "img-1182-5aa2cfd683",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1182.JPG",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1182.JPG",
+        "type": "JPG",
+        "bytes": 4155239
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1182-5aa2cfd683_900.jpg",
+        "detailKey": "expo/img-1182-5aa2cfd683_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1182-5aa2cfd683.jpg",
+        "legacyMasterKey": "masters/img-1182-5aa2cfd683/IMG_1182.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1182-5aa2cfd683_6mp.jpg",
+          "jpg-3mp": "renders/img-1182-5aa2cfd683_3mp.jpg",
+          "jpg-1mp": "renders/img-1182-5aa2cfd683_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1182-5aa2cfd683/IMG_1182.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1182-5aa2cfd683/IMG_1182.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1182-5aa2cfd683/IMG_1182.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1181-a12bca4639": {
+      "id": "img-1181-a12bca4639",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1181.JPG",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1181.JPG",
+        "type": "JPG",
+        "bytes": 9994214
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1181-a12bca4639_900.jpg",
+        "detailKey": "expo/img-1181-a12bca4639_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1181-a12bca4639.jpg",
+        "legacyMasterKey": "masters/img-1181-a12bca4639/IMG_1181.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1181-a12bca4639_6mp.jpg",
+          "jpg-3mp": "renders/img-1181-a12bca4639_3mp.jpg",
+          "jpg-1mp": "renders/img-1181-a12bca4639_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1181-a12bca4639/IMG_1181.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1181-a12bca4639/IMG_1181.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1181-a12bca4639/IMG_1181.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1180-fe3d9faa8d": {
+      "id": "img-1180-fe3d9faa8d",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1180.JPG",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1180.JPG",
+        "type": "JPG",
+        "bytes": 10048659
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1180-fe3d9faa8d_900.jpg",
+        "detailKey": "expo/img-1180-fe3d9faa8d_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1180-fe3d9faa8d.jpg",
+        "legacyMasterKey": "masters/img-1180-fe3d9faa8d/IMG_1180.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1180-fe3d9faa8d_6mp.jpg",
+          "jpg-3mp": "renders/img-1180-fe3d9faa8d_3mp.jpg",
+          "jpg-1mp": "renders/img-1180-fe3d9faa8d_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1180-fe3d9faa8d/IMG_1180.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1180-fe3d9faa8d/IMG_1180.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1180-fe3d9faa8d/IMG_1180.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1179-73dc1ce59c": {
+      "id": "img-1179-73dc1ce59c",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1179.JPG",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1179.JPG",
+        "type": "JPG",
+        "bytes": 10441416
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1179-73dc1ce59c_900.jpg",
+        "detailKey": "expo/img-1179-73dc1ce59c_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1179-73dc1ce59c.jpg",
+        "legacyMasterKey": "masters/img-1179-73dc1ce59c/IMG_1179.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1179-73dc1ce59c_6mp.jpg",
+          "jpg-3mp": "renders/img-1179-73dc1ce59c_3mp.jpg",
+          "jpg-1mp": "renders/img-1179-73dc1ce59c_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1179-73dc1ce59c/IMG_1179.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1179-73dc1ce59c/IMG_1179.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1179-73dc1ce59c/IMG_1179.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1177-ed6ca580f8": {
+      "id": "img-1177-ed6ca580f8",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1177.JPG",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1177.JPG",
+        "type": "JPG",
+        "bytes": 1357319
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1177-ed6ca580f8_900.jpg",
+        "detailKey": "expo/img-1177-ed6ca580f8_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1177-ed6ca580f8.jpg",
+        "legacyMasterKey": "masters/img-1177-ed6ca580f8/IMG_1177.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1177-ed6ca580f8_6mp.jpg",
+          "jpg-3mp": "renders/img-1177-ed6ca580f8_3mp.jpg",
+          "jpg-1mp": "renders/img-1177-ed6ca580f8_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1177-ed6ca580f8/IMG_1177.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1177-ed6ca580f8/IMG_1177.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1177-ed6ca580f8/IMG_1177.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1166-5254d26291": {
+      "id": "img-1166-5254d26291",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1166.MOV",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1166.MOV",
+        "type": "MOV",
+        "bytes": 7021034
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1166-5254d26291_900.jpg",
+        "detailKey": "expo/img-1166-5254d26291_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1166-5254d26291.mov",
+        "legacyMasterKey": "masters/img-1166-5254d26291/IMG_1166.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1166-5254d26291_6mp.jpg",
+          "jpg-3mp": "renders/img-1166-5254d26291_3mp.jpg",
+          "jpg-1mp": "renders/img-1166-5254d26291_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1166-5254d26291/IMG_1166.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1166-5254d26291/IMG_1166.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1166-5254d26291/IMG_1166.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1165-7f280d668b": {
+      "id": "img-1165-7f280d668b",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1165.MOV",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1165.MOV",
+        "type": "MOV",
+        "bytes": 5847261
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1165-7f280d668b_900.jpg",
+        "detailKey": "expo/img-1165-7f280d668b_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1165-7f280d668b.mov",
+        "legacyMasterKey": "masters/img-1165-7f280d668b/IMG_1165.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1165-7f280d668b_6mp.jpg",
+          "jpg-3mp": "renders/img-1165-7f280d668b_3mp.jpg",
+          "jpg-1mp": "renders/img-1165-7f280d668b_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1165-7f280d668b/IMG_1165.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1165-7f280d668b/IMG_1165.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1165-7f280d668b/IMG_1165.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1164-ff3aa85aa6": {
+      "id": "img-1164-ff3aa85aa6",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1164.MOV",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1164.MOV",
+        "type": "MOV",
+        "bytes": 17353928
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1164-ff3aa85aa6_900.jpg",
+        "detailKey": "expo/img-1164-ff3aa85aa6_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1164-ff3aa85aa6.mov",
+        "legacyMasterKey": "masters/img-1164-ff3aa85aa6/IMG_1164.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1164-ff3aa85aa6_6mp.jpg",
+          "jpg-3mp": "renders/img-1164-ff3aa85aa6_3mp.jpg",
+          "jpg-1mp": "renders/img-1164-ff3aa85aa6_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1164-ff3aa85aa6/IMG_1164.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1164-ff3aa85aa6/IMG_1164.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1164-ff3aa85aa6/IMG_1164.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1163-865c215612": {
+      "id": "img-1163-865c215612",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1163.MOV",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1163.MOV",
+        "type": "MOV",
+        "bytes": 870964
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1163-865c215612_900.jpg",
+        "detailKey": "expo/img-1163-865c215612_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1163-865c215612.mov",
+        "legacyMasterKey": "masters/img-1163-865c215612/IMG_1163.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1163-865c215612_6mp.jpg",
+          "jpg-3mp": "renders/img-1163-865c215612_3mp.jpg",
+          "jpg-1mp": "renders/img-1163-865c215612_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1163-865c215612/IMG_1163.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1163-865c215612/IMG_1163.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1163-865c215612/IMG_1163.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1162-8d5f189d84": {
+      "id": "img-1162-8d5f189d84",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 San Gimignano/IMG_1162.MOV",
+      "sourceFile": {
+        "path": "2025 San Gimignano/IMG_1162.MOV",
+        "type": "MOV",
+        "bytes": 7782050
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1162-8d5f189d84_900.jpg",
+        "detailKey": "expo/img-1162-8d5f189d84_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1162-8d5f189d84.mov",
+        "legacyMasterKey": "masters/img-1162-8d5f189d84/IMG_1162.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1162-8d5f189d84_6mp.jpg",
+          "jpg-3mp": "renders/img-1162-8d5f189d84_3mp.jpg",
+          "jpg-1mp": "renders/img-1162-8d5f189d84_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1162-8d5f189d84/IMG_1162.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1162-8d5f189d84/IMG_1162.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1162-8d5f189d84/IMG_1162.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1151-9cde6756a2": {
+      "id": "img-1151-9cde6756a2",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1151.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1151.JPG",
+        "type": "JPG",
+        "bytes": 5649715
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1151-9cde6756a2_900.jpg",
+        "detailKey": "expo/img-1151-9cde6756a2_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1151-9cde6756a2.jpg",
+        "legacyMasterKey": "masters/img-1151-9cde6756a2/IMG_1151.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1151-9cde6756a2_6mp.jpg",
+          "jpg-3mp": "renders/img-1151-9cde6756a2_3mp.jpg",
+          "jpg-1mp": "renders/img-1151-9cde6756a2_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1151-9cde6756a2/IMG_1151.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1151-9cde6756a2/IMG_1151.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1151-9cde6756a2/IMG_1151.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1150-3541f17aa7": {
+      "id": "img-1150-3541f17aa7",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1150.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1150.JPG",
+        "type": "JPG",
+        "bytes": 5009632
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1150-3541f17aa7_900.jpg",
+        "detailKey": "expo/img-1150-3541f17aa7_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1150-3541f17aa7.jpg",
+        "legacyMasterKey": "masters/img-1150-3541f17aa7/IMG_1150.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1150-3541f17aa7_6mp.jpg",
+          "jpg-3mp": "renders/img-1150-3541f17aa7_3mp.jpg",
+          "jpg-1mp": "renders/img-1150-3541f17aa7_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1150-3541f17aa7/IMG_1150.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1150-3541f17aa7/IMG_1150.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1150-3541f17aa7/IMG_1150.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1149-ae6b096d6f": {
+      "id": "img-1149-ae6b096d6f",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1149.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1149.JPG",
+        "type": "JPG",
+        "bytes": 6224894
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1149-ae6b096d6f_900.jpg",
+        "detailKey": "expo/img-1149-ae6b096d6f_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1149-ae6b096d6f.jpg",
+        "legacyMasterKey": "masters/img-1149-ae6b096d6f/IMG_1149.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1149-ae6b096d6f_6mp.jpg",
+          "jpg-3mp": "renders/img-1149-ae6b096d6f_3mp.jpg",
+          "jpg-1mp": "renders/img-1149-ae6b096d6f_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1149-ae6b096d6f/IMG_1149.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1149-ae6b096d6f/IMG_1149.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1149-ae6b096d6f/IMG_1149.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1141-e7e66ca045": {
+      "id": "img-1141-e7e66ca045",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1141.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1141.JPG",
+        "type": "JPG",
+        "bytes": 2764521
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1141-e7e66ca045_900.jpg",
+        "detailKey": "expo/img-1141-e7e66ca045_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1141-e7e66ca045.jpg",
+        "legacyMasterKey": "masters/img-1141-e7e66ca045/IMG_1141.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1141-e7e66ca045_6mp.jpg",
+          "jpg-3mp": "renders/img-1141-e7e66ca045_3mp.jpg",
+          "jpg-1mp": "renders/img-1141-e7e66ca045_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1141-e7e66ca045/IMG_1141.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1140-5f0e42d7e3": {
+      "id": "img-1140-5f0e42d7e3",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1140.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1140.JPG",
+        "type": "JPG",
+        "bytes": 1466865
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1140-5f0e42d7e3_900.jpg",
+        "detailKey": "expo/img-1140-5f0e42d7e3_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1140-5f0e42d7e3.jpg",
+        "legacyMasterKey": "masters/img-1140-5f0e42d7e3/IMG_1140.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1140-5f0e42d7e3_6mp.jpg",
+          "jpg-3mp": "renders/img-1140-5f0e42d7e3_3mp.jpg",
+          "jpg-1mp": "renders/img-1140-5f0e42d7e3_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1140-5f0e42d7e3/IMG_1140.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1142-7b199b33ad": {
+      "id": "img-1142-7b199b33ad",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1142.MOV",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1142.MOV",
+        "type": "MOV",
+        "bytes": 14716541
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1142-7b199b33ad_900.jpg",
+        "detailKey": "expo/img-1142-7b199b33ad_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1142-7b199b33ad.mov",
+        "legacyMasterKey": "masters/img-1142-7b199b33ad/IMG_1142.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1142-7b199b33ad_6mp.jpg",
+          "jpg-3mp": "renders/img-1142-7b199b33ad_3mp.jpg",
+          "jpg-1mp": "renders/img-1142-7b199b33ad_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1142-7b199b33ad/IMG_1142.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1142-7b199b33ad/IMG_1142.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1142-7b199b33ad/IMG_1142.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1124-a67a48ee91": {
+      "id": "img-1124-a67a48ee91",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1124.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1124.JPG",
+        "type": "JPG",
+        "bytes": 3070529
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1124-a67a48ee91_900.jpg",
+        "detailKey": "expo/img-1124-a67a48ee91_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1124-a67a48ee91.jpg",
+        "legacyMasterKey": "masters/img-1124-a67a48ee91/IMG_1124.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1124-a67a48ee91_6mp.jpg",
+          "jpg-3mp": "renders/img-1124-a67a48ee91_3mp.jpg",
+          "jpg-1mp": "renders/img-1124-a67a48ee91_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1124-a67a48ee91/IMG_1124.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1124-a67a48ee91/IMG_1124.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1124-a67a48ee91/IMG_1124.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1123-807c7c6a80": {
+      "id": "img-1123-807c7c6a80",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1123.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1123.JPG",
+        "type": "JPG",
+        "bytes": 6343836
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1123-807c7c6a80_900.jpg",
+        "detailKey": "expo/img-1123-807c7c6a80_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1123-807c7c6a80.jpg",
+        "legacyMasterKey": "masters/img-1123-807c7c6a80/IMG_1123.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1123-807c7c6a80_6mp.jpg",
+          "jpg-3mp": "renders/img-1123-807c7c6a80_3mp.jpg",
+          "jpg-1mp": "renders/img-1123-807c7c6a80_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1123-807c7c6a80/IMG_1123.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1123-807c7c6a80/IMG_1123.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1123-807c7c6a80/IMG_1123.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1122-38b4360e54": {
+      "id": "img-1122-38b4360e54",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1122.JPG",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1122.JPG",
+        "type": "JPG",
+        "bytes": 1026833
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1122-38b4360e54_900.jpg",
+        "detailKey": "expo/img-1122-38b4360e54_1800.jpg"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1122-38b4360e54.jpg",
+        "legacyMasterKey": "masters/img-1122-38b4360e54/IMG_1122.JPG",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1122-38b4360e54_6mp.jpg",
+          "jpg-3mp": "renders/img-1122-38b4360e54_3mp.jpg",
+          "jpg-1mp": "renders/img-1122-38b4360e54_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1122-38b4360e54/IMG_1122.JPG-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1122-38b4360e54/IMG_1122.JPG-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1122-38b4360e54/IMG_1122.JPG-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1112-482e0b08e3": {
+      "id": "img-1112-482e0b08e3",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1112.MOV",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1112.MOV",
+        "type": "MOV",
+        "bytes": 9337840
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1112-482e0b08e3_900.jpg",
+        "detailKey": "expo/img-1112-482e0b08e3_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1112-482e0b08e3.mov",
+        "legacyMasterKey": "masters/img-1112-482e0b08e3/IMG_1112.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1112-482e0b08e3_6mp.jpg",
+          "jpg-3mp": "renders/img-1112-482e0b08e3_3mp.jpg",
+          "jpg-1mp": "renders/img-1112-482e0b08e3_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1112-482e0b08e3/IMG_1112.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1112-482e0b08e3/IMG_1112.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1112-482e0b08e3/IMG_1112.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1111-3e8483bc6f": {
+      "id": "img-1111-3e8483bc6f",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1111.MOV",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1111.MOV",
+        "type": "MOV",
+        "bytes": 6968843
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1111-3e8483bc6f_900.jpg",
+        "detailKey": "expo/img-1111-3e8483bc6f_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1111-3e8483bc6f.mov",
+        "legacyMasterKey": "masters/img-1111-3e8483bc6f/IMG_1111.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1111-3e8483bc6f_6mp.jpg",
+          "jpg-3mp": "renders/img-1111-3e8483bc6f_3mp.jpg",
+          "jpg-1mp": "renders/img-1111-3e8483bc6f_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1111-3e8483bc6f/IMG_1111.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1111-3e8483bc6f/IMG_1111.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1111-3e8483bc6f/IMG_1111.MOV-jpg-1mp.jpg"
+        }
+      }
+    },
+    "img-1110-d9679b1131": {
+      "id": "img-1110-d9679b1131",
+      "collectionKey": "italy",
+      "collectionTitle": "Italy",
+      "sourcePath": "2025 Florence/IMG_1110.MOV",
+      "sourceFile": {
+        "path": "2025 Florence/IMG_1110.MOV",
+        "type": "MOV",
+        "bytes": 5604378
+      },
+      "sourceMode": "import-cache",
+      "originalGalleryCountry": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "path_hint"
+      },
+      "publicPreview": {
+        "galleryKey": "expo/img-1110-d9679b1131_900.jpg",
+        "detailKey": "expo/img-1110-d9679b1131_short_5s_720p.mp4"
+      },
+      "privateDelivery": {
+        "masterKey": "masters/img-1110-d9679b1131.mov",
+        "legacyMasterKey": "masters/img-1110-d9679b1131/IMG_1110.MOV",
+        "renderKeys": {
+          "jpg-6mp": "renders/img-1110-d9679b1131_6mp.jpg",
+          "jpg-3mp": "renders/img-1110-d9679b1131_3mp.jpg",
+          "jpg-1mp": "renders/img-1110-d9679b1131_1mp.jpg"
+        },
+        "legacyRenderKeys": {
+          "jpg-6mp": "renders/img-1110-d9679b1131/IMG_1110.MOV-jpg-6mp.jpg",
+          "jpg-3mp": "renders/img-1110-d9679b1131/IMG_1110.MOV-jpg-3mp.jpg",
+          "jpg-1mp": "renders/img-1110-d9679b1131/IMG_1110.MOV-jpg-1mp.jpg"
         }
       }
     },

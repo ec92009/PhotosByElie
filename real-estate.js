@@ -176,6 +176,12 @@
     return isLocalHost ? "http://localhost:8787" : "";
   };
 
+  const workerMediaUrl = (key) => {
+    const cleanKey = String(key || "").replace(/^\/+/, "");
+    const baseUrl = workerBaseUrl();
+    return cleanKey && baseUrl ? `${baseUrl}/media/${cleanKey.split("/").map(encodeURIComponent).join("/")}` : "";
+  };
+
   const loadScript = (src) => new Promise((resolve, reject) => {
     if (!src) {
       reject(new Error("No real-estate context script configured."));
@@ -1210,6 +1216,30 @@
     window.photosByElieVersionInternalLinks?.(app);
   };
 
+  const attributeSelectorValue = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+
+  const syncVisibleSelectionState = (photoIds = []) => {
+    const ids = [...new Set(photoIds.filter(Boolean))];
+    ids.forEach((photoId) => {
+      const photo = state.photosById.get(photoId);
+      const card = elements.grid?.querySelector(`[data-photo-id="${attributeSelectorValue(photoId)}"]`);
+      if (!photo || !card) return;
+      const selected = isSelectedForActiveProject(photo);
+      card.classList.toggle("is-selected", selected);
+      const checkbox = card.querySelector("[data-select-photo]");
+      if (checkbox) checkbox.checked = selected;
+    });
+    renderDraft();
+    renderWizard();
+    syncFileActionLabels();
+  };
+
+  const selectionChangeNeedsFullRender = () => (
+    state.wizardStep !== 1
+    || state.selectedOnly
+    || state.sort === "selected"
+  );
+
   const setWizardStep = (step) => {
     const next = normalizeWizardStep(step);
     if (next >= 2 && activeSelectedPhotos().length === 0) {
@@ -1259,7 +1289,11 @@
     });
     persistProjectAssignments();
     persistSelection();
-    render();
+    if (selectionChangeNeedsFullRender()) {
+      render();
+    } else {
+      syncVisibleSelectionState(photoIds);
+    }
   };
 
   const setSelected = (photoId, selected) => {
@@ -1290,7 +1324,16 @@
     }
     persistTitles();
     renderDraft();
-    if (state.activePhotoId === photoId && elements.dialogTitle) elements.dialogTitle.textContent = titleFor(photo);
+    const nextTitle = titleFor(photo);
+    elements.grid?.querySelectorAll(`[data-title-photo="${attributeSelectorValue(photoId)}"]`).forEach((input) => {
+      if (input !== document.activeElement) input.value = nextTitle;
+    });
+    if (state.activePhotoId === photoId) {
+      if (elements.dialogTitle) elements.dialogTitle.textContent = nextTitle;
+      if (elements.dialogTitleInput && elements.dialogTitleInput !== document.activeElement) {
+        elements.dialogTitleInput.value = nextTitle;
+      }
+    }
   };
 
   const setPhotoProject = (photoId, projectId, assigned) => {
@@ -1559,12 +1602,14 @@
       const photo = state.photosById.get(item.photoId);
       if (!photo) return null;
       const video = item.mediaType === "video" || isVideo(photo);
+      const dimensions = pdfDimensionsFor(photo);
       return {
         projectTitle: projectTitle || item.projectTitle || "",
         title: item.title || titleFor(photo),
         mediaType: video ? "video" : "photo",
         imageUrl: imageFor(photo, "detail"),
         videoUrl: video ? videoPreviewFor(photo) : "",
+        orientation: dimensions.height > dimensions.width ? "portrait" : "landscape",
         durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
         durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
         source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
@@ -1596,9 +1641,12 @@
     body{margin:0;background:#0d0d0d;color:#f7f7f7}
     main{min-height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) auto}
     .stage{position:relative;display:grid;min-height:70dvh;background:#050505;place-items:center;overflow:hidden}
-    .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505}
-    .frame img,.frame video{width:100%;height:100%;object-fit:contain;background:#050505}
-    .frame img{animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
+    .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505;overflow:hidden}
+    .frame video{width:100%;height:100%;object-fit:contain;background:#050505}
+    .photo-slide{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:#050505}
+    .photo-slide img{display:block;width:100%;height:100%;background:transparent}
+    .slide-backdrop{position:absolute;inset:0;object-fit:cover;filter:blur(24px);opacity:.48;transform:scale(1.1)}
+    .slide-photo{position:relative;z-index:1;object-fit:contain;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
     @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
     .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(14px,4vw,38px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
     .caption h1{max-width:820px;margin:0;font-size:clamp(1.8rem,5vw,4.8rem);line-height:.98}
@@ -1668,7 +1716,7 @@
         </tr>`).join("")}
       </tbody>
     </table>
-    <p class="note">This browser preview preserves source duration for videos when the browser can play them. Video source audio plays at ${escapeHtml(audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb)} dB under the generated music. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with random Ken Burns motion.</p>
+    <p class="note">This browser preview preserves source duration for videos when the browser can play them. Video source audio plays at ${escapeHtml(audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb)} dB under the generated music. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with portrait-safe Ken Burns motion.</p>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
     <script>
       const slides = ${safeSlidesJson};
@@ -1685,6 +1733,7 @@
       let soundBlocked = Boolean(music);
       const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
       const musicVolume = Math.pow(10, Number(musicTrack?.musicGainDb ?? ${previewMusicGainDb}) / 20);
+      const attr = (value) => String(value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const effectStyle = (effect, durationMs) => {
         const presets = {
           "slow-zoom-in": [1.005, 1.045, "0%", "0%", "0%", "0%"],
@@ -1696,6 +1745,12 @@
         };
         const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["slow-zoom-in"];
         return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
+      };
+      const photoSlideHtml = (slide) => {
+        const source = attr(slide.imageUrl);
+        const style = attr(effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)));
+        const orientation = slide.orientation === "portrait" ? "portrait" : "landscape";
+        return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><img class="slide-photo" alt="" style="' + style + '" src="' + source + '"></div>';
       };
 
       const clearTimer = () => {
@@ -1742,17 +1797,17 @@
         counter.textContent = (index + 1) + " / " + slides.length;
         if (playing) playMusic();
         if (slide.mediaType === "video" && slide.videoUrl) {
-          frame.innerHTML = '<video controls playsinline poster="' + slide.imageUrl.replace(/"/g, "&quot;") + '" src="' + slide.videoUrl.replace(/"/g, "&quot;") + '"></video>';
+          frame.innerHTML = '<video controls playsinline poster="' + attr(slide.imageUrl) + '" src="' + attr(slide.videoUrl) + '"></video>';
           const video = frame.querySelector("video");
           video.volume = sourceVideoVolume;
           video.addEventListener("ended", () => playing && next());
           video.addEventListener("error", () => {
-            frame.innerHTML = '<img alt="" style="' + effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)).replace(/"/g, "&quot;") + '" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
+            frame.innerHTML = photoSlideHtml(slide);
             if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
           });
           if (playing) video.play().catch(() => {});
         } else {
-          frame.innerHTML = '<img alt="" style="' + effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)).replace(/"/g, "&quot;") + '" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
+          frame.innerHTML = photoSlideHtml(slide);
           if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
         }
       };
@@ -1844,6 +1899,37 @@
       // Some browsers restrict about:blank writes; the reserved tab can still be navigated.
     }
     return popup;
+  };
+
+  const showOutputWindowError = (reservedWindow, title, detail) => {
+    if (!reservedWindow || reservedWindow.closed) return;
+    try {
+      reservedWindow.document.open();
+      reservedWindow.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(title || "Output failed")}</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f6f4;color:#151515}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f6f4}
+    main{width:min(680px,calc(100% - 32px));border:1px solid #d7d2ca;background:#fff;padding:22px}
+    h1{margin:0 0 10px;font-size:clamp(1.6rem,7vw,3rem);line-height:1}
+    p{margin:0;color:#555;font-size:1rem;line-height:1.45}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${escapeHtml(title || "Needs attention")}</h1>
+    <p>${escapeHtml(detail || "The output could not be prepared. Return to the Photos By Elie page and try again.")}</p>
+  </main>
+</body>
+</html>`);
+      reservedWindow.document.close();
+    } catch {
+      // The status panel in the original page still carries the failure message.
+    }
   };
 
   const openBlobInBrowser = async (blob, filename, reservedWindow = null) => {
@@ -2332,21 +2418,65 @@
   const pdfPhotoFor = (entry) => entry?.photo || entry;
   const pdfTitleFor = (entry) => entry?.title || titleFor(pdfPhotoFor(entry));
 
+  const pdfImageKeysFor = (photo) => {
+    const preview = photo?.media?.publicPreview || {};
+    return [
+      preview.detailKey,
+      photo?.cloudPdfSource?.publicKey,
+      preview.galleryKey,
+    ].map((key) => String(key || "").replace(/^\/+/, ""))
+      .filter(Boolean)
+      .filter((key, index, keys) => keys.indexOf(key) === index);
+  };
+
+  const pdfImageUrlsFor = (photo) => {
+    const directUrl = imageFor(photo, "detail");
+    const keys = pdfImageKeysFor(photo);
+    const workerUrls = keys.map(workerMediaUrl).filter(Boolean);
+    const publicUrls = keys.map(publicMediaUrl).filter(Boolean);
+    const candidates = isLocalHost
+      ? [directUrl, ...workerUrls, ...publicUrls]
+      : [...workerUrls, directUrl, ...publicUrls];
+    return candidates.filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index);
+  };
+
+  const fetchPdfImageBlob = async (photo, title, index, total) => {
+    const urls = pdfImageUrlsFor(photo);
+    let lastError = urls.length ? "" : "no image URL is configured";
+    for (const url of urls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          lastError = `HTTP ${response.status}`;
+          continue;
+        }
+        const blob = await response.blob();
+        if (!blob || !blob.size) {
+          lastError = "empty image response";
+          continue;
+        }
+        return blob;
+      } catch (error) {
+        lastError = error?.message || "network request failed";
+      }
+    }
+    const label = title || titleFor(photo) || `image ${index + 1}`;
+    throw new Error(`Could not load PDF image ${index + 1}/${total}: ${label}${lastError ? ` (${lastError})` : ""}`);
+  };
+
   const fetchPdfImages = async (photos, onProgress = null) => {
     const images = [];
     for (const [index, entry] of photos.entries()) {
       const photo = pdfPhotoFor(entry);
-      const imageUrl = imageFor(photo, "detail");
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`Could not load ${titleFor(photo)}`);
-      const blob = await response.blob();
+      const title = pdfTitleFor(entry);
+      const blob = await fetchPdfImageBlob(photo, title, index, photos.length);
       images.push({
         blob,
         dimensions: pdfDimensionsFor(photo),
         photo,
-        title: pdfTitleFor(entry),
+        title,
       });
-      onProgress?.({ index, total: photos.length, photo, title: pdfTitleFor(entry) });
+      onProgress?.({ index, total: photos.length, photo, title });
     }
     return images;
   };
@@ -2763,6 +2893,7 @@
       } else {
         message = error?.message || "PDF output failed";
       }
+      if (mode === "view") outputWindows.forEach((popup) => showOutputWindowError(popup, "PDF needs attention", message));
       setStatus(message);
       failOutputProgress(message);
     } finally {
@@ -3400,7 +3531,9 @@
       event.target.value = "";
     });
 
-    elements.dialogTitleInput?.addEventListener("input", (event) => setTitle(state.activePhotoId, event.target.value));
+    const syncDialogTitleInput = (event) => setTitle(state.activePhotoId, event.target.value);
+    elements.dialogTitleInput?.addEventListener("input", syncDialogTitleInput);
+    elements.dialogTitleInput?.addEventListener("change", syncDialogTitleInput);
     elements.dialogSelected?.addEventListener("change", (event) => setSelected(state.activePhotoId, event.target.checked));
     document.querySelector("[data-re-dialog-prev]")?.addEventListener("click", () => stepDialog(-1));
     document.querySelector("[data-re-dialog-next]")?.addEventListener("click", () => stepDialog(1));

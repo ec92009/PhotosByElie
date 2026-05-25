@@ -169,8 +169,8 @@ def ken_burns_filter(effect: str, duration: int) -> str:
         x = "(iw-iw/zoom)*0.5"
         y = "(ih-ih/zoom)*0.5"
     return (
-        f"scale={WORK_WIDTH}:{WORK_HEIGHT}:force_original_aspect_ratio=increase,"
-        f"crop={WORK_WIDTH}:{WORK_HEIGHT},"
+        f"scale={WORK_WIDTH}:{WORK_HEIGHT}:force_original_aspect_ratio=decrease,"
+        f"pad={WORK_WIDTH}:{WORK_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black,"
         f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={SIZE}:fps={FPS},"
         "setsar=1,format=yuv420p"
     )

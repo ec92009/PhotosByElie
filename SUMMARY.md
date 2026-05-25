@@ -6,12 +6,12 @@ Date: 2026-05-25
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v86.1`
-- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=86.1`.
+- Current visible build: `v86.10`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=86.10`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
-- Current catalog scale: `6,664` public media rows in the SQLite catalog: AI/Leonardo `4,921`, France `315`, Italy `25`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
-- The catalog-baseline audit is complete. Compared with the earlier `6,016`-row baseline at `736fe76b`, current public inventory is `+648` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `25` instead of `35`; USA, Portugal, Mexico, and Slovakia are unchanged.
+- Current catalog scale: `6,672` public media rows in the SQLite catalog: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
+- The catalog-baseline audit is complete. Compared with the earlier `6,016`-row baseline at `736fe76b`, current public inventory is `+656` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `33` instead of `35` because two Italy rows were recently blocked; USA, Portugal, Mexico, and Slovakia are unchanged.
 - Public catalog loading and rebuild operations now use plain `assets/catalog/photosbyelie.sqlite`; Brotli catalog generation/loading is retired from the normal path.
 - Title/keyword review queue state is SQLite-backed in tracked durable `assets/owner-actions/Owner.sqlite`; WAL/SHM sidecars stay ignored/local. Title/keyword batch JSON is compatibility/audit output and must not be treated as authoritative public catalog state.
 - 2026-05-24 hourly handoff sweep verified the local David `Owner.sqlite` with `PRAGMA integrity_check` = `ok` and uploaded a private R2 snapshot to `photosbyelie-private/owner-sync/snapshots/david/Owner-latest.sqlite.gz`. Local and downloaded gzip SHA-256 both matched `345359cd9eb0ac8bc37a2f6c691fa263a31a1b2b3e924bf724f6271ef6f0073f`; the compressed snapshot is `3.9M`. Per `docs/sops/MAX_DAVID_SYNC_SOP.md`, `Owner.sqlite` itself remains uncommitted.
@@ -51,7 +51,7 @@ Date: 2026-05-25
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v86.1`: Owner Expo imports now show only Owner-remembered source folders rather than log-discovered subfolders, selected Camera folders auto-use Lightroom Green + 4-star selection, AI/Leonardo folders remain governed by tombstones, and Italy country inference recognizes Florence/Firenze, Pisa, San Gimignano, and Tuscany so those rows are no longer exported as `unknown`.
+- Latest checkpoint is `v86.10`: Owner Expo imports now show only Owner-remembered source folders rather than log-discovered subfolders, selected Camera folders auto-use Lightroom Green + 4-star selection, AI/Leonardo folders remain governed by tombstones, Italy country inference recognizes Florence/Firenze, Pisa, San Gimignano, and Tuscany, and the ten older Pisa phone-export rows are restored under their original `2024 Pisa/Pisa, 12 May 2025` IDs.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it.
 - The 2026-05-24 social package is prepared only for Facebook, Instagram, and Pinterest from public R2 preview URLs. Each platform still needs final manual publish/account confirmation before posting.
 - PhotosByElie active collaboration time is paused with `4:43` used as of 2026-05-24. Generated browser screenshots under `output/` and root `facebook-built-in-*` debug captures are local-only and ignored.
@@ -66,7 +66,7 @@ The import progress UI was polished in `v83.9`, `v83.10`, `v83.11`, simplified i
 
 Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-This refresh updates the durable summary/backlog/README/handoff state through `v86.1`, records the Camera-only eligibility guard, and notes that the Italy catalog audit restored the expected current Italy rows without changing Stripe settings or price behavior.
+This refresh updates the durable summary/backlog/README/handoff state through `v86.10`, records the Camera-only eligibility guard, and notes that the Italy catalog audit plus Pisa phone-export restore brought current active Italy rows to `33` without changing Stripe settings or price behavior.
 
 The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
 
@@ -78,7 +78,7 @@ The blacklist investigation confirmed the suspicion behind the user's question: 
 
 The import eligibility follow-up restored the older Lightroom constraint only where it belongs now: Camera paths require Green label plus rating 4+, while Apple Photo Albums and AI/Leonardo folders are accepted by folder membership and protected by tombstones. The new `scripts/audit_import_eligibility.py` found `10` ineligible Camera rows still present in raw `tmp/import-cache/manifest.json`; the cleanup pass deleted their current R2 objects without writing permanent tombstones, and a post-cleanup audit reports `0` current R2 objects for those rows.
 
-The catalog-baseline audit found the earlier Italy `0` symptom came from missing Italy path/GPS hints. Florence, San Gimignano, and Pisa rows existed in the import cache but were classified as `unknown`, and public export excludes `unknown`. `v86.1` adds Italy hints to both import and export paths and regenerates the SQLite catalog, homepage data, Expo manifest, media sidecar, and Worker catalog. The restored Italy count is `25`; the old baseline's remaining `10` Italy rows came from a phone-export `Pisa, 12 May 2025` source that is not in the current import cache and should wait for the full-path-plus-mtime source anchor to avoid another duplicate-ID import.
+The catalog-baseline audit found the earlier Italy `0` symptom came from missing Italy path/GPS hints. Florence, San Gimignano, and Pisa rows existed in the import cache but were classified as `unknown`, and public export excludes `unknown`. `v86.1` added Italy hints to both import and export paths and restored those rows. `v86.10` then restored the old baseline's ten Pisa phone-export rows by re-importing only those files through their original `2024 Pisa/Pisa, 12 May 2025` relative paths and uploading their public previews and private deliverables. Current Italy active count is `33`, because two recently blocked Italy rows are excluded.
 
 ## Earlier Conversation Context
 

@@ -5,7 +5,7 @@
   "publish_scope": "all-eligible",
   "selection_mode": "newest",
   "seed": null,
-  "photos_count": 6664,
+  "photos_count": 6672,
   "reserve_counts": {
     "ai": 0,
     "france": 0,
@@ -89924,6 +89924,90 @@
       }
     },
     {
+      "id": "img-1219-570b09bebb",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1219.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1219-570b09bebb_900.jpg",
+        "detail": "expo/img-1219-570b09bebb_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1218-fe487846d6",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1218.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1218-fe487846d6_900.jpg",
+        "detail": "expo/img-1218-fe487846d6_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1213-7276413ecc",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1213.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1213-7276413ecc_900.jpg",
+        "detail": "expo/img-1213-7276413ecc_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1212-96505e7356",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1212.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1212-96505e7356_900.jpg",
+        "detail": "expo/img-1212-96505e7356_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1208-d059e156dc",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1208.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1208-d059e156dc_900.jpg",
+        "detail": "expo/img-1208-d059e156dc_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1207-5079ff3336",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1207.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1207-5079ff3336_900.jpg",
+        "detail": "expo/img-1207-5079ff3336_1800.jpg"
+      }
+    },
+    {
       "id": "img-1205-4ca5e788f0",
       "relative_path": "2025 Pisa/IMG_1205.JPG",
       "gallery_country": {
@@ -89949,6 +90033,62 @@
       "derivatives": {
         "gallery": "expo/img-1204-1d710fba81_900.jpg",
         "detail": "expo/img-1204-1d710fba81_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1203-d7219d5193",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1203.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1203-d7219d5193_900.jpg",
+        "detail": "expo/img-1203-d7219d5193_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1199-0ebd1a5044",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1199.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1199-0ebd1a5044_900.jpg",
+        "detail": "expo/img-1199-0ebd1a5044_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1198-bb563d6235",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1198.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1198-bb563d6235_900.jpg",
+        "detail": "expo/img-1198-bb563d6235_1800.jpg"
+      }
+    },
+    {
+      "id": "img-1197-0132d88761",
+      "relative_path": "2024 Pisa/Pisa, 12 May 2025/IMG_1197.jpeg",
+      "gallery_country": {
+        "slug": "italy",
+        "label": "Italy",
+        "source": "keyword"
+      },
+      "source_mode": "import-cache",
+      "derivatives": {
+        "gallery": "expo/img-1197-0132d88761_900.jpg",
+        "detail": "expo/img-1197-0132d88761_1800.jpg"
       }
     },
     {
@@ -90218,20 +90358,6 @@
       }
     },
     {
-      "id": "img-1122-38b4360e54",
-      "relative_path": "2025 Florence/IMG_1122.JPG",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "path_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1122-38b4360e54_900.jpg",
-        "detail": "expo/img-1122-38b4360e54_1800.jpg"
-      }
-    },
-    {
       "id": "img-1112-482e0b08e3",
       "relative_path": "2025 Florence/IMG_1112.MOV",
       "gallery_country": {
@@ -90257,20 +90383,6 @@
       "derivatives": {
         "gallery": "expo/img-1111-3e8483bc6f_900.jpg",
         "detail": "expo/img-1111-3e8483bc6f_short_5s_720p.mp4"
-      }
-    },
-    {
-      "id": "img-1110-d9679b1131",
-      "relative_path": "2025 Florence/IMG_1110.MOV",
-      "gallery_country": {
-        "slug": "italy",
-        "label": "Italy",
-        "source": "path_hint"
-      },
-      "source_mode": "import-cache",
-      "derivatives": {
-        "gallery": "expo/img-1110-d9679b1131_900.jpg",
-        "detail": "expo/img-1110-d9679b1131_short_5s_720p.mp4"
       }
     },
     {

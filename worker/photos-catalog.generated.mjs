@@ -442156,8 +442156,464 @@ export const collections = {
     "accent": "italy-gallery",
     "photos": [
       {
-        "id": "img-1205-4ca5e788f0",
+        "id": "img-1219-570b09bebb",
         "className": "p1",
+        "title": "IMG 1219",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1219"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:37:28"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/731, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1219.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4284 x 5712 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1219-570b09bebb_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1219-570b09bebb_900.jpg",
+            "detailKey": "expo/img-1219-570b09bebb_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1219.jpeg",
+            "type": "JPG",
+            "bytes": 6723201
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1218-fe487846d6",
+        "className": "p2",
+        "title": "IMG 1218",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1218"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:36:34"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/959, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1218.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4284 x 5712 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1218-fe487846d6_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1218-fe487846d6_900.jpg",
+            "detailKey": "expo/img-1218-fe487846d6_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1218.jpeg",
+            "type": "JPG",
+            "bytes": 7067886
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1213-7276413ecc",
+        "className": "p3",
+        "title": "IMG 1213",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1213"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:36:07"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1346, f/2.2, ISO 40"
+          },
+          {
+            "label": "Focal length",
+            "value": "2.2 mm / 25 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1213.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 3024 x 4032 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1213-7276413ecc_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1213-7276413ecc_900.jpg",
+            "detailKey": "expo/img-1213-7276413ecc_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1213.jpeg",
+            "type": "JPG",
+            "bytes": 3031425
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1212-96505e7356",
+        "className": "p4",
+        "title": "IMG 1212",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1212"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:36:03"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1110, f/2.2, ISO 40"
+          },
+          {
+            "label": "Focal length",
+            "value": "2.2 mm / 14 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1212.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 3024 x 4032 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1212-96505e7356_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1212-96505e7356_900.jpg",
+            "detailKey": "expo/img-1212-96505e7356_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1212.jpeg",
+            "type": "JPG",
+            "bytes": 2906250
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1208-d059e156dc",
+        "className": "p5",
+        "title": "IMG 1208",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 18,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1208"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:32:24"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/2075, f/1.6, ISO 100"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1208.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 3906 x 4606 / 18 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1208-d059e156dc_1800.jpg / 1526 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1208-d059e156dc_900.jpg",
+            "detailKey": "expo/img-1208-d059e156dc_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1208.jpeg",
+            "type": "JPG",
+            "bytes": 4181624
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1207-5079ff3336",
+        "className": "p1",
+        "title": "IMG 1207",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1207"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:32:14"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/1393, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 52 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1207.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 3024 x 4032 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1207-5079ff3336_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1207-5079ff3336_900.jpg",
+            "detailKey": "expo/img-1207-5079ff3336_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1207.jpeg",
+            "type": "JPG",
+            "bytes": 3753253
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1205-4ca5e788f0",
+        "className": "p2",
         "title": "IMG 1205",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
@@ -442227,7 +442683,7 @@ export const collections = {
       },
       {
         "id": "img-1204-1d710fba81",
-        "className": "p2",
+        "className": "p3",
         "title": "IMG 1204",
         "caption": "Italy / 2025-05-12",
         "full": "JPG master",
@@ -442294,6 +442750,310 @@ export const collections = {
           }
         ],
         "keywords": []
+      },
+      {
+        "id": "img-1203-d7219d5193",
+        "className": "p4",
+        "title": "IMG 1203",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1203"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:31:36"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/2639, f/1.6, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1203.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4284 x 5712 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1203-d7219d5193_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1203-d7219d5193_900.jpg",
+            "detailKey": "expo/img-1203-d7219d5193_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1203.jpeg",
+            "type": "JPG",
+            "bytes": 7334885
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1199-0ebd1a5044",
+        "className": "p5",
+        "title": "IMG 1199",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1199"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:29:15"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/2985, f/1.6, ISO 64"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1199.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 5712 x 4284 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1199-0ebd1a5044_1800.jpg / 1800 x 1350 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1199-0ebd1a5044_900.jpg",
+            "detailKey": "expo/img-1199-0ebd1a5044_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1199.jpeg",
+            "type": "JPG",
+            "bytes": 6722235
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1198-bb563d6235",
+        "className": "p1",
+        "title": "IMG 1198",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 24.5,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1198"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:29:01"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 5.96mm f/1.6"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/4950, f/1.6, ISO 64"
+          },
+          {
+            "label": "Focal length",
+            "value": "6.0 mm / 26 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1198.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 4284 x 5712 / 24.5 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1198-bb563d6235_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1198-bb563d6235_900.jpg",
+            "detailKey": "expo/img-1198-bb563d6235_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1198.jpeg",
+            "type": "JPG",
+            "bytes": 5258977
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
+      },
+      {
+        "id": "img-1197-0132d88761",
+        "className": "p2",
+        "title": "IMG 1197",
+        "caption": "Italy / 2025-05-12",
+        "full": "JPG master",
+        "megapixels": 12.2,
+        "sourceOrigin": "camera",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "metadata": [
+          {
+            "label": "Metadata title",
+            "value": "IMG 1197"
+          },
+          {
+            "label": "Keywords",
+            "value": "Italy"
+          },
+          {
+            "label": "Captured",
+            "value": "2025:05:12 18:27:29"
+          },
+          {
+            "label": "Camera",
+            "value": "Apple iPhone 16 Plus"
+          },
+          {
+            "label": "Lens",
+            "value": "iPhone 16 Plus back dual wide camera 2.22mm f/2.2"
+          },
+          {
+            "label": "Exposure",
+            "value": "1/2208, f/2.2, ISO 50"
+          },
+          {
+            "label": "Focal length",
+            "value": "2.2 mm / 22 mm equivalent"
+          },
+          {
+            "label": "Original file",
+            "value": "IMG_1197.jpeg"
+          },
+          {
+            "label": "Original size",
+            "value": "JPEG / 3024 x 4032 / 12.2 MP"
+          },
+          {
+            "label": "Location",
+            "value": "Italy"
+          },
+          {
+            "label": "Preview file",
+            "value": "img-1197-0132d88761_1800.jpg / 1350 x 1800 / JPEG"
+          }
+        ],
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1197-0132d88761_900.jpg",
+            "detailKey": "expo/img-1197-0132d88761_1800.jpg"
+          }
+        },
+        "sourceFiles": [
+          {
+            "path": "2024 Pisa/Pisa, 12 May 2025/IMG_1197.jpeg",
+            "type": "JPG",
+            "bytes": 2380888
+          }
+        ],
+        "keywords": [
+          "Italy"
+        ]
       },
       {
         "id": "img-1184-adad54985d",
@@ -443626,62 +444386,8 @@ export const collections = {
         "keywords": []
       },
       {
-        "id": "img-1122-38b4360e54",
-        "className": "p2",
-        "title": "IMG 1122",
-        "caption": "Italy / 2025-05-10",
-        "full": "JPG master",
-        "megapixels": 3.6,
-        "sourceOrigin": "camera",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "metadata": [
-          {
-            "label": "Metadata title",
-            "value": "IMG 1122"
-          },
-          {
-            "label": "Captured",
-            "value": "2025:05:10 15:44:06"
-          },
-          {
-            "label": "Original file",
-            "value": "IMG_1122.JPG"
-          },
-          {
-            "label": "Original size",
-            "value": "JPEG / 1290 x 2796 / 3.6 MP"
-          },
-          {
-            "label": "Location",
-            "value": "Italy"
-          },
-          {
-            "label": "Preview file",
-            "value": "img-1122-38b4360e54_1800.jpg / 830 x 1800 / JPEG"
-          }
-        ],
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1122-38b4360e54_900.jpg",
-            "detailKey": "expo/img-1122-38b4360e54_1800.jpg"
-          }
-        },
-        "sourceFiles": [
-          {
-            "path": "2025 Florence/IMG_1122.JPG",
-            "type": "JPG",
-            "bytes": 1026833
-          }
-        ],
-        "keywords": []
-      },
-      {
         "id": "img-1112-482e0b08e3",
-        "className": "p3",
+        "className": "p2",
         "title": "IMG 1112",
         "caption": "Italy / 2025-05-10",
         "full": "MOV master",
@@ -443751,7 +444457,7 @@ export const collections = {
       },
       {
         "id": "img-1111-3e8483bc6f",
-        "className": "p4",
+        "className": "p3",
         "title": "IMG 1111",
         "caption": "Italy / 2025-05-10",
         "full": "MOV master",
@@ -443818,76 +444524,6 @@ export const collections = {
         ],
         "keywords": [],
         "duration": 6.03
-      },
-      {
-        "id": "img-1110-d9679b1131",
-        "className": "p5",
-        "title": "IMG 1110",
-        "caption": "Italy / 2025-05-10",
-        "full": "MOV master",
-        "megapixels": 2.1,
-        "sourceOrigin": "camera",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "metadata": [
-          {
-            "label": "Metadata title",
-            "value": "IMG 1110"
-          },
-          {
-            "label": "Captured",
-            "value": "2025:05:10 11:44:56"
-          },
-          {
-            "label": "Camera",
-            "value": "Apple iPhone 16 Plus"
-          },
-          {
-            "label": "Lens",
-            "value": "iPhone 16 Plus back camera 5.96mm f/1.6"
-          },
-          {
-            "label": "Focal length",
-            "value": "26"
-          },
-          {
-            "label": "Original file",
-            "value": "IMG_1110.MOV"
-          },
-          {
-            "label": "Original size",
-            "value": "MOV / 1920 x 1080 / 2.1 MP"
-          },
-          {
-            "label": "Location",
-            "value": "Italy"
-          },
-          {
-            "label": "Preview file",
-            "value": "img-1110-d9679b1131_short_5s_720p.mp4 / 1280 x 720 / MP4"
-          }
-        ],
-        "media": {
-          "type": "video",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1110-d9679b1131_900.jpg",
-            "detailKey": "expo/img-1110-d9679b1131_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 4.57
-          }
-        },
-        "sourceFiles": [
-          {
-            "path": "2025 Florence/IMG_1110.MOV",
-            "type": "MOV",
-            "bytes": 5604378
-          }
-        ],
-        "keywords": [],
-        "duration": 4.57
       }
     ]
   },

@@ -497,7 +497,59 @@
   };
   const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
-  const slideshowTransition = "basic-carousel";
+  const slideshowTransition = "random-ken-burns";
+  const slideshowMusicTracks = Object.freeze([
+    { title: "Quiet Linden Study", bpm: 82, duration: 113.02, src: "./assets/music/slideshow-guitar/quiet-linden-study-single-guitar-113s.mp3" },
+    { title: "Warm Balcony Theme", bpm: 86, duration: 107.847, src: "./assets/music/slideshow-guitar/warm-balcony-theme-single-guitar-107s.mp3" },
+    { title: "Open House Aria", bpm: 88, duration: 105.436, src: "./assets/music/slideshow-guitar/open-house-aria-single-guitar-104s.mp3" },
+    { title: "Cedar Stairwell", bpm: 80, duration: 115.8, src: "./assets/music/slideshow-guitar/cedar-stairwell-single-guitar-116s.mp3" },
+    { title: "Terrace in C", bpm: 84, duration: 110.371, src: "./assets/music/slideshow-guitar/terrace-in-c-single-guitar-109s.mp3" },
+    { title: "Window Light Etude", bpm: 90, duration: 103.133, src: "./assets/music/slideshow-guitar/window-light-etude-single-guitar-103s.mp3" },
+    { title: "Blue Hour Listing", bpm: 82, duration: 113.02, src: "./assets/music/slideshow-guitar/blue-hour-listing-single-guitar-112s.mp3" },
+    { title: "Ivory Courtyard", bpm: 86, duration: 107.847, src: "./assets/music/slideshow-guitar/ivory-courtyard-single-guitar-106s.mp3" },
+    { title: "Sunday Parlor", bpm: 84, duration: 110.371, src: "./assets/music/slideshow-guitar/sunday-parlor-single-guitar-108s.mp3" },
+    { title: "Soft Key Return", bpm: 90, duration: 103.133, src: "./assets/music/slideshow-guitar/soft-key-return-single-guitar-101s.mp3" },
+  ]);
+  const slideshowMusicGainDb = 0;
+  const sourceVideoAudioGainDb = -20;
+  const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
+  const absoluteTrackUrl = (track) => {
+    if (!track?.src) return "";
+    try {
+      return new URL(track.src, window.location.href).href;
+    } catch {
+      return track.src;
+    }
+  };
+  const withAbsoluteTrackUrl = (track) => track ? { ...track, absoluteSrc: absoluteTrackUrl(track) } : null;
+  const chooseSlideshowMusicTrack = () => withAbsoluteTrackUrl(
+    slideshowMusicTracks[Math.floor(Math.random() * slideshowMusicTracks.length)] || slideshowMusicTracks[0]
+  );
+  const slideshowAudioPolicyFor = (musicTrack = null) => ({
+    selection: "random-from-single-guitar-pool",
+    musicGainDb: slideshowMusicGainDb,
+    sourceVideoAudioGainDb,
+    sourceVideoAudioLinearGain,
+    musicTrack: musicTrack ? { ...musicTrack, musicGainDb: slideshowMusicGainDb } : null,
+    musicPool: slideshowMusicTracks.map((track) => ({ ...track })),
+  });
+  const slideshowSettingsFor = (musicTrack = null) => ({
+    mode: "one-slideshow-per-project",
+    photoDurationSeconds: state.slideshowPhotoSeconds,
+    videoDurationPolicy: "preserve-source-duration",
+    transition: slideshowTransition,
+    effects: "random-ken-burns",
+    audioPolicy: slideshowAudioPolicyFor(musicTrack),
+  });
+  const kenBurnsEffects = Object.freeze([
+    "slow-zoom-in",
+    "slow-zoom-out",
+    "pan-left",
+    "pan-right",
+    "rise-up",
+    "drift-down",
+  ]);
+  const randomKenBurnsEffect = () => kenBurnsEffects[Math.floor(Math.random() * kenBurnsEffects.length)] || "slow-zoom-in";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -574,7 +626,7 @@
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
       button.textContent = "Open video preview";
-      button.title = "Open a browser slideshow preview; selected videos keep their full duration";
+      button.title = "Open a browser slideshow preview with random single-guitar music; selected videos keep duration and play 20 dB under the music";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = "Share selection table";
@@ -971,10 +1023,7 @@
         pageWatermarkPlacement: "footer-center",
       },
       slideshowSettings: {
-        mode: "one-slideshow-per-project",
-        photoDurationSeconds: state.slideshowPhotoSeconds,
-        videoDurationPolicy: "preserve-source-duration",
-        transition: slideshowTransition,
+        ...slideshowSettingsFor(),
       },
       projects: projects.map((project) => ({
         projectId: project.projectId,
@@ -1109,35 +1158,35 @@
 
   const buildSlideshowManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
     const base = buildBatchManifest(photosOverride, activeOnly);
+    const musicTrack = chooseSlideshowMusicTrack();
+    const effectsByPhotoId = new Map((base.items || []).map((item) => [item.photoId, randomKenBurnsEffect()]));
+    const slideshowOutputItem = (item) => ({
+      ...item,
+      outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
+      durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
+      transition: slideshowTransition,
+      effect: effectsByPhotoId.get(item.photoId) || randomKenBurnsEffect(),
+    });
     return {
       ...base,
       schema: "photosbyelie.realEstateSlideshowBatch.v1",
       outputMode: "one-slideshow-per-project",
       pdfSettings: undefined,
-      slideshowSettings: {
-        mode: "one-slideshow-per-project",
-        photoDurationSeconds: state.slideshowPhotoSeconds,
-        videoDurationPolicy: "preserve-source-duration",
-        transition: slideshowTransition,
-      },
+      slideshowSettings: slideshowSettingsFor(musicTrack),
       projects: (base.projects || []).map((project) => ({
         ...project,
-        items: (project.items || []).map((item) => ({
-          ...item,
-          outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
-          durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
-        })),
+        items: (project.items || []).map(slideshowOutputItem),
       })),
-      items: (base.items || []).map((item) => ({
-        ...item,
-        outputTreatment: item.mediaType === "video" ? "source-video-full-duration" : "still-photo",
-        durationSeconds: item.mediaType === "video" ? item.durationSeconds : state.slideshowPhotoSeconds,
-      })),
+      items: (base.items || []).map(slideshowOutputItem),
     };
   };
 
   const slideshowHtmlFor = (manifest) => {
     const rows = selectionRowsFor(manifest);
+    const audioPolicy = manifest.slideshowSettings?.audioPolicy || {};
+    const musicTrack = audioPolicy.musicTrack || null;
+    const previewSourceVideoVolume = Number(audioPolicy.sourceVideoAudioLinearGain ?? sourceVideoAudioLinearGain);
+    const previewMusicGainDb = Number(audioPolicy.musicGainDb ?? slideshowMusicGainDb);
     const slides = rows.map(({ projectTitle, item }) => {
       const photo = state.photosById.get(item.photoId);
       if (!photo) return null;
@@ -1151,6 +1200,7 @@
         durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
         durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
         source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
+        effect: item.effect || randomKenBurnsEffect(),
       };
     }).filter(Boolean);
     const safeJson = JSON.stringify(manifest, null, 2)
@@ -1158,6 +1208,10 @@
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
     const safeSlidesJson = JSON.stringify(slides)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const safeMusicJson = JSON.stringify(musicTrack)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
@@ -1176,6 +1230,8 @@
     .stage{position:relative;display:grid;min-height:70dvh;background:#050505;place-items:center;overflow:hidden}
     .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505}
     .frame img,.frame video{width:100%;height:100%;object-fit:contain;background:#050505}
+    .frame img{animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
+    @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
     .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(14px,4vw,38px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
     .caption h1{max-width:820px;margin:0;font-size:clamp(1.8rem,5vw,4.8rem);line-height:.98}
     .caption p{margin:8px 0 0;color:#d7d7d7;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
@@ -1198,6 +1254,7 @@
   <main>
     <section class="stage" aria-label="Browser video preview">
       <div class="frame" data-frame></div>
+      ${musicTrack?.absoluteSrc || musicTrack?.src ? `<audio data-music preload="auto" loop src="${escapeHtml(musicTrack.absoluteSrc || musicTrack.src)}"></audio>` : ""}
       <div class="caption">
         <div>
           <p data-project>${escapeHtml(slides[0]?.projectTitle || manifest.customer || "Client")}</p>
@@ -1216,8 +1273,9 @@
       <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
       <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
       <div><dt>Photo duration</dt><dd>${escapeHtml(manifest.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds)}s</dd></div>
-      <div><dt>Videos</dt><dd>Full source duration</dd></div>
-      <div><dt>Transition</dt><dd>Basic carousel</dd></div>
+      <div><dt>Music</dt><dd>${escapeHtml(musicTrack?.title || "Random single-guitar cue")}</dd></div>
+      <div><dt>Source audio</dt><dd>${escapeHtml(`${audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb} dB`)}</dd></div>
+      <div><dt>Transition</dt><dd>Random Ken Burns</dd></div>
     </dl>
     <table>
       <thead>
@@ -1242,11 +1300,13 @@
         </tr>`).join("")}
       </tbody>
     </table>
-    <p class="note">This browser preview preserves source duration for videos when the browser can play them. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with a basic carousel transition.</p>
+    <p class="note">This browser preview preserves source duration for videos when the browser can play them. Video source audio plays at ${escapeHtml(audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb)} dB under the generated music. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with random Ken Burns motion.</p>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
     <script>
       const slides = ${safeSlidesJson};
+      const musicTrack = ${safeMusicJson};
       const frame = document.querySelector("[data-frame]");
+      const music = document.querySelector("[data-music]");
       const title = document.querySelector("[data-title]");
       const project = document.querySelector("[data-project]");
       const counter = document.querySelector("[data-counter]");
@@ -1254,10 +1314,32 @@
       let index = 0;
       let timer = 0;
       let playing = true;
+      const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
+      const musicVolume = Math.pow(10, Number(musicTrack?.musicGainDb ?? ${previewMusicGainDb}) / 20);
+      const effectStyle = (effect, durationMs) => {
+        const presets = {
+          "slow-zoom-in": [1.02, 1.13, "0%", "0%", "0%", "0%"],
+          "slow-zoom-out": [1.13, 1.03, "0%", "0%", "0%", "0%"],
+          "pan-left": [1.09, 1.1, "2.5%", "0%", "-2.5%", "0%"],
+          "pan-right": [1.09, 1.1, "-2.5%", "0%", "2.5%", "0%"],
+          "rise-up": [1.08, 1.11, "0%", "2%", "0%", "-2%"],
+          "drift-down": [1.08, 1.11, "0%", "-2%", "0%", "2%"],
+        };
+        const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["slow-zoom-in"];
+        return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
+      };
 
       const clearTimer = () => {
         if (timer) window.clearTimeout(timer);
         timer = 0;
+      };
+      const playMusic = () => {
+        if (!music) return;
+        music.volume = musicVolume;
+        music.play().catch(() => {});
+      };
+      const pauseMusic = () => {
+        if (music) music.pause();
       };
       const render = () => {
         clearTimer();
@@ -1272,17 +1354,19 @@
         title.textContent = slide.title || "Untitled";
         project.textContent = slide.projectTitle || slide.mediaType || "";
         counter.textContent = (index + 1) + " / " + slides.length;
+        if (playing) playMusic();
         if (slide.mediaType === "video" && slide.videoUrl) {
-          frame.innerHTML = '<video controls playsinline autoplay poster="' + slide.imageUrl.replace(/"/g, "&quot;") + '" src="' + slide.videoUrl.replace(/"/g, "&quot;") + '"></video>';
+          frame.innerHTML = '<video controls playsinline poster="' + slide.imageUrl.replace(/"/g, "&quot;") + '" src="' + slide.videoUrl.replace(/"/g, "&quot;") + '"></video>';
           const video = frame.querySelector("video");
+          video.volume = sourceVideoVolume;
           video.addEventListener("ended", () => playing && next());
           video.addEventListener("error", () => {
-            frame.innerHTML = '<img alt="" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
+            frame.innerHTML = '<img alt="" style="' + effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)).replace(/"/g, "&quot;") + '" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
             if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
           });
           if (playing) video.play().catch(() => {});
         } else {
-          frame.innerHTML = '<img alt="" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
+          frame.innerHTML = '<img alt="" style="' + effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)).replace(/"/g, "&quot;") + '" src="' + slide.imageUrl.replace(/"/g, "&quot;") + '">';
           if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
         }
       };
@@ -1301,8 +1385,17 @@
         playButton.textContent = playing ? "Pause" : "Play";
         const video = frame.querySelector("video");
         if (video) {
-          if (playing) video.play().catch(() => {});
-          else video.pause();
+          if (playing) {
+            playMusic();
+            video.play().catch(() => {});
+          } else {
+            pauseMusic();
+            video.pause();
+          }
+        } else if (playing) {
+          playMusic();
+        } else {
+          pauseMusic();
         }
         render();
       });

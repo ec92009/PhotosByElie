@@ -1,0 +1,70 @@
+{
+  "schema": "photosbyelie.realEstateSlideshowMusic.v1",
+  "selection": "random-from-single-guitar-pool",
+  "musicGainDb": 0,
+  "sourceVideoAudioGainDb": -20,
+  "sourceVideoAudioLinearGain": 0.1,
+  "transition": "random-ken-burns",
+  "tracks": [
+    {
+      "title": "Quiet Linden Study",
+      "bpm": 82,
+      "duration": 113.02,
+      "src": "./assets/music/slideshow-guitar/quiet-linden-study-single-guitar-113s.mp3"
+    },
+    {
+      "title": "Warm Balcony Theme",
+      "bpm": 86,
+      "duration": 107.847,
+      "src": "./assets/music/slideshow-guitar/warm-balcony-theme-single-guitar-107s.mp3"
+    },
+    {
+      "title": "Open House Aria",
+      "bpm": 88,
+      "duration": 105.436,
+      "src": "./assets/music/slideshow-guitar/open-house-aria-single-guitar-104s.mp3"
+    },
+    {
+      "title": "Cedar Stairwell",
+      "bpm": 80,
+      "duration": 115.8,
+      "src": "./assets/music/slideshow-guitar/cedar-stairwell-single-guitar-116s.mp3"
+    },
+    {
+      "title": "Terrace in C",
+      "bpm": 84,
+      "duration": 110.371,
+      "src": "./assets/music/slideshow-guitar/terrace-in-c-single-guitar-109s.mp3"
+    },
+    {
+      "title": "Window Light Etude",
+      "bpm": 90,
+      "duration": 103.133,
+      "src": "./assets/music/slideshow-guitar/window-light-etude-single-guitar-103s.mp3"
+    },
+    {
+      "title": "Blue Hour Listing",
+      "bpm": 82,
+      "duration": 113.02,
+      "src": "./assets/music/slideshow-guitar/blue-hour-listing-single-guitar-112s.mp3"
+    },
+    {
+      "title": "Ivory Courtyard",
+      "bpm": 86,
+      "duration": 107.847,
+      "src": "./assets/music/slideshow-guitar/ivory-courtyard-single-guitar-106s.mp3"
+    },
+    {
+      "title": "Sunday Parlor",
+      "bpm": 84,
+      "duration": 110.371,
+      "src": "./assets/music/slideshow-guitar/sunday-parlor-single-guitar-108s.mp3"
+    },
+    {
+      "title": "Soft Key Return",
+      "bpm": 90,
+      "duration": 103.133,
+      "src": "./assets/music/slideshow-guitar/soft-key-return-single-guitar-101s.mp3"
+    }
+  ]
+}

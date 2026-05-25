@@ -30,6 +30,14 @@ DEFAULT_R2_ROOT = "real-estate"
 ACCESS_CODE_HASH_ALGORITHM = "sha256-salt-v1"
 
 
+def load_slideshow_music_policy(repo_root: Path) -> dict[str, Any]:
+    path = repo_root / "assets" / "real-estate" / "slideshow-music.json"
+    try:
+        return json.loads(path.read_text())
+    except FileNotFoundError:
+        return {}
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug or "item"
@@ -727,14 +735,15 @@ def build_manifest(
             "imageField": "cloudPdfSource.imageUrl",
             "cloudImageKeyField": "cloudPdfSource.publicKey",
             "mode": "one-output-per-project",
-            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
+            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Slideshows choose one single-guitar cue at random, keep generated music at 0 dB, and mix source video audio 20 dB lower; videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
+            "slideshowMusic": load_slideshow_music_policy(repo_root),
             "batchManifest": {
                 "schema": PDF_BATCH_SCHEMA,
                 "batchIdFormat": "YYYYMMDDTHHMMSSZ",
                 "storageKeyPattern": f"real-estate/pdf-batches/{gallery_key}/{{batchId}}.json",
                 "retrievalOrder": "createdAt desc",
                 "projectFields": ["projectId", "projectTitle", "sortIndex", "items"],
-                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "durationSeconds", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "sourceVideoPrivateKey", "sourceDurationSeconds", "projectId", "projectTitle", "projectIds"],
+                "itemFields": ["photoId", "title", "sortIndex", "mediaType", "durationSeconds", "pdfTreatment", "pdfStillPercent", "slideshowDurationPolicy", "slideshowDurationSeconds", "sourceVideoPrivateKey", "sourceDurationSeconds", "projectId", "projectTitle", "projectIds", "transition", "effect", "outputTreatment"],
                 "resumeBehavior": "Loading a prior batch manifest seeds the selected media IDs and edited titles by project; generating PDFs or slideshow plans from that draft writes a new timestamped batch manifest with sourceBatchId set to the prior batchId.",
                 "template": pdf_batch_manifest_template(
                     customer=customer,

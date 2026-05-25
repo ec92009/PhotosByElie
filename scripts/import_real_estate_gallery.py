@@ -723,10 +723,12 @@ def build_manifest(
             "title": gallery_title,
             "description": "Private real-estate selection gallery for project PDF and slideshow assembly.",
             "accent": "spain",
+            "deliverables": [],
             "photos": photos,
         },
         "albums": album_entries,
         "photos": photos,
+        "deliverables": [],
         "cloudPdfWorkflow": {
             "titleField": "editableTitle",
             "selectionStoreKey": f"photosbyelie-real-estate-liked-{gallery_key}",

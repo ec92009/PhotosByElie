@@ -2479,6 +2479,7 @@ body[data-real-estate] main.shell{
   gap:clamp(10px,1.5dvh,16px);
 }
 .real-estate-shell.is-locked .real-estate-hero,
+.real-estate-shell.is-locked .real-estate-deliverables,
 .real-estate-shell.is-locked .real-estate-wizard,
 .real-estate-shell.is-locked .real-estate-workbench{
   display:none;
@@ -2634,6 +2635,53 @@ body[data-real-estate] main.shell{
   font-size:clamp(1.45rem,2.6vw,2.2rem);
   font-weight:850;
   line-height:1;
+}
+.real-estate-deliverables{
+  display:grid;
+  gap:14px;
+  padding:clamp(18px,3vw,30px) max(var(--panel-inline),var(--page-gutter));
+  border-top:1px solid var(--line);
+  background:var(--surface);
+}
+.real-estate-deliverables-head{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  gap:14px;
+}
+.real-estate-deliverables-head h2{
+  margin:0;
+  font-size:clamp(1.4rem,2.5vw,2.2rem);
+  line-height:1;
+}
+.real-estate-deliverable-list{
+  display:grid;
+  gap:8px;
+}
+.real-estate-deliverable{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  border:1px solid var(--line);
+  background:var(--bg);
+  padding:12px;
+}
+.real-estate-deliverable strong,
+.real-estate-deliverable span{
+  display:block;
+}
+.real-estate-deliverable span{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:.8rem;
+  font-weight:760;
+}
+.real-estate-deliverable-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
 }
 .real-estate-wizard{
   display:grid;
@@ -5626,6 +5674,21 @@ html[data-theme="light"] .detail-preview.has-image::after{
   .real-estate-gallery-toolbar{
     display:grid;
     align-items:start;
+  }
+  .real-estate-deliverables-head,
+  .real-estate-deliverable{
+    grid-template-columns:1fr;
+  }
+  .real-estate-deliverables-head{
+    display:grid;
+    align-items:start;
+  }
+  .real-estate-deliverable-actions{
+    justify-content:stretch;
+  }
+  .real-estate-deliverable-actions .btn{
+    flex:1 1 100px;
+    justify-content:center;
   }
   .real-estate-toolbar-actions,
   .real-estate-action-bar{

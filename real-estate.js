@@ -42,6 +42,8 @@
     customer: app.querySelector("[data-re-customer]"),
     title: app.querySelector("[data-re-title]"),
     description: app.querySelector("[data-re-description]"),
+    deliverablesPanel: app.querySelector("[data-re-deliverables-panel]"),
+    deliverablesList: app.querySelector("[data-re-deliverables-list]"),
     total: app.querySelector("[data-re-total]"),
     albumTotal: app.querySelector("[data-re-album-total]"),
     selectedTotal: app.querySelector("[data-re-selected-total]"),
@@ -618,15 +620,32 @@
     if (value >= 1024) return `${Math.round(value / 1024)} KB`;
     return `${value} bytes`;
   };
+  const deliverableActionNote = "View on mobile, or download on a computer. Capture or share whatever you are seeing with your device tools.";
 
   const syncFileActionLabels = () => {
+    document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
+      button.textContent = "View selected outputs";
+      button.title = "View selected PDF and video outputs in the browser, useful on mobile";
+    });
+    document.querySelectorAll("[data-re-download-outputs]").forEach((button) => {
+      button.textContent = "Download selected outputs";
+      button.title = "Download selected PDF and video outputs for desktop file handling";
+    });
+    document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
+      button.textContent = "View PDF";
+      button.title = "View project PDFs in the browser; selected videos appear as stills from 10% in";
+    });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = "Open PDF";
-      button.title = "Open project PDFs in the browser; selected videos appear as stills from 10% in";
+      button.textContent = "Download PDF";
+      button.title = "Download project PDFs; selected videos appear as stills from 10% in";
+    });
+    document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
+      button.textContent = "View video";
+      button.title = "View a browser slideshow/video output with random single-guitar music";
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      button.textContent = "Open video preview";
-      button.title = "Open a browser slideshow preview with random single-guitar music; selected videos keep duration and play 20 dB under the music";
+      button.textContent = "Download video";
+      button.title = "Download the video output with random single-guitar music; selected videos keep duration and play 20 dB under the music";
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = "Share selection table";
@@ -688,6 +707,91 @@
     if (elements.total) elements.total.textContent = String(photos.length);
     if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Media";
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
+    renderProducedDeliverables();
+  };
+
+  const absoluteDeliverableUrl = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      return new URL(raw, window.location.href).href;
+    } catch {
+      return raw;
+    }
+  };
+
+  const rawDeliverables = () => [
+    ...(Array.isArray(state.payload?.deliverables) ? state.payload.deliverables : []),
+    ...(Array.isArray(state.gallery?.deliverables) ? state.gallery.deliverables : []),
+  ];
+
+  const normalizeDeliverable = (row, index) => {
+    const type = String(row?.type || row?.format || row?.kind || "file").toLowerCase();
+    const ready = !row?.status || ["ready", "complete", "completed", "published"].includes(String(row.status).toLowerCase());
+    const viewUrl = absoluteDeliverableUrl(row?.viewUrl || row?.watchUrl || row?.url || row?.href);
+    const downloadUrl = absoluteDeliverableUrl(row?.downloadUrl || row?.fileUrl || row?.url || row?.href);
+    const editUrl = absoluteDeliverableUrl(row?.editUrl || row?.batchUrl || row?.manifestUrl || row?.selectionUrl || row?.sourceBatchUrl);
+    return {
+      id: String(row?.id || row?.deliverableId || `${type}-${index + 1}`),
+      type,
+      label: type === "pdf" ? "PDF" : type === "video" || type === "mp4" ? "Video" : "File",
+      title: String(row?.title || row?.projectTitle || row?.name || `Deliverable ${index + 1}`),
+      createdAt: String(row?.createdAt || row?.generatedAt || row?.updatedAt || ""),
+      bytes: Number(row?.bytes || row?.size || 0) || 0,
+      status: ready ? "ready" : String(row?.status || "pending"),
+      viewUrl,
+      downloadUrl,
+      editUrl,
+      batch: row?.batch || row?.manifest || row?.selection || null,
+      filename: String(row?.filename || row?.fileName || ""),
+    };
+  };
+
+  const producedDeliverables = () => rawDeliverables()
+    .map(normalizeDeliverable)
+    .filter((item) => item.title || item.viewUrl || item.downloadUrl);
+
+  const renderProducedDeliverables = () => {
+    if (!elements.deliverablesPanel || !elements.deliverablesList) return;
+    const items = producedDeliverables();
+    if (!items.length) {
+      elements.deliverablesList.innerHTML = `
+        <p class="real-estate-muted">No produced PDFs or videos are ready yet. Create a PDF or video below, then finished cloud deliverables will appear here for repeat viewing and downloading.</p>
+      `;
+      return;
+    }
+    elements.deliverablesList.innerHTML = items.map((item) => {
+      const date = item.createdAt ? new Date(item.createdAt) : null;
+      const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : item.createdAt;
+      const meta = [
+        item.label,
+        item.status !== "ready" ? item.status : "",
+        dateLabel,
+        item.bytes ? formatBytes(item.bytes) : "",
+      ].filter(Boolean).join(" / ");
+      const view = item.viewUrl
+        ? `<a class="btn secondary" href="${escapeHtml(item.viewUrl)}" target="_blank" rel="noopener">View</a>`
+        : `<button class="btn secondary" type="button" disabled>View</button>`;
+      const download = item.downloadUrl
+        ? `<a class="btn secondary" href="${escapeHtml(item.downloadUrl)}" ${item.filename ? `download="${escapeHtml(item.filename)}"` : "download"}>Download</a>`
+        : `<button class="btn secondary" type="button" disabled>Download</button>`;
+      const edit = (item.editUrl || item.batch)
+        ? `<button class="btn secondary" type="button" data-re-edit-deliverable="${escapeHtml(item.id)}">Edit</button>`
+        : `<button class="btn secondary" type="button" disabled>Edit</button>`;
+      return `
+        <article class="real-estate-deliverable">
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <span>${escapeHtml(meta || item.label)}</span>
+          </div>
+          <div class="real-estate-deliverable-actions">
+            ${edit}
+            ${view}
+            ${download}
+          </div>
+        </article>
+      `;
+    }).join("");
   };
 
   const albumSelectedCount = (slug) => selectedPhotos()
@@ -822,7 +926,7 @@
       button.disabled = state.wizardStep >= 1 && state.wizardStep < 4 && selected === 0;
       button.textContent = state.wizardStep === 0 ? "Pick photos" : (state.wizardStep === 3 ? "Choose output" : "Next");
     });
-    document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
+    document.querySelectorAll("[data-re-open-outputs], [data-re-download-outputs]").forEach((button) => {
       button.hidden = state.wizardStep !== 4;
       button.disabled = selected === 0;
     });
@@ -1524,25 +1628,27 @@
     }
   };
 
-  const shareSlideshowPlan = async (reservedWindow = null) => {
+  const shareSlideshowPlan = async ({ mode = "download", reservedWindow = null } = {}) => {
     if (!requireUnlocked()) return;
     const selected = activeSelectedPhotos();
     if (!selected.length) {
-      setStatus("Select media before sharing a slideshow plan");
+      setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
     const batch = buildSlideshowManifest(selected, true);
     const blob = new Blob([slideshowHtmlFor(batch)], { type: "text/html" });
     const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
     try {
-      const saved = await openBlobInBrowser(blob, filename, reservedWindow || reserveOutputWindow("Building video preview"));
+      const saved = mode === "view"
+        ? await openBlobInBrowser(blob, filename, reservedWindow || reserveOutputWindow("Building video preview"))
+        : { method: "download", ...(await downloadBlob(blob, filename)) };
       if (saved.method === "open" || saved.method === "open-current") {
-        setStatus(`Opened ${saved.filename}; use the browser save or share controls`);
+        setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
     } catch (error) {
-      setStatus(error?.name === "AbortError" ? "Share canceled" : "Slideshow plan could not be shared");
+      setStatus(error?.name === "AbortError" ? "Output canceled" : "Video output could not be prepared");
     }
   };
 
@@ -2073,16 +2179,16 @@
     return new Blob(chunks, { type: "application/pdf" });
   };
 
-  const downloadPdf = async (reservedWindows = []) => {
+  const downloadPdf = async ({ mode = "download", reservedWindows = [] } = {}) => {
     if (!requireUnlocked() || state.pdfBusy) return;
     const photos = activeSelectedPhotos();
     if (!photos.length) {
-      setStatus("Select media before opening project PDFs");
+      setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} project PDFs`);
       return;
     }
     const projects = projectGroupsFor(photos, true);
-    const outputWindows = [...reservedWindows];
-    while (outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
+    const outputWindows = mode === "view" ? [...reservedWindows] : [];
+    while (mode === "view" && outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
     const batchId = timestampId();
     const paper = paperFormatFor();
     const summary = selectedMediaSummary(photos);
@@ -2094,15 +2200,17 @@
       for (const [index, project] of projects.entries()) {
         const blob = await buildPdfBlob(await fetchPdfImages(project.photos));
         const filename = `${state.gallery?.key || "real-estate"}-${fileSlug(project.projectTitle)}-${paper.key}-${batchId}.pdf`;
-        const saved = await openBlobInBrowser(blob, filename, outputWindows[index] || null);
+        const saved = mode === "view"
+          ? await openBlobInBrowser(blob, filename, outputWindows[index] || null)
+          : { method: "download", ...(await downloadBlob(blob, filename)) };
         savedProjectCount += 1;
         if (saved.method === "open" || saved.method === "open-current") {
-          setStatus(`Opened ${saved.filename}; use the browser save or share controls`);
+          setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
         } else {
           setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
         }
       }
-      setStatus(`Opened ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} in the browser with ${photos.length} media${videoNote}`);
+      setStatus(`${mode === "view" ? "Viewing" : "Downloaded"} ${projects.length} ${paper.label} project PDF${projects.length === 1 ? "" : "s"} with ${photos.length} media${videoNote}. ${deliverableActionNote}`);
     } catch (error) {
       if (error?.name === "AbortError") {
         setStatus(savedProjectCount
@@ -2116,11 +2224,11 @@
     }
   };
 
-  const openSelectedOutputs = async () => {
+  const outputSelectedOutputs = async (mode = "view") => {
     if (!requireUnlocked()) return;
     const selected = activeSelectedPhotos();
     if (!selected.length) {
-      setStatus("Select at least one photo or video before opening outputs");
+      setStatus(`Select at least one photo or video before ${mode === "view" ? "viewing" : "downloading"} outputs`);
       return;
     }
     const wantsPdf = elements.outputPdf?.checked !== false;
@@ -2129,11 +2237,14 @@
       setStatus("Choose PDF, video, or both");
       return;
     }
-    const pdfWindow = wantsPdf ? reserveOutputWindow("Building PDF") : null;
-    const videoWindow = wantsVideo ? reserveOutputWindow("Building video preview") : null;
-    if (wantsPdf) await downloadPdf(pdfWindow ? [pdfWindow] : []);
-    if (wantsVideo) await shareSlideshowPlan(videoWindow);
+    const pdfWindow = mode === "view" && wantsPdf ? reserveOutputWindow("Building PDF") : null;
+    const videoWindow = mode === "view" && wantsVideo ? reserveOutputWindow("Building video preview") : null;
+    if (wantsPdf) await downloadPdf({ mode, reservedWindows: pdfWindow ? [pdfWindow] : [] });
+    if (wantsVideo) await shareSlideshowPlan({ mode, reservedWindow: videoWindow });
   };
+
+  const openSelectedOutputs = () => outputSelectedOutputs("view");
+  const downloadSelectedOutputs = () => outputSelectedOutputs("download");
 
   const selectVisible = () => {
     if (!requireUnlocked()) return;
@@ -2144,6 +2255,20 @@
   const clearSelection = () => {
     if (!requireUnlocked()) return;
     applySelectionForPhotoIds(activeSelectedPhotos().map((photo) => photo.id), false);
+  };
+
+  const startNewProduct = () => {
+    if (!requireUnlocked()) return;
+    state.selectedOrder = [];
+    state.selectedIds = new Set();
+    state.projectAssignments = {};
+    state.selectedOnly = false;
+    state.album = defaultAlbumSlug();
+    persistSelection();
+    persistProjectAssignments();
+    setWizardStep(firstWizardStep());
+    document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("Started a new product. Choose media, edit titles, reorder, then view or download outputs.");
   };
 
   const activeSelectionIds = () => activeSelectedPhotos().map((photo) => photo.id);
@@ -2297,6 +2422,10 @@
     if (!file) return;
     const text = await file.text();
     const batch = parseBatchFileText(text);
+    applyBatchManifest(batch);
+  };
+
+  const applyBatchManifest = (batch, { statusPrefix = "Loaded", editMode = false } = {}) => {
     if (batch?.pdfSettings?.paperFormat) {
       state.pdfFormat = paperFormatFor(batch.pdfSettings.paperFormat).key;
       localStorage.setItem(pdfFormatKey, state.pdfFormat);
@@ -2337,8 +2466,25 @@
     persistSelection();
     persistTitles();
     persistProjectAssignments();
+    if (editMode) state.wizardStep = 3;
     render();
-    setStatus(`Loaded ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}`);
+    setStatus(`${statusPrefix} ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}${editMode ? "; use Photos to add or remove media, and Order to reorder" : ""}`);
+  };
+
+  const editProducedDeliverable = async (deliverableId) => {
+    if (!requireUnlocked()) return;
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    if (!item) return;
+    try {
+      setStatus(`Loading ${item.title} for editing...`);
+      const response = item.batch ? null : await fetch(item.editUrl);
+      if (response && !response.ok) throw new Error(`Could not load product manifest (${response.status})`);
+      const batch = item.batch || parseBatchFileText(await response.text());
+      applyBatchManifest(batch, { statusPrefix: "Editing", editMode: true });
+      document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+      setStatus(error?.message || "Could not load this product for editing");
+    }
   };
 
   const openBatchFile = async () => {
@@ -2592,17 +2738,30 @@
     document.querySelectorAll("[data-re-open-outputs]").forEach((button) => button.addEventListener("click", () => {
       openSelectedOutputs().catch(() => setStatus("Outputs could not be opened"));
     }));
+    document.querySelectorAll("[data-re-download-outputs]").forEach((button) => button.addEventListener("click", () => {
+      downloadSelectedOutputs().catch(() => setStatus("Outputs could not be downloaded"));
+    }));
+    document.querySelectorAll("[data-re-create-product]").forEach((button) => button.addEventListener("click", startNewProduct));
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
       shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
     }));
+    document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => button.addEventListener("click", () => {
+      shareSlideshowPlan({ mode: "view" }).catch(() => setStatus("Video output could not be viewed"));
+    }));
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => button.addEventListener("click", () => {
-      shareSlideshowPlan().catch(() => setStatus("Slideshow plan could not be shared"));
+      shareSlideshowPlan({ mode: "download" }).catch(() => setStatus("Video output could not be downloaded"));
     }));
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => button.addEventListener("click", () => {
       shareOriginalsZip().catch(() => setStatus("Originals ZIP failed"));
     }));
-    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf()));
+    document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
+    document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
+    elements.deliverablesList?.addEventListener("click", (event) => {
+      const button = event.target?.closest?.("[data-re-edit-deliverable]");
+      if (!button) return;
+      editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
+    });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
       openBatchFile().catch(() => setStatus("Selection file could not be loaded"));
     }));

@@ -4,10 +4,10 @@ Last updated: 2026-05-24
 
 ## Current Facts
 
-- Current visible build: `v85.0`.
+- Current visible build: `v86.0`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=85.0`.
-- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=85.0`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=86.0`.
+- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=86.0`.
 - Current catalog scale: `3,824` public media rows in `assets/catalog/photosbyelie.sqlite`: France `315`, USA `159`, Spain `1,024`, Mexico `2`, AI/Leonardo `2,106`, Italy `0`, Portugal `216`, Slovakia `2`.
 - The latest cloud-media checkpoint regenerated public catalog/homepage/worker artifacts after the import work. That makes the current repo internally consistent, but the drop from the earlier `6,016`-row baseline still needs an explicit catalog-baseline audit before more launch/publishing work.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -52,9 +52,10 @@ Last updated: 2026-05-24
 - `v83.23` makes discarded/Waste Basket source paths participate in import and export filtering, records source paths in new tombstones, and adds a read-only audit for source-path tombstone dodgers in current manifests/R2 state.
 - `v83.24` stops the Expo source pulldown from mining import-log subfolders, restores the Green + 4-star eligibility gate only for Camera imports/exports, leaves AI imports tombstone-driven, and adds an R2 audit/delete pass for ineligible Camera rows.
 - `v85.0` adds a public slideshow music mini-app with eleven original subdued Spanish-style guitar cues, each under two minutes, plus play/pause, seeking, MP3 links, and volume controls.
+- `v86.0` adds ten more classical-guitar-leaning cues with more variety: tremolo studies, waltz, Phrygian lullaby, salon miniature, counterpoint, and nocturne.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v85.0`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v86.0`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It publishes only when existing authentication allows it and otherwise leaves ready-to-publish packages.

@@ -1312,6 +1312,7 @@
   );
 
   const setWizardStep = (step) => {
+    flushTitleInputs();
     const next = normalizeWizardStep(step);
     if (next >= 2 && activeSelectedPhotos().length === 0) {
       setStatus("Select at least one photo or video before continuing");
@@ -1407,6 +1408,15 @@
     }
   };
 
+  const flushTitleInputs = () => {
+    elements.grid?.querySelectorAll("[data-title-photo]").forEach((input) => {
+      if (input?.dataset?.titlePhoto) setTitle(input.dataset.titlePhoto, input.value);
+    });
+    if (state.activePhotoId && elements.dialogTitleInput) {
+      setTitle(state.activePhotoId, elements.dialogTitleInput.value);
+    }
+  };
+
   const setPhotoProject = (photoId, projectId, assigned) => {
     const photo = state.photosById.get(photoId);
     if (!photo) return;
@@ -1475,6 +1485,7 @@
   }));
 
   const buildBatchManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
+    flushTitleInputs();
     const template = workflow().batchManifest?.template || {};
     const batchId = timestampId();
     const photos = photosOverride;
@@ -2882,7 +2893,8 @@
   } = {}) => {
     if (!requireUnlocked() || state.pdfBusy || state.outputBusy) return;
     const photos = batchOverride ? [] : activeSelectedPhotos();
-    const projects = Array.isArray(projectsOverride) ? projectsOverride : projectGroupsFor(photos, true);
+    const batch = batchOverride || buildBatchManifest(photos, true);
+    const projects = Array.isArray(projectsOverride) ? projectsOverride : pdfProjectsForBatch(batch);
     const selectedCount = projects.reduce((sum, project) => sum + project.photos.length, 0);
     if (!selectedCount) {
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} project PDFs`);
@@ -2890,7 +2902,6 @@
     }
     const outputWindows = mode === "view" ? [...reservedWindows] : [];
     while (mode === "view" && outputWindows.length < projects.length) outputWindows.push(reserveOutputWindow("Building PDF"));
-    const batch = batchOverride || buildBatchManifest(photos, true);
     const batchId = batch.batchId;
     const paper = paperFormatFor();
     const shelfFilename = projects.length === 1

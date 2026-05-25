@@ -108,6 +108,10 @@
     editedTitles: {},
     projectAssignments: {},
     localDeliverables: [],
+    cloudDeliverables: [],
+    cloudDeliverablesBusy: false,
+    cloudDeliverablesLoaded: false,
+    cloudDeliverablesError: "",
     activePhotoId: "",
     lastRangePhotoId: "",
     dragDraftId: "",
@@ -370,9 +374,10 @@
     );
   };
 
-  const writeSession = (username = "") => writeJson(authStoreKey(), {
+  const writeSession = (username = "", accessCode = "") => writeJson(authStoreKey(), {
     galleryKey: state.gallery?.key || "",
     username,
+    accessCode,
     unlocked: true,
     unlockedAt: new Date().toISOString(),
   });
@@ -805,7 +810,29 @@
     }
   };
 
+  const cloudCredentialSnapshot = () => {
+    const savedCredentials = readSessionCredentials();
+    const savedSession = readJson(authStoreKey(), {});
+    return {
+      username: String(
+        state.username
+        || savedCredentials.username
+        || savedSession.username
+        || state.payload?.customer?.username
+        || state.payload?.customer?.name
+        || ""
+      ),
+      accessCode: String(
+        state.accessCode
+        || savedCredentials.accessCode
+        || savedSession.accessCode
+        || ""
+      ),
+    };
+  };
+
   const rawDeliverables = () => [
+    ...(Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : []),
     ...(Array.isArray(state.localDeliverables) ? state.localDeliverables : []),
     ...(Array.isArray(state.payload?.deliverables) ? state.payload.deliverables : []),
     ...(Array.isArray(state.gallery?.deliverables) ? state.gallery.deliverables : []),
@@ -833,9 +860,18 @@
     };
   };
 
-  const producedDeliverables = () => rawDeliverables()
-    .map(normalizeDeliverable)
-    .filter((item) => item.title || item.viewUrl || item.downloadUrl || item.editUrl || item.batch);
+  const producedDeliverables = () => {
+    const seen = new Set();
+    return rawDeliverables()
+      .map(normalizeDeliverable)
+      .filter((item) => item.title || item.viewUrl || item.downloadUrl || item.editUrl || item.batch)
+      .filter((item) => {
+        const key = item.id || `${item.type}:${item.createdAt}:${item.title}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  };
 
   const localDeliverableTitleFor = (type, batch) => {
     const label = type === "pdf" ? "PDF" : "Video";
@@ -856,6 +892,88 @@
     }
   };
 
+  const credentialsForCloudDeliverables = async ({ promptIfMissing = false } = {}) => {
+    const credentials = cloudCredentialSnapshot();
+    if (!credentials.accessCode && promptIfMissing) {
+      credentials.accessCode = await promptOriginalsPassword("Enter the client password to sync products saved in the cloud.");
+    }
+    if (!credentials.username || !credentials.accessCode) return null;
+    writeSessionCredentials(credentials.username, credentials.accessCode);
+    if (state.unlocked) writeSession(credentials.username, credentials.accessCode);
+    return credentials;
+  };
+
+  const fetchCloudDeliverables = async ({ promptIfMissing = false, quiet = true } = {}) => {
+    const baseUrl = workerBaseUrl();
+    if (!state.unlocked || !state.gallery?.key || !baseUrl) return [];
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing });
+    if (!credentials) {
+      renderProducedDeliverables();
+      if (!quiet && promptIfMissing) setStatus("Cloud products need the client password to sync.");
+      return [];
+    }
+    state.cloudDeliverablesBusy = true;
+    state.cloudDeliverablesError = "";
+    renderProducedDeliverables();
+    try {
+      const response = await fetch(`${baseUrl}/real-estate/deliverables/list`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryKey: state.gallery?.key || "",
+          username: credentials.username,
+          accessCode: credentials.accessCode,
+          limit: 50,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body?.error?.message || "Cloud products could not be loaded.");
+      }
+      state.cloudDeliverables = Array.isArray(body.deliverables) ? body.deliverables : [];
+      state.cloudDeliverablesLoaded = true;
+      if (!quiet) {
+        setStatus(`Synced ${state.cloudDeliverables.length} saved product${state.cloudDeliverables.length === 1 ? "" : "s"} from the cloud`);
+      }
+      return state.cloudDeliverables;
+    } catch (error) {
+      state.cloudDeliverablesError = error?.message || "Cloud products could not be loaded.";
+      if (!quiet) setStatus(state.cloudDeliverablesError);
+      throw error;
+    } finally {
+      state.cloudDeliverablesBusy = false;
+      renderProducedDeliverables();
+    }
+  };
+
+  const saveCloudDeliverable = async (record) => {
+    const baseUrl = workerBaseUrl();
+    if (!record?.id || !state.gallery?.key || !baseUrl || !state.unlocked) return null;
+    const credentials = await credentialsForCloudDeliverables({ promptIfMissing: false });
+    if (!credentials) return null;
+    const response = await fetch(`${baseUrl}/real-estate/deliverables`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryKey: state.gallery?.key || "",
+        username: credentials.username,
+        accessCode: credentials.accessCode,
+        deliverable: record,
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body?.error?.message || "Cloud product could not be saved.");
+    }
+    const saved = body.deliverable || record;
+    const existing = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
+    state.cloudDeliverables = [saved, ...existing.filter((item) => item?.id !== saved.id)].slice(0, 50);
+    state.cloudDeliverablesLoaded = true;
+    state.cloudDeliverablesError = "";
+    renderProducedDeliverables();
+    return saved;
+  };
+
   const saveLocalDeliverable = ({ type = "file", batch = null, filename = "", bytes = 0 } = {}) => {
     if (!batch?.batchId) return null;
     const normalizedType = String(type || "file").toLowerCase();
@@ -873,6 +991,10 @@
     state.localDeliverables = [record, ...existing.filter((item) => item?.id !== record.id)].slice(0, 25);
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
     renderProducedDeliverables();
+    saveCloudDeliverable(record).catch((error) => {
+      state.cloudDeliverablesError = error?.message || "Cloud product could not be saved.";
+      renderProducedDeliverables();
+    });
     return record;
   };
 
@@ -880,8 +1002,19 @@
     if (!elements.deliverablesPanel || !elements.deliverablesList) return;
     const items = producedDeliverables();
     if (!items.length) {
+      const cloudCredentials = cloudCredentialSnapshot();
+      const canOfferCloudSync = state.unlocked && workerBaseUrl() && !cloudCredentials.accessCode;
+      const cloudNote = state.cloudDeliverablesBusy
+        ? `<p class="real-estate-muted">Checking cloud products...</p>`
+        : state.cloudDeliverablesError
+          ? `<p class="real-estate-muted">Cloud products could not be reached. Local products on this device will still appear here.</p>`
+          : canOfferCloudSync
+            ? `<p class="real-estate-muted">This device needs the client password once to sync saved cloud products.</p>
+              <button class="btn secondary" type="button" data-re-sync-deliverables>Sync saved products</button>`
+            : "";
       elements.deliverablesList.innerHTML = `
         <p class="real-estate-muted">No produced PDFs or videos are ready yet. Create a PDF or video below, then finished cloud deliverables will appear here for repeat viewing and downloading.</p>
+        ${cloudNote}
       `;
       syncFileActionLabels();
       return;
@@ -2999,10 +3132,11 @@
       }
       state.unlocked = true;
       writeSessionCredentials(elements.loginName?.value || "", elements.loginCode?.value || "");
-      writeSession(elements.loginName?.value || "");
+      writeSession(elements.loginName?.value || "", elements.loginCode?.value || "");
       clearLogoutFromHistory();
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
+      fetchCloudDeliverables({ quiet: true }).catch(() => {});
       window.setTimeout(() => showHelp(), 120);
     });
 
@@ -3226,8 +3360,12 @@
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
-      const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable]");
+      const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-sync-deliverables]");
       if (!button) return;
+      if (button.matches("[data-re-sync-deliverables]")) {
+        fetchCloudDeliverables({ promptIfMissing: true, quiet: false }).catch(() => {});
+        return;
+      }
       if (button.matches("[data-re-edit-deliverable]")) {
         editProducedDeliverable(button.getAttribute("data-re-edit-deliverable") || "").catch(() => setStatus("Could not edit this product"));
         return;
@@ -3315,12 +3453,13 @@
     const savedCredentials = readSessionCredentials();
     const savedSession = readJson(authStoreKey(), {});
     state.username = savedCredentials.username || savedSession.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
-    state.accessCode = savedCredentials.accessCode || "";
+    state.accessCode = savedCredentials.accessCode || savedSession.accessCode || "";
     if (elements.density) elements.density.value = state.density;
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;
     renderHero();
     render();
+    if (state.unlocked) fetchCloudDeliverables({ quiet: true }).catch(() => {});
   };
 
   const initialize = async () => {

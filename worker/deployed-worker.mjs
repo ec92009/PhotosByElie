@@ -1,6 +1,7 @@
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createKvStore } from "./kv-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
@@ -118,6 +119,7 @@ export default {
       downloadTtlSeconds: downloadTokenTtlSeconds + (24 * 60 * 60),
     });
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");
+    const realEstateGalleries = realEstateGalleriesFor(env);
     const worker = createPhotosByElieWorker({
       catalog,
       store,
@@ -129,7 +131,11 @@ export default {
       realEstateOriginals: createRealEstateOriginals({
         privateBucket,
         store,
-        galleries: realEstateGalleriesFor(env),
+        galleries: realEstateGalleries,
+      }),
+      realEstateDeliverables: createRealEstateDeliverables({
+        privateBucket,
+        galleries: realEstateGalleries,
       }),
       ordersUrl: `${publicSiteUrl}/order.html`,
       successUrl: `${publicSiteUrl}/order.html?id={ORDER_ID}&session_id={CHECKOUT_SESSION_ID}&checkout=success`,

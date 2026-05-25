@@ -8,6 +8,7 @@ import deployedWorker from "./deployed-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createStripeClient, createStripeWebhookSignature } from "./stripe-client.mjs";
@@ -113,6 +114,19 @@ const createFakeR2 = (initial = {}) => {
         httpMetadata: options.httpMetadata || {},
         customMetadata: options.customMetadata || {},
       });
+    },
+    list: async ({ prefix = "", limit = 1000 } = {}) => {
+      const objects = [...values.entries()]
+        .filter(([key]) => key.startsWith(prefix))
+        .sort(([left], [right]) => left.localeCompare(right))
+        .slice(0, limit)
+        .map(([key, value]) => ({
+          key,
+          size: value.body.byteLength,
+          httpMetadata: value.httpMetadata,
+          customMetadata: value.customMetadata,
+        }));
+      return { objects, truncated: false };
     },
     _debug: values,
   };
@@ -729,6 +743,78 @@ test("real-estate originals endpoint rejects the wrong client password", async (
   assert.equal(response.status, 403);
   const body = await response.json();
   assert.equal(body.error.code, "real_estate_auth_required");
+});
+
+test("real-estate deliverables endpoint saves and lists client products", async () => {
+  const randomUUID = deterministicIds();
+  const privateR2 = createFakeR2();
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store: createMemoryStore(),
+    stripe: createMockStripeClient({ randomUUID }),
+    randomUUID,
+    realEstateDeliverables: createRealEstateDeliverables({
+      privateBucket: privateR2,
+      randomUUID,
+      now: () => new Date("2026-05-17T12:00:00.000Z"),
+      galleries: [{
+        key: "corine-real-estate",
+        username: "Corine",
+        accessCode: "LaConcha",
+      }],
+    }),
+  });
+  const deliverable = {
+    id: "local-pdf-20260517T120000Z",
+    type: "pdf",
+    title: "PDF: La Concha 1 Apt 8AB1",
+    createdAt: "2026-05-17T12:00:00.000Z",
+    filename: "corine-real-estate-la-concha-a4-20260517T120000Z.pdf",
+    bytes: 54321,
+    batch: {
+      batchId: "20260517T120000Z",
+      createdAt: "2026-05-17T12:00:00.000Z",
+      galleryKey: "corine-real-estate",
+      projects: [{
+        projectId: "re-2026-la-concha-1-apt-8ab1",
+        projectTitle: "La Concha 1 Apt 8AB1",
+        items: [{
+          photoId: "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043",
+          title: "La Concha 1 Apt 8AB1 - 01",
+          sortIndex: 1,
+        }],
+      }],
+    },
+  };
+
+  const saveResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    deliverable,
+  }));
+  assert.equal(saveResponse.status, 201);
+  const saved = await saveResponse.json();
+  assert.equal(saved.deliverable.id, deliverable.id);
+  assert.equal(saved.deliverable.batch.batchId, deliverable.batch.batchId);
+
+  const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+  }));
+  assert.equal(listResponse.status, 200);
+  const listed = await listResponse.json();
+  assert.equal(listed.count, 1);
+  assert.equal(listed.deliverables[0].id, deliverable.id);
+  assert.equal(listed.deliverables[0].filename, deliverable.filename);
+
+  const wrongPassword = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
+    galleryKey: "corine-real-estate",
+    username: "Corine",
+    accessCode: "Wrong",
+  }));
+  assert.equal(wrongPassword.status, 403);
 });
 
 test("deployed Worker blocks checkout when private delivery files are missing", async () => {

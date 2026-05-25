@@ -419,6 +419,7 @@ export const createPhotosByElieWorker = ({
   cancelUrl = "https://photosbyelie.com/basket.html?checkout=cancelled",
   mockStripeEnabled = true,
   realEstateOriginals = null,
+  realEstateDeliverables = null,
   downloadTokenTtlSeconds = DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS,
   downloadTokenMaxDownloads = DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS,
 } = {}) => {
@@ -740,6 +741,24 @@ export const createPhotosByElieWorker = ({
     return json({ originals }, 201);
   };
 
+  const listRealEstateDeliverables = async (request) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.listDeliverables !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
+    }
+    const payload = await parseJson(request);
+    const deliverables = await realEstateDeliverables.listDeliverables(payload);
+    return json(deliverables);
+  };
+
+  const putRealEstateDeliverable = async (request) => {
+    if (!realEstateDeliverables || typeof realEstateDeliverables.putDeliverable !== "function") {
+      return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
+    }
+    const payload = await parseJson(request);
+    const deliverable = await realEstateDeliverables.putDeliverable(payload);
+    return json({ deliverable }, 201);
+  };
+
   const fetch = async (request) => {
     if (request.method === "OPTIONS") return json({ ok: true });
     const url = new URL(request.url);
@@ -754,6 +773,8 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/stripe-webhook") return await stripeWebhook(request);
       if (request.method === "POST" && path === "/mock-stripe/pay") return await mockPay(request);
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
+      if (request.method === "POST" && path === "/real-estate/deliverables/list") return await listRealEstateDeliverables(request);
+      if (request.method === "POST" && path === "/real-estate/deliverables") return await putRealEstateDeliverable(request);
       const orderSessionMatch = path.match(/^\/orders\/by-session\/([^/]+)$/);
       if (request.method === "GET" && orderSessionMatch) return await getOrderByCheckoutSession(request, decodeURIComponent(orderSessionMatch[1]));
       const orderMatch = path.match(/^\/orders\/([^/]+)$/);

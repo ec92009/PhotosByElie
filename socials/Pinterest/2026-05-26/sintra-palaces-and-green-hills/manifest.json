@@ -1,0 +1,68 @@
+{
+  "date": "2026-05-26",
+  "platform": "Pinterest",
+  "status": "artifact_set_ready",
+  "account": "@photosbyelie",
+  "board": "Portugal Travel Photography",
+  "post_type": "carousel_pin_or_multi_image_pin",
+  "title": "Sintra Palaces and Green Hills",
+  "pin_title": "Sintra Palaces and Green Hills",
+  "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-sintra-palaces-green-hills-2026-05-26",
+  "campaign_id": "pinterest-sintra-palaces-green-hills-2026-05-26",
+  "caption": "Palace details, green hills, and quiet Sintra atmosphere from Portugal. Browse the focused Photos By Elie set: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-sintra-palaces-green-hills-2026-05-26",
+  "alt_text": "Sintra palace architecture and green hills in Portugal, photographed for Photos By Elie.",
+  "recommended_upload_set": "images",
+  "available_count": 5,
+  "notes": [
+    "Images are downloaded public watermarked R2 previews staged for browser upload.",
+    "Pinterest package is capped at exactly 5 images.",
+    "Confirm the final account/board/page target before publishing."
+  ],
+  "items": [
+    {
+      "order": 1,
+      "id": "20180518-1522-00564-8ed80527e5",
+      "title": "20180518 1522 00564",
+      "image": "images/01-20180518-1522-00564-8ed80527e5-20180518-1522-00564.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1522-00564-8ed80527e5_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180518-1522-00564-8ed80527e5",
+      "local_staged_path": "socials/Pinterest/2026-05-26/sintra-palaces-and-green-hills/images/01-20180518-1522-00564-8ed80527e5-20180518-1522-00564.jpg"
+    },
+    {
+      "order": 2,
+      "id": "20180518-1522-00563-6e60338108",
+      "title": "20180518 1522 00563",
+      "image": "images/02-20180518-1522-00563-6e60338108-20180518-1522-00563.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1522-00563-6e60338108_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180518-1522-00563-6e60338108",
+      "local_staged_path": "socials/Pinterest/2026-05-26/sintra-palaces-and-green-hills/images/02-20180518-1522-00563-6e60338108-20180518-1522-00563.jpg"
+    },
+    {
+      "order": 3,
+      "id": "20180518-1520-00559-72f1bcdf6b",
+      "title": "20180518 1520 00559",
+      "image": "images/03-20180518-1520-00559-72f1bcdf6b-20180518-1520-00559.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1520-00559-72f1bcdf6b_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180518-1520-00559-72f1bcdf6b",
+      "local_staged_path": "socials/Pinterest/2026-05-26/sintra-palaces-and-green-hills/images/03-20180518-1520-00559-72f1bcdf6b-20180518-1520-00559.jpg"
+    },
+    {
+      "order": 4,
+      "id": "20180518-1519-00556-5a996cd928",
+      "title": "20180518 1519 00556",
+      "image": "images/04-20180518-1519-00556-5a996cd928-20180518-1519-00556.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1519-00556-5a996cd928_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180518-1519-00556-5a996cd928",
+      "local_staged_path": "socials/Pinterest/2026-05-26/sintra-palaces-and-green-hills/images/04-20180518-1519-00556-5a996cd928-20180518-1519-00556.jpg"
+    },
+    {
+      "order": 5,
+      "id": "20180518-1518-00555-2fda7a62dd",
+      "title": "20180518 1518 00555",
+      "image": "images/05-20180518-1518-00555-2fda7a62dd-20180518-1518-00555.jpg",
+      "source_url": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180518-1518-00555-2fda7a62dd_1800.jpg",
+      "photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180518-1518-00555-2fda7a62dd",
+      "local_staged_path": "socials/Pinterest/2026-05-26/sintra-palaces-and-green-hills/images/05-20180518-1518-00555-2fda7a62dd-20180518-1518-00555.jpg"
+    }
+  ]
+}

@@ -2772,7 +2772,8 @@ body[data-real-estate] main.shell{
     var(--surface-2);
 }
 .real-estate-deliverable-disclosure,
-.real-estate-deliverable-rename{
+.real-estate-deliverable-rename,
+.real-estate-deliverable-delete{
   display:grid;
   width:38px;
   height:38px;
@@ -2793,9 +2794,20 @@ body[data-real-estate] main.shell{
   border-left:10px solid currentColor;
   margin-left:2px;
 }
-.real-estate-deliverable-rename .md-icon{
+.real-estate-deliverable-tools{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+}
+.real-estate-deliverable-rename .md-icon,
+.real-estate-deliverable-delete .md-icon{
   width:18px;
   height:18px;
+}
+.real-estate-deliverable-delete{
+  border-color:color-mix(in srgb,#b42318 46%,var(--line));
+  color:#8f1d16;
 }
 .real-estate-deliverable-copy{
   min-width:0;
@@ -2810,6 +2822,11 @@ body[data-real-estate] main.shell{
 .real-estate-deliverable strong,
 .real-estate-deliverable span{
   display:block;
+}
+.real-estate-deliverable-title{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .real-estate-deliverable-name{
   display:block;

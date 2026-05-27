@@ -151,6 +151,7 @@
   const reIcon = (name) => {
     const paths = {
       edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2 1.58.63-2.52 8.43-8.43 1.06 1.06-8.43 8.43L5 18.83zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+      trash: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z",
     };
     const path = paths[name];
     if (!path) return window.photosByElieMdIcon?.(name) || "";
@@ -1351,12 +1352,17 @@
           </button>
           ${thumbnail ? `<img class="real-estate-deliverable-thumb" src="${escapeHtml(thumbnail)}" alt=""/>` : `<span class="real-estate-deliverable-thumb is-empty" aria-hidden="true"></span>`}
           <div class="real-estate-deliverable-copy">
-            ${canRename
-              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name" ${editingName ? "" : "readonly tabindex=\"-1\""} aria-readonly="${editingName ? "false" : "true"}"/>`
-              : `<strong>${escapeHtml(displayTitle)}</strong>`}
+            ${canRename && editingName
+              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
+              : `<strong class="real-estate-deliverable-title">${escapeHtml(displayTitle)}</strong>`}
             <span>${escapeHtml(meta || item.label)}</span>
           </div>
-          ${canRename ? `<button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>` : ""}
+          ${canRename ? `
+            <div class="real-estate-deliverable-tools">
+              <button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>
+              <button class="real-estate-deliverable-delete" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(displayTitle)}">${reIcon("trash")}</button>
+            </div>
+          ` : ""}
         </article>
       `;
     }).join("");
@@ -3980,6 +3986,13 @@
         event.preventDefault();
         event.stopPropagation();
         beginDeliverableNameEdit(nameEditButton.getAttribute("data-re-edit-name") || "");
+        return;
+      }
+      const deleteButton = event.target?.closest?.("[data-re-delete-deliverable]");
+      if (deleteButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteProducedDeliverable(deleteButton.getAttribute("data-re-delete-deliverable") || "").catch((error) => setStatus(error?.message || "Could not delete this product"));
         return;
       }
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;

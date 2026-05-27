@@ -2128,6 +2128,8 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   overflow:hidden;
 }
 .title-keyword-review-preview img{
+  position:absolute;
+  inset:0;
   width:100%;
   max-width:100%;
   height:100%;

@@ -1,13 +1,13 @@
 # Photos By Elie Backlog
 
-Last updated: 2026-05-25
+Last updated: 2026-05-27
 
 ## Current Facts
 
-- Current visible build: `v86.10`.
+- Current visible build: `v88.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=86.10`.
-- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=86.10`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=88.2`.
+- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=88.2`.
 - Current catalog scale: `6,672` public media rows in `assets/catalog/photosbyelie.sqlite`: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
 - The catalog baseline audit is complete. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the current catalog is `+656` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `33` instead of `35` because two Italy rows were recently blocked; USA, Portugal, Mexico, and Slovakia are unchanged. The Italy `0` state was caused by missing Italy path/GPS hints, which left Florence, San Gimignano, and Pisa rows as `unknown` and therefore excluded from public export.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -62,9 +62,10 @@ Last updated: 2026-05-25
 - `v86.7` makes Real Estate PDF preview phone-safe by opening rendered pages in an HTML proof instead of a raw PDF blob, and saves the shelf product as soon as output generation starts.
 - `v86.8` makes Real Estate slideshow sound recovery explicit on mobile, softens Ken Burns crop, and replays shelf PDFs directly from the saved product manifest.
 - `v86.10` restores the ten older Pisa phone-export Italy rows under their original `2024 Pisa/Pisa, 12 May 2025` IDs, uploading public previews, private masters, and private JPG triplets; current Italy active count is `33` because two recently blocked Italy rows are excluded.
+- `v88.2` makes the Real Estate client page a saved-product shelf first, persists current selections through the cloud deliverables/R2 shelf, uses editable YYMMDD-type sequence names, removes visible selection-file buttons, splits Stills/Videos/Albums/Selections in the hero stats, and puts editing into a separate detail flow with Back to shelf plus the five review steps.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v86.10`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v88.2`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 first restored rows came from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows from the older phone-export folder `Pisa, 12 May 2025` were restored in `v86.10` using their original `2024 Pisa/Pisa, 12 May 2025` relative paths and IDs. The broader same-path overwrite/de-dupe work remains open because arbitrary selected-root imports can still derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.
@@ -76,73 +77,79 @@ Last updated: 2026-05-25
 
 ## Numbered Backlog
 
-1. **Create first-party social springboards for the 2026-05-25 themes.**
-   - Add conservative campaign pages or homepage/latest-social cards for Albi/Tarn, Madrid interiors, and northern Portugal.
+1. **Move Real Estate PDF/video assembly fully cloud-side.**
+   - Use the saved selection manifest as the job input and keep David/local browser out of the production path.
+   - Return view and download URLs for PDF/video products, with originals/source-video audio still ducked under the generated guitar bed.
+   - Persist job status and failure reasons so the shelf can show pending, ready, or needs-attention states.
+
+2. **Run a full Real Estate client rehearsal.**
+   - Pick one client/property set, import/publish/upload it, save a selection, generate PDF and video, reopen from the shelf on mobile, rename it, and delete a throwaway artifact.
+   - Verify titles reach final PDF/video output, vertical photos are framed gently, downloads use browser-safe links, and Back to shelf works.
+
+3. **Add shelf polish for Real Estate saved products.**
+   - Add grouped shelf rows if one selection produces both PDF and video, without losing direct view/download/delete affordances in the detail page.
+   - Consider a small status chip for selection/PDF/video and an explicit "saved in cloud" signal after R2 writes succeed.
+   - Keep the first page focused on the shelf plus Create new selection.
+
+4. **Create first-party social springboards and a latest-social shelf.**
+   - Build focused campaign pages or homepage cards for the current social-package themes, including the 2026-05-27 packages.
    - Use only public catalog data and watermarked public previews.
-   - Apply the visible-site versioning SOP, validate, commit, and push before using the URLs in posts.
+   - Apply visible-site versioning, validation, commit, and push before using URLs in posts.
 
-2. **Turn the daily social automation into a full pre-post target builder.**
-   - Before posting, have `pbe-daily-social-posts` choose or create the best first-party URL, then stage `socials/{Platform}/YYYY-MM-DD/{theme-slug}/images`, `caption.txt`, `README.md`, and `manifest.json`.
-   - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; derive Threads 3-4 image variants from Instagram only when useful.
-   - Record published URLs or explicit manual blockers in the package.
+5. **Turn daily social automation into a full pre-post target builder.**
+   - Before posting, choose or create the best first-party URL, then stage platform upload folders with images, captions, README, and manifest.
+   - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; derive Threads 3-4 image variants from Instagram when useful.
+   - Record published URLs or explicit manual blockers in each package.
 
-3. **Finish source re-export de-duplication and clean today's duplicates.**
+6. **Finish source re-export de-duplication and cleanup.**
    - Use full source pathname plus modified date as the import anchor.
-   - If the same source path is re-exported with a newer modified date, overwrite the prior generated master, public previews, and private JPG triplets instead of creating a second photo identity.
-   - Audit today's imports and prepare a reversible duplicate cleanup before deleting anything.
+   - Same-path newer exports should overwrite previous generated masters, public previews, and private JPG triplets instead of creating duplicates.
+   - Audit duplicate candidates and prepare a reversible cleanup before deleting anything.
 
-4. **Add import source history management.**
-   - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
-   - Include a one-time review of any legacy entries saved before `v83.24`.
-   - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
+7. **Add import source history management.**
+   - Let Owner remove missing or stale remembered folders, pin favorites, and inspect last-used path/time before starting a run.
+   - Include a one-time review of legacy entries saved before `v83.24`.
+   - Keep `Owner.sqlite` authoritative; do not add another JSON state source.
 
-5. **Run a full Real Estate rehearsal.**
-   - Pick one client folder on Saturn, use discovered properties, import previews, publish context, run upload dry-run, and prepare the Worker secret.
-   - Check local and public review URLs before any real upload.
-
-6. **Preflight import dependencies before starting photo work.**
+8. **Preflight import dependencies before photo work starts.**
    - Check Pillow, `exiftool`, `ffmpeg`/`ffprobe`, R2 upload configuration, and source readability before queuing photos.
-   - Surface one actionable Owner status instead of letting missing dependencies create per-photo failure storms.
+   - Surface one actionable Owner status instead of per-photo failure storms.
 
-7. **Review and tune buyer support/refund wording.**
-   - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft.
+9. **Review buyer support, refund, and license wording.**
+   - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current policy draft.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-8. **Approve and deploy the real price and offer strategy.**
-   - Review the proposed `$3 / $8 / $28 / $65` camera ladder and lower AI ladder.
+10. **Approve and deploy the real price and offer strategy.**
+   - Review the proposed camera and AI price ladders.
    - After approval, update pricing, regenerate catalog/Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
 
-9. **Curate the first sellable storefront.**
+11. **Curate the first sellable storefront.**
    - Apply strong title/keyword approvals, block unsellable rows, pick featured collections, and put the strongest commercial/travel/editorial sets first.
 
-10. **Add conversion analytics.**
+12. **Add conversion analytics.**
    - Track privacy-conscious browsing, basket, checkout, payment, and download events while excluding localhost Owner activity.
 
-11. **Improve public discovery and SEO.**
-   - Add fuzzy search, richer page metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only metadata.
+13. **Improve public discovery and SEO.**
+   - Add fuzzy search, richer metadata, Open Graph images, canonical URLs, structured data, and per-campaign/per-gallery metadata without Owner-only details.
 
-12. **Owner decision pass for the current title/keyword queue.**
+14. **Owner decision pass for the current title/keyword queue.**
    - Open `owner-review.html?view=title-keywords` locally and review the active proposed rows, starting with batch `2026-05-24-000237-818Z`.
-   - Pay special attention to the `84` rejected rows waiting for the next rework path and the `62` parked rows that need owner context.
+   - Resolve rejected and parked rows before the next large generator pass.
 
-13. **Verify Owner-private artifact separation after deploy.**
-   - Confirm public GitHub Pages no longer serves title/keyword batch or approval JSON.
-   - Keep `Owner.sqlite` as durable state and treat title/keyword JSON as compatibility/audit output.
+15. **Verify Owner-private artifact separation after deploy.**
+   - Confirm GitHub Pages does not serve private Owner review JSON or secrets.
+   - Keep `Owner.sqlite` as durable state and treat review JSON as compatibility/audit output.
 
-14. **Run the next generator pass after the current batch is resolved.**
-   - Use the improved local keyword floor, larger subprocess buffer, and batch-summary preservation fix.
-   - Compare keyword-target misses, `source_context`, and `needs_owner_context` counts against `2026-05-24-000237-818Z`.
+16. **Run the next title/keyword generator pass after review.**
+   - Use the improved keyword floor, larger subprocess buffer, and batch-summary preservation.
+   - Compare misses and context-needed counts against `2026-05-24-000237-818Z`.
 
-15. **Polish Real Estate production outputs and access.**
-   - Move final PDF/slideshow assembly to cloud/server-side execution using saved manifests.
-   - Add optional background music controls and server-side access gating.
-
-16. **Harden hidden/discarded lifecycle.**
+17. **Harden hidden/discarded lifecycle.**
    - Make H/X, undo, Waste Basket, discard, R2 public wipe, and catalog rebuilds share one durable state flow.
    - Avoid publishing partial hidden/discarded state.
 
-17. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
+18. **Replace temporary `r2.dev` preview URLs with a custom media domain.**
    - Attach a media domain, update `media-config.js`, and retest public and Real Estate preview loading.
 
-18. **Keep repo and media cleanup deliberate.**
+19. **Keep repo and media cleanup deliberate.**
    - Do not use GitHub as a media vault. Keep root HTML while GitHub Pages serves from repo root.

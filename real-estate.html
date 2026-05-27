@@ -61,21 +61,24 @@
         <p class="lead" data-re-description>Private media review workspace for project PDF and slideshow delivery.</p>
         <dl class="real-estate-stats" aria-label="Gallery totals">
           <div>
-            <dt>Media</dt>
+            <dt>Stills</dt>
             <dd data-re-total>0</dd>
+          </div>
+          <div>
+            <dt>Videos</dt>
+            <dd data-re-video-total>0</dd>
           </div>
           <div>
             <dt>Albums</dt>
             <dd data-re-album-total>0</dd>
           </div>
           <div>
-            <dt>Selected</dt>
+            <dt>Selections</dt>
             <dd data-re-selected-total>0</dd>
           </div>
         </dl>
         <div class="cta">
-          <button class="btn primary" type="button" data-re-create-product>+ Create new product</button>
-          <button class="btn secondary" type="button" data-re-load-batch>Load selection file...</button>
+          <button class="btn primary" type="button" data-re-create-product>+ Create new selection</button>
           <button class="btn secondary" type="button" data-re-help-open>Help</button>
         </div>
       </div>
@@ -85,16 +88,16 @@
       <div class="real-estate-deliverables-head">
         <div>
           <p class="eyebrow">Produced so far</p>
-          <h2 id="real-estate-deliverables-title">Your PDFs and videos</h2>
+          <h2 id="real-estate-deliverables-title">Your saved products</h2>
           <p class="real-estate-muted">View files on mobile or download them on a computer. You can capture or share whatever you are seeing in the way that works best for you.</p>
         </div>
-        <button class="btn secondary" type="button" data-re-create-product>+ Create new product</button>
       </div>
       <div class="real-estate-deliverable-list" data-re-deliverables-list></div>
     </section>
 
     <section class="panel real-estate-wizard" id="real-estate-wizard" data-re-wizard aria-label="Real estate review steps">
       <div class="real-estate-wizard-head">
+        <button class="btn secondary real-estate-shelf-back" type="button" data-re-shelf-back>Back to shelf</button>
         <ol class="real-estate-stepper" data-re-stepper aria-label="Review steps">
           <li><button type="button" data-re-step-jump="0"><b>0</b><span>Property</span></button></li>
           <li><button type="button" data-re-step-jump="1"><b>1</b><span>Photos</span></button></li>
@@ -105,8 +108,6 @@
         <p class="gallery-status" data-re-wizard-status aria-live="polite">Choose a property to begin.</p>
       </div>
       <div class="real-estate-wizard-actions">
-        <button class="btn secondary" type="button" data-re-load-batch>Load selection file...</button>
-        <button class="btn secondary" type="button" data-re-step-back>Back</button>
         <button class="btn primary" type="button" data-re-step-next>Next</button>
       </div>
     </section>
@@ -164,7 +165,6 @@
             <strong data-re-draft-count>0</strong>
           </div>
           <div class="real-estate-draft-list" data-re-draft-list></div>
-          <button class="btn secondary" type="button" data-re-load-batch>Load selection file...</button>
           <input class="real-estate-hidden-file" type="file" accept="text/html,.html,.htm,application/json,.json" data-re-load-batch-input/>
         </section>
       </aside>
@@ -179,7 +179,7 @@
             <button class="btn secondary" type="button" data-re-select-visible>Select visible</button>
             <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
             <button class="btn secondary" type="button" data-re-download-slideshow>Download video</button>
-            <button class="btn secondary" type="button" data-re-download-batch>Share selection table</button>
+            <button class="btn secondary" type="button" data-re-download-batch>Save selection</button>
             <button class="btn secondary" type="button" data-re-download-originals>Share originals ZIP</button>
           </div>
         </div>
@@ -228,7 +228,7 @@
           <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
           <button class="btn secondary" type="button" data-re-view-slideshow>View video</button>
           <button class="btn secondary" type="button" data-re-download-slideshow>Download video</button>
-          <button class="btn secondary" type="button" data-re-download-batch>Share selection table</button>
+          <button class="btn secondary" type="button" data-re-download-batch>Save selection</button>
         </div>
         <div class="real-estate-output-progress" data-re-output-progress hidden aria-live="polite">
           <div class="real-estate-output-progress-head">
@@ -245,7 +245,7 @@
   <div class="real-estate-action-bar" data-re-action-bar>
     <strong><span data-re-selected-bar>0</span> files selected</strong>
     <span data-re-action-status>Ready</span>
-    <button class="btn secondary" type="button" data-re-step-back>Back</button>
+    <button class="btn secondary" type="button" data-re-shelf-back>Back to shelf</button>
     <button class="btn primary" type="button" data-re-step-next>Next</button>
     <button class="btn secondary" type="button" data-re-open-outputs>View outputs</button>
     <button class="btn secondary" type="button" data-re-download-outputs>Download outputs</button>
@@ -295,7 +295,7 @@
         <li>Go to Order and drag the selected media into the PDF or video sequence.</li>
         <li>Go to Output, choose PDF, video, or both, then view or download the deliverables.</li>
         <li>View files on mobile or download them on a computer; capture or share whatever you are seeing in the way that works best for you.</li>
-        <li>Load a previous selection file if you want to resume from an older batch.</li>
+        <li>Open a saved selection from the shelf when you want to resume or revise older work.</li>
       </ol>
       <div class="real-estate-dialog-actions">
         <button class="btn primary" type="button" data-re-help-dismiss>Start selecting</button>

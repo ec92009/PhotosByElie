@@ -24,9 +24,9 @@ for remote execution.
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Local owner preview: `python3 scripts/local_server.py 8000`
-- Current visible build: `v86.10`
+- Current visible build: `v88.2`
 - Social/Pinterest/Threads destinations should point to first-party campaign mini-collections or a fresh homepage latest-social shelf whenever practical, so buyers can browse related photos and escape embedded browsers before checkout/download. Broad gallery URLs remain acceptable fallbacks only when a campaign/homepage change is unnecessary or unsafe.
-- Recent baseline commits include: `8cd776b0 photosbyelie: refresh import backlog docs`, `6dffc1ff photosbyelie: checkpoint cloud media sweep`, `c812736e photosbyelie: clarify import counts and python preflight`, and `4edde36a photosbyelie: block tombstoned source reimports`.
+- Recent baseline commits include: `8193a5ee photosbyelie: record social browser checks`, `cc886957 photosbyelie: prepare 2026-05-27 social packages`, `2bae81d4 photosbyelie: simplify pinned collections shelf`, and the new `v88.2` Real Estate saved-selection shelf pass.
 - Current business direction: focus on turning the site into a selling machine. Payments, delivery trust, buyer offer clarity, pricing, curation, analytics, SEO, landing pages, and launch outreach now lead the backlog.
 - Public Expo catalog: `6,672` publishable media rows after the Pisa phone-export restore: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the catalog is `+656` rows overall; Italy was restored from `0` to `25` by adding Florence/Firenze, Pisa, San Gimignano, and Tuscany country hints, then the ten older `2024 Pisa/Pisa, 12 May 2025` phone-export rows were restored under their original IDs. Two recently blocked Italy rows are excluded from the active count.
 - Public catalog data is SQLite-backed: `assets/catalog/photosbyelie.sqlite` is the active plain payload, and `photos-data.js` is the bootstrap for the existing `window.photosByElieData` browser contract. Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -90,7 +90,7 @@ for remote execution.
 - Price/offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`. It recommends keeping launch digital-only and, after owner approval, replacing the proof-flow low tiers with a real camera ladder of `$3 / $8 / $28 / $65` and a lower AI ladder of `$2 / $5 / $14 / $25`.
 - Local POD preview draft: first print sizes are 12x16, 16x20, and 18x24; Prodigi is the primary/value route, Printful is the standard fallback route, theprintspace is the premium candidate, and Gelato stays as API-proof/global-routing candidate. `pod_settings.storefrontEnabled` remains false.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v86.10`; Owner Expo imports now skip known discarded/Waste Basket source paths, only show Owner-remembered source folders in the Expo pulldown, and auto-apply Green + 4-star selection only to Camera paths. AI/Leonardo stays tombstone-driven. Italy path/GPS inference is restored for Florence/Firenze, Pisa, San Gimignano, and Tuscany, and the ten older Pisa phone-export rows are back in public catalog state. The next import hardening pass should finish same-path newer re-export overwrite behavior instead of creating duplicate media rows.
+- Latest checkpoint is `v88.2`; the Real Estate client page now starts on a saved shelf, saves current selections through the cloud deliverables/R2 path, names products with editable YYMMDD-type sequences, removes visible selection-file buttons, and opens prior work into a separate detail flow with Back to shelf plus Property/Photos/Titles/Order/Output navigation. The next Real Estate hardening pass should move final PDF/video assembly fully server-side and rehearse one complete public client lifecycle.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three different daily themes for Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It now should prepare first-party springboard/campaign targets before posting, stage drag-ready local upload trees under `socials/{Platform}/YYYY-MM-DD/{theme-slug}/`, and publish only when existing authentication allows it.
 - The 2026-05-25 daily social package is prepared from public R2 previews only: Facebook `Albi River and Brick Cathedral` has 8 images, Instagram `Madrid Chapels and Courtyards` has 10 images, Pinterest `Northern Portugal Green Horizons` has exactly 5 images, and Threads has a 4-image Madrid variant. The Threads onboarding/test post was manually completed from Chrome; no platform URL was captured.
 - The tracked QR coaster 3MF assets were refreshed after print/underside review. Treat them as current printable project files unless a newer slicer/export pass replaces them.
@@ -121,52 +121,58 @@ cd /Users/ecohen/Dev/PhotosByElie
 
 ## Current Priority
 
-1. **Create first-party social springboards and a homepage latest-social shelf.**
-   - Start with the 2026-05-25 themes: Albi/Tarn, Madrid interiors, and northern Portugal.
-   - Use only public catalog data and watermarked public previews.
+1. **Move Real Estate PDF/video assembly fully cloud-side.**
+   - Use saved selection manifests as job inputs and keep local machines out of production output creation.
+   - Return durable view/download URLs plus job status/failure detail back to the shelf.
+
+2. **Run a full Real Estate client rehearsal.**
+   - Import/publish/upload one client property set, save a selection, generate PDF/video, reopen from mobile, rename, and delete a throwaway product.
+
+3. **Create first-party social springboards and a homepage latest-social shelf.**
+   - Start with the 2026-05-27 social packages and use only public catalog data and watermarked public previews.
    - Apply the visible-site versioning SOP, validation, commit, and push before using any new URL in social posts.
 
-2. **Teach the daily social automation to prepare the target before posting.**
+4. **Teach the daily social automation to prepare the target before posting.**
    - Create or choose the first-party campaign/homepage target, stage platform upload trees, and record published URLs/manual blockers.
    - Keep Pinterest exactly five images; keep Facebook/Instagram at 5-10; add Threads 3-4 image variants only when useful.
 
-3. **Finish import re-export de-duplication and clean today's duplicates.**
+5. **Finish import re-export de-duplication and clean duplicates.**
    - Use full source pathname plus modified date as the source anchor.
    - Same-path re-exports with a newer modified date should overwrite the previous master, previews, and JPG triplets rather than creating a duplicate photo.
    - Audit today's imports and prepare a reversible duplicate cleanup before deleting anything. The Italy audit proved selected-root subfolder imports can derive duplicate IDs for already-known source files.
 
-4. **Add import source history management.**
+6. **Add import source history management.**
    - Let Owner remove missing or stale remembered folders, optionally pin favorites, and inspect the last-used time/source path before starting a run.
    - Include a one-time review of any legacy entries saved before `v83.24`, because log-discovered folders are no longer added automatically but older remembered rows may still exist locally.
    - Keep `Owner.sqlite` authoritative; do not introduce another JSON state file.
 
-5. **Keep Owner/generated state handoff-ready.**
+7. **Keep Owner/generated state handoff-ready.**
    - Review local approval/proposal/discard/catalog state before each generated-data commit.
    - Commit tracked manifest changes only when they represent durable R2/catalog state.
    - Keep unrelated local edits out of feature commits.
 
-6. **Review checkout trust and buyer support wording.**
+8. **Review checkout trust and buyer support wording.**
    - `v83.3` ships conservative support/license defaults; owner should approve or adjust refund, delivery-refresh, and commercial-use language before heavier launch traffic.
    - Use `docs/commerce/PRICE_OFFER_STRATEGY.md` as the current refund/support policy draft before editing public copy.
    - Keep Stripe receipts as payment records and PhotosByElie order/support pages as delivery/recovery records.
 
-7. **Make checkout and delivery production-durable.**
+9. **Make checkout and delivery production-durable.**
    - Choose D1 vs KV for longer-term order state.
    - Store order ID, buyer email, basket snapshot, expected/paid amount, status, delivery file keys, and download timing.
    - Current KV defaults retain checkout-session lookup keys for 90 days, keep download tokens available for 30 days, and allow 100 successful downloads per token unless Worker environment values override them.
    - Make receipt/order/download copy explicit and trustworthy.
 
-8. **Package the buyer offer.**
+10. **Package the buyer offer.**
    - Clarify usage rights, resolution labels, what Full resolution means, AI-origin handling, delivery expectations, refunds, and contact.
    - Decide first public offer: digital-only single assets, bundles, or collection packs.
    - Rephrase basket/order language around draft/review/availability so it builds confidence.
 
-9. **Approve and deploy the real price and offer strategy.**
+11. **Approve and deploy the real price and offer strategy.**
    - Review `docs/commerce/PRICE_OFFER_STRATEGY.md`.
    - After approval, change `assets/catalog/product-pricing.json`, regenerate catalog and Worker artifacts, bump the visible version, deploy the Worker, and run one low-value live proof purchase.
    - Defer bundles, collection packs, buy-all-liked, and promo-code hooks until single-photo launch behavior is proven.
 
-10. **Curate the first sellable storefront.**
+12. **Curate the first sellable storefront.**
    - Review visible catalog before paid traffic or launch outreach.
    - Block photos that should not be sold or shown.
    - Pick featured collections and hero images.

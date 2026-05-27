@@ -1,13 +1,13 @@
 # Conversation Summary
 
-Date: 2026-05-25
+Date: 2026-05-27
 
 ## Current State
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v86.10`
-- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview has been `http://localhost:8000/owner.html?v=86.10`.
+- Current visible build: `v88.2`
+- Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview is `http://localhost:8000/owner.html?v=88.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
 - Current catalog scale: `6,672` public media rows in the SQLite catalog: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
@@ -51,7 +51,7 @@ Date: 2026-05-25
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v86.10`: Owner Expo imports now show only Owner-remembered source folders rather than log-discovered subfolders, selected Camera folders auto-use Lightroom Green + 4-star selection, AI/Leonardo folders remain governed by tombstones, Italy country inference recognizes Florence/Firenze, Pisa, San Gimignano, and Tuscany, and the ten older Pisa phone-export rows are restored under their original `2024 Pisa/Pisa, 12 May 2025` IDs.
+- Latest checkpoint is `v88.2`: the Real Estate client page is a saved-product shelf first, with cloud-backed selection manifests, editable date/type names such as `260526-PDF-1` and `260526-VIDEO-1`, no per-row action-button clutter, and a separate detail workflow with Back to shelf plus Property/Photos/Titles/Order/Output navigation.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It now should prepare the first-party springboard/campaign target before posting, stage drag-ready assets under `socials/{Platform}/YYYY-MM-DD/{theme-slug}/`, and only publish when existing authentication allows it.
 - The 2026-05-25 social package is prepared from public R2 previews only: Facebook `Albi River and Brick Cathedral` has 8 images and points to the France gallery; Instagram `Madrid Chapels and Courtyards` has 10 images and points to the Spain gallery; Pinterest `Northern Portugal Green Horizons` has exactly 5 images and points to the Portugal gallery. A Threads 4-image Madrid variant is staged under `socials/Threads/2026-05-25/madrid-chapels-and-courtyards/`; the first Threads test post was manually completed from Chrome after Instagram-based onboarding, but no platform URL was captured.
 - The current social-destination gap is that today's posts still spring mostly to broad gallery URLs. The next visible-site pass should add a homepage/latest-social shelf and/or focused campaign pages for Albi/Tarn, Madrid interiors, and northern Portugal before future posts go out.
@@ -59,7 +59,9 @@ Date: 2026-05-25
 
 ## Latest Conversation Update
 
-The latest conversation moved from the daily social package into operational polish for actually posting it. Pinterest's five-photo limit is now explicit in the automation prompt and package policy. Drag-ready upload trees were created for Facebook, Instagram, Pinterest, and Threads under `socials/`, each with `images/`, `caption.txt`, `README.md`, and `manifest.json`. The user manually posted the Threads Madrid test from Chrome after finishing onboarding; publishing URLs were not captured.
+The latest conversation focused on the Real Estate client review flow after live phone use. The user first validated the generated slideshow proof, then pushed the access model toward a cloud-first workflow where David can be asleep: clients create PDF/video outputs against R2-backed manifests, view files on mobile, download files on desktop, and return later to a first-page shelf of saved work. The UI now treats creation as "Create new selection" rather than "Create new product"; the old selection-file buttons are removed from the visible flow; "Selected" became "Selections"; "Media" is split into Stills and Videos; and the bottom action bar remains the inter-tab navigation surface in detail mode.
+
+`v88.2` implements the shelf/detail split. The shelf row itself opens the saved manifest for editing, while the product name is an inline editable field. Automatically generated names use YYMMDD plus type and sequence, for example `260526-PDF-1`, `260526-VIDEO-1`, and `260526-SELECTION-1`. Saving the current selection now stores a `selection` product through the existing `/real-estate/deliverables` Worker/R2 path, so selection manifests can survive across devices without depending on local HTML files. The detail page has a Back to shelf control to the left of the five-step navigation, and local smoke verified shelf mode, detail mode, Back to shelf, stats, and editable names on `real-estate.html?v=88.2&client=elie`.
 
 The user also called out the missing "nice place to spring to" problem. Today the packages link to first-party gallery URLs, which is acceptable but broad. The daily automation prompt was updated outside the repo so future runs should prepare first-party springboard/campaign targets before posting and should treat gallery URLs as a fallback only when a campaign/homepage change is unnecessary or unsafe. Any public campaign/homepage change must follow the visible-site versioning, validation, commit, and push SOP before its URL is used.
 
@@ -71,7 +73,7 @@ The import progress UI was polished in `v83.9`, `v83.10`, `v83.11`, simplified i
 
 Repo cleanup found one meaningful tracked change after the UI work: `assets/owner-actions/Owner.sqlite` had durable R2 lifecycle/import state changes, including 1,711 new R2 object primary keys plus cleanup lifecycle transitions. `PRAGMA integrity_check` returned `ok`, and the state was committed as `eafac300 photosbyelie: record owner r2 lifecycle state`.
 
-This refresh updates the durable summary/backlog/README/handoff state through `v86.10`, records the Camera-only eligibility guard, and notes that the Italy catalog audit plus Pisa phone-export restore brought current active Italy rows to `33` without changing Stripe settings or price behavior.
+An earlier docs refresh updated the durable summary/backlog/README/handoff state through `v86.10`, recorded the Camera-only eligibility guard, and noted that the Italy catalog audit plus Pisa phone-export restore brought current active Italy rows to `33` without changing Stripe settings or price behavior.
 
 The immediate follow-up screenshot showed a selected-folder import failing at `selected-folder` with `Missing required tool: exiftool`. `exiftool` was installed at `/opt/homebrew/bin/exiftool`; the failure came from a GUI/Dock/Safari-launched helper with a stripped PATH. `v83.12` adds Homebrew path bootstrapping to the local helper, cloud sweep wrapper, and Lightroom import script so `exiftool`, `ffmpeg`, and `ffprobe` resolve reliably outside an interactive shell.
 
@@ -219,4 +221,4 @@ browser checks on Owner tabs, import dashboard, detail H/X redirect, and correct
 
 ## Current Backlog
 
-`TODO.md` is the numbered backlog source of truth. The fresh priority order is: add first-party social springboard targets and a homepage latest-social shelf, teach the daily social automation to create those targets before posting, finish source re-export overwrite behavior and clean today's duplicates, add import source history management, rehearse Real Estate import/output, finish import dependency preflights, then resume buyer support/pricing/storefront/analytics/SEO/marketing and longer-horizon Owner/media hardening.
+`TODO.md` is the numbered backlog source of truth. The fresh priority order is: finish the Real Estate cloud assembly/access model, run a full Real Estate client rehearsal, add first-party social springboards/latest-social shelf, teach daily social automation to create or choose those targets before posting, finish source re-export overwrite behavior, add import source history management, then resume buyer support/pricing/storefront/analytics/SEO/marketing and longer-horizon Owner/media hardening.

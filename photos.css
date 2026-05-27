@@ -2486,6 +2486,11 @@ body[data-real-estate] main.shell{
 .real-estate-shell.is-locked .real-estate-workbench{
   display:none;
 }
+.real-estate-shell.is-shelf-mode .real-estate-wizard,
+.real-estate-shell.is-shelf-mode .real-estate-workbench,
+.real-estate-shell.is-detail-mode .real-estate-deliverables{
+  display:none;
+}
 .real-estate-shell:not(.is-locked) .real-estate-login{
   display:none;
 }
@@ -2616,9 +2621,9 @@ body[data-real-estate] main.shell{
 }
 .real-estate-stats{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:10px;
-  width:min(520px,100%);
+  width:min(680px,100%);
   margin:10px 0 0;
 }
 .real-estate-stats div{
@@ -2662,16 +2667,43 @@ body[data-real-estate] main.shell{
 }
 .real-estate-deliverable{
   display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-columns:minmax(0,1fr);
   align-items:center;
   gap:12px;
   border:1px solid var(--line);
   background:var(--bg);
   padding:12px;
 }
+.real-estate-deliverable.is-openable{
+  cursor:pointer;
+}
+.real-estate-deliverable.is-openable:hover{
+  border-color:color-mix(in srgb,var(--brand) 48%,var(--line));
+  background:color-mix(in srgb,var(--surface) 82%,var(--bg));
+}
 .real-estate-deliverable strong,
 .real-estate-deliverable span{
   display:block;
+}
+.real-estate-deliverable-name{
+  display:block;
+  width:100%;
+  min-width:0;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  font-size:1rem;
+  font-weight:850;
+  line-height:1.2;
+  padding:2px 0;
+}
+.real-estate-deliverable-name:focus{
+  outline:2px solid color-mix(in srgb,var(--brand) 70%,transparent);
+  outline-offset:2px;
+  background:var(--surface);
+  padding-inline:6px;
 }
 .real-estate-deliverable span{
   margin-top:3px;
@@ -2697,8 +2729,18 @@ body[data-real-estate] main.shell{
 }
 .real-estate-wizard-head{
   display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:start;
   gap:8px;
   min-width:0;
+}
+.real-estate-wizard-head .gallery-status{
+  grid-column:1 / -1;
+}
+.real-estate-shelf-back{
+  min-height:46px;
+  white-space:nowrap;
+  justify-content:center;
 }
 .real-estate-stepper{
   display:grid;

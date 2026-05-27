@@ -45,6 +45,7 @@
     deliverablesPanel: app.querySelector("[data-re-deliverables-panel]"),
     deliverablesList: app.querySelector("[data-re-deliverables-list]"),
     total: app.querySelector("[data-re-total]"),
+    videoTotal: app.querySelector("[data-re-video-total]"),
     albumTotal: app.querySelector("[data-re-album-total]"),
     selectedTotal: app.querySelector("[data-re-selected-total]"),
     albums: app.querySelector("[data-re-albums]"),
@@ -95,6 +96,7 @@
     photosById: new Map(),
     albums: [],
     album: "all",
+    detailMode: false,
     wizardStep: 0,
     query: "",
     mediaType: "all",
@@ -409,7 +411,9 @@
 
   const syncAuthUi = () => {
     app.classList.toggle("is-locked", !state.unlocked);
-    if (elements.actionBar) elements.actionBar.hidden = !state.unlocked;
+    app.classList.toggle("is-shelf-mode", state.unlocked && !state.detailMode);
+    app.classList.toggle("is-detail-mode", state.unlocked && state.detailMode);
+    if (elements.actionBar) elements.actionBar.hidden = !state.unlocked || !state.detailMode;
     if (elements.loginStatus && state.unlocked) elements.loginStatus.textContent = "";
     if (!state.unlocked && elements.loginCode) {
       elements.loginCode.value = "";
@@ -751,8 +755,8 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
-      button.textContent = outputBusy && kind === "selection" ? "Preparing..." : "Share selection table";
-      button.title = "Open or share an HTML table that can be loaded back later";
+      button.textContent = outputBusy && kind === "selection" ? "Saving..." : "Save selection";
+      button.title = "Save the current selection to the cloud shelf; file sharing remains available as a fallback";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
@@ -807,13 +811,18 @@
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
+    const videoCount = photos.filter(isVideo).length;
+    const stillCount = Math.max(0, photos.length - videoCount);
     if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
     if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
     if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
     if (elements.description) elements.description.textContent = gallery?.description || "Private media review workspace for project PDFs and slideshow delivery.";
-    if (elements.total) elements.total.textContent = String(photos.length);
-    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Media";
+    if (elements.total) elements.total.textContent = String(stillCount);
+    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Stills";
+    if (elements.videoTotal) elements.videoTotal.textContent = String(videoCount);
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
+    if (elements.selectedTotal) elements.selectedTotal.textContent = String(producedDeliverables().length);
+    if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = "Selections";
     renderProducedDeliverables();
   };
 
@@ -869,7 +878,7 @@
     return {
       id: String(row?.id || row?.deliverableId || `${type}-${index + 1}`),
       type,
-      label: type === "pdf" ? "PDF" : type === "video" || type === "mp4" ? "Video" : "File",
+      label: type === "pdf" ? "PDF" : type === "selection" ? "Selection" : type === "video" || type === "mp4" ? "Video" : "File",
       title: String(row?.title || row?.projectTitle || row?.name || `Deliverable ${index + 1}`),
       createdAt: String(row?.createdAt || row?.generatedAt || row?.updatedAt || ""),
       bytes: Number(row?.bytes || row?.size || 0) || 0,
@@ -896,23 +905,91 @@
       });
   };
 
-  const localDeliverableTitleFor = (type, batch) => {
-    const label = type === "pdf" ? "PDF" : "Video";
-    const projectTitles = (Array.isArray(batch?.projects) ? batch.projects : [])
-      .map((project) => String(project?.projectTitle || "").trim())
-      .filter(Boolean);
-    const uniqueTitles = projectTitles.filter((title, index, items) => items.indexOf(title) === index);
-    if (uniqueTitles.length === 1) return `${label}: ${uniqueTitles[0]}`;
-    if (uniqueTitles.length > 1) return `${label}: ${uniqueTitles.length} projects`;
-    return `${label}: ${state.payload?.customer?.name || state.gallery?.title || "Real estate product"}`;
-  };
-
   const cloneBatch = (batch) => {
     try {
       return JSON.parse(JSON.stringify(batch));
     } catch {
       return batch;
     }
+  };
+
+  const deliverableTypeCode = (type) => {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized === "pdf") return "PDF";
+    if (normalized === "selection") return "SELECTION";
+    return "VIDEO";
+  };
+
+  const validDateFor = (value) => {
+    const date = value ? new Date(value) : new Date();
+    return Number.isNaN(date.getTime()) ? new Date() : date;
+  };
+
+  const dateCodeFor = (value) => {
+    const date = validDateFor(value);
+    return [
+      String(date.getFullYear()).slice(-2),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("");
+  };
+
+  const isLegacyAutoDeliverableTitle = (title) => /^(PDF|Video):\s*/i.test(String(title || "").trim());
+
+  const needsGeneratedDeliverableName = (item) => {
+    const title = String(item?.title || "").trim();
+    return !title || isLegacyAutoDeliverableTitle(title);
+  };
+
+  const generatedDeliverableNamesFor = (items) => {
+    const names = new Map();
+    const groups = new Map();
+    items.forEach((item) => {
+      if (!item?.id || !needsGeneratedDeliverableName(item)) return;
+      const key = `${dateCodeFor(item.createdAt || item.batch?.createdAt)}:${deliverableTypeCode(item.type)}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(item);
+    });
+    groups.forEach((group, key) => {
+      const [code, typeCode] = key.split(":");
+      const pattern = new RegExp(`^${code}-${typeCode}-(\\d+)$`);
+      const used = new Set(items
+        .filter((item) => !needsGeneratedDeliverableName(item))
+        .map((item) => String(item.title || "").trim().match(pattern)?.[1])
+        .filter(Boolean)
+        .map(Number));
+      let next = 1;
+      [...group].sort((a, b) => (
+        validDateFor(a.createdAt || a.batch?.createdAt).getTime() - validDateFor(b.createdAt || b.batch?.createdAt).getTime()
+        || String(a.id).localeCompare(String(b.id))
+      )).forEach((item) => {
+        while (used.has(next)) next += 1;
+        used.add(next);
+        names.set(item.id, `${dateCodeFor(item.createdAt || item.batch?.createdAt)}-${deliverableTypeCode(item.type)}-${next}`);
+      });
+    });
+    return names;
+  };
+
+  const displayDeliverableTitleFor = (item, generatedNames = new Map()) => (
+    needsGeneratedDeliverableName(item)
+      ? generatedNames.get(item.id) || `${dateCodeFor(item?.createdAt || item?.batch?.createdAt)}-${deliverableTypeCode(item?.type)}-1`
+      : String(item?.title || "").trim()
+  );
+
+  const nextGeneratedDeliverableName = (type, createdAt, excludeId = "") => {
+    const existingItems = producedDeliverables().filter((item) => item.id !== excludeId);
+    const generatedNames = generatedDeliverableNamesFor(existingItems);
+    const code = dateCodeFor(createdAt);
+    const typeCode = deliverableTypeCode(type);
+    const pattern = new RegExp(`^${code}-${typeCode}-(\\d+)$`);
+    const used = new Set(existingItems
+      .map((item) => displayDeliverableTitleFor(item, generatedNames).match(pattern)?.[1])
+      .filter(Boolean)
+      .map(Number));
+    let next = 1;
+    while (used.has(next)) next += 1;
+    return `${code}-${typeCode}-${next}`;
   };
 
   const credentialsForCloudDeliverables = async ({ promptIfMissing = false } = {}) => {
@@ -1038,12 +1115,15 @@
 
   const deleteProducedDeliverable = async (deliverableId) => {
     if (!requireUnlocked()) return;
-    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    const items = producedDeliverables();
+    const generatedNames = generatedDeliverableNamesFor(items);
+    const item = items.find((deliverable) => deliverable.id === deliverableId);
     if (!item || !["cloud", "local"].includes(item.source)) return;
-    const confirmed = window.confirm(`Delete ${item.title || item.label || "this product"} from saved products?`);
+    const title = displayDeliverableTitleFor(item, generatedNames);
+    const confirmed = window.confirm(`Delete ${title || "this product"} from saved products?`);
     if (!confirmed) return;
 
-    setStatus(`Deleting ${item.title || item.label || "product"}...`);
+    setStatus(`Deleting ${title || "product"}...`);
     if (item.source === "cloud") {
       await deleteCloudDeliverable(deliverableId, { promptIfMissing: true });
     } else {
@@ -1055,23 +1135,26 @@
     removeLocalDeliverable(deliverableId);
     removeCloudDeliverableState(deliverableId);
     renderProducedDeliverables();
-    setStatus(`Deleted ${item.title || item.label || "product"} from saved products.`);
+    setStatus(`Deleted ${title || "product"} from saved products.`);
   };
 
   const saveLocalDeliverable = ({ type = "file", batch = null, filename = "", bytes = 0 } = {}) => {
     if (!batch?.batchId) return null;
     const normalizedType = String(type || "file").toLowerCase();
+    const id = `local-${normalizedType}-${batch.batchId}`;
+    const existing = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
+    const existingRecord = existing.find((item) => item?.id === id);
+    const createdAt = batch.createdAt || new Date().toISOString();
     const record = {
-      id: `local-${normalizedType}-${batch.batchId}`,
+      id,
       type: normalizedType,
-      title: localDeliverableTitleFor(normalizedType, batch),
-      createdAt: batch.createdAt || new Date().toISOString(),
+      title: String(existingRecord?.title || "").trim() || nextGeneratedDeliverableName(normalizedType, createdAt, id),
+      createdAt,
       status: "ready",
       bytes: Number(bytes) || 0,
       filename: String(filename || ""),
       batch: cloneBatch(batch),
     };
-    const existing = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
     state.localDeliverables = [record, ...existing.filter((item) => item?.id !== record.id)].slice(0, 25);
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
     renderProducedDeliverables();
@@ -1082,9 +1165,38 @@
     return record;
   };
 
+  const renameProducedDeliverable = async (deliverableId, name) => {
+    if (!requireUnlocked()) return;
+    const items = producedDeliverables();
+    const generatedNames = generatedDeliverableNamesFor(items);
+    const item = items.find((deliverable) => deliverable.id === deliverableId);
+    if (!item || !["cloud", "local"].includes(item.source)) return;
+    const fallback = displayDeliverableTitleFor(item, generatedNames);
+    const title = String(name || "").trim() || fallback;
+    const updateRecord = (record) => (
+      String(record?.id || "") === deliverableId
+        ? { ...record, title }
+        : record
+    );
+    state.localDeliverables = (Array.isArray(state.localDeliverables) ? state.localDeliverables : []).map(updateRecord);
+    state.cloudDeliverables = (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : []).map(updateRecord);
+    writeJson(localDeliverablesStoreKey(), state.localDeliverables);
+    renderProducedDeliverables();
+    setStatus(`Renamed product to ${title}.`);
+    const updated = [...state.cloudDeliverables, ...state.localDeliverables]
+      .find((record) => String(record?.id || "") === deliverableId);
+    if (updated) {
+      saveCloudDeliverable(updated).catch((error) => {
+        state.cloudDeliverablesError = error?.message || "Cloud product name could not be saved.";
+        renderProducedDeliverables();
+      });
+    }
+  };
+
   const renderProducedDeliverables = () => {
     if (!elements.deliverablesPanel || !elements.deliverablesList) return;
     const items = producedDeliverables();
+    if (elements.selectedTotal) elements.selectedTotal.textContent = String(items.length);
     if (!items.length) {
       const cloudCredentials = cloudCredentialSnapshot();
       const canOfferCloudSync = state.unlocked && workerBaseUrl() && !cloudCredentials.accessCode;
@@ -1097,53 +1209,32 @@
               <button class="btn secondary" type="button" data-re-sync-deliverables>Sync saved products</button>`
             : "";
       elements.deliverablesList.innerHTML = `
-        <p class="real-estate-muted">No produced PDFs or videos are ready yet. Create a PDF or video below, then finished cloud deliverables will appear here for repeat viewing and downloading.</p>
+        <p class="real-estate-muted">No saved products are ready yet. Save a selection or create a PDF or video below, then cloud-synced items will appear here for repeat viewing and downloading.</p>
         ${cloudNote}
       `;
       syncFileActionLabels();
       return;
     }
+    const generatedNames = generatedDeliverableNamesFor(items);
     elements.deliverablesList.innerHTML = items.map((item) => {
       const date = item.createdAt ? new Date(item.createdAt) : null;
       const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : item.createdAt;
+      const displayTitle = displayDeliverableTitleFor(item, generatedNames);
+      const canRename = ["cloud", "local"].includes(item.source);
       const meta = [
         item.label,
         item.status !== "ready" ? item.status : "",
         dateLabel,
         item.bytes ? formatBytes(item.bytes) : "",
       ].filter(Boolean).join(" / ");
-      const view = item.viewUrl
-        ? `<a class="btn secondary" href="${escapeHtml(item.viewUrl)}" target="_blank" rel="noopener">View</a>`
-        : item.batch
-          ? `<button class="btn secondary" type="button" data-re-view-deliverable="${escapeHtml(item.id)}">View</button>`
-        : `<button class="btn secondary" type="button" disabled>View</button>`;
-      const openVideoDownload = item.type === "video" && shouldOpenHtmlVideoDownloadsInBrowser();
-      const download = item.downloadUrl
-        ? openVideoDownload
-          ? `<a class="btn secondary" href="${escapeHtml(item.viewUrl || item.downloadUrl)}" target="_blank" rel="noopener">Open</a>`
-          : `<a class="btn secondary" href="${escapeHtml(item.downloadUrl)}" ${item.filename ? `download="${escapeHtml(item.filename)}"` : "download"}>Download</a>`
-        : item.batch
-          ? openVideoDownload
-            ? `<button class="btn secondary" type="button" data-re-download-deliverable="${escapeHtml(item.id)}">Save</button>`
-            : `<button class="btn secondary" type="button" data-re-download-deliverable="${escapeHtml(item.id)}">Download</button>`
-        : `<button class="btn secondary" type="button" disabled>Download</button>`;
-      const edit = (item.editUrl || item.batch)
-        ? `<button class="btn secondary" type="button" data-re-edit-deliverable="${escapeHtml(item.id)}">Edit</button>`
-        : `<button class="btn secondary" type="button" disabled>Edit</button>`;
-      const remove = ["cloud", "local"].includes(item.source)
-        ? `<button class="btn danger" type="button" data-re-delete-deliverable="${escapeHtml(item.id)}">Delete</button>`
-        : `<button class="btn secondary" type="button" disabled>Delete</button>`;
+      const canOpen = Boolean(item.editUrl || item.batch);
       return `
-        <article class="real-estate-deliverable">
+        <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
           <div>
-            <strong>${escapeHtml(item.title)}</strong>
+            ${canRename
+              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
+              : `<strong>${escapeHtml(displayTitle)}</strong>`}
             <span>${escapeHtml(meta || item.label)}</span>
-          </div>
-          <div class="real-estate-deliverable-actions">
-            ${edit}
-            ${view}
-            ${download}
-            ${remove}
           </div>
         </article>
       `;
@@ -1974,7 +2065,7 @@
       await navigator.clipboard.writeText(batch);
       setStatus(`Copied ${manifest.projects.length} project selection list${manifest.projects.length === 1 ? "" : "s"}`);
     } catch {
-      setStatus("Clipboard unavailable; use Share selection table");
+      setStatus("Clipboard unavailable; use Save selection");
     }
   };
 
@@ -2132,17 +2223,17 @@
     if (!requireUnlocked() || state.outputBusy) return;
     const batch = buildBatchManifest(activeSelectedPhotos(), true);
     if (!batch.items?.length) {
-      setStatus("Select media before sharing a selection table");
+      setStatus("Select media before saving a selection");
       return;
     }
     startOutputProgress({
-      title: "Preparing selection table",
-      detail: "Building the shareable selection file...",
+      title: "Saving selection",
+      detail: "Building the selection manifest...",
       total: 2,
       kind: "selection",
     });
     updateOutputProgress({
-      title: "Preparing selection table",
+      title: "Saving selection",
       detail: "Formatting selected media...",
       current: 1,
       total: 2,
@@ -2150,6 +2241,7 @@
     try {
       const blob = new Blob([selectionHtmlFor(batch)], { type: "text/html" });
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+      saveLocalDeliverable({ type: "selection", batch, filename, bytes: blob.size });
       const saved = await shareOrOpenBlob({
         blob,
         filename,
@@ -2163,9 +2255,9 @@
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
       }
-      completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
+      completeOutputProgress(`Saved selection to the shelf: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
-      const message = error?.name === "AbortError" ? "Share canceled" : "Selection table could not be shared";
+      const message = error?.name === "AbortError" ? "Save canceled" : "Selection could not be saved";
       setStatus(message);
       failOutputProgress(message);
     }
@@ -3076,8 +3168,20 @@
     applySelectionForPhotoIds(activeSelectedPhotos().map((photo) => photo.id), false);
   };
 
+  const returnToShelf = () => {
+    if (!requireUnlocked()) return;
+    flushTitleInputs();
+    state.detailMode = false;
+    state.selectedOnly = false;
+    if (elements.selectedOnly) elements.selectedOnly.checked = false;
+    render();
+    elements.deliverablesPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("Back to the saved selection shelf.");
+  };
+
   const startNewProduct = () => {
     if (!requireUnlocked()) return;
+    state.detailMode = true;
     state.selectedOrder = [];
     state.selectedIds = new Set();
     state.projectAssignments = {};
@@ -3087,7 +3191,7 @@
     persistProjectAssignments();
     setWizardStep(firstWizardStep());
     document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setStatus("Started a new product. Choose media, edit titles, reorder, then view or download outputs.");
+    setStatus("Started a new selection. Choose media, edit titles, reorder, then view or download outputs.");
   };
 
   const activeSelectionIds = () => activeSelectedPhotos().map((photo) => photo.id);
@@ -3299,10 +3403,13 @@
 
   const editProducedDeliverable = async (deliverableId) => {
     if (!requireUnlocked()) return;
-    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    const items = producedDeliverables();
+    const generatedNames = generatedDeliverableNamesFor(items);
+    const item = items.find((deliverable) => deliverable.id === deliverableId);
     if (!item) return;
     try {
-      setStatus(`Loading ${item.title} for editing...`);
+      setStatus(`Loading ${displayDeliverableTitleFor(item, generatedNames)} for editing...`);
+      state.detailMode = true;
       const batch = await deliverableBatchFor(item);
       applyBatchManifest(batch, { statusPrefix: "Editing", editMode: true });
       document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3326,6 +3433,34 @@
           batchOverride: batch,
           projectsOverride: projects,
         });
+        return;
+      }
+      if (item.type === "selection") {
+        const title = mode === "view" ? "Opening selection view" : "Preparing selection download";
+        startOutputProgress({
+          title,
+          detail: "Loading saved selection...",
+          total: 2,
+          kind: "selection",
+        });
+        const html = selectionHtmlFor(batch);
+        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId || timestampId()}-selection.html`;
+        updateOutputProgress({
+          title,
+          detail: mode === "view" ? "Opening saved selection view..." : "Sending saved selection file to Downloads...",
+          current: 1,
+          total: 2,
+        });
+        const blob = new Blob([html], { type: "text/html" });
+        const saved = mode === "view"
+          ? await openHtmlInBrowser(html, filename, reserveOutputWindow("Opening selection"))
+          : { method: "download", ...(await downloadBlob(blob, filename)) };
+        if (saved.method === "open" || saved.method === "open-current") {
+          setStatus(`Viewing ${saved.filename}.`);
+        } else {
+          setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
+        }
+        completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
         return;
       }
       const mobileSave = mode === "download" && shouldOpenHtmlVideoDownloadsInBrowser();
@@ -3627,6 +3762,12 @@
     document.querySelectorAll("[data-re-step-next]").forEach((button) => button.addEventListener("click", () => {
       setWizardStep(state.wizardStep + 1);
     }));
+    document.addEventListener("click", (event) => {
+      const shelfBack = event.target?.closest?.("[data-re-shelf-back]");
+      if (!shelfBack) return;
+      event.preventDefault();
+      returnToShelf();
+    });
     document.querySelectorAll("[data-re-open-outputs]").forEach((button) => button.addEventListener("click", () => {
       openSelectedOutputs().catch(() => setStatus("Outputs could not be opened"));
     }));
@@ -3636,7 +3777,7 @@
     document.querySelectorAll("[data-re-create-product]").forEach((button) => button.addEventListener("click", startNewProduct));
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
-      shareSelectionTable().catch(() => setStatus("Selection table could not be shared"));
+      shareSelectionTable().catch(() => setStatus("Selection could not be saved"));
     }));
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => button.addEventListener("click", () => {
       shareSlideshowPlan({ mode: "view" }).catch(() => setStatus("Video output could not be viewed"));
@@ -3650,6 +3791,12 @@
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
+      if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
+      const row = event.target?.closest?.("[data-re-open-deliverable]");
+      if (row) {
+        editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
+        return;
+      }
       const button = event.target?.closest?.("[data-re-edit-deliverable], [data-re-view-deliverable], [data-re-download-deliverable], [data-re-delete-deliverable], [data-re-sync-deliverables]");
       if (!button) return;
       if (button.matches("[data-re-sync-deliverables]")) {
@@ -3667,6 +3814,24 @@
       const mode = button.matches("[data-re-view-deliverable]") ? "view" : "download";
       const id = button.getAttribute(mode === "view" ? "data-re-view-deliverable" : "data-re-download-deliverable") || "";
       runProducedDeliverable(id, mode).catch(() => setStatus("Could not prepare this product"));
+    });
+    elements.deliverablesList?.addEventListener("change", (event) => {
+      const input = event.target?.closest?.("[data-re-rename-deliverable]");
+      if (!input) return;
+      renameProducedDeliverable(input.getAttribute("data-re-rename-deliverable") || "", input.value).catch(() => setStatus("Could not rename this product"));
+    });
+    elements.deliverablesList?.addEventListener("keydown", (event) => {
+      const input = event.target?.closest?.("[data-re-rename-deliverable]");
+      if (input) {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        input.blur();
+        return;
+      }
+      const row = event.target?.closest?.("[data-re-open-deliverable]");
+      if (!row || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      editProducedDeliverable(row.getAttribute("data-re-open-deliverable") || "").catch(() => setStatus("Could not edit this selection"));
     });
     document.querySelectorAll("[data-re-load-batch]").forEach((button) => button.addEventListener("click", () => {
       openBatchFile().catch(() => setStatus("Selection file could not be loaded"));

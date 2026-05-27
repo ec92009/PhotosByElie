@@ -255,6 +255,31 @@ npm run social:pinterest-downloads -- --date 2026-05-14
 
 That writes `downloads.html` and `download-manifest.tsv` beside the staged Pin images, carousel candidates, source previews, and copy blocks.
 
+The first Pinterest API publishing scaffold is dry-run by default and does not store credentials. It prepares one standard image Pin request per staged Pinterest image, using public watermarked R2 image URLs plus the first-party PhotosByElie destination:
+
+```bash
+npm run social:pinterest-api -- --manifest socials/Pinterest/2026-05-27/gibraltar-rock-and-bay-views/manifest.json
+```
+
+After a Pinterest app is approved, generate the authorization URL and exchange the returned code. Tokens are saved outside the repo and are not printed:
+
+```bash
+export PINTEREST_CLIENT_ID='...'
+export PINTEREST_CLIENT_SECRET='...'
+export PINTEREST_REDIRECT_URI='http://localhost/'
+npm run social:pinterest-oauth -- --auth-url
+npm run social:pinterest-oauth -- --exchange-code '<returned-code>'
+```
+
+After a token is available outside the repo, list boards and pass the intended board id explicitly:
+
+```bash
+npm run social:pinterest-api -- --list-boards
+npm run social:pinterest-api -- --manifest socials/Pinterest/2026-05-27/gibraltar-rock-and-bay-views/manifest.json --board-id "$PINTEREST_BOARD_ID"
+```
+
+Live publishing requires `--publish`, `PINTEREST_ACCESS_TOKEN`, and a board id. See `docs/sops/PINTEREST_API_SOP.md`.
+
 Useful options:
 
 ```bash

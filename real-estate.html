@@ -8,9 +8,9 @@
   <meta name="description" content="Private real-estate media review, project PDF, and slideshow selection workspace for Photos By Elie clients."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=89.0"/>
-  <link rel="stylesheet" href="./styles.css?v=89.0"/>
-  <link rel="stylesheet" href="./photos.css?v=89.0"/>
+  <link rel="stylesheet" href="./shared.css?v=89.1"/>
+  <link rel="stylesheet" href="./styles.css?v=89.1"/>
+  <link rel="stylesheet" href="./photos.css?v=89.1"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,9 +22,9 @@
     <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
       <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
-      <a class="is-active" href="./real-estate.html">Real Estate</a>
+      <a class="is-active" href="./real-estate.html" data-i18n="nav.real_estate">Real Estate</a>
     </nav>
-    <span class="site-version-badge">v89.0</span>
+    <span class="site-version-badge">v89.1</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -34,21 +34,21 @@
   <main id="main-content" class="shell real-estate-shell is-locked" data-real-estate-app>
     <section class="panel real-estate-login" data-re-login aria-labelledby="real-estate-login-title">
       <div class="real-estate-login-card">
-        <p class="eyebrow" data-re-login-customer>Private client access</p>
-        <h1 id="real-estate-login-title">Client login</h1>
+        <p class="eyebrow" data-re-login-customer data-i18n="re.login.eyebrow">Private client access</p>
+        <h1 id="real-estate-login-title" data-i18n="re.login.title">Client login</h1>
         <form class="real-estate-login-form" data-re-login-form>
           <label for="real-estate-username">
-            <span>Username</span>
-            <input id="real-estate-username" type="text" autocomplete="username" data-re-login-name placeholder="Username" required/>
+            <span data-i18n="re.login.username">Username</span>
+            <input id="real-estate-username" type="text" autocomplete="username" data-re-login-name placeholder="Username" data-i18n-placeholder="re.login.username" required/>
           </label>
-          <label for="real-estate-access-code">Password</label>
+          <label for="real-estate-access-code" data-i18n="re.login.password">Password</label>
           <div class="real-estate-password-field">
-            <input id="real-estate-access-code" type="password" autocomplete="current-password" data-re-login-code placeholder="Password" required/>
-            <button class="real-estate-password-toggle" type="button" data-re-toggle-code aria-label="Show password" aria-pressed="false">
+            <input id="real-estate-access-code" type="password" autocomplete="current-password" data-re-login-code placeholder="Password" data-i18n-placeholder="re.login.password" required/>
+            <button class="real-estate-password-toggle" type="button" data-re-toggle-code aria-label="Show password" data-i18n-aria-label="re.login.show_password" aria-pressed="false">
               <span data-re-code-icon aria-hidden="true"></span>
             </button>
           </div>
-          <button class="btn primary" type="submit">Log in</button>
+          <button class="btn primary" type="submit" data-i18n="re.login.submit">Log in</button>
           <p class="real-estate-login-status" data-re-login-status aria-live="polite"></p>
         </form>
       </div>
@@ -59,31 +59,31 @@
         <p class="eyebrow" data-re-customer>Client review</p>
         <h1 id="real-estate-title" data-re-title>Real estate selection</h1>
         <label class="real-estate-active-product" data-re-active-product-label hidden>
-          <span>Selection</span>
-          <input type="text" data-re-active-product-name aria-label="Selection name"/>
+          <span data-i18n="re.selection.label">Selection</span>
+          <input type="text" data-re-active-product-name aria-label="Selection name" data-i18n-aria-label="re.selection.name"/>
         </label>
         <p class="lead" data-re-description>Private media review workspace for project PDF and slideshow delivery.</p>
-        <dl class="real-estate-stats" aria-label="Gallery totals">
+        <dl class="real-estate-stats" aria-label="Gallery totals" data-i18n-aria-label="re.stats.gallery_totals">
           <div>
-            <dt>Stills</dt>
+            <dt data-i18n="re.stats.stills">Stills</dt>
             <dd data-re-total>0</dd>
           </div>
           <div>
-            <dt>Videos</dt>
+            <dt data-i18n="re.stats.videos">Videos</dt>
             <dd data-re-video-total>0</dd>
           </div>
           <div>
-            <dt>Albums</dt>
+            <dt data-i18n="re.stats.albums">Albums</dt>
             <dd data-re-album-total>0</dd>
           </div>
           <div>
-            <dt>Selections</dt>
+            <dt data-i18n="re.stats.selections">Selections</dt>
             <dd data-re-selected-total>0</dd>
           </div>
         </dl>
         <div class="cta">
-          <button class="btn primary" type="button" data-re-create-product>+ Create new selection</button>
-          <button class="btn secondary" type="button" data-re-help-open>Help</button>
+          <button class="btn primary" type="button" data-re-create-product data-i18n="re.cta.create_selection">+ Create new selection</button>
+          <button class="btn secondary" type="button" data-re-help-open data-i18n="re.help.button">Help</button>
         </div>
       </div>
     </section>
@@ -91,82 +91,82 @@
     <section class="panel real-estate-deliverables" data-re-deliverables-panel aria-labelledby="real-estate-deliverables-title">
       <div class="real-estate-deliverables-head">
         <div>
-          <p class="eyebrow">Produced so far</p>
-          <h2 id="real-estate-deliverables-title">Your saved products</h2>
-          <p class="real-estate-muted">View files on mobile or download them on a computer. You can capture or share whatever you are seeing in the way that works best for you.</p>
+          <p class="eyebrow" data-i18n="re.shelf.eyebrow">Produced so far</p>
+          <h2 id="real-estate-deliverables-title" data-i18n="re.shelf.title">Your saved products</h2>
+          <p class="real-estate-muted" data-i18n="re.shelf.note">View files on mobile or download them on a computer. You can capture or share whatever you are seeing in the way that works best for you.</p>
         </div>
-        <button class="btn primary" type="button" data-re-create-product data-re-shelf-create-product hidden>+ Create new selection</button>
+        <button class="btn primary" type="button" data-re-create-product data-re-shelf-create-product data-i18n="re.cta.create_selection" hidden>+ Create new selection</button>
       </div>
       <div class="real-estate-deliverable-list" data-re-deliverables-list></div>
     </section>
 
-    <section class="panel real-estate-wizard" id="real-estate-wizard" data-re-wizard aria-label="Real estate review steps">
+    <section class="panel real-estate-wizard" id="real-estate-wizard" data-re-wizard aria-label="Real estate review steps" data-i18n-aria-label="re.wizard.steps_label">
       <div class="real-estate-wizard-head">
-        <button class="btn secondary real-estate-shelf-back" type="button" data-re-shelf-back>Back to shelf</button>
-        <ol class="real-estate-stepper" data-re-stepper aria-label="Review steps">
-          <li><button type="button" data-re-step-jump="0"><b>1</b><span>Shoots</span></button></li>
-          <li><button type="button" data-re-step-jump="1"><b>2</b><span>Photos</span></button></li>
-          <li><button type="button" data-re-step-jump="2"><b>3</b><span>Titles</span></button></li>
-          <li><button type="button" data-re-step-jump="3"><b>4</b><span>Order</span></button></li>
-          <li><button type="button" data-re-step-jump="4"><b>5</b><span>Output</span></button></li>
+        <button class="btn secondary real-estate-shelf-back" type="button" data-re-shelf-back data-i18n="re.wizard.back_shelf">Back to shelf</button>
+        <ol class="real-estate-stepper" data-re-stepper aria-label="Review steps" data-i18n-aria-label="re.wizard.steps_label">
+          <li><button type="button" data-re-step-jump="0"><b>1</b><span data-i18n="re.step.shoots">Shoots</span></button></li>
+          <li><button type="button" data-re-step-jump="1"><b>2</b><span data-i18n="re.step.photos">Photos</span></button></li>
+          <li><button type="button" data-re-step-jump="2"><b>3</b><span data-i18n="re.step.titles">Titles</span></button></li>
+          <li><button type="button" data-re-step-jump="3"><b>4</b><span data-i18n="re.step.order">Order</span></button></li>
+          <li><button type="button" data-re-step-jump="4"><b>5</b><span data-i18n="re.step.output">Output</span></button></li>
         </ol>
-        <p class="gallery-status" data-re-wizard-status aria-live="polite">Choose shoots to begin.</p>
+        <p class="gallery-status" data-re-wizard-status aria-live="polite" data-i18n="re.status.choose_shoots">Choose shoots to begin.</p>
       </div>
       <div class="real-estate-wizard-actions">
-        <button class="btn primary" type="button" data-re-step-next>Next</button>
+        <button class="btn primary" type="button" data-re-step-next data-i18n="common.next">Next</button>
       </div>
     </section>
 
-    <section class="panel real-estate-workbench" aria-label="Real estate review workspace">
-      <aside class="real-estate-sidebar" aria-label="Review controls">
+    <section class="panel real-estate-workbench" aria-label="Real estate review workspace" data-i18n-aria-label="re.workbench.label">
+      <aside class="real-estate-sidebar" aria-label="Review controls" data-i18n-aria-label="re.controls.label">
         <section class="real-estate-control-group" data-re-panel="properties" aria-labelledby="real-estate-albums-title">
-          <h2 id="real-estate-albums-title">Shoots</h2>
+          <h2 id="real-estate-albums-title" data-i18n="re.panel.shoots">Shoots</h2>
           <div class="real-estate-album-list" data-re-albums></div>
         </section>
 
         <section class="real-estate-control-group" data-re-panel="filters" aria-labelledby="real-estate-filters-title">
-          <h2 id="real-estate-filters-title">Filters</h2>
+          <h2 id="real-estate-filters-title" data-i18n="re.panel.filters">Filters</h2>
           <form class="real-estate-filter-form" data-re-filter-form>
             <label>
-              <span>Search</span>
-              <input type="search" data-re-search placeholder="Title, file, or album"/>
+              <span data-i18n="re.filter.search">Search</span>
+              <input type="search" data-re-search placeholder="Title, file, or album" data-i18n-placeholder="re.filter.search_placeholder"/>
             </label>
             <label>
-              <span>Sort</span>
+              <span data-i18n="re.filter.sort">Sort</span>
               <select data-re-sort>
-                <option value="album">Album order</option>
-                <option value="selected">Selected first</option>
-                <option value="title">Title</option>
-                <option value="file">File name</option>
+                <option value="album" data-i18n="re.sort.album">Album order</option>
+                <option value="selected" data-i18n="re.sort.selected">Selected first</option>
+                <option value="title" data-i18n="gallery.title">Title</option>
+                <option value="file" data-i18n="re.sort.file">File name</option>
               </select>
             </label>
             <label>
-              <span>Media</span>
+              <span data-i18n="gallery.media">Media</span>
               <select data-re-media-type>
-                <option value="all">Photos + videos</option>
-                <option value="photo">Photos</option>
-                <option value="video">Videos</option>
+                <option value="all" data-i18n="re.media.all">Photos + videos</option>
+                <option value="photo" data-i18n="gallery.photos">Photos</option>
+                <option value="video" data-i18n="gallery.videos">Videos</option>
               </select>
             </label>
             <label>
-              <span>Card size</span>
+              <span data-i18n="re.filter.card_size">Card size</span>
               <select data-re-density>
-                <option value="compact">Compact</option>
-                <option value="balanced" selected>Balanced</option>
-                <option value="large">Large</option>
+                <option value="compact" data-i18n="re.density.compact">Compact</option>
+                <option value="balanced" selected data-i18n="re.density.balanced">Balanced</option>
+                <option value="large" data-i18n="re.density.large">Large</option>
               </select>
             </label>
             <label class="real-estate-check">
               <input type="checkbox" data-re-selected-only/>
-              <span>Selected only</span>
+              <span data-i18n="re.filter.selected_only">Selected only</span>
             </label>
-            <button class="btn secondary" type="button" data-re-clear-filters>Clear filters</button>
+            <button class="btn secondary" type="button" data-re-clear-filters data-i18n="gallery.clear_filters">Clear filters</button>
           </form>
         </section>
 
         <section class="real-estate-control-group" data-re-panel="draft" aria-labelledby="real-estate-draft-title">
           <div class="real-estate-group-head">
-            <h2 id="real-estate-draft-title">Output draft</h2>
+            <h2 id="real-estate-draft-title" data-i18n="re.draft.title">Output draft</h2>
             <strong data-re-draft-count>0</strong>
           </div>
           <div class="real-estate-draft-list" data-re-draft-list></div>
@@ -177,15 +177,12 @@
       <section class="real-estate-gallery-area" aria-labelledby="real-estate-gallery">
         <div class="real-estate-gallery-toolbar">
           <div>
-            <h2 id="real-estate-gallery">Media review</h2>
-            <p class="gallery-status" data-re-status aria-live="polite">Loading real-estate gallery...</p>
+            <h2 id="real-estate-gallery" data-i18n="re.gallery.title">Media review</h2>
+            <p class="gallery-status" data-re-status aria-live="polite" data-i18n="re.status.loading">Loading real-estate gallery...</p>
           </div>
           <div class="real-estate-toolbar-actions">
-            <button class="btn secondary" type="button" data-re-select-visible>Select visible</button>
-            <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
-            <button class="btn secondary" type="button" data-re-download-slideshow>Download video</button>
-            <button class="btn secondary" type="button" data-re-download-batch>Save selection</button>
-            <button class="btn secondary" type="button" data-re-download-originals>Share originals ZIP</button>
+            <button class="btn secondary" type="button" data-re-select-visible data-i18n="re.action.select_visible">Select visible</button>
+            <button class="btn secondary" type="button" data-re-download-originals data-i18n="re.output.share_originals">Share originals ZIP</button>
           </div>
         </div>
         <div class="real-estate-grid" data-re-grid></div>
@@ -193,51 +190,31 @@
 
       <section class="real-estate-output-panel" data-re-output-panel aria-labelledby="real-estate-output-title">
         <div class="real-estate-step-head">
-          <p class="eyebrow">Step 4</p>
-          <h2 id="real-estate-output-title">Choose outputs</h2>
-          <p class="real-estate-muted">View files right away on mobile, or download them for desktop file handling. You can capture or share whatever you are seeing in the way that works best for you.</p>
-        </div>
-        <div class="real-estate-output-options">
-          <label class="real-estate-output-choice">
-            <input type="checkbox" data-re-output-pdf checked/>
-            <span>
-              <strong>PDF</strong>
-              <small>One PDF per shoot. Videos appear as a still from 10% into the clip.</small>
-            </span>
-          </label>
-          <label class="real-estate-output-choice">
-            <input type="checkbox" data-re-output-video/>
-            <span>
-              <strong>Video</strong>
-              <small>Video deliverable with random single-guitar music. Photos use the seconds below; source videos keep duration with audio 20 dB under music.</small>
-            </span>
-          </label>
+          <p class="eyebrow" data-i18n="re.output.eyebrow">Step 5</p>
+          <h2 id="real-estate-output-title" data-i18n="re.output.title">Preview or download</h2>
+          <p class="real-estate-muted" data-i18n="re.output.note">Each selection includes both PDF and video formats. Preview either one, or download everything for desktop file handling.</p>
         </div>
         <div class="real-estate-output-settings">
           <label class="real-estate-pdf-setting" for="real-estate-pdf-format">
-            <span>PDF paper size</span>
+            <span data-i18n="re.output.paper_size">PDF paper size</span>
             <select id="real-estate-pdf-format" data-re-pdf-format>
               <option value="a4">A4</option>
               <option value="letter">Letter</option>
             </select>
           </label>
           <label class="real-estate-pdf-setting" for="real-estate-slideshow-photo-seconds">
-            <span>Photo seconds in video</span>
+            <span data-i18n="re.output.photo_seconds">Photo seconds in video</span>
             <input id="real-estate-slideshow-photo-seconds" type="number" min="1" max="30" step="1" value="4" data-re-slideshow-photo-seconds/>
           </label>
         </div>
         <div class="real-estate-output-actions">
-          <button class="btn primary" type="button" data-re-open-outputs>View selected outputs</button>
-          <button class="btn secondary" type="button" data-re-download-outputs>Download selected outputs</button>
-          <button class="btn secondary" type="button" data-re-view-pdf>Preview PDF</button>
-          <button class="btn secondary" type="button" data-re-download-pdf>Download PDF</button>
-          <button class="btn secondary" type="button" data-re-view-slideshow>View video</button>
-          <button class="btn secondary" type="button" data-re-download-slideshow>Download video</button>
-          <button class="btn secondary" type="button" data-re-download-batch>Save selection</button>
+          <button class="btn secondary" type="button" data-re-view-pdf data-i18n="re.output.preview_pdf">Preview PDF</button>
+          <button class="btn secondary" type="button" data-re-view-slideshow data-i18n="re.output.preview_video">Preview video</button>
+          <button class="btn primary" type="button" data-re-download-outputs data-i18n="re.output.download_everything">Download everything</button>
         </div>
         <div class="real-estate-output-progress" data-re-output-progress hidden aria-live="polite">
           <div class="real-estate-output-progress-head">
-            <strong data-re-output-progress-title>Working...</strong>
+            <strong data-re-output-progress-title data-i18n="re.progress.working">Working...</strong>
             <span data-re-output-progress-eta></span>
           </div>
           <progress data-re-output-progress-bar max="100" value="0"></progress>
@@ -248,20 +225,19 @@
   </main>
 
   <div class="real-estate-action-bar" data-re-action-bar>
-    <strong><span data-re-selected-bar>0</span> files selected</strong>
-    <span data-re-action-status>Ready</span>
-    <button class="btn secondary" type="button" data-re-shelf-back>Back to shelf</button>
-    <button class="btn primary" type="button" data-re-step-next>Next</button>
-    <button class="btn secondary" type="button" data-re-open-outputs>View outputs</button>
-    <button class="btn secondary" type="button" data-re-download-outputs>Download outputs</button>
-    <button class="btn secondary" type="button" data-re-clear-selection>Clear selected</button>
-    <button class="btn secondary real-estate-help-button" type="button" data-re-help-open aria-label="Help" title="Help">?</button>
-    <button class="btn secondary" type="button" data-re-logout>Sign out</button>
+    <strong><span data-re-selected-bar>0</span> <span data-i18n="re.action.files_selected">files selected</span></strong>
+    <span data-re-action-status data-i18n="re.status.ready">Ready</span>
+    <button class="btn secondary" type="button" data-re-shelf-back data-i18n="re.wizard.back_shelf">Back to shelf</button>
+    <button class="btn primary" type="button" data-re-step-next data-i18n="common.next">Next</button>
+    <button class="btn secondary" type="button" data-re-download-outputs data-i18n="re.output.download_everything">Download everything</button>
+    <button class="btn secondary" type="button" data-re-clear-selection data-i18n="re.action.clear_selected">Clear selected</button>
+    <button class="btn secondary real-estate-help-button" type="button" data-re-help-open aria-label="Help" title="Help" data-i18n-aria-label="re.help.button" data-i18n-title="re.help.button">?</button>
+    <button class="btn secondary" type="button" data-re-logout data-i18n="re.action.sign_out">Sign out</button>
   </div>
 
   <dialog class="real-estate-lightbox" data-re-dialog>
     <form method="dialog" class="real-estate-lightbox-close-form">
-      <button class="gallery-top-button" value="close" aria-label="Close media preview">&times;</button>
+      <button class="gallery-top-button" value="close" aria-label="Close media preview" data-i18n-aria-label="re.dialog.close_preview">&times;</button>
     </form>
     <div class="real-estate-lightbox-layout">
       <figure data-re-dialog-figure>
@@ -271,16 +247,16 @@
         <p class="eyebrow" data-re-dialog-album></p>
         <h2 data-re-dialog-title></h2>
         <label>
-          <input type="text" data-re-dialog-title-input aria-label="Output title"/>
+          <input type="text" data-re-dialog-title-input aria-label="Output title" data-i18n-aria-label="re.dialog.output_title"/>
         </label>
         <label class="real-estate-check">
           <input type="checkbox" data-re-dialog-selected/>
-          <span>Selected for output</span>
+          <span data-i18n="re.dialog.selected_for_output">Selected for output</span>
         </label>
         <dl class="real-estate-photo-details" data-re-dialog-details></dl>
         <div class="real-estate-dialog-actions">
-          <button class="btn secondary" type="button" data-re-dialog-prev>Previous</button>
-          <button class="btn secondary" type="button" data-re-dialog-next>Next</button>
+          <button class="btn secondary" type="button" data-re-dialog-prev data-i18n="common.previous">Previous</button>
+          <button class="btn secondary" type="button" data-re-dialog-next data-i18n="common.next">Next</button>
         </div>
       </aside>
     </div>
@@ -288,40 +264,40 @@
 
   <dialog class="real-estate-help" data-re-help-dialog aria-labelledby="real-estate-help-title">
     <form method="dialog" class="real-estate-lightbox-close-form">
-      <button class="gallery-top-button" value="close" aria-label="Close help">&times;</button>
+      <button class="gallery-top-button" value="close" aria-label="Close help" data-i18n-aria-label="re.help.close">&times;</button>
     </form>
     <div class="real-estate-help-panel">
-      <p class="eyebrow">New selection</p>
-      <h2 id="real-estate-help-title">How project outputs work</h2>
+      <p class="eyebrow" data-i18n="re.help.eyebrow">New selection</p>
+      <h2 id="real-estate-help-title" data-i18n="re.help.title">How project outputs work</h2>
       <ol class="real-estate-help-list">
-        <li>Pick one or more shoots first; the Photos step shows only those media.</li>
-        <li>Click photos or videos to select the ones to use.</li>
-        <li>Go to Titles and change only the captions that should be different in the final product.</li>
-        <li>Go to Order and drag the selected media into the PDF or video sequence.</li>
-        <li>Go to Output, choose PDF, video, or both, then view or download the deliverables.</li>
-        <li>View files on mobile or download them on a computer; capture or share whatever you are seeing in the way that works best for you.</li>
-        <li>Open a saved selection from the shelf when you want to resume or revise older work.</li>
+        <li data-i18n="re.help.step1">Pick one or more shoots first; the Photos step shows only those media.</li>
+        <li data-i18n="re.help.step2">Click photos or videos to select the ones to use.</li>
+        <li data-i18n="re.help.step3">Go to Titles and change only the captions that should be different in the final product.</li>
+        <li data-i18n="re.help.step4">Go to Order and drag the selected media into the PDF or video sequence.</li>
+        <li data-i18n="re.help.step5">Go to Output to preview the PDF, preview the video, or download everything.</li>
+        <li data-i18n="re.help.step6">View files on mobile or download them on a computer; capture or share whatever you are seeing in the way that works best for you.</li>
+        <li data-i18n="re.help.step7">Open a saved selection from the shelf when you want to resume or revise older work.</li>
       </ol>
       <div class="real-estate-dialog-actions">
-        <button class="btn primary" type="button" data-re-help-dismiss>Start selecting</button>
+        <button class="btn primary" type="button" data-re-help-dismiss data-i18n="re.help.start">Start selecting</button>
       </div>
     </div>
   </dialog>
 
   <dialog class="real-estate-help real-estate-originals-auth" data-re-originals-dialog aria-labelledby="real-estate-originals-title">
-    <button class="gallery-top-button real-estate-originals-close" type="button" data-re-originals-cancel aria-label="Cancel originals ZIP">&times;</button>
+    <button class="gallery-top-button real-estate-originals-close" type="button" data-re-originals-cancel aria-label="Cancel originals ZIP" data-i18n-aria-label="re.originals.cancel_zip">&times;</button>
     <div class="real-estate-help-panel">
-      <p class="eyebrow">Private originals</p>
-      <h2 id="real-estate-originals-title">Originals ZIP password</h2>
+      <p class="eyebrow" data-i18n="re.originals.eyebrow">Private originals</p>
+      <h2 id="real-estate-originals-title" data-i18n="re.originals.title">Originals ZIP password</h2>
       <form class="real-estate-originals-form" data-re-originals-form>
         <label for="real-estate-originals-code">
-          <span>Password</span>
-          <input id="real-estate-originals-code" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" data-re-originals-code placeholder="Password" required/>
+          <span data-i18n="re.login.password">Password</span>
+          <input id="real-estate-originals-code" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" data-re-originals-code placeholder="Password" data-i18n-placeholder="re.login.password" required/>
         </label>
         <p class="real-estate-login-status" data-re-originals-status aria-live="polite"></p>
         <div class="real-estate-dialog-actions">
-          <button class="btn primary" type="submit">Create ZIP</button>
-          <button class="btn secondary" type="button" data-re-originals-cancel>Cancel</button>
+          <button class="btn primary" type="submit" data-i18n="re.originals.create_zip">Create ZIP</button>
+          <button class="btn secondary" type="button" data-re-originals-cancel data-i18n="re.action.cancel">Cancel</button>
         </div>
       </form>
     </div>
@@ -338,9 +314,9 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=89.0"></script>
-  <script src="./photos.js?v=89.0"></script>
-  <script src="./site-version.js?v=89.0"></script>
-  <script src="./real-estate.js?v=89.0"></script>
+  <script src="./media-config.js?v=89.1"></script>
+  <script src="./photos.js?v=89.1"></script>
+  <script src="./site-version.js?v=89.1"></script>
+  <script src="./real-estate.js?v=89.1"></script>
 </body>
 </html>

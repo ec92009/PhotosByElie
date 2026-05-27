@@ -148,6 +148,17 @@
     "'": "&#39;",
   }[char]));
 
+  const replaceTokens = (text, replacements = {}) => Object.entries(replacements).reduce(
+    (value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement ?? "")),
+    String(text || "")
+  );
+
+  const t = (keyName, replacements = {}, fallback = "") => {
+    const value = window.photosByElieI18n?.t?.(keyName, replacements);
+    if (value && value !== keyName) return value;
+    return replaceTokens(fallback || keyName, replacements);
+  };
+
   const reIcon = (name) => {
     const paths = {
       edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2 1.58.63-2.52 8.43-8.43 1.06 1.06-8.43 8.43L5 18.83zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
@@ -421,7 +432,9 @@
       elements.loginCodeIcon.innerHTML = window.photosByElieMdIcon?.(name) || fallbackIcon(name);
     }
     if (elements.loginCodeToggle) {
-      elements.loginCodeToggle.setAttribute("aria-label", showing ? "Hide password" : "Show password");
+      elements.loginCodeToggle.setAttribute("aria-label", showing
+        ? t("re.login.hide_password", {}, "Hide password")
+        : t("re.login.show_password", {}, "Show password"));
       elements.loginCodeToggle.setAttribute("aria-pressed", String(showing));
     }
   };
@@ -718,7 +731,9 @@
     elements.outputProgress.hidden = false;
     const safeTotal = Math.max(0, Number(total) || 0);
     const safeCurrent = Math.min(safeTotal || Number(current) || 0, Math.max(0, Number(current) || 0));
-    if (elements.outputProgressTitle) elements.outputProgressTitle.textContent = title || (done ? "Done" : "Working...");
+    if (elements.outputProgressTitle) elements.outputProgressTitle.textContent = title || (done
+      ? t("re.progress.done", {}, "Done")
+      : t("re.progress.working", {}, "Working..."));
     if (elements.outputProgressDetail) elements.outputProgressDetail.textContent = detail || "";
     if (elements.outputProgressEta) elements.outputProgressEta.textContent = done ? "" : outputProgressEta(safeCurrent, safeTotal);
     if (elements.outputProgressBar) {
@@ -730,7 +745,7 @@
       }
     }
   };
-  const startOutputProgress = ({ title = "Working...", detail = "", total = 0, kind = "output" } = {}) => {
+  const startOutputProgress = ({ title = t("re.progress.working", {}, "Working..."), detail = "", total = 0, kind = "output" } = {}) => {
     state.outputBusy = true;
     state.outputBusyKind = kind;
     state.outputProgressStartedAt = Date.now();
@@ -738,8 +753,8 @@
     setStatus(detail || title);
     syncFileActionLabels();
   };
-  const completeOutputProgress = (detail = "Done") => {
-    updateOutputProgress({ title: "Done", detail, current: 1, total: 1, done: true });
+  const completeOutputProgress = (detail = t("re.progress.done", {}, "Done")) => {
+    updateOutputProgress({ title: t("re.progress.done", {}, "Done"), detail, current: 1, total: 1, done: true });
     state.outputBusy = false;
     state.outputBusyKind = "";
     state.outputProgressStartedAt = 0;
@@ -750,7 +765,7 @@
     }, 4500);
   };
   const failOutputProgress = (detail = "Output failed") => {
-    updateOutputProgress({ title: "Needs attention", detail, current: 0, total: 1 });
+    updateOutputProgress({ title: t("re.progress.needs_attention", {}, "Needs attention"), detail, current: 0, total: 1 });
     state.outputBusy = false;
     state.outputBusyKind = "";
     state.outputProgressStartedAt = 0;
@@ -762,45 +777,49 @@
     const kind = state.outputBusyKind;
     const noActiveSelection = activeSelectedPhotos().length === 0;
     document.querySelectorAll("[data-re-open-outputs]").forEach((button) => {
-      button.textContent = outputBusy && kind === "outputs-view" ? "Working..." : "View selected outputs";
+      button.textContent = outputBusy && kind === "outputs-view"
+        ? t("re.progress.working", {}, "Working...")
+        : "Preview all outputs";
       button.title = "View selected PDF and video outputs in the browser, useful on mobile";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-outputs]").forEach((button) => {
-      button.textContent = outputBusy && kind === "outputs-download" ? "Working..." : "Download selected outputs";
+      button.textContent = outputBusy && kind === "outputs-download"
+        ? t("re.output.download_everything_busy", {}, "Preparing everything...")
+        : t("re.output.download_everything", {}, "Download everything");
       button.title = "Download selected PDF and video outputs for desktop file handling";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-view" ? "Building PDF..." : "Preview PDF";
+      button.textContent = outputBusy && kind === "pdf-view" ? "Building PDF..." : t("re.output.preview_pdf", {}, "Preview PDF");
       button.title = "Preview project PDFs in a mobile-safe browser page; selected videos appear as stills from 10% in";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => {
-      button.textContent = outputBusy && kind === "pdf-download" ? "Building PDF..." : "Download PDF";
+      button.textContent = outputBusy && kind === "pdf-download" ? "Building PDF..." : t("re.output.download_pdf", {}, "Download PDF");
       button.title = "Download project PDFs; selected videos appear as stills from 10% in";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
-      button.textContent = outputBusy && kind === "video-view" ? "Preparing video..." : "View video";
+      button.textContent = outputBusy && kind === "video-view" ? "Preparing video..." : t("re.output.preview_video", {}, "Preview video");
       button.title = "View a browser slideshow/video output with random single-guitar music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
       const mobileOpen = shouldOpenHtmlVideoDownloadsInBrowser();
-      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : (mobileOpen ? "Save video" : "Download video");
+      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : (mobileOpen ? "Save video" : t("re.output.download_video", {}, "Download video"));
       button.title = mobileOpen
         ? "Open the phone share/save controls for the slideshow video file; falls back to browser view if saving is unavailable"
         : "Download the video output with random single-guitar music; selected videos keep duration and play 20 dB under the music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
-      button.textContent = outputBusy && kind === "selection" ? "Saving..." : "Save selection";
+      button.textContent = outputBusy && kind === "selection" ? "Saving..." : t("re.action.save_selection", {}, "Save selection");
       button.title = "Save the current selection to the cloud shelf; file sharing remains available as a fallback";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-originals]").forEach((button) => {
-      button.textContent = state.originalsBusy ? "Building originals ZIP..." : "Share originals ZIP";
+      button.textContent = state.originalsBusy ? "Building originals ZIP..." : t("re.output.share_originals", {}, "Share originals ZIP");
       button.title = "Prepare a ZIP of selected original source media from private delivery storage";
       button.disabled = state.originalsBusy || outputBusy || selectedPhotos().length === 0;
     });
@@ -851,16 +870,18 @@
     const products = producedDeliverables();
     const videoCount = photos.filter(isVideo).length;
     const stillCount = Math.max(0, photos.length - videoCount);
-    if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
-    if (elements.customer) elements.customer.textContent = payload?.customer?.name ? `${payload.customer.name} review` : "Client review";
-    if (elements.title) elements.title.textContent = gallery?.title || "Real estate selection";
-    if (elements.description) elements.description.textContent = gallery?.description || "Private media review workspace for project PDFs and slideshow delivery.";
+    if (elements.loginCustomer) elements.loginCustomer.textContent = t("re.login.eyebrow", {}, "Private client access");
+    if (elements.customer) elements.customer.textContent = payload?.customer?.name
+      ? t("re.hero.customer_review", { name: payload.customer.name }, `${payload.customer.name} review`)
+      : t("re.hero.client_review", {}, "Client review");
+    if (elements.title) elements.title.textContent = gallery?.title || t("re.hero.title", {}, "Real estate selection");
+    if (elements.description) elements.description.textContent = gallery?.description || t("re.hero.description", {}, "Private media review workspace for project PDFs and slideshow delivery.");
     if (elements.total) elements.total.textContent = String(stillCount);
-    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Stills";
+    if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = t("re.stats.stills", {}, "Stills");
     if (elements.videoTotal) elements.videoTotal.textContent = String(videoCount);
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
     if (elements.selectedTotal) elements.selectedTotal.textContent = String(products.length);
-    if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = "Selections";
+    if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = t("re.stats.selections", {}, "Selections");
     syncActiveProductName();
     syncCreateProductButtons(products);
     renderProducedDeliverables();
@@ -929,12 +950,67 @@
       batch: row?.batch || row?.manifest || row?.selection || null,
       filename: String(row?.filename || row?.fileName || ""),
       source: String(row?.__deliverableSource || ""),
+      raw: row,
     };
+  };
+
+  const hashString = (value) => {
+    let hash = 5381;
+    const text = String(value || "");
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) + hash) ^ text.charCodeAt(index);
+    }
+    return (hash >>> 0).toString(36);
+  };
+
+  const batchProductFingerprint = (batch) => {
+    const projectRows = Array.isArray(batch?.projects)
+      ? batch.projects.flatMap((project, projectIndex) => (
+        (Array.isArray(project?.items) ? project.items : []).map((item, itemIndex) => [
+          project?.projectId || "",
+          project?.projectTitle || "",
+          Number(project?.sortIndex) || projectIndex + 1,
+          item?.photoId || "",
+          Number(item?.sortIndex) || itemIndex + 1,
+          item?.title || "",
+        ].join(":"))
+      ))
+      : [];
+    const itemRows = projectRows.length
+      ? projectRows
+      : (Array.isArray(batch?.items) ? batch.items.map((item, itemIndex) => [
+        item?.projectId || "",
+        item?.projectTitle || "",
+        item?.photoId || "",
+        Number(item?.sortIndex) || itemIndex + 1,
+        item?.title || "",
+      ].join(":")) : []);
+    return itemRows.length ? itemRows.join("|") : String(batch?.batchId || "");
+  };
+
+  const deliverableProductGroupKey = (item) => {
+    if (item?.batch) return `batch:${state.gallery?.key || ""}:${batchProductFingerprint(item.batch)}`;
+    return `file:${item?.source || ""}:${item?.editUrl || item?.viewUrl || item?.downloadUrl || item?.id || ""}`;
+  };
+
+  const deliverableFormatCode = (type) => {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized === "pdf") return "pdf";
+    if (normalized === "video" || normalized === "mp4" || normalized === "slideshow") return "video";
+    return "selection";
+  };
+
+  const deliverableFormatsLabel = (formats = []) => {
+    const ordered = ["pdf", "video", "selection"].filter((format) => formats.includes(format));
+    if (ordered.includes("pdf") && ordered.includes("video")) return "PDF + Video";
+    if (ordered.includes("pdf")) return "PDF";
+    if (ordered.includes("video")) return "Video";
+    return "PDF + Video";
   };
 
   const producedDeliverables = () => {
     const seen = new Set();
-    return rawDeliverables()
+    const rows = rawDeliverables()
       .map(normalizeDeliverable)
       .filter((item) => item.title || item.viewUrl || item.downloadUrl || item.editUrl || item.batch)
       .filter((item) => {
@@ -943,6 +1019,55 @@
         seen.add(key);
         return true;
       });
+    const groups = new Map();
+    rows.forEach((item) => {
+      const groupKey = deliverableProductGroupKey(item);
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          id: `product-${hashString(groupKey)}`,
+          key: groupKey,
+          rows: [],
+          formats: new Set(),
+          relatedIds: [],
+        });
+      }
+      const group = groups.get(groupKey);
+      group.rows.push(item);
+      group.formats.add(deliverableFormatCode(item.type));
+      group.relatedIds.push(item.id);
+    });
+    return [...groups.values()].map((group) => {
+      const rowsByPreference = [...group.rows].sort((a, b) => {
+        const aType = deliverableFormatCode(a.type) === "selection" ? 0 : 1;
+        const bType = deliverableFormatCode(b.type) === "selection" ? 0 : 1;
+        const aSource = a.source === "cloud" ? 0 : a.source === "local" ? 1 : 2;
+        const bSource = b.source === "cloud" ? 0 : b.source === "local" ? 1 : 2;
+        return aType - bType || aSource - bSource;
+      });
+      const primary = rowsByPreference[0] || group.rows[0];
+      const latest = [...group.rows].sort((a, b) => validDateFor(b.createdAt).getTime() - validDateFor(a.createdAt).getTime())[0] || primary;
+      const batchSource = rowsByPreference.find((item) => item.batch)?.batch || primary?.batch || null;
+      const formats = [...group.formats];
+      const source = group.rows.some((item) => item.source === "cloud")
+        ? "cloud"
+        : group.rows.some((item) => item.source === "local")
+          ? "local"
+          : (primary?.source || "");
+      return {
+        ...primary,
+        id: group.id,
+        type: "product",
+        label: deliverableFormatsLabel(formats),
+        title: String(rowsByPreference.find((item) => !needsGeneratedDeliverableName(item))?.title || primary?.title || "").trim(),
+        createdAt: latest?.createdAt || primary?.createdAt || "",
+        bytes: group.rows.reduce((sum, item) => sum + (Number(item.bytes) || 0), 0),
+        batch: batchSource,
+        source,
+        formats,
+        relatedIds: group.relatedIds.filter(Boolean),
+        records: group.rows,
+      };
+    });
   };
 
   const cloneBatch = (batch) => {
@@ -956,7 +1081,7 @@
   const deliverableTypeCode = (type) => {
     const normalized = String(type || "").toLowerCase();
     if (normalized === "pdf") return "PDF";
-    if (normalized === "selection") return "SELECTION";
+    if (normalized === "selection" || normalized === "product") return "SELECTION";
     return "VIDEO";
   };
 
@@ -999,7 +1124,9 @@
 
   const isLegacyAutoDeliverableTitle = (title) => {
     const value = String(title || "").trim();
-    return /^(PDF|Video):\s*/i.test(value) || /^\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value);
+    return /^(PDF|Video):\s*/i.test(value)
+      || /^\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value)
+      || /^[A-Za-z0-9-]+-\d{6}-(PDF|VIDEO)-\d+$/i.test(value);
   };
 
   const needsGeneratedDeliverableName = (item) => {
@@ -1063,7 +1190,7 @@
     if (!state.activeDeliverableId) return state.activeDeliverableName || nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
     const items = producedDeliverables();
     const item = items.find((deliverable) => deliverable.id === state.activeDeliverableId);
-    if (!item) return state.activeDeliverableName || "Selection";
+    if (!item) return state.activeDeliverableName || t("re.selection.label", {}, "Selection");
     const generatedNames = generatedDeliverableNamesFor(items);
     return displayDeliverableTitleFor(item, generatedNames);
   };
@@ -1079,7 +1206,9 @@
     document.querySelectorAll("[data-re-create-product]").forEach((button) => {
       const shelfButton = button.matches("[data-re-shelf-create-product]");
       button.hidden = shelfButton ? products.length === 0 : state.detailMode || products.length > 0;
-      if (!shelfButton) button.textContent = products.length === 0 ? "Create your first selection" : "+ Create new selection";
+      button.textContent = products.length === 0
+        ? t("re.cta.first_selection", {}, "Create your first selection")
+        : t("re.cta.create_selection", {}, "+ Create new selection");
     });
   };
 
@@ -1165,15 +1294,22 @@
     return saved;
   };
 
+  const relatedDeliverableIdsFor = (deliverableId) => {
+    const item = producedDeliverables().find((deliverable) => deliverable.id === deliverableId);
+    return new Set([deliverableId, ...(Array.isArray(item?.relatedIds) ? item.relatedIds : [])].filter(Boolean).map(String));
+  };
+
   const removeLocalDeliverable = (deliverableId) => {
+    const ids = relatedDeliverableIdsFor(deliverableId);
     const before = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
-    state.localDeliverables = before.filter((item) => String(item?.id || "") !== deliverableId);
+    state.localDeliverables = before.filter((item) => !ids.has(String(item?.id || "")));
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
   };
 
   const removeCloudDeliverableState = (deliverableId) => {
+    const ids = relatedDeliverableIdsFor(deliverableId);
     const before = Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : [];
-    state.cloudDeliverables = before.filter((item) => String(item?.id || "") !== deliverableId);
+    state.cloudDeliverables = before.filter((item) => !ids.has(String(item?.id || "")));
   };
 
   const deleteCloudDeliverable = async (deliverableId, { promptIfMissing = false } = {}) => {
@@ -1215,18 +1351,33 @@
     if (!confirmed) return;
 
     setStatus(`Deleting ${title || "product"}...`);
-    if (item.source === "cloud") {
-      await deleteCloudDeliverable(deliverableId, { promptIfMissing: true });
+    const cloudRecordIds = (Array.isArray(item.records) ? item.records : [item])
+      .filter((record) => record?.source === "cloud")
+      .map((record) => String(record.id || ""))
+      .filter(Boolean);
+    if (cloudRecordIds.length) {
+      for (const cloudId of cloudRecordIds) {
+        await deleteCloudDeliverable(cloudId, { promptIfMissing: true });
+      }
     } else {
-      deleteCloudDeliverable(deliverableId, { promptIfMissing: false }).catch((error) => {
-        state.cloudDeliverablesError = error?.message || "Cloud product could not be deleted.";
-        renderProducedDeliverables();
+      (Array.isArray(item.relatedIds) ? item.relatedIds : [deliverableId]).forEach((relatedId) => {
+        deleteCloudDeliverable(relatedId, { promptIfMissing: false }).catch((error) => {
+          state.cloudDeliverablesError = error?.message || "Cloud product could not be deleted.";
+          renderProducedDeliverables();
+        });
       });
     }
     removeLocalDeliverable(deliverableId);
     removeCloudDeliverableState(deliverableId);
     renderProducedDeliverables();
     setStatus(`Deleted ${title || "product"} from saved products.`);
+  };
+
+  const productIdForRecord = (record) => {
+    const item = producedDeliverables().find((deliverable) => (
+      Array.isArray(deliverable.relatedIds) && deliverable.relatedIds.includes(record?.id)
+    ));
+    return item?.id || record?.id || "";
   };
 
   const saveLocalDeliverable = ({ type = "file", batch = null, filename = "", bytes = 0 } = {}) => {
@@ -1250,8 +1401,9 @@
       batch: cloneBatch(batch),
     };
     state.localDeliverables = [record, ...existing.filter((item) => item?.id !== record.id)].slice(0, 25);
+    const productId = productIdForRecord(record);
     if (normalizedType === "selection" && !state.activeDeliverableId) {
-      state.activeDeliverableId = record.id;
+      state.activeDeliverableId = productId || record.id;
       state.activeDeliverableName = record.title;
     }
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
@@ -1272,15 +1424,17 @@
     if (!item || !["cloud", "local"].includes(item.source)) return;
     const fallback = displayDeliverableTitleFor(item, generatedNames);
     const title = String(name || "").trim() || fallback;
+    const ids = relatedDeliverableIdsFor(deliverableId);
     const updateRecord = (record) => (
-      String(record?.id || "") === deliverableId
+      ids.has(String(record?.id || ""))
         ? { ...record, title }
         : record
     );
     state.localDeliverables = (Array.isArray(state.localDeliverables) ? state.localDeliverables : []).map(updateRecord);
     state.cloudDeliverables = (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : []).map(updateRecord);
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
-    if (state.activeDeliverableId === deliverableId) {
+    if (state.activeDeliverableId === deliverableId || ids.has(state.activeDeliverableId)) {
+      state.activeDeliverableId = deliverableId;
       state.activeDeliverableName = title;
       state.activeDeliverableNameEdited = true;
     }
@@ -1289,13 +1443,13 @@
     syncActiveProductName();
     setStatus(`Renamed product to ${title}.`);
     const updated = [...state.cloudDeliverables, ...state.localDeliverables]
-      .find((record) => String(record?.id || "") === deliverableId);
-    if (updated) {
-      saveCloudDeliverable(updated).catch((error) => {
+      .filter((record) => ids.has(String(record?.id || "")));
+    updated.forEach((record) => {
+      saveCloudDeliverable(record).catch((error) => {
         state.cloudDeliverablesError = error?.message || "Cloud product name could not be saved.";
         renderProducedDeliverables();
       });
-    }
+    });
   };
 
   const beginDeliverableNameEdit = (deliverableId) => {
@@ -1473,7 +1627,7 @@
           <button type="button" data-remove-draft="${escapeHtml(photo.id)}" aria-label="Remove ${escapeHtml(titleFor(photo))}">&times;</button>
         </div>
       </article>
-    `).join("") : `<p class="real-estate-muted">No selected media yet.</p>`;
+    `).join("") : `<p class="real-estate-muted">${escapeHtml(t("re.draft.empty", {}, "No selected media yet."))}</p>`;
   };
 
   const activeOutputSummary = () => state.albums
@@ -1484,17 +1638,17 @@
 
   const stepCopy = () => {
     const selected = activeSelectedPhotos().length;
-    if (state.wizardStep === 0) return "Choose the shoots you want to pick from.";
-    if (state.wizardStep === 1) return `Click media from ${selectedPropertyTitle()} to select it. Shift-click selects a range.`;
+    if (state.wizardStep === 0) return t("re.status.choose_shoots_step", {}, "Choose the shoots you want to pick from.");
+    if (state.wizardStep === 1) return t("re.status.click_media", { project: selectedPropertyTitle() }, `Click media from ${selectedPropertyTitle()} to select it. Shift-click selects a range.`);
     if (state.wizardStep === 2) return selected
-      ? `Only the ${selected} selected media items are shown. Change titles only where needed.`
-      : "Select at least one photo or video before editing titles.";
+      ? t("re.status.selected_titles", { count: selected }, `Only the ${selected} selected media items are shown. Change titles only where needed.`)
+      : t("re.status.select_before_titles", {}, "Select at least one photo or video before editing titles.");
     if (state.wizardStep === 3) return selected
-      ? `Drag the ${selected} selected media items into the order you want.`
-      : "Select at least one photo or video before ordering.";
+      ? t("re.status.drag_selected", { count: selected }, `Drag the ${selected} selected media items into the order you want.`)
+      : t("re.status.select_before_order", {}, "Select at least one photo or video before ordering.");
     return selected
-      ? `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Choose PDF, video, or both.`
-      : "Select at least one photo or video before creating outputs.";
+      ? t("re.status.ready_output", { summary: activeOutputSummary() || `${selected} selected media` }, `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Preview the PDF, preview the video, or download everything.`)
+      : t("re.status.select_before_output", {}, "Select at least one photo or video before creating outputs.");
   };
 
   const renderWizard = () => {
@@ -1518,7 +1672,9 @@
     document.querySelectorAll("[data-re-step-next]").forEach((button) => {
       button.hidden = state.wizardStep >= 4;
       button.disabled = (state.wizardStep === 0 && shootCount === 0) || (state.wizardStep >= 1 && state.wizardStep < 4 && selected === 0);
-      button.textContent = state.wizardStep === 0 ? "Pick photos" : (state.wizardStep === 3 ? "Choose output" : "Next");
+      button.textContent = state.wizardStep === 0
+        ? t("re.action.pick_photos", {}, "Pick photos")
+        : (state.wizardStep === 3 ? t("re.action.choose_output", {}, "Choose output") : t("common.next", {}, "Next"));
     });
     document.querySelectorAll("[data-re-open-outputs], [data-re-download-outputs]").forEach((button) => {
       button.hidden = state.wizardStep !== 4;
@@ -1907,8 +2063,8 @@
 `;
   };
 
-  const buildSlideshowManifest = (photosOverride = selectedPhotos(), activeOnly = false) => {
-    const base = buildBatchManifest(photosOverride, activeOnly);
+  const buildSlideshowManifest = (photosOverride = selectedPhotos(), activeOnly = false, baseOverride = null) => {
+    const base = baseOverride ? cloneBatch(baseOverride) : buildBatchManifest(photosOverride, activeOnly);
     const musicTrack = chooseSlideshowMusicTrack();
     const effectsByPhotoId = new Map((base.items || []).map((item) => [item.photoId, randomKenBurnsEffect()]));
     const slideshowOutputItem = (item) => ({
@@ -2414,10 +2570,10 @@
     }
   };
 
-  const shareSlideshowPlan = async ({ mode = "download", reservedWindow = null, recordProduct = true, progressKind = "" } = {}) => {
+  const shareSlideshowPlan = async ({ mode = "download", reservedWindow = null, recordProduct = true, progressKind = "", batchOverride = null } = {}) => {
     if (!requireUnlocked() || state.outputBusy) return;
     const selected = activeSelectedPhotos();
-    if (!selected.length) {
+    if (!selected.length && !batchOverride?.items?.length) {
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
@@ -2434,10 +2590,10 @@
       kind: progressKind || (mode === "view" ? "video-view" : "video-download"),
     });
     try {
-      const batch = buildSlideshowManifest(selected, true);
+      const batch = buildSlideshowManifest(selected, true, batchOverride);
       updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
       const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
-      if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename });
+      if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename });
       const html = slideshowHtmlFor(batch);
       updateOutputProgress({
         title,
@@ -2461,7 +2617,7 @@
             reservedWindow: fallbackWindow,
           })
           : { method: "download", ...(await downloadBlob(blob, filename)) };
-      if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
+      if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: saved.filename, bytes: saved.bytes });
       if (saved.method === "share") {
         setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else if (saved.method === "open" || saved.method === "open-current") {
@@ -3231,7 +3387,7 @@
       total: totalSteps,
       kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
     });
-    if (recordProduct) saveLocalDeliverable({ type: "pdf", batch, filename: shelfFilename });
+    if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: shelfFilename });
     let savedProjectCount = 0;
     let totalSavedBytes = 0;
     let lastFilename = "";
@@ -3265,7 +3421,7 @@
       }
       if (recordProduct) {
         saveLocalDeliverable({
-          type: "pdf",
+          type: "selection",
           batch,
           filename: projects.length === 1 ? lastFilename : shelfFilename,
           bytes: totalSavedBytes,
@@ -3298,17 +3454,14 @@
       setStatus(`Select at least one photo or video before ${mode === "view" ? "viewing" : "downloading"} outputs`);
       return;
     }
-    const wantsPdf = elements.outputPdf?.checked !== false;
-    const wantsVideo = Boolean(elements.outputVideo?.checked);
-    if (!wantsPdf && !wantsVideo) {
-      setStatus("Choose PDF, video, or both");
-      return;
-    }
-    const pdfWindow = mode === "view" && wantsPdf ? reserveOutputWindow("Building PDF") : null;
-    const videoWindow = mode === "view" && wantsVideo ? reserveOutputWindow("Building video preview") : null;
+    const batch = buildBatchManifest(selected, true);
+    const selectionFilename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+    saveLocalDeliverable({ type: "selection", batch, filename: selectionFilename });
+    const pdfWindow = mode === "view" ? reserveOutputWindow("Building PDF") : null;
+    const videoWindow = mode === "view" ? reserveOutputWindow("Building video preview") : null;
     const progressKind = mode === "view" ? "outputs-view" : "outputs-download";
-    if (wantsPdf) await downloadPdf({ mode, reservedWindows: pdfWindow ? [pdfWindow] : [], progressKind });
-    if (wantsVideo) await shareSlideshowPlan({ mode, reservedWindow: videoWindow, progressKind });
+    await downloadPdf({ mode, reservedWindows: pdfWindow ? [pdfWindow] : [], recordProduct: false, progressKind, batchOverride: batch });
+    await shareSlideshowPlan({ mode, reservedWindow: videoWindow, recordProduct: false, progressKind, batchOverride: batch });
   };
 
   const openSelectedOutputs = () => outputSelectedOutputs("view");
@@ -4088,6 +4241,7 @@
       if (event.key === "ArrowLeft") stepDialog(-1);
       if (event.key === "ArrowRight") stepDialog(1);
     });
+    window.addEventListener("photosbyelie:languagechange", () => render());
   };
 
   const initializeFromPayload = (payload) => {

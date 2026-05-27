@@ -4,7 +4,7 @@
   "musicGainDb": 0,
   "sourceVideoAudioGainDb": -20,
   "sourceVideoAudioLinearGain": 0.1,
-  "transition": "random-ken-burns",
+  "transition": "subtle-centered-ken-burns",
   "tracks": [
     {
       "title": "Quiet Linden Study",

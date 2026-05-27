@@ -30,9 +30,10 @@ OUTPUT_ROOT = ROOT / "tmp" / "real-estate-slideshows"
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 FFPROBE = "/opt/homebrew/bin/ffprobe"
 FPS = 30
-SIZE = "1920x1080"
-WORK_WIDTH = 2304
-WORK_HEIGHT = 1296
+LANDSCAPE_SIZE = "1920x1080"
+PORTRAIT_SIZE = "1080x1920"
+LANDSCAPE_WORK = (2304, 1296)
+PORTRAIT_WORK = (1296, 2304)
 
 
 def run(command: list[str]) -> None:
@@ -141,42 +142,83 @@ def load_music(rng: random.Random) -> tuple[dict[str, Any], dict[str, Any], Path
     return config, track, path
 
 
-def ken_burns_filter(effect: str, duration: int) -> str:
+def ffmpeg_drawtext_escape(value: str) -> str:
+    return str(value or "").replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+
+
+def render_geometry(orientation: str) -> tuple[str, int, int]:
+    if orientation == "portrait":
+        return PORTRAIT_SIZE, *PORTRAIT_WORK
+    return LANDSCAPE_SIZE, *LANDSCAPE_WORK
+
+
+def ken_burns_filter(
+    effect: str,
+    duration: int,
+    orientation: str,
+    counter: str = "",
+    watermark_text: str = "",
+) -> str:
     frames = max(1, duration * FPS)
     denom = max(1, frames - 1)
-    if effect == "slow-zoom-out":
-        z = f"1.13-0.10*on/{denom}"
+    size, work_width, work_height = render_geometry(orientation)
+    if effect == "center-breathe-out":
+        z = f"1.024-0.024*on/{denom}"
         x = "(iw-iw/zoom)*0.5"
         y = "(ih-ih/zoom)*0.5"
-    elif effect == "pan-left":
-        z = "1.10"
-        x = f"(iw-iw/zoom)*(0.85-0.70*on/{denom})"
+    elif effect == "center-drift-left":
+        z = f"1.012+0.012*on/{denom}"
+        x = f"(iw-iw/zoom)*(0.5-0.04*on/{denom})"
         y = "(ih-ih/zoom)*0.5"
-    elif effect == "pan-right":
-        z = "1.10"
-        x = f"(iw-iw/zoom)*(0.15+0.70*on/{denom})"
+    elif effect == "center-drift-right":
+        z = f"1.012+0.012*on/{denom}"
+        x = f"(iw-iw/zoom)*(0.5+0.04*on/{denom})"
         y = "(ih-ih/zoom)*0.5"
-    elif effect == "rise-up":
-        z = f"1.08+0.04*on/{denom}"
+    elif effect == "center-drift-up":
+        z = f"1.012+0.012*on/{denom}"
         x = "(iw-iw/zoom)*0.5"
-        y = f"(ih-ih/zoom)*(0.75-0.45*on/{denom})"
-    elif effect == "drift-down":
-        z = f"1.08+0.04*on/{denom}"
+        y = f"(ih-ih/zoom)*(0.5-0.04*on/{denom})"
+    elif effect == "center-drift-down":
+        z = f"1.012+0.012*on/{denom}"
         x = "(iw-iw/zoom)*0.5"
-        y = f"(ih-ih/zoom)*(0.25+0.45*on/{denom})"
+        y = f"(ih-ih/zoom)*(0.5+0.04*on/{denom})"
     else:
-        z = f"1.02+0.11*on/{denom}"
+        z = f"1.0+0.024*on/{denom}"
         x = "(iw-iw/zoom)*0.5"
         y = "(ih-ih/zoom)*0.5"
-    return (
-        f"scale={WORK_WIDTH}:{WORK_HEIGHT}:force_original_aspect_ratio=decrease,"
-        f"pad={WORK_WIDTH}:{WORK_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black,"
-        f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={SIZE}:fps={FPS},"
-        "setsar=1,format=yuv420p"
-    )
+    filters = [
+        f"scale={work_width}:{work_height}:force_original_aspect_ratio=decrease",
+        f"pad={work_width}:{work_height}:(ow-iw)/2:(oh-ih)/2:color=black",
+        f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={size}:fps={FPS}",
+        "setsar=1",
+        "format=yuv420p",
+    ]
+    if counter:
+        filters.append(
+            "drawtext="
+            f"text='{ffmpeg_drawtext_escape(counter)}':"
+            "x=24:y=h-th-24:fontsize=26:fontcolor=white:"
+            "box=1:boxcolor=gray@0.78:boxborderw=6"
+        )
+    if watermark_text:
+        filters.append(
+            "drawtext="
+            f"text='{ffmpeg_drawtext_escape(watermark_text)}':"
+            "x=(w-text_w)/2:y=h-th-10:fontsize=18:"
+            "fontcolor=white@0.62:shadowcolor=black@0.5:shadowx=1:shadowy=1"
+        )
+    return ",".join(filters)
 
 
-def render_segment(photo: dict[str, Any], output: Path, duration: int, effect: str) -> None:
+def render_segment(
+    photo: dict[str, Any],
+    output: Path,
+    duration: int,
+    effect: str,
+    orientation: str,
+    counter: str,
+    watermark_text: str,
+) -> None:
     run([
         FFMPEG,
         "-y",
@@ -190,7 +232,7 @@ def render_segment(photo: dict[str, Any], output: Path, duration: int, effect: s
         "-t",
         str(duration),
         "-vf",
-        ken_burns_filter(effect, duration),
+        ken_burns_filter(effect, duration, orientation, counter, watermark_text),
         "-an",
         "-c:v",
         "libx264",
@@ -265,6 +307,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seconds", type=int, default=5)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--orientation", choices=["landscape", "portrait"], default="landscape")
+    parser.add_argument("--watermark-text", default="\u00a9 2026 Photos By Elie")
+    parser.add_argument("--no-watermark", action="store_true")
     return parser.parse_args()
 
 
@@ -275,20 +320,36 @@ def main() -> None:
     payload = load_context(args.context)
     album, photos = choose_photos(payload, args.context, args.count, rng)
     config, track, music_path = load_music(rng)
-    effects = ["slow-zoom-in", "slow-zoom-out", "pan-left", "pan-right", "rise-up", "drift-down"]
+    effects = [
+        "center-breathe-in",
+        "center-breathe-out",
+        "center-drift-left",
+        "center-drift-right",
+        "center-drift-up",
+        "center-drift-down",
+    ]
     chosen_effects = [rng.choice(effects) for _ in photos]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     output_dir = OUTPUT_ROOT / f"elie-{album}-{stamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
-    output = args.output or (output_dir / f"elie-{album}-10x{args.seconds}s-music.mp4")
+    output = args.output or (output_dir / f"elie-{album}-10x{args.seconds}s-{args.orientation}-music.mp4")
     total_seconds = args.count * args.seconds
+    watermark_text = "" if args.no_watermark else str(args.watermark_text or "").strip()
 
     with tempfile.TemporaryDirectory(dir=output_dir) as tmp:
         tmp_path = Path(tmp)
         segments = []
         for index, (photo, effect) in enumerate(zip(photos, chosen_effects), start=1):
             segment = tmp_path / f"segment-{index:02d}.mp4"
-            render_segment(photo, segment, args.seconds, effect)
+            render_segment(
+                photo,
+                segment,
+                args.seconds,
+                effect,
+                args.orientation,
+                f"{index}/{len(photos)}",
+                watermark_text,
+            )
             segments.append(segment)
         silent = tmp_path / "silent.mp4"
         concat_segments(segments, silent)
@@ -301,6 +362,12 @@ def main() -> None:
         "context": str(args.context),
         "album": album,
         "photoDurationSeconds": args.seconds,
+        "outputOrientation": args.orientation,
+        "outputAspectRatio": "9:16" if args.orientation == "portrait" else "16:9",
+        "fitMode": "contain",
+        "playback": "once-no-loop",
+        "watermarkEnabled": bool(watermark_text),
+        "watermarkText": watermark_text,
         "output": str(output),
         "durationSeconds": ffprobe_duration(output),
         "music": {
@@ -310,7 +377,7 @@ def main() -> None:
         },
         "sourceVideoAudioGainDb": config.get("sourceVideoAudioGainDb", -20),
         "sourceVideoAudioLinearGain": config.get("sourceVideoAudioLinearGain", 0.1),
-        "transition": config.get("transition", "random-ken-burns"),
+        "transition": config.get("transition", "subtle-centered-ken-burns"),
         "photos": [
             {
                 "photoId": photo.get("id"),

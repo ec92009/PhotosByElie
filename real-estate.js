@@ -16,6 +16,9 @@
   const densityKey = "photosbyelie-real-estate-card-density";
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
   const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
+  const slideshowOrientationKey = "photosbyelie-real-estate-slideshow-orientation";
+  const watermarkKey = "photosbyelie-real-estate-watermark";
+  const watermarkTextKey = "photosbyelie-real-estate-watermark-text";
 
   const clearLogoutFromHistory = () => {
     if (!pageParams.has("logout")) return;
@@ -59,6 +62,8 @@
     selectedOnly: app.querySelector("[data-re-selected-only]"),
     pdfFormat: app.querySelector("[data-re-pdf-format]"),
     slideshowPhotoSeconds: app.querySelector("[data-re-slideshow-photo-seconds]"),
+    watermarkEnabled: app.querySelector("[data-re-watermark-enabled]"),
+    watermarkText: app.querySelector("[data-re-watermark-text]"),
     status: app.querySelector("[data-re-status]"),
     draftCount: app.querySelector("[data-re-draft-count]"),
     draftList: app.querySelector("[data-re-draft-list]"),
@@ -107,6 +112,9 @@
     density: localStorage.getItem(densityKey) || "balanced",
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
     slideshowPhotoSeconds: Number(localStorage.getItem(slideshowPhotoSecondsKey)) || 4,
+    slideshowOrientation: localStorage.getItem(slideshowOrientationKey) || "landscape",
+    watermarkEnabled: localStorage.getItem(watermarkKey) !== "off",
+    watermarkText: localStorage.getItem(watermarkTextKey) || "",
     selectedOnly: false,
     selectedOrder: [],
     selectedIds: new Set(),
@@ -555,7 +563,12 @@
   };
   const paperFormatFor = (key = state.pdfFormat) => paperFormats[key] || paperFormats.a4;
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
-  const slideshowTransition = "random-ken-burns";
+  const densityOptions = new Set(["compact", "balanced", "large"]);
+  const slideshowOrientationOptions = new Set(["landscape", "portrait"]);
+  const normalizeDensity = (value) => densityOptions.has(value) ? value : "balanced";
+  const normalizeSlideshowOrientation = (value) => slideshowOrientationOptions.has(value) ? value : "landscape";
+  const activeWatermarkText = () => state.watermarkEnabled ? (String(state.watermarkText || "").trim() || pdfWatermarkText) : "";
+  const slideshowTransition = "subtle-centered-ken-burns";
   const slideshowMusicTracks = Object.freeze([
     { title: "Quiet Linden Study", bpm: 82, duration: 113.02, src: "./assets/music/slideshow-guitar/quiet-linden-study-single-guitar-113s.mp3" },
     { title: "Warm Balcony Theme", bpm: 86, duration: 107.847, src: "./assets/music/slideshow-guitar/warm-balcony-theme-single-guitar-107s.mp3" },
@@ -595,19 +608,25 @@
     mode: "one-slideshow-per-project",
     photoDurationSeconds: state.slideshowPhotoSeconds,
     videoDurationPolicy: "preserve-source-duration",
+    outputOrientation: normalizeSlideshowOrientation(state.slideshowOrientation),
+    outputAspectRatio: normalizeSlideshowOrientation(state.slideshowOrientation) === "portrait" ? "9:16" : "16:9",
+    fitMode: "contain-with-blurred-backdrop",
+    playback: "once-no-loop",
+    watermarkEnabled: Boolean(state.watermarkEnabled),
+    watermarkText: activeWatermarkText(),
     transition: slideshowTransition,
-    effects: "random-ken-burns",
+    effects: "subtle-centered-ken-burns",
     audioPolicy: slideshowAudioPolicyFor(musicTrack),
   });
   const kenBurnsEffects = Object.freeze([
-    "slow-zoom-in",
-    "slow-zoom-out",
-    "pan-left",
-    "pan-right",
-    "rise-up",
-    "drift-down",
+    "center-breathe-in",
+    "center-breathe-out",
+    "center-drift-left",
+    "center-drift-right",
+    "center-drift-up",
+    "center-drift-down",
   ]);
-  const randomKenBurnsEffect = () => kenBurnsEffects[Math.floor(Math.random() * kenBurnsEffects.length)] || "slow-zoom-in";
+  const randomKenBurnsEffect = () => kenBurnsEffects[Math.floor(Math.random() * kenBurnsEffects.length)] || "center-breathe-in";
   const photoSearchText = (photo) => [
     titleFor(photo),
     photo?.title,
@@ -1682,7 +1701,71 @@
     });
   };
 
+  const syncDensityControls = () => {
+    const normalized = normalizeDensity(state.density);
+    state.density = normalized;
+    if (elements.density) elements.density.value = normalized;
+    document.querySelectorAll("[data-re-density-quick]").forEach((control) => {
+      control.hidden = state.wizardStep !== 1 && state.wizardStep !== 2;
+    });
+    document.querySelectorAll("[data-re-density-choice]").forEach((button) => {
+      const active = button.dataset.reDensityChoice === normalized;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  const setDensity = (value) => {
+    const normalized = normalizeDensity(value);
+    if (state.density === normalized) {
+      syncDensityControls();
+      return;
+    }
+    state.density = normalized;
+    localStorage.setItem(densityKey, normalized);
+    syncDensityControls();
+    renderGrid();
+  };
+
+  const syncSlideshowOrientationControls = () => {
+    const normalized = normalizeSlideshowOrientation(state.slideshowOrientation);
+    state.slideshowOrientation = normalized;
+    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((button) => {
+      const active = button.dataset.reSlideshowOrientation === normalized;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  const setSlideshowOrientation = (value) => {
+    const normalized = normalizeSlideshowOrientation(value);
+    state.slideshowOrientation = normalized;
+    localStorage.setItem(slideshowOrientationKey, normalized);
+    syncSlideshowOrientationControls();
+  };
+
+  const syncWatermarkControls = () => {
+    if (elements.watermarkEnabled) elements.watermarkEnabled.checked = Boolean(state.watermarkEnabled);
+    if (elements.watermarkText) {
+      elements.watermarkText.value = String(state.watermarkText || "").trim() || pdfWatermarkText;
+      elements.watermarkText.disabled = !state.watermarkEnabled;
+    }
+  };
+
+  const setWatermarkEnabled = (enabled) => {
+    state.watermarkEnabled = Boolean(enabled);
+    localStorage.setItem(watermarkKey, state.watermarkEnabled ? "on" : "off");
+    syncWatermarkControls();
+  };
+
+  const setWatermarkText = (value) => {
+    state.watermarkText = String(value || "");
+    localStorage.setItem(watermarkTextKey, state.watermarkText);
+    syncWatermarkControls();
+  };
+
   const render = () => {
+    state.density = normalizeDensity(state.density);
     document.body.dataset.realEstateDensity = state.density;
     if (elements.pdfFormat) elements.pdfFormat.value = paperFormatFor().key;
     if (elements.mediaType) elements.mediaType.value = state.mediaType;
@@ -1694,6 +1777,9 @@
     renderGrid();
     renderDraft();
     renderWizard();
+    syncDensityControls();
+    syncSlideshowOrientationControls();
+    syncWatermarkControls();
     syncFileActionLabels();
     window.photosByElieVersionInternalLinks?.(app);
   };
@@ -1905,6 +1991,7 @@
     const photos = photosOverride;
     const projects = projectGroupsFor(photos, activeOnly);
     const mediaSummary = selectedMediaSummary(photos);
+    const watermarkText = activeWatermarkText();
     return {
       ...template,
       schema: template.schema || workflow().batchManifest?.schema || "photosbyelie.realEstatePdfBatch.v1",
@@ -1924,9 +2011,10 @@
         fitMode: "contain",
         videoTreatment: "still-from-video",
         videoStillPercent: 10,
-        photoWatermark: pdfWatermarkText,
+        photoWatermark: watermarkText,
+        watermarkEnabled: Boolean(watermarkText),
         photoWatermarkPlacement: "bottom-center",
-        pageWatermark: pdfWatermarkText,
+        pageWatermark: watermarkText,
         pageWatermarkPlacement: "footer-center",
       },
       slideshowSettings: {
@@ -2094,6 +2182,9 @@
     const musicTrack = audioPolicy.musicTrack || null;
     const previewSourceVideoVolume = Number(audioPolicy.sourceVideoAudioLinearGain ?? sourceVideoAudioLinearGain);
     const previewMusicGainDb = Number(audioPolicy.musicGainDb ?? slideshowMusicGainDb);
+    const outputOrientation = manifest.slideshowSettings?.outputOrientation === "portrait" ? "portrait" : "landscape";
+    const outputRatio = outputOrientation === "portrait" ? 9 / 16 : 16 / 9;
+    const slideshowWatermarkText = String(manifest.slideshowSettings?.watermarkText || "").trim();
     const slides = rows.map(({ projectTitle, item }) => {
       const photo = state.photosById.get(item.photoId);
       if (!photo) return null;
@@ -2135,8 +2226,8 @@
     :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4;background:#0d0d0d;color:#f7f7f7}
     *{box-sizing:border-box}
     body{margin:0;background:#0d0d0d;color:#f7f7f7}
-    main{min-height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) auto}
-    .stage{position:relative;display:grid;min-height:70dvh;background:#050505;place-items:center;overflow:hidden}
+    main{min-height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) auto;place-items:center stretch}
+    .stage{position:relative;display:grid;width:100vw;height:calc(100dvh - 70px);background:#050505;place-items:center;align-self:center;justify-self:center;overflow:hidden}
     .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505;overflow:hidden}
     .frame video{width:100%;height:100%;object-fit:contain;background:#050505}
     .photo-slide{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:#050505}
@@ -2144,19 +2235,19 @@
     .slide-backdrop{position:absolute;inset:0;object-fit:cover;filter:blur(24px);opacity:.48;transform:scale(1.1)}
     .slide-photo{position:relative;z-index:1;object-fit:contain;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
     @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
-    .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(14px,4vw,38px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
+    .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(46px,6vw,74px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
     .caption h1{max-width:820px;margin:0;font-size:clamp(1.8rem,5vw,4.8rem);line-height:.98}
     .caption p{margin:8px 0 0;color:#d7d7d7;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    .slide-count{position:absolute;left:clamp(10px,2.4vw,22px);bottom:clamp(10px,2.4vw,22px);z-index:4;border-radius:4px;background:rgba(80,80,80,.78);color:#fff;padding:3px 7px;font-size:.78rem;font-weight:850;line-height:1;text-shadow:none}
     .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
     .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(255,255,255,.14);background:#171717;padding:14px}
     button{min-height:42px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#242424;color:#fff;padding:8px 18px;font:inherit;font-weight:800;cursor:pointer}
     button:hover{background:#303030}
     @media (max-width:700px){
-      main{display:block;min-height:100dvh}
-      .stage{min-height:calc(100dvh - 70px)}
-      .photo-slide{padding:calc(env(safe-area-inset-top,0px) + 12px) 12px clamp(132px,24dvh,190px)}
-      .frame video{padding:calc(env(safe-area-inset-top,0px) + 12px) 12px clamp(132px,24dvh,190px)}
-      .caption{bottom:clamp(18px,5dvh,48px)}
+      main{display:grid;min-height:100dvh}
+      .photo-slide{padding:0}
+      .frame video{padding:0}
+      .caption{bottom:clamp(42px,10dvh,72px)}
       .caption h1{font-size:clamp(1.35rem,8vw,2.5rem)}
       .caption p{font-size:.78rem}
       .controls{position:sticky;bottom:0;z-index:5;padding:10px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
@@ -2173,7 +2264,7 @@
     .note{width:min(1120px,calc(100% - 32px));margin:0 auto 22px;color:#aaa;font-size:.9rem}
   </style>
 </head>
-<body>
+<body class="video-${outputOrientation}">
   <main>
     <section class="stage" aria-label="Browser video preview">
       <div class="frame" data-frame></div>
@@ -2183,9 +2274,9 @@
           <p data-project>${escapeHtml(slides[0]?.projectTitle || manifest.customer || "Client")}</p>
           <h1 data-title>${escapeHtml(slides[0]?.title || "Photos By Elie slideshow")}</h1>
         </div>
-        <strong data-counter>${slides.length ? `1 / ${slides.length}` : "0 / 0"}</strong>
       </div>
-      <div class="watermark">${escapeHtml(pdfWatermarkText)}</div>
+      <strong class="slide-count" data-counter>${slides.length ? `1/${slides.length}` : "0/0"}</strong>
+      ${slideshowWatermarkText ? `<div class="watermark">${escapeHtml(slideshowWatermarkText)}</div>` : ""}
     </section>
     <div class="controls">
       <button type="button" data-prev>Previous</button>
@@ -2196,9 +2287,10 @@
       <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
       <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
       <div><dt>Photo duration</dt><dd>${escapeHtml(manifest.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds)}s</dd></div>
+      <div><dt>Format</dt><dd>${escapeHtml(outputOrientation === "portrait" ? "Vertical 9:16" : "Landscape 16:9")}</dd></div>
       <div><dt>Music</dt><dd>${escapeHtml(musicTrack?.title || "Random single-guitar cue")}</dd></div>
       <div><dt>Source audio</dt><dd>${escapeHtml(`${audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb} dB`)}</dd></div>
-      <div><dt>Transition</dt><dd>Random Ken Burns</dd></div>
+      <div><dt>Transition</dt><dd>Subtle centered Ken Burns</dd></div>
     </dl>
     <table>
       <thead>
@@ -2223,11 +2315,13 @@
         </tr>`).join("")}
       </tbody>
     </table>
-    <p class="note">This browser preview preserves source duration for videos when the browser can play them. Video source audio plays at ${escapeHtml(audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb)} dB under the generated music. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with portrait-safe Ken Burns motion.</p>
+    <p class="note">This browser preview plays once and stops at the end. Video source audio plays at ${escapeHtml(audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb)} dB under the generated music. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with subtle centered Ken Burns motion.</p>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
     <script>
       const slides = ${safeSlidesJson};
       const musicTrack = ${safeMusicJson};
+      const videoRatio = ${Number(outputRatio).toFixed(6)};
+      const stage = document.querySelector(".stage");
       const frame = document.querySelector("[data-frame]");
       const music = document.querySelector("[data-music]");
       const title = document.querySelector("[data-title]");
@@ -2243,14 +2337,14 @@
       const attr = (value) => String(value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const effectStyle = (effect, durationMs) => {
         const presets = {
-          "slow-zoom-in": [1.005, 1.045, "0%", "0%", "0%", "0%"],
-          "slow-zoom-out": [1.045, 1.01, "0%", "0%", "0%", "0%"],
-          "pan-left": [1.03, 1.04, "1.1%", "0%", "-1.1%", "0%"],
-          "pan-right": [1.03, 1.04, "-1.1%", "0%", "1.1%", "0%"],
-          "rise-up": [1.025, 1.04, "0%", "0.9%", "0%", "-0.9%"],
-          "drift-down": [1.025, 1.04, "0%", "-0.9%", "0%", "0.9%"],
+          "center-breathe-in": [1.0, 1.024, "0%", "0%", "0%", "0%"],
+          "center-breathe-out": [1.024, 1.0, "0%", "0%", "0%", "0%"],
+          "center-drift-left": [1.012, 1.024, "0%", "0%", "-0.35%", "0%"],
+          "center-drift-right": [1.012, 1.024, "0%", "0%", "0.35%", "0%"],
+          "center-drift-up": [1.012, 1.024, "0%", "0%", "0%", "-0.35%"],
+          "center-drift-down": [1.012, 1.024, "0%", "0%", "0%", "0.35%"],
         };
-        const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["slow-zoom-in"];
+        const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["center-breathe-in"];
         return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
       };
       const photoSlideHtml = (slide) => {
@@ -2264,6 +2358,22 @@
         if (timer) window.clearTimeout(timer);
         timer = 0;
       };
+      const applyStageSize = () => {
+        if (!stage) return;
+        const controls = document.querySelector(".controls");
+        const controlHeight = controls ? controls.getBoundingClientRect().height : 70;
+        const maxWidth = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+        const maxHeight = Math.max(220, (window.innerHeight || document.documentElement.clientHeight || 1) - controlHeight);
+        let width = maxWidth;
+        let height = width / videoRatio;
+        if (height > maxHeight) {
+          height = maxHeight;
+          width = height * videoRatio;
+        }
+        stage.style.width = Math.round(width) + "px";
+        stage.style.height = Math.round(height) + "px";
+      };
+      window.addEventListener("resize", applyStageSize);
       const syncPlayButton = () => {
         if (!playButton) return;
         playButton.textContent = soundBlocked ? "Play with sound" : (playing ? "Pause" : "Play");
@@ -2291,17 +2401,18 @@
       };
       const render = () => {
         clearTimer();
+        applyStageSize();
         const slide = slides[index];
         if (!slide) {
           frame.innerHTML = "";
           title.textContent = "No media selected";
           project.textContent = "";
-          counter.textContent = "0 / 0";
+          counter.textContent = "0/0";
           return;
         }
         title.textContent = slide.title || "Untitled";
         project.textContent = slide.projectTitle || slide.mediaType || "";
-        counter.textContent = (index + 1) + " / " + slides.length;
+        counter.textContent = (index + 1) + "/" + slides.length;
         if (playing) playMusic();
         if (slide.mediaType === "video" && slide.videoUrl) {
           frame.innerHTML = '<video controls playsinline poster="' + attr(slide.imageUrl) + '" src="' + attr(slide.videoUrl) + '"></video>';
@@ -2319,17 +2430,29 @@
         }
       };
       const next = () => {
-        index = slides.length ? (index + 1) % slides.length : 0;
+        if (!slides.length) {
+          index = 0;
+          render();
+          return;
+        }
+        if (index >= slides.length - 1) {
+          playing = false;
+          pauseMusic();
+          syncPlayButton();
+          return;
+        }
+        index += 1;
         render();
       };
       const prev = () => {
-        index = slides.length ? (index - 1 + slides.length) % slides.length : 0;
+        index = slides.length ? Math.max(0, index - 1) : 0;
         render();
       };
       document.querySelector("[data-next]")?.addEventListener("click", next);
       document.querySelector("[data-prev]")?.addEventListener("click", prev);
       playButton?.addEventListener("click", async () => {
         if (soundBlocked) {
+          if (!playing && index >= slides.length - 1) index = 0;
           playing = true;
           await playMusic();
           const video = frame.querySelector("video");
@@ -2337,7 +2460,9 @@
           render();
           return;
         }
+        const replayFromEnd = !playing && index >= slides.length - 1;
         playing = !playing;
+        if (playing && replayFromEnd) index = 0;
         syncPlayButton();
         const video = frame.querySelector("video");
         if (video) {
@@ -3102,6 +3227,7 @@
     const paper = paperFormatFor();
     const pageWidth = paper.width;
     const pageHeight = paper.height;
+    const watermarkText = activeWatermarkText();
     const margin = 30;
     const captionArea = 30;
     const captionGap = 7;
@@ -3160,26 +3286,30 @@
             slot.width
           );
 
-          const watermarkFontSize = Math.max(8, Math.min(12, placement.width / 48));
-          context.font = `700 ${watermarkFontSize}px Arial, Helvetica, sans-serif`;
-          context.textAlign = "center";
-          context.textBaseline = "alphabetic";
-          const photoWatermark = fittedCanvasText(context, pdfWatermarkText, placement.width - 18);
-          const watermarkY = placement.y + placement.height - Math.max(8, watermarkFontSize * 0.8);
-          context.fillStyle = "rgba(0, 0, 0, 0.38)";
-          drawCenteredCanvasText(context, photoWatermark, placement.x + 1, watermarkY + 1, placement.width);
-          context.fillStyle = "rgba(255, 255, 255, 0.70)";
-          drawCenteredCanvasText(context, photoWatermark, placement.x, watermarkY, placement.width);
+          if (watermarkText) {
+            const watermarkFontSize = Math.max(8, Math.min(12, placement.width / 48));
+            context.font = `700 ${watermarkFontSize}px Arial, Helvetica, sans-serif`;
+            context.textAlign = "center";
+            context.textBaseline = "alphabetic";
+            const photoWatermark = fittedCanvasText(context, watermarkText, placement.width - 18);
+            const watermarkY = placement.y + placement.height - Math.max(8, watermarkFontSize * 0.8);
+            context.fillStyle = "rgba(0, 0, 0, 0.38)";
+            drawCenteredCanvasText(context, photoWatermark, placement.x + 1, watermarkY + 1, placement.width);
+            context.fillStyle = "rgba(255, 255, 255, 0.70)";
+            drawCenteredCanvasText(context, photoWatermark, placement.x, watermarkY, placement.width);
+          }
         } finally {
           loaded.cleanup();
         }
       }
 
-      context.font = "700 8px Arial, Helvetica, sans-serif";
-      context.textAlign = "center";
-      context.textBaseline = "alphabetic";
-      context.fillStyle = "rgba(0, 0, 0, 0.42)";
-      context.fillText(pdfWatermarkText, pageWidth / 2, pageHeight - 10);
+      if (watermarkText) {
+        context.font = "700 8px Arial, Helvetica, sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "alphabetic";
+        context.fillStyle = "rgba(0, 0, 0, 0.42)";
+        context.fillText(watermarkText, pageWidth / 2, pageHeight - 10);
+      }
 
       renderedPages.push({
         bytes: await canvasToJpegBytes(canvas),
@@ -3920,9 +4050,7 @@
       renderGrid();
     });
     elements.density?.addEventListener("change", (event) => {
-      state.density = event.target.value;
-      localStorage.setItem(densityKey, state.density);
-      renderGrid();
+      setDensity(event.target.value);
     });
     elements.pdfFormat?.addEventListener("change", (event) => {
       state.pdfFormat = paperFormatFor(event.target.value).key;
@@ -3934,6 +4062,15 @@
       state.slideshowPhotoSeconds = next;
       localStorage.setItem(slideshowPhotoSecondsKey, String(next));
       event.target.value = String(next);
+    });
+    elements.watermarkEnabled?.addEventListener("change", (event) => {
+      setWatermarkEnabled(event.target.checked);
+    });
+    elements.watermarkText?.addEventListener("change", (event) => {
+      setWatermarkText(event.target.value);
+    });
+    elements.watermarkText?.addEventListener("blur", (event) => {
+      setWatermarkText(event.target.value);
     });
     elements.selectedOnly?.addEventListener("change", (event) => {
       state.selectedOnly = event.target.checked;
@@ -4091,6 +4228,12 @@
     }));
     document.querySelectorAll("[data-re-step-next]").forEach((button) => button.addEventListener("click", () => {
       setWizardStep(state.wizardStep + 1);
+    }));
+    document.querySelectorAll("[data-re-density-choice]").forEach((button) => button.addEventListener("click", () => {
+      setDensity(button.dataset.reDensityChoice);
+    }));
+    document.querySelectorAll("[data-re-slideshow-orientation]").forEach((button) => button.addEventListener("click", () => {
+      setSlideshowOrientation(button.dataset.reSlideshowOrientation);
     }));
     document.addEventListener("click", (event) => {
       const createProduct = event.target?.closest?.("[data-re-create-product]");
@@ -4280,9 +4423,12 @@
     const savedSession = readJson(authStoreKey(), {});
     state.username = savedCredentials.username || savedSession.username || state.payload?.customer?.username || state.payload?.customer?.name || "";
     state.accessCode = savedCredentials.accessCode || savedSession.accessCode || "";
+    state.density = normalizeDensity(state.density);
     if (elements.density) elements.density.value = state.density;
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;
+    state.slideshowOrientation = normalizeSlideshowOrientation(state.slideshowOrientation);
+    if (!String(state.watermarkText || "").trim()) state.watermarkText = pdfWatermarkText;
     renderHero();
     render();
     if (state.unlocked) fetchCloudDeliverables({ quiet: true }).catch(() => {});

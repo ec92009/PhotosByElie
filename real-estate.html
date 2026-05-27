@@ -8,9 +8,9 @@
   <meta name="description" content="Private real-estate media review, project PDF, and slideshow selection workspace for Photos By Elie clients."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=89.1"/>
-  <link rel="stylesheet" href="./styles.css?v=89.1"/>
-  <link rel="stylesheet" href="./photos.css?v=89.1"/>
+  <link rel="stylesheet" href="./shared.css?v=89.2"/>
+  <link rel="stylesheet" href="./styles.css?v=89.2"/>
+  <link rel="stylesheet" href="./photos.css?v=89.2"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a class="is-active" href="./real-estate.html" data-i18n="nav.real_estate">Real Estate</a>
     </nav>
-    <span class="site-version-badge">v89.1</span>
+    <span class="site-version-badge">v89.2</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -113,6 +113,14 @@
         <p class="gallery-status" data-re-wizard-status aria-live="polite" data-i18n="re.status.choose_shoots">Choose shoots to begin.</p>
       </div>
       <div class="real-estate-wizard-actions">
+        <div class="real-estate-density-quick" data-re-density-quick hidden aria-label="Card size" data-i18n-aria-label="re.filter.card_size">
+          <span data-i18n="re.filter.card_size">Card size</span>
+          <div class="real-estate-segmented" role="group">
+            <button type="button" data-re-density-choice="compact" data-i18n="re.density.compact">Compact</button>
+            <button type="button" data-re-density-choice="balanced" data-i18n="re.density.balanced">Balanced</button>
+            <button type="button" data-re-density-choice="large" data-i18n="re.density.large">Large</button>
+          </div>
+        </div>
         <button class="btn primary" type="button" data-re-step-next data-i18n="common.next">Next</button>
       </div>
     </section>
@@ -205,6 +213,21 @@
           <label class="real-estate-pdf-setting" for="real-estate-slideshow-photo-seconds">
             <span data-i18n="re.output.photo_seconds">Photo seconds in video</span>
             <input id="real-estate-slideshow-photo-seconds" type="number" min="1" max="30" step="1" value="4" data-re-slideshow-photo-seconds/>
+          </label>
+          <div class="real-estate-pdf-setting real-estate-video-format" data-re-video-format aria-label="Video format" data-i18n-aria-label="re.output.video_format">
+            <span data-i18n="re.output.video_format">Video format</span>
+            <div class="real-estate-segmented" role="group">
+              <button type="button" data-re-slideshow-orientation="landscape" data-i18n="re.output.video_landscape">Landscape</button>
+              <button type="button" data-re-slideshow-orientation="portrait" data-i18n="re.output.video_portrait">Vertical</button>
+            </div>
+          </div>
+          <label class="real-estate-pdf-setting real-estate-watermark-setting" for="real-estate-watermark-text">
+            <span data-i18n="re.output.watermark_text">Watermark text</span>
+            <input id="real-estate-watermark-text" type="text" value="© 2026 Photos By Elie" data-re-watermark-text/>
+          </label>
+          <label class="real-estate-check real-estate-watermark-toggle">
+            <input type="checkbox" data-re-watermark-enabled checked/>
+            <span data-i18n="re.output.watermark_enabled">Use watermark on PDF and video</span>
           </label>
         </div>
         <div class="real-estate-output-actions">
@@ -314,9 +337,9 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=89.1"></script>
-  <script src="./photos.js?v=89.1"></script>
-  <script src="./site-version.js?v=89.1"></script>
-  <script src="./real-estate.js?v=89.1"></script>
+  <script src="./media-config.js?v=89.2"></script>
+  <script src="./photos.js?v=89.2"></script>
+  <script src="./site-version.js?v=89.2"></script>
+  <script src="./real-estate.js?v=89.2"></script>
 </body>
 </html>

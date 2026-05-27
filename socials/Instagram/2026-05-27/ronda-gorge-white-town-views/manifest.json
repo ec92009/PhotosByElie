@@ -1,7 +1,7 @@
 {
   "date": "2026-05-27",
   "platform": "Instagram",
-  "status": "prepared",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Ronda Gorge and White Town Views",
@@ -13,7 +13,8 @@
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
     "Use files in numeric order for the Instagram carousel.",
-    "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use the profile link/story sticker as available."
+    "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use the profile link/story sticker as available.",
+    "Built-in Browser confirmed Instagram is logged in as ec92009. Not published because carousel image upload and final Share require manual file-picker/action-time confirmation."
   ],
   "items": [
     {
@@ -169,5 +170,9 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240519-161730-00073-484057c528",
       "local_staged_path": "socials/Instagram/2026-05-27/ronda-gorge-white-town-views/images/09-20240519-161730-00073-484057c528-ronda.jpg"
     }
-  ]
+  ],
+  "browser_check": {
+    "checked_at": "2026-05-27T07:12:53.713484Z",
+    "result": "Built-in Browser confirmed Instagram is logged in as ec92009. Not published because carousel image upload and final Share require manual file-picker/action-time confirmation."
+  }
 }

@@ -1,7 +1,7 @@
 {
   "date": "2026-05-27",
   "platform": "Facebook",
-  "status": "prepared",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "Photos By Elie Facebook Page",
   "post_type": "multi_photo_or_album",
   "title": "Albert Kahn Garden Paths",
@@ -13,7 +13,8 @@
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
     "Use files in numeric order for the Facebook carousel/post.",
-    "Remove any off-theme automatic link preview before publishing; keep the URL in the caption."
+    "Remove any off-theme automatic link preview before publishing; keep the URL in the caption.",
+    "Built-in Browser confirmed Facebook Page management view for Photos By Elie. Not published because multi-image upload and final Post require manual file-picker/action-time confirmation."
   ],
   "items": [
     {
@@ -152,5 +153,9 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=img-6021-9b14501285",
       "local_staged_path": "socials/Facebook/2026-05-27/albert-kahn-garden-paths/images/08-img-6021-9b14501285-boulogne-billancourt-musee-albert-kahn.jpg"
     }
-  ]
+  ],
+  "browser_check": {
+    "checked_at": "2026-05-27T07:12:53.713484Z",
+    "result": "Built-in Browser confirmed Facebook Page management view for Photos By Elie. Not published because multi-image upload and final Post require manual file-picker/action-time confirmation."
+  }
 }

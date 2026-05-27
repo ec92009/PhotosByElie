@@ -1,7 +1,7 @@
 {
   "date": "2026-05-27",
   "platform": "Threads",
-  "status": "prepared",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "Threads account via Instagram login",
   "post_type": "image_post",
   "title": "Ronda Gorge and White Town Views",
@@ -12,7 +12,8 @@
   "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
   "notes": [
     "Uses four public watermarked images copied from the Instagram Ronda carousel set.",
-    "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+    "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+    "Built-in Browser confirmed Threads is logged in as @ec92009. Not published because image attachment and final Post require manual file-picker/action-time confirmation."
   ],
   "items": [
     {
@@ -87,5 +88,9 @@
       "local_staged_path": "socials/Threads/2026-05-27/ronda-gorge-white-town-views/images/04-d5h-2748-855aefd854-ronda.jpg",
       "source_instagram_file": "socials/Instagram/2026-05-27/ronda-gorge-white-town-views/images/07-d5h-2748-855aefd854-ronda.jpg"
     }
-  ]
+  ],
+  "browser_check": {
+    "checked_at": "2026-05-27T07:12:53.713484Z",
+    "result": "Built-in Browser confirmed Threads is logged in as @ec92009. Not published because image attachment and final Post require manual file-picker/action-time confirmation."
+  }
 }

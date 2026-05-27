@@ -6,14 +6,14 @@ Prepared from the public SQLite-backed catalog export and public R2 preview URLs
 
 ## Publishing Status
 
-- facebook: prepared; ready for Built-in Browser publishing after account/board confirmation.
-- instagram: prepared; ready for Built-in Browser publishing after account/board confirmation.
-- pinterest: prepared; ready for Built-in Browser publishing after account/board confirmation.
-- threads: prepared; ready for Built-in Browser publishing after account/board confirmation.
+- facebook: prepared; authenticated Facebook Page management confirmed; manual image upload/final Post still needed.
+- instagram: prepared; authenticated ec92009 session confirmed; manual carousel upload/final Share still needed.
+- pinterest: prepared; authenticated Photos By Elie Business Hub confirmed; manual Pin Builder upload, board confirmation, and final Publish still needed.
+- threads: prepared; authenticated @ec92009 session confirmed; manual image attach/final Post still needed.
 
 ## FACEBOOK - Albert Kahn Garden Paths
 
-- Account/status: Photos By Elie Facebook Page; prepared, not yet published.
+- Account/status: Photos By Elie Facebook Page; prepared; authenticated browser session confirmed, not published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-albert-kahn-garden-paths-2026-05-27
 - Image count: 8
 - Local package: socials/Facebook/2026-05-27/albert-kahn-garden-paths
@@ -39,7 +39,7 @@ Selected media:
 
 ## INSTAGRAM - Ronda Gorge and White Town Views
 
-- Account/status: ec92009; prepared, not yet published.
+- Account/status: ec92009; prepared; authenticated browser session confirmed, not published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27
 - Image count: 9
 - Local package: socials/Instagram/2026-05-27/ronda-gorge-white-town-views
@@ -68,7 +68,7 @@ Selected media:
 
 ## PINTEREST - Del Mar Sunset Tide Colors
 
-- Account/status: @photosbyelie; prepared, not yet published.
+- Account/status: @photosbyelie; prepared; authenticated browser session confirmed, not published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-del-mar-sunset-tide-colors-2026-05-27
 - Image count: 5
 - Local package: socials/Pinterest/2026-05-27/del-mar-sunset-tide-colors
@@ -95,7 +95,7 @@ Selected media:
 
 ## THREADS - Ronda Gorge and White Town Views
 
-- Account/status: Threads account via Instagram login; prepared, not yet published.
+- Account/status: Threads account via Instagram login; prepared; authenticated browser session confirmed, not published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27
 - Image count: 4
 - Local package: socials/Threads/2026-05-27/ronda-gorge-white-town-views

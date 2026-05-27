@@ -4,7 +4,7 @@
 
 - Account: Threads account via Instagram login
 - Type: image_post
-- Status: Prepared; not yet published.
+- Status: Prepared; authenticated browser session confirmed, not yet published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27
 - Link preview: remove if generic/off-theme before posting.
 
@@ -34,3 +34,7 @@ Prepared from public watermarked R2 preview URLs and the staged Instagram packag
 - 2. `d5h-2760-8ccdd9684c` - images/02-d5h-2760-8ccdd9684c-ronda.jpg
 - 3. `d5h-2749-2f1d7f391b` - images/03-d5h-2749-2f1d7f391b-ronda.jpg
 - 4. `d5h-2748-855aefd854` - images/04-d5h-2748-855aefd854-ronda.jpg
+
+## Browser Check
+
+- Built-in Browser confirmed Threads is logged in as @ec92009. Not published because image attachment and final Post require manual file-picker/action-time confirmation.

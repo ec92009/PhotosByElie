@@ -4,7 +4,7 @@
 
 - Account: @photosbyelie
 - Type: carousel_pin_or_multi_image_pin
-- Status: Prepared; not yet published.
+- Status: Prepared; authenticated browser session confirmed, not yet published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-del-mar-sunset-tide-colors-2026-05-27
 - Campaign: pinterest-del-mar-sunset-tide-colors-2026-05-27
 
@@ -37,3 +37,7 @@ Prepared from public watermarked R2 preview URLs listed in the manifest and dail
 - 3. `20180130-1829-00078-c8a1e6c9ca` - images/03-20180130-1829-00078-c8a1e6c9ca-del-mar-dog-beach-at-sunset.jpg
 - 4. `20180130-1826-00076-d2dfbc75f1` - images/04-20180130-1826-00076-d2dfbc75f1-del-mar-dog-beach-at-sunset.jpg
 - 5. `20180130-1824-00075-43302f0e18` - images/05-20180130-1824-00075-43302f0e18-del-mar-dog-beach-at-sunset.jpg
+
+## Browser Check
+
+- Built-in Browser confirmed Pinterest Business Hub is logged in as Photos By Elie. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation.

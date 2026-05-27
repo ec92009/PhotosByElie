@@ -4,7 +4,7 @@
 
 - Account: ec92009
 - Type: carousel
-- Status: Prepared; not yet published.
+- Status: Prepared; authenticated browser session confirmed, not yet published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-ronda-gorge-white-town-views-2026-05-27
 - Campaign: instagram-ronda-gorge-white-town-views-2026-05-27
 
@@ -39,3 +39,7 @@ Prepared from public watermarked R2 preview URLs listed in the manifest and dail
 - 7. `d5h-2748-855aefd854` - images/07-d5h-2748-855aefd854-ronda.jpg
 - 8. `d5h-2747-5e7d6bc190` - images/08-d5h-2747-5e7d6bc190-ronda.jpg
 - 9. `20240519-161730-00073-484057c528` - images/09-20240519-161730-00073-484057c528-ronda.jpg
+
+## Browser Check
+
+- Built-in Browser confirmed Instagram is logged in as ec92009. Not published because carousel image upload and final Share require manual file-picker/action-time confirmation.

@@ -4,7 +4,7 @@
 
 - Account: Photos By Elie Facebook Page
 - Type: multi_photo_or_album
-- Status: Prepared; not yet published.
+- Status: Prepared; authenticated browser session confirmed, not yet published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-albert-kahn-garden-paths-2026-05-27
 - Campaign: facebook-albert-kahn-garden-paths-2026-05-27
 
@@ -36,3 +36,7 @@ Prepared from public watermarked R2 preview URLs listed in the manifest and dail
 - 6. `img-6025-e3389f0f7c` - images/06-img-6025-e3389f0f7c-boulogne-billancourt-musee-albert-kahn.jpg
 - 7. `img-6023-2ecc6286fb` - images/07-img-6023-2ecc6286fb-boulogne-billancourt-musee-albert-kahn.jpg
 - 8. `img-6021-9b14501285` - images/08-img-6021-9b14501285-boulogne-billancourt-musee-albert-kahn.jpg
+
+## Browser Check
+
+- Built-in Browser confirmed Facebook Page management view for Photos By Elie. Not published because multi-image upload and final Post require manual file-picker/action-time confirmation.

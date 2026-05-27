@@ -1,7 +1,7 @@
 {
   "date": "2026-05-27",
   "platform": "Pinterest",
-  "status": "prepared",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "@photosbyelie",
   "post_type": "carousel_pin_or_multi_image_pin",
   "title": "Del Mar Sunset Tide Colors",
@@ -13,7 +13,8 @@
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
     "Pinterest package is capped at exactly 5 images.",
-    "Confirm the board before publishing; recommended board: California and USA Photography."
+    "Confirm the board before publishing; recommended board: California and USA Photography.",
+    "Built-in Browser confirmed Pinterest Business Hub is logged in as Photos By Elie. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation."
   ],
   "items": [
     {
@@ -105,5 +106,9 @@
   "board": "California and USA Photography",
   "pin_title": "Del Mar Sunset Tide Colors",
   "description": "Saturated Pacific sunset color and tide reflections at Del Mar Dog Beach in California, selected from Photos By Elie for coastal wall-art browsing.",
-  "alt_text": "Five Photos By Elie sunset photographs from Del Mar Dog Beach, showing pink, red, and orange Pacific sky reflected in low tide water."
+  "alt_text": "Five Photos By Elie sunset photographs from Del Mar Dog Beach, showing pink, red, and orange Pacific sky reflected in low tide water.",
+  "browser_check": {
+    "checked_at": "2026-05-27T07:12:53.713484Z",
+    "result": "Built-in Browser confirmed Pinterest Business Hub is logged in as Photos By Elie. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation."
+  }
 }

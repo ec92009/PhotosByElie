@@ -9,16 +9,16 @@
     "site_base_url": "https://ec92009.github.io/PhotosByElie/"
   },
   "publishing_status": {
-    "facebook": "prepared",
-    "instagram": "prepared",
-    "pinterest": "prepared",
-    "threads": "prepared"
+    "facebook": "prepared_authenticated_confirmed_not_published",
+    "instagram": "prepared_authenticated_confirmed_not_published",
+    "pinterest": "prepared_authenticated_confirmed_not_published",
+    "threads": "prepared_authenticated_confirmed_not_published"
   },
   "packages": [
     {
       "date": "2026-05-27",
       "platform": "Facebook",
-      "status": "prepared",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "Photos By Elie Facebook Page",
       "post_type": "multi_photo_or_album",
       "title": "Albert Kahn Garden Paths",
@@ -174,15 +174,19 @@
       ],
       "image_count": 8,
       "manual_steps": [
-        "Open socials/Facebook/2026-05-27/albert-kahn-garden-paths and upload images in numeric order from `images/`.",
+        "Open the local package directory and upload images in numeric order from `images/`.",
         "Paste `caption.txt` into the platform composer.",
-        "Confirm the visible account/profile/board before clicking the final publish/share/post button."
-      ]
+        "Confirm the visible account/profile/board and click the final publish/share/post button manually."
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-27T07:12:53.713484Z",
+        "result": "Built-in Browser confirmed Facebook Page management view for Photos By Elie. Not published because multi-image upload and final Post require manual file-picker/action-time confirmation."
+      }
     },
     {
       "date": "2026-05-27",
       "platform": "Instagram",
-      "status": "prepared",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Ronda Gorge and White Town Views",
@@ -355,15 +359,19 @@
       ],
       "image_count": 9,
       "manual_steps": [
-        "Open socials/Instagram/2026-05-27/ronda-gorge-white-town-views and upload images in numeric order from `images/`.",
+        "Open the local package directory and upload images in numeric order from `images/`.",
         "Paste `caption.txt` into the platform composer.",
-        "Confirm the visible account/profile/board before clicking the final publish/share/post button."
-      ]
+        "Confirm the visible account/profile/board and click the final publish/share/post button manually."
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-27T07:12:53.713484Z",
+        "result": "Built-in Browser confirmed Instagram is logged in as ec92009. Not published because carousel image upload and final Share require manual file-picker/action-time confirmation."
+      }
     },
     {
       "date": "2026-05-27",
       "platform": "Pinterest",
-      "status": "prepared",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "@photosbyelie",
       "post_type": "carousel_pin_or_multi_image_pin",
       "title": "Del Mar Sunset Tide Colors",
@@ -472,15 +480,19 @@
       ],
       "image_count": 5,
       "manual_steps": [
-        "Open socials/Pinterest/2026-05-27/del-mar-sunset-tide-colors and upload images in numeric order from `images/`.",
+        "Open the local package directory and upload images in numeric order from `images/`.",
         "Paste `caption.txt` into the platform composer.",
-        "Confirm the visible account/profile/board before clicking the final publish/share/post button."
-      ]
+        "Confirm the visible account/profile/board and click the final publish/share/post button manually."
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-27T07:12:53.713484Z",
+        "result": "Built-in Browser confirmed Pinterest Business Hub is logged in as Photos By Elie. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation."
+      }
     },
     {
       "date": "2026-05-27",
       "platform": "Threads",
-      "status": "prepared",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "Threads account via Instagram login",
       "post_type": "image_post",
       "title": "Ronda Gorge and White Town Views",
@@ -571,10 +583,14 @@
       ],
       "image_count": 4,
       "manual_steps": [
-        "Open socials/Threads/2026-05-27/ronda-gorge-white-town-views and upload images in numeric order from `images/`.",
+        "Open the local package directory and upload images in numeric order from `images/`.",
         "Paste `caption.txt` into the platform composer.",
-        "Confirm the visible account/profile/board before clicking the final publish/share/post button."
-      ]
+        "Confirm the visible account/profile/board and click the final publish/share/post button manually."
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-27T07:12:53.713484Z",
+        "result": "Built-in Browser confirmed Threads is logged in as @ec92009. Not published because image attachment and final Post require manual file-picker/action-time confirmation."
+      }
     }
   ]
 }

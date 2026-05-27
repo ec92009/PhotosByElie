@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Instagram Login Callback | Photos By Elie</title>
+  <meta name="description" content="Photos By Elie Instagram business login callback."/>
+  <meta property="og:title" content="Instagram Login Callback | Photos By Elie"/>
+  <meta property="og:description" content="Photos By Elie Instagram business login callback."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <meta name="twitter:card" content="summary"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('byelie-theme');
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+      } catch {}
+    })();
+  </script>
+  <link rel="stylesheet" href="./shared.css?v=89.9"/>
+  <link rel="stylesheet" href="./styles.css?v=89.9"/>
+  <link rel="stylesheet" href="./photos.css?v=89.9"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .callback-value{
+      width:100%;
+      min-height:92px;
+      box-sizing:border-box;
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:12px;
+      color:var(--ink);
+      background:var(--card);
+      font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      resize:vertical;
+    }
+    .callback-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top:14px;
+    }
+    .callback-status{
+      color:var(--muted);
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
+  <header class="topbar shell">
+    <a class="brand" href="./"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</a>
+    <nav class="version-switch" aria-label="Site navigation" data-i18n-aria-label="a11y.site_nav">
+      <a href="https://ec92009.github.io/byElie/">By Elie</a> <span>|</span>
+      <a class="is-active" href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
+      <a href="./support.html">Support</a>
+    </nav>
+    <span class="site-version-badge">v89.9</span>
+    <div class="header-controls">
+      <button class="language-toggle" type="button" data-language-toggle>English</button>
+      <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
+    </div>
+  </header>
+
+  <main id="main-content" class="shell">
+    <section class="panel">
+      <p class="eyebrow">Instagram API</p>
+      <h1>Instagram Login Callback</h1>
+      <p id="callback-summary">Waiting for Instagram login details.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Returned Code</h2>
+      <p>Copy this authorization code into the local token exchange step. Do not put app secrets in this page or in chat.</p>
+      <textarea id="callback-code" class="callback-value" readonly></textarea>
+      <div class="callback-actions">
+        <button id="copy-code" class="primary-action" type="button">Copy code</button>
+        <span id="copy-status" class="callback-status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Full Redirect URL</h2>
+      <textarea id="callback-url" class="callback-value" readonly></textarea>
+    </section>
+  </main>
+
+  <script src="./photos.js?v=89.9"></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code') || '';
+      const error = params.get('error') || '';
+      const errorReason = params.get('error_reason') || '';
+      const errorDescription = params.get('error_description') || '';
+      const summary = document.getElementById('callback-summary');
+      const codeField = document.getElementById('callback-code');
+      const urlField = document.getElementById('callback-url');
+      const copyButton = document.getElementById('copy-code');
+      const copyStatus = document.getElementById('copy-status');
+
+      urlField.value = window.location.href;
+      codeField.value = code;
+
+      if (code) {
+        summary.textContent = 'Instagram returned an authorization code. Copy it for the local token exchange.';
+      } else if (error) {
+        const details = [error, errorReason, errorDescription].filter(Boolean).join(': ');
+        summary.textContent = details || 'Instagram returned an authorization error.';
+        codeField.value = details;
+      } else {
+        summary.textContent = 'No authorization code is present yet. Start the Instagram business login flow from Meta.';
+      }
+
+      copyButton.addEventListener('click', async () => {
+        const value = codeField.value.trim();
+        if (!value) {
+          copyStatus.textContent = 'Nothing to copy yet.';
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(value);
+          copyStatus.textContent = 'Copied.';
+        } catch {
+          codeField.focus();
+          codeField.select();
+          copyStatus.textContent = 'Select and copy manually.';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -6,7 +6,7 @@ Tracking rule: See `docs/sops/TIMELOG_SOP.md`.
 
 Started tracking: 2026-05-22 06:55 CEST
 
-Clock state: paused
+Clock state: running
 
 ## Sessions
 
@@ -95,8 +95,9 @@ Clock state: paused
 | 2026-05-27 | 11:55 CEST | 11:56 CEST | 0:01 | Requested an Owner-mode R shortcut to queue the current photo for title/keyword review. |
 | 2026-05-27 | 12:03 CEST | 12:04 CEST | 0:01 | Requested the gallery hero/filter panel opacity be doubled in light mode. |
 | 2026-05-27 | 12:20 CEST | 12:21 CEST | 0:01 | Reported stale title/keyword review count when the saved review batch was empty. |
+| 2026-05-28 | 00:36 CEST | 01:03 CEST | 0:27 | Guided Meta Instagram API app creation, Business Login setup, and permission selection for automated social publishing. |
 
 ## Totals
 
-Active collaboration time used: 4:56
+Active collaboration time used: 5:23
 Remaining budget: not set

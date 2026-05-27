@@ -2883,7 +2883,7 @@
     return pages;
   };
 
-  const imagePlacement = (dimensions, box) => {
+  const imagePlacement = (dimensions, box, { verticalAlign = "middle" } = {}) => {
     const scale = Math.min(box.width / dimensions.width, box.height / dimensions.height);
     const width = dimensions.width * scale;
     const height = dimensions.height * scale;
@@ -2891,7 +2891,7 @@
       width,
       height,
       x: box.x + ((box.width - width) / 2),
-      y: box.y + ((box.height - height) / 2),
+      y: verticalAlign === "top" ? box.y : box.y + ((box.height - height) / 2),
     };
   };
 
@@ -2941,7 +2941,9 @@
     const pageWidth = paper.width;
     const pageHeight = paper.height;
     const margin = 30;
-    const titleArea = 28;
+    const captionArea = 30;
+    const captionGap = 7;
+    const footerArea = 18;
     const rowGap = 18;
     const scale = 2;
     const renderedPages = [];
@@ -2956,9 +2958,10 @@
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, pageWidth, pageHeight);
 
+      const contentHeight = pageHeight - (margin * 2) - footerArea;
       const slotHeight = page.layout === "two-up-landscape"
-        ? ((pageHeight - (margin * 2) - rowGap) / 2)
-        : (pageHeight - (margin * 2));
+        ? ((contentHeight - rowGap) / 2)
+        : contentHeight;
       const slots = page.layout === "two-up-landscape"
         ? [
           { x: margin, y: margin, width: pageWidth - (margin * 2), height: slotHeight },
@@ -2976,21 +2979,24 @@
           };
           const imageBox = {
             x: slot.x,
-            y: slot.y + titleArea,
+            y: slot.y,
             width: slot.width,
-            height: Math.max(1, slot.height - titleArea),
+            height: Math.max(1, slot.height - captionArea),
           };
-          const placement = imagePlacement(naturalDimensions, imageBox);
+          const placement = imagePlacement(naturalDimensions, imageBox, { verticalAlign: "top" });
+          context.drawImage(loaded.image, placement.x, placement.y, placement.width, placement.height);
+
           context.fillStyle = "#111111";
           context.font = "700 12px Arial, Helvetica, sans-serif";
-          context.textAlign = "left";
-          context.textBaseline = "middle";
-          context.fillText(
+          context.textAlign = "center";
+          context.textBaseline = "top";
+          drawCenteredCanvasText(
+            context,
             fittedCanvasText(context, item.title || titleFor(item.photo), slot.width),
             slot.x,
-            slot.y + 13
+            placement.y + placement.height + captionGap,
+            slot.width
           );
-          context.drawImage(loaded.image, placement.x, placement.y, placement.width, placement.height);
 
           const watermarkFontSize = Math.max(8, Math.min(12, placement.width / 48));
           context.font = `700 ${watermarkFontSize}px Arial, Helvetica, sans-serif`;

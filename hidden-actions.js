@@ -26,7 +26,7 @@
     "queue-title-keyword-review": "Sending photo to title/keyword review...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
     "publish-hidden-blacklist": "Publishing master blacklist...",
-    "wipe-hidden-r2": "Purging banned-photo R2 copies...",
+    "wipe-hidden-r2": "Emptying waste basket",
     "save-title-keyword-review-approvals": "Saving title/keyword review decisions...",
   };
 

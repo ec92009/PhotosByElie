@@ -627,6 +627,23 @@
       }
       return;
     }
+    if (key === "r") {
+      event.preventDefault();
+      const photo = unknownPhotos().find((item) => item.id === selectedPhotoId) || unknownPhotos()[0];
+      if (!photo) return;
+      try {
+        if (!hiddenActions.queueTitleKeywordReview) {
+          throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+        }
+        const result = await hiddenActions.queueTitleKeywordReview(photo.id);
+        setStatus(result?.already_pending
+          ? `${photo.title} is already in title/keyword review.`
+          : `${photo.title} sent to title/keyword review.`);
+      } catch (error) {
+        setStatus(error?.message || "Could not send photo to title/keyword review.");
+      }
+      return;
+    }
     if (key !== "u") return;
     event.preventDefault();
     let restoredId = null;

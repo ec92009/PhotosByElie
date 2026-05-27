@@ -71,6 +71,7 @@
       `${shortcutKey("U")} undo`,
       `${shortcutKey("T")} title`,
       `${shortcutKey("K")} keywords`,
+      `${shortcutKey("R")} review`,
       `${shortcutKey("Arrows")} select`,
       `${shortcutKey("Enter")} detail`,
       `${shortcutKey("Double-click")} detail`,
@@ -514,6 +515,22 @@
     const actions = hiddenActions();
     if (event.key.toLowerCase() === "t" || event.key.toLowerCase() === "k") {
       openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");
+      event.preventDefault();
+      return;
+    }
+    if (event.key.toLowerCase() === "r") {
+      if (!selected?.photo) return;
+      try {
+        if (!actions.queueTitleKeywordReview) {
+          throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+        }
+        const result = await actions.queueTitleKeywordReview(selected.photo.id);
+        setStatus(result?.already_pending
+          ? `${selected.photo.title} is already in title/keyword review.`
+          : `${selected.photo.title} sent to title/keyword review.`);
+      } catch (error) {
+        setStatus(error?.message || "Could not send photo to title/keyword review.");
+      }
       event.preventDefault();
       return;
     }

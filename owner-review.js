@@ -54,6 +54,8 @@
         <span aria-hidden="true">|</span>
         <kbd>U</kbd> undo
         <span aria-hidden="true">|</span>
+        <kbd>R</kbd> review title/keywords
+        <span aria-hidden="true">|</span>
         <kbd>Arrows</kbd> select
         <span aria-hidden="true">|</span>
         <kbd>Double-click</kbd> preview

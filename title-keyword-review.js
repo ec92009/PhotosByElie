@@ -19,6 +19,8 @@
   ]);
   const rejectReasons = [
     { value: "incorrect", label: "incorrect", note: "this title is incorrect" },
+    { value: "generic", label: "too generic", note: "too generic; make the title more specific" },
+    { value: "placeholder", label: "placeholder", note: "too placeholder-y; replace with a real title" },
     { value: "keywords", label: "use keywords", note: "use the existing keywords as clues" },
     { value: "detail", label: "add details", note: "dig up more details" },
     { value: "shoot", label: "use shoot", note: "use other photos in the 2-3 hour window for clues" },
@@ -27,6 +29,11 @@
   const rejectReasonByValue = new Map(rejectReasons.map((reason) => [reason.value, reason]));
   const legacyRejectReasonNotes = new Map([
     ["incorrect", "incorrect"],
+    ["too generic", "generic"],
+    ["generic", "generic"],
+    ["too placeholder-y", "placeholder"],
+    ["too placeholder", "placeholder"],
+    ["placeholder", "placeholder"],
     ["use the hints in the keywords to provide a decent title", "keywords"],
     ["needs detail", "detail"],
     ["use other photos in the shoot as clues", "shoot"],

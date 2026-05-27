@@ -219,6 +219,34 @@ Stop it with `Ctrl-C`. The database lives under `tmp/`, so it is disposable and 
 
 `validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the SQLite catalog/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, discarded/tombstone exclusions, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
 
+## Social API Scaffolds
+
+The social API helpers are dry-run-first wrappers for prepared daily package manifests. They never store app secrets or access tokens in the repo; OAuth helpers save token JSON under `~/.config/photosbyelie/` with `0600` permissions.
+
+Pinterest:
+
+```bash
+npm run social:pinterest-oauth -- --auth-url
+npm run social:pinterest-api -- --manifest socials/Pinterest/YYYY-MM-DD/theme/manifest.json --board-id "$PINTEREST_BOARD_ID"
+```
+
+Facebook Page and Instagram:
+
+```bash
+npm run social:meta-oauth -- --auth-url
+npm run social:meta-api -- --platform facebook --manifest socials/Facebook/YYYY-MM-DD/theme/manifest.json --page-id "$META_PAGE_ID"
+npm run social:meta-api -- --platform instagram --manifest socials/Instagram/YYYY-MM-DD/theme/manifest.json --ig-user-id "$META_IG_USER_ID"
+```
+
+Threads:
+
+```bash
+npm run social:threads-oauth -- --auth-url
+npm run social:threads-api -- --manifest socials/Threads/YYYY-MM-DD/theme/manifest.json --threads-user-id "$THREADS_USER_ID"
+```
+
+Live publishing requires adding `--publish` after reviewing dry-run output.
+
 The generated product list currently includes digital file options, local-only physical print sizes, per-print framing choices, POD supplier mappings, and shipping/handling offsets. Print labels keep both inch and centimeter dimensions, but `photos-data.js` still carries the lightweight helper functions that infer the browser-locale measurement system and expose pricing helpers. Update `export_photos_data.py` when changing product ids, labels, prices, dimensions, frame options, shipping/handling amounts, POD metadata, or availability thresholds so regenerated catalog SQLite/bootstrap files keep the public checkout model intact.
 
 Run the validator before pushing public site changes:

@@ -12,7 +12,9 @@
     "social:pinterest-api": "node scripts/pinterest_api_publish.mjs",
     "social:pinterest-oauth": "node scripts/pinterest_oauth.mjs",
     "social:meta-api": "node scripts/meta_api_publish.mjs",
-    "social:meta-oauth": "node scripts/meta_oauth.mjs"
+    "social:meta-oauth": "node scripts/meta_oauth.mjs",
+    "social:threads-api": "node scripts/threads_api_publish.mjs",
+    "social:threads-oauth": "node scripts/threads_oauth.mjs"
   },
   "dependencies": {
     "jpeg-js": "^0.4.4"

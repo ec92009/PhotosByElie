@@ -34,6 +34,11 @@ LANDSCAPE_SIZE = "1920x1080"
 PORTRAIT_SIZE = "1080x1920"
 LANDSCAPE_WORK = (2304, 1296)
 PORTRAIT_WORK = (1296, 2304)
+FONT_CANDIDATES = [
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",
+]
 
 
 def run(command: list[str]) -> None:
@@ -146,19 +151,28 @@ def ffmpeg_drawtext_escape(value: str) -> str:
     return str(value or "").replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
+def choose_font() -> str:
+    for candidate in FONT_CANDIDATES:
+        if Path(candidate).exists():
+            return candidate
+    raise RuntimeError("No usable system font found for slideshow watermark overlays.")
+
+
 def render_geometry(orientation: str) -> tuple[str, int, int]:
     if orientation == "portrait":
         return PORTRAIT_SIZE, *PORTRAIT_WORK
     return LANDSCAPE_SIZE, *LANDSCAPE_WORK
 
 
-def ken_burns_filter(
-    effect: str,
-    duration: int,
-    orientation: str,
-    counter: str = "",
-    watermark_text: str = "",
-) -> str:
+def fit_filter(orientation: str) -> str:
+    _, work_width, work_height = render_geometry(orientation)
+    return ",".join([
+        f"scale={work_width}:{work_height}:force_original_aspect_ratio=decrease",
+        f"pad={work_width}:{work_height}:(ow-iw)/2:(oh-ih)/2:color=black",
+    ])
+
+
+def ken_burns_motion_filter(effect: str, duration: int, orientation: str) -> str:
     frames = max(1, duration * FPS)
     denom = max(1, frames - 1)
     size, work_width, work_height = render_geometry(orientation)
@@ -186,28 +200,88 @@ def ken_burns_filter(
         z = f"1.0+0.024*on/{denom}"
         x = "(iw-iw/zoom)*0.5"
         y = "(ih-ih/zoom)*0.5"
-    filters = [
-        f"scale={work_width}:{work_height}:force_original_aspect_ratio=decrease",
-        f"pad={work_width}:{work_height}:(ow-iw)/2:(oh-ih)/2:color=black",
+    return ",".join([
         f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={size}:fps={FPS}",
         "setsar=1",
         "format=yuv420p",
-    ]
-    if counter:
-        filters.append(
-            "drawtext="
-            f"text='{ffmpeg_drawtext_escape(counter)}':"
-            "x=24:y=h-th-24:fontsize=26:fontcolor=white:"
-            "box=1:boxcolor=gray@0.78:boxborderw=6"
-        )
+    ])
+
+
+def ken_burns_filter(effect: str, duration: int, orientation: str) -> str:
+    return f"{fit_filter(orientation)},{ken_burns_motion_filter(effect, duration, orientation)}"
+
+
+def write_segment_overlay(output: Path, width: int, height: int, watermark: str, counter: str, font: str) -> None:
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError as exc:
+        raise RuntimeError(
+            "Pillow is required for slideshow watermark overlays. Run `python3 -m pip install --user pillow`."
+        ) from exc
+
+    overlay = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay)
+    watermark_text = str(watermark or "").strip()
     if watermark_text:
-        filters.append(
-            "drawtext="
-            f"text='{ffmpeg_drawtext_escape(watermark_text)}':"
-            "x=(w-text_w)/2:y=h-th-10:fontsize=18:"
-            "fontcolor=white@0.62:shadowcolor=black@0.5:shadowx=1:shadowy=1"
+        repeat_font = ImageFont.truetype(font, max(22, round(min(width, height) / 18)))
+        repeat_stroke = max(1, round(min(width, height) / 260))
+        bbox = draw.textbbox((0, 0), watermark_text.upper(), font=repeat_font, stroke_width=repeat_stroke)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        tile_padding = max(54, round(min(width, height) * 0.18))
+        tile = Image.new("RGBA", (text_width + tile_padding * 2, text_height + tile_padding * 2), (255, 255, 255, 0))
+        tile_draw = ImageDraw.Draw(tile)
+        tile_draw.text(
+            (tile_padding, tile_padding),
+            watermark_text.upper(),
+            font=repeat_font,
+            fill=(255, 255, 255, 38),
+            stroke_width=repeat_stroke,
+            stroke_fill=(0, 0, 0, 32),
         )
-    return ",".join(filters)
+        rotated = tile.rotate(-28, expand=True, resample=Image.Resampling.BICUBIC)
+        step_x = max(180, round(rotated.width * 0.78))
+        step_y = max(150, round(rotated.height * 0.72))
+        for y in range(-rotated.height, height + rotated.height, step_y):
+            row_offset = 0 if (y // step_y) % 2 == 0 else -(step_x // 2)
+            for x in range(-rotated.width + row_offset, width + rotated.width, step_x):
+                overlay.alpha_composite(rotated, (x, y))
+
+        corner_font = ImageFont.truetype(font, max(18, round(min(width, height) / 24)))
+        corner_stroke = max(1, round(min(width, height) / 360))
+        corner_bbox = draw.textbbox((0, 0), "PhotosByElie", font=corner_font, stroke_width=corner_stroke)
+        margin = max(18, round(min(width, height) / 36))
+        corner_position = (
+            max(margin, width - (corner_bbox[2] - corner_bbox[0]) - margin),
+            max(margin, height - (corner_bbox[3] - corner_bbox[1]) - margin),
+        )
+        draw.text(
+            corner_position,
+            "PhotosByElie",
+            font=corner_font,
+            fill=(255, 255, 255, 185),
+            stroke_width=corner_stroke,
+            stroke_fill=(0, 0, 0, 122),
+        )
+
+    if counter:
+        counter_font = ImageFont.truetype(font, max(24, round(min(width, height) / 44)))
+        padding_x = max(9, round(min(width, height) / 140))
+        padding_y = max(6, round(min(width, height) / 210))
+        box_margin = max(24, round(min(width, height) / 54))
+        bbox = draw.textbbox((0, 0), counter, font=counter_font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = box_margin
+        y = height - box_margin - text_height - padding_y * 2
+        draw.rounded_rectangle(
+            (x, y, x + text_width + padding_x * 2, y + text_height + padding_y * 2),
+            radius=max(3, round(min(width, height) / 360)),
+            fill=(80, 80, 80, 198),
+        )
+        draw.text((x + padding_x, y + padding_y), counter, font=counter_font, fill=(255, 255, 255, 255))
+
+    overlay.save(output)
 
 
 def render_segment(
@@ -218,7 +292,11 @@ def render_segment(
     orientation: str,
     counter: str,
     watermark_text: str,
+    font: str,
 ) -> None:
+    _, work_width, work_height = render_geometry(orientation)
+    overlay = output.with_suffix(".overlay.png")
+    write_segment_overlay(overlay, work_width, work_height, watermark_text, counter, font)
     run([
         FFMPEG,
         "-y",
@@ -229,10 +307,16 @@ def render_segment(
         "1",
         "-i",
         photo["_localPath"],
+        "-loop",
+        "1",
+        "-i",
+        str(overlay),
         "-t",
         str(duration),
-        "-vf",
-        ken_burns_filter(effect, duration, orientation, counter, watermark_text),
+        "-filter_complex",
+        f"[0:v]{fit_filter(orientation)}[base];[base][1:v]overlay=0:0:format=auto,{ken_burns_motion_filter(effect, duration, orientation)}[v]",
+        "-map",
+        "[v]",
         "-an",
         "-c:v",
         "libx264",
@@ -267,8 +351,9 @@ def concat_segments(segments: list[Path], output: Path) -> None:
     ])
 
 
-def add_music(video: Path, music: Path, output: Path, total_seconds: int, music_gain_db: float) -> None:
-    fade_start = max(0, total_seconds - 2)
+def add_music(video: Path, music: Path, output: Path, total_seconds: int, music_gain_db: float, fade_seconds: int) -> None:
+    fade_duration = max(0.1, min(float(total_seconds), float(fade_seconds or 2)))
+    fade_start = max(0, float(total_seconds) - fade_duration)
     run([
         FFMPEG,
         "-y",
@@ -284,7 +369,7 @@ def add_music(video: Path, music: Path, output: Path, total_seconds: int, music_
         "-t",
         str(total_seconds),
         "-filter_complex",
-        f"[1:a]volume={music_gain_db}dB,atrim=0:{total_seconds},afade=t=out:st={fade_start}:d=2[a]",
+        f"[1:a]volume={music_gain_db}dB,atrim=0:{total_seconds},afade=t=out:st={fade_start:.3f}:d={fade_duration:.3f}[a]",
         "-map",
         "0:v:0",
         "-map",
@@ -335,6 +420,7 @@ def main() -> None:
     output = args.output or (output_dir / f"elie-{album}-10x{args.seconds}s-{args.orientation}-music.mp4")
     total_seconds = args.count * args.seconds
     watermark_text = "" if args.no_watermark else str(args.watermark_text or "").strip()
+    font = choose_font()
 
     with tempfile.TemporaryDirectory(dir=output_dir) as tmp:
         tmp_path = Path(tmp)
@@ -349,11 +435,12 @@ def main() -> None:
                 args.orientation,
                 f"{index}/{len(photos)}",
                 watermark_text,
+                font,
             )
             segments.append(segment)
         silent = tmp_path / "silent.mp4"
         concat_segments(segments, silent)
-        add_music(silent, music_path, output, total_seconds, float(config.get("musicGainDb", 0)))
+        add_music(silent, music_path, output, total_seconds, float(config.get("musicGainDb", 0)), args.seconds)
 
     manifest = {
         "schema": "photosbyelie.realEstateSlideshowProof.v1",
@@ -365,7 +452,10 @@ def main() -> None:
         "outputOrientation": args.orientation,
         "outputAspectRatio": "9:16" if args.orientation == "portrait" else "16:9",
         "fitMode": "contain",
+        "barTreatment": "black-bars",
         "playback": "once-no-loop",
+        "musicFadeOutSeconds": args.seconds,
+        "overlayOrder": "watermark-and-counter-before-ken-burns",
         "watermarkEnabled": bool(watermark_text),
         "watermarkText": watermark_text,
         "output": str(output),

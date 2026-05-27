@@ -612,6 +612,9 @@
     outputAspectRatio: normalizeSlideshowOrientation(state.slideshowOrientation) === "portrait" ? "9:16" : "16:9",
     fitMode: "contain-with-blurred-backdrop",
     playback: "once-no-loop",
+    musicFadeOutPolicy: "fade-over-final-slide",
+    overlayOrder: "watermark-and-counter-before-ken-burns",
+    watermarkPolicy: "importer-style-repeating-preview-plus-bottom",
     watermarkEnabled: Boolean(state.watermarkEnabled),
     watermarkText: activeWatermarkText(),
     transition: slideshowTransition,
@@ -1140,12 +1143,20 @@
       .replace(/^-+|-+$/g, "")
       || "Selection"
   );
+  const escapeRegExp = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const generatedDeliverableStemFor = (item, fallback = "") => (
+    `${deliverableProjectCodeFor(item, fallback)}-${dateCodeFor(item?.createdAt || item?.batch?.createdAt)}`
+  );
+  const generatedDeliverableSequencePatternFor = (stem) => (
+    new RegExp(`^${escapeRegExp(stem)}(?:-(?:PDF|VIDEO|SELECTION))?-(\\d+)$`, "i")
+  );
 
   const isLegacyAutoDeliverableTitle = (title) => {
     const value = String(title || "").trim();
     return /^(PDF|Video):\s*/i.test(value)
       || /^\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value)
-      || /^[A-Za-z0-9-]+-\d{6}-(PDF|VIDEO)-\d+$/i.test(value);
+      || /^[A-Za-z0-9-]+-\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value)
+      || /^[A-Za-z0-9-]+-\d{6}-\d+$/i.test(value);
   };
 
   const needsGeneratedDeliverableName = (item) => {
@@ -1158,13 +1169,12 @@
     const groups = new Map();
     items.forEach((item) => {
       if (!item?.id || !needsGeneratedDeliverableName(item)) return;
-      const key = `${deliverableProjectCodeFor(item)}:${dateCodeFor(item.createdAt || item.batch?.createdAt)}:${deliverableTypeCode(item.type)}`;
+      const key = generatedDeliverableStemFor(item);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(item);
     });
-    groups.forEach((group, key) => {
-      const [projectCode, code, typeCode] = key.split(":");
-      const pattern = new RegExp(`^${projectCode}-${code}-${typeCode}-(\\d+)$`);
+    groups.forEach((group, stem) => {
+      const pattern = generatedDeliverableSequencePatternFor(stem);
       const used = new Set(items
         .filter((item) => !needsGeneratedDeliverableName(item))
         .map((item) => String(item.title || "").trim().match(pattern)?.[1])
@@ -1177,7 +1187,7 @@
       )).forEach((item) => {
         while (used.has(next)) next += 1;
         used.add(next);
-        names.set(item.id, `${deliverableProjectCodeFor(item)}-${dateCodeFor(item.createdAt || item.batch?.createdAt)}-${deliverableTypeCode(item.type)}-${next}`);
+        names.set(item.id, `${generatedDeliverableStemFor(item)}-${next}`);
       });
     });
     return names;
@@ -1185,24 +1195,50 @@
 
   const displayDeliverableTitleFor = (item, generatedNames = new Map()) => (
     needsGeneratedDeliverableName(item)
-      ? generatedNames.get(item.id) || `${dateCodeFor(item?.createdAt || item?.batch?.createdAt)}-${deliverableTypeCode(item?.type)}-1`
+      ? generatedNames.get(item.id) || `${generatedDeliverableStemFor(item)}-1`
       : String(item?.title || "").trim()
   );
+  const deliverableMediaSummaryFor = (item) => {
+    const batch = item?.batch || {};
+    const explicit = batch.mediaSummary || item?.mediaSummary || {};
+    const photos = Number(explicit.photos ?? explicit.photoCount);
+    const videos = Number(explicit.videos ?? explicit.videoCount);
+    if (Number.isFinite(photos) || Number.isFinite(videos)) {
+      return {
+        photos: Number.isFinite(photos) ? Math.max(0, photos) : 0,
+        videos: Number.isFinite(videos) ? Math.max(0, videos) : 0,
+      };
+    }
+    const rows = Array.isArray(batch.items) ? batch.items : [];
+    return rows.reduce((summary, row) => {
+      if (String(row?.mediaType || "").toLowerCase() === "video") summary.videos += 1;
+      else summary.photos += 1;
+      return summary;
+    }, { photos: 0, videos: 0 });
+  };
+  const pluralizeMediaCount = (count, singular, plural = `${singular}s`) => (
+    `${count} ${count === 1 ? singular : plural}`
+  );
+  const deliverableMediaSummaryLabelFor = (item) => {
+    const summary = deliverableMediaSummaryFor(item);
+    const parts = [];
+    if (summary.photos) parts.push(pluralizeMediaCount(summary.photos, "photo"));
+    if (summary.videos) parts.push(pluralizeMediaCount(summary.videos, "video"));
+    return parts.join(" + ");
+  };
 
   const nextGeneratedDeliverableName = (type, createdAt, excludeId = "", projectTitle = "") => {
     const existingItems = producedDeliverables().filter((item) => item.id !== excludeId);
     const generatedNames = generatedDeliverableNamesFor(existingItems);
-    const code = dateCodeFor(createdAt);
-    const typeCode = deliverableTypeCode(type);
-    const projectCode = deliverableProjectCodeFor({ projectTitle }, selectedPropertyTitle());
-    const pattern = new RegExp(`^${projectCode}-${code}-${typeCode}-(\\d+)$`);
+    const stem = generatedDeliverableStemFor({ type, createdAt, projectTitle }, selectedPropertyTitle());
+    const pattern = generatedDeliverableSequencePatternFor(stem);
     const used = new Set(existingItems
       .map((item) => displayDeliverableTitleFor(item, generatedNames).match(pattern)?.[1])
       .filter(Boolean)
       .map(Number));
     let next = 1;
     while (used.has(next)) next += 1;
-    return `${projectCode}-${code}-${typeCode}-${next}`;
+    return `${stem}-${next}`;
   };
 
   const activeDeliverableName = () => {
@@ -1509,8 +1545,10 @@
       const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : item.createdAt;
       const displayTitle = displayDeliverableTitleFor(item, generatedNames);
       const canRename = ["cloud", "local"].includes(item.source);
+      const mediaSummaryLabel = deliverableMediaSummaryLabelFor(item);
       const meta = [
         item.label,
+        mediaSummaryLabel,
         item.status !== "ready" ? item.status : "",
         dateLabel,
         item.bytes ? formatBytes(item.bytes) : "",
@@ -2230,10 +2268,16 @@
     .stage{position:relative;display:grid;width:100vw;height:calc(100dvh - 70px);background:#050505;place-items:center;align-self:center;justify-self:center;overflow:hidden}
     .frame{position:absolute;inset:0;display:grid;place-items:center;background:#050505;overflow:hidden}
     .frame video{width:100%;height:100%;object-fit:contain;background:#050505}
+    .video-wrap{position:absolute;inset:0;display:grid;place-items:center;background:#050505}
     .photo-slide{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:#050505}
     .photo-slide img{display:block;width:100%;height:100%;background:transparent}
     .slide-backdrop{position:absolute;inset:0;object-fit:cover;filter:blur(24px);opacity:.48;transform:scale(1.1)}
-    .slide-photo{position:relative;z-index:1;object-fit:contain;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
+    .photo-content{position:absolute;inset:0;z-index:1;display:grid;place-items:center;overflow:hidden;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
+    .slide-photo{position:absolute;inset:0;z-index:1;object-fit:contain}
+    .photo-watermark-sheet{position:absolute;inset:-32%;z-index:2;display:grid;grid-template-columns:repeat(4,max-content);align-content:center;justify-content:center;gap:clamp(90px,18vmin,260px) clamp(110px,22vmin,300px);pointer-events:none;transform:rotate(-28deg)}
+    .photo-watermark-sheet span{display:block;color:rgba(255,255,255,.168);font-size:clamp(1.35rem,4.2vmin,4.6rem);font-weight:900;letter-spacing:.02em;text-shadow:0 0 1px rgba(0,0,0,.13),0 1px 2px rgba(0,0,0,.13);text-transform:uppercase;white-space:nowrap}
+    .photo-watermark-sheet span:nth-child(4n+2),.photo-watermark-sheet span:nth-child(4n+4){transform:translateX(-48%)}
+    .photo-watermark-corner{position:absolute;right:clamp(14px,2.2vmin,38px);bottom:clamp(14px,2.2vmin,38px);z-index:3;color:rgba(255,255,255,.72);font-size:clamp(.85rem,2.2vmin,1.45rem);font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.48)}
     @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
     .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(46px,6vw,74px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
     .caption h1{max-width:820px;margin:0;font-size:clamp(1.8rem,5vw,4.8rem);line-height:.98}
@@ -2275,7 +2319,6 @@
           <h1 data-title>${escapeHtml(slides[0]?.title || "Photos By Elie slideshow")}</h1>
         </div>
       </div>
-      <strong class="slide-count" data-counter>${slides.length ? `1/${slides.length}` : "0/0"}</strong>
       ${slideshowWatermarkText ? `<div class="watermark">${escapeHtml(slideshowWatermarkText)}</div>` : ""}
     </section>
     <div class="controls">
@@ -2320,16 +2363,17 @@
     <script>
       const slides = ${safeSlidesJson};
       const musicTrack = ${safeMusicJson};
+      const watermarkText = ${JSON.stringify(slideshowWatermarkText)};
       const videoRatio = ${Number(outputRatio).toFixed(6)};
       const stage = document.querySelector(".stage");
       const frame = document.querySelector("[data-frame]");
       const music = document.querySelector("[data-music]");
       const title = document.querySelector("[data-title]");
       const project = document.querySelector("[data-project]");
-      const counter = document.querySelector("[data-counter]");
       const playButton = document.querySelector("[data-play]");
       let index = 0;
       let timer = 0;
+      let fadeTimer = 0;
       let playing = true;
       let soundBlocked = Boolean(music);
       const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
@@ -2347,16 +2391,26 @@
         const [startScale, endScale, startX, startY, endX, endY] = presets[effect] || presets["center-breathe-in"];
         return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
       };
-      const photoSlideHtml = (slide) => {
+      const counterHtml = (counterText) => '<strong class="slide-count">' + attr(counterText) + '</strong>';
+      const watermarkSheetHtml = () => {
+        const text = String(watermarkText || "").trim().toUpperCase();
+        if (!text) return "";
+        return '<div class="photo-watermark-sheet" aria-hidden="true">' + Array.from({ length: 28 }, () => '<span>' + attr(text) + '</span>').join("") + '</div><b class="photo-watermark-corner" aria-hidden="true">PhotosByElie</b>';
+      };
+      const photoSlideHtml = (slide, counterText) => {
         const source = attr(slide.imageUrl);
         const style = attr(effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)));
         const orientation = slide.orientation === "portrait" ? "portrait" : "landscape";
-        return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><img class="slide-photo" alt="" style="' + style + '" src="' + source + '"></div>';
+        return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><div class="photo-content" style="' + style + '"><img class="slide-photo" alt="" src="' + source + '">' + watermarkSheetHtml() + counterHtml(counterText) + '</div></div>';
       };
 
       const clearTimer = () => {
         if (timer) window.clearTimeout(timer);
         timer = 0;
+      };
+      const clearFadeTimer = () => {
+        if (fadeTimer) window.clearTimeout(fadeTimer);
+        fadeTimer = 0;
       };
       const applyStageSize = () => {
         if (!stage) return;
@@ -2397,35 +2451,54 @@
         }
       };
       const pauseMusic = () => {
+        clearFadeTimer();
         if (music) music.pause();
+      };
+      const syncMusicFade = (slide) => {
+        clearFadeTimer();
+        if (!music) return;
+        if (!playing || index !== slides.length - 1) {
+          music.volume = musicVolume;
+          return;
+        }
+        const duration = Math.max(1000, Number(slide?.durationMs || ${Number(state.slideshowPhotoSeconds) * 1000}));
+        const start = performance.now();
+        const tick = () => {
+          if (!playing || index !== slides.length - 1) return;
+          const elapsed = performance.now() - start;
+          const remaining = Math.max(0, 1 - (elapsed / duration));
+          music.volume = Math.max(0, Math.min(1, musicVolume * remaining));
+          if (remaining > 0) fadeTimer = window.setTimeout(tick, 80);
+        };
+        tick();
       };
       const render = () => {
         clearTimer();
         applyStageSize();
         const slide = slides[index];
+        const counterText = (index + 1) + "/" + slides.length;
         if (!slide) {
           frame.innerHTML = "";
           title.textContent = "No media selected";
           project.textContent = "";
-          counter.textContent = "0/0";
           return;
         }
         title.textContent = slide.title || "Untitled";
         project.textContent = slide.projectTitle || slide.mediaType || "";
-        counter.textContent = (index + 1) + "/" + slides.length;
         if (playing) playMusic();
+        syncMusicFade(slide);
         if (slide.mediaType === "video" && slide.videoUrl) {
-          frame.innerHTML = '<video controls playsinline poster="' + attr(slide.imageUrl) + '" src="' + attr(slide.videoUrl) + '"></video>';
+          frame.innerHTML = '<div class="video-wrap"><video controls playsinline poster="' + attr(slide.imageUrl) + '" src="' + attr(slide.videoUrl) + '"></video>' + counterHtml(counterText) + '</div>';
           const video = frame.querySelector("video");
           video.volume = sourceVideoVolume;
           video.addEventListener("ended", () => playing && next());
           video.addEventListener("error", () => {
-            frame.innerHTML = photoSlideHtml(slide);
+            frame.innerHTML = photoSlideHtml(slide, counterText);
             if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
           });
           if (playing) video.play().catch(() => {});
         } else {
-          frame.innerHTML = photoSlideHtml(slide);
+          frame.innerHTML = photoSlideHtml(slide, counterText);
           if (playing) timer = window.setTimeout(next, Math.max(1000, slide.durationMs || 4000));
         }
       };
@@ -2464,6 +2537,7 @@
         playing = !playing;
         if (playing && replayFromEnd) index = 0;
         syncPlayButton();
+        if (music && playing && index === 0) music.volume = musicVolume;
         const video = frame.querySelector("video");
         if (video) {
           if (playing) {
@@ -3222,6 +3296,61 @@
     context.fillText(text, x + (width / 2), y);
   };
 
+  const drawImporterStyleCanvasWatermark = (context, text, box) => {
+    const watermarkText = String(text || "").trim();
+    if (!watermarkText || !box?.width || !box?.height) return;
+    const fontSize = Math.max(18, Math.round(Math.max(box.width, box.height) / 45));
+    const repeatFontSize = Math.max(34, Math.round(fontSize * 2.35));
+    const repeatStroke = Math.max(2, Math.round(Math.max(1, fontSize / 14) * 2.2));
+    const repeatText = watermarkText.toUpperCase();
+
+    context.save();
+    context.beginPath();
+    context.rect(box.x, box.y, box.width, box.height);
+    context.clip();
+    context.font = `900 ${repeatFontSize}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    const metrics = context.measureText(repeatText);
+    const textWidth = Math.max(1, metrics.width);
+    const textHeight = repeatFontSize;
+    const tilePadding = Math.max(80, Math.round(Math.min(box.width, box.height) * 0.22));
+    const stepX = Math.max(220, Math.round((textWidth + tilePadding * 2) * 0.78));
+    const stepY = Math.max(180, Math.round((textHeight + tilePadding * 2) * 0.72));
+
+    context.translate(box.x + (box.width / 2), box.y + (box.height / 2));
+    context.rotate(-28 * Math.PI / 180);
+    context.translate(-(box.width / 2), -(box.height / 2));
+    context.lineWidth = repeatStroke;
+    context.strokeStyle = "rgba(0, 0, 0, 0.13)";
+    context.fillStyle = "rgba(255, 255, 255, 0.168)";
+    for (let y = -box.height; y < box.height * 2; y += stepY) {
+      const rowOffset = Math.round(y / stepY) % 2 === 0 ? 0 : -(stepX / 2);
+      for (let x = -box.width + rowOffset; x < box.width * 2; x += stepX) {
+        context.strokeText(repeatText, x, y);
+        context.fillText(repeatText, x, y);
+      }
+    }
+    context.restore();
+
+    context.save();
+    context.beginPath();
+    context.rect(box.x, box.y, box.width, box.height);
+    context.clip();
+    const cornerFontSize = Math.max(18, Math.round(Math.min(box.width, box.height) / 24));
+    const cornerStroke = Math.max(1, Math.round(Math.min(box.width, box.height) / 360));
+    const cornerMargin = Math.max(18, Math.round(Math.min(box.width, box.height) / 36));
+    context.font = `900 ${cornerFontSize}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "right";
+    context.textBaseline = "bottom";
+    context.lineWidth = cornerStroke;
+    context.strokeStyle = "rgba(0, 0, 0, 0.48)";
+    context.fillStyle = "rgba(255, 255, 255, 0.72)";
+    context.strokeText("PhotosByElie", box.x + box.width - cornerMargin, box.y + box.height - cornerMargin);
+    context.fillText("PhotosByElie", box.x + box.width - cornerMargin, box.y + box.height - cornerMargin);
+    context.restore();
+  };
+
   const renderPdfPages = async (images, onProgress = null) => {
     const pages = paginatePdfImages(images);
     const paper = paperFormatFor();
@@ -3273,6 +3402,7 @@
           };
           const placement = imagePlacement(naturalDimensions, imageBox, { verticalAlign: "top" });
           context.drawImage(loaded.image, placement.x, placement.y, placement.width, placement.height);
+          if (watermarkText) drawImporterStyleCanvasWatermark(context, watermarkText, placement);
 
           context.fillStyle = "#111111";
           context.font = "700 12px Arial, Helvetica, sans-serif";

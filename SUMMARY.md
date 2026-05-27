@@ -6,7 +6,7 @@ Date: 2026-05-27
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v88.2`
+- Current visible build: `v89.6`
 - Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview is `http://localhost:8000/owner.html?v=88.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`
@@ -51,7 +51,7 @@ Date: 2026-05-27
 - Local POD preview data now lives in `assets/catalog/product-pricing.json`, the compact SQLite catalog, `photos-data.js`, and the Worker catalog export. Prodigi is modeled as primary/value, Printful as standard fallback, theprintspace as premium candidate, and Gelato as API-proof/global-routing candidate.
 - A small Snapmaker/Orca 3MF project export for the PhotosByElie QR coaster is present under `assets/3d/`.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v88.2`: the Real Estate client page is a saved-product shelf first, with cloud-backed selection manifests, editable date/type names such as `260526-PDF-1` and `260526-VIDEO-1`, no per-row action-button clutter, and a separate detail workflow with Back to shelf plus Property/Photos/Titles/Order/Output navigation.
+- Latest checkpoint is `v89.6`: the Real Estate client page is a saved-product shelf first, with cloud-backed selection manifests, editable project/date/sequence names, shelf rows that show selected photo/video counts, and a separate detail workflow with Back to shelf plus Shoot/Photos/Titles/Order/Output navigation. RE video output now keeps mismatched-orientation stills contained with bars/backdrops, applies the slide counter and importer-style watermark before Ken Burns motion, and fades the music over the final slide duration.
 - Daily social-post automation `pbe-daily-social-posts` is active at 09:00 local time. It prepares three daily themes across Facebook, Instagram, and Pinterest, with 5-10 watermarked public images for Facebook/Instagram and exactly 5 for Pinterest because Pinterest accepts only 5 photos at a time. It now should prepare the first-party springboard/campaign target before posting, stage drag-ready assets under `socials/{Platform}/YYYY-MM-DD/{theme-slug}/`, and only publish when existing authentication allows it.
 - The 2026-05-25 social package is prepared from public R2 previews only: Facebook `Albi River and Brick Cathedral` has 8 images and points to the France gallery; Instagram `Madrid Chapels and Courtyards` has 10 images and points to the Spain gallery; Pinterest `Northern Portugal Green Horizons` has exactly 5 images and points to the Portugal gallery. A Threads 4-image Madrid variant is staged under `socials/Threads/2026-05-25/madrid-chapels-and-courtyards/`; the first Threads test post was manually completed from Chrome after Instagram-based onboarding, but no platform URL was captured.
 - The current social-destination gap is that today's posts still spring mostly to broad gallery URLs. The next visible-site pass should add a homepage/latest-social shelf and/or focused campaign pages for Albi/Tarn, Madrid interiors, and northern Portugal before future posts go out.

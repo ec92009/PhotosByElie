@@ -308,18 +308,23 @@ const renderLiked = () => {
     });
   });
 
-  const selectedOptionsFor = (itemIndex) => Array.from(document.querySelectorAll(`[data-liked-resolution="${itemIndex}"]:checked`))
-    .map((checkbox) => {
-      const option = resolutionOptions.find((item) => item.id === checkbox.value);
-      if (!option) return null;
-      const selected = { id: option.id };
-      if (option.type === "print") {
-        selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
-        selected.frameId = document.querySelector(`[data-liked-print-frame="${itemIndex}"][data-option-id="${option.id}"]:checked`)?.value || "none";
-      }
-      return selected;
-    })
-    .filter(Boolean);
+  const selectedOptionsFor = (itemIndex) => {
+    const item = likedStore.read()[itemIndex];
+    const { photo } = photoForLikedItem(item || {});
+    const availableOptions = availableOptionsForPhoto(photo);
+    return Array.from(document.querySelectorAll(`[data-liked-resolution="${itemIndex}"]:checked`))
+      .map((checkbox) => {
+        const option = availableOptions.find((candidate) => candidate.id === checkbox.value);
+        if (!option) return null;
+        const selected = { id: option.id };
+        if (option.type === "print") {
+          selected.quantity = document.querySelector(`[data-liked-print-quantity="${itemIndex}"][data-option-id="${option.id}"]`)?.value || 1;
+          selected.frameId = document.querySelector(`[data-liked-print-frame="${itemIndex}"][data-option-id="${option.id}"]:checked`)?.value || "none";
+        }
+        return selected;
+      })
+      .filter(Boolean);
+  };
 
   const syncItemOptions = (itemIndex) => {
     const item = likedStore.read()[itemIndex];

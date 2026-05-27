@@ -99,6 +99,7 @@ const ensureGalleryKeyboardHint = () => {
     `${shortcutKey("U")} undo`,
     `${shortcutKey("T")} title`,
     `${shortcutKey("K")} keywords`,
+    `${shortcutKey("R")} review`,
     `${shortcutKey("Arrows")} select`,
     `${shortcutKey("Enter")} detail`,
     `${shortcutKey("Double-click")} detail`
@@ -1076,6 +1077,23 @@ if (galleryRoot && gallery) {
         const selected = photos[selectedIndex];
         if (!selected) return;
         openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");
+        event.preventDefault();
+        return;
+      }
+      if (event.key.toLowerCase() === "r") {
+        const selected = photos[selectedIndex];
+        if (!selected) return;
+        try {
+          if (!hiddenActions.queueTitleKeywordReview) {
+            throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+          }
+          const result = await hiddenActions.queueTitleKeywordReview(selected.id);
+          setGalleryStatus(result?.already_pending
+            ? `${selected.title} is already in title/keyword review.`
+            : `${selected.title} sent to title/keyword review.`);
+        } catch (error) {
+          setGalleryStatus(error?.message || "Could not send photo to title/keyword review.");
+        }
         event.preventDefault();
         return;
       }

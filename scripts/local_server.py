@@ -187,6 +187,7 @@ from owner_state_db import keyword_blacklist_terms as keyword_blacklist_terms_db
 from owner_state_db import record_country_assignments as record_country_assignments_db  # noqa: E402
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
 from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
+from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
 
 
@@ -4655,6 +4656,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "sync-country-keywords",
         "remove-collection-keyword",
         "update-photo-metadata",
+        "queue-title-keyword-review",
         "apply-title-keyword-review-approvals",
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
@@ -4816,6 +4818,15 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
 
     if action == "save-keyword-blacklist":
         return _save_keyword_blacklist(repo_root, payload)
+
+    if action == "queue-title-keyword-review":
+        queue_result = queue_title_keyword_review_photo_db(repo_root, photo_id)
+        return {
+            "ok": True,
+            "action": action,
+            **queue_result,
+            "review_url": "./owner-review.html?view=title-keywords",
+        }
 
     if action == "clear-title-keyword-review-block":
         batch_id = str(payload.get("batch_id") or "").strip()

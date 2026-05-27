@@ -177,7 +177,8 @@ const renderDetailShortcutHint = () => {
       `${detailShortcutKey("X")} block`,
       `${detailShortcutKey("U")} undo`,
       `${detailShortcutKey("T")} title`,
-      `${detailShortcutKey("K")} keywords`
+      `${detailShortcutKey("K")} keywords`,
+      `${detailShortcutKey("R")} review`
     ]
     : [];
   detailShortcutHint.innerHTML = [
@@ -831,6 +832,21 @@ if (localModerationEnabled) {
     if (key === "t" || key === "k") {
       openOwnerMetadataModal(key === "k" ? "keywords" : "title");
       event.preventDefault();
+      return;
+    }
+    if (key === "r") {
+      event.preventDefault();
+      try {
+        if (!hiddenActions.queueTitleKeywordReview) {
+          throw new Error("Refresh Owner mode to load title/keyword review queueing.");
+        }
+        const result = await hiddenActions.queueTitleKeywordReview(photo.id);
+        status.textContent = result?.already_pending
+          ? `${photo.title} is already in title/keyword review.`
+          : `${photo.title} sent to title/keyword review.`;
+      } catch (error) {
+        status.textContent = error?.message || "Could not send photo to title/keyword review.";
+      }
       return;
     }
     if (key === "x" || key === "b" || key === "h") {

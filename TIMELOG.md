@@ -91,8 +91,10 @@ Clock state: paused
 | 2026-05-27 | 10:07 CEST | 10:08 CEST | 0:01 | Corrected Owner title/keyword preview whitespace direction so photos use their natural aspect ratio. |
 | 2026-05-27 | 10:31 CEST | 10:32 CEST | 0:01 | Requested per-field title/keyword propagation controls for same-shoot Owner review rows; background implementation time excluded. |
 | 2026-05-27 | 10:39 CEST | 10:41 CEST | 0:02 | Recycled rejected and parked title/keyword rows into a local test proposal batch, leaving unparked rows rework-eligible. |
+| 2026-05-27 | 11:30 CEST | 11:31 CEST | 0:01 | Reported video download checkbox on liked/basket product rows would not stay selected. |
+| 2026-05-27 | 11:55 CEST | 11:56 CEST | 0:01 | Requested an Owner-mode R shortcut to queue the current photo for title/keyword review. |
 
 ## Totals
 
-Active collaboration time used: 4:52
+Active collaboration time used: 4:54
 Remaining budget: not set

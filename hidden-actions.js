@@ -23,6 +23,7 @@
     "sync-country-keywords": "Syncing country metadata into generated catalog files...",
     "remove-collection-keyword": "Removing collection keyword from catalog metadata...",
     "update-photo-metadata": "Saving title and keyword metadata...",
+    "queue-title-keyword-review": "Sending photo to title/keyword review...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
     "publish-hidden-blacklist": "Publishing master blacklist...",
     "wipe-hidden-r2": "Purging banned-photo R2 copies...",
@@ -447,6 +448,11 @@
     });
   };
 
+  const queueTitleKeywordReview = async (photoId) => {
+    if (!enabled || !photoId) return null;
+    return photoAction("queue-title-keyword-review", photoId);
+  };
+
   const syncCountryKeywords = async () => {
     if (!enabled) return null;
     return photoAction("sync-country-keywords", null);
@@ -520,6 +526,7 @@
     updateOwnerBusy,
     setCountryAssignment,
     setCountryAssignments,
+    queueTitleKeywordReview,
     syncFromPublishedBlacklist,
     syncCountryKeywords,
     undo,

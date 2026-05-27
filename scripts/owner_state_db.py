@@ -1058,6 +1058,226 @@ def _catalog_keywords_by_media_id(repo_root: Path, media_ids: list[str]) -> dict
         catalog_conn.close()
 
 
+def _catalog_title_keyword_metadata(repo_root: Path, media_id: str) -> dict[str, Any]:
+    media_id = str(media_id or "").strip()
+    if not media_id:
+        raise ValueError("media_id must be a non-empty string")
+    catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
+    if not catalog_path.exists():
+        raise FileNotFoundError(f"missing public catalog: {catalog_path}")
+    catalog_conn = sqlite3.connect(catalog_path)
+    catalog_conn.row_factory = sqlite3.Row
+    try:
+        keyword_lookup = _catalog_keyword_lookup(catalog_conn)
+        row = catalog_conn.execute(
+            """
+            SELECT media_id, title, keyword_ids, captured_at
+            FROM media_items
+            WHERE media_id = ?
+            """,
+            (media_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError(f"photo not found in current catalog: {media_id}")
+        return {
+            "media_id": str(row["media_id"] or ""),
+            "title": str(row["title"] or "").strip() or media_id,
+            "keywords": _catalog_keywords(row["keyword_ids"], keyword_lookup),
+            "captured_at": str(row["captured_at"] or ""),
+        }
+    finally:
+        catalog_conn.close()
+
+
+def queue_title_keyword_review_photo(repo_root: Path, media_id: str, db_path: Path | None = None) -> dict[str, Any]:
+    """Queue a catalog photo for manual title/keyword review from Owner mode."""
+    media_id = str(media_id or "").strip()
+    if not media_id:
+        raise ValueError("media_id must be a non-empty string")
+    catalog = _catalog_title_keyword_metadata(repo_root, media_id)
+    conn = connect(repo_root, db_path)
+    proposed_at = now_iso()
+    batch_id = f"manual-title-keyword-review-{proposed_at[:10]}"
+    try:
+        existing_queue = conn.execute(
+            """
+            SELECT review_state, latest_attempt, latest_proposed_batch_id, rejected_count
+            FROM title_keyword_queue
+            WHERE media_id = ?
+            """,
+            (media_id,),
+        ).fetchone()
+        if existing_queue and existing_queue["review_state"] == "proposed":
+            attempt = int(existing_queue["latest_attempt"] or 1)
+            existing_batch_id = str(existing_queue["latest_proposed_batch_id"] or "")
+            if conn.execute(
+                "SELECT 1 FROM title_keyword_proposals WHERE media_id = ? AND attempt = ?",
+                (media_id, attempt),
+            ).fetchone():
+                return {
+                    "db": (db_path or DEFAULT_DB).as_posix(),
+                    "photo_id": media_id,
+                    "batch_id": existing_batch_id,
+                    "attempt": attempt,
+                    "queued": False,
+                    "already_pending": True,
+                    "title": catalog["title"],
+                    "keywords": catalog["keywords"],
+                }
+            batch_id = existing_batch_id or batch_id
+        else:
+            proposal_row = conn.execute(
+                "SELECT max(attempt) FROM title_keyword_proposals WHERE media_id = ?",
+                (media_id,),
+            ).fetchone()
+            latest_proposal_attempt = int(proposal_row[0] or 0) if proposal_row else 0
+            latest_queue_attempt = int(existing_queue["latest_attempt"] or 0) if existing_queue else 0
+            attempt = max(latest_proposal_attempt, latest_queue_attempt) + 1
+            if attempt <= 1 and not latest_proposal_attempt and not latest_queue_attempt:
+                attempt = 1
+
+        rules = _keyword_blacklist_rules(conn)
+        source_keywords = _normalized_keywords(catalog["keywords"])
+        review_keywords = _reviewable_keywords(source_keywords, rules)
+        review_keys = {keyword.casefold() for keyword in review_keywords}
+        removed_blacklisted = [
+            keyword
+            for keyword in source_keywords
+            if keyword.casefold() not in review_keys
+            and keyword.casefold() not in TITLE_KEYWORD_STATE_FLAGS
+        ]
+        capture_at = str(catalog.get("captured_at") or "")
+        _upsert_batch(
+            conn,
+            {
+                "batch_id": batch_id,
+                "generated_at": proposed_at,
+                "selection": {
+                    "total_count": 1,
+                    "ordinary_new_count": 1,
+                    "rework_count": 0,
+                    "parked_count": 0,
+                    "candidate_count": 1,
+                },
+                "range": {"newest": capture_at, "oldest": capture_at},
+            },
+            "manual-owner-shortcut",
+        )
+        conn.execute(
+            """
+            INSERT INTO title_keyword_proposals (
+              media_id, attempt, batch_id, previous_title, previous_keywords,
+              proposed_title, proposed_keywords, proposal_status, confidence,
+              needs_owner_context, proposal_reason, removed_blacklisted,
+              keyword_target, keyword_target_met, generator_model, generator_model_level,
+              generator_model_maxed, model_ladder, proposed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(media_id, attempt) DO UPDATE SET
+              batch_id = excluded.batch_id,
+              previous_title = excluded.previous_title,
+              previous_keywords = excluded.previous_keywords,
+              proposed_title = excluded.proposed_title,
+              proposed_keywords = excluded.proposed_keywords,
+              proposal_status = excluded.proposal_status,
+              confidence = excluded.confidence,
+              needs_owner_context = excluded.needs_owner_context,
+              proposal_reason = excluded.proposal_reason,
+              removed_blacklisted = excluded.removed_blacklisted,
+              keyword_target = excluded.keyword_target,
+              keyword_target_met = excluded.keyword_target_met,
+              generator_model = excluded.generator_model,
+              generator_model_level = excluded.generator_model_level,
+              generator_model_maxed = excluded.generator_model_maxed,
+              model_ladder = excluded.model_ladder,
+              proposed_at = excluded.proposed_at
+            """,
+            (
+                media_id,
+                attempt,
+                batch_id,
+                catalog["title"],
+                _keywords_text(review_keywords),
+                catalog["title"],
+                _keywords_text(review_keywords),
+                "manual-owner-review",
+                "medium",
+                0,
+                "Queued from Owner mode with the R shortcut.",
+                json.dumps(removed_blacklisted, ensure_ascii=False),
+                None,
+                None,
+                "manual-owner-shortcut",
+                None,
+                0,
+                json.dumps(["manual-owner-shortcut"], ensure_ascii=False),
+                proposed_at,
+            ),
+        )
+        _upsert_queue(
+            conn,
+            media_id=media_id,
+            review_state="proposed",
+            latest_attempt=attempt,
+            batch_id=batch_id,
+            proposed_at=proposed_at,
+            rework_priority=False,
+            rejected_count=int(existing_queue["rejected_count"] or 0) if existing_queue else 0,
+            owner_comment="Queued from Owner mode.",
+        )
+        conn.execute(
+            """
+            UPDATE title_keyword_queue
+            SET review_state = 'proposed',
+                latest_attempt = ?,
+                latest_proposed_batch_id = ?,
+                latest_proposed_at = ?,
+                reviewed_at = NULL,
+                applied_at = NULL,
+                rework_priority = 0,
+                owner_comment = ?,
+                updated_at = ?
+            WHERE media_id = ?
+            """,
+            (attempt, batch_id, proposed_at, "Queued from Owner mode.", proposed_at, media_id),
+        )
+        pending_count = int(conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM title_keyword_queue
+            WHERE review_state = 'proposed'
+              AND latest_proposed_batch_id = ?
+            """,
+            (batch_id,),
+        ).fetchone()[0] or 0)
+        conn.execute(
+            """
+            UPDATE title_keyword_batches
+            SET total_count = ?,
+                ordinary_new_count = ?,
+                candidate_count = ?,
+                newest_capture_at = COALESCE(NULLIF(?, ''), newest_capture_at),
+                oldest_capture_at = COALESCE(NULLIF(?, ''), oldest_capture_at)
+            WHERE batch_id = ?
+            """,
+            (pending_count, pending_count, pending_count, capture_at, capture_at, batch_id),
+        )
+        _set_setting(conn, "title_keyword_review_dir", TITLE_KEYWORD_REVIEW_ROOT.as_posix())
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "photo_id": media_id,
+            "batch_id": batch_id,
+            "attempt": attempt,
+            "queued": True,
+            "already_pending": False,
+            "pending_count": pending_count,
+            "title": catalog["title"],
+            "keywords": review_keywords,
+        }
+    finally:
+        conn.close()
+
+
 def repair_title_keyword_proposal_keywords(repo_root: Path, db_path: Path | None = None) -> dict[str, Any]:
     """Ensure active proposals do not drop existing non-blacklisted catalog keywords."""
     conn = connect(repo_root, db_path)

@@ -246,10 +246,21 @@
     SWEEP_PHASE_ALIASES.get(String(phaseKey || "")) || String(phaseKey || "")
   );
 
+  const renderOwnerPreviewState = () => {
+    refreshCountsFromSource();
+    refreshBlockedSyncPanel();
+    renderPodCommerce();
+    loadCostEstimate();
+    loadKeywordBlacklist();
+    loadTitleKeywordReviewCount();
+    loadImportSources();
+    renderR2Coverage(null);
+  };
+
   const renderOwnerAvailability = (authState = ownerAuth?.state || {}, options = {}) => {
     if (!ownerAuth?.enabled) return;
     const available = authState.available === true;
-    if (controls) controls.hidden = !available;
+    if (controls) controls.hidden = false;
     if (locked) locked.hidden = available;
     if (available) {
       setStatus("Owner controls unlocked on localhost.");
@@ -269,8 +280,9 @@
         });
       }
     } else {
-      setText(locked, "Owner controls need the local helper server.");
-      setStatus("Owner controls need the local helper server.");
+      setText(locked, "Owner helper actions are offline. Read-only Owner dashboard is still available; use 127.0.0.1 or start scripts/local_server.py for actions.");
+      setStatus("Owner helper actions are offline; dashboard shown read-only.");
+      renderOwnerPreviewState();
     }
   };
 
@@ -374,6 +386,31 @@
 
   const formatCount = (value) => Number(value || 0).toLocaleString();
   const reviewPhotoLabel = (count) => `${formatCount(count)} ${Number(count) === 1 ? "photo" : "photos"}`;
+  const titleKeywordReviewPhotoId = (item) => String(item?.photo_id || item?.photoId || "").trim();
+  const savedTitleKeywordReviewIds = (payload) => {
+    const ids = new Set();
+    for (const key of ["approvals", "rejections", "blocked"]) {
+      for (const item of payload?.[key] || []) {
+        const photoId = titleKeywordReviewPhotoId(item);
+        if (photoId) ids.add(photoId);
+      }
+    }
+    return ids;
+  };
+  const staticTitleKeywordReviewCount = async (payload) => {
+    const photos = Array.isArray(payload?.photos) ? payload.photos : [];
+    const batchId = String(payload?.batch_id || payload?.batchId || "").trim();
+    if (!photos.length || !batchId) return 0;
+    const approvalsPath = `./assets/owner-actions/title-keyword-review-queue/approvals-${encodeURIComponent(batchId)}.json`;
+    const approvalsHref = window.photosByElieVersionedHref?.(approvalsPath) || approvalsPath;
+    const approvalsResponse = await fetch(approvalsHref, { cache: "no-store" }).catch(() => null);
+    const approvalRecord = approvalsResponse?.ok ? await approvalsResponse.json().catch(() => ({})) : {};
+    const savedIds = savedTitleKeywordReviewIds(approvalRecord);
+    return photos.filter((photo) => {
+      const photoId = titleKeywordReviewPhotoId(photo);
+      return photoId && !savedIds.has(photoId);
+    }).length;
+  };
   const numberFromLog = (value) => Number(String(value || "").replace(/,/g, "")) || 0;
   const secondsSinceIso = (value) => {
     const timestamp = Date.parse(value || "");
@@ -994,12 +1031,22 @@
       const response = await fetch("/__photosbyelie/title-keyword-review-queue", { cache: "no-store" });
       if (!response.ok) throw new Error(`Title/keyword queue ${response.status}`);
       const payload = await response.json();
-      const count = Number(payload?.selection?.sqlite_pending_count ?? payload?.photos?.length ?? 0);
+      const count = Number(Array.isArray(payload?.photos) ? payload.photos.length : payload?.selection?.visible_pending_count ?? payload?.selection?.sqlite_pending_count ?? 0);
       titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
       titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} for title and keyword cleanup` : "Review title and keyword proposals");
     } catch {
-      titleKeywordReviewLink.textContent = "Review";
-      titleKeywordReviewLink.setAttribute("aria-label", "Review title and keyword proposals");
+      try {
+        const href = window.photosByElieVersionedHref?.("./assets/owner-actions/title-keyword-review-queue/latest.json") || "./assets/owner-actions/title-keyword-review-queue/latest.json";
+        const response = await fetch(href, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Title/keyword queue view ${response.status}`);
+        const payload = await response.json();
+        const count = await staticTitleKeywordReviewCount(payload);
+        titleKeywordReviewLink.textContent = count > 0 ? `Review ${reviewPhotoLabel(count)}` : "Review";
+        titleKeywordReviewLink.setAttribute("aria-label", count > 0 ? `Review ${reviewPhotoLabel(count)} from the latest title and keyword batch` : "Review title and keyword proposals");
+      } catch {
+        titleKeywordReviewLink.textContent = "Review";
+        titleKeywordReviewLink.setAttribute("aria-label", "Review title and keyword proposals");
+      }
     }
   };
 

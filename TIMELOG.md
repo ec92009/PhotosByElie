@@ -94,8 +94,9 @@ Clock state: paused
 | 2026-05-27 | 11:30 CEST | 11:31 CEST | 0:01 | Reported video download checkbox on liked/basket product rows would not stay selected. |
 | 2026-05-27 | 11:55 CEST | 11:56 CEST | 0:01 | Requested an Owner-mode R shortcut to queue the current photo for title/keyword review. |
 | 2026-05-27 | 12:03 CEST | 12:04 CEST | 0:01 | Requested the gallery hero/filter panel opacity be doubled in light mode. |
+| 2026-05-27 | 12:20 CEST | 12:21 CEST | 0:01 | Reported stale title/keyword review count when the saved review batch was empty. |
 
 ## Totals
 
-Active collaboration time used: 4:55
+Active collaboration time used: 4:56
 Remaining budget: not set

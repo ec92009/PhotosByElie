@@ -8,9 +8,9 @@
   <meta name="description" content="Private real-estate media review, project PDF, and slideshow selection workspace for Photos By Elie clients."/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=88.4"/>
-  <link rel="stylesheet" href="./styles.css?v=88.4"/>
-  <link rel="stylesheet" href="./photos.css?v=88.4"/>
+  <link rel="stylesheet" href="./shared.css?v=88.5"/>
+  <link rel="stylesheet" href="./styles.css?v=88.5"/>
+  <link rel="stylesheet" href="./photos.css?v=88.5"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
       <a href="./" data-i18n="nav.photos">Photos</a> <span>|</span>
       <a class="is-active" href="./real-estate.html">Real Estate</a>
     </nav>
-    <span class="site-version-badge">v88.4</span>
+    <span class="site-version-badge">v88.5</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -58,6 +58,10 @@
       <div class="real-estate-hero-copy">
         <p class="eyebrow" data-re-customer>Client review</p>
         <h1 id="real-estate-title" data-re-title>Real estate selection</h1>
+        <label class="real-estate-active-product" data-re-active-product-label hidden>
+          <span>Selection</span>
+          <input type="text" data-re-active-product-name aria-label="Selection name"/>
+        </label>
         <p class="lead" data-re-description>Private media review workspace for project PDF and slideshow delivery.</p>
         <dl class="real-estate-stats" aria-label="Gallery totals">
           <div>
@@ -91,6 +95,7 @@
           <h2 id="real-estate-deliverables-title">Your saved products</h2>
           <p class="real-estate-muted">View files on mobile or download them on a computer. You can capture or share whatever you are seeing in the way that works best for you.</p>
         </div>
+        <button class="btn primary" type="button" data-re-create-product data-re-shelf-create-product hidden>+ Create new selection</button>
       </div>
       <div class="real-estate-deliverable-list" data-re-deliverables-list></div>
     </section>
@@ -99,13 +104,13 @@
       <div class="real-estate-wizard-head">
         <button class="btn secondary real-estate-shelf-back" type="button" data-re-shelf-back>Back to shelf</button>
         <ol class="real-estate-stepper" data-re-stepper aria-label="Review steps">
-          <li><button type="button" data-re-step-jump="0"><b>0</b><span>Property</span></button></li>
-          <li><button type="button" data-re-step-jump="1"><b>1</b><span>Photos</span></button></li>
-          <li><button type="button" data-re-step-jump="2"><b>2</b><span>Titles</span></button></li>
-          <li><button type="button" data-re-step-jump="3"><b>3</b><span>Order</span></button></li>
-          <li><button type="button" data-re-step-jump="4"><b>4</b><span>Output</span></button></li>
+          <li><button type="button" data-re-step-jump="0"><b>1</b><span>Shoots</span></button></li>
+          <li><button type="button" data-re-step-jump="1"><b>2</b><span>Photos</span></button></li>
+          <li><button type="button" data-re-step-jump="2"><b>3</b><span>Titles</span></button></li>
+          <li><button type="button" data-re-step-jump="3"><b>4</b><span>Order</span></button></li>
+          <li><button type="button" data-re-step-jump="4"><b>5</b><span>Output</span></button></li>
         </ol>
-        <p class="gallery-status" data-re-wizard-status aria-live="polite">Choose a property to begin.</p>
+        <p class="gallery-status" data-re-wizard-status aria-live="polite">Choose shoots to begin.</p>
       </div>
       <div class="real-estate-wizard-actions">
         <button class="btn primary" type="button" data-re-step-next>Next</button>
@@ -115,7 +120,7 @@
     <section class="panel real-estate-workbench" aria-label="Real estate review workspace">
       <aside class="real-estate-sidebar" aria-label="Review controls">
         <section class="real-estate-control-group" data-re-panel="properties" aria-labelledby="real-estate-albums-title">
-          <h2 id="real-estate-albums-title">Properties</h2>
+          <h2 id="real-estate-albums-title">Shoots</h2>
           <div class="real-estate-album-list" data-re-albums></div>
         </section>
 
@@ -197,7 +202,7 @@
             <input type="checkbox" data-re-output-pdf checked/>
             <span>
               <strong>PDF</strong>
-              <small>One PDF per property. Videos appear as a still from 10% into the clip.</small>
+              <small>One PDF per shoot. Videos appear as a still from 10% into the clip.</small>
             </span>
           </label>
           <label class="real-estate-output-choice">
@@ -289,7 +294,7 @@
       <p class="eyebrow">New selection</p>
       <h2 id="real-estate-help-title">How project outputs work</h2>
       <ol class="real-estate-help-list">
-        <li>Pick a property first; the review moves to that property's media.</li>
+        <li>Pick one or more shoots first; the Photos step shows only those media.</li>
         <li>Click photos or videos to select the ones to use.</li>
         <li>Go to Titles and change only the captions that should be different in the final product.</li>
         <li>Go to Order and drag the selected media into the PDF or video sequence.</li>
@@ -333,9 +338,9 @@
     </div>
   </footer>
 
-  <script src="./media-config.js?v=88.4"></script>
-  <script src="./photos.js?v=88.4"></script>
-  <script src="./site-version.js?v=88.4"></script>
-  <script src="./real-estate.js?v=88.4"></script>
+  <script src="./media-config.js?v=88.5"></script>
+  <script src="./photos.js?v=88.5"></script>
+  <script src="./site-version.js?v=88.5"></script>
+  <script src="./real-estate.js?v=88.5"></script>
 </body>
 </html>

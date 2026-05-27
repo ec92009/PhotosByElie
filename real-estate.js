@@ -41,6 +41,8 @@
     loginStatus: app.querySelector("[data-re-login-status]"),
     customer: app.querySelector("[data-re-customer]"),
     title: app.querySelector("[data-re-title]"),
+    activeProductLabel: app.querySelector("[data-re-active-product-label]"),
+    activeProductName: app.querySelector("[data-re-active-product-name]"),
     description: app.querySelector("[data-re-description]"),
     deliverablesPanel: app.querySelector("[data-re-deliverables-panel]"),
     deliverablesList: app.querySelector("[data-re-deliverables-list]"),
@@ -96,6 +98,7 @@
     photosById: new Map(),
     albums: [],
     album: "all",
+    shootFilters: [],
     detailMode: false,
     wizardStep: 0,
     query: "",
@@ -109,6 +112,10 @@
     selectedIds: new Set(),
     editedTitles: {},
     projectAssignments: {},
+    activeDeliverableId: "",
+    activeDeliverableName: "",
+    activeDeliverableNameEdited: false,
+    editingDeliverableNameId: "",
     localDeliverables: [],
     cloudDeliverables: [],
     cloudDeliverablesBusy: false,
@@ -140,6 +147,15 @@
     "\"": "&quot;",
     "'": "&#39;",
   }[char]));
+
+  const reIcon = (name) => {
+    const paths = {
+      edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2 1.58.63-2.52 8.43-8.43 1.06 1.06-8.43 8.43L5 18.83zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+    };
+    const path = paths[name];
+    if (!path) return window.photosByElieMdIcon?.(name) || "";
+    return `<svg class="md-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${path}"></path></svg>`;
+  };
 
   const safeUrl = (value) => {
     const raw = String(value || "");
@@ -604,18 +620,41 @@
   const persistTitles = () => writeJson(titleStoreKey(), state.editedTitles);
   const persistProjectAssignments = () => writeJson(projectStoreKey(), state.projectAssignments);
 
-  const selectedPropertyTitle = () => (
-    state.albums.find((album) => album.slug === state.album)?.displayTitle
-    || state.albums.find((album) => album.slug === state.album)?.title
-    || "this property"
-  );
+  const albumForSlug = (slug) => state.albums.find((album) => album.slug === slug);
+  const shootTitleFor = (slug) => {
+    const album = albumForSlug(slug);
+    return album?.displayTitle || album?.title || slug || "Shoot";
+  };
+  const normalizeShootFilters = (filters = state.shootFilters) => {
+    const known = new Set(state.albums.map((album) => album.slug));
+    return [...new Set((Array.isArray(filters) ? filters : []).filter((slug) => known.has(slug)))];
+  };
+  const selectedShootIds = () => {
+    const normalized = normalizeShootFilters();
+    return normalized;
+  };
+  const selectedShootSet = () => new Set(selectedShootIds());
+  const primaryShootId = () => selectedShootIds()[0] || defaultAlbumSlug();
+  const selectedPropertyTitle = () => {
+    const shoots = selectedShootIds();
+    if (shoots.length === 1) return shootTitleFor(shoots[0]);
+    if (shoots.length > 1) return `${shoots.length} shoots`;
+    return "selected shoots";
+  };
+
+  const updateAutoActiveDeliverableName = () => {
+    if (!state.detailMode || state.activeDeliverableId || state.activeDeliverableNameEdited) return;
+    state.activeDeliverableName = nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
+    syncActiveProductName();
+  };
 
   const filteredPhotos = () => {
     const query = state.query.trim().toLowerCase();
     const selectedRank = new Map(state.selectedOrder.map((id, index) => [id, index]));
     const selectedOnly = state.selectedOnly || state.wizardStep === 2;
+    const shootSet = selectedShootSet();
     const photos = state.photos.filter((photo) => {
-      if (state.wizardStep !== 1 && state.album && state.album !== "all" && photo.albumSlug !== state.album && !assignedProjectIdsFor(photo).includes(state.album)) return false;
+      if (state.wizardStep === 1 && (!shootSet.size || !shootSet.has(photo.albumSlug))) return false;
       if (state.mediaType !== "all" && mediaTypeFor(photo) !== state.mediaType) return false;
       if (selectedOnly && !isSelectedForActiveProject(photo)) return false;
       if (query && !photoSearchText(photo).includes(query)) return false;
@@ -791,26 +830,24 @@
     return explicit.length ? explicit : [projectIdFor(photo)];
   };
 
-  const isSelectedForActiveProject = (photo) => (
-    state.selectedIds.has(photo?.id)
-    && selectedProjectIdsFor(photo).includes(activeProjectId())
-  );
+  const isSelectedForActiveProject = (photo) => state.selectedIds.has(photo?.id);
 
-  const activeSelectedPhotos = () => selectedPhotos().filter(isSelectedForActiveProject);
+  const activeSelectedPhotos = () => selectedPhotos();
 
   const defaultAlbumSlug = () => state.albums[0]?.slug || "all";
 
   const hasPropertyPicker = () => state.albums.length > 1;
 
-  const firstWizardStep = () => hasPropertyPicker() ? 0 : 1;
+  const firstWizardStep = () => 0;
 
   const normalizeWizardStep = (step) => Math.max(firstWizardStep(), Math.min(4, Number(step) || firstWizardStep()));
 
-  const activeProjectId = () => (state.album && state.album !== "all" ? state.album : defaultAlbumSlug());
+  const activeProjectId = () => primaryShootId();
 
   const renderHero = () => {
     const { gallery, payload, photos } = state;
     const albums = state.albums;
+    const products = producedDeliverables();
     const videoCount = photos.filter(isVideo).length;
     const stillCount = Math.max(0, photos.length - videoCount);
     if (elements.loginCustomer) elements.loginCustomer.textContent = "Private client access";
@@ -821,8 +858,10 @@
     if (elements.total?.previousElementSibling) elements.total.previousElementSibling.textContent = "Stills";
     if (elements.videoTotal) elements.videoTotal.textContent = String(videoCount);
     if (elements.albumTotal) elements.albumTotal.textContent = String(albums.length);
-    if (elements.selectedTotal) elements.selectedTotal.textContent = String(producedDeliverables().length);
+    if (elements.selectedTotal) elements.selectedTotal.textContent = String(products.length);
     if (elements.selectedTotal?.previousElementSibling) elements.selectedTotal.previousElementSibling.textContent = "Selections";
+    syncActiveProductName();
+    syncCreateProductButtons(products);
     renderProducedDeliverables();
   };
 
@@ -934,7 +973,33 @@
     ].join("");
   };
 
-  const isLegacyAutoDeliverableTitle = (title) => /^(PDF|Video):\s*/i.test(String(title || "").trim());
+  const deliverableProjectTitleFor = (item) => {
+    const batch = item?.batch || item;
+    const projectTitles = Array.isArray(batch?.projects)
+      ? batch.projects.map((project) => String(project?.projectTitle || "").trim()).filter(Boolean)
+      : [];
+    if (projectTitles.length === 1) return projectTitles[0];
+    if (projectTitles.length > 1) return "Multiple";
+    const itemProjectTitle = Array.isArray(batch?.items)
+      ? batch.items.map((row) => String(row?.projectTitle || "").trim()).find(Boolean)
+      : "";
+    return String(item?.projectTitle || batch?.projectTitle || itemProjectTitle || "").trim();
+  };
+
+  const deliverableProjectCodeFor = (item, fallback = "") => (
+    String(deliverableProjectTitleFor(item) || fallback || "Selection")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^A-Za-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      || "Selection"
+  );
+
+  const isLegacyAutoDeliverableTitle = (title) => {
+    const value = String(title || "").trim();
+    return /^(PDF|Video):\s*/i.test(value) || /^\d{6}-(PDF|VIDEO|SELECTION)-\d+$/i.test(value);
+  };
 
   const needsGeneratedDeliverableName = (item) => {
     const title = String(item?.title || "").trim();
@@ -946,13 +1011,13 @@
     const groups = new Map();
     items.forEach((item) => {
       if (!item?.id || !needsGeneratedDeliverableName(item)) return;
-      const key = `${dateCodeFor(item.createdAt || item.batch?.createdAt)}:${deliverableTypeCode(item.type)}`;
+      const key = `${deliverableProjectCodeFor(item)}:${dateCodeFor(item.createdAt || item.batch?.createdAt)}:${deliverableTypeCode(item.type)}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(item);
     });
     groups.forEach((group, key) => {
-      const [code, typeCode] = key.split(":");
-      const pattern = new RegExp(`^${code}-${typeCode}-(\\d+)$`);
+      const [projectCode, code, typeCode] = key.split(":");
+      const pattern = new RegExp(`^${projectCode}-${code}-${typeCode}-(\\d+)$`);
       const used = new Set(items
         .filter((item) => !needsGeneratedDeliverableName(item))
         .map((item) => String(item.title || "").trim().match(pattern)?.[1])
@@ -965,7 +1030,7 @@
       )).forEach((item) => {
         while (used.has(next)) next += 1;
         used.add(next);
-        names.set(item.id, `${dateCodeFor(item.createdAt || item.batch?.createdAt)}-${deliverableTypeCode(item.type)}-${next}`);
+        names.set(item.id, `${deliverableProjectCodeFor(item)}-${dateCodeFor(item.createdAt || item.batch?.createdAt)}-${deliverableTypeCode(item.type)}-${next}`);
       });
     });
     return names;
@@ -977,19 +1042,44 @@
       : String(item?.title || "").trim()
   );
 
-  const nextGeneratedDeliverableName = (type, createdAt, excludeId = "") => {
+  const nextGeneratedDeliverableName = (type, createdAt, excludeId = "", projectTitle = "") => {
     const existingItems = producedDeliverables().filter((item) => item.id !== excludeId);
     const generatedNames = generatedDeliverableNamesFor(existingItems);
     const code = dateCodeFor(createdAt);
     const typeCode = deliverableTypeCode(type);
-    const pattern = new RegExp(`^${code}-${typeCode}-(\\d+)$`);
+    const projectCode = deliverableProjectCodeFor({ projectTitle }, selectedPropertyTitle());
+    const pattern = new RegExp(`^${projectCode}-${code}-${typeCode}-(\\d+)$`);
     const used = new Set(existingItems
       .map((item) => displayDeliverableTitleFor(item, generatedNames).match(pattern)?.[1])
       .filter(Boolean)
       .map(Number));
     let next = 1;
     while (used.has(next)) next += 1;
-    return `${code}-${typeCode}-${next}`;
+    return `${projectCode}-${code}-${typeCode}-${next}`;
+  };
+
+  const activeDeliverableName = () => {
+    if (!state.activeDeliverableId) return state.activeDeliverableName || nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
+    const items = producedDeliverables();
+    const item = items.find((deliverable) => deliverable.id === state.activeDeliverableId);
+    if (!item) return state.activeDeliverableName || "Selection";
+    const generatedNames = generatedDeliverableNamesFor(items);
+    return displayDeliverableTitleFor(item, generatedNames);
+  };
+
+  const syncActiveProductName = () => {
+    if (elements.activeProductLabel) elements.activeProductLabel.hidden = !state.detailMode;
+    if (elements.activeProductName && document.activeElement !== elements.activeProductName) {
+      elements.activeProductName.value = activeDeliverableName();
+    }
+  };
+
+  const syncCreateProductButtons = (products = producedDeliverables()) => {
+    document.querySelectorAll("[data-re-create-product]").forEach((button) => {
+      const shelfButton = button.matches("[data-re-shelf-create-product]");
+      button.hidden = shelfButton ? products.length === 0 : state.detailMode || products.length > 0;
+      if (!shelfButton) button.textContent = products.length === 0 ? "Create your first selection" : "+ Create new selection";
+    });
   };
 
   const credentialsForCloudDeliverables = async ({ promptIfMissing = false } = {}) => {
@@ -1145,10 +1235,13 @@
     const existing = Array.isArray(state.localDeliverables) ? state.localDeliverables : [];
     const existingRecord = existing.find((item) => item?.id === id);
     const createdAt = batch.createdAt || new Date().toISOString();
+    const projectTitle = deliverableProjectTitleFor({ batch }) || selectedPropertyTitle();
     const record = {
       id,
       type: normalizedType,
-      title: String(existingRecord?.title || "").trim() || nextGeneratedDeliverableName(normalizedType, createdAt, id),
+      title: String(existingRecord?.title || "").trim()
+        || (normalizedType === "selection" ? String(state.activeDeliverableName || "").trim() : "")
+        || nextGeneratedDeliverableName(normalizedType, createdAt, id, projectTitle),
       createdAt,
       status: "ready",
       bytes: Number(bytes) || 0,
@@ -1156,8 +1249,13 @@
       batch: cloneBatch(batch),
     };
     state.localDeliverables = [record, ...existing.filter((item) => item?.id !== record.id)].slice(0, 25);
+    if (normalizedType === "selection" && !state.activeDeliverableId) {
+      state.activeDeliverableId = record.id;
+      state.activeDeliverableName = record.title;
+    }
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
     renderProducedDeliverables();
+    syncActiveProductName();
     saveCloudDeliverable(record).catch((error) => {
       state.cloudDeliverablesError = error?.message || "Cloud product could not be saved.";
       renderProducedDeliverables();
@@ -1181,7 +1279,13 @@
     state.localDeliverables = (Array.isArray(state.localDeliverables) ? state.localDeliverables : []).map(updateRecord);
     state.cloudDeliverables = (Array.isArray(state.cloudDeliverables) ? state.cloudDeliverables : []).map(updateRecord);
     writeJson(localDeliverablesStoreKey(), state.localDeliverables);
+    if (state.activeDeliverableId === deliverableId) {
+      state.activeDeliverableName = title;
+      state.activeDeliverableNameEdited = true;
+    }
+    state.editingDeliverableNameId = "";
     renderProducedDeliverables();
+    syncActiveProductName();
     setStatus(`Renamed product to ${title}.`);
     const updated = [...state.cloudDeliverables, ...state.localDeliverables]
       .find((record) => String(record?.id || "") === deliverableId);
@@ -1193,25 +1297,35 @@
     }
   };
 
+  const beginDeliverableNameEdit = (deliverableId) => {
+    state.editingDeliverableNameId = String(deliverableId || "");
+    renderProducedDeliverables();
+    window.setTimeout(() => {
+      const input = elements.deliverablesList?.querySelector(`[data-re-rename-deliverable="${attributeSelectorValue(deliverableId)}"]`);
+      input?.focus();
+      input?.select?.();
+    }, 0);
+  };
+
+  const renameActiveProduct = async (name) => {
+    const title = String(name || "").trim() || activeDeliverableName();
+    state.activeDeliverableName = title;
+    state.activeDeliverableNameEdited = true;
+    if (state.activeDeliverableId) {
+      await renameProducedDeliverable(state.activeDeliverableId, title);
+    } else {
+      syncActiveProductName();
+    }
+  };
+
   const renderProducedDeliverables = () => {
     if (!elements.deliverablesPanel || !elements.deliverablesList) return;
     const items = producedDeliverables();
     if (elements.selectedTotal) elements.selectedTotal.textContent = String(items.length);
+    elements.deliverablesPanel.hidden = items.length === 0;
+    syncCreateProductButtons(items);
     if (!items.length) {
-      const cloudCredentials = cloudCredentialSnapshot();
-      const canOfferCloudSync = state.unlocked && workerBaseUrl() && !cloudCredentials.accessCode;
-      const cloudNote = state.cloudDeliverablesBusy
-        ? `<p class="real-estate-muted">Checking cloud products...</p>`
-        : state.cloudDeliverablesError
-          ? `<p class="real-estate-muted">Cloud products could not be reached. Local products on this device will still appear here.</p>`
-          : canOfferCloudSync
-            ? `<p class="real-estate-muted">This device needs the client password once to sync saved cloud products.</p>
-              <button class="btn secondary" type="button" data-re-sync-deliverables>Sync saved products</button>`
-            : "";
-      elements.deliverablesList.innerHTML = `
-        <p class="real-estate-muted">No saved products are ready yet. Save a selection or create a PDF or video below, then cloud-synced items will appear here for repeat viewing and downloading.</p>
-        ${cloudNote}
-      `;
+      elements.deliverablesList.innerHTML = "";
       syncFileActionLabels();
       return;
     }
@@ -1228,14 +1342,21 @@
         item.bytes ? formatBytes(item.bytes) : "",
       ].filter(Boolean).join(" / ");
       const canOpen = Boolean(item.editUrl || item.batch);
+      const editingName = state.editingDeliverableNameId === item.id;
+      const thumbnail = deliverableThumbnailFor(item);
       return `
-        <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
-          <div>
+        <article class="real-estate-deliverable ${canOpen ? "is-openable" : ""} ${editingName ? "is-renaming" : ""}" ${canOpen ? `data-re-open-deliverable="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
+          <button class="real-estate-deliverable-disclosure" type="button" ${canOpen ? `data-re-open-deliverable-button="${escapeHtml(item.id)}"` : "disabled"} aria-label="Open ${escapeHtml(displayTitle)}">
+            <span aria-hidden="true"></span>
+          </button>
+          ${thumbnail ? `<img class="real-estate-deliverable-thumb" src="${escapeHtml(thumbnail)}" alt=""/>` : `<span class="real-estate-deliverable-thumb is-empty" aria-hidden="true"></span>`}
+          <div class="real-estate-deliverable-copy">
             ${canRename
-              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name"/>`
+              ? `<input class="real-estate-deliverable-name" type="text" value="${escapeHtml(displayTitle)}" data-re-rename-deliverable="${escapeHtml(item.id)}" aria-label="Product name" ${editingName ? "" : "readonly tabindex=\"-1\""} aria-readonly="${editingName ? "false" : "true"}"/>`
               : `<strong>${escapeHtml(displayTitle)}</strong>`}
             <span>${escapeHtml(meta || item.label)}</span>
           </div>
+          ${canRename ? `<button class="real-estate-deliverable-rename" type="button" data-re-edit-name="${escapeHtml(item.id)}" aria-label="Rename ${escapeHtml(displayTitle)}">${reIcon("edit")}</button>` : ""}
         </article>
       `;
     }).join("");
@@ -1246,15 +1367,34 @@
     .filter((photo) => selectedProjectIdsFor(photo).includes(slug))
     .length;
 
+  const albumThumbnailFor = (slug) => {
+    const photo = state.photos.find((candidate) => candidate.albumSlug === slug);
+    return photo ? imageFor(photo) : "";
+  };
+
+  const deliverableThumbnailFor = (item) => {
+    const batch = item?.batch;
+    const photoId = Array.isArray(batch?.projects)
+      ? batch.projects.flatMap((project) => project.items || []).find((row) => row?.photoId)?.photoId
+      : Array.isArray(batch?.items)
+        ? batch.items.find((row) => row?.photoId)?.photoId
+        : "";
+    const photo = state.photosById.get(photoId);
+    return photo ? imageFor(photo) : "";
+  };
+
   const renderAlbums = () => {
     if (!elements.albums) return;
+    const selectedShoots = selectedShootSet();
     elements.albums.innerHTML = state.albums.length ? state.albums.map((album) => `
-        <button class="real-estate-album-filter ${state.album === album.slug ? "is-active" : ""}" type="button" data-album-filter="${escapeHtml(album.slug)}" aria-pressed="${state.album === album.slug}">
+        <label class="real-estate-album-filter ${selectedShoots.has(album.slug) ? "is-active" : ""}" data-shoot-option="${escapeHtml(album.slug)}">
+          <input type="checkbox" data-shoot-filter="${escapeHtml(album.slug)}" ${selectedShoots.has(album.slug) ? "checked" : ""}/>
+          <img src="${escapeHtml(albumThumbnailFor(album.slug))}" alt=""/>
           <span>${escapeHtml(album.displayTitle || album.title)}</span>
-          <small>${Number(album.photoCount) || 0} property media / ${albumSelectedCount(album.slug)} selected</small>
-          <b>Choose property</b>
-        </button>
-      `).join("") : `<p class="real-estate-muted">No properties are available yet.</p>`;
+          <small>${Number(album.photoCount) || 0} shoot media / ${albumSelectedCount(album.slug)} selected</small>
+          <b>${selectedShoots.has(album.slug) ? "Included" : "Include shoot"}</b>
+        </label>
+      `).join("") : `<p class="real-estate-muted">No shoots are available yet.</p>`;
   };
 
   const renderGrid = () => {
@@ -1267,7 +1407,7 @@
       const video = isVideo(photo);
       const mediaLabel = mediaLabelFor(photo);
       const duration = formatDuration(durationSecondsFor(photo));
-      const originalProperty = photo.albumSlug === activeProjectId() ? "" : albumTitleFor(photo);
+      const originalProperty = selectedShootSet().has(photo.albumSlug) ? "" : albumTitleFor(photo);
       return `
         <article class="real-estate-photo-card ${selected ? "is-selected" : ""} ${video ? "is-video" : ""}" data-photo-id="${escapeHtml(photo.id)}">
           <div class="real-estate-photo-media-shell">
@@ -1307,7 +1447,6 @@
 
   const renderDraft = () => {
     const selectedPhotos = activeSelectedPhotos();
-    if (elements.selectedTotal) elements.selectedTotal.textContent = String(selectedPhotos.length);
     if (elements.actionBarSelected) elements.actionBarSelected.textContent = String(selectedPhotos.length);
     if (elements.draftCount) elements.draftCount.textContent = String(selectedPhotos.length);
     if (!elements.draftList) return;
@@ -1339,8 +1478,8 @@
 
   const stepCopy = () => {
     const selected = activeSelectedPhotos().length;
-    if (state.wizardStep === 0) return "Choose the property you want to prepare.";
-    if (state.wizardStep === 1) return `Click media to select it for ${selectedPropertyTitle()}. Shift-click selects a range.`;
+    if (state.wizardStep === 0) return "Choose the shoots you want to pick from.";
+    if (state.wizardStep === 1) return `Click media from ${selectedPropertyTitle()} to select it. Shift-click selects a range.`;
     if (state.wizardStep === 2) return selected
       ? `Only the ${selected} selected media items are shown. Change titles only where needed.`
       : "Select at least one photo or video before editing titles.";
@@ -1354,16 +1493,17 @@
 
   const renderWizard = () => {
     const selected = activeSelectedPhotos().length;
+    const shootCount = selectedShootIds().length;
     const firstStep = firstWizardStep();
     app.dataset.reStep = String(state.wizardStep);
     if (elements.wizardStatus) elements.wizardStatus.textContent = stepCopy();
     document.querySelectorAll("[data-re-step-jump]").forEach((button) => {
       const parsed = Number(button.dataset.reStepJump);
       const step = Number.isFinite(parsed) ? parsed : firstStep;
-      button.hidden = step === 0 && !hasPropertyPicker();
+      button.hidden = false;
       button.classList.toggle("is-active", step === state.wizardStep);
       button.setAttribute("aria-current", step === state.wizardStep ? "step" : "false");
-      button.disabled = step >= 2 && selected === 0;
+      button.disabled = (step === 1 && shootCount === 0) || (step >= 2 && selected === 0);
     });
     document.querySelectorAll("[data-re-step-back]").forEach((button) => {
       button.disabled = state.wizardStep <= firstStep;
@@ -1371,7 +1511,7 @@
     });
     document.querySelectorAll("[data-re-step-next]").forEach((button) => {
       button.hidden = state.wizardStep >= 4;
-      button.disabled = state.wizardStep >= 1 && state.wizardStep < 4 && selected === 0;
+      button.disabled = (state.wizardStep === 0 && shootCount === 0) || (state.wizardStep >= 1 && state.wizardStep < 4 && selected === 0);
       button.textContent = state.wizardStep === 0 ? "Pick photos" : (state.wizardStep === 3 ? "Choose output" : "Next");
     });
     document.querySelectorAll("[data-re-open-outputs], [data-re-download-outputs]").forEach((button) => {
@@ -1386,6 +1526,8 @@
     if (elements.mediaType) elements.mediaType.value = state.mediaType;
     if (elements.slideshowPhotoSeconds) elements.slideshowPhotoSeconds.value = String(state.slideshowPhotoSeconds);
     syncAuthUi();
+    syncActiveProductName();
+    syncCreateProductButtons();
     renderAlbums();
     renderGrid();
     renderDraft();
@@ -1421,7 +1563,10 @@
   const setWizardStep = (step) => {
     flushTitleInputs();
     const next = normalizeWizardStep(step);
-    if (next >= 2 && activeSelectedPhotos().length === 0) {
+    if (next >= 1 && selectedShootIds().length === 0) {
+      setStatus("Choose at least one shoot before picking photos");
+      state.wizardStep = 0;
+    } else if (next >= 2 && activeSelectedPhotos().length === 0) {
       setStatus("Select at least one photo or video before continuing");
       state.wizardStep = 1;
     } else {
@@ -1445,10 +1590,10 @@
   };
 
   const applySelectionForPhotoIds = (photoIds, selected) => {
-    const projectId = activeProjectId();
     photoIds.forEach((photoId) => {
       if (!state.photosById.has(photoId)) return;
       const photo = state.photosById.get(photoId);
+      const projectId = projectIdFor(photo);
       const current = projectListForSelectionChange(photoId, photo);
       if (selected && projectId) {
         state.projectAssignments[photoId] = [...current, projectId]
@@ -1545,7 +1690,7 @@
     videos: photos.filter(isVideo).length,
   });
   const outputProjectIdsFor = (photo, activeOnly = false) => {
-    if (activeOnly && state.album && state.album !== "all" && isSelectedForActiveProject(photo)) return [state.album];
+    if (activeOnly) return selectedProjectIdsFor(photo);
     return assignedProjectIdsFor(photo);
   };
 
@@ -3172,6 +3317,10 @@
     if (!requireUnlocked()) return;
     flushTitleInputs();
     state.detailMode = false;
+    state.activeDeliverableId = "";
+    state.activeDeliverableName = "";
+    state.activeDeliverableNameEdited = false;
+    state.editingDeliverableNameId = "";
     state.selectedOnly = false;
     if (elements.selectedOnly) elements.selectedOnly.checked = false;
     render();
@@ -3182,11 +3331,16 @@
   const startNewProduct = () => {
     if (!requireUnlocked()) return;
     state.detailMode = true;
+    state.activeDeliverableId = "";
+    state.album = defaultAlbumSlug();
+    state.shootFilters = state.album ? [state.album] : [];
+    state.activeDeliverableName = nextGeneratedDeliverableName("selection", new Date().toISOString(), "", selectedPropertyTitle());
+    state.activeDeliverableNameEdited = false;
+    state.editingDeliverableNameId = "";
     state.selectedOrder = [];
     state.selectedIds = new Set();
     state.projectAssignments = {};
     state.selectedOnly = false;
-    state.album = defaultAlbumSlug();
     persistSelection();
     persistProjectAssignments();
     setWizardStep(firstWizardStep());
@@ -3386,12 +3540,14 @@
     };
     const firstProjectId = items.find((item) => item.projectId && state.albums.some((album) => album.slug === item.projectId))?.projectId;
     if (firstProjectId) state.album = firstProjectId;
+    const batchProjectIds = [...new Set(items.map((item) => item.projectId).filter((projectId) => state.albums.some((album) => album.slug === projectId)))];
+    state.shootFilters = normalizeShootFilters(batchProjectIds.length ? batchProjectIds : [state.album]);
     persistSelection();
     persistTitles();
     persistProjectAssignments();
-    if (editMode) state.wizardStep = 3;
+    if (editMode) state.wizardStep = 4;
     render();
-    setStatus(`${statusPrefix} ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}${editMode ? "; use Photos to add or remove media, and Order to reorder" : ""}`);
+    setStatus(`${statusPrefix} ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}${editMode ? "; output is ready to view or adjust" : ""}`);
   };
 
   const deliverableBatchFor = async (item) => {
@@ -3410,6 +3566,10 @@
     try {
       setStatus(`Loading ${displayDeliverableTitleFor(item, generatedNames)} for editing...`);
       state.detailMode = true;
+      state.activeDeliverableId = item.id;
+      state.activeDeliverableName = displayDeliverableTitleFor(item, generatedNames);
+      state.activeDeliverableNameEdited = !needsGeneratedDeliverableName(item);
+      state.editingDeliverableNameId = "";
       const batch = await deliverableBatchFor(item);
       applyBatchManifest(batch, { statusPrefix: "Editing", editMode: true });
       document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3565,12 +3725,17 @@
       window.setTimeout(() => showHelp(), 120);
     });
 
-    elements.albums?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-album-filter]");
-      if (!button) return;
+    elements.albums?.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-shoot-filter]");
+      if (!checkbox) return;
       if (!requireUnlocked()) return;
-      state.album = button.dataset.albumFilter || "all";
-      state.wizardStep = 1;
+      const shoot = checkbox.dataset.shootFilter || "";
+      const next = new Set(selectedShootIds());
+      if (checkbox.checked) next.add(shoot);
+      else next.delete(shoot);
+      state.shootFilters = normalizeShootFilters([...next]);
+      state.album = primaryShootId();
+      updateAutoActiveDeliverableName();
       state.selectedOnly = false;
       if (elements.selectedOnly) elements.selectedOnly.checked = false;
       render();
@@ -3763,6 +3928,12 @@
       setWizardStep(state.wizardStep + 1);
     }));
     document.addEventListener("click", (event) => {
+      const createProduct = event.target?.closest?.("[data-re-create-product]");
+      if (createProduct) {
+        event.preventDefault();
+        startNewProduct();
+        return;
+      }
       const shelfBack = event.target?.closest?.("[data-re-shelf-back]");
       if (!shelfBack) return;
       event.preventDefault();
@@ -3774,7 +3945,14 @@
     document.querySelectorAll("[data-re-download-outputs]").forEach((button) => button.addEventListener("click", () => {
       downloadSelectedOutputs().catch(() => setStatus("Outputs could not be downloaded"));
     }));
-    document.querySelectorAll("[data-re-create-product]").forEach((button) => button.addEventListener("click", startNewProduct));
+    elements.activeProductName?.addEventListener("change", (event) => {
+      renameActiveProduct(event.target.value).catch(() => setStatus("Could not rename this selection"));
+    });
+    elements.activeProductName?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      event.target.blur();
+    });
     document.querySelectorAll("[data-re-copy-batch]").forEach((button) => button.addEventListener("click", copyBatch));
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => button.addEventListener("click", () => {
       shareSelectionTable().catch(() => setStatus("Selection could not be saved"));
@@ -3791,6 +3969,13 @@
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "view" })));
     document.querySelectorAll("[data-re-download-pdf]").forEach((button) => button.addEventListener("click", () => downloadPdf({ mode: "download" })));
     elements.deliverablesList?.addEventListener("click", (event) => {
+      const nameEditButton = event.target?.closest?.("[data-re-edit-name]");
+      if (nameEditButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        beginDeliverableNameEdit(nameEditButton.getAttribute("data-re-edit-name") || "");
+        return;
+      }
       if (event.target?.closest?.("[data-re-rename-deliverable]")) return;
       const row = event.target?.closest?.("[data-re-open-deliverable]");
       if (row) {
@@ -3818,6 +4003,11 @@
     elements.deliverablesList?.addEventListener("change", (event) => {
       const input = event.target?.closest?.("[data-re-rename-deliverable]");
       if (!input) return;
+      renameProducedDeliverable(input.getAttribute("data-re-rename-deliverable") || "", input.value).catch(() => setStatus("Could not rename this product"));
+    });
+    elements.deliverablesList?.addEventListener("focusout", (event) => {
+      const input = event.target?.closest?.("[data-re-rename-deliverable]");
+      if (!input || state.editingDeliverableNameId !== input.getAttribute("data-re-rename-deliverable")) return;
       renameProducedDeliverable(input.getAttribute("data-re-rename-deliverable") || "", input.value).catch(() => setStatus("Could not rename this product"));
     });
     elements.deliverablesList?.addEventListener("keydown", (event) => {
@@ -3899,6 +4089,8 @@
     if (!state.album || state.album === "all" || !state.albums.some((album) => album.slug === state.album)) {
       state.album = defaultAlbumSlug();
     }
+    state.shootFilters = normalizeShootFilters(state.shootFilters);
+    if (!state.shootFilters.length && state.album) state.shootFilters = [state.album];
     state.wizardStep = firstWizardStep();
     state.selectedOrder = normalizeSelectedOrder(readJson(selectionStoreKey(), []));
     state.selectedIds = new Set(state.selectedOrder);

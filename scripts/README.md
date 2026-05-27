@@ -280,6 +280,31 @@ npm run social:pinterest-api -- --manifest socials/Pinterest/2026-05-27/gibralta
 
 Live publishing requires `--publish`, `PINTEREST_ACCESS_TOKEN`, and a board id. See `docs/sops/PINTEREST_API_SOP.md`.
 
+The Meta API scaffold follows the same dry-run-first pattern for Facebook Page and Instagram publishing. Tokens are stored outside the repo by the OAuth helper:
+
+```bash
+export META_APP_ID='...'
+export META_APP_SECRET='...'
+export META_REDIRECT_URI='http://localhost/'
+npm run social:meta-oauth -- --auth-url
+npm run social:meta-oauth -- --exchange-code '<returned-code>'
+```
+
+After a token exists, discover the Photos By Elie Page and linked Instagram account:
+
+```bash
+npm run social:meta-api -- --list-pages
+```
+
+Dry-run Facebook and Instagram packages before any live call:
+
+```bash
+npm run social:meta-api -- --platform facebook --manifest socials/Facebook/2026-05-27/paris-arts-metiers-mechanical-details/manifest.json --page-id "$META_PAGE_ID"
+npm run social:meta-api -- --platform instagram --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json --ig-user-id "$META_IG_USER_ID"
+```
+
+Live publishing requires `--publish`, a token, and the relevant Page or Instagram id. See `docs/sops/META_API_SOP.md`.
+
 Useful options:
 
 ```bash

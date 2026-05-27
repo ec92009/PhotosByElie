@@ -2102,7 +2102,7 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 }
 .title-keyword-review-row{
   display:grid;
-  grid-template-columns:minmax(170px,220px) minmax(190px,.8fr) minmax(280px,1.25fr) minmax(170px,210px);
+  grid-template-columns:minmax(150px,220px) minmax(170px,.8fr) minmax(0,1.25fr) minmax(150px,210px);
   gap:14px;
   align-items:stretch;
   border:1px solid var(--line);
@@ -2194,9 +2194,18 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   gap:9px;
   min-width:0;
 }
-.title-keyword-review-proposed label{
+.title-keyword-review-proposed > label,
+.title-keyword-review-field{
   display:grid;
   gap:5px;
+  min-width:0;
+}
+.title-keyword-review-field-heading{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  min-width:0;
 }
 .title-keyword-review-proposed span{
   color:var(--muted);
@@ -2204,6 +2213,39 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   font-weight:800;
   letter-spacing:.1em;
   text-transform:uppercase;
+}
+.title-keyword-review-field-heading label{
+  min-width:0;
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:800;
+  letter-spacing:.1em;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+.title-keyword-review-propagate-field{
+  display:grid;
+  flex:0 0 auto;
+  width:24px;
+  height:24px;
+  place-items:center;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface-2);
+  color:var(--text);
+  font:inherit;
+  font-size:.86rem;
+  font-weight:850;
+  line-height:1;
+  padding:0;
+  cursor:pointer;
+}
+.title-keyword-review-propagate-field:hover{
+  border-color:var(--text);
+}
+.title-keyword-review-propagate-field:focus-visible{
+  outline:2px solid var(--text);
+  outline-offset:2px;
 }
 .title-keyword-review-proposed input,
 .title-keyword-review-proposed textarea{
@@ -2224,9 +2266,11 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
 .title-keyword-review-model{
   display:grid;
   gap:4px;
+  min-width:0;
   border:1px solid var(--line);
   background:color-mix(in srgb,var(--surface-2) 74%,var(--surface) 26%);
   padding:8px 10px;
+  overflow-wrap:anywhere;
 }
 .title-keyword-review-model p{
   display:flex;
@@ -2403,9 +2447,9 @@ body[data-gallery="owner-title-keyword-review"] [data-title-keyword-review-root]
   padding-top:16px;
   border-top:1px solid var(--line);
 }
-@media (min-width:761px) and (max-width:980px){
+@media (min-width:761px) and (max-width:1120px){
   .title-keyword-review-row{
-    grid-template-columns:minmax(150px,200px) minmax(160px,.8fr) minmax(260px,1.25fr);
+    grid-template-columns:minmax(140px,200px) minmax(150px,.8fr) minmax(0,1.25fr);
     gap:12px;
   }
   .title-keyword-review-approve{

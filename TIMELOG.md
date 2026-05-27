@@ -89,8 +89,10 @@ Clock state: paused
 | 2026-05-25 | 18:55 CEST | 18:59 CEST | 0:04 | Refreshed social-package docs, summarized the Threads/Pinterest automation updates, and reprioritized the backlog around first-party social springboards. |
 | 2026-05-27 | 09:24 CEST | 09:25 CEST | 0:01 | Reported truncated Owner title/keyword review previews and requested a fix; background implementation time excluded. |
 | 2026-05-27 | 10:07 CEST | 10:08 CEST | 0:01 | Corrected Owner title/keyword preview whitespace direction so photos use their natural aspect ratio. |
+| 2026-05-27 | 10:31 CEST | 10:32 CEST | 0:01 | Requested per-field title/keyword propagation controls for same-shoot Owner review rows; background implementation time excluded. |
+| 2026-05-27 | 10:39 CEST | 10:41 CEST | 0:02 | Recycled rejected and parked title/keyword rows into a local test proposal batch, leaving unparked rows rework-eligible. |
 
 ## Totals
 
-Active collaboration time used: 4:49
+Active collaboration time used: 4:52
 Remaining budget: not set

@@ -456,6 +456,8 @@
         ? uniqueKeywords([...currentKeywordList, ...rawProposedKeywords])
         : rawProposedKeywords;
       const proposedKeywords = proposedKeywordList.join(", ");
+      const titleInputId = `review-title-${index}`;
+      const keywordsInputId = `review-keywords-${index}`;
       const href = versionedHref(`./photo.html?id=${encodeURIComponent(photoId)}`);
       const previewClasses = [
         "title-keyword-review-preview",
@@ -474,14 +476,20 @@
             <p>${currentKeywordsHtml}</p>
           </div>
           <form class="title-keyword-review-proposed" data-review-editor autocomplete="off">
-              <label>
-                <span>Proposed title</span>
-                <input type="text" value="${escapeHtml(proposedTitle)}" data-review-title/>
-              </label>
-              <label>
-                <span>Proposed keywords</span>
-                <textarea rows="3" data-review-keywords>${escapeHtml(proposedKeywords)}</textarea>
-              </label>
+              <div class="title-keyword-review-field">
+                <div class="title-keyword-review-field-heading">
+                  <label for="${titleInputId}">Proposed title</label>
+                  <button class="title-keyword-review-propagate-field" type="button" data-review-propagate-field="title" aria-label="Propagate proposed title down" title="Propagate this title to current and following rows in the same two-hour shoot window">↓</button>
+                </div>
+                <input id="${titleInputId}" type="text" value="${escapeHtml(proposedTitle)}" data-review-title/>
+              </div>
+              <div class="title-keyword-review-field">
+                <div class="title-keyword-review-field-heading">
+                  <label for="${keywordsInputId}">Proposed keywords</label>
+                  <button class="title-keyword-review-propagate-field" type="button" data-review-propagate-field="keywords" aria-label="Propagate proposed keywords down" title="Propagate these keywords to current and following rows in the same two-hour shoot window">↓</button>
+                </div>
+                <textarea id="${keywordsInputId}" rows="3" data-review-keywords>${escapeHtml(proposedKeywords)}</textarea>
+              </div>
               ${proposalModelHtml(item)}
           </form>
           <div class="title-keyword-review-approve title-keyword-review-decision">
@@ -921,6 +929,57 @@
       });
     };
 
+    const metadataFieldConfig = {
+      title: {
+        selector: "[data-review-title]",
+        label: "title",
+      },
+      keywords: {
+        selector: "[data-review-keywords]",
+        label: "keywords",
+      },
+    };
+
+    const markCardApprovedForMetadata = (targetCard) => {
+      targetCard.dataset.reviewDecisionTouched = "1";
+      const targetApprove = targetCard.querySelector("[data-review-approve]");
+      const targetReject = targetCard.querySelector("[data-review-reject]");
+      const targetBlock = targetCard.querySelector("[data-review-block]");
+      const targetComment = targetCard.querySelector("[data-review-reject-comment]");
+      if (targetApprove) targetApprove.checked = true;
+      if (targetReject) targetReject.checked = false;
+      if (targetBlock) targetBlock.checked = false;
+      setRejectReasonValue(targetCard, "");
+      setRejectReasonsDisabled(targetCard, true);
+      targetComment?.closest("label")?.classList.add("is-disabled");
+      if (targetComment) targetComment.readOnly = true;
+    };
+
+    const propagateMetadataField = (field, card) => {
+      const config = metadataFieldConfig[field];
+      if (!config) return;
+      const sourceInput = card.querySelector(config.selector);
+      if (!sourceInput) return;
+      const value = String(sourceInput.value || "");
+      const targets = cardsInShootWindow(card).filter((targetCard) => targetCard.querySelector(config.selector));
+      targets.forEach((targetCard) => {
+        const targetInput = targetCard.querySelector(config.selector);
+        const targetPhotoId = targetCard.getAttribute("data-review-photo-id") || "";
+        if (targetInput) targetInput.value = value;
+        if (targetPhotoId) window.clearTimeout(rowSaveTimers.get(targetPhotoId));
+        markCardApprovedForMetadata(targetCard);
+        setRowStatus(targetCard, "Saving...", "saving");
+      });
+      if (status) status.textContent = `Propagated proposed ${config.label} to ${targets.length} current/following same-shoot rows; saving as approvals.`;
+      saveCardsDecisions(targets).then((result) => {
+        if (result && status) status.textContent = `Propagated proposed ${config.label} to ${result.count} current/following same-shoot rows.`;
+      }).catch((error) => {
+        const message = error?.message || `Could not save propagated ${config.label}.`;
+        targets.forEach((targetCard) => setRowStatus(targetCard, "Save failed", "error", message));
+        if (status) status.textContent = message;
+      });
+    };
+
     const propagateDecision = (photoId, card) => {
       const sourceDecision = buildRowDecision(photoId, card);
       if (!sourceDecision.approval && !sourceDecision.rejection && !sourceDecision.blocked) {
@@ -1047,6 +1106,7 @@
       const comment = card.querySelector("[data-review-reject-comment]");
       const titleInput = card.querySelector("[data-review-title]");
       const keywordInput = card.querySelector("[data-review-keywords]");
+      const propagateFieldButtons = [...card.querySelectorAll("[data-review-propagate-field]")];
       const propagate = card.querySelector("[data-review-propagate]");
       const block = card.querySelector("[data-review-block]");
       const previousRejectReason = card.dataset.reviewPreviousRejectReason || "";
@@ -1211,6 +1271,13 @@
       comment?.addEventListener("pointerdown", activateRejectFromComment);
       titleInput?.addEventListener("input", activateApproveFromEdit);
       keywordInput?.addEventListener("input", activateApproveFromEdit);
+      propagateFieldButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          propagateMetadataField(button.getAttribute("data-review-propagate-field") || "", card);
+        });
+      });
       propagate?.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();

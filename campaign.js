@@ -44,7 +44,7 @@
 
   const photoIndex = new Map(allPhotos().map((entry) => [entry.photo.id, entry]));
 
-  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=88.2`;
+  const photoHref = (id) => `./photo.html?id=${encodeURIComponent(id)}&v=88.3`;
 
   const entriesForIds = (ids) => (ids || [])
     .map((id) => photoIndex.get(id))
@@ -211,7 +211,7 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=88.2`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json?v=88.3`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;

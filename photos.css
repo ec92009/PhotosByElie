@@ -3889,6 +3889,10 @@ body[data-fixed-header] .header-controls{
 body[data-gallery] .gallery-hero{
   padding-inline:var(--page-gutter);
 }
+html[data-theme="light"] body[data-gallery] .gallery-hero{
+  --glass-panel-alpha:.304;
+  background:rgb(var(--glass-surface-rgb) / var(--glass-panel-alpha));
+}
 .gallery-view-controls{
   position:fixed;
   top:var(--gallery-view-controls-top,12px);

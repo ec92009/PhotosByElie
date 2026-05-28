@@ -584,6 +584,15 @@
   const slideshowMusicGainDb = 0;
   const sourceVideoAudioGainDb = -20;
   const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
+  const slideshowVideoFps = 30;
+  const slideshowVideoMimeTypes = Object.freeze([
+    "video/mp4;codecs=h264,aac",
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ]);
   const absoluteTrackUrl = (track) => {
     if (!track?.src) return "";
     try {
@@ -730,15 +739,7 @@
     if (value >= 1024) return `${Math.round(value / 1024)} KB`;
     return `${value} bytes`;
   };
-  const deliverableActionNote = "View on mobile, or download on a computer. Capture or share whatever you are seeing with your device tools.";
-  const shouldOpenHtmlVideoDownloadsInBrowser = () => {
-    const userAgent = String(navigator.userAgent || "");
-    const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
-    const iPadDesktopUserAgent = /Macintosh/i.test(userAgent) && Number(navigator.maxTouchPoints || 0) > 1;
-    const coarsePointer = Boolean(window.matchMedia?.("(pointer: coarse)")?.matches);
-    const narrowViewport = Boolean(window.matchMedia?.("(max-width: 900px)")?.matches);
-    return mobileUserAgent || iPadDesktopUserAgent || (coarsePointer && narrowViewport);
-  };
+  const deliverableActionNote = "Open or download on phone or desktop, then save or share with your device tools.";
   const outputProgressEta = (current, total) => {
     if (!state.outputProgressStartedAt || !current || !total || current >= total) return "";
     const elapsed = (Date.now() - state.outputProgressStartedAt) / 1000;
@@ -810,7 +811,7 @@
       button.textContent = outputBusy && kind === "outputs-download"
         ? t("re.output.download_everything_busy", {}, "Preparing everything...")
         : t("re.output.download_everything", {}, "Download everything");
-      button.title = "Download selected PDF and video outputs for desktop file handling";
+      button.title = "Download selected true PDF and video files on phone or desktop";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-view-pdf]").forEach((button) => {
@@ -829,11 +830,11 @@
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
-      const mobileOpen = shouldOpenHtmlVideoDownloadsInBrowser();
-      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : (mobileOpen ? "Save video" : t("re.output.download_video", {}, "Download video"));
-      button.title = mobileOpen
-        ? "Open the phone share/save controls for the slideshow video file; falls back to browser view if saving is unavailable"
-        : "Download the video output with random single-guitar music; selected videos keep duration and play 20 dB under the music";
+      const recordable = canRecordSlideshowVideo();
+      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : t("re.output.download_video", {}, "Download video");
+      button.title = recordable
+        ? "Download a real video file with random single-guitar music and a final-slide fade"
+        : "This browser cannot record a real video file from the slideshow";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
@@ -2214,8 +2215,27 @@
     };
   };
 
+  const slideshowSlidesFor = (manifest) => selectionRowsFor(manifest).map(({ projectTitle, item }) => {
+    const photo = state.photosById.get(item.photoId);
+    if (!photo) return null;
+    const video = item.mediaType === "video" || isVideo(photo);
+    const dimensions = pdfDimensionsFor(photo);
+    return {
+      projectTitle: projectTitle || item.projectTitle || "",
+      title: item.title || titleFor(photo),
+      mediaType: video ? "video" : "photo",
+      imageUrl: imageFor(photo, "detail"),
+      videoUrl: video ? videoPreviewFor(photo) : "",
+      orientation: dimensions.height > dimensions.width ? "portrait" : "landscape",
+      aspectRatio: dimensions.width > 0 && dimensions.height > 0 ? dimensions.width / dimensions.height : 1,
+      durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
+      durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
+      source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
+      effect: item.effect || randomKenBurnsEffect(),
+    };
+  }).filter(Boolean);
+
   const slideshowHtmlFor = (manifest) => {
-    const rows = selectionRowsFor(manifest);
     const audioPolicy = manifest.slideshowSettings?.audioPolicy || {};
     const musicTrack = audioPolicy.musicTrack || null;
     const previewSourceVideoVolume = Number(audioPolicy.sourceVideoAudioLinearGain ?? sourceVideoAudioLinearGain);
@@ -2223,25 +2243,7 @@
     const outputOrientation = manifest.slideshowSettings?.outputOrientation === "portrait" ? "portrait" : "landscape";
     const outputRatio = outputOrientation === "portrait" ? 9 / 16 : 16 / 9;
     const slideshowWatermarkText = String(manifest.slideshowSettings?.watermarkText || "").trim();
-    const slides = rows.map(({ projectTitle, item }) => {
-      const photo = state.photosById.get(item.photoId);
-      if (!photo) return null;
-      const video = item.mediaType === "video" || isVideo(photo);
-      const dimensions = pdfDimensionsFor(photo);
-      return {
-        projectTitle: projectTitle || item.projectTitle || "",
-        title: item.title || titleFor(photo),
-        mediaType: video ? "video" : "photo",
-        imageUrl: imageFor(photo, "detail"),
-        videoUrl: video ? videoPreviewFor(photo) : "",
-        orientation: dimensions.height > dimensions.width ? "portrait" : "landscape",
-        aspectRatio: dimensions.width > 0 && dimensions.height > 0 ? dimensions.width / dimensions.height : 1,
-        durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
-        durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
-        source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
-        effect: item.effect || randomKenBurnsEffect(),
-      };
-    }).filter(Boolean);
+    const slides = slideshowSlidesFor(manifest);
     const safeJson = JSON.stringify(manifest, null, 2)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
@@ -2279,9 +2281,9 @@
     .photo-watermark-sheet span{display:block;color:rgba(255,255,255,.168);font-size:clamp(1.35rem,4.2vmin,4.6rem);font-weight:900;letter-spacing:.02em;text-shadow:0 0 1px rgba(0,0,0,.13),0 1px 2px rgba(0,0,0,.13);text-transform:uppercase;white-space:nowrap}
     .photo-watermark-sheet span:nth-child(4n+2),.photo-watermark-sheet span:nth-child(4n+4){transform:translateX(-48%)}
     .photo-watermark-corner{position:absolute;right:clamp(14px,2.2vmin,38px);bottom:clamp(14px,2.2vmin,38px);z-index:3;color:rgba(255,255,255,.72);font-size:clamp(.85rem,2.2vmin,1.45rem);font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.48)}
-    .photo-title{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(34px,7vmin,92px) clamp(14px,3vmin,34px) clamp(12px,2.2vmin,28px);background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0));color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.82);pointer-events:none}
-    .photo-title p{margin:0 0 .2em;font-size:clamp(.62rem,1.65vmin,1rem);font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.84)}
-    .photo-title h1{margin:0;max-width:min(760px,82%);font-size:clamp(1.35rem,4.8vmin,4.2rem);line-height:.98}
+    .photo-title{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(34px,7vmin,92px) clamp(14px,3vmin,34px) clamp(36px,6vmin,68px);background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0));color:#fff;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,.82);pointer-events:none}
+    .photo-title p{margin:0 auto .2em;font-size:clamp(.62rem,1.65vmin,1rem);font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.84)}
+    .photo-title h1{margin:0 auto;max-width:min(760px,82%);font-size:clamp(1.35rem,4.8vmin,4.2rem);line-height:.98}
     @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
     .slide-count{position:absolute;left:clamp(10px,2.4vw,22px);bottom:clamp(10px,2.4vw,22px);z-index:4;border-radius:4px;background:rgba(80,80,80,.78);color:#fff;padding:3px 7px;font-size:.78rem;font-weight:850;line-height:1;text-shadow:none}
     .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
@@ -2292,7 +2294,7 @@
       main{display:grid;min-height:100dvh}
       .photo-slide{padding:0}
       .frame video{padding:0}
-      .photo-title{padding-top:clamp(28px,8vmin,72px)}
+      .photo-title{padding-top:clamp(28px,8vmin,72px);padding-bottom:clamp(34px,8vmin,56px)}
       .photo-title h1{font-size:clamp(1.15rem,7vw,2.3rem)}
       .photo-title p{font-size:.72rem}
       .controls{position:sticky;bottom:0;z-index:5;padding:10px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
@@ -2308,9 +2310,7 @@
       ${slideshowWatermarkText ? `<div class="watermark">${escapeHtml(slideshowWatermarkText)}</div>` : ""}
     </section>
     <div class="controls">
-      <button type="button" data-prev>Previous</button>
       <button type="button" data-play>${musicTrack?.absoluteSrc || musicTrack?.src ? "Play with sound" : "Pause"}</button>
-      <button type="button" data-next>Next</button>
     </div>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
     <script>
@@ -2324,7 +2324,9 @@
       const playButton = document.querySelector("[data-play]");
       let index = 0;
       let timer = 0;
-      let fadeTimer = 0;
+      let fadeFrame = 0;
+      let fadeInterval = 0;
+      let fadeDone = null;
       let playing = true;
       let soundBlocked = Boolean(music);
       const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
@@ -2378,9 +2380,39 @@
         if (timer) window.clearTimeout(timer);
         timer = 0;
       };
-      const clearFadeTimer = () => {
-        if (fadeTimer) window.cancelAnimationFrame(fadeTimer);
-        fadeTimer = 0;
+      const clearMusicFade = () => {
+        if (fadeFrame) window.cancelAnimationFrame(fadeFrame);
+        if (fadeInterval) window.clearInterval(fadeInterval);
+        fadeFrame = 0;
+        fadeInterval = 0;
+        fadeDone = null;
+      };
+      const clampVolume = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+      const beginMusicFade = (durationMs, onDone = null) => {
+        if (!music) return;
+        clearMusicFade();
+        const startedAt = performance.now();
+        const fadeDuration = Math.max(300, Number(durationMs) || 300);
+        const startVolume = clampVolume(music.volume || musicVolume);
+        fadeDone = typeof onDone === "function" ? onDone : null;
+        const tick = () => {
+          const elapsed = performance.now() - startedAt;
+          const remaining = Math.max(0, 1 - (elapsed / fadeDuration));
+          music.volume = clampVolume(startVolume * remaining);
+          if (remaining > 0) {
+            if (!fadeFrame) fadeFrame = window.requestAnimationFrame(() => {
+              fadeFrame = 0;
+              tick();
+            });
+            return;
+          }
+          const done = fadeDone;
+          clearMusicFade();
+          music.volume = 0;
+          if (done) done();
+        };
+        fadeInterval = window.setInterval(tick, 80);
+        tick();
       };
       const applyStageSize = () => {
         if (!stage) return;
@@ -2410,6 +2442,7 @@
           syncPlayButton();
           return true;
         }
+        clearMusicFade();
         music.volume = musicVolume;
         try {
           await music.play();
@@ -2423,27 +2456,23 @@
         }
       };
       const pauseMusic = () => {
-        clearFadeTimer();
+        clearMusicFade();
         if (music) music.pause();
       };
+      const stopMusicAtEnd = () => {
+        if (!music) return;
+        music.volume = 0;
+        music.pause();
+      };
       const syncMusicFade = (slide) => {
-        clearFadeTimer();
         if (!music) return;
         if (!playing || index !== slides.length - 1) {
+          clearMusicFade();
           music.volume = musicVolume;
           return;
         }
         const duration = Math.max(1000, Number(slide?.durationMs || ${Number(state.slideshowPhotoSeconds) * 1000}));
-        const fadeDuration = Math.max(500, duration - 120);
-        const start = performance.now();
-        const tick = () => {
-          if (!playing || index !== slides.length - 1) return;
-          const elapsed = performance.now() - start;
-          const remaining = Math.max(0, 1 - (elapsed / fadeDuration));
-          music.volume = Math.max(0, Math.min(1, musicVolume * remaining));
-          if (remaining > 0) fadeTimer = window.requestAnimationFrame(tick);
-        };
-        tick();
+        beginMusicFade(duration);
       };
       const render = () => {
         clearTimer();
@@ -2479,19 +2508,17 @@
         }
         if (index >= slides.length - 1) {
           playing = false;
-          pauseMusic();
+          if (music && music.volume > 0.01) {
+            beginMusicFade(600, stopMusicAtEnd);
+          } else {
+            stopMusicAtEnd();
+          }
           syncPlayButton();
           return;
         }
         index += 1;
         render();
       };
-      const prev = () => {
-        index = slides.length ? Math.max(0, index - 1) : 0;
-        render();
-      };
-      document.querySelector("[data-next]")?.addEventListener("click", next);
-      document.querySelector("[data-prev]")?.addEventListener("click", prev);
       playButton?.addEventListener("click", async () => {
         if (soundBlocked) {
           if (!playing && index >= slides.length - 1) index = 0;
@@ -2660,15 +2687,6 @@
       : null
   );
 
-  const canShareFile = (filename, mimeType = "text/html") => {
-    if (typeof File !== "function" || !navigator.share || !navigator.canShare) return false;
-    try {
-      return navigator.canShare({ files: [new File([""], filename, { type: mimeType })] });
-    } catch {
-      return false;
-    }
-  };
-
   const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true, reservedWindow = null }) => {
     const file = fileForShare(blob, filename);
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -2738,6 +2756,380 @@
     }
   };
 
+  const preferredSlideshowVideoMimeType = () => {
+    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return "";
+    return slideshowVideoMimeTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
+  };
+
+  const slideshowVideoExtensionFor = (mimeType = "") => (
+    String(mimeType).toLowerCase().includes("mp4") ? "mp4" : "webm"
+  );
+
+  const canRecordSlideshowVideo = () => {
+    if (typeof MediaRecorder === "undefined") return false;
+    const canvas = document.createElement("canvas");
+    return typeof canvas.captureStream === "function" && Boolean(preferredSlideshowVideoMimeType());
+  };
+
+  const slideshowVideoSizeFor = (manifest) => (
+    manifest?.slideshowSettings?.outputOrientation === "portrait"
+      ? { width: 720, height: 1280 }
+      : { width: 1280, height: 720 }
+  );
+
+  const objectFitBox = (dimensions, box, fit = "contain") => {
+    const width = Math.max(1, Number(dimensions?.width) || 1);
+    const height = Math.max(1, Number(dimensions?.height) || 1);
+    const scale = fit === "cover"
+      ? Math.max(box.width / width, box.height / height)
+      : Math.min(box.width / width, box.height / height);
+    const targetWidth = width * scale;
+    const targetHeight = height * scale;
+    return {
+      x: box.x + ((box.width - targetWidth) / 2),
+      y: box.y + ((box.height - targetHeight) / 2),
+      width: targetWidth,
+      height: targetHeight,
+    };
+  };
+
+  const roundedRectPath = (context, x, y, width, height, radius) => {
+    const safeRadius = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + safeRadius, y);
+    context.lineTo(x + width - safeRadius, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+    context.lineTo(x + width, y + height - safeRadius);
+    context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+    context.lineTo(x + safeRadius, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+    context.lineTo(x, y + safeRadius);
+    context.quadraticCurveTo(x, y, x + safeRadius, y);
+    context.closePath();
+  };
+
+  const fittedSlideshowText = (context, value, maxWidth) => {
+    const text = String(value || "");
+    if (context.measureText(text).width <= maxWidth) return text;
+    const ellipsis = "...";
+    let low = 0;
+    let high = text.length;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (context.measureText(`${text.slice(0, mid)}${ellipsis}`).width <= maxWidth) low = mid;
+      else high = mid - 1;
+    }
+    return `${text.slice(0, low)}${ellipsis}`;
+  };
+
+  const loadSlideshowImage = (url) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Could not load slideshow image: ${url}`));
+    image.decoding = "async";
+    image.src = url;
+  });
+
+  const loadSlideshowVideo = (url, posterUrl = "") => new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    if (posterUrl) video.poster = posterUrl;
+    video.addEventListener("loadedmetadata", () => resolve(video), { once: true });
+    video.addEventListener("error", () => reject(new Error(`Could not load slideshow video: ${url}`)), { once: true });
+    video.src = url;
+    video.load();
+  });
+
+  const loadSlideshowMedia = async (slide) => {
+    if (slide.mediaType === "video" && slide.videoUrl) {
+      try {
+        const video = await loadSlideshowVideo(slide.videoUrl, slide.imageUrl);
+        return {
+          kind: "video",
+          element: video,
+          dimensions: {
+            width: video.videoWidth || 1280,
+            height: video.videoHeight || 720,
+          },
+        };
+      } catch {
+        // Use the still frame if the browser cannot decode the source clip for canvas recording.
+      }
+    }
+    const image = await loadSlideshowImage(slide.imageUrl);
+    return {
+      kind: "image",
+      element: image,
+      dimensions: {
+        width: image.naturalWidth || 1800,
+        height: image.naturalHeight || 1200,
+      },
+    };
+  };
+
+  const kenBurnsFrameTransform = (effect, progress, canvas) => {
+    const p = Math.max(0, Math.min(1, Number(progress) || 0));
+    const driftX = canvas.width * 0.018;
+    const driftY = canvas.height * 0.018;
+    if (effect === "center-breathe-out") return { scale: 1.024 - (0.024 * p), x: 0, y: 0 };
+    if (effect === "center-drift-left") return { scale: 1.012 + (0.012 * p), x: -driftX * p, y: 0 };
+    if (effect === "center-drift-right") return { scale: 1.012 + (0.012 * p), x: driftX * p, y: 0 };
+    if (effect === "center-drift-up") return { scale: 1.012 + (0.012 * p), x: 0, y: -driftY * p };
+    if (effect === "center-drift-down") return { scale: 1.012 + (0.012 * p), x: 0, y: driftY * p };
+    return { scale: 1 + (0.024 * p), x: 0, y: 0 };
+  };
+
+  const drawSlideshowMedia = (context, media, box, fit = "contain") => {
+    const rect = objectFitBox(media.dimensions, box, fit);
+    context.drawImage(media.element, rect.x, rect.y, rect.width, rect.height);
+    return rect;
+  };
+
+  const drawVideoWatermark = (context, text, box) => {
+    const watermarkText = String(text || "").trim();
+    if (!watermarkText || !box.width || !box.height) return;
+    const repeated = watermarkText.toUpperCase();
+    const fontSize = Math.max(22, Math.round(Math.min(box.width, box.height) / 18));
+    const stepX = Math.max(190, Math.round(fontSize * repeated.length * 0.78));
+    const stepY = Math.max(150, Math.round(fontSize * 3.4));
+
+    context.save();
+    context.beginPath();
+    context.rect(box.x, box.y, box.width, box.height);
+    context.clip();
+    context.translate(box.x + (box.width / 2), box.y + (box.height / 2));
+    context.rotate(-28 * Math.PI / 180);
+    context.font = `900 ${fontSize}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    context.lineWidth = Math.max(1, Math.round(fontSize / 14));
+    context.strokeStyle = "rgba(0,0,0,0.13)";
+    context.fillStyle = "rgba(255,255,255,0.168)";
+    for (let y = -box.height * 1.4; y < box.height * 1.4; y += stepY) {
+      const rowOffset = Math.round(y / stepY) % 2 === 0 ? 0 : -(stepX / 2);
+      for (let x = -box.width * 1.4 + rowOffset; x < box.width * 1.4; x += stepX) {
+        context.strokeText(repeated, x, y);
+        context.fillText(repeated, x, y);
+      }
+    }
+    context.restore();
+
+    context.save();
+    context.font = `900 ${Math.max(20, Math.round(Math.min(box.width, box.height) / 24))}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "right";
+    context.textBaseline = "bottom";
+    context.lineWidth = 2;
+    context.strokeStyle = "rgba(0,0,0,0.48)";
+    context.fillStyle = "rgba(255,255,255,0.72)";
+    const margin = Math.max(18, Math.round(Math.min(box.width, box.height) / 36));
+    context.strokeText("PhotosByElie", box.x + box.width - margin, box.y + box.height - margin);
+    context.fillText("PhotosByElie", box.x + box.width - margin, box.y + box.height - margin);
+    context.restore();
+  };
+
+  const drawVideoTitle = (context, slide, box) => {
+    const title = String(slide.title || "Untitled").trim();
+    const projectTitle = String(slide.projectTitle || slide.mediaType || "").trim();
+    const gradientHeight = Math.max(120, Math.round(box.height * 0.25));
+    const gradient = context.createLinearGradient(0, box.y + box.height - gradientHeight, 0, box.y + box.height);
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(1, "rgba(0,0,0,0.62)");
+    context.fillStyle = gradient;
+    context.fillRect(box.x, box.y + box.height - gradientHeight, box.width, gradientHeight);
+
+    const bottomPadding = Math.max(54, Math.round(Math.min(box.width, box.height) * 0.075));
+    const titleSize = Math.max(30, Math.min(72, Math.round(box.width * 0.07)));
+    const eyebrowSize = Math.max(15, Math.min(28, Math.round(titleSize * 0.36)));
+    const titleY = box.y + box.height - bottomPadding;
+    context.save();
+    context.textAlign = "center";
+    context.shadowColor = "rgba(0,0,0,0.82)";
+    context.shadowBlur = 10;
+    context.shadowOffsetY = 2;
+    context.fillStyle = "rgba(255,255,255,0.84)";
+    context.font = `900 ${eyebrowSize}px Arial, Helvetica, sans-serif`;
+    context.fillText(fittedSlideshowText(context, projectTitle.toUpperCase(), box.width * 0.78), box.x + (box.width / 2), titleY - titleSize - 8);
+    context.fillStyle = "#ffffff";
+    context.font = `900 ${titleSize}px Arial, Helvetica, sans-serif`;
+    context.fillText(fittedSlideshowText(context, title, box.width * 0.78), box.x + (box.width / 2), titleY);
+    context.restore();
+  };
+
+  const drawVideoCounter = (context, counterText, box) => {
+    const fontSize = Math.max(18, Math.round(Math.min(box.width, box.height) / 34));
+    const paddingX = Math.max(7, Math.round(fontSize * 0.4));
+    const paddingY = Math.max(4, Math.round(fontSize * 0.26));
+    const margin = Math.max(12, Math.round(Math.min(box.width, box.height) / 42));
+    context.save();
+    context.font = `850 ${fontSize}px Arial, Helvetica, sans-serif`;
+    context.textBaseline = "top";
+    context.textAlign = "left";
+    const metrics = context.measureText(counterText);
+    const width = metrics.width + (paddingX * 2);
+    const height = fontSize + (paddingY * 2);
+    const x = box.x + margin;
+    const y = box.y + box.height - margin - height;
+    roundedRectPath(context, x, y, width, height, Math.max(3, Math.round(fontSize / 5)));
+    context.fillStyle = "rgba(80,80,80,0.78)";
+    context.fill();
+    context.fillStyle = "#ffffff";
+    context.fillText(counterText, x + paddingX, y + paddingY);
+    context.restore();
+  };
+
+  const drawRecordedSlideFrame = (context, canvas, slide, media, progress, counterText, watermarkText) => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#050505";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.save();
+    context.globalAlpha = 0.48;
+    context.filter = "blur(24px)";
+    drawSlideshowMedia(context, media, { x: 0, y: 0, width: canvas.width, height: canvas.height }, "cover");
+    context.restore();
+
+    const cardBox = objectFitBox(media.dimensions, { x: 0, y: 0, width: canvas.width, height: canvas.height }, "contain");
+    const transform = kenBurnsFrameTransform(slide.effect, progress, canvas);
+    context.save();
+    context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
+    context.scale(transform.scale, transform.scale);
+    context.translate(-canvas.width / 2, -canvas.height / 2);
+    context.save();
+    context.beginPath();
+    context.rect(cardBox.x, cardBox.y, cardBox.width, cardBox.height);
+    context.clip();
+    drawSlideshowMedia(context, media, cardBox, "cover");
+    drawVideoWatermark(context, watermarkText, cardBox);
+    drawVideoTitle(context, slide, cardBox);
+    drawVideoCounter(context, counterText, cardBox);
+    context.restore();
+    context.restore();
+  };
+
+  const nextAnimationFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve));
+
+  const prepareSlideshowAudio = async (manifest, totalDurationSeconds) => {
+    const audioPolicy = manifest.slideshowSettings?.audioPolicy || {};
+    const musicTrack = audioPolicy.musicTrack || null;
+    const musicUrl = musicTrack?.absoluteSrc || absoluteTrackUrl(musicTrack);
+    if (!musicUrl) return null;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error("This browser cannot add music to a recorded video.");
+    const context = new AudioContextClass();
+    await context.resume?.();
+    const destination = context.createMediaStreamDestination();
+    const response = await fetch(musicUrl, { mode: "cors" });
+    if (!response.ok) throw new Error(`Could not load slideshow music: HTTP ${response.status}`);
+    const buffer = await context.decodeAudioData(await response.arrayBuffer());
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(gain);
+    gain.connect(destination);
+    return {
+      stream: destination.stream,
+      start: () => {
+        const now = context.currentTime + 0.05;
+        const duration = Math.max(0.1, totalDurationSeconds);
+        const fadeDuration = Math.max(0.3, Math.min(duration, Number(manifest.slideshowSettings?.musicFadeOutSeconds || state.slideshowPhotoSeconds) || state.slideshowPhotoSeconds));
+        const fadeStart = Math.max(0, duration - fadeDuration);
+        const volume = Math.max(0, Math.min(1, Math.pow(10, Number(musicTrack?.musicGainDb ?? slideshowMusicGainDb) / 20)));
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.setValueAtTime(volume, now + fadeStart);
+        gain.gain.linearRampToValueAtTime(0.0001, now + duration);
+        source.start(now);
+        source.stop(now + duration + 0.25);
+      },
+      stop: () => {
+        try { source.stop(); } catch {}
+        destination.stream.getTracks().forEach((track) => track.stop());
+        context.close?.();
+      },
+    };
+  };
+
+  const recordSlideshowVideoBlob = async (manifest, onProgress = null) => {
+    const mimeType = preferredSlideshowVideoMimeType();
+    if (!mimeType || !canRecordSlideshowVideo()) {
+      throw new Error("This browser cannot record a real video file from the slideshow. Try current Safari or Chrome on desktop.");
+    }
+    const slides = slideshowSlidesFor(manifest);
+    if (!slides.length) throw new Error("No slides are available for video export.");
+    const size = slideshowVideoSizeFor(manifest);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("This browser cannot render the slideshow video.");
+    const totalDurationSeconds = slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0);
+    const canvasStream = canvas.captureStream(slideshowVideoFps);
+    const audio = await prepareSlideshowAudio(manifest, totalDurationSeconds);
+    const stream = new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...(audio?.stream?.getAudioTracks?.() || []),
+    ]);
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks = [];
+    let recorderError = null;
+    recorder.addEventListener("dataavailable", (event) => {
+      if (event.data?.size) chunks.push(event.data);
+    });
+    recorder.addEventListener("error", (event) => {
+      recorderError = event.error || new Error("The video recorder failed.");
+    });
+    const stopped = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
+    recorder.start(1000);
+    audio?.start?.();
+    try {
+      for (const [index, slide] of slides.entries()) {
+        onProgress?.({ phase: "load", index, total: slides.length, slide });
+        const media = await loadSlideshowMedia(slide);
+        if (media.kind === "video") {
+          try {
+            media.element.currentTime = 0;
+            await media.element.play();
+          } catch {
+            // Muted autoplay can still fail in some browsers; the poster frame will be recorded.
+          }
+        }
+        const duration = Math.max(1000, Number(slide.durationMs) || 4000);
+        const startedAt = performance.now();
+        let elapsed = 0;
+        while (elapsed < duration) {
+          elapsed = performance.now() - startedAt;
+          const progress = Math.max(0, Math.min(1, elapsed / duration));
+          drawRecordedSlideFrame(context, canvas, slide, media, progress, `${index + 1}/${slides.length}`, String(manifest.slideshowSettings?.watermarkText || "").trim());
+          onProgress?.({ phase: "render", index, total: slides.length, progress, slide });
+          await nextAnimationFrame();
+        }
+        if (media.kind === "video") {
+          media.element.pause();
+          media.element.removeAttribute("src");
+          media.element.load();
+        }
+      }
+    } finally {
+      if (recorder.state !== "inactive") recorder.stop();
+      await stopped;
+      stream.getTracks().forEach((track) => track.stop());
+      audio?.stop?.();
+    }
+    if (recorderError) throw recorderError;
+    const finalMimeType = recorder.mimeType || mimeType;
+    const blob = new Blob(chunks, { type: finalMimeType });
+    if (!blob.size) throw new Error("The browser created an empty video file.");
+    return {
+      blob,
+      mimeType: finalMimeType,
+      extension: slideshowVideoExtensionFor(finalMimeType),
+    };
+  };
+
   const shareSlideshowPlan = async ({ mode = "download", reservedWindow = null, recordProduct = true, progressKind = "", batchOverride = null } = {}) => {
     if (!requireUnlocked() || state.outputBusy) return;
     const selected = activeSelectedPhotos();
@@ -2745,12 +3137,9 @@
       setStatus(`Select media before ${mode === "view" ? "viewing" : "downloading"} a video output`);
       return;
     }
-    const mobileSave = mode === "download" && shouldOpenHtmlVideoDownloadsInBrowser();
     const openInBrowser = mode === "view";
-    const title = openInBrowser ? "Preparing video view" : mobileSave ? "Preparing video save" : "Preparing video download";
-    const fallbackWindow = (openInBrowser || (mobileSave && !canShareFile("slideshow.html", "text/html")))
-      ? (reservedWindow || reserveOutputWindow(openInBrowser ? "Building video preview" : "Preparing video save"))
-      : null;
+    const title = openInBrowser ? "Preparing video view" : "Preparing video file";
+    const fallbackWindow = openInBrowser ? (reservedWindow || reserveOutputWindow("Building video preview")) : null;
     startOutputProgress({
       title,
       detail: "Building slideshow manifest...",
@@ -2760,32 +3149,34 @@
     try {
       const batch = buildSlideshowManifest(selected, true, batchOverride);
       updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
-      const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
-      if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename });
-      const html = slideshowHtmlFor(batch);
-      updateOutputProgress({
-        title,
-        detail: openInBrowser
-          ? "Opening browser video view..."
-          : mobileSave
-            ? "Opening phone save controls..."
-            : "Sending video file to Downloads...",
-        current: 2,
-        total: 3,
-      });
-      const blob = new Blob([html], { type: "text/html" });
-      const saved = openInBrowser
-        ? await openHtmlInBrowser(html, filename, fallbackWindow)
-        : mobileSave
-          ? await shareOrOpenBlob({
-            blob,
-            filename,
-            title: "Photos By Elie video",
-            text: "Photos By Elie slideshow video file",
-            reservedWindow: fallbackWindow,
-          })
-          : { method: "download", ...(await downloadBlob(blob, filename)) };
-      if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: saved.filename, bytes: saved.bytes });
+      let saved = null;
+      if (openInBrowser) {
+        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
+        if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename });
+        const html = slideshowHtmlFor(batch);
+        updateOutputProgress({ title, detail: "Opening browser video view...", current: 2, total: 3 });
+        saved = await openHtmlInBrowser(html, filename, fallbackWindow);
+        if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: saved.filename, bytes: saved.bytes });
+      } else {
+        const slides = slideshowSlidesFor(batch);
+        updateOutputProgress({ title, detail: `Recording real video file from ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 2, total: 3 });
+        const recorded = await recordSlideshowVideoBlob(batch, ({ phase, index, total, slide }) => {
+          if (phase !== "load") return;
+          const detail = `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`;
+          updateOutputProgress({ title, detail, current: 2, total: 3 });
+          setStatus(detail);
+        });
+        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
+        updateOutputProgress({ title, detail: "Sending video file to your device...", current: 3, total: 3 });
+        saved = await shareOrOpenBlob({
+          blob: recorded.blob,
+          filename,
+          title: "Photos By Elie video",
+          text: "Photos By Elie slideshow video file",
+          openFallback: false,
+        });
+        if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
+      }
       if (saved.method === "share") {
         setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else if (saved.method === "open" || saved.method === "open-current") {
@@ -3616,7 +4007,7 @@
       total: totalSteps,
       kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
     });
-    if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: shelfFilename });
+    if (recordProduct) saveLocalDeliverable({ type: "pdf", batch, filename: shelfFilename });
     let savedProjectCount = 0;
     let totalSavedBytes = 0;
     let lastFilename = "";
@@ -3650,7 +4041,7 @@
       }
       if (recordProduct) {
         saveLocalDeliverable({
-          type: "selection",
+          type: "pdf",
           batch,
           filename: projects.length === 1 ? lastFilename : shelfFilename,
           bytes: totalSavedBytes,
@@ -4017,50 +4408,12 @@
         completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
         return;
       }
-      const mobileSave = mode === "download" && shouldOpenHtmlVideoDownloadsInBrowser();
-      const openInBrowser = mode === "view";
-      const title = openInBrowser ? "Preparing video view" : mobileSave ? "Preparing video save" : "Preparing video download";
-      const fallbackWindow = (openInBrowser || (mobileSave && !canShareFile("slideshow.html", "text/html")))
-        ? reserveOutputWindow(openInBrowser ? "Building video preview" : "Preparing video save")
-        : null;
-      startOutputProgress({
-        title,
-        detail: "Loading saved video product...",
-        total: 2,
-        kind: mode === "view" ? "video-view" : "video-download",
+      await shareSlideshowPlan({
+        mode,
+        recordProduct: false,
+        progressKind: mode === "view" ? "video-view" : "video-download",
+        batchOverride: batch,
       });
-      const html = slideshowHtmlFor(batch);
-      const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId || timestampId()}-slideshow.html`;
-      updateOutputProgress({
-        title,
-        detail: openInBrowser
-          ? "Opening saved video view..."
-          : mobileSave
-            ? "Opening phone save controls..."
-            : "Sending saved video file to Downloads...",
-        current: 1,
-        total: 2,
-      });
-      const blob = new Blob([html], { type: "text/html" });
-      const saved = openInBrowser
-        ? await openHtmlInBrowser(html, filename, fallbackWindow)
-        : mobileSave
-          ? await shareOrOpenBlob({
-            blob,
-            filename,
-            title: "Photos By Elie video",
-            text: "Photos By Elie slideshow video file",
-            reservedWindow: fallbackWindow,
-          })
-          : { method: "download", ...(await downloadBlob(blob, filename)) };
-      if (saved.method === "share") {
-        setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
-      } else if (saved.method === "open" || saved.method === "open-current") {
-        setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
-      } else {
-        setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);
-      }
-      completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
       setStatus(error?.message || "Could not prepare this product");
       failOutputProgress(error?.message || "Could not prepare this product");

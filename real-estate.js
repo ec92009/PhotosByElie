@@ -142,6 +142,14 @@
     outputBusyKind: "",
     outputProgressStartedAt: 0,
     outputProgressHideTimer: 0,
+    videoExportCache: null,
+    videoExportCacheKey: "",
+    videoExportPromise: null,
+    videoExportAbort: null,
+    videoExportStatus: "idle",
+    videoExportError: "",
+    videoExportTimer: 0,
+    videoExportToken: 0,
     originalsBusy: false,
     originalsCredentialRequest: null,
     username: "",
@@ -831,11 +839,22 @@
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
       const recordable = canRecordSlideshowVideo();
-      button.textContent = outputBusy && kind === "video-download" ? "Preparing video..." : t("re.output.download_video", {}, "Download video");
+      const videoPreparing = state.videoExportStatus === "building";
+      const videoError = state.videoExportStatus === "error";
+      button.textContent = outputBusy && kind === "video-download"
+        ? "Preparing video..."
+        : videoPreparing
+          ? "Preparing video..."
+          : videoError
+            ? "Retry video"
+            : t("re.output.download_video", {}, "Download video");
       button.title = recordable
-        ? "Download a real video file with random single-guitar music and a final-slide fade"
+        ? (state.videoExportStatus === "ready"
+          ? "Download the prepared real video file"
+          : "Download a real video file with random single-guitar music and a final-slide fade")
         : "This browser cannot record a real video file from the slideshow";
-      button.disabled = outputBusy || noActiveSelection;
+      if (state.videoExportError && videoError) button.title = state.videoExportError;
+      button.disabled = outputBusy || noActiveSelection || !recordable;
     });
     document.querySelectorAll("[data-re-download-batch]").forEach((button) => {
       button.textContent = outputBusy && kind === "selection" ? "Saving..." : t("re.action.save_selection", {}, "Save selection");
@@ -1706,7 +1725,7 @@
       ? t("re.status.drag_selected", { count: selected }, `Drag the ${selected} selected media items into the order you want.`)
       : t("re.status.select_before_order", {}, "Select at least one photo or video before ordering.");
     return selected
-      ? t("re.status.ready_output", { summary: activeOutputSummary() || `${selected} selected media` }, `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Preview the PDF, preview the video, or download everything.`)
+      ? t("re.status.ready_output", { summary: activeOutputSummary() || `${selected} selected media` }, `Ready for output: ${activeOutputSummary() || `${selected} selected media`}. Preview either format, or download the PDF or video file.`)
       : t("re.status.select_before_output", {}, "Select at least one photo or video before creating outputs.");
   };
 
@@ -1779,9 +1798,11 @@
 
   const setSlideshowOrientation = (value) => {
     const normalized = normalizeSlideshowOrientation(value);
+    const changed = state.slideshowOrientation !== normalized;
     state.slideshowOrientation = normalized;
     localStorage.setItem(slideshowOrientationKey, normalized);
     syncSlideshowOrientationControls();
+    if (changed) invalidateVideoExportCache();
   };
 
   const syncWatermarkControls = () => {
@@ -1793,15 +1814,20 @@
   };
 
   const setWatermarkEnabled = (enabled) => {
+    const changed = state.watermarkEnabled !== Boolean(enabled);
     state.watermarkEnabled = Boolean(enabled);
     localStorage.setItem(watermarkKey, state.watermarkEnabled ? "on" : "off");
     syncWatermarkControls();
+    if (changed) invalidateVideoExportCache();
   };
 
   const setWatermarkText = (value) => {
-    state.watermarkText = String(value || "");
+    const next = String(value || "");
+    const changed = state.watermarkText !== next;
+    state.watermarkText = next;
     localStorage.setItem(watermarkTextKey, state.watermarkText);
     syncWatermarkControls();
+    if (changed) invalidateVideoExportCache();
   };
 
   const render = () => {
@@ -1901,6 +1927,7 @@
     });
     persistProjectAssignments();
     persistSelection();
+    invalidateVideoExportCache();
     if (selectionChangeNeedsFullRender()) {
       render();
     } else {
@@ -1927,6 +1954,7 @@
   const setTitle = (photoId, value) => {
     const photo = state.photosById.get(photoId);
     if (!photo) return;
+    const previousTitle = titleFor(photo);
     const clean = String(value || "").trim();
     const fallback = photo.editableTitle || photo.title || photo.id;
     if (!clean || clean === fallback) {
@@ -1937,6 +1965,7 @@
     persistTitles();
     renderDraft();
     const nextTitle = titleFor(photo);
+    if (nextTitle !== previousTitle) invalidateVideoExportCache();
     elements.grid?.querySelectorAll(`[data-title-photo="${attributeSelectorValue(photoId)}"]`).forEach((input) => {
       if (input !== document.activeElement) input.value = nextTitle;
     });
@@ -1968,6 +1997,7 @@
     if (!next.length) next = [projectIdFor(photo)];
     state.projectAssignments[photoId] = next;
     persistProjectAssignments();
+    invalidateVideoExportCache();
     render();
   };
 
@@ -2756,10 +2786,12 @@
     }
   };
 
-  const preferredSlideshowVideoMimeType = () => {
-    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return "";
-    return slideshowVideoMimeTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
+  const supportedSlideshowVideoMimeTypes = () => {
+    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return [];
+    return slideshowVideoMimeTypes.filter((mimeType) => MediaRecorder.isTypeSupported(mimeType));
   };
+
+  const preferredSlideshowVideoMimeType = () => supportedSlideshowVideoMimeTypes()[0] || "";
 
   const slideshowVideoExtensionFor = (mimeType = "") => (
     String(mimeType).toLowerCase().includes("mp4") ? "mp4" : "webm"
@@ -2771,11 +2803,27 @@
     return typeof canvas.captureStream === "function" && Boolean(preferredSlideshowVideoMimeType());
   };
 
-  const slideshowVideoSizeFor = (manifest) => (
+  const slideshowVideoSizesFor = (manifest) => (
     manifest?.slideshowSettings?.outputOrientation === "portrait"
-      ? { width: 720, height: 1280 }
-      : { width: 1280, height: 720 }
+      ? [
+        { width: 576, height: 1024 },
+        { width: 540, height: 960 },
+        { width: 720, height: 1280 },
+      ]
+      : [{ width: 1280, height: 720 }]
   );
+
+  const slideshowVideoSizeFor = (manifest) => slideshowVideoSizesFor(manifest)[0];
+
+  const videoExportAbortError = () => {
+    const error = new Error("Video export canceled");
+    error.name = "AbortError";
+    return error;
+  };
+
+  const throwIfVideoExportAborted = (signal) => {
+    if (signal?.aborted) throw videoExportAbortError();
+  };
 
   const objectFitBox = (dimensions, box, fit = "contain") => {
     const width = Math.max(1, Number(dimensions?.width) || 1);
@@ -3021,6 +3069,10 @@
     if (!AudioContextClass) throw new Error("This browser cannot add music to a recorded video.");
     const context = new AudioContextClass();
     await context.resume?.();
+    if (context.state && context.state !== "running") {
+      await context.close?.();
+      throw new Error("Tap Download video once so this browser can add music to the video file.");
+    }
     const destination = context.createMediaStreamDestination();
     const response = await fetch(musicUrl, { mode: "cors" });
     if (!response.ok) throw new Error(`Could not load slideshow music: HTTP ${response.status}`);
@@ -3053,72 +3105,82 @@
     };
   };
 
-  const recordSlideshowVideoBlob = async (manifest, onProgress = null) => {
-    const mimeType = preferredSlideshowVideoMimeType();
-    if (!mimeType || !canRecordSlideshowVideo()) {
-      throw new Error("This browser cannot record a real video file from the slideshow. Try current Safari or Chrome on desktop.");
-    }
-    const slides = slideshowSlidesFor(manifest);
-    if (!slides.length) throw new Error("No slides are available for video export.");
-    const size = slideshowVideoSizeFor(manifest);
+  const recordSlideshowVideoAttempt = async (manifest, slides, { size = slideshowVideoSizeFor(manifest), mimeType = preferredSlideshowVideoMimeType(), signal = null } = {}, onProgress = null) => {
+    throwIfVideoExportAborted(signal);
     const canvas = document.createElement("canvas");
     canvas.width = size.width;
     canvas.height = size.height;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("This browser cannot render the slideshow video.");
     const totalDurationSeconds = slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0);
-    const canvasStream = canvas.captureStream(slideshowVideoFps);
-    const audio = await prepareSlideshowAudio(manifest, totalDurationSeconds);
-    const stream = new MediaStream([
-      ...canvasStream.getVideoTracks(),
-      ...(audio?.stream?.getAudioTracks?.() || []),
-    ]);
-    const recorder = new MediaRecorder(stream, { mimeType });
+    let canvasStream = null;
+    let audio = null;
+    let stream = null;
+    let recorder = null;
+    let stopped = null;
     const chunks = [];
     let recorderError = null;
-    recorder.addEventListener("dataavailable", (event) => {
-      if (event.data?.size) chunks.push(event.data);
-    });
-    recorder.addEventListener("error", (event) => {
-      recorderError = event.error || new Error("The video recorder failed.");
-    });
-    const stopped = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
-    recorder.start(1000);
-    audio?.start?.();
+
     try {
+      canvasStream = canvas.captureStream(slideshowVideoFps);
+      audio = await prepareSlideshowAudio(manifest, totalDurationSeconds);
+      throwIfVideoExportAborted(signal);
+      stream = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...(audio?.stream?.getAudioTracks?.() || []),
+      ]);
+      recorder = new MediaRecorder(stream, { mimeType });
+      recorder.addEventListener("dataavailable", (event) => {
+        if (event.data?.size) chunks.push(event.data);
+      });
+      recorder.addEventListener("error", (event) => {
+        recorderError = event.error || new Error("The video recorder failed.");
+      });
+      stopped = new Promise((resolve) => recorder.addEventListener("stop", resolve, { once: true }));
+      recorder.start(1000);
+      audio?.start?.();
       for (const [index, slide] of slides.entries()) {
+        throwIfVideoExportAborted(signal);
         onProgress?.({ phase: "load", index, total: slides.length, slide });
         const media = await loadSlideshowMedia(slide);
-        if (media.kind === "video") {
-          try {
-            media.element.currentTime = 0;
-            await media.element.play();
-          } catch {
-            // Muted autoplay can still fail in some browsers; the poster frame will be recorded.
+        try {
+          if (media.kind === "video") {
+            try {
+              media.element.currentTime = 0;
+              await media.element.play();
+            } catch {
+              // Muted autoplay can still fail in some browsers; the poster frame will be recorded.
+            }
           }
-        }
-        const duration = Math.max(1000, Number(slide.durationMs) || 4000);
-        const startedAt = performance.now();
-        let elapsed = 0;
-        while (elapsed < duration) {
-          elapsed = performance.now() - startedAt;
-          const progress = Math.max(0, Math.min(1, elapsed / duration));
-          drawRecordedSlideFrame(context, canvas, slide, media, progress, `${index + 1}/${slides.length}`, String(manifest.slideshowSettings?.watermarkText || "").trim());
-          onProgress?.({ phase: "render", index, total: slides.length, progress, slide });
-          await nextAnimationFrame();
-        }
-        if (media.kind === "video") {
-          media.element.pause();
-          media.element.removeAttribute("src");
-          media.element.load();
+          const duration = Math.max(1000, Number(slide.durationMs) || 4000);
+          const startedAt = performance.now();
+          let elapsed = 0;
+          while (elapsed < duration) {
+            throwIfVideoExportAborted(signal);
+            elapsed = performance.now() - startedAt;
+            const progress = Math.max(0, Math.min(1, elapsed / duration));
+            drawRecordedSlideFrame(context, canvas, slide, media, progress, `${index + 1}/${slides.length}`, String(manifest.slideshowSettings?.watermarkText || "").trim());
+            onProgress?.({ phase: "render", index, total: slides.length, progress, slide });
+            await nextAnimationFrame();
+          }
+        } finally {
+          if (media.kind === "video") {
+            media.element.pause();
+            media.element.removeAttribute("src");
+            media.element.load();
+          }
         }
       }
     } finally {
-      if (recorder.state !== "inactive") recorder.stop();
-      await stopped;
-      stream.getTracks().forEach((track) => track.stop());
+      if (recorder && recorder.state !== "inactive") {
+        try { recorder.stop(); } catch {}
+      }
+      if (stopped) await stopped.catch(() => {});
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      else canvasStream?.getTracks?.().forEach((track) => track.stop());
       audio?.stop?.();
     }
+    throwIfVideoExportAborted(signal);
     if (recorderError) throw recorderError;
     const finalMimeType = recorder.mimeType || mimeType;
     const blob = new Blob(chunks, { type: finalMimeType });
@@ -3127,7 +3189,209 @@
       blob,
       mimeType: finalMimeType,
       extension: slideshowVideoExtensionFor(finalMimeType),
+      size,
     };
+  };
+
+  const recordSlideshowVideoBlob = async (manifest, onProgress = null, { signal = null } = {}) => {
+    const mimeTypes = supportedSlideshowVideoMimeTypes();
+    if (!mimeTypes.length || !canRecordSlideshowVideo()) {
+      throw new Error("This browser cannot record a real video file from the slideshow. Try current Safari or Chrome on desktop.");
+    }
+    const slides = slideshowSlidesFor(manifest);
+    if (!slides.length) throw new Error("No slides are available for video export.");
+    const sizes = slideshowVideoSizesFor(manifest);
+    let lastError = null;
+    for (const size of sizes) {
+      for (const mimeType of mimeTypes) {
+        try {
+          onProgress?.({ phase: "attempt", size, mimeType, total: slides.length });
+          return await recordSlideshowVideoAttempt(manifest, slides, { size, mimeType, signal }, onProgress);
+        } catch (error) {
+          if (error?.name === "AbortError") throw error;
+          lastError = error;
+          console.warn("Real Estate slideshow recorder attempt failed", {
+            size,
+            mimeType,
+            message: error?.message || String(error),
+          });
+          onProgress?.({ phase: "retry", size, mimeType, error, total: slides.length });
+        }
+      }
+    }
+    const portrait = manifest?.slideshowSettings?.outputOrientation === "portrait";
+    const detail = lastError?.message ? `: ${lastError.message}` : ".";
+    throw new Error(`The browser could not finish the ${portrait ? "vertical " : ""}video file${detail}`);
+  };
+
+  const currentVideoExportKey = () => {
+    const photos = activeSelectedPhotos();
+    if (!photos.length) return "";
+    const projects = projectGroupsFor(photos, true).map((project) => ({
+      projectId: project.projectId,
+      projectTitle: project.projectTitle,
+      projectIndex: project.projectIndex,
+      items: project.photos.map((photo) => ({
+        id: photo.id,
+        title: titleFor(photo),
+        mediaType: mediaTypeFor(photo),
+        durationSeconds: isVideo(photo) ? durationSecondsFor(photo) : state.slideshowPhotoSeconds,
+        dimensions: pdfDimensionsFor(photo),
+        image: imageFor(photo, "detail"),
+        video: isVideo(photo) ? videoPreviewFor(photo) : "",
+      })),
+    }));
+    return JSON.stringify({
+      schema: "photosbyelie.realEstateVideoCache.v2",
+      galleryKey: state.gallery?.key || "",
+      photoDurationSeconds: state.slideshowPhotoSeconds,
+      outputOrientation: normalizeSlideshowOrientation(state.slideshowOrientation),
+      watermarkText: activeWatermarkText(),
+      projects,
+    });
+  };
+
+  const clearVideoExportTimer = () => {
+    if (!state.videoExportTimer) return;
+    window.clearTimeout(state.videoExportTimer);
+    state.videoExportTimer = 0;
+  };
+
+  const updateBackgroundVideoProgress = ({ detail = "", current = 0, total = 0, done = false } = {}) => {
+    if (state.outputBusy || state.pdfBusy || !elements.outputProgress) return;
+    if (!state.outputProgressStartedAt || current === 0) state.outputProgressStartedAt = Date.now();
+    updateOutputProgress({
+      title: done ? "Video ready" : "Preparing video in background",
+      detail,
+      current,
+      total,
+      done,
+    });
+    if (done) {
+      state.outputProgressStartedAt = 0;
+      if (state.outputProgressHideTimer) window.clearTimeout(state.outputProgressHideTimer);
+      state.outputProgressHideTimer = window.setTimeout(() => {
+        if (elements.outputProgress) elements.outputProgress.hidden = true;
+        state.outputProgressHideTimer = 0;
+      }, 4500);
+    }
+  };
+
+  const scheduleVideoExportSynthesis = (delay = 700) => {
+    clearVideoExportTimer();
+    if (!state.unlocked || !activeSelectedPhotos().length || !canRecordSlideshowVideo()) return;
+    state.videoExportTimer = window.setTimeout(() => {
+      state.videoExportTimer = 0;
+      ensureVideoExportReady({ background: true }).catch(() => {});
+    }, Math.max(0, Number(delay) || 0));
+  };
+
+  const invalidateVideoExportCache = ({ schedule = true } = {}) => {
+    clearVideoExportTimer();
+    state.videoExportToken += 1;
+    state.videoExportAbort?.abort?.();
+    state.videoExportAbort = null;
+    state.videoExportPromise = null;
+    state.videoExportCache = null;
+    state.videoExportCacheKey = "";
+    state.videoExportStatus = "idle";
+    state.videoExportError = "";
+    syncFileActionLabels();
+    if (schedule) scheduleVideoExportSynthesis();
+  };
+
+  const ensureVideoExportReady = async ({ background = false } = {}) => {
+    const key = currentVideoExportKey();
+    if (!key) throw new Error("Select media before preparing a video output.");
+    if (state.videoExportCache?.key === key) return state.videoExportCache;
+    if (state.videoExportPromise && state.videoExportCacheKey === key) return state.videoExportPromise;
+
+    state.videoExportToken += 1;
+    const token = state.videoExportToken;
+    const controller = new AbortController();
+    state.videoExportAbort?.abort?.();
+    state.videoExportAbort = controller;
+    state.videoExportCache = null;
+    state.videoExportCacheKey = key;
+    state.videoExportStatus = "building";
+    state.videoExportError = "";
+    syncFileActionLabels();
+
+    const promise = (async () => {
+      const selected = activeSelectedPhotos();
+      const batch = buildSlideshowManifest(selected, true);
+      const slides = slideshowSlidesFor(batch);
+      if (background) {
+        updateBackgroundVideoProgress({
+          detail: `Recording ${slides.length} slide${slides.length === 1 ? "" : "s"} for the video file...`,
+          current: 0,
+          total: Math.max(1, slides.length),
+        });
+      }
+      const recorded = await recordSlideshowVideoBlob(batch, ({ phase, index = 0, total = slides.length, slide, size }) => {
+        if (phase === "attempt" && background) {
+          updateBackgroundVideoProgress({
+            detail: `Starting ${size?.width || ""}x${size?.height || ""} video recording...`,
+            current: 0,
+            total: Math.max(1, total),
+          });
+          return;
+        }
+        if (phase !== "load") return;
+        const detail = `Recording slide ${index + 1}/${total}: ${slide?.title || "Untitled"}`;
+        if (background) updateBackgroundVideoProgress({ detail, current: index + 1, total });
+        else {
+          updateOutputProgress({ title: "Preparing video file", detail, current: 2, total: 3 });
+          setStatus(detail);
+        }
+      }, { signal: controller.signal });
+      throwIfVideoExportAborted(controller.signal);
+      if (token !== state.videoExportToken || currentVideoExportKey() !== key) throw videoExportAbortError();
+      const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
+      const cache = {
+        key,
+        batch,
+        blob: recorded.blob,
+        mimeType: recorded.mimeType,
+        extension: recorded.extension,
+        filename,
+        bytes: Number(recorded.blob?.size) || 0,
+        size: recorded.size,
+      };
+      state.videoExportCache = cache;
+      state.videoExportStatus = "ready";
+      state.videoExportError = "";
+      if (background) {
+        updateBackgroundVideoProgress({
+          detail: `Video ready: ${filename} (${formatBytes(cache.bytes)})`,
+          current: 1,
+          total: 1,
+          done: true,
+        });
+      }
+      syncFileActionLabels();
+      return cache;
+    })();
+
+    state.videoExportPromise = promise;
+    promise.catch((error) => {
+      if (error?.name === "AbortError" || token !== state.videoExportToken) return;
+      state.videoExportStatus = "error";
+      state.videoExportError = error?.message || "Video output could not be prepared";
+      if (background) {
+        updateBackgroundVideoProgress({
+          detail: state.videoExportError,
+          current: 0,
+          total: 1,
+        });
+      }
+      syncFileActionLabels();
+    }).finally(() => {
+      if (state.videoExportPromise === promise) state.videoExportPromise = null;
+      if (state.videoExportAbort === controller) state.videoExportAbort = null;
+      syncFileActionLabels();
+    });
+    return promise;
   };
 
   const shareSlideshowPlan = async ({ mode = "download", reservedWindow = null, recordProduct = true, progressKind = "", batchOverride = null } = {}) => {
@@ -3147,7 +3411,7 @@
       kind: progressKind || (mode === "view" ? "video-view" : "video-download"),
     });
     try {
-      const batch = buildSlideshowManifest(selected, true, batchOverride);
+      let batch = buildSlideshowManifest(selected, true, batchOverride);
       updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
       let saved = null;
       if (openInBrowser) {
@@ -3158,15 +3422,25 @@
         saved = await openHtmlInBrowser(html, filename, fallbackWindow);
         if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: saved.filename, bytes: saved.bytes });
       } else {
-        const slides = slideshowSlidesFor(batch);
-        updateOutputProgress({ title, detail: `Recording real video file from ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 2, total: 3 });
-        const recorded = await recordSlideshowVideoBlob(batch, ({ phase, index, total, slide }) => {
-          if (phase !== "load") return;
-          const detail = `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`;
-          updateOutputProgress({ title, detail, current: 2, total: 3 });
-          setStatus(detail);
-        });
-        const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
+        let recorded = null;
+        let filename = "";
+        if (!batchOverride) {
+          updateOutputProgress({ title, detail: "Finishing the prepared video file...", current: 2, total: 3 });
+          const prepared = await ensureVideoExportReady({ background: false });
+          batch = prepared.batch;
+          recorded = prepared;
+          filename = prepared.filename;
+        } else {
+          const slides = slideshowSlidesFor(batch);
+          updateOutputProgress({ title, detail: `Recording real video file from ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 2, total: 3 });
+          recorded = await recordSlideshowVideoBlob(batch, ({ phase, index, total, slide }) => {
+            if (phase !== "load") return;
+            const detail = `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`;
+            updateOutputProgress({ title, detail, current: 2, total: 3 });
+            setStatus(detail);
+          });
+          filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.${recorded.extension}`;
+        }
         updateOutputProgress({ title, detail: "Sending video file to your device...", current: 3, total: 3 });
         saved = await shareOrOpenBlob({
           blob: recorded.blob,
@@ -3186,7 +3460,12 @@
       }
       completeOutputProgress(`Ready: ${saved.filename} (${formatBytes(saved.bytes)})`);
     } catch (error) {
-      const message = error?.name === "AbortError" ? "Output canceled" : "Video output could not be prepared";
+      if (error?.name !== "AbortError") console.error("Real Estate video output failed", error);
+      const message = error?.name === "AbortError"
+        ? "Video output canceled"
+        : error?.message
+          ? `Video output could not be prepared: ${error.message}`
+          : "Video output could not be prepared";
       setStatus(message);
       failOutputProgress(message);
     }
@@ -4128,6 +4407,7 @@
     state.selectedOnly = false;
     persistSelection();
     persistProjectAssignments();
+    invalidateVideoExportCache({ schedule: false });
     setWizardStep(firstWizardStep());
     document.querySelector("#real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
     setStatus("Started a new selection. Choose media, edit titles, reorder, then view or download outputs.");
@@ -4145,6 +4425,7 @@
       if (!state.selectedOrder.includes(id)) state.selectedOrder.push(id);
     });
     persistSelection();
+    invalidateVideoExportCache();
     render();
   };
 
@@ -4330,6 +4611,7 @@
     persistSelection();
     persistTitles();
     persistProjectAssignments();
+    invalidateVideoExportCache();
     if (editMode) state.wizardStep = 4;
     render();
     setStatus(`${statusPrefix} ${activeSelectedPhotos().length} selected media for ${selectedPropertyTitle()}${editMode ? "; output is ready to view or adjust" : ""}`);
@@ -4469,6 +4751,7 @@
       syncAuthUi();
       setStatus(`${state.photos.length} visible / ${state.photos.length} media`);
       fetchCloudDeliverables({ quiet: true }).catch(() => {});
+      scheduleVideoExportSynthesis(1000);
       window.setTimeout(() => showHelp(), 120);
     });
 
@@ -4511,9 +4794,11 @@
     });
     elements.slideshowPhotoSeconds?.addEventListener("change", (event) => {
       const next = Math.max(1, Math.min(30, Math.round(Number(event.target.value) || 4)));
+      const changed = state.slideshowPhotoSeconds !== next;
       state.slideshowPhotoSeconds = next;
       localStorage.setItem(slideshowPhotoSecondsKey, String(next));
       event.target.value = String(next);
+      if (changed) invalidateVideoExportCache();
     });
     elements.watermarkEnabled?.addEventListener("change", (event) => {
       setWatermarkEnabled(event.target.checked);
@@ -4884,6 +5169,7 @@
     renderHero();
     render();
     if (state.unlocked) fetchCloudDeliverables({ quiet: true }).catch(() => {});
+    if (state.unlocked) scheduleVideoExportSynthesis(1200);
   };
 
   const initialize = async () => {

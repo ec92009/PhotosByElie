@@ -102,8 +102,9 @@ Clock state: running
 | 2026-05-28 | 09:09 CEST | 09:10 CEST | 0:01 | Flagged stale visible-version doc headers after the Real Estate preview release. |
 | 2026-05-28 | 09:12 CEST | 09:15 CEST | 0:03 | Requested centered Real Estate video titles, playback-style controls, and a repaired final-slide music fade. |
 | 2026-05-28 | 09:18 CEST | 09:19 CEST | 0:01 | Requested Real Estate downloads use true PDF and video files with matching phone and desktop behavior. |
+| 2026-05-28 | 09:40 CEST | 09:43 CEST | 0:03 | Reported the Real Estate vertical video hiccup and requested separate PDF/video download buttons plus proactive video preparation. |
 
 ## Totals
 
-Active collaboration time used: 5:32
+Active collaboration time used: 5:35
 Remaining budget: not set

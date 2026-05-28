@@ -1,7 +1,7 @@
 {
   "date": "2026-05-28",
   "platform": "Facebook",
-  "status": "prepared_pending_browser_publish",
+  "status": "prepared_live_campaign_verified_not_published_target_uncertain",
   "account": "Photos By Elie Facebook Page",
   "post_type": "multi_photo_post",
   "title": "Granada Alhambra Courtyards",
@@ -13,7 +13,10 @@
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
     "Use files in numeric order for the Facebook multi-photo post.",
-    "If Facebook creates an off-theme link preview, remove only the preview and keep the URL in the caption."
+    "If Facebook creates an off-theme link preview, remove only the preview and keep the URL in the caption.",
+    "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.",
+    "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+    "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
   ],
   "items": [
     {
@@ -152,5 +155,13 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240517-140442-00257-f6a38f120c",
       "local_staged_path": "socials/Facebook/2026-05-28/granada-alhambra-courtyards/images/08-20240517-140442-00257-f6a38f120c-granada-alhambra.jpg"
     }
-  ]
+  ],
+  "browser_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+  }
 }

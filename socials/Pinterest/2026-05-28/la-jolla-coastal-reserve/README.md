@@ -1,7 +1,7 @@
 # Pinterest - La Jolla Coastal Reserve
 
 - Date: 2026-05-28
-- Status: prepared_pending_browser_publish
+- Status: prepared_authenticated_confirmed_not_published
 - Account/profile/board: @photosbyelie
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-la-jolla-coastal-reserve-2026-05-28
 - Image count: 5
@@ -32,3 +32,9 @@ La Jolla coast in clean Pacific light: reserve paths, open water, and calm Calif
 - Pinterest package intentionally contains exactly 5 images.
 - Images are downloaded public watermarked R2 previews staged for Pin Builder upload.
 - Confirm the board before publishing; recommended board is California and USA Photography.
+
+## Browser Check
+
+- Built-in Browser reached Pinterest @photosbyelie without login prompts. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation.
+- GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.
+- No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth.

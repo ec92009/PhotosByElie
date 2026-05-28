@@ -1,7 +1,7 @@
 # Instagram - Seville Cathedral Stone and Light
 
 - Date: 2026-05-28
-- Status: prepared_pending_browser_publish
+- Status: prepared_authenticated_confirmed_not_published
 - Account/profile/board: ec92009
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28
 - Image count: 8
@@ -33,3 +33,9 @@ Seville Cathedral in stone, height, and chapel light. A tight Photos By Elie arc
 - Images are downloaded public watermarked R2 previews staged for browser upload.
 - Use files in numeric order for the Instagram carousel.
 - Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.
+
+## Browser Check
+
+- Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation.
+- GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.
+- No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth.

@@ -1,7 +1,7 @@
 # Facebook - Granada Alhambra Courtyards
 
 - Date: 2026-05-28
-- Status: prepared_pending_browser_publish
+- Status: prepared_live_campaign_verified_not_published_target_uncertain
 - Account/profile/board: Photos By Elie Facebook Page
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-granada-alhambra-courtyards-2026-05-28
 - Image count: 8
@@ -31,3 +31,9 @@ Granada in carved light: Alhambra courtyards, tile rhythm, quiet arches, and war
 - Images are downloaded public watermarked R2 previews staged for browser upload.
 - Use files in numeric order for the Facebook multi-photo post.
 - If Facebook creates an off-theme link preview, remove only the preview and keep the URL in the caption.
+
+## Browser Check
+
+- Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.
+- GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.
+- No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth.

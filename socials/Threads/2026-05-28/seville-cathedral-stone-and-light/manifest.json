@@ -1,7 +1,7 @@
 {
   "date": "2026-05-28",
   "platform": "Threads",
-  "status": "prepared_pending_browser_publish",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "ec92009 via Instagram login",
   "post_type": "short_image_thread",
   "title": "Seville Cathedral Stone and Light",
@@ -13,7 +13,10 @@
   "notes": [
     "Threads variant is derived from the Instagram Seville set.",
     "Keep the post tight at 4 images.",
-    "Remove any automatic link preview if it shows generic/off-theme metadata."
+    "Remove any automatic link preview if it shows generic/off-theme metadata.",
+    "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation.",
+    "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+    "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
   ],
   "items": [
     {
@@ -85,5 +88,13 @@
       "local_staged_path": "socials/Threads/2026-05-28/seville-cathedral-stone-and-light/images/04-20240307-144118-00203-3e8a805cc4-seville-cathedral.jpg"
     }
   ],
-  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+  "browser_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+  }
 }

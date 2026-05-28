@@ -1,7 +1,7 @@
 {
   "date": "2026-05-28",
   "platform": "Instagram",
-  "status": "prepared_pending_browser_publish",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Seville Cathedral Stone and Light",
@@ -13,7 +13,10 @@
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
     "Use files in numeric order for the Instagram carousel.",
-    "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available."
+    "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.",
+    "Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation.",
+    "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+    "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
   ],
   "items": [
     {
@@ -152,5 +155,13 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144118-00203-3e8a805cc4",
       "local_staged_path": "socials/Instagram/2026-05-28/seville-cathedral-stone-and-light/images/08-20240307-144118-00203-3e8a805cc4-seville-cathedral.jpg"
     }
-  ]
+  ],
+  "browser_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+  }
 }

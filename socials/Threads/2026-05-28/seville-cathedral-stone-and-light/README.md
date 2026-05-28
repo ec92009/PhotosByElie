@@ -1,7 +1,7 @@
 # Threads - Seville Cathedral Stone and Light
 
 - Date: 2026-05-28
-- Status: prepared_pending_browser_publish
+- Status: prepared_authenticated_confirmed_not_published
 - Account/profile/board: ec92009 via Instagram login
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28
 - Image count: 4
@@ -30,3 +30,9 @@ Four Seville Cathedral frames: stone height, chapel glow, and quiet architectura
 - Threads variant is derived from the Instagram Seville set.
 - Keep the post tight at 4 images.
 - Remove any automatic link preview if it shows generic/off-theme metadata.
+
+## Browser Check
+
+- Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation.
+- GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.
+- No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth.

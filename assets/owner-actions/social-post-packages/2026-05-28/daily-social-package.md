@@ -6,14 +6,14 @@ Prepared from the public SQLite-backed catalog export and public R2 preview URLs
 
 ## Publishing Status
 
-- facebook: prepared_pending_browser_publish; live browser publish not completed in this run yet.
-- instagram: prepared_pending_browser_publish; live browser publish not completed in this run yet.
-- pinterest: prepared_pending_browser_publish; live browser publish not completed in this run yet.
-- threads: prepared_pending_browser_publish; live browser publish not completed in this run yet.
+- facebook: prepared_live_campaign_checked_not_published; see Browser Checks.
+- instagram: prepared_live_campaign_checked_not_published; see Browser Checks.
+- pinterest: prepared_live_campaign_checked_not_published; see Browser Checks.
+- threads: prepared_live_campaign_checked_not_published; see Browser Checks.
 
 ## FACEBOOK - Granada Alhambra Courtyards
 
-- Account/status: Photos By Elie Facebook Page; prepared_pending_browser_publish.
+- Account/status: Photos By Elie Facebook Page; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-granada-alhambra-courtyards-2026-05-28
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-05-28/granada-alhambra-courtyards
@@ -39,7 +39,7 @@ Selected media:
 
 ## INSTAGRAM - Seville Cathedral Stone and Light
 
-- Account/status: ec92009; prepared_pending_browser_publish.
+- Account/status: ec92009; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-28/seville-cathedral-stone-and-light
@@ -67,7 +67,7 @@ Selected media:
 
 ## PINTEREST - La Jolla Coastal Reserve
 
-- Account/status: @photosbyelie; prepared_pending_browser_publish.
+- Account/status: @photosbyelie; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-la-jolla-coastal-reserve-2026-05-28
 - Image count: 5
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-05-28/la-jolla-coastal-reserve
@@ -94,7 +94,7 @@ Selected media:
 
 ## THREADS - Seville Cathedral Stone and Light
 
-- Account/status: ec92009 via Instagram login; prepared_pending_browser_publish.
+- Account/status: ec92009 via Instagram login; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28
 - Image count: 4
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-05-28/seville-cathedral-stone-and-light
@@ -119,9 +119,14 @@ Selected media:
 
 ## Browser Checks
 
-- Not completed yet. Publishing requires confirming visible account/profile/board and final action buttons in the Built-in Browser.
+- Facebook: Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.
+- Instagram: Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation.
+- Pinterest: Built-in Browser reached Pinterest @photosbyelie without login prompts. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation.
+- Threads: Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation.
+- API: No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth.
 
 ## Deployment Check
 
-- Pending: campaign manifests need version bump, commit, push, and live URL check before publishing.
+- GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.
+- Campaign commit pushed: `72c84f35`.
 

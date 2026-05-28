@@ -6,16 +6,16 @@
   "source": "public SQLite-backed catalog and public R2 preview URLs only",
   "site_base_url": "https://ec92009.github.io/PhotosByElie/",
   "status_summary": {
-    "facebook": "prepared_pending_browser_publish",
-    "instagram": "prepared_pending_browser_publish",
-    "pinterest": "prepared_pending_browser_publish",
-    "threads": "prepared_pending_browser_publish"
+    "facebook": "prepared_live_campaign_verified_not_published_target_uncertain",
+    "instagram": "prepared_authenticated_confirmed_not_published",
+    "pinterest": "prepared_authenticated_confirmed_not_published",
+    "threads": "prepared_authenticated_confirmed_not_published"
   },
   "packages": [
     {
       "date": "2026-05-28",
       "platform": "Facebook",
-      "status": "prepared_pending_browser_publish",
+      "status": "prepared_live_campaign_verified_not_published_target_uncertain",
       "account": "Photos By Elie Facebook Page",
       "post_type": "multi_photo_post",
       "title": "Granada Alhambra Courtyards",
@@ -27,7 +27,10 @@
       "notes": [
         "Images are downloaded public watermarked R2 previews staged for browser upload.",
         "Use files in numeric order for the Facebook multi-photo post.",
-        "If Facebook creates an off-theme link preview, remove only the preview and keep the URL in the caption."
+        "If Facebook creates an off-theme link preview, remove only the preview and keep the URL in the caption.",
+        "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.",
+        "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+        "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
       ],
       "items": [
         {
@@ -166,12 +169,20 @@
           "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240517-140442-00257-f6a38f120c",
           "local_staged_path": "socials/Facebook/2026-05-28/granada-alhambra-courtyards/images/08-20240517-140442-00257-f6a38f120c-granada-alhambra.jpg"
         }
-      ]
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+      }
     },
     {
       "date": "2026-05-28",
       "platform": "Instagram",
-      "status": "prepared_pending_browser_publish",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Seville Cathedral Stone and Light",
@@ -183,7 +194,10 @@
       "notes": [
         "Images are downloaded public watermarked R2 previews staged for browser upload.",
         "Use files in numeric order for the Instagram carousel.",
-        "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available."
+        "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.",
+        "Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation.",
+        "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+        "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
       ],
       "items": [
         {
@@ -322,12 +336,20 @@
           "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20240307-144118-00203-3e8a805cc4",
           "local_staged_path": "socials/Instagram/2026-05-28/seville-cathedral-stone-and-light/images/08-20240307-144118-00203-3e8a805cc4-seville-cathedral.jpg"
         }
-      ]
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+      }
     },
     {
       "date": "2026-05-28",
       "platform": "Pinterest",
-      "status": "prepared_pending_browser_publish",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "@photosbyelie",
       "post_type": "multi_image_pin",
       "title": "La Jolla Coastal Reserve",
@@ -339,7 +361,10 @@
       "notes": [
         "Pinterest package intentionally contains exactly 5 images.",
         "Images are downloaded public watermarked R2 previews staged for Pin Builder upload.",
-        "Confirm the board before publishing; recommended board is California and USA Photography."
+        "Confirm the board before publishing; recommended board is California and USA Photography.",
+        "Built-in Browser reached Pinterest @photosbyelie without login prompts. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation.",
+        "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+        "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
       ],
       "items": [
         {
@@ -431,12 +456,20 @@
       "pin_title": "La Jolla Coastal Reserve Wall Art",
       "description": "California coast photographs from La Jolla and Scripps Coastal Reserve, selected by Photos By Elie for calm ocean light, clean horizon structure, and wall-art browsing.",
       "board_recommendation": "California and USA Photography",
-      "alt_text": "Five Photos By Elie photographs from La Jolla and Scripps Coastal Reserve showing California coast, ocean views, cliffs, and bright Pacific light."
+      "alt_text": "Five Photos By Elie photographs from La Jolla and Scripps Coastal Reserve showing California coast, ocean views, cliffs, and bright Pacific light.",
+      "browser_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+      }
     },
     {
       "date": "2026-05-28",
       "platform": "Threads",
-      "status": "prepared_pending_browser_publish",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "ec92009 via Instagram login",
       "post_type": "short_image_thread",
       "title": "Seville Cathedral Stone and Light",
@@ -448,7 +481,10 @@
       "notes": [
         "Threads variant is derived from the Instagram Seville set.",
         "Keep the post tight at 4 images.",
-        "Remove any automatic link preview if it shows generic/off-theme metadata."
+        "Remove any automatic link preview if it shows generic/off-theme metadata.",
+        "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation.",
+        "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+        "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
       ],
       "items": [
         {
@@ -520,7 +556,42 @@
           "local_staged_path": "socials/Threads/2026-05-28/seville-cathedral-stone-and-light/images/04-20240307-144118-00203-3e8a805cc4-seville-cathedral.jpg"
         }
       ],
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "browser_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-28T03:11:08Z",
+        "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting."
+      }
     }
-  ]
+  ],
+  "browser_checks": {
+    "Facebook": {
+      "checked_at": "2026-05-28T03:11:08Z",
+      "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie showed unavailable content; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+    },
+    "Instagram": {
+      "checked_at": "2026-05-28T03:11:08Z",
+      "result": "Built-in Browser reached Instagram @ec92009 without login prompts. Not published because carousel upload and final Share require manual file-picker/action-time confirmation."
+    },
+    "Pinterest": {
+      "checked_at": "2026-05-28T03:11:08Z",
+      "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts. Not published because Pin Builder upload, board confirmation, and final Publish require manual file-picker/action-time confirmation."
+    },
+    "Threads": {
+      "checked_at": "2026-05-28T03:11:08Z",
+      "result": "Built-in Browser reached Threads @ec92009 without login prompts. Not published because image attachment/link-preview review and final Post require manual file-picker/action-time confirmation."
+    }
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "GitHub Pages deployment succeeded and all three new campaign JSON URLs returned HTTP 200 with v89.10 cache busting.",
+    "commit": "72c84f35"
+  },
+  "api_check": {
+    "checked_at": "2026-05-28T03:11:08Z",
+    "result": "No local API OAuth token files were present for Meta, Pinterest, or Threads, so API publishing was unavailable without new OAuth."
+  }
 }

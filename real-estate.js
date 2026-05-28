@@ -613,6 +613,7 @@
     fitMode: "contain-with-blurred-backdrop",
     playback: "once-no-loop",
     musicFadeOutPolicy: "fade-over-final-slide",
+    musicFadeOutSeconds: state.slideshowPhotoSeconds,
     overlayOrder: "watermark-and-counter-before-ken-burns",
     watermarkPolicy: "importer-style-repeating-preview-plus-bottom",
     watermarkEnabled: Boolean(state.watermarkEnabled),
@@ -2122,7 +2123,6 @@
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
-    const dateLabel = manifest.createdAt ? new Date(manifest.createdAt).toLocaleString() : "";
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -2297,15 +2297,6 @@
       .controls{position:sticky;bottom:0;z-index:5;padding:10px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
       button{min-height:38px;padding:7px 14px}
     }
-    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;width:min(1120px,100%);margin:0 auto;padding:16px}
-    .meta div{border:1px solid rgba(255,255,255,.14);background:#141414;padding:10px}
-    .meta dt{color:#aaa;font-size:.72rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
-    .meta dd{margin:4px 0 0;font-weight:850}
-    table{width:min(1120px,calc(100% - 32px));border-collapse:collapse;margin:0 auto 22px;font-size:.9rem;color:#e8e8e8}
-    th,td{border:1px solid rgba(255,255,255,.14);padding:8px;text-align:left;vertical-align:top}
-    th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#aaa}
-    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
-    .note{width:min(1120px,calc(100% - 32px));margin:0 auto 22px;color:#aaa;font-size:.9rem}
   </style>
 </head>
 <body class="video-${outputOrientation}">
@@ -2326,39 +2317,6 @@
       <button type="button" data-play>${musicTrack?.absoluteSrc || musicTrack?.src ? "Play with sound" : "Pause"}</button>
       <button type="button" data-next>Next</button>
     </div>
-    <dl class="meta">
-      <div><dt>Batch</dt><dd><code>${escapeHtml(manifest.batchId || "")}</code></dd></div>
-      <div><dt>Created</dt><dd>${escapeHtml(dateLabel)}</dd></div>
-      <div><dt>Photo duration</dt><dd>${escapeHtml(manifest.slideshowSettings?.photoDurationSeconds || state.slideshowPhotoSeconds)}s</dd></div>
-      <div><dt>Format</dt><dd>${escapeHtml(outputOrientation === "portrait" ? "Vertical 9:16" : "Landscape 16:9")}</dd></div>
-      <div><dt>Music</dt><dd>${escapeHtml(musicTrack?.title || "Random single-guitar cue")}</dd></div>
-      <div><dt>Source audio</dt><dd>${escapeHtml(`${audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb} dB`)}</dd></div>
-      <div><dt>Transition</dt><dd>Subtle centered Ken Burns</dd></div>
-    </dl>
-    <table>
-      <thead>
-        <tr>
-          <th>Project</th>
-          <th>Order</th>
-          <th>Type</th>
-          <th>Duration</th>
-          <th>Title</th>
-          <th>Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(({ projectTitle, item }) => `
-        <tr>
-          <td>${escapeHtml(projectTitle || item.projectTitle || "")}</td>
-          <td>${escapeHtml(item.sortIndex || "")}</td>
-          <td>${escapeHtml(item.mediaType || "photo")}</td>
-          <td>${escapeHtml(item.mediaType === "video" ? `preserve source${formatDuration(item.durationSeconds) ? ` (${formatDuration(item.durationSeconds)})` : ""}` : `${item.durationSeconds || state.slideshowPhotoSeconds}s`)}</td>
-          <td>${escapeHtml(item.title || "")}</td>
-          <td><code>${escapeHtml(item.cloudSourceKey || item.publicStillKey || item.photoId || "")}</code></td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-    <p class="note">This browser preview plays once and stops at the end. Video source audio plays at ${escapeHtml(audioPolicy.sourceVideoAudioGainDb ?? sourceVideoAudioGainDb)} dB under the generated music. Photos use ${escapeHtml(state.slideshowPhotoSeconds)} seconds with subtle centered Ken Burns motion.</p>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
     <script>
       const slides = ${safeSlidesJson};
@@ -2409,7 +2367,7 @@
         timer = 0;
       };
       const clearFadeTimer = () => {
-        if (fadeTimer) window.clearTimeout(fadeTimer);
+        if (fadeTimer) window.cancelAnimationFrame(fadeTimer);
         fadeTimer = 0;
       };
       const applyStageSize = () => {
@@ -2462,13 +2420,14 @@
           return;
         }
         const duration = Math.max(1000, Number(slide?.durationMs || ${Number(state.slideshowPhotoSeconds) * 1000}));
+        const fadeDuration = Math.max(500, duration - 120);
         const start = performance.now();
         const tick = () => {
           if (!playing || index !== slides.length - 1) return;
           const elapsed = performance.now() - start;
-          const remaining = Math.max(0, 1 - (elapsed / duration));
+          const remaining = Math.max(0, 1 - (elapsed / fadeDuration));
           music.volume = Math.max(0, Math.min(1, musicVolume * remaining));
-          if (remaining > 0) fadeTimer = window.setTimeout(tick, 80);
+          if (remaining > 0) fadeTimer = window.requestAnimationFrame(tick);
         };
         tick();
       };

@@ -17,6 +17,7 @@
   const pdfFormatKey = "photosbyelie-real-estate-pdf-format";
   const slideshowPhotoSecondsKey = "photosbyelie-real-estate-slideshow-photo-seconds";
   const slideshowOrientationKey = "photosbyelie-real-estate-slideshow-orientation";
+  const slideshowMusicCountryKey = "photosbyelie-real-estate-slideshow-music-country";
   const watermarkKey = "photosbyelie-real-estate-watermark";
   const watermarkTextKey = "photosbyelie-real-estate-watermark-text";
 
@@ -62,6 +63,7 @@
     selectedOnly: app.querySelector("[data-re-selected-only]"),
     pdfFormat: app.querySelector("[data-re-pdf-format]"),
     slideshowPhotoSeconds: app.querySelector("[data-re-slideshow-photo-seconds]"),
+    slideshowMusicCountry: app.querySelector("[data-re-slideshow-music-country]"),
     watermarkEnabled: app.querySelector("[data-re-watermark-enabled]"),
     watermarkText: app.querySelector("[data-re-watermark-text]"),
     status: app.querySelector("[data-re-status]"),
@@ -113,6 +115,10 @@
     pdfFormat: localStorage.getItem(pdfFormatKey) || "a4",
     slideshowPhotoSeconds: Number(localStorage.getItem(slideshowPhotoSecondsKey)) || 4,
     slideshowOrientation: localStorage.getItem(slideshowOrientationKey) || "landscape",
+    slideshowMusicCountry: localStorage.getItem(slideshowMusicCountryKey) || "auto",
+    slideshowMusicTracks: [],
+    slideshowMusicManifestLoaded: false,
+    slideshowMusicManifestError: "",
     watermarkEnabled: localStorage.getItem(watermarkKey) !== "off",
     watermarkText: localStorage.getItem(watermarkTextKey) || "",
     selectedOnly: false,
@@ -573,28 +579,17 @@
   const pdfWatermarkText = "\u00a9 2026 Photos By Elie";
   const densityOptions = new Set(["compact", "balanced", "large"]);
   const slideshowOrientationOptions = new Set(["landscape", "portrait"]);
+  const slideshowMusicCountries = Object.freeze(["Spain", "Portugal", "France", "USA"]);
+  const slideshowMusicCountryOptions = new Set(["auto", ...slideshowMusicCountries]);
   const normalizeDensity = (value) => densityOptions.has(value) ? value : "balanced";
   const normalizeSlideshowOrientation = (value) => slideshowOrientationOptions.has(value) ? value : "landscape";
+  const normalizeSlideshowMusicCountry = (value) => {
+    const raw = String(value || "").trim();
+    return slideshowMusicCountryOptions.has(raw) ? raw : "auto";
+  };
   const activeWatermarkText = () => state.watermarkEnabled ? (String(state.watermarkText || "").trim() || pdfWatermarkText) : "";
   const slideshowTransition = "subtle-centered-ken-burns";
-  const slideshowMusicTracks = Object.freeze([
-    { title: "Quiet Linden Study", bpm: 82, duration: 113.02, src: "./assets/music/slideshow-guitar/quiet-linden-study-single-guitar-113s.mp3" },
-    { title: "Warm Balcony Theme", bpm: 86, duration: 107.847, src: "./assets/music/slideshow-guitar/warm-balcony-theme-single-guitar-107s.mp3" },
-    { title: "Open House Aria", bpm: 88, duration: 105.436, src: "./assets/music/slideshow-guitar/open-house-aria-single-guitar-104s.mp3" },
-    { title: "Cedar Stairwell", bpm: 80, duration: 115.8, src: "./assets/music/slideshow-guitar/cedar-stairwell-single-guitar-116s.mp3" },
-    { title: "Terrace in C", bpm: 84, duration: 110.371, src: "./assets/music/slideshow-guitar/terrace-in-c-single-guitar-109s.mp3" },
-    { title: "Window Light Etude", bpm: 90, duration: 103.133, src: "./assets/music/slideshow-guitar/window-light-etude-single-guitar-103s.mp3" },
-    { title: "Blue Hour Listing", bpm: 82, duration: 113.02, src: "./assets/music/slideshow-guitar/blue-hour-listing-single-guitar-112s.mp3" },
-    { title: "Ivory Courtyard", bpm: 86, duration: 107.847, src: "./assets/music/slideshow-guitar/ivory-courtyard-single-guitar-106s.mp3" },
-    { title: "Sunday Parlor", bpm: 84, duration: 110.371, src: "./assets/music/slideshow-guitar/sunday-parlor-single-guitar-108s.mp3" },
-    { title: "Soft Key Return", bpm: 90, duration: 103.133, src: "./assets/music/slideshow-guitar/soft-key-return-single-guitar-101s.mp3" },
-  ].map((track) => ({
-    ...track,
-    source: "Photos By Elie",
-    license: "Original Photos By Elie cue",
-    creditRequired: false,
-    creditText: `Music: ${track.title} - Photos By Elie`,
-  })));
+  const slideshowMusicManifestUrl = `./assets/music/slideshow-guitar/pixabay/pixabay-guitar-candidates.json${contextVersion}`;
   const slideshowMusicGainDb = 0;
   const sourceVideoAudioGainDb = -20;
   const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
@@ -607,6 +602,11 @@
     "video/webm;codecs=vp8,opus",
     "video/webm",
   ]);
+  const trackPublicKey = (track) => (
+    String(track?.r2Key || track?.publicKey || track?.src || "")
+      .replace(/^\.\//, "")
+      .replace(/^\/+/, "")
+  );
   const absoluteTrackUrl = (track) => {
     if (!track?.src) return "";
     try {
@@ -615,10 +615,48 @@
       return track.src;
     }
   };
-  const withAbsoluteTrackUrl = (track) => track ? { ...track, absoluteSrc: absoluteTrackUrl(track) } : null;
-  const chooseSlideshowMusicTrack = () => withAbsoluteTrackUrl(
-    slideshowMusicTracks[Math.floor(Math.random() * slideshowMusicTracks.length)] || slideshowMusicTracks[0]
+  const workerTrackUrl = (track) => workerMediaUrl(trackPublicKey(track));
+  const withAbsoluteTrackUrl = (track) => {
+    if (!track) return null;
+    const publicKey = trackPublicKey(track);
+    return {
+      ...track,
+      publicKey,
+      absoluteSrc: isLocalHost ? absoluteTrackUrl(track) : (workerTrackUrl(track) || absoluteTrackUrl(track)),
+    };
+  };
+  const textIncludesCountry = (text, country) => {
+    const normalized = String(text || "").toLowerCase();
+    if (!normalized) return false;
+    const aliases = {
+      Spain: ["spain", "spanish", "espagne", "espana", "españa", "madrid", "barcelona", "valencia", "andalusia", "andalucia"],
+      Portugal: ["portugal", "portuguese", "lisbon", "lisboa", "porto", "sintra"],
+      France: ["france", "french", "paris", "albi", "rueil", "malmaison"],
+      USA: ["usa", "u.s.a", "united states", "america", "american", "new york", "california"],
+    }[country] || [country.toLowerCase()];
+    return aliases.some((alias) => normalized.includes(alias));
+  };
+  const inferSlideshowMusicCountry = (photos = activeSelectedPhotos()) => {
+    const text = [
+      state.gallery?.key,
+      state.gallery?.title,
+      state.payload?.customer?.name,
+      ...projectGroupsFor(photos, true).flatMap((project) => [project.projectId, project.projectTitle]),
+      ...photos.flatMap((photo) => [photo?.albumSlug, photo?.albumTitle, photo?.album, photo?.caption, photo?.country, photo?.collection]),
+    ].filter(Boolean).join(" ");
+    return slideshowMusicCountries.find((country) => textIncludesCountry(text, country)) || "Spain";
+  };
+  const activeSlideshowMusicCountry = (photos = activeSelectedPhotos()) => (
+    state.slideshowMusicCountry === "auto" ? inferSlideshowMusicCountry(photos) : normalizeSlideshowMusicCountry(state.slideshowMusicCountry)
   );
+  const chooseSlideshowMusicTrack = (photos = activeSelectedPhotos()) => {
+    const country = activeSlideshowMusicCountry(photos);
+    const countryTracks = state.slideshowMusicTracks.filter((track) => track.country === country);
+    const fallbackTracks = state.slideshowMusicTracks.filter((track) => track.country === "Spain");
+    const pool = countryTracks.length ? countryTracks : (fallbackTracks.length ? fallbackTracks : state.slideshowMusicTracks);
+    const track = pool[Math.floor(Math.random() * pool.length)] || null;
+    return withAbsoluteTrackUrl(track ? { ...track, selectedCountry: country } : null);
+  };
   const slideshowMusicCreditFor = (track) => {
     if (!track) return null;
     const text = String(track.creditText || [
@@ -652,12 +690,14 @@
     ? Math.max(3000, Math.min(7000, 2400 + (credits.length * 900)))
     : 0;
   const slideshowAudioPolicyFor = (musicTrack = null) => ({
-    selection: "random-from-single-guitar-pool",
+    selection: "random-from-country-pixabay-pool",
+    requestedCountry: state.slideshowMusicCountry,
+    resolvedCountry: musicTrack?.selectedCountry || musicTrack?.country || "",
     musicGainDb: slideshowMusicGainDb,
     sourceVideoAudioGainDb,
     sourceVideoAudioLinearGain,
     musicTrack: musicTrack ? { ...musicTrack, musicGainDb: slideshowMusicGainDb } : null,
-    musicPool: slideshowMusicTracks.map((track) => ({ ...track })),
+    musicPool: state.slideshowMusicTracks.map((track) => ({ ...track })),
     musicCredits: slideshowMusicCreditsFor(musicTrack),
   });
   const slideshowSettingsFor = (musicTrack = null) => ({
@@ -678,6 +718,43 @@
     effects: "subtle-centered-ken-burns",
     audioPolicy: slideshowAudioPolicyFor(musicTrack),
   });
+  const normalizeSlideshowMusicTrack = (track) => {
+    const src = String(track?.src || "").trim();
+    if (!src) return null;
+    return {
+      ...track,
+      bpm: Number(track?.bpm) || 0,
+      country: slideshowMusicCountries.includes(track?.country) ? track.country : "Spain",
+      source: track?.source || "Pixabay",
+      license: track?.license || "Pixabay Content License",
+      licenseUrl: track?.licenseUrl || "https://pixabay.com/service/license-summary/",
+      creditRequired: true,
+      creditText: track?.creditText || `Music: "${track?.title || "Pixabay music"}" by ${track?.author || "Pixabay contributor"} via Pixabay`,
+      r2Key: trackPublicKey(track),
+    };
+  };
+  const loadSlideshowMusicManifest = async () => {
+    try {
+      const response = await fetch(slideshowMusicManifestUrl, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const manifest = await response.json();
+      const tracks = Array.isArray(manifest?.tracks)
+        ? manifest.tracks.map(normalizeSlideshowMusicTrack).filter(Boolean)
+        : [];
+      if (!tracks.length) throw new Error("No slideshow music tracks found");
+      state.slideshowMusicTracks = tracks;
+      state.slideshowMusicManifestLoaded = true;
+      state.slideshowMusicManifestError = "";
+      syncSlideshowMusicCountryControls();
+      invalidateVideoExportCache({ schedule: state.unlocked });
+    } catch (error) {
+      state.slideshowMusicTracks = [];
+      state.slideshowMusicManifestLoaded = false;
+      state.slideshowMusicManifestError = error?.message || "Could not load slideshow music";
+      syncSlideshowMusicCountryControls();
+      console.warn("Could not load Real Estate slideshow music manifest", error);
+    }
+  };
   const kenBurnsEffects = Object.freeze([
     "center-breathe-in",
     "center-breathe-out",
@@ -873,7 +950,7 @@
     });
     document.querySelectorAll("[data-re-view-slideshow]").forEach((button) => {
       button.textContent = outputBusy && kind === "video-view" ? "Preparing video..." : t("re.output.preview_video", {}, "Preview video");
-      button.title = "View a browser slideshow/video output with random single-guitar music";
+      button.title = "View a browser slideshow/video output with country-matched Pixabay music";
       button.disabled = outputBusy || noActiveSelection;
     });
     document.querySelectorAll("[data-re-download-slideshow]").forEach((button) => {
@@ -890,7 +967,7 @@
       button.title = recordable
         ? (state.videoExportStatus === "ready"
           ? "Download the prepared real video file"
-          : "Download a real video file with random single-guitar music and a final-slide fade")
+          : "Download a real video file with country-matched Pixabay music and a final-slide fade")
         : "This browser cannot record a real video file from the slideshow";
       if (state.videoExportError && videoError) button.title = state.videoExportError;
       button.disabled = outputBusy || noActiveSelection || !recordable;
@@ -1844,6 +1921,30 @@
     if (changed) invalidateVideoExportCache();
   };
 
+  const syncSlideshowMusicCountryControls = () => {
+    const normalized = normalizeSlideshowMusicCountry(state.slideshowMusicCountry);
+    state.slideshowMusicCountry = normalized;
+    if (!elements.slideshowMusicCountry) return;
+    elements.slideshowMusicCountry.value = normalized;
+    const inferred = inferSlideshowMusicCountry();
+    const trackCount = state.slideshowMusicTracks.filter((track) => track.country === inferred).length;
+    const suffix = state.slideshowMusicManifestLoaded
+      ? `${inferred}${trackCount ? `, ${trackCount} tracks` : ""}`
+      : "loading";
+    elements.slideshowMusicCountry.title = normalized === "auto"
+      ? `Auto currently resolves to ${suffix}`
+      : `Use ${normalized} music for generated videos`;
+  };
+
+  const setSlideshowMusicCountry = (value) => {
+    const normalized = normalizeSlideshowMusicCountry(value);
+    const changed = state.slideshowMusicCountry !== normalized;
+    state.slideshowMusicCountry = normalized;
+    localStorage.setItem(slideshowMusicCountryKey, normalized);
+    syncSlideshowMusicCountryControls();
+    if (changed) invalidateVideoExportCache();
+  };
+
   const syncWatermarkControls = () => {
     if (elements.watermarkEnabled) elements.watermarkEnabled.checked = Boolean(state.watermarkEnabled);
     if (elements.watermarkText) {
@@ -1884,6 +1985,7 @@
     renderWizard();
     syncDensityControls();
     syncSlideshowOrientationControls();
+    syncSlideshowMusicCountryControls();
     syncWatermarkControls();
     syncFileActionLabels();
     window.photosByElieVersionInternalLinks?.(app);
@@ -2261,7 +2363,7 @@
 
   const buildSlideshowManifest = (photosOverride = selectedPhotos(), activeOnly = false, baseOverride = null) => {
     const base = baseOverride ? cloneBatch(baseOverride) : buildBatchManifest(photosOverride, activeOnly);
-    const musicTrack = chooseSlideshowMusicTrack();
+    const musicTrack = chooseSlideshowMusicTrack(photosOverride);
     const effectsByPhotoId = new Map((base.items || []).map((item) => [item.photoId, randomKenBurnsEffect()]));
     const slideshowOutputItem = (item) => ({
       ...item,
@@ -3407,6 +3509,10 @@
       galleryKey: state.gallery?.key || "",
       photoDurationSeconds: state.slideshowPhotoSeconds,
       outputOrientation: normalizeSlideshowOrientation(state.slideshowOrientation),
+      musicCountry: state.slideshowMusicCountry,
+      resolvedMusicCountry: activeSlideshowMusicCountry(photos),
+      musicManifestLoaded: state.slideshowMusicManifestLoaded,
+      musicTrackCount: state.slideshowMusicTracks.length,
       watermarkText: activeWatermarkText(),
       musicCreditPolicy: "append-end-card-when-required-v1",
       projects,
@@ -4962,6 +5068,9 @@
       event.target.value = String(next);
       if (changed) invalidateVideoExportCache();
     });
+    elements.slideshowMusicCountry?.addEventListener("change", (event) => {
+      setSlideshowMusicCountry(event.target.value);
+    });
     elements.watermarkEnabled?.addEventListener("change", (event) => {
       setWatermarkEnabled(event.target.checked);
     });
@@ -5327,9 +5436,11 @@
     state.pdfFormat = paperFormatFor(state.pdfFormat).key;
     if (elements.pdfFormat) elements.pdfFormat.value = state.pdfFormat;
     state.slideshowOrientation = normalizeSlideshowOrientation(state.slideshowOrientation);
+    state.slideshowMusicCountry = normalizeSlideshowMusicCountry(state.slideshowMusicCountry);
     if (!String(state.watermarkText || "").trim()) state.watermarkText = pdfWatermarkText;
     renderHero();
     render();
+    loadSlideshowMusicManifest();
     if (state.unlocked) fetchCloudDeliverables({ quiet: true }).catch(() => {});
     if (state.unlocked) scheduleVideoExportSynthesis(1200);
   };

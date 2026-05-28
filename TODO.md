@@ -4,10 +4,10 @@ Last updated: 2026-05-28
 
 ## Current Facts
 
-- Current visible build: `v89.19`.
+- Current visible build: `v89.20`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=89.19`.
-- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=89.19`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=89.20`.
+- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=89.20`.
 - Current catalog scale: `6,672` public media rows in `assets/catalog/photosbyelie.sqlite`: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
 - The catalog baseline audit is complete. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the current catalog is `+656` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `33` instead of `35` because two Italy rows were recently blocked; USA, Portugal, Mexico, and Slovakia are unchanged. The Italy `0` state was caused by missing Italy path/GPS hints, which left Florence, San Gimignano, and Pisa rows as `unknown` and therefore excluded from public export.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -72,9 +72,10 @@ Last updated: 2026-05-28
 - `v89.17` removes CC0 slideshow music clips under 30 seconds, normalizes the remaining 20 CC0 clips, simplifies the music gallery to stars/play/position/delete, plays previews at 100%, and makes moving a position slider switch to that track.
 - `v89.18` adds sixteen normalized Pixabay guitar candidates to the top of the public music gallery for iPhone auditioning and stores author/source/license/credit metadata for future video credits.
 - `v89.19` expands the public music gallery to forty normalized Pixabay country candidates: Spain, Portugal, France, and USA, with phone-friendly country filters and stored author/source/license/credit metadata for future video credits.
+- `v89.20` makes Real Estate video output use the country-tagged Pixabay music pool instead of the old original cue pool, routes public music playback through the Worker media route, and adds an Output-page music-country selector with Auto from project inference.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v89.19`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v89.20`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 first restored rows came from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows from the older phone-export folder `Pisa, 12 May 2025` were restored in `v86.10` using their original `2024 Pisa/Pisa, 12 May 2025` relative paths and IDs. The broader same-path overwrite/de-dupe work remains open because arbitrary selected-root imports can still derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.

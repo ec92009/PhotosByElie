@@ -107,8 +107,9 @@ Clock state: running
 | 2026-05-28 | 16:15 CEST | 16:19 CEST | 0:04 | Requested CC0 clip loudness normalization, removal of under-30-second clips, and a simplified gallery with stars, delete, and position-only progress. |
 | 2026-05-28 | 16:37 CEST | 16:50 CEST | 0:04 | Requested Pixabay exploration and an iPhone-ready audition page with future video music credits. |
 | 2026-05-28 | 20:00 CEST | 20:03 CEST | 0:03 | Requested tagging the current Pixabay batch as Spain and adding Portugal, France, and USA audition batches. |
+| 2026-05-28 | 20:17 CEST | 20:21 CEST | 0:04 | Requested Real Estate video output switch from the old cue pool to country-matched Pixabay music with project inference or manual country selection. |
 
 ## Totals
 
-Active collaboration time used: 5:48
+Active collaboration time used: 5:52
 Remaining budget: not set

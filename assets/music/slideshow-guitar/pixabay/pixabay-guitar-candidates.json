@@ -1,0 +1,521 @@
+{
+  "schema": "photosbyelie.pixabaySlideshowMusic.v1",
+  "source": "Pixabay Music",
+  "sourceSearches": [
+    "https://pixabay.com/music/search/flamenco-guitar/",
+    "https://pixabay.com/music/search/flamenco%20guitar%20instrumental/",
+    "https://pixabay.com/music/search/spanish%20guitar%20instrumental/",
+    "https://pixabay.com/music/search/latin%20guitar%20instrumental/",
+    "https://pixabay.com/music/search/mediterranean%20guitar/",
+    "https://pixabay.com/music/search/rumba%20guitar/",
+    "https://pixabay.com/music/search/nylon%20guitar/"
+  ],
+  "license": "Pixabay Content License",
+  "licenseUrl": "https://pixabay.com/service/license-summary/",
+  "creditRequired": true,
+  "creditNote": "Pixabay does not require attribution under its license summary, but Photos By Elie marks these tracks credit-required so video exports append music credits.",
+  "selectionNote": "Fast mobile audition pack: guitar/Latin/flamenco/nylon candidates screened from Pixabay pages for instrumental/backing/solo-guitar fit.",
+  "normalization": {
+    "targetIntegratedLufs": -14.0,
+    "targetTruePeakDbtp": -1.5,
+    "targetLra": 11.0
+  },
+  "tracks": [
+    {
+      "id": "pixabay-dance-of-andalusia",
+      "title": "Dance of Andalusia - Flamenco Acoustic Guitar Instrumental",
+      "author": "nickpanekAIassets",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-quotdance-of-andalusiaquot-flamenco-acoustic-guitar-instrumental-391298/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/08/18/audio_9ffba24e78.mp3",
+      "duration": 235.752,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-dance-of-andalusia.mp3",
+      "localFile": "pixabay-dance-of-andalusia.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Flamenco Guitar",
+        "Acoustic Guitar",
+        "Spanish Music",
+        "Instrumental",
+        "Latin Guitar",
+        "Mediterranean Music"
+      ],
+      "viewsAtSelection": 14375,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Dance of Andalusia - Flamenco Acoustic Guitar Instrumental\" by nickpanekAIassets via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-classical-guitar-flamenco-flair",
+      "title": "Classical Guitar Piece with Flamenco Flair",
+      "author": "nickpanekAIassets",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/solo-guitar-classical-guitar-piece-with-flamenco-flair-253103/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2024/10/20/audio_7c2b448428.mp3",
+      "duration": 173.664,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-classical-guitar-flamenco-flair.mp3",
+      "localFile": "pixabay-classical-guitar-flamenco-flair.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Classical Guitar",
+        "Flamenco",
+        "Spanish Guitar",
+        "Instrumental",
+        "Elegant Guitar"
+      ],
+      "viewsAtSelection": 164866,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Classical Guitar Piece with Flamenco Flair\" by nickpanekAIassets via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-spanish-flamenco-studiokolomna",
+      "title": "Spanish Flamenco",
+      "author": "StudioKolomna",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-spanish-flamenco-247239/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2024/10/03/audio_e58a0d4e0e.mp3",
+      "duration": 132.153,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-spanish-flamenco-studiokolomna.mp3",
+      "localFile": "pixabay-spanish-flamenco-studiokolomna.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Spanish",
+        "Flamenco",
+        "Spanish Guitar",
+        "Spanish Instrumental",
+        "Spanish Background"
+      ],
+      "viewsAtSelection": 141803,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Spanish Flamenco\" by StudioKolomna via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-latin-mexican-flamenco",
+      "title": "Latin Mexican Flamenco",
+      "author": "Tunetank",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-latin-mexican-flamenco-348464/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/06/13/audio_462f052c61.mp3",
+      "duration": 120.0,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-latin-mexican-flamenco.mp3",
+      "localFile": "pixabay-latin-mexican-flamenco.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Latin Flamenco",
+        "Flamenco Instrumental",
+        "Latin Guitar",
+        "Flamenco Groove"
+      ],
+      "viewsAtSelection": 9071,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Latin Mexican Flamenco\" by Tunetank via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-passionate-flamenco-instrumental",
+      "title": "Passionate Flamenco Instrumental",
+      "author": "nickpanekAIassets",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/folk-passionate-flamenco-instrumental-252482/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2024/10/18/audio_a4bdd0c019.mp3",
+      "duration": 206.88,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-passionate-flamenco-instrumental.mp3",
+      "localFile": "pixabay-passionate-flamenco-instrumental.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Flamenco",
+        "Instrumental",
+        "Spanish Guitar",
+        "Rhythmic Guitar",
+        "Folk Music"
+      ],
+      "viewsAtSelection": 18817,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Passionate Flamenco Instrumental\" by nickpanekAIassets via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-latin-flamenco-tunetank",
+      "title": "Latin Flamenco",
+      "author": "Tunetank",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/solo-guitar-latin-flamenco-347409/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/06/06/audio_e25ee0eecd.mp3",
+      "duration": 99.096,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-latin-flamenco-tunetank.mp3",
+      "localFile": "pixabay-latin-flamenco-tunetank.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Latin Flamenco",
+        "Flamenco Instrumental",
+        "Latin Guitar",
+        "Flamenco Groove"
+      ],
+      "viewsAtSelection": 5657,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Latin Flamenco\" by Tunetank via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-spanish-motifs",
+      "title": "Spanish Motifs",
+      "author": "Olele44",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-spanish-motifs-329486/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/04/19/audio_ff0abace8c.mp3",
+      "duration": 93.571,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-spanish-motifs.mp3",
+      "localFile": "pixabay-spanish-motifs.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Flamenco",
+        "Spanish Guitar",
+        "Instrumental",
+        "Acoustic Guitar",
+        "Bright"
+      ],
+      "viewsAtSelection": 22860,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Spanish Motifs\" by Olele44 via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-spanish-nastelbom",
+      "title": "Spanish",
+      "author": "NastelBom",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/solo-guitar-spanish-444603/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/12/05/audio_4dacc6ce43.mp3",
+      "duration": 120.033,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-spanish-nastelbom.mp3",
+      "localFile": "pixabay-spanish-nastelbom.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Spanish",
+        "Spanish Guitar",
+        "Spanish Instrumental",
+        "Spanish Acoustic"
+      ],
+      "viewsAtSelection": 16027,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Spanish\" by NastelBom via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-latin-acoust-guitar-music",
+      "title": "Latin Acoust Guitar Music",
+      "author": "Tunetank",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-latin-acoust-guitar-music-349783/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/06/13/audio_1229002cf4.mp3",
+      "duration": 154.392,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-latin-acoust-guitar-music.mp3",
+      "localFile": "pixabay-latin-acoust-guitar-music.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Latin Acoustic Guitar",
+        "Acoustic Guitar",
+        "Latin Guitar Instrumental",
+        "Background"
+      ],
+      "viewsAtSelection": 2746,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Latin Acoust Guitar Music\" by Tunetank via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-latin-dancing-guitar",
+      "title": "Latin Dancing Guitar",
+      "author": "AbsoluteSound",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/solo-guitar-latin-dancing-guitar-510789/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2026/03/29/audio_6014eb3861.mp3",
+      "duration": 140.042,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-latin-dancing-guitar.mp3",
+      "localFile": "pixabay-latin-dancing-guitar.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Guitar",
+        "Acoustic Guitar",
+        "Guitar Instrumental",
+        "Background Guitar",
+        "Clean Guitar"
+      ],
+      "viewsAtSelection": 10872,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Latin Dancing Guitar\" by AbsoluteSound via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-latin-guitars-and-strings",
+      "title": "Latin Guitars and Strings",
+      "author": "AbsoluteSound",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-latin-guitars-and-strings-505781/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2026/03/20/audio_8cb1beb838.mp3",
+      "duration": 122.227,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-latin-guitars-and-strings.mp3",
+      "localFile": "pixabay-latin-guitars-and-strings.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Guitar",
+        "Acoustic Guitar",
+        "Guitar Instrumental",
+        "Background Guitar",
+        "Strings"
+      ],
+      "viewsAtSelection": 3508,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Latin Guitars and Strings\" by AbsoluteSound via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-gypsy-love-song-instrumental",
+      "title": "Gypsy Love Song - Instrumental",
+      "author": "surfohi",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-gypsy-love-song-instrumental-12015/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2021/12/11/audio_b6458e2579.mp3",
+      "duration": 626.965,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-gypsy-love-song-instrumental.mp3",
+      "localFile": "pixabay-gypsy-love-song-instrumental.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Guitar",
+        "Latin",
+        "Instrumental",
+        "Acoustic Guitar",
+        "Romantic",
+        "Elegant"
+      ],
+      "viewsAtSelection": 89777,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Gypsy Love Song - Instrumental\" by surfohi via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-spanish-guitar-acoustic",
+      "title": "Spanish Guitar Acoustic",
+      "author": "bp6zflyzky4",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/acoustic-group-spanish-guitar-acoustic-538756/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2026/05/22/audio_43f3649536.mp3",
+      "duration": 179.112,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-spanish-guitar-acoustic.mp3",
+      "localFile": "pixabay-spanish-guitar-acoustic.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Guitar",
+        "Acoustic Guitar",
+        "Spanish Guitar",
+        "Flamenco Guitar",
+        "Soft Guitar"
+      ],
+      "viewsAtSelection": 131,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Spanish Guitar Acoustic\" by bp6zflyzky4 via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-rumba-spanish-chords-backing-track",
+      "title": "Rumba Spanish Chords Backing Track",
+      "author": "AhmadMousaviPour",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/solo-guitar-21rumba-spanish-chords-backing-track-306523/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/02/26/audio_fb0c42c03b.mp3",
+      "duration": 242.495,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-rumba-spanish-chords-backing-track.mp3",
+      "localFile": "pixabay-rumba-spanish-chords-backing-track.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Guitar",
+        "Spanish Chords",
+        "Flamenco",
+        "Rumba",
+        "Backing Track"
+      ],
+      "viewsAtSelection": 3972,
+      "aiGenerated": false,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Rumba Spanish Chords Backing Track\" by AhmadMousaviPour via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-rumba-catalana-chill-out-barcelona-08",
+      "title": "Rumba Catalana Chill Out - Barcelona Music 08",
+      "author": "vjgalaxy",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/bossa-nova-rumba-catalana-chill-out-barcelona-music-08-439702/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2025/11/19/audio_ba86cb294b.mp3",
+      "duration": 171.552,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-rumba-catalana-chill-out-barcelona-08.mp3",
+      "localFile": "pixabay-rumba-catalana-chill-out-barcelona-08.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Mediterranean",
+        "Guitar",
+        "Barcelona",
+        "Chill Out",
+        "Catalan Rumba",
+        "Lounge"
+      ],
+      "viewsAtSelection": 2330,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Rumba Catalana Chill Out - Barcelona Music 08\" by vjgalaxy via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    },
+    {
+      "id": "pixabay-dreaming-on-guitar-strings",
+      "title": "Dreaming on guitar strings",
+      "author": "Surprising_Media",
+      "source": "Pixabay",
+      "sourceUrl": "https://pixabay.com/music/solo-guitar-dreaming-on-guitar-strings-512774/",
+      "sourceAudioUrl": "https://cdn.pixabay.com/audio/2026/04/02/audio_40639e2c8e.mp3",
+      "duration": 597.696,
+      "src": "./assets/music/slideshow-guitar/pixabay/pixabay-dreaming-on-guitar-strings.mp3",
+      "localFile": "pixabay-dreaming-on-guitar-strings.mp3",
+      "tempo": "audition",
+      "tags": [
+        "Ambient",
+        "Romantic",
+        "Background",
+        "Nylon Guitar",
+        "Instrumental",
+        "Guitar Solo"
+      ],
+      "viewsAtSelection": 5517,
+      "aiGenerated": true,
+      "license": "Pixabay Content License",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "creditRequired": true,
+      "creditText": "Music: \"Dreaming on guitar strings\" by Surprising_Media via Pixabay",
+      "normalized": {
+        "targetIntegratedLufs": -14.0,
+        "targetTruePeakDbtp": -1.5,
+        "targetLra": 11.0,
+        "note": "Normalized locally for Photos By Elie mobile audition consistency."
+      }
+    }
+  ]
+}

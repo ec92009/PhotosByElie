@@ -97,14 +97,19 @@ const createFakeR2 = (initial = {}) => {
         size: value.body.byteLength,
       };
     },
-    get: async (key) => {
+    get: async (key, options = {}) => {
       const value = values.get(key);
       if (!value) return null;
+      const range = options.range || null;
+      const start = Number.isInteger(range?.offset) ? Math.max(0, range.offset) : 0;
+      const end = Number.isInteger(range?.length) ? Math.min(value.body.byteLength, start + range.length) : value.body.byteLength;
+      const body = value.body.slice(start, end);
       return {
         httpMetadata: value.httpMetadata,
         customMetadata: value.customMetadata,
-        arrayBuffer: async () => value.body.buffer.slice(value.body.byteOffset, value.body.byteOffset + value.body.byteLength),
-        body: value.body,
+        size: value.body.byteLength,
+        arrayBuffer: async () => body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength),
+        body,
       };
     },
     put: async (key, body, options = {}) => {
@@ -1043,6 +1048,34 @@ test("deployed Worker serves public R2 previews through the media route", async 
   const response = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), env);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "image/jpeg");
+  assert.equal(response.headers.get("accept-ranges"), "bytes");
   assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, immutable");
   assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "ffd8ffd9");
+});
+
+test("deployed Worker serves public R2 media byte ranges", async () => {
+  const publicR2 = createFakeR2({
+    "assets/music/slideshow-guitar/pixabay/sample.mp3": {
+      body: new Uint8Array([0, 1, 2, 3, 4, 5]),
+      httpMetadata: { contentType: "audio/mpeg" },
+    },
+  });
+  const env = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: createFakeR2(),
+    PUBLIC_MEDIA: publicR2,
+    DELIVERY_MEDIA: createFakeR2(),
+    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+  };
+
+  const response = await deployedWorker.fetch(new Request("https://worker.test/media/assets/music/slideshow-guitar/pixabay/sample.mp3", {
+    headers: { range: "bytes=1-3" },
+  }), env);
+
+  assert.equal(response.status, 206);
+  assert.equal(response.headers.get("content-type"), "audio/mpeg");
+  assert.equal(response.headers.get("accept-ranges"), "bytes");
+  assert.equal(response.headers.get("content-length"), "3");
+  assert.equal(response.headers.get("content-range"), "bytes 1-3/6");
+  assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "010203");
 });

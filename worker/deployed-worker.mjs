@@ -54,11 +54,38 @@ const realEstateGalleriesFor = (env = {}) => {
   return legacy?.username && legacy?.accessCode ? [legacy] : [];
 };
 
-const mediaHeaders = (object = null) => ({
+const mediaHeaders = (object = null, extraHeaders = {}) => ({
   "access-control-allow-origin": "*",
+  "accept-ranges": "bytes",
   "cache-control": "public, max-age=31536000, immutable",
   "content-type": object?.httpMetadata?.contentType || "image/jpeg",
+  ...extraHeaders,
 });
+
+const parseSingleByteRange = (rangeHeader, size) => {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader || "").trim());
+  if (!match || !Number.isFinite(size) || size < 1) return null;
+
+  const [, startRaw, endRaw] = match;
+  if (!startRaw && !endRaw) return null;
+
+  if (!startRaw) {
+    const suffixLength = Number(endRaw);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength < 1) return null;
+    const length = Math.min(suffixLength, size);
+    const start = size - length;
+    return { offset: start, length, start, end: size - 1 };
+  }
+
+  const start = Number(startRaw);
+  const requestedEnd = endRaw ? Number(endRaw) : size - 1;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(requestedEnd) || start >= size || requestedEnd < start) {
+    return null;
+  }
+
+  const end = Math.min(requestedEnd, size - 1);
+  return { offset: start, length: end - start + 1, start, end };
+};
 
 const publicMediaResponse = async (request, env) => {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -77,7 +104,47 @@ const publicMediaResponse = async (request, env) => {
     });
   }
 
-  const object = await requiredBinding(env, "PUBLIC_MEDIA").get(key);
+  const bucket = requiredBinding(env, "PUBLIC_MEDIA");
+  const rangeHeader = request.headers.get("range");
+
+  if (rangeHeader) {
+    const metadata = typeof bucket.head === "function" ? await bucket.head(key) : await bucket.get(key);
+    if (!metadata) {
+      return new Response("Media not found", {
+        status: 404,
+        headers: { "access-control-allow-origin": "*" },
+      });
+    }
+
+    const size = Number(metadata.size);
+    const range = parseSingleByteRange(rangeHeader, size);
+    if (!range) {
+      return new Response("Requested range not satisfiable", {
+        status: 416,
+        headers: mediaHeaders(metadata, {
+          "content-range": Number.isFinite(size) ? `bytes */${size}` : "bytes */*",
+        }),
+      });
+    }
+
+    const object = request.method === "HEAD" ? metadata : await bucket.get(key, { range: { offset: range.offset, length: range.length } });
+    if (!object) {
+      return new Response("Media not found", {
+        status: 404,
+        headers: { "access-control-allow-origin": "*" },
+      });
+    }
+
+    return new Response(request.method === "HEAD" ? null : object.body, {
+      status: 206,
+      headers: mediaHeaders(object, {
+        "content-length": String(range.length),
+        "content-range": `bytes ${range.start}-${range.end}/${size}`,
+      }),
+    });
+  }
+
+  const object = await bucket.get(key);
   if (!object) {
     return new Response("Media not found", {
       status: 404,

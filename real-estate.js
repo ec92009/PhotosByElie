@@ -588,7 +588,13 @@
     { title: "Ivory Courtyard", bpm: 86, duration: 107.847, src: "./assets/music/slideshow-guitar/ivory-courtyard-single-guitar-106s.mp3" },
     { title: "Sunday Parlor", bpm: 84, duration: 110.371, src: "./assets/music/slideshow-guitar/sunday-parlor-single-guitar-108s.mp3" },
     { title: "Soft Key Return", bpm: 90, duration: 103.133, src: "./assets/music/slideshow-guitar/soft-key-return-single-guitar-101s.mp3" },
-  ]);
+  ].map((track) => ({
+    ...track,
+    source: "Photos By Elie",
+    license: "Original Photos By Elie cue",
+    creditRequired: false,
+    creditText: `Music: ${track.title} - Photos By Elie`,
+  })));
   const slideshowMusicGainDb = 0;
   const sourceVideoAudioGainDb = -20;
   const sourceVideoAudioLinearGain = 10 ** (sourceVideoAudioGainDb / 20);
@@ -613,6 +619,38 @@
   const chooseSlideshowMusicTrack = () => withAbsoluteTrackUrl(
     slideshowMusicTracks[Math.floor(Math.random() * slideshowMusicTracks.length)] || slideshowMusicTracks[0]
   );
+  const slideshowMusicCreditFor = (track) => {
+    if (!track) return null;
+    const text = String(track.creditText || [
+      track.title ? `Music: ${track.title}` : "",
+      track.author ? `by ${track.author}` : "",
+      track.license ? `(${track.license})` : "",
+    ].filter(Boolean).join(" ")).trim();
+    if (!text) return null;
+    return {
+      text,
+      required: Boolean(track.creditRequired),
+      title: track.title || "",
+      author: track.author || "",
+      source: track.source || "",
+      sourceUrl: track.sourceUrl || "",
+      license: track.license || "",
+      licenseUrl: track.licenseUrl || "",
+    };
+  };
+  const slideshowMusicCreditsFor = (track) => ({
+    renderPolicy: "append-end-card-when-required",
+    durationSeconds: 4,
+    entries: [slideshowMusicCreditFor(track)].filter(Boolean),
+  });
+  const slideshowRequiredCreditsFor = (manifest) => {
+    const audioPolicy = manifest?.slideshowSettings?.audioPolicy || {};
+    const entries = Array.isArray(audioPolicy.musicCredits?.entries) ? audioPolicy.musicCredits.entries : [];
+    return entries.filter((entry) => entry?.required && String(entry.text || "").trim());
+  };
+  const slideshowCreditDurationMsFor = (credits = []) => credits.length
+    ? Math.max(3000, Math.min(7000, 2400 + (credits.length * 900)))
+    : 0;
   const slideshowAudioPolicyFor = (musicTrack = null) => ({
     selection: "random-from-single-guitar-pool",
     musicGainDb: slideshowMusicGainDb,
@@ -620,6 +658,7 @@
     sourceVideoAudioLinearGain,
     musicTrack: musicTrack ? { ...musicTrack, musicGainDb: slideshowMusicGainDb } : null,
     musicPool: slideshowMusicTracks.map((track) => ({ ...track })),
+    musicCredits: slideshowMusicCreditsFor(musicTrack),
   });
   const slideshowSettingsFor = (musicTrack = null) => ({
     mode: "one-slideshow-per-project",
@@ -2274,6 +2313,8 @@
     const outputRatio = outputOrientation === "portrait" ? 9 / 16 : 16 / 9;
     const slideshowWatermarkText = String(manifest.slideshowSettings?.watermarkText || "").trim();
     const slides = slideshowSlidesFor(manifest);
+    const musicCredits = slideshowRequiredCreditsFor(manifest);
+    const creditDurationMs = slideshowCreditDurationMsFor(musicCredits);
     const safeJson = JSON.stringify(manifest, null, 2)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
@@ -2283,6 +2324,10 @@
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
     const safeMusicJson = JSON.stringify(musicTrack)
+      .replace(/</g, "\\u003c")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029");
+    const safeCreditsJson = JSON.stringify(musicCredits)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
@@ -2314,6 +2359,11 @@
     .photo-title{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(34px,7vmin,92px) clamp(14px,3vmin,34px) clamp(36px,6vmin,68px);background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0));color:#fff;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,.82);pointer-events:none}
     .photo-title p{margin:0 auto .2em;font-size:clamp(.62rem,1.65vmin,1rem);font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.84)}
     .photo-title h1{margin:0 auto;max-width:min(760px,82%);font-size:clamp(1.35rem,4.8vmin,4.2rem);line-height:.98}
+    .credits-card{position:absolute;inset:0;display:grid;place-items:center;padding:clamp(24px,7vw,90px);background:#050505;text-align:center}
+    .credits-card-inner{display:grid;gap:clamp(10px,2.4vmin,20px);max-width:min(820px,86vw)}
+    .credits-card p{margin:0;color:rgba(255,255,255,.72);font-size:clamp(.8rem,2vmin,1.1rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .credits-card strong{display:block;color:#fff;font-size:clamp(1.15rem,3.4vmin,2.4rem);line-height:1.08;text-shadow:0 2px 10px rgba(0,0,0,.72)}
+    .credits-card small{display:block;color:rgba(255,255,255,.64);font-size:clamp(.72rem,1.6vmin,1rem);font-weight:700;line-height:1.35}
     @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
     .slide-count{position:absolute;left:clamp(10px,2.4vw,22px);bottom:clamp(10px,2.4vw,22px);z-index:4;border-radius:4px;background:rgba(80,80,80,.78);color:#fff;padding:3px 7px;font-size:.78rem;font-weight:850;line-height:1;text-shadow:none}
     .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
@@ -2346,6 +2396,8 @@
     <script>
       const slides = ${safeSlidesJson};
       const musicTrack = ${safeMusicJson};
+      const musicCredits = ${safeCreditsJson};
+      const creditDurationMs = ${Number(creditDurationMs)};
       const watermarkText = ${JSON.stringify(slideshowWatermarkText)};
       const videoRatio = ${Number(outputRatio).toFixed(6)};
       const stage = document.querySelector(".stage");
@@ -2358,6 +2410,7 @@
       let fadeInterval = 0;
       let fadeDone = null;
       let playing = true;
+      let showingCredits = false;
       let soundBlocked = Boolean(music);
       const sourceVideoVolume = Math.min(1, Math.max(0, ${Number(previewSourceVideoVolume).toFixed(4)}));
       const musicVolume = Math.pow(10, Number(musicTrack?.musicGainDb ?? ${previewMusicGainDb}) / 20);
@@ -2404,6 +2457,14 @@
         const cardStyle = attr(photoCardStyle(slide));
         const orientation = slide.orientation === "portrait" ? "portrait" : "landscape";
         return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><div class="photo-content" style="' + style + '"><div class="photo-card" style="' + cardStyle + '"><img class="slide-photo" alt="" src="' + source + '">' + watermarkSheetHtml() + photoTitleHtml(slide) + counterHtml(counterText) + '</div></div></div>';
+      };
+      const creditsHtml = () => {
+        const entries = Array.isArray(musicCredits) ? musicCredits : [];
+        return '<div class="credits-card"><div class="credits-card-inner"><p>Music credit</p>' + entries.map((entry) => {
+          const text = attr(entry?.text || "");
+          const detail = [entry?.source, entry?.license].filter(Boolean).join(" / ");
+          return '<strong>' + text + '</strong>' + (detail ? '<small>' + attr(detail) + '</small>' : '');
+        }).join("") + '</div></div>';
       };
 
       const clearTimer = () => {
@@ -2494,6 +2555,11 @@
         music.volume = 0;
         music.pause();
       };
+      const finishPlayback = () => {
+        playing = false;
+        stopMusicAtEnd();
+        syncPlayButton();
+      };
       const syncMusicFade = (slide) => {
         if (!music) return;
         if (!playing || index !== slides.length - 1) {
@@ -2507,6 +2573,11 @@
       const render = () => {
         clearTimer();
         applyStageSize();
+        if (showingCredits) {
+          frame.innerHTML = creditsHtml();
+          if (playing) timer = window.setTimeout(finishPlayback, Math.max(1000, creditDurationMs || 3500));
+          return;
+        }
         const slide = slides[index];
         const counterText = (index + 1) + "/" + slides.length;
         if (!slide) {
@@ -2537,6 +2608,11 @@
           return;
         }
         if (index >= slides.length - 1) {
+          if (musicCredits.length && !showingCredits) {
+            showingCredits = true;
+            render();
+            return;
+          }
           playing = false;
           if (music && music.volume > 0.01) {
             beginMusicFade(600, stopMusicAtEnd);
@@ -2551,7 +2627,10 @@
       };
       playButton?.addEventListener("click", async () => {
         if (soundBlocked) {
-          if (!playing && index >= slides.length - 1) index = 0;
+          if (!playing && (index >= slides.length - 1 || showingCredits)) {
+            index = 0;
+            showingCredits = false;
+          }
           playing = true;
           await playMusic();
           const video = frame.querySelector("video");
@@ -2559,9 +2638,12 @@
           render();
           return;
         }
-        const replayFromEnd = !playing && index >= slides.length - 1;
+        const replayFromEnd = !playing && (index >= slides.length - 1 || showingCredits);
         playing = !playing;
-        if (playing && replayFromEnd) index = 0;
+        if (playing && replayFromEnd) {
+          index = 0;
+          showingCredits = false;
+        }
         syncPlayButton();
         if (music && playing && index === 0) music.volume = musicVolume;
         const video = frame.querySelector("video");
@@ -3029,6 +3111,68 @@
     context.restore();
   };
 
+  const canvasTextLines = (context, text, maxWidth) => {
+    const words = String(text || "").split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = "";
+    words.forEach((word) => {
+      const nextLine = line ? `${line} ${word}` : word;
+      if (line && context.measureText(nextLine).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = nextLine;
+      }
+    });
+    if (line) lines.push(line);
+    return lines.length ? lines : [""];
+  };
+
+  const drawRecordedCreditsFrame = (context, canvas, credits) => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#050505";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const safeCredits = Array.isArray(credits) ? credits.filter((entry) => String(entry?.text || "").trim()) : [];
+    if (!safeCredits.length) return;
+
+    const maxWidth = canvas.width * 0.78;
+    const eyebrowSize = Math.max(22, Math.round(Math.min(canvas.width, canvas.height) / 34));
+    const titleSize = Math.max(34, Math.round(Math.min(canvas.width, canvas.height) / 20));
+    const detailSize = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) / 42));
+    const titleLineHeight = titleSize * 1.14;
+    const detailLineHeight = detailSize * 1.32;
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(255,255,255,0.72)";
+    context.font = `900 ${eyebrowSize}px Arial, Helvetica, sans-serif`;
+    context.fillText("MUSIC CREDIT", canvas.width / 2, canvas.height * 0.28);
+
+    let y = canvas.height * 0.42;
+    safeCredits.forEach((entry) => {
+      context.fillStyle = "#ffffff";
+      context.font = `900 ${titleSize}px Arial, Helvetica, sans-serif`;
+      canvasTextLines(context, entry.text, maxWidth).forEach((line) => {
+        context.fillText(line, canvas.width / 2, y);
+        y += titleLineHeight;
+      });
+
+      const detail = [entry.source, entry.license].filter(Boolean).join(" / ");
+      if (detail) {
+        y += detailLineHeight * 0.2;
+        context.fillStyle = "rgba(255,255,255,0.64)";
+        context.font = `700 ${detailSize}px Arial, Helvetica, sans-serif`;
+        canvasTextLines(context, detail, maxWidth).forEach((line) => {
+          context.fillText(line, canvas.width / 2, y);
+          y += detailLineHeight;
+        });
+      }
+      y += titleLineHeight * 0.45;
+    });
+    context.restore();
+  };
+
   const drawRecordedSlideFrame = (context, canvas, slide, media, progress, counterText, watermarkText) => {
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#050505";
@@ -3088,12 +3232,15 @@
       start: () => {
         const now = context.currentTime + 0.05;
         const duration = Math.max(0.1, totalDurationSeconds);
+        const creditsDuration = slideshowCreditDurationMsFor(slideshowRequiredCreditsFor(manifest)) / 1000;
+        const musicEnd = Math.max(0.1, duration - creditsDuration);
         const fadeDuration = Math.max(0.3, Math.min(duration, Number(manifest.slideshowSettings?.musicFadeOutSeconds || state.slideshowPhotoSeconds) || state.slideshowPhotoSeconds));
-        const fadeStart = Math.max(0, duration - fadeDuration);
+        const fadeStart = Math.max(0, musicEnd - fadeDuration);
         const volume = Math.max(0, Math.min(1, Math.pow(10, Number(musicTrack?.musicGainDb ?? slideshowMusicGainDb) / 20)));
         gain.gain.setValueAtTime(volume, now);
         gain.gain.setValueAtTime(volume, now + fadeStart);
-        gain.gain.linearRampToValueAtTime(0.0001, now + duration);
+        gain.gain.linearRampToValueAtTime(0.0001, now + musicEnd);
+        if (duration > musicEnd + 0.01) gain.gain.setValueAtTime(0.0001, now + duration);
         source.start(now);
         source.stop(now + duration + 0.25);
       },
@@ -3112,7 +3259,9 @@
     canvas.height = size.height;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("This browser cannot render the slideshow video.");
-    const totalDurationSeconds = slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0);
+    const requiredCredits = slideshowRequiredCreditsFor(manifest);
+    const creditDurationMs = slideshowCreditDurationMsFor(requiredCredits);
+    const totalDurationSeconds = slides.reduce((sum, slide) => sum + (Math.max(1000, Number(slide.durationMs) || 0) / 1000), 0) + (creditDurationMs / 1000);
     let canvasStream = null;
     let audio = null;
     let stream = null;
@@ -3169,6 +3318,18 @@
             media.element.removeAttribute("src");
             media.element.load();
           }
+        }
+      }
+      if (requiredCredits.length) {
+        const duration = Math.max(1000, creditDurationMs || 3500);
+        const startedAt = performance.now();
+        let elapsed = 0;
+        while (elapsed < duration) {
+          throwIfVideoExportAborted(signal);
+          elapsed = performance.now() - startedAt;
+          drawRecordedCreditsFrame(context, canvas, requiredCredits);
+          onProgress?.({ phase: "credits", index: slides.length, total: slides.length + 1, progress: Math.max(0, Math.min(1, elapsed / duration)) });
+          await nextAnimationFrame();
         }
       }
     } finally {
@@ -3242,11 +3403,12 @@
       })),
     }));
     return JSON.stringify({
-      schema: "photosbyelie.realEstateVideoCache.v2",
+      schema: "photosbyelie.realEstateVideoCache.v3",
       galleryKey: state.gallery?.key || "",
       photoDurationSeconds: state.slideshowPhotoSeconds,
       outputOrientation: normalizeSlideshowOrientation(state.slideshowOrientation),
       watermarkText: activeWatermarkText(),
+      musicCreditPolicy: "append-end-card-when-required-v1",
       projects,
     });
   };

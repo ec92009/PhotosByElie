@@ -103,8 +103,9 @@ Clock state: running
 | 2026-05-28 | 09:12 CEST | 09:15 CEST | 0:03 | Requested centered Real Estate video titles, playback-style controls, and a repaired final-slide music fade. |
 | 2026-05-28 | 09:18 CEST | 09:19 CEST | 0:01 | Requested Real Estate downloads use true PDF and video files with matching phone and desktop behavior. |
 | 2026-05-28 | 09:40 CEST | 09:43 CEST | 0:03 | Reported the Real Estate vertical video hiccup and requested separate PDF/video download buttons plus proactive video preparation. |
+| 2026-05-28 | 14:38 CEST | 14:40 CEST | 0:02 | Requested public-domain Spanish guitar clips for the audio gallery and future video credit handling. |
 
 ## Totals
 
-Active collaboration time used: 5:35
+Active collaboration time used: 5:37
 Remaining budget: not set

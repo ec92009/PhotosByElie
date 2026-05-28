@@ -5,7 +5,8 @@ The default proof pulls random still photos from the Elie real-estate context,
 applies random Ken Burns-style motion, chooses one configured single-guitar cue
 at random, and mixes music at 0 dB. The shared slideshow music config also
 records the production rule for videos: source video audio is mixed 20 dB under
-the generated music.
+the generated music. Track credit metadata is preserved in the proof manifest
+so any required video credit end-card can be audited with the render.
 """
 
 from __future__ import annotations
@@ -145,6 +146,29 @@ def load_music(rng: random.Random) -> tuple[dict[str, Any], dict[str, Any], Path
     if not path.exists():
         raise RuntimeError(f"Music track is missing: {path}")
     return config, track, path
+
+
+def music_credit_entry(track: dict[str, Any]) -> dict[str, Any] | None:
+    text = str(track.get("creditText") or "").strip()
+    if not text:
+        parts = [
+            f"Music: {track.get('title')}" if track.get("title") else "",
+            f"by {track.get('author')}" if track.get("author") else "",
+            f"({track.get('license')})" if track.get("license") else "",
+        ]
+        text = " ".join(part for part in parts if part).strip()
+    if not text:
+        return None
+    return {
+        "text": text,
+        "required": bool(track.get("creditRequired")),
+        "title": track.get("title", ""),
+        "author": track.get("author", ""),
+        "source": track.get("source", ""),
+        "sourceUrl": track.get("sourceUrl", ""),
+        "license": track.get("license", ""),
+        "licenseUrl": track.get("licenseUrl", ""),
+    }
 
 
 def ffmpeg_drawtext_escape(value: str) -> str:
@@ -421,6 +445,7 @@ def main() -> None:
     total_seconds = args.count * args.seconds
     watermark_text = "" if args.no_watermark else str(args.watermark_text or "").strip()
     font = choose_font()
+    music_credit = music_credit_entry(track)
 
     with tempfile.TemporaryDirectory(dir=output_dir) as tmp:
         tmp_path = Path(tmp)
@@ -464,6 +489,10 @@ def main() -> None:
             **track,
             "path": str(music_path),
             "musicGainDb": config.get("musicGainDb", 0),
+        },
+        "musicCredits": {
+            **(config.get("creditPolicy") or {"renderPolicy": "append-end-card-when-required", "durationSeconds": 4}),
+            "entries": [music_credit] if music_credit else [],
         },
         "sourceVideoAudioGainDb": config.get("sourceVideoAudioGainDb", -20),
         "sourceVideoAudioLinearGain": config.get("sourceVideoAudioLinearGain", 0.1),

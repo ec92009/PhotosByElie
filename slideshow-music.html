@@ -4,9 +4,9 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Photos By Elie | Slideshow Guitar</title>
-  <meta name="description" content="Subdued classic guitar cues for Photos By Elie real estate slideshows."/>
+  <meta name="description" content="Subdued classic guitar cues and CC0 Spanish-guitar references for Photos By Elie real estate slideshows."/>
   <meta property="og:title" content="Photos By Elie Slideshow Guitar"/>
-  <meta property="og:description" content="Forty-one quiet guitar cues for real estate slideshow playback, including gentler single-guitar pieces at 80-90 bpm."/>
+  <meta property="og:description" content="Seventy guitar cues for real estate slideshow playback: forty-one original pieces and twenty-nine CC0 Spanish-guitar references."/>
   <meta property="og:type" content="website"/>
   <meta property="og:image" content="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
@@ -18,9 +18,9 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="./shared.css?v=89.15"/>
-  <link rel="stylesheet" href="./styles.css?v=89.15"/>
-  <link rel="stylesheet" href="./photos.css?v=89.15"/>
+  <link rel="stylesheet" href="./shared.css?v=89.16"/>
+  <link rel="stylesheet" href="./styles.css?v=89.16"/>
+  <link rel="stylesheet" href="./photos.css?v=89.16"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -223,7 +223,20 @@
       text-decoration: none;
     }
 
-    .music-file-link:hover {
+    .music-file-stack {
+      display: grid;
+      gap: 4px;
+    }
+
+    .music-source-link {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .music-file-link:hover,
+    .music-source-link:hover {
       color: var(--music-accent);
     }
 
@@ -272,7 +285,7 @@
       <a href="./real-estate.html?logout=1&client=elie">Client login</a> <span>|</span>
       <a class="is-active" href="./slideshow-music.html">Music</a>
     </nav>
-    <span class="site-version-badge">v89.15</span>
+    <span class="site-version-badge">v89.16</span>
     <div class="header-controls">
       <button class="language-toggle" type="button" data-language-toggle>English</button>
       <button class="theme-toggle" type="button" data-theme-toggle><span class="mode-light" data-i18n="theme.night">Night</span><span class="mode-dark" data-i18n="theme.day">Day</span></button>
@@ -282,9 +295,9 @@
   <main id="main-content" class="shell music-shell">
     <section class="panel music-hero" aria-labelledby="music-title">
       <p class="eyebrow">Real estate slideshow audio</p>
-      <h1 id="music-title">Classic Guitar Library</h1>
-      <p class="lead">Original quiet guitar cues for property slide shows, social reels, and client previews, now with gentler single-guitar pieces at 80-90 bpm.</p>
-      <p class="music-status" id="musicStatus">Ready to audition</p>
+      <h1 id="music-title">Classic Guitar Gallery</h1>
+      <p class="lead">Original quiet guitar cues for property slide shows, social reels, and client previews, plus the full 29-file CC0 Spanish-guitar reference set from Wikimedia Commons.</p>
+      <p class="music-status" id="musicStatus">Loading public-domain clips...</p>
     </section>
 
     <section class="music-table-wrap" aria-label="Slideshow guitar pieces">
@@ -318,8 +331,8 @@
     </div>
   </footer>
 
-  <script src="./photos.js?v=89.15"></script>
-  <script src="./site-version.js?v=89.15"></script>
+  <script src="./photos.js?v=89.16"></script>
+  <script src="./site-version.js?v=89.16"></script>
   <script>
     (() => {
       const tracks = [
@@ -612,6 +625,7 @@
         }
       ];
 
+      const publicDomainManifestUrl = "./assets/music/slideshow-guitar/public-domain/commons-spanish-guitar.json?v=89.16";
       const rowRoot = document.getElementById("musicRows");
       const status = document.getElementById("musicStatus");
       const players = [];
@@ -622,6 +636,58 @@
         const minutes = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
         return `${minutes}:${secs}`;
+      };
+
+      const escapeHtml = (value) => String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+      const trackTempoLabel = (track) => {
+        const bpm = Number(track.bpm);
+        if (Number.isFinite(bpm) && bpm > 0) return `${bpm} bpm`;
+        return String(track.tempo || "free tempo");
+      };
+
+      const trackMetaLabel = (track) => [
+        formatTime(Number(track.duration)),
+        trackTempoLabel(track),
+        track.license || "",
+      ].filter(Boolean).join(" / ");
+
+      const trackLinksHtml = (track) => {
+        const links = [`<a class="music-file-link" href="${escapeHtml(track.src)}">MP3</a>`];
+        if (track.sourceUrl) {
+          links.push(`<a class="music-source-link" href="${escapeHtml(track.sourceUrl)}" target="_blank" rel="noreferrer">Source</a>`);
+        }
+        if (track.licenseUrl) {
+          links.push(`<a class="music-source-link" href="${escapeHtml(track.licenseUrl)}" target="_blank" rel="noreferrer">${escapeHtml(track.license || "License")}</a>`);
+        }
+        return `<span class="music-file-stack">${links.join("")}</span>`;
+      };
+
+      const normalizePublicDomainTrack = (track) => ({
+        ...track,
+        title: `CC0 ${track.title || "Spanish Guitar"}`,
+        collection: "Public domain reference",
+        mood: track.mood || `Public-domain nylon-string reference from ${track.source || "Wikimedia Commons"}`,
+        bpm: 0,
+        tempo: track.tempo || "free tempo",
+        source: track.source || "Wikimedia Commons",
+        license: track.license || "CC0 1.0",
+        licenseUrl: track.licenseUrl || "https://creativecommons.org/publicdomain/zero/1.0/",
+        creditRequired: Boolean(track.creditRequired),
+      });
+
+      const loadPublicDomainTracks = async () => {
+        const response = await fetch(publicDomainManifestUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const manifest = await response.json();
+        const publicDomainTracks = Array.isArray(manifest.tracks) ? manifest.tracks.map(normalizePublicDomainTrack) : [];
+        tracks.push(...publicDomainTracks);
+        return publicDomainTracks.length;
       };
 
       const playIcon = () => (
@@ -676,77 +742,89 @@
         });
       };
 
-      tracks.forEach((track, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td class="music-number">${String(index + 1).padStart(2, "0")}</td>
-          <td class="music-piece"><strong>${track.title}</strong><span>${formatTime(track.duration)} at ${track.bpm} bpm</span></td>
-          <td class="music-mood">${track.mood}</td>
-          <td class="music-play-cell"></td>
-          <td class="music-seek-cell"><label class="sr-only" for="seek-${index}">Position for ${track.title}</label><input id="seek-${index}" type="range" min="0" max="1000" value="0"></td>
-          <td class="music-time">0:00 / ${formatTime(track.duration)}</td>
-          <td class="music-volume-cell"><label class="music-volume"><span class="sr-only">Volume for ${track.title}</span><input type="range" min="0" max="100" value="65"><span>65%</span></label></td>
-          <td class="music-link-cell"><a class="music-file-link" href="${track.src}">MP3</a></td>
-        `;
+      const renderTracks = () => {
+        rowRoot.innerHTML = "";
+        players.splice(0, players.length);
+        tracks.forEach((track, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="music-number">${String(index + 1).padStart(2, "0")}</td>
+            <td class="music-piece"><strong>${escapeHtml(track.title)}</strong><span>${escapeHtml(trackMetaLabel(track))}</span></td>
+            <td class="music-mood">${escapeHtml(track.mood)}</td>
+            <td class="music-play-cell"></td>
+            <td class="music-seek-cell"><label class="sr-only" for="seek-${index}">Position for ${escapeHtml(track.title)}</label><input id="seek-${index}" type="range" min="0" max="1000" value="0"></td>
+            <td class="music-time">0:00 / ${formatTime(Number(track.duration))}</td>
+            <td class="music-volume-cell"><label class="music-volume"><span class="sr-only">Volume for ${escapeHtml(track.title)}</span><input type="range" min="0" max="100" value="65"><span>65%</span></label></td>
+            <td class="music-link-cell">${trackLinksHtml(track)}</td>
+          `;
 
-        const audio = new Audio(track.src);
-        audio.preload = "metadata";
-        audio.volume = 0.65;
+          const audio = new Audio(track.src);
+          audio.preload = "metadata";
+          audio.volume = 0.65;
 
-        const button = document.createElement("button");
-        button.className = "music-play";
-        button.type = "button";
-        button.setAttribute("aria-label", `Play ${track.title}`);
-        button.innerHTML = playIcon();
-        row.querySelector(".music-play-cell").append(button);
+          const button = document.createElement("button");
+          button.className = "music-play";
+          button.type = "button";
+          button.setAttribute("aria-label", `Play ${track.title}`);
+          button.innerHTML = playIcon();
+          row.querySelector(".music-play-cell").append(button);
 
-        const seek = row.querySelector(`#seek-${index}`);
-        const time = row.querySelector(".music-time");
-        const volume = row.querySelector(".music-volume input");
-        const volumeLabel = row.querySelector(".music-volume span:last-child");
-        const item = { audio, button, seek, time, volume, row, volumeValue: 0.65 };
-        players.push(item);
+          const seek = row.querySelector(`#seek-${index}`);
+          const time = row.querySelector(".music-time");
+          const volume = row.querySelector(".music-volume input");
+          const volumeLabel = row.querySelector(".music-volume span:last-child");
+          const item = { audio, button, seek, time, volume, row, volumeValue: 0.65 };
+          players.push(item);
 
-        button.addEventListener("click", async () => {
-          if (audio.paused || audio.ended) {
+          button.addEventListener("click", async () => {
+            if (audio.paused || audio.ended) {
+              pauseOthers(index);
+              await ensureAudioGraph(item);
+              await audio.play();
+              status.textContent = `Playing ${track.title}`;
+            } else {
+              audio.pause();
+              status.textContent = "Paused";
+            }
+            syncRow(index);
+          });
+
+          seek.addEventListener("input", () => {
+            const duration = Number.isFinite(audio.duration) ? audio.duration : track.duration;
+            audio.currentTime = (Number(seek.value) / Number(seek.max)) * duration;
+            syncRow(index);
+          });
+
+          volume.addEventListener("input", async () => {
+            const nextVolume = Number(volume.value) / 100;
+            await setVolume(item, nextVolume);
+            volumeLabel.textContent = `${volume.value}%`;
+          });
+
+          audio.addEventListener("loadedmetadata", () => syncRow(index));
+          audio.addEventListener("timeupdate", () => syncRow(index));
+          audio.addEventListener("play", () => {
             pauseOthers(index);
-            await ensureAudioGraph(item);
-            await audio.play();
             status.textContent = `Playing ${track.title}`;
-          } else {
-            audio.pause();
-            status.textContent = "Paused";
-          }
-          syncRow(index);
-        });
+            syncRow(index);
+          });
+          audio.addEventListener("pause", () => syncRow(index));
+          audio.addEventListener("ended", () => {
+            status.textContent = `Ready to audition ${tracks.length} cues`;
+            syncRow(index);
+          });
 
-        seek.addEventListener("input", () => {
-          const duration = Number.isFinite(audio.duration) ? audio.duration : track.duration;
-          audio.currentTime = (Number(seek.value) / Number(seek.max)) * duration;
-          syncRow(index);
+          rowRoot.append(row);
         });
+        status.textContent = `Ready to audition ${tracks.length} cues`;
+      };
 
-        volume.addEventListener("input", async () => {
-          const nextVolume = Number(volume.value) / 100;
-          await setVolume(item, nextVolume);
-          volumeLabel.textContent = `${volume.value}%`;
-        });
-
-        audio.addEventListener("loadedmetadata", () => syncRow(index));
-        audio.addEventListener("timeupdate", () => syncRow(index));
-        audio.addEventListener("play", () => {
-          pauseOthers(index);
-          status.textContent = `Playing ${track.title}`;
-          syncRow(index);
-        });
-        audio.addEventListener("pause", () => syncRow(index));
-        audio.addEventListener("ended", () => {
-          status.textContent = "Ready to audition";
-          syncRow(index);
-        });
-
-        rowRoot.append(row);
-      });
+      loadPublicDomainTracks()
+        .catch((error) => {
+          console.warn("Could not load public-domain guitar manifest", error);
+          status.textContent = "Public-domain clips could not be loaded; original cues are available";
+        })
+        .finally(renderTracks);
     })();
   </script>
 </body>

@@ -737,7 +737,7 @@ def build_manifest(
             "imageField": "cloudPdfSource.imageUrl",
             "cloudImageKeyField": "cloudPdfSource.publicKey",
             "mode": "one-output-per-project",
-            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Slideshows choose one single-guitar cue at random, keep generated music at 0 dB, and mix source video audio 20 dB lower; videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
+            "assembly": "Cloud service receives selected media ids grouped by apartment project plus edited titles, then generates one PDF or slideshow per project on demand. Slideshows choose one single-guitar cue at random, keep generated music at 0 dB, mix source video audio 20 dB lower, and carry music credit metadata for an end-card only when a track requires it; videos keep source duration in slideshow output and use the 10% still frame in PDFs.",
             "slideshowMusic": load_slideshow_music_policy(repo_root),
             "batchManifest": {
                 "schema": PDF_BATCH_SCHEMA,

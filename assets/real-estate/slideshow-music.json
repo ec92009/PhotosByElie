@@ -5,6 +5,13 @@
   "sourceVideoAudioGainDb": -20,
   "sourceVideoAudioLinearGain": 0.1,
   "transition": "subtle-centered-ken-burns",
+  "creditPolicy": {
+    "renderPolicy": "append-end-card-when-required",
+    "durationSeconds": 4,
+    "requiredField": "creditRequired",
+    "textField": "creditText",
+    "note": "CC0/public-domain tracks do not require attribution, but per-track source and license metadata can be carried into video manifests when needed."
+  },
   "tracks": [
     {
       "title": "Quiet Linden Study",

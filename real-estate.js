@@ -2235,6 +2235,7 @@
         imageUrl: imageFor(photo, "detail"),
         videoUrl: video ? videoPreviewFor(photo) : "",
         orientation: dimensions.height > dimensions.width ? "portrait" : "landscape",
+        aspectRatio: dimensions.width > 0 && dimensions.height > 0 ? dimensions.width / dimensions.height : 1,
         durationMs: Math.max(1000, Number(video ? item.durationSeconds : item.slideshowDurationSeconds || state.slideshowPhotoSeconds) * 1000 || state.slideshowPhotoSeconds * 1000),
         durationLabel: video ? (formatDuration(item.durationSeconds || durationSecondsFor(photo)) || "source duration") : `${item.slideshowDurationSeconds || state.slideshowPhotoSeconds}s`,
         source: item.cloudSourceKey || item.publicStillKey || item.photoId || "",
@@ -2253,7 +2254,6 @@
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029");
-    const dateLabel = manifest.createdAt ? new Date(manifest.createdAt).toLocaleString() : "";
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -2270,18 +2270,19 @@
     .frame video{width:100%;height:100%;object-fit:contain;background:#050505}
     .video-wrap{position:absolute;inset:0;display:grid;place-items:center;background:#050505}
     .photo-slide{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:#050505}
-    .photo-slide img{display:block;width:100%;height:100%;background:transparent}
-    .slide-backdrop{position:absolute;inset:0;object-fit:cover;filter:blur(24px);opacity:.48;transform:scale(1.1)}
-    .photo-content{position:absolute;inset:0;z-index:1;display:grid;place-items:center;overflow:hidden;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
-    .slide-photo{position:absolute;inset:0;z-index:1;object-fit:contain}
+    .photo-slide img{display:block;background:transparent}
+    .slide-backdrop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(24px);opacity:.48;transform:scale(1.1)}
+    .photo-content{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;overflow:visible;animation:kenBurns var(--slide-duration,4s) ease-in-out both;will-change:transform}
+    .photo-card{position:relative;z-index:1;display:block;overflow:hidden}
+    .slide-photo{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:cover}
     .photo-watermark-sheet{position:absolute;inset:-32%;z-index:2;display:grid;grid-template-columns:repeat(4,max-content);align-content:center;justify-content:center;gap:clamp(90px,18vmin,260px) clamp(110px,22vmin,300px);pointer-events:none;transform:rotate(-28deg)}
     .photo-watermark-sheet span{display:block;color:rgba(255,255,255,.168);font-size:clamp(1.35rem,4.2vmin,4.6rem);font-weight:900;letter-spacing:.02em;text-shadow:0 0 1px rgba(0,0,0,.13),0 1px 2px rgba(0,0,0,.13);text-transform:uppercase;white-space:nowrap}
     .photo-watermark-sheet span:nth-child(4n+2),.photo-watermark-sheet span:nth-child(4n+4){transform:translateX(-48%)}
     .photo-watermark-corner{position:absolute;right:clamp(14px,2.2vmin,38px);bottom:clamp(14px,2.2vmin,38px);z-index:3;color:rgba(255,255,255,.72);font-size:clamp(.85rem,2.2vmin,1.45rem);font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.48)}
+    .photo-title{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(34px,7vmin,92px) clamp(14px,3vmin,34px) clamp(12px,2.2vmin,28px);background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0));color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.82);pointer-events:none}
+    .photo-title p{margin:0 0 .2em;font-size:clamp(.62rem,1.65vmin,1rem);font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.84)}
+    .photo-title h1{margin:0;max-width:min(760px,82%);font-size:clamp(1.35rem,4.8vmin,4.2rem);line-height:.98}
     @keyframes kenBurns{from{transform:scale(var(--start-scale,1.03)) translate(var(--start-x,0),var(--start-y,0))}to{transform:scale(var(--end-scale,1.1)) translate(var(--end-x,0),var(--end-y,0))}}
-    .caption{position:absolute;left:clamp(14px,4vw,42px);right:clamp(14px,4vw,42px);bottom:clamp(46px,6vw,74px);display:flex;align-items:end;justify-content:space-between;gap:16px;text-shadow:0 2px 14px #000}
-    .caption h1{max-width:820px;margin:0;font-size:clamp(1.8rem,5vw,4.8rem);line-height:.98}
-    .caption p{margin:8px 0 0;color:#d7d7d7;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
     .slide-count{position:absolute;left:clamp(10px,2.4vw,22px);bottom:clamp(10px,2.4vw,22px);z-index:4;border-radius:4px;background:rgba(80,80,80,.78);color:#fff;padding:3px 7px;font-size:.78rem;font-weight:850;line-height:1;text-shadow:none}
     .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
     .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(255,255,255,.14);background:#171717;padding:14px}
@@ -2291,9 +2292,9 @@
       main{display:grid;min-height:100dvh}
       .photo-slide{padding:0}
       .frame video{padding:0}
-      .caption{bottom:clamp(42px,10dvh,72px)}
-      .caption h1{font-size:clamp(1.35rem,8vw,2.5rem)}
-      .caption p{font-size:.78rem}
+      .photo-title{padding-top:clamp(28px,8vmin,72px)}
+      .photo-title h1{font-size:clamp(1.15rem,7vw,2.3rem)}
+      .photo-title p{font-size:.72rem}
       .controls{position:sticky;bottom:0;z-index:5;padding:10px calc(10px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
       button{min-height:38px;padding:7px 14px}
     }
@@ -2304,12 +2305,6 @@
     <section class="stage" aria-label="Browser video preview">
       <div class="frame" data-frame></div>
       ${musicTrack?.absoluteSrc || musicTrack?.src ? `<audio data-music preload="auto" loop src="${escapeHtml(musicTrack.absoluteSrc || musicTrack.src)}"></audio>` : ""}
-      <div class="caption">
-        <div>
-          <p data-project>${escapeHtml(slides[0]?.projectTitle || manifest.customer || "Client")}</p>
-          <h1 data-title>${escapeHtml(slides[0]?.title || "Photos By Elie slideshow")}</h1>
-        </div>
-      </div>
       ${slideshowWatermarkText ? `<div class="watermark">${escapeHtml(slideshowWatermarkText)}</div>` : ""}
     </section>
     <div class="controls">
@@ -2326,8 +2321,6 @@
       const stage = document.querySelector(".stage");
       const frame = document.querySelector("[data-frame]");
       const music = document.querySelector("[data-music]");
-      const title = document.querySelector("[data-title]");
-      const project = document.querySelector("[data-project]");
       const playButton = document.querySelector("[data-play]");
       let index = 0;
       let timer = 0;
@@ -2350,16 +2343,35 @@
         return "--slide-duration:" + durationMs + "ms;--start-scale:" + startScale + ";--end-scale:" + endScale + ";--start-x:" + startX + ";--start-y:" + startY + ";--end-x:" + endX + ";--end-y:" + endY;
       };
       const counterHtml = (counterText) => '<strong class="slide-count">' + attr(counterText) + '</strong>';
+      const photoCardStyle = (slide) => {
+        const rect = stage?.getBoundingClientRect?.();
+        const stageWidth = Math.max(1, rect?.width || window.innerWidth || 1);
+        const stageHeight = Math.max(1, rect?.height || window.innerHeight || 1);
+        const ratio = Math.max(0.05, Number(slide?.aspectRatio || 1));
+        let width = stageWidth;
+        let height = width / ratio;
+        if (height > stageHeight) {
+          height = stageHeight;
+          width = height * ratio;
+        }
+        return "width:" + Math.round(width) + "px;height:" + Math.round(height) + "px";
+      };
       const watermarkSheetHtml = () => {
         const text = String(watermarkText || "").trim().toUpperCase();
         if (!text) return "";
         return '<div class="photo-watermark-sheet" aria-hidden="true">' + Array.from({ length: 28 }, () => '<span>' + attr(text) + '</span>').join("") + '</div><b class="photo-watermark-corner" aria-hidden="true">PhotosByElie</b>';
       };
+      const photoTitleHtml = (slide) => {
+        const projectTitle = String(slide.projectTitle || "").trim();
+        const titleText = String(slide.title || "Untitled").trim();
+        return '<div class="photo-title"><p>' + attr(projectTitle || slide.mediaType || "") + '</p><h1>' + attr(titleText) + '</h1></div>';
+      };
       const photoSlideHtml = (slide, counterText) => {
         const source = attr(slide.imageUrl);
         const style = attr(effectStyle(slide.effect, Math.max(1000, slide.durationMs || 4000)));
+        const cardStyle = attr(photoCardStyle(slide));
         const orientation = slide.orientation === "portrait" ? "portrait" : "landscape";
-        return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><div class="photo-content" style="' + style + '"><img class="slide-photo" alt="" src="' + source + '">' + watermarkSheetHtml() + counterHtml(counterText) + '</div></div>';
+        return '<div class="photo-slide is-' + orientation + '"><img class="slide-backdrop" aria-hidden="true" alt="" src="' + source + '"><div class="photo-content" style="' + style + '"><div class="photo-card" style="' + cardStyle + '"><img class="slide-photo" alt="" src="' + source + '">' + watermarkSheetHtml() + photoTitleHtml(slide) + counterHtml(counterText) + '</div></div></div>';
       };
 
       const clearTimer = () => {
@@ -2384,6 +2396,8 @@
         }
         stage.style.width = Math.round(width) + "px";
         stage.style.height = Math.round(height) + "px";
+        const card = frame?.querySelector?.(".photo-card");
+        if (card && slides[index]) card.setAttribute("style", photoCardStyle(slides[index]));
       };
       window.addEventListener("resize", applyStageSize);
       const syncPlayButton = () => {
@@ -2438,12 +2452,8 @@
         const counterText = (index + 1) + "/" + slides.length;
         if (!slide) {
           frame.innerHTML = "";
-          title.textContent = "No media selected";
-          project.textContent = "";
           return;
         }
-        title.textContent = slide.title || "Untitled";
-        project.textContent = slide.projectTitle || slide.mediaType || "";
         if (playing) playMusic();
         syncMusicFade(slide);
         if (slide.mediaType === "video" && slide.videoUrl) {

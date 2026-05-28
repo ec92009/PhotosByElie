@@ -106,8 +106,9 @@ Clock state: running
 | 2026-05-28 | 14:38 CEST | 14:40 CEST | 0:02 | Requested public-domain Spanish guitar clips for the audio gallery and future video credit handling. |
 | 2026-05-28 | 16:15 CEST | 16:19 CEST | 0:04 | Requested CC0 clip loudness normalization, removal of under-30-second clips, and a simplified gallery with stars, delete, and position-only progress. |
 | 2026-05-28 | 16:37 CEST | 16:50 CEST | 0:04 | Requested Pixabay exploration and an iPhone-ready audition page with future video music credits. |
+| 2026-05-28 | 20:00 CEST | 20:03 CEST | 0:03 | Requested tagging the current Pixabay batch as Spain and adding Portugal, France, and USA audition batches. |
 
 ## Totals
 
-Active collaboration time used: 5:45
+Active collaboration time used: 5:48
 Remaining budget: not set

@@ -110,8 +110,9 @@ Clock state: running
 | 2026-05-28 | 20:17 CEST | 20:21 CEST | 0:04 | Requested Real Estate video output switch from the old cue pool to country-matched Pixabay music with project inference or manual country selection. |
 | 2026-05-28 | 20:35 CEST | 20:37 CEST | 0:02 | Requested the public music audition gallery read the Pixabay batch from R2 through the Worker. |
 | 2026-05-29 | 00:39 CEST | 00:43 CEST | 0:04 | Diagnosed silent slideshow gallery audio as missing Worker byte-range media responses and prepared the iPhone/Safari playback fix. |
+| 2026-05-29 | 00:46 CEST | 00:51 CEST | 0:05 | Followed up on v89.22 audio still being silent and removed the cross-origin Web Audio playback path from the music gallery. |
 
 ## Totals
 
-Active collaboration time used: 5:58
+Active collaboration time used: 6:03
 Remaining budget: not set

@@ -99,8 +99,9 @@ Clock state: running
 | 2026-05-28 | 07:34 CEST | 07:35 CEST | 0:01 | Requested Real Estate mobile video preview cleanup and final-slide audio fade. |
 | 2026-05-28 | 07:54 CEST | 07:55 CEST | 0:01 | Asked for the media sidecar validation mismatch cause. |
 | 2026-05-28 | 09:03 CEST | 09:04 CEST | 0:01 | Requested Real Estate video preview titles be anchored to the actual photo. |
+| 2026-05-28 | 09:09 CEST | 09:10 CEST | 0:01 | Flagged stale visible-version doc headers after the Real Estate preview release. |
 
 ## Totals
 
-Active collaboration time used: 5:27
+Active collaboration time used: 5:28
 Remaining budget: not set

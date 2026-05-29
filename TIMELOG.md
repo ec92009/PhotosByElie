@@ -128,8 +128,9 @@ Clock state: running
 | 2026-05-29 | 17:03 CEST | 17:58 CEST | 0:55 | Completed Meta API social publishing: recorded the Facebook API post/comment, connected Instagram Login, published the Cascais carousel, and updated package/API docs. |
 | 2026-05-29 | 17:58 CEST | 18:08 CEST | 0:10 | Corrected the Instagram caption-link workflow after confirming caption URLs are not clickable, added profile-link guidance, and warned on raw Instagram URLs in API dry runs. |
 | 2026-05-29 | 18:08 CEST | 18:28 CEST | 0:20 | Added newest-first campaign shelf indexing, default 3-column Fill gallery entry, progressive Show all rendering, icon origin badges, and sampled caption colors. |
+| 2026-05-29 | 18:28 CEST | 18:42 CEST | 0:14 | Created and validated local Codex skills for Facebook API connection, Instagram API connection, Facebook Page publishing with owner-persona follow-up, and Instagram panorama publish guardrails. |
 
 ## Totals
 
-Active collaboration time used: 8:31
+Active collaboration time used: 8:45
 Remaining budget: not set

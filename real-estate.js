@@ -2342,6 +2342,28 @@
     ));
   };
 
+  const slideshowImageKeysFor = (photo) => {
+    const preview = photo?.media?.publicPreview || {};
+    return [
+      preview.detailKey,
+      photo?.cloudPdfSource?.publicKey,
+      preview.galleryKey,
+    ].map((key) => String(key || "").replace(/^\/+/, ""))
+      .filter(Boolean)
+      .filter((key, index, keys) => keys.indexOf(key) === index);
+  };
+
+  const slideshowImageUrlsFor = (photo) => {
+    const directUrl = imageFor(photo, "detail");
+    const keys = slideshowImageKeysFor(photo);
+    const workerUrls = keys.map(workerMediaUrl).filter(Boolean);
+    const publicUrls = keys.map(publicMediaUrl).filter(Boolean);
+    const candidates = isLocalHost
+      ? [directUrl, ...workerUrls, ...publicUrls]
+      : [...workerUrls, directUrl, ...publicUrls];
+    return candidates.filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index);
+  };
+
   const selectionPlainTextFor = (manifest) => {
     const rows = selectionRowsFor(manifest);
     return [
@@ -2475,6 +2497,7 @@
       title: item.title || titleFor(photo),
       mediaType: video ? "video" : "photo",
       imageUrl: imageFor(photo, "detail"),
+      imageUrls: slideshowImageUrlsFor(photo),
       videoUrl: video ? videoPreviewFor(photo) : "",
       orientation: dimensions.height > dimensions.width ? "portrait" : "landscape",
       aspectRatio: dimensions.width > 0 && dimensions.height > 0 ? dimensions.width / dimensions.height : 1,
@@ -3200,11 +3223,14 @@
     image.src = url;
   });
 
-  const slideshowImageCandidates = (url) => {
-    const candidates = [String(url || "")].filter(Boolean);
-    const first = candidates[0] || "";
-    const smallPreview = first.replace(/_1800(\.[a-z0-9]+)([?#].*)?$/i, "_900$1$2");
-    if (smallPreview && smallPreview !== first) candidates.push(smallPreview);
+  const slideshowImageCandidates = (input) => {
+    const urls = (Array.isArray(input) ? input : [input]).map((url) => String(url || "")).filter(Boolean);
+    const candidates = [];
+    urls.forEach((url) => {
+      [url, url.replace(/_1800(\.[a-z0-9]+)([?#].*)?$/i, "_900$1$2")].forEach((candidate) => {
+        if (candidate && !candidates.includes(candidate)) candidates.push(candidate);
+      });
+    });
     return candidates;
   };
 
@@ -3237,7 +3263,8 @@
         lastError = error;
       }
     }
-    throw new Error(`Could not load slideshow image: ${url}${lastError?.message ? ` (${lastError.message})` : ""}`);
+    const label = Array.isArray(url) ? (url[0] || "configured slideshow image") : url;
+    throw new Error(`Could not load slideshow image: ${label}${lastError?.message ? ` (${lastError.message})` : ""}`);
   };
 
   const loadSlideshowVideo = (url, posterUrl = "") => new Promise((resolve, reject) => {
@@ -3269,7 +3296,7 @@
         // Use the still frame if the browser cannot decode the source clip for canvas recording.
       }
     }
-    const image = await loadSlideshowImage(slide.imageUrl);
+    const image = await loadSlideshowImage(slide.imageUrls?.length ? slide.imageUrls : slide.imageUrl);
     return {
       kind: "image",
       element: image,

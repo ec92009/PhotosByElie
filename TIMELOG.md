@@ -111,8 +111,11 @@ Clock state: running
 | 2026-05-28 | 20:35 CEST | 20:37 CEST | 0:02 | Requested the public music audition gallery read the Pixabay batch from R2 through the Worker. |
 | 2026-05-29 | 00:39 CEST | 00:43 CEST | 0:04 | Diagnosed silent slideshow gallery audio as missing Worker byte-range media responses and prepared the iPhone/Safari playback fix. |
 | 2026-05-29 | 00:46 CEST | 00:51 CEST | 0:05 | Followed up on v89.22 audio still being silent and removed the cross-origin Web Audio playback path from the music gallery. |
+| 2026-05-29 | 08:13 CEST | 08:14 CEST | 0:01 | Checked Pinterest API transition state, local token files, and Pinterest email review status. |
+| 2026-05-29 | 08:27 CEST | 08:31 CEST | 0:04 | Diagnosed Real Estate video download UI staying busy while the native share sheet was already open and prepared the handoff-state fix. |
+| 2026-05-29 | 08:31 CEST | 08:36 CEST | 0:05 | Added Real Estate video recording fallback image loading for public R2 stills that fail direct Safari/WebApp decode. |
 
 ## Totals
 
-Active collaboration time used: 6:03
+Active collaboration time used: 6:13
 Remaining budget: not set

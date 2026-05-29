@@ -2905,13 +2905,25 @@
     const file = fileForShare(blob, filename);
     if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({
+        const sharePromise = navigator.share({
           title,
           text,
           files: [file],
         });
+        const settled = await Promise.race([
+          sharePromise.then(() => "complete"),
+          sharePromise.then(null, (error) => {
+            throw error;
+          }),
+          new Promise((resolve) => window.setTimeout(() => resolve("opened"), 500)),
+        ]);
+        if (settled === "opened") {
+          sharePromise.catch((error) => {
+            if (error?.name !== "AbortError") console.warn("Device share failed after opening", error);
+          });
+        }
         if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
-        return { method: "share", filename, bytes: Number(blob.size) || 0 };
+        return { method: settled === "opened" ? "share-opened" : "share", filename, bytes: Number(blob.size) || 0 };
       } catch (error) {
         if (error?.name === "AbortError") {
           if (reservedWindow && !reservedWindow.closed) reservedWindow.close();
@@ -2955,7 +2967,7 @@
         title: "Photos By Elie selection",
         text: `${batch.customer || "Client"} selection table`,
       });
-      if (saved.method === "share") {
+      if (saved.method === "share" || saved.method === "share-opened") {
         setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else if (saved.method === "open") {
         setStatus(`Opened ${saved.filename}; use the browser share or save controls`);
@@ -3054,14 +3066,54 @@
     return `${text.slice(0, low)}${ellipsis}`;
   };
 
-  const loadSlideshowImage = (url) => new Promise((resolve, reject) => {
+  const loadSlideshowImageElement = (url, { crossOrigin = "anonymous" } = {}) => new Promise((resolve, reject) => {
     const image = new Image();
-    image.crossOrigin = "anonymous";
+    if (crossOrigin) image.crossOrigin = crossOrigin;
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Could not load slideshow image: ${url}`));
     image.decoding = "async";
     image.src = url;
   });
+
+  const slideshowImageCandidates = (url) => {
+    const candidates = [String(url || "")].filter(Boolean);
+    const first = candidates[0] || "";
+    const smallPreview = first.replace(/_1800(\.[a-z0-9]+)([?#].*)?$/i, "_900$1$2");
+    if (smallPreview && smallPreview !== first) candidates.push(smallPreview);
+    return candidates;
+  };
+
+  const loadSlideshowImageViaBlob = async (url) => {
+    const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const image = await loadSlideshowImageElement(objectUrl, { crossOrigin: "" });
+      image._photosByElieObjectUrl = objectUrl;
+      return image;
+    } catch (error) {
+      URL.revokeObjectURL(objectUrl);
+      throw error;
+    }
+  };
+
+  const loadSlideshowImage = async (url) => {
+    let lastError = null;
+    for (const candidate of slideshowImageCandidates(url)) {
+      try {
+        return await loadSlideshowImageElement(candidate);
+      } catch (error) {
+        lastError = error;
+      }
+      try {
+        return await loadSlideshowImageViaBlob(candidate);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw new Error(`Could not load slideshow image: ${url}${lastError?.message ? ` (${lastError.message})` : ""}`);
+  };
 
   const loadSlideshowVideo = (url, posterUrl = "") => new Promise((resolve, reject) => {
     const video = document.createElement("video");
@@ -3415,6 +3467,10 @@
             await nextAnimationFrame();
           }
         } finally {
+          if (media.element?._photosByElieObjectUrl) {
+            URL.revokeObjectURL(media.element._photosByElieObjectUrl);
+            media.element._photosByElieObjectUrl = "";
+          }
           if (media.kind === "video") {
             media.element.pause();
             media.element.removeAttribute("src");
@@ -3719,7 +3775,7 @@
         });
         if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
       }
-      if (saved.method === "share") {
+      if (saved.method === "share" || saved.method === "share-opened") {
         setStatus(`Saved/shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else if (saved.method === "open" || saved.method === "open-current") {
         setStatus(`Viewing ${saved.filename}. ${deliverableActionNote}`);
@@ -4034,7 +4090,7 @@
         text: `${state.payload?.customer?.name || "Client"} selected original media`,
         openFallback: false,
       });
-      if (saved.method === "share") {
+      if (saved.method === "share" || saved.method === "share-opened") {
         setStatus(`Shared ${saved.filename} (${formatBytes(saved.bytes)})`);
       } else {
         setStatus(`Downloaded ${saved.filename} to Downloads (${formatBytes(saved.bytes)})`);

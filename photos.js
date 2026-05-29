@@ -1713,6 +1713,12 @@ window.photosByElieMediaUrl = (photo, size = 'gallery') => {
   return '';
 };
 
+window.photosByElieMediaSampleUrl = (photo, size = 'gallery') => {
+  const key = window.photosByElieMediaKey(photo, size);
+  if (!key || !isLocalhostMediaPage) return window.photosByElieMediaUrl(photo, size);
+  return `/__photosbyelie/public-media/${key.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
+};
+
 window.photosByElieMediaType = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
 window.photosByElieIsVideo = (photo) => window.photosByElieMediaType(photo) === "video";
 window.photosByElieVideoDurationSeconds = (photo) => {

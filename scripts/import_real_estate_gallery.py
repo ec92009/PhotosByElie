@@ -18,6 +18,8 @@ from typing import Any
 
 from PIL import Image, ImageOps
 
+from update_caption_colors import caption_color
+
 
 RAW_EXTENSIONS = {".raw", ".dng", ".nef", ".cr2", ".cr3", ".arw", ".orf", ".raf", ".rw2"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
@@ -563,6 +565,7 @@ def build_manifest(
             rendered_preview_1800 += 1 if preview_1800_render["rendered"] else 0
             total_preview_900_bytes += int(preview_900_render["bytes"])
             total_preview_1800_bytes += int(preview_1800_render["bytes"])
+            title_color = caption_color(preview_900_path) or ""
             emit_import_event(
                 progress_json,
                 "STEP",
@@ -597,6 +600,7 @@ def build_manifest(
                 "title": default_title,
                 "editableTitle": default_title,
                 "caption": album_title,
+                "captionColor": title_color,
                 "className": "real-estate-photo" + (" real-estate-video" if media_type == "video" else ""),
                 "full": source.name,
                 "gallerySrc": preview_900_rel,

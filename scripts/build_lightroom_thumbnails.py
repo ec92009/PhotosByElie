@@ -38,6 +38,7 @@ from media_policy import DEVELOPED_IMAGE_EXTENSIONS, DEVELOPED_VIDEO_EXTENSIONS,
 from import_eligibility import green_selected, lightroom_selected, normalize_rating
 from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, upsert_r2_object_state
 from sync_r2_media import DEFAULT_THROTTLE_FILE, UploadItem, append_upload_state, first_env, s3_put, wrangler_command
+from update_caption_colors import caption_color
 
 
 IMAGE_EXTENSIONS = DEVELOPED_IMAGE_EXTENSIONS
@@ -2409,6 +2410,10 @@ def process_import_item(
                 "generated_at": now_iso(),
             }
             r2_assets = upload_r2_assets(args, row, gallery_path, detail_path, source, artifact_plan)
+            if gallery_path.exists():
+                color = caption_color(gallery_path)
+                if color:
+                    row["caption_color"] = color
             if r2_assets:
                 removed_tmp = cleanup_uploaded_tmp_previews(args, r2_assets, [gallery_path, detail_path])
                 row["r2"] = {

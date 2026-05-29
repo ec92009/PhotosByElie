@@ -67,11 +67,11 @@ html[data-theme="light"]{
     linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.06) 44%,rgba(0,0,0,.16));
   --glass-surface-rgb:246 242 236;
   --glass-control-rgb:255 255 255;
-  --glass-topbar-alpha:.136;
-  --glass-control-alpha:.184;
-  --glass-panel-alpha:.152;
-  --glass-card-alpha:.208;
-  --glass-card-hover-alpha:.256;
+  --glass-topbar-alpha:.26;
+  --glass-control-alpha:.26;
+  --glass-panel-alpha:.26;
+  --glass-card-alpha:.26;
+  --glass-card-hover-alpha:.32;
   --glass-pill-alpha:.272;
   --glass-field-alpha:.72;
   --glass-border:rgba(255,255,255,.25);
@@ -221,7 +221,7 @@ h1{margin:0;line-height:1.08;font-size:clamp(2rem,4vw,3.2rem);max-width:18ch}
 h2{margin:0 0 8px;font-size:clamp(1.25rem,2vw,1.8rem)}
 .lead{margin:12px 0 0;color:var(--muted);max-width:68ch;line-height:1.58}
 .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-.btn{display:inline-flex;text-decoration:none;padding:10px 14px;border-radius:999px;border:1px solid var(--line);font-weight:700;transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease}
+.btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;padding:10px 14px;border-radius:999px;border:1px solid var(--line);font:inherit;font-weight:700;line-height:1.2;transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease}
 .btn.primary{
   background-color:var(--text);
   color:var(--bg);

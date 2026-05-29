@@ -68,6 +68,7 @@ const defaultFilterState = {
 };
 const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
+let filterToggle = null;
 
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -244,6 +245,14 @@ const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterStat
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
 
+const syncFilterToggle = () => {
+  if (!filterToggle || !filterBar) return;
+  const count = activeFilterCount();
+  const label = t("gallery.search");
+  filterToggle.textContent = count > 0 ? `${label} (${count})` : label;
+  filterToggle.setAttribute("aria-expanded", filterBar.classList.contains("is-open") ? "true" : "false");
+};
+
 const syncFilterControls = () => {
   if (!filterBar) return;
   filterBar.querySelectorAll("[data-gallery-filter]").forEach((control) => {
@@ -258,13 +267,22 @@ const syncFilterControls = () => {
   });
   const searchInput = filterBar.querySelector("[data-gallery-search]");
   if (searchInput) searchInput.value = filterState.query || "";
+  syncFilterToggle();
 };
 
 const ensureGalleryFilterControls = () => {
   if (filterBar || !gallery) return;
   const filterTarget = galleryActions || document.querySelector(".gallery-hero");
   if (!filterTarget) return;
+  filterToggle = document.createElement("button");
+  filterToggle.className = "btn secondary gallery-filter-toggle";
+  filterToggle.type = "button";
+  filterToggle.dataset.galleryFilterToggle = "";
+  filterToggle.setAttribute("aria-controls", "gallery-filter-bar");
+  filterToggle.setAttribute("aria-expanded", "false");
+  filterToggle.textContent = t("gallery.search");
   filterBar = document.createElement("form");
+  filterBar.id = "gallery-filter-bar";
   filterBar.className = "gallery-filter-bar";
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
@@ -319,9 +337,14 @@ const ensureGalleryFilterControls = () => {
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
   `;
-  filterTarget.after(filterBar);
+  filterTarget.after(filterToggle);
+  filterToggle.after(filterBar);
   window.photosByElieI18n?.apply?.();
   syncFilterControls();
+  filterToggle.addEventListener("click", () => {
+    filterBar.classList.toggle("is-open");
+    syncFilterToggle();
+  });
   filterBar.addEventListener("submit", (event) => {
     event.preventDefault();
   });
@@ -348,6 +371,7 @@ const ensureGalleryFilterControls = () => {
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };
+    syncFilterToggle();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery();

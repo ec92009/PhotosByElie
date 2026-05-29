@@ -248,11 +248,13 @@
     }).join("");
 
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
-      card.addEventListener("click", () => {
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
         selectedIndex = Number(card.dataset.photoIndex || 0);
         updateSelection();
       });
-      card.addEventListener("dblclick", () => {
+      card.addEventListener("dblclick", (event) => {
+        event.preventDefault();
         if (card.dataset.photoHref) window.location.assign(versionedHref(card.dataset.photoHref));
       });
     });

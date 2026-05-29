@@ -23,7 +23,8 @@ import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
+from urllib.request import Request, urlopen
 
 
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
@@ -42,6 +43,7 @@ OWNER_SESSION_PATH = "/__photosbyelie/owner-session"
 OWNER_LOGIN_PATH = "/__photosbyelie/owner-login"
 OWNER_LOGOUT_PATH = "/__photosbyelie/owner-logout"
 TITLE_KEYWORD_REVIEW_QUEUE_PATH = "/__photosbyelie/title-keyword-review-queue"
+PUBLIC_MEDIA_PROXY_PATH = "/__photosbyelie/public-media/"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
@@ -60,6 +62,7 @@ REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 PUBLIC_SITE_BASE_URL = "https://ec92009.github.io/PhotosByElie/"
+PUBLIC_MEDIA_BASE_URL = "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev"
 TITLE_KEYWORD_REVIEW_FLAG = "Title_Keywords_Reviewed"
 TITLE_KEYWORD_PROPOSED_FLAG = "Title_Keywords_Proposed"
 TITLE_KEYWORD_REJECTED_FLAG = "Title_Keywords_Rejected"
@@ -234,6 +237,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
+        if path.startswith(PUBLIC_MEDIA_PROXY_PATH):
+            self._handle_public_media_proxy(path)
+            return
         if path == OWNER_SESSION_PATH:
             self._handle_owner_session()
             return
@@ -378,6 +384,31 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         body = thumb.read_bytes()
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _handle_public_media_proxy(self, path: str) -> None:
+        if not self._is_loopback_request():
+            self.send_error(HTTPStatus.FORBIDDEN, "localhost-only endpoint")
+            return
+        key = unquote(path[len(PUBLIC_MEDIA_PROXY_PATH):]).lstrip("/")
+        if not key or "\\" in key or ".." in key.split("/"):
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid media key")
+            return
+        safe_key = "/".join(quote(part, safe="") for part in key.split("/") if part)
+        upstream = f"{PUBLIC_MEDIA_BASE_URL}/{safe_key}"
+        try:
+            request = Request(upstream, headers={"User-Agent": "PhotosByElieLocal/1.0"})
+            with urlopen(request, timeout=20) as response:
+                body = response.read()
+                content_type = response.headers.get_content_type() or mimetypes.guess_type(key)[0] or "application/octet-stream"
+        except OSError as error:
+            self.send_error(HTTPStatus.BAD_GATEWAY, str(error))
+            return
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "private, max-age=3600")
         self.end_headers()
@@ -5298,7 +5329,18 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     else:
         found = _find_and_remove(hidden_groups, photo_id)
         if not found:
-            raise ValueError(f"photo not found in Hidden: {photo_id}")
+            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+            r2_task = _start_r2_upload_task("hidden-blacklist", [_hidden_blacklist_upload_item(repo_root)], "hidden-blacklist-upload")
+            return {
+                "ok": True,
+                "action": action,
+                "photo_id": photo_id,
+                "message": "already put back",
+                "moved": {"from": "hidden", "to": "expo", "mode": "blacklist", "already_put_back": True},
+                "r2_blacklist_task": r2_task,
+                "worker_catalog": worker_catalog,
+                "site": site_state,
+            }
         hidden_slug, hidden_photo = found
         _source_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
         if not _find_photo(expo_groups, photo_id):

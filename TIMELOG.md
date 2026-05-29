@@ -130,8 +130,16 @@ Clock state: running
 | 2026-05-29 | 18:08 CEST | 18:28 CEST | 0:20 | Added newest-first campaign shelf indexing, default 3-column Fill gallery entry, progressive Show all rendering, icon origin badges, and sampled caption colors. |
 | 2026-05-29 | 18:28 CEST | 18:42 CEST | 0:14 | Created and validated local Codex skills for Facebook API connection, Instagram API connection, Facebook Page publishing with owner-persona follow-up, and Instagram panorama publish guardrails. |
 | 2026-05-29 | 18:42 CEST | 18:55 CEST | 0:13 | Fixed campaign gallery previews broken by cross-origin image sampling and restored the social campaign default to 3-column Fill layout. |
+| 2026-05-29 | 18:56 CEST | 19:01 CEST | 0:05 | Fixed Waste Basket single-click selection and made put-back tolerate stale local basket entries. |
+| 2026-05-29 | 19:18 CEST | 19:19 CEST | 0:01 | Evened Owner Waste Basket action button heights. |
+| 2026-05-29 | 19:20 CEST | 19:20 CEST | 0:00 | Extended Owner action button height normalization across review cards. |
+| 2026-05-29 | 19:21 CEST | 19:21 CEST | 0:00 | Removed obsolete refresh buttons from Owner review cards. |
+| 2026-05-29 | 19:32 CEST | 19:32 CEST | 0:00 | Confirmed the sitewide light-theme glass opacity floor at 0.26. |
+| 2026-05-29 | 19:35 CEST | 19:35 CEST | 0:00 | Normalized Owner button typography and centering. |
+| 2026-05-29 | 19:45 CEST | 19:47 CEST | 0:02 | Restored gallery thumbnail loading after caption sampling forced CORS mode, and replaced the black caption fallback. |
+| 2026-05-29 | 19:47 CEST | 22:43 CEST | 0:28 | Added persistent caption colors to the catalog/import flow, backfilled all photo masters from previews, and collapsed mobile gallery filters behind Search; slow backfill/runtime waiting excluded. |
 
 ## Totals
 
-Active collaboration time used: 8:58
+Active collaboration time used: 9:34
 Remaining budget: not set

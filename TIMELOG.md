@@ -116,8 +116,9 @@ Clock state: running
 | 2026-05-29 | 08:31 CEST | 08:36 CEST | 0:05 | Added Real Estate video recording fallback image loading for public R2 stills that fail direct Safari/WebApp decode. |
 | 2026-05-29 | 09:13 CEST | 09:15 CEST | 0:02 | Changed the Real Estate help modal dismissal from per-gallery to section-wide first-visit behavior. |
 | 2026-05-29 | 09:18 CEST | 09:23 CEST | 0:05 | Saved Real Estate selections before output actions and added an obvious close control to browser video previews. |
+| 2026-05-29 | 09:35 CEST | 09:43 CEST | 0:08 | Returned browser video previews to the Real Estate Output step and removed the sticky mobile Output footer controls. |
 
 ## Totals
 
-Active collaboration time used: 6:20
+Active collaboration time used: 6:28
 Remaining budget: not set

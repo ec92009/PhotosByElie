@@ -5990,8 +5990,18 @@ html[data-theme="light"] .detail-preview.has-image::after{
   body[data-real-estate]{
     --re-action-bar-clearance:330px;
   }
+  body[data-real-estate][data-real-estate-step="4"]{
+    --re-action-bar-clearance:0px;
+  }
   body[data-real-estate] main.shell{
     padding-bottom:118px;
+  }
+  body[data-real-estate][data-real-estate-step="4"] main.shell{
+    padding-bottom:clamp(12px,2dvh,22px);
+  }
+  body[data-real-estate][data-real-estate-step="4"] .real-estate-action-bar,
+  body[data-real-estate][data-real-estate-step="4"] .site-footer{
+    display:none;
   }
   .real-estate-stats,
   .real-estate-sidebar,

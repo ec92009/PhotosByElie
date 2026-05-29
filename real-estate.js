@@ -34,6 +34,42 @@
     }
   };
 
+  const wizardStepSlugs = ["shoots", "photos", "titles", "order", "output"];
+  const wizardStepSlugFor = (step) => wizardStepSlugs[normalizeWizardStep(step)] || "shoots";
+  const wizardStepFromSlug = (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    const index = wizardStepSlugs.indexOf(normalized);
+    return index >= 0 ? index : null;
+  };
+  const requestedWizardStepFromUrl = () => {
+    const fromParam = wizardStepFromSlug(pageParams.get("step"));
+    if (fromParam !== null) return fromParam;
+    const fromHash = wizardStepFromSlug(String(window.location.hash || "").replace(/^#/, "").replace(/^real-estate-/, ""));
+    return fromHash;
+  };
+  const replaceWizardStepInUrl = (step) => {
+    if (!window.history?.replaceState) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("step", wizardStepSlugFor(step));
+      url.hash = step === 4 ? "real-estate-output-title" : "real-estate-wizard";
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    } catch {
+      // Browsers can block history writes in unusual embedded contexts.
+    }
+  };
+  const previewReturnUrl = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("logout");
+      url.searchParams.set("step", "output");
+      url.hash = "real-estate-output-title";
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return `./real-estate.html${contextVersion}#real-estate-output-title`;
+    }
+  };
+
   const elements = {
     login: app.querySelector("[data-re-login]"),
     loginForm: app.querySelector("[data-re-login-form]"),
@@ -1858,6 +1894,7 @@
     const shootCount = selectedShootIds().length;
     const firstStep = firstWizardStep();
     app.dataset.reStep = String(state.wizardStep);
+    document.body.dataset.realEstateStep = String(state.wizardStep);
     if (elements.wizardStatus) elements.wizardStatus.textContent = stepCopy();
     document.querySelectorAll("[data-re-step-jump]").forEach((button) => {
       const parsed = Number(button.dataset.reStepJump);
@@ -2044,6 +2081,7 @@
       if (elements.selectedOnly) elements.selectedOnly.checked = false;
     }
     render();
+    replaceWizardStepInUrl(state.wizardStep);
     document.getElementById("real-estate-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -2425,6 +2463,7 @@
     const slides = slideshowSlidesFor(manifest);
     const musicCredits = slideshowRequiredCreditsFor(manifest);
     const creditDurationMs = slideshowCreditDurationMsFor(musicCredits);
+    const returnUrl = previewReturnUrl();
     const safeJson = JSON.stringify(manifest, null, 2)
       .replace(/</g, "\\u003c")
       .replace(/\u2028/g, "\\u2028")
@@ -2518,6 +2557,7 @@
       const music = document.querySelector("[data-music]");
       const playButton = document.querySelector("[data-play]");
       const closeButton = document.querySelector("[data-close-preview]");
+      const returnUrl = ${JSON.stringify(returnUrl)};
       let index = 0;
       let timer = 0;
       let fadeFrame = 0;
@@ -2778,16 +2818,16 @@
       });
       closeButton?.addEventListener("click", () => {
         try {
+          window.close();
+          window.setTimeout(() => {
+            if (!document.hidden) window.location.href = returnUrl;
+          }, 250);
           if (window.opener && !window.opener.closed) {
             window.close();
-            window.setTimeout(() => {
-              if (!document.hidden) window.location.href = ${JSON.stringify(`./real-estate.html${contextVersion}`)};
-            }, 250);
             return;
           }
         } catch {}
-        if (history.length > 1) history.back();
-        else window.location.href = ${JSON.stringify(`./real-estate.html${contextVersion}`)};
+        window.location.href = returnUrl;
       });
       syncPlayButton();
       render();
@@ -5502,6 +5542,12 @@
     state.selectedIds = new Set(state.selectedOrder);
     state.editedTitles = readJson(titleStoreKey(), {});
     state.projectAssignments = readJson(projectStoreKey(), {});
+    const requestedStep = requestedWizardStepFromUrl();
+    if (requestedStep !== null) {
+      state.wizardStep = requestedStep >= 2 && activeSelectedPhotos().length === 0
+        ? Math.min(firstWizardStep(), 1)
+        : Math.max(firstWizardStep(), requestedStep);
+    }
     const savedDeliverables = readJson(localDeliverablesStoreKey(), []);
     state.localDeliverables = Array.isArray(savedDeliverables) ? savedDeliverables : [];
     if (pageParams.has("logout")) {

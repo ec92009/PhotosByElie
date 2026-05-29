@@ -1,11 +1,14 @@
 # Instagram - Cascais Atlantic Evening
 
 - Date: 2026-05-29
-- Status: prepared_live_campaign_checked_not_published
+- Status: published
 - Account/profile/board: ec92009
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
-- Image count: 8
+- Image count: 5 published by API; 8 staged locally
 - Local images: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-29/cascais-atlantic-evening/images
+- Published URL: https://www.instagram.com/p/DY7ad1KjBxX/
+- Instagram media ID: 18176345059396594
+- Published at: 2026-05-29T15:54:52Z
 
 ## Caption
 
@@ -32,10 +35,13 @@ Cascais at evening pace: marina water, patterned stone, Atlantic boats, and soft
 
 - Images are downloaded public watermarked R2 previews staged for browser upload.
 - Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.
+- Published via Instagram API with Instagram Login token stored outside the repo at `~/.config/photosbyelie/instagram-token.json`.
+- API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.
+- Published caption starts: "Cascais at evening pace, selected for Instagram..." and keeps the same campaign URL and hashtags.
 
 ## Browser Check
 
 
-- Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.
+- Published via Instagram API and verified by Graph API. Permalink: https://www.instagram.com/p/DY7ad1KjBxX/.
+- Graph verification returned a `CAROUSEL_ALBUM`, username `ec92009`, timestamp `2026-05-29T15:54:52+0000`, and 5 image children.
 - GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
-- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.

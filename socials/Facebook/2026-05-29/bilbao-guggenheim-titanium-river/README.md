@@ -39,4 +39,5 @@ Bilbao in titanium, river light, and museum color: Guggenheim curves, glass inte
 
 - Published via Meta Pages API and verified by Graph API. Permalink: https://www.facebook.com/122102168061334672/posts/122102167911334672.
 - Built-in Browser verification loaded the Facebook permalink and showed the Photos By Elie post with the Bilbao caption and photo attachments.
+- Elie Cohen added a French comment under the live PBE Page post at 2026-05-29T15:17Z: "Bilbao en titane, lumière sur la rivière et couleurs du musée : courbes du Guggenheim, intérieurs de verre et géométrie urbaine, réunis dans une sélection Photos By Elie pensée pour l’art mural. Parcourir la sélection : https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29"
 - GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.

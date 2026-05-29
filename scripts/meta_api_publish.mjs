@@ -8,7 +8,10 @@ import process from "node:process";
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || "v23.0";
 const GRAPH_BASE = process.env.META_GRAPH_BASE || `https://graph.facebook.com/${GRAPH_VERSION}`;
+const INSTAGRAM_GRAPH_BASE = process.env.META_INSTAGRAM_GRAPH_BASE || `https://graph.instagram.com/${GRAPH_VERSION}`;
 const DEFAULT_TOKEN_FILE = path.join(os.homedir(), ".config", "photosbyelie", "meta-token.json");
+const DEFAULT_INSTAGRAM_TOKEN_FILE = path.join(os.homedir(), ".config", "photosbyelie", "instagram-token.json");
+const DEFAULT_INSTAGRAM_CONTAINER_WAIT_MS = Number(process.env.INSTAGRAM_CONTAINER_WAIT_MS || 120000);
 
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
@@ -38,6 +41,8 @@ Environment:
   META_PAGE_ACCESS_TOKEN  Optional Page token for Facebook publish calls.
   META_PAGE_ID            Optional default Facebook Page id.
   META_IG_USER_ID         Optional default Instagram professional account id.
+  INSTAGRAM_TOKEN_FILE    Optional. Defaults to ~/.config/photosbyelie/instagram-token.json.
+  INSTAGRAM_ACCESS_TOKEN  Optional Instagram API token for Instagram publish calls.
   META_GRAPH_VERSION      Optional. Defaults to v23.0.
 
 Notes:
@@ -54,17 +59,37 @@ function fail(message) {
   process.exit(1);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function token() {
+function token(filePath = DEFAULT_TOKEN_FILE, envName = "META_ACCESS_TOKEN") {
+  const envToken = String(process.env[envName] || "").trim();
+  if (envToken) return envToken;
+  const resolvedPath = path.resolve(String(filePath));
+  if (!fs.existsSync(resolvedPath)) return "";
+  const payload = readJson(resolvedPath);
+  return String(payload.access_token || "").trim();
+}
+
+function metaToken() {
+  return token(process.env.META_TOKEN_FILE || DEFAULT_TOKEN_FILE, "META_ACCESS_TOKEN");
+}
+
+function instagramTokenPayload() {
+  const filePath = path.resolve(String(process.env.INSTAGRAM_TOKEN_FILE || DEFAULT_INSTAGRAM_TOKEN_FILE));
+  if (!fs.existsSync(filePath)) return {};
+  return readJson(filePath);
+}
+
+function instagramToken() {
   const envToken = String(process.env.META_ACCESS_TOKEN || "").trim();
   if (envToken) return envToken;
-  const filePath = path.resolve(String(process.env.META_TOKEN_FILE || DEFAULT_TOKEN_FILE));
-  if (!fs.existsSync(filePath)) return "";
-  const payload = readJson(filePath);
-  return String(payload.access_token || "").trim();
+  return token(process.env.INSTAGRAM_TOKEN_FILE || DEFAULT_INSTAGRAM_TOKEN_FILE, "INSTAGRAM_ACCESS_TOKEN");
 }
 
 function mediaItems(manifest) {
@@ -94,7 +119,7 @@ function pageId() {
 }
 
 function igUserId() {
-  return String(args.get("ig-user-id") || process.env.META_IG_USER_ID || "").trim();
+  return String(args.get("ig-user-id") || process.env.META_IG_USER_ID || instagramTokenPayload().ig_user_id || "").trim();
 }
 
 function facebookDryRun(manifest, resolvedPageId) {
@@ -176,15 +201,16 @@ function instagramDryRun(manifest, resolvedIgUserId) {
     ig_user_id: resolvedIgUserId || null,
     image_count: mediaContainers.length,
     graph_version: GRAPH_VERSION,
+    graph_base: INSTAGRAM_GRAPH_BASE,
     note: "Live publish creates media containers, then publishes a single image or carousel container.",
     media_containers: mediaContainers,
     publish: carouselOrSingle,
   };
 }
 
-async function graphFetch(pathname, options = {}, accessToken = token()) {
+async function graphFetch(pathname, options = {}, accessToken = metaToken(), graphBase = GRAPH_BASE) {
   if (!accessToken) fail("META_ACCESS_TOKEN is required for this command unless a token file exists.");
-  const response = await fetch(`${GRAPH_BASE}${pathname}`, {
+  const response = await fetch(`${graphBase}${pathname}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -199,7 +225,7 @@ async function graphFetch(pathname, options = {}, accessToken = token()) {
   return body;
 }
 
-async function graphPostForm(pathname, body, accessToken) {
+async function graphPostForm(pathname, body, accessToken, graphBase = GRAPH_BASE) {
   const form = new URLSearchParams();
   for (const [key, value] of Object.entries(body)) {
     form.set(key, typeof value === "string" ? value : JSON.stringify(value));
@@ -208,7 +234,7 @@ async function graphPostForm(pathname, body, accessToken) {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form,
-  }, accessToken);
+  }, accessToken, graphBase);
 }
 
 function redactedPage(page) {
@@ -277,13 +303,30 @@ async function publishFacebook(payload) {
 
 async function publishInstagram(payload) {
   if (!payload.ig_user_id) fail("An Instagram user id is required for --publish.");
+  const accessToken = instagramToken();
+  if (!accessToken) fail("INSTAGRAM_ACCESS_TOKEN is required for Instagram publishing unless an Instagram token file exists.");
+  const waitForContainer = async (id, label) => {
+    const deadline = Date.now() + DEFAULT_INSTAGRAM_CONTAINER_WAIT_MS;
+    let last = null;
+    while (Date.now() < deadline) {
+      const status = await graphFetch(`/${id}?fields=status_code,status`, {}, accessToken, INSTAGRAM_GRAPH_BASE);
+      last = status;
+      if (status.status_code === "FINISHED") return status;
+      if (status.status_code === "ERROR" || status.status_code === "EXPIRED") {
+        throw new Error(`Instagram container ${label} ${id} failed: ${JSON.stringify(status)}`);
+      }
+      await sleep(5000);
+    }
+    throw new Error(`Instagram container ${label} ${id} was not ready before timeout. Last status: ${JSON.stringify(last)}`);
+  };
   const created = [];
   for (const entry of payload.media_containers) {
-    const result = await graphPostForm(entry.endpoint, entry.body, token());
+    const result = await graphPostForm(entry.endpoint, entry.body, accessToken, INSTAGRAM_GRAPH_BASE);
+    await waitForContainer(result.id, entry.source_item?.media_id || entry.source_item?.order || "media");
     created.push({ source_item: entry.source_item, response: result });
   }
   if (created.length === 1) {
-    const published = await graphPostForm(payload.publish.endpoint, { creation_id: created[0].response.id }, token());
+    const published = await graphPostForm(payload.publish.endpoint, { creation_id: created[0].response.id }, accessToken, INSTAGRAM_GRAPH_BASE);
     console.log(JSON.stringify({ status: "published", platform: "instagram", created, published }, null, 2));
     return;
   }
@@ -291,8 +334,9 @@ async function publishInstagram(payload) {
     media_type: "CAROUSEL",
     children: created.map((item) => item.response.id).join(","),
     caption: caption(readJson(resolvedManifestPath())),
-  }, token());
-  const published = await graphPostForm(payload.publish.publish_endpoint, { creation_id: carousel.id }, token());
+  }, accessToken, INSTAGRAM_GRAPH_BASE);
+  await waitForContainer(carousel.id, "carousel");
+  const published = await graphPostForm(payload.publish.publish_endpoint, { creation_id: carousel.id }, accessToken, INSTAGRAM_GRAPH_BASE);
   console.log(JSON.stringify({ status: "published", platform: "instagram", created, carousel, published }, null, 2));
 }
 

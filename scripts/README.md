@@ -235,7 +235,7 @@ Facebook Page and Instagram:
 ```bash
 npm run social:meta-oauth -- --auth-url
 npm run social:meta-api -- --platform facebook --manifest socials/Facebook/YYYY-MM-DD/theme/manifest.json --page-id "$META_PAGE_ID"
-npm run social:meta-api -- --platform instagram --manifest socials/Instagram/YYYY-MM-DD/theme/manifest.json --ig-user-id "$META_IG_USER_ID"
+npm run social:meta-api -- --platform instagram --manifest socials/Instagram/YYYY-MM-DD/theme/manifest.json
 ```
 
 Threads:
@@ -308,7 +308,7 @@ npm run social:pinterest-api -- --manifest socials/Pinterest/2026-05-27/gibralta
 
 Live publishing requires `--publish`, `PINTEREST_ACCESS_TOKEN`, and a board id. See `docs/sops/PINTEREST_API_SOP.md`.
 
-The Meta API scaffold follows the same dry-run-first pattern for Facebook Page and Instagram publishing. Tokens are stored outside the repo by the OAuth helper:
+The Meta API scaffold follows the same dry-run-first pattern for Facebook Page and Instagram publishing. Facebook tokens are stored outside the repo by the OAuth helper:
 
 ```bash
 export META_APP_ID='...'
@@ -318,7 +318,7 @@ npm run social:meta-oauth -- --auth-url
 npm run social:meta-oauth -- --exchange-code '<returned-code>'
 ```
 
-After a token exists, discover the Photos By Elie Page and linked Instagram account:
+After a Facebook token exists, discover the Photos By Elie Page:
 
 ```bash
 npm run social:meta-api -- --list-pages
@@ -328,10 +328,10 @@ Dry-run Facebook and Instagram packages before any live call:
 
 ```bash
 npm run social:meta-api -- --platform facebook --manifest socials/Facebook/2026-05-27/paris-arts-metiers-mechanical-details/manifest.json --page-id "$META_PAGE_ID"
-npm run social:meta-api -- --platform instagram --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json --ig-user-id "$META_IG_USER_ID"
+npm run social:meta-api -- --platform instagram --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json
 ```
 
-Live publishing requires `--publish`, a token, and the relevant Page or Instagram id. See `docs/sops/META_API_SOP.md`.
+For Instagram API with Instagram Login, generate the Instagram account token from the Meta Instagram API setup screen, save it outside the repo at `~/.config/photosbyelie/instagram-token.json`, and include the `ig_user_id` shown by Meta in that file. Live publishing requires `--publish`, a token, and the relevant Page or Instagram id. See `docs/sops/META_API_SOP.md`.
 
 Useful options:
 

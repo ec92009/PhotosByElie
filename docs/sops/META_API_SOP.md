@@ -7,7 +7,7 @@ Use this SOP when moving PhotosByElie Facebook Page and Instagram publishing tow
 - The repo has a dry-run-first Meta publisher at `scripts/meta_api_publish.mjs`.
 - The repo has a Meta OAuth helper at `scripts/meta_oauth.mjs`.
 - Live API publishing is disabled unless `--publish` is passed.
-- Secrets are never stored in the repo. OAuth tokens are stored outside the repo at `~/.config/photosbyelie/meta-token.json` with `0600` permissions.
+- Secrets are never stored in the repo. Facebook OAuth tokens are stored outside the repo at `~/.config/photosbyelie/meta-token.json` with `0600` permissions. Instagram Login tokens are stored outside the repo at `~/.config/photosbyelie/instagram-token.json` with `0600` permissions.
 - The first target is two-platform coverage: Photos By Elie Facebook Page publishing and linked Instagram professional-account publishing.
 - Personal Facebook profile reposting is not part of the normal public Pages/Instagram API path and should remain browser/manual.
 
@@ -32,13 +32,16 @@ export META_REDIRECT_URI='http://localhost/'
 
 ## Permission Targets
 
-Start with the smallest set needed for Facebook Page and Instagram feed publishing:
+Start with the smallest set needed for Facebook Page publishing through Facebook Login:
 
 - `pages_show_list`
 - `pages_read_engagement`
 - `pages_manage_posts`
-- `instagram_basic`
-- `instagram_content_publish`
+
+For the newer Instagram API with Instagram Login flow, use the Instagram API setup screen and grant the Instagram account tester access. The key publishing permissions shown by Meta are:
+
+- `instagram_business_basic`
+- `instagram_business_content_publish`
 
 Meta may rename or split permissions as products change. Use the current names shown in the Meta app dashboard if they differ.
 
@@ -78,6 +81,14 @@ Record locally, not in public copy:
 - whether a linked `instagram_business_account` id is returned
 - whether the token has the expected Page access
 
+For Instagram Login token-generator setup, record locally:
+
+- the Instagram account id shown in the generator row
+- the username
+- that the token file exists at `~/.config/photosbyelie/instagram-token.json`
+
+Never paste the token into chat, source files, docs, or shell history.
+
 ## Dry Run
 
 Facebook Page package:
@@ -94,8 +105,7 @@ Instagram package:
 ```bash
 npm run social:meta-api -- \
   --platform instagram \
-  --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json \
-  --ig-user-id "$META_IG_USER_ID"
+  --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json
 ```
 
 Confirm:
@@ -122,7 +132,6 @@ npm run social:meta-api -- \
 npm run social:meta-api -- \
   --platform instagram \
   --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json \
-  --ig-user-id "$META_IG_USER_ID" \
   --publish
 ```
 

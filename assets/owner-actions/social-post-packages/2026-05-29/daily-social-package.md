@@ -7,7 +7,7 @@ Prepared from public SQLite catalog rows and public R2 watermarked previews only
 ## Publishing Status
 
 - facebook: published; see Publish Checks.
-- instagram: prepared_live_campaign_checked_not_published; see Browser Checks.
+- instagram: published; see Publish Checks.
 - pinterest: prepared_authenticated_confirmed_not_published; see Browser Checks.
 - threads: prepared_live_campaign_checked_not_published; see Browser Checks.
 
@@ -42,10 +42,12 @@ Selected media:
 
 ## INSTAGRAM - Cascais Atlantic Evening
 
-- Account/status: ec92009; prepared_live_campaign_checked_not_published.
+- Account/status: ec92009; published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
-- Image count: 8
+- Image count: 5 published by API; 8 staged locally
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-29/cascais-atlantic-evening
+- Published URL: https://www.instagram.com/p/DY7ad1KjBxX/
+- Instagram media ID: 18176345059396594
 
 Caption:
 
@@ -123,11 +125,12 @@ Selected media:
 ## Publish Checks
 
 - Facebook: Published via Meta Pages API to Photos By Elie Page ID `1146747141854670`; Graph verification returned 8 photo attachments and permalink https://www.facebook.com/122102168061334672/posts/122102167911334672. Built-in Browser verification loaded the Facebook permalink and showed the Photos By Elie post with the Bilbao caption and photo attachments.
-- Instagram: Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.
+- Facebook comment: Elie Cohen added a French comment under the live PBE Page post at 2026-05-29T15:17Z; Built-in Browser verification showed it live with comment id `4458071704436052`.
+- Instagram: Published via Instagram API to `ec92009`; Graph verification returned a `CAROUSEL_ALBUM` with 5 image children and permalink https://www.instagram.com/p/DY7ad1KjBxX/. The API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.
 - Pinterest: Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.
 - Threads: Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.
 
 ## Deployment Check
 
 - GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
-- Meta OAuth token is now saved outside the repo at ~/.config/photosbyelie/meta-token.json and was used for the Facebook API publish. Pinterest and Threads token files were still not present during this package run.
+- Meta OAuth token is now saved outside the repo at ~/.config/photosbyelie/meta-token.json and was used for the Facebook API publish. Instagram API token is saved outside the repo at ~/.config/photosbyelie/instagram-token.json and was used for the Cascais API publish. Pinterest and Threads token files were still not present during this package run.

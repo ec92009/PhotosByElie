@@ -173,6 +173,14 @@
     "image_count": 8,
     "verified_at": "2026-05-29T15:10:20Z",
     "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+    "personal_comment": {
+      "status": "published",
+      "account": "Elie Cohen",
+      "comment_id": "4458071704436052",
+      "published_at": "2026-05-29T15:17:00Z",
+      "text": "Bilbao en titane, lumière sur la rivière et couleurs du musée : courbes du Guggenheim, intérieurs de verre et géométrie urbaine, réunis dans une sélection Photos By Elie pensée pour l’art mural.\nParcourir la sélection : https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
+      "verification": "Built-in Browser showed the comment live under the PBE Page post."
+    },
     "uploaded_photo_ids": [
       "122102167491334672",
       "122102167539334672",
@@ -195,6 +203,14 @@
     "image_count": 8,
     "verified_at": "2026-05-29T15:10:20Z",
     "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+    "personal_comment": {
+      "status": "published",
+      "account": "Elie Cohen",
+      "comment_id": "4458071704436052",
+      "published_at": "2026-05-29T15:17:00Z",
+      "text": "Bilbao en titane, lumière sur la rivière et couleurs du musée : courbes du Guggenheim, intérieurs de verre et géométrie urbaine, réunis dans une sélection Photos By Elie pensée pour l’art mural.\nParcourir la sélection : https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29",
+      "verification": "Built-in Browser showed the comment live under the PBE Page post."
+    },
     "uploaded_photo_ids": [
       "122102167491334672",
       "122102167539334672",

@@ -211,16 +211,39 @@ async function graphPostForm(pathname, body, accessToken) {
   }, accessToken);
 }
 
+function redactedPage(page) {
+  return {
+    id: page.id,
+    name: page.name,
+    link: page.link || null,
+    has_page_access_token: Boolean(page.access_token),
+    instagram_business_account: page.instagram_business_account || null,
+  };
+}
+
+async function pageDetails(targetPageId) {
+  return graphFetch(`/${targetPageId}?fields=id,name,link,access_token,instagram_business_account{id,username}`);
+}
+
 async function listPages() {
   const body = await graphFetch("/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}");
+  const pages = (body.data || []).map(redactedPage);
+  const requestedPageId = pageId();
+  const notes = [];
+  if (requestedPageId && !pages.some((page) => page.id === requestedPageId)) {
+    const directPage = await pageDetails(requestedPageId).catch((error) => {
+      notes.push(`Direct Page lookup for ${requestedPageId} failed: ${error.message}`);
+      return null;
+    });
+    if (directPage?.id) {
+      pages.push(redactedPage(directPage));
+      notes.push("Included Page from direct Page-ID lookup because /me/accounts returned no matching Page.");
+    }
+  }
   const redacted = {
     graph_version: GRAPH_VERSION,
-    pages: (body.data || []).map((page) => ({
-      id: page.id,
-      name: page.name,
-      has_page_access_token: Boolean(page.access_token),
-      instagram_business_account: page.instagram_business_account || null,
-    })),
+    pages,
+    notes,
   };
   console.log(JSON.stringify(redacted, null, 2));
 }
@@ -230,8 +253,10 @@ async function pageAccessToken(targetPageId) {
   if (envPageToken) return envPageToken;
   const body = await graphFetch("/me/accounts?fields=id,name,access_token");
   const page = (body.data || []).find((candidate) => candidate.id === targetPageId);
-  if (!page?.access_token) fail(`No Page access token returned for page id ${targetPageId}.`);
-  return page.access_token;
+  if (page?.access_token) return page.access_token;
+  const directPage = await pageDetails(targetPageId);
+  if (directPage?.access_token) return directPage.access_token;
+  fail(`No Page access token returned for page id ${targetPageId}.`);
 }
 
 async function publishFacebook(payload) {

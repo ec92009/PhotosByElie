@@ -1610,6 +1610,12 @@
     return record;
   };
 
+  const saveSelectionBeforeOutput = (batch) => {
+    if (!batch?.batchId) return null;
+    const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-selection.html`;
+    return saveLocalDeliverable({ type: "selection", batch, filename });
+  };
+
   const renameProducedDeliverable = async (deliverableId, name) => {
     if (!requireUnlocked()) return;
     const items = producedDeliverables();
@@ -2473,7 +2479,9 @@
     .watermark{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:rgba(255,255,255,.52);font-size:.76rem;font-weight:700;text-shadow:0 1px 6px #000}
     .controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;border-top:1px solid rgba(255,255,255,.14);background:#171717;padding:14px}
     button{min-height:42px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#242424;color:#fff;padding:8px 18px;font:inherit;font-weight:800;cursor:pointer}
+    .close-preview{background:#f7f7f7;color:#111;border-color:#f7f7f7}
     button:hover{background:#303030}
+    .close-preview:hover{background:#fff}
     @media (max-width:700px){
       main{display:grid;min-height:100dvh}
       .photo-slide{padding:0}
@@ -2494,6 +2502,7 @@
       ${slideshowWatermarkText ? `<div class="watermark">${escapeHtml(slideshowWatermarkText)}</div>` : ""}
     </section>
     <div class="controls">
+      <button class="close-preview" type="button" data-close-preview>Close preview</button>
       <button type="button" data-play>${musicTrack?.absoluteSrc || musicTrack?.src ? "Play with sound" : "Pause"}</button>
     </div>
     <script type="application/json" data-re-selection-batch>${safeJson}</script>
@@ -2508,6 +2517,7 @@
       const frame = document.querySelector("[data-frame]");
       const music = document.querySelector("[data-music]");
       const playButton = document.querySelector("[data-play]");
+      const closeButton = document.querySelector("[data-close-preview]");
       let index = 0;
       let timer = 0;
       let fadeFrame = 0;
@@ -2765,6 +2775,19 @@
           pauseMusic();
         }
         render();
+      });
+      closeButton?.addEventListener("click", () => {
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.close();
+            window.setTimeout(() => {
+              if (!document.hidden) window.location.href = ${JSON.stringify(`./real-estate.html${contextVersion}`)};
+            }, 250);
+            return;
+          }
+        } catch {}
+        if (history.length > 1) history.back();
+        else window.location.href = ${JSON.stringify(`./real-estate.html${contextVersion}`)};
       });
       syncPlayButton();
       render();
@@ -3740,13 +3763,12 @@
       let batch = buildSlideshowManifest(selected, true, batchOverride);
       updateOutputProgress({ title, detail: "Adding music and Ken Burns motion...", current: 1, total: 3 });
       let saved = null;
+      if (recordProduct) saveSelectionBeforeOutput(batch);
       if (openInBrowser) {
         const filename = `${state.gallery?.key || "real-estate"}-${batch.batchId}-slideshow.html`;
-        if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename });
         const html = slideshowHtmlFor(batch);
         updateOutputProgress({ title, detail: "Opening browser video view...", current: 2, total: 3 });
         saved = await openHtmlInBrowser(html, filename, fallbackWindow);
-        if (recordProduct) saveLocalDeliverable({ type: "selection", batch, filename: saved.filename, bytes: saved.bytes });
       } else {
         let recorded = null;
         let filename = "";
@@ -4612,6 +4634,7 @@
       total: totalSteps,
       kind: progressKind || (mode === "view" ? "pdf-view" : "pdf-download"),
     });
+    if (recordProduct) saveSelectionBeforeOutput(batch);
     if (recordProduct) saveLocalDeliverable({ type: "pdf", batch, filename: shelfFilename });
     let savedProjectCount = 0;
     let totalSavedBytes = 0;

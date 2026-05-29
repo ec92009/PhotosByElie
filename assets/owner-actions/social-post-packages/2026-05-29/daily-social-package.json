@@ -3,16 +3,16 @@
   "generated_at": "2026-05-29T03:06:07Z",
   "source_policy": "Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
   "status": {
-    "facebook": "prepared_campaign_created_not_published",
-    "instagram": "prepared_campaign_created_not_published",
-    "pinterest": "prepared_campaign_created_not_published",
-    "threads": "prepared_campaign_created_not_published"
+    "facebook": "prepared_live_campaign_checked_not_published",
+    "instagram": "prepared_live_campaign_checked_not_published",
+    "pinterest": "prepared_authenticated_confirmed_not_published",
+    "threads": "prepared_live_campaign_checked_not_published"
   },
   "packages": [
     {
       "date": "2026-05-29",
       "platform": "Facebook",
-      "status": "prepared_campaign_created_not_published",
+      "status": "prepared_live_campaign_checked_not_published",
       "account": "Photos By Elie Facebook Page",
       "post_type": "multi_photo",
       "title": "Bilbao Guggenheim Titanium and River",
@@ -22,7 +22,10 @@
       "recommended_upload_set": "images",
       "available_count": 8,
       "notes": [
-        "Images are downloaded public watermarked R2 previews staged for browser upload."
+        "Images are downloaded public watermarked R2 previews staged for browser upload.",
+        "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned \"This content isn't available right now\"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
       ],
       "items": [
         {
@@ -161,12 +164,20 @@
           "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180515-1554-00418-1666851aba",
           "local_staged_path": "socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images/08-20180515-1554-00418-1666851aba-bilbao-guggenheim-titanium-and-river.jpg"
         }
-      ]
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned \"This content isn't available right now\"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      }
     },
     {
       "date": "2026-05-29",
       "platform": "Instagram",
-      "status": "prepared_campaign_created_not_published",
+      "status": "prepared_live_campaign_checked_not_published",
       "account": "ec92009",
       "post_type": "carousel",
       "title": "Cascais Atlantic Evening",
@@ -177,7 +188,10 @@
       "available_count": 8,
       "notes": [
         "Images are downloaded public watermarked R2 previews staged for browser upload.",
-        "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available."
+        "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.",
+        "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
       ],
       "items": [
         {
@@ -316,12 +330,20 @@
           "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
           "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/08-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
         }
-      ]
+      ],
+      "browser_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      }
     },
     {
       "date": "2026-05-29",
       "platform": "Pinterest",
-      "status": "prepared_campaign_created_not_published",
+      "status": "prepared_authenticated_confirmed_not_published",
       "account": "@photosbyelie",
       "post_type": "pin_builder_multi_image",
       "title": "San Diego Aquarium Blue Reef",
@@ -332,7 +354,10 @@
       "available_count": 5,
       "notes": [
         "Images are downloaded public watermarked R2 previews staged for browser upload.",
-        "Pinterest package is capped at exactly 5 images for the current platform limit."
+        "Pinterest package is capped at exactly 5 images for the current platform limit.",
+        "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
       ],
       "items": [
         {
@@ -424,12 +449,20 @@
       "pin_title": "San Diego Aquarium Blue Reef Wall Art",
       "description": "Blue aquarium and reef photographs from San Diego, selected by Photos By Elie for luminous water, coral color, and calm wall-art browsing.",
       "board_recommendation": "California and USA Photography",
-      "alt_text": "Five Photos By Elie photographs from a San Diego aquarium showing blue water, reef coral, and colorful tropical fish."
+      "alt_text": "Five Photos By Elie photographs from a San Diego aquarium showing blue water, reef coral, and colorful tropical fish.",
+      "browser_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      }
     },
     {
       "date": "2026-05-29",
       "platform": "Threads",
-      "status": "prepared_campaign_created_not_published",
+      "status": "prepared_live_campaign_checked_not_published",
       "account": "ec92009 via Instagram login",
       "post_type": "multi_image_thread",
       "title": "Cascais Atlantic Evening",
@@ -440,7 +473,10 @@
       "available_count": 4,
       "notes": [
         "Images are downloaded public watermarked R2 previews staged for browser upload.",
-        "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+        "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+        "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
       ],
       "items": [
         {
@@ -512,12 +548,47 @@
           "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
         }
       ],
-      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+      "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+      "browser_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made."
+      },
+      "deployment_check": {
+        "checked_at": "2026-05-29T03:14:36Z",
+        "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      }
     }
   ],
-  "browser_checks": [],
+  "browser_checks": [
+    {
+      "platform": "Facebook",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned \"This content isn't available right now\"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+    },
+    {
+      "platform": "Instagram",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made."
+    },
+    {
+      "platform": "Pinterest",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual."
+    },
+    {
+      "platform": "Threads",
+      "checked_at": "2026-05-29T03:14:36Z",
+      "result": "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made."
+    }
+  ],
   "deployment_check": {
-    "status": "pending",
-    "notes": "Campaign manifests and v90.1 cache busting must be committed, pushed, and live-checked before publishing."
+    "checked_at": "2026-05-29T03:14:36Z",
+    "status": "succeeded",
+    "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+    "commit": "f0a4fd9a"
+  },
+  "api_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
   }
 }

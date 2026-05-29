@@ -1,7 +1,7 @@
 # Instagram - Cascais Atlantic Evening
 
 - Date: 2026-05-29
-- Status: prepared_campaign_created_not_published
+- Status: prepared_live_campaign_checked_not_published
 - Account/profile/board: ec92009
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
 - Image count: 8
@@ -32,3 +32,10 @@ Cascais at evening pace: marina water, patterned stone, Atlantic boats, and soft
 
 - Images are downloaded public watermarked R2 previews staged for browser upload.
 - Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.
+
+## Browser Check
+
+
+- Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.
+- GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
+- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.

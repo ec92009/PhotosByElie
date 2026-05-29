@@ -1,7 +1,7 @@
 # Threads - Cascais Atlantic Evening
 
 - Date: 2026-05-29
-- Status: prepared_campaign_created_not_published
+- Status: prepared_live_campaign_checked_not_published
 - Account/profile/board: ec92009 via Instagram login
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
 - Image count: 4
@@ -29,3 +29,10 @@ Four Cascais frames: marina blue, Atlantic boats, patterned stone, and evening P
 
 - Images are downloaded public watermarked R2 previews staged for browser upload.
 - Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.
+
+## Browser Check
+
+
+- Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.
+- GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
+- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.

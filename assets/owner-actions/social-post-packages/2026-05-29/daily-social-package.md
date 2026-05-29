@@ -1,19 +1,19 @@
 # PhotosByElie Daily Social Package - 2026-05-29
 
-Generated: 2026-05-29T03:06:07Z
+Generated: 2026-05-29T03:14:36Z
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
 
 ## Publishing Status
 
-- facebook: prepared_campaign_created_not_published; campaign/staged package prepared, browser publishing not attempted yet.
-- instagram: prepared_campaign_created_not_published; campaign/staged package prepared, browser publishing not attempted yet.
-- pinterest: prepared_campaign_created_not_published; campaign/staged package prepared, browser publishing not attempted yet.
-- threads: prepared_campaign_created_not_published; campaign/staged package prepared, browser publishing not attempted yet.
+- facebook: prepared_live_campaign_checked_not_published; see Browser Checks.
+- instagram: prepared_live_campaign_checked_not_published; see Browser Checks.
+- pinterest: prepared_authenticated_confirmed_not_published; see Browser Checks.
+- threads: prepared_live_campaign_checked_not_published; see Browser Checks.
 
 ## FACEBOOK - Bilbao Guggenheim Titanium and River
 
-- Account/status: Photos By Elie Facebook Page; prepared_campaign_created_not_published.
+- Account/status: Photos By Elie Facebook Page; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river
@@ -39,7 +39,7 @@ Selected media:
 
 ## INSTAGRAM - Cascais Atlantic Evening
 
-- Account/status: ec92009; prepared_campaign_created_not_published.
+- Account/status: ec92009; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-29/cascais-atlantic-evening
@@ -67,7 +67,7 @@ Selected media:
 
 ## PINTEREST - San Diego Aquarium Blue Reef
 
-- Account/status: @photosbyelie; prepared_campaign_created_not_published.
+- Account/status: @photosbyelie; prepared_authenticated_confirmed_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29
 - Image count: 5
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-05-29/san-diego-aquarium-blue-reef
@@ -94,7 +94,7 @@ Selected media:
 
 ## THREADS - Cascais Atlantic Evening
 
-- Account/status: ec92009 via Instagram login; prepared_campaign_created_not_published.
+- Account/status: ec92009 via Instagram login; prepared_live_campaign_checked_not_published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
 - Image count: 4
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-05-29/cascais-atlantic-evening
@@ -119,8 +119,12 @@ Selected media:
 
 ## Browser Checks
 
-- Pending until the v90.1 campaign manifests are committed, pushed, and live-resolving.
+- Facebook: Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned "This content isn't available right now"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.
+- Instagram: Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.
+- Pinterest: Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.
+- Threads: Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.
 
 ## Deployment Check
 
-- Pending.
+- GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
+- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.

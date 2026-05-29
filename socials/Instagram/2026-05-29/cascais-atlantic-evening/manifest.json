@@ -1,7 +1,7 @@
 {
   "date": "2026-05-29",
   "platform": "Instagram",
-  "status": "prepared_campaign_created_not_published",
+  "status": "prepared_live_campaign_checked_not_published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Cascais Atlantic Evening",
@@ -12,7 +12,10 @@
   "available_count": 8,
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
-    "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available."
+    "Instagram feed captions do not make the URL clickable; keep it for copy/paste or use profile link/story sticker as available.",
+    "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.",
+    "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+    "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
   ],
   "items": [
     {
@@ -151,5 +154,13 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940",
       "local_staged_path": "socials/Instagram/2026-05-29/cascais-atlantic-evening/images/08-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
     }
-  ]
+  ],
+  "browser_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+  }
 }

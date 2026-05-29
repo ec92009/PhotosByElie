@@ -1,7 +1,7 @@
 {
   "date": "2026-05-29",
   "platform": "Pinterest",
-  "status": "prepared_campaign_created_not_published",
+  "status": "prepared_authenticated_confirmed_not_published",
   "account": "@photosbyelie",
   "post_type": "pin_builder_multi_image",
   "title": "San Diego Aquarium Blue Reef",
@@ -12,7 +12,10 @@
   "available_count": 5,
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
-    "Pinterest package is capped at exactly 5 images for the current platform limit."
+    "Pinterest package is capped at exactly 5 images for the current platform limit.",
+    "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.",
+    "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+    "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
   ],
   "items": [
     {
@@ -104,5 +107,13 @@
   "pin_title": "San Diego Aquarium Blue Reef Wall Art",
   "description": "Blue aquarium and reef photographs from San Diego, selected by Photos By Elie for luminous water, coral color, and calm wall-art browsing.",
   "board_recommendation": "California and USA Photography",
-  "alt_text": "Five Photos By Elie photographs from a San Diego aquarium showing blue water, reef coral, and colorful tropical fish."
+  "alt_text": "Five Photos By Elie photographs from a San Diego aquarium showing blue water, reef coral, and colorful tropical fish.",
+  "browser_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+  }
 }

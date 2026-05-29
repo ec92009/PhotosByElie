@@ -1,7 +1,7 @@
 # Pinterest - San Diego Aquarium Blue Reef
 
 - Date: 2026-05-29
-- Status: prepared_campaign_created_not_published
+- Status: prepared_authenticated_confirmed_not_published
 - Account/profile/board: @photosbyelie
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-san-diego-aquarium-blue-reef-2026-05-29
 - Image count: 5
@@ -31,3 +31,10 @@ Blue reef light, coral texture, and calm aquarium color from Photos By Elie. Bro
 
 - Images are downloaded public watermarked R2 previews staged for browser upload.
 - Pinterest package is capped at exactly 5 images for the current platform limit.
+
+## Browser Check
+
+
+- Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.
+- GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
+- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.

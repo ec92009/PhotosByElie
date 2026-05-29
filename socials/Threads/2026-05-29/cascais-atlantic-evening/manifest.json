@@ -1,7 +1,7 @@
 {
   "date": "2026-05-29",
   "platform": "Threads",
-  "status": "prepared_campaign_created_not_published",
+  "status": "prepared_live_campaign_checked_not_published",
   "account": "ec92009 via Instagram login",
   "post_type": "multi_image_thread",
   "title": "Cascais Atlantic Evening",
@@ -12,7 +12,10 @@
   "available_count": 4,
   "notes": [
     "Images are downloaded public watermarked R2 previews staged for browser upload.",
-    "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+    "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+    "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.",
+    "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
+    "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
   ],
   "items": [
     {
@@ -84,5 +87,13 @@
       "local_staged_path": "socials/Threads/2026-05-29/cascais-atlantic-evening/images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg"
     }
   ],
-  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting."
+  "link_preview_note": "Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.",
+  "browser_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made."
+  },
+  "deployment_check": {
+    "checked_at": "2026-05-29T03:14:36Z",
+    "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+  }
 }

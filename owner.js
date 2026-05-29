@@ -1093,6 +1093,36 @@
     }
   };
 
+  const realEstateClientLoginUrl = (client) => {
+    const raw = client?.localReviewUrl || "./real-estate.html?logout=1";
+    try {
+      const url = new URL(raw, window.location.href);
+      url.searchParams.delete("logout");
+      return window.photosByElieVersionedHref?.(`${url.pathname}${url.search}${url.hash}`) || `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return window.photosByElieVersionedHref?.(raw.replace(/([?&])logout=1&?/, "$1").replace(/[?&]$/, "")) || raw;
+    }
+  };
+
+  const unlockRealEstateClientSession = (client) => {
+    const galleryKey = String(client?.galleryKey || realEstateConventionsFor(client).galleryKey || "").trim();
+    const username = String(client?.username || client?.customer || client?.email || "").trim();
+    const accessCode = String(client?.accessCode || "").trim();
+    if (!galleryKey || !username || !accessCode) return false;
+    try {
+      window.localStorage.setItem(`photosbyelie-real-estate-session-${galleryKey}`, JSON.stringify({
+        galleryKey,
+        username,
+        accessCode,
+        unlocked: true,
+        unlockedAt: new Date().toISOString(),
+      }));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const realEstatePropertiesFor = (client) => (
     client?.properties?.length ? client.properties : (client?.effectiveProperties || client?.availableProperties || client?.albums || [])
   );
@@ -1455,10 +1485,14 @@
       setRealEstateStatus(`${client.customer || "Client"} needs a local context before login can open. Press RE import or Publish context first.`);
       return;
     }
+    if (!unlockRealEstateClientSession(client)) {
+      setRealEstateStatus(`${client.customer || "Client"} needs a saved password before direct login can open.`);
+      return;
+    }
     markRealEstateRowSelected(client.id);
     renderRealEstateClients();
-    setRealEstateStatus(`Opening ${client.customer || client.id} login...`);
-    window.open(window.photosByElieVersionedHref?.(client.localReviewUrl) || client.localReviewUrl, "_blank", "noopener");
+    setRealEstateStatus(`Opening ${client.customer || client.id} review...`);
+    window.open(realEstateClientLoginUrl(client), "_blank", "noopener");
   };
 
   const runRealEstateClientAction = async (action) => {

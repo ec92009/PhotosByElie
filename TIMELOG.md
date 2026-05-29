@@ -123,8 +123,9 @@ Clock state: running
 | 2026-05-29 | 14:43 CEST | 14:48 CEST | 0:05 | Routed Real Estate video recording still-frame loads through Worker media URLs with 1800px and 900px fallbacks. |
 | 2026-05-29 | 14:51 CEST | 14:54 CEST | 0:03 | Changed desktop Real Estate video downloads to skip the native Safari share sheet while preserving mobile share behavior. |
 | 2026-05-29 | 15:35 CEST | 15:40 CEST | 0:05 | Added per-client Owner Real Estate row login buttons and fixed the wrong-client login path. |
+| 2026-05-29 | 15:45 CEST | 15:48 CEST | 0:03 | Made Owner Real Estate row login buttons seed the local client session and open directly into the review. |
 
 ## Totals
 
-Active collaboration time used: 6:55
+Active collaboration time used: 6:58
 Remaining budget: not set

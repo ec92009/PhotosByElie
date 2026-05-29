@@ -3086,6 +3086,33 @@
     if (signal?.aborted) throw videoExportAbortError();
   };
 
+  const waitForVideoExportDelay = (ms) => new Promise((resolve) => window.setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+
+  const waitForRecorderStop = async (recorder, stopped, signal, timeoutMs = 7000) => {
+    if (!stopped) return "missing";
+    let timeoutId = 0;
+    const timeout = new Promise((resolve) => {
+      timeoutId = window.setTimeout(() => resolve("timeout"), Math.max(1000, Number(timeoutMs) || 7000));
+    });
+    const abort = signal
+      ? new Promise((_, reject) => {
+        if (signal.aborted) {
+          reject(videoExportAbortError());
+          return;
+        }
+        signal.addEventListener("abort", () => reject(videoExportAbortError()), { once: true });
+      })
+      : null;
+    try {
+      return await Promise.race([stopped.then(() => "stopped"), timeout, ...(abort ? [abort] : [])]);
+    } finally {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      if (recorder?.state !== "inactive") {
+        try { recorder.requestData?.(); } catch {}
+      }
+    }
+  };
+
   const objectFitBox = (dimensions, box, fit = "contain") => {
     const width = Math.max(1, Number(dimensions?.width) || 1);
     const height = Math.max(1, Number(dimensions?.height) || 1);
@@ -3488,6 +3515,7 @@
     let stopped = null;
     const chunks = [];
     let recorderError = null;
+    let recorderStopTimedOut = false;
 
     try {
       canvasStream = canvas.captureStream(slideshowVideoFps);
@@ -3555,11 +3583,18 @@
           await nextAnimationFrame();
         }
       }
+      onProgress?.({ phase: "finalize", index: slides.length, total: slides.length, progress: 1 });
     } finally {
       if (recorder && recorder.state !== "inactive") {
+        try { recorder.requestData?.(); } catch {}
+        await waitForVideoExportDelay(180);
         try { recorder.stop(); } catch {}
       }
-      if (stopped) await stopped.catch(() => {});
+      const stopResult = await waitForRecorderStop(recorder, stopped, signal).catch((error) => {
+        if (error?.name === "AbortError") throw error;
+        return "error";
+      });
+      recorderStopTimedOut = stopResult === "timeout";
       if (stream) stream.getTracks().forEach((track) => track.stop());
       else canvasStream?.getTracks?.().forEach((track) => track.stop());
       audio?.stop?.();
@@ -3569,6 +3604,7 @@
     const finalMimeType = recorder.mimeType || mimeType;
     const blob = new Blob(chunks, { type: finalMimeType });
     if (!blob.size) throw new Error("The browser created an empty video file.");
+    if (recorderStopTimedOut) console.warn("Real Estate slideshow recorder stop timed out; using recorded chunks collected so far.");
     return {
       blob,
       mimeType: finalMimeType,
@@ -3726,6 +3762,15 @@
           });
           return;
         }
+        if (phase === "finalize") {
+          const detail = "Finalizing video file...";
+          if (background) updateBackgroundVideoProgress({ detail, current: Math.max(1, total), total: Math.max(1, total) });
+          else {
+            updateOutputProgress({ title: "Preparing video file", detail, current: 2, total: 3 });
+            setStatus(detail);
+          }
+          return;
+        }
         if (phase !== "load") return;
         const detail = `Recording slide ${index + 1}/${total}: ${slide?.title || "Untitled"}`;
         if (background) updateBackgroundVideoProgress({ detail, current: index + 1, total });
@@ -3822,6 +3867,12 @@
           const slides = slideshowSlidesFor(batch);
           updateOutputProgress({ title, detail: `Recording real video file from ${slides.length} slide${slides.length === 1 ? "" : "s"}...`, current: 2, total: 3 });
           recorded = await recordSlideshowVideoBlob(batch, ({ phase, index, total, slide }) => {
+            if (phase === "finalize") {
+              const detail = "Finalizing video file...";
+              updateOutputProgress({ title, detail, current: 2, total: 3 });
+              setStatus(detail);
+              return;
+            }
             if (phase !== "load") return;
             const detail = `Recording slide ${index + 1}/${total}: ${slide.title || "Untitled"}`;
             updateOutputProgress({ title, detail, current: 2, total: 3 });

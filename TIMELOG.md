@@ -117,8 +117,9 @@ Clock state: running
 | 2026-05-29 | 09:13 CEST | 09:15 CEST | 0:02 | Changed the Real Estate help modal dismissal from per-gallery to section-wide first-visit behavior. |
 | 2026-05-29 | 09:18 CEST | 09:23 CEST | 0:05 | Saved Real Estate selections before output actions and added an obvious close control to browser video previews. |
 | 2026-05-29 | 09:35 CEST | 09:43 CEST | 0:08 | Returned browser video previews to the Real Estate Output step and removed the sticky mobile Output footer controls. |
+| 2026-05-29 | 10:53 CEST | 10:58 CEST | 0:05 | Fixed Real Estate iPhone video export getting stuck after recording the final slide by adding MediaRecorder finalization safeguards. |
 
 ## Totals
 
-Active collaboration time used: 6:28
+Active collaboration time used: 6:33
 Remaining budget: not set

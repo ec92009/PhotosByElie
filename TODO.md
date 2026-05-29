@@ -4,10 +4,10 @@ Last updated: 2026-05-29
 
 ## Current Facts
 
-- Current visible build: `v90.5`.
+- Current visible build: `v90.6`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`.
-- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=90.5`.
-- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=90.5`.
+- Local Owner page: use the Dock launcher or the active helper port near 8000, currently `http://localhost:8000/owner.html?v=90.6`.
+- Public slideshow music app: `https://ec92009.github.io/PhotosByElie/slideshow-music.html?v=90.6`.
 - Current catalog scale: `6,672` public media rows in `assets/catalog/photosbyelie.sqlite`: AI/Leonardo `4,921`, France `315`, Italy `33`, Mexico `2`, Portugal `216`, Slovakia `2`, Spain `1,024`, USA `159`.
 - The catalog baseline audit is complete. Compared with the earlier `6,016`-row checkpoint at `736fe76b`, the current catalog is `+656` rows overall: AI/Leonardo is unchanged at `4,921`; France is `+192`; Spain is `+466`; Italy is `33` instead of `35` because two Italy rows were recently blocked; USA, Portugal, Mexico, and Slovakia are unchanged. The Italy `0` state was caused by missing Italy path/GPS hints, which left Florence, San Gimignano, and Pisa rows as `unknown` and therefore excluded from public export.
 - Public catalog loading and rebuilds use plain `assets/catalog/photosbyelie.sqlite`; Brotli `.sqlite.br` is legacy-only and not part of normal operations.
@@ -81,9 +81,10 @@ Last updated: 2026-05-29
 - `v90.3` stores Real Estate help dismissal at the section level, while honoring older per-gallery dismissals, so the modal appears only on the first visit.
 - `v90.4` saves the active Real Estate selection before starting PDF/video previews or downloads, and adds a visible Close preview button to the browser video preview.
 - `v90.5` returns browser video previews to the Output step when close has to navigate, and removes the sticky bottom controls/footer from the mobile Output screen.
+- `v90.6` keeps iPhone/Safari video export from sticking at the last recorded slide by finalizing recorder data with a stop-event watchdog.
 - Price and offer strategy draft: `docs/commerce/PRICE_OFFER_STRATEGY.md`; no live price change has been made from that draft yet.
 - First-pass public crawl files exist: `robots.txt` and `sitemap.xml`.
-- Latest checkpoint is `v90.5`; this file remains the numbered backlog source of truth.
+- Latest checkpoint is `v90.6`; this file remains the numbered backlog source of truth.
 - New import/re-export rule requested by Owner: the durable import anchor should be the full source pathname plus the source modified date. If only the modified date changes for the same source path, the new render should overwrite the older stored forms instead of creating a duplicate media row.
 - Italy audit detail: the 25 first restored rows came from `2025 Florence`, `2025 San Gimignano`, and `2025 Pisa`. The 10 Italy rows from the older phone-export folder `Pisa, 12 May 2025` were restored in `v86.10` using their original `2024 Pisa/Pisa, 12 May 2025` relative paths and IDs. The broader same-path overwrite/de-dupe work remains open because arbitrary selected-root imports can still derive duplicate IDs.
 - Current source-path tombstone audit found `0` manifest dodgers and `0` current R2 dodgers from `4,699` discarded IDs and `301` recovered discarded source paths. Current Camera eligibility audit found `10` ineligible raw import-cache rows and `0` current R2 objects after cleanup.

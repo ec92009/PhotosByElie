@@ -45,3 +45,9 @@ Cascais at evening pace: marina water, patterned stone, Atlantic boats, and soft
 - Published via Instagram API and verified by Graph API. Permalink: https://www.instagram.com/p/DY7ad1KjBxX/.
 - Graph verification returned a `CAROUSEL_ALBUM`, username `ec92009`, timestamp `2026-05-29T15:54:52+0000`, and 5 image children.
 - GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
+
+## Link Correction
+
+- Instagram feed captions render raw URLs as plain text, not clickable links.
+- Recovery action: set the Instagram profile website link to https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29 while this post is featured.
+- Recommended manual caption edit if editing in Instagram UI: `Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit from the profile link.`

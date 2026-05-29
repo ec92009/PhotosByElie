@@ -792,5 +792,12 @@
         "Publisher waits for media containers to finish processing before creating/publishing the carousel."
       ]
     }
+  },
+  "instagram_link_behavior": {
+    "status": "caption_url_not_clickable",
+    "affected_post": "https://www.instagram.com/p/DY7ad1KjBxX/",
+    "recommended_profile_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+    "recommended_manual_caption": "Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit from the profile link.\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast",
+    "automation_fix": "Future generated Instagram captions should avoid raw campaign URLs and direct users to the profile link instead."
   }
 }

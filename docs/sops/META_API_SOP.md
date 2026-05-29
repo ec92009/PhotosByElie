@@ -115,6 +115,7 @@ Confirm:
 - Facebook will create one Page post with attached media
 - Instagram will create one feed carousel
 - image counts match platform limits
+- Instagram captions do not make raw URLs clickable. Before publishing, put the campaign URL in the Instagram profile website link when the post depends on a clickable destination, and use caption copy such as "Browse the edit from the profile link."
 
 ## Publish
 
@@ -136,6 +137,7 @@ npm run social:meta-api -- \
 ```
 
 After publishing, verify the live result in a browser and update the relevant package manifest/README with published status and URLs.
+For Instagram, verify that the profile website link points to the active campaign if the caption references the profile link.
 
 ## Source Docs
 

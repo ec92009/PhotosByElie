@@ -16,7 +16,8 @@
     "Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.",
     "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
     "Instagram API token is saved outside the repo at ~/.config/photosbyelie/instagram-token.json; token prefix verified locally without printing the token.",
-    "First live API attempt with all 8 images failed before publishing because images 1-3 are panorama crops outside Instagram Graph aspect-ratio limits; final live post used images 4-8."
+    "First live API attempt with all 8 images failed before publishing because images 1-3 are panorama crops outside Instagram Graph aspect-ratio limits; final live post used images 4-8.",
+    "Post-publish correction: Instagram caption URLs are not clickable; set the profile website link to the Cascais campaign and use profile-link wording for future Instagram captions."
   ],
   "items": [
     {
@@ -247,5 +248,11 @@
       "API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.",
       "Publisher waits for media containers to finish processing before creating/publishing the carousel."
     ]
+  },
+  "instagram_link_behavior": {
+    "status": "caption_url_not_clickable",
+    "note": "Instagram feed captions render raw URLs as plain text. Use the Instagram profile website link for the campaign destination and caption copy that says to browse from the profile link.",
+    "recommended_profile_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29",
+    "recommended_manual_caption": "Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit from the profile link.\n\n#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast"
   }
 }

@@ -331,7 +331,7 @@ npm run social:meta-api -- --platform facebook --manifest socials/Facebook/2026-
 npm run social:meta-api -- --platform instagram --manifest socials/Instagram/2026-05-27/setenil-rock-streets/manifest.json
 ```
 
-For Instagram API with Instagram Login, generate the Instagram account token from the Meta Instagram API setup screen, save it outside the repo at `~/.config/photosbyelie/instagram-token.json`, and include the `ig_user_id` shown by Meta in that file. Live publishing requires `--publish`, a token, and the relevant Page or Instagram id. See `docs/sops/META_API_SOP.md`.
+For Instagram API with Instagram Login, generate the Instagram account token from the Meta Instagram API setup screen, save it outside the repo at `~/.config/photosbyelie/instagram-token.json`, and include the `ig_user_id` shown by Meta in that file. Live publishing requires `--publish`, a token, and the relevant Page or Instagram id. Instagram captions do not make raw URLs clickable, so campaign-driven posts should use the Instagram profile website link plus "profile link" caption copy. See `docs/sops/META_API_SOP.md`.
 
 Useful options:
 

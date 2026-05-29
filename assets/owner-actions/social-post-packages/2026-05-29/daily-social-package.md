@@ -48,11 +48,20 @@ Selected media:
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-29/cascais-atlantic-evening
 - Published URL: https://www.instagram.com/p/DY7ad1KjBxX/
 - Instagram media ID: 18176345059396594
+- Link behavior: Instagram renders caption URLs as plain text. Recovery is to set the Instagram profile website link to the campaign URL and use "profile link" wording.
 
 Caption:
 
 ```text
 Cascais at evening pace: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-cascais-atlantic-evening-2026-05-29
+
+#PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast
+```
+
+Recommended manual caption edit:
+
+```text
+Cascais at evening pace, selected for Instagram: marina water, patterned stone, Atlantic boats, and soft Portugal light. A compact Photos By Elie coastal set for calm rooms and travel-minded walls. Browse the edit from the profile link.
 
 #PhotosByElie #Cascais #PortugalTravel #TravelPhotography #WallArt #CoastalPhotography #AtlanticCoast
 ```
@@ -126,7 +135,7 @@ Selected media:
 
 - Facebook: Published via Meta Pages API to Photos By Elie Page ID `1146747141854670`; Graph verification returned 8 photo attachments and permalink https://www.facebook.com/122102168061334672/posts/122102167911334672. Built-in Browser verification loaded the Facebook permalink and showed the Photos By Elie post with the Bilbao caption and photo attachments.
 - Facebook comment: Elie Cohen added a French comment under the live PBE Page post at 2026-05-29T15:17Z; Built-in Browser verification showed it live with comment id `4458071704436052`.
-- Instagram: Published via Instagram API to `ec92009`; Graph verification returned a `CAROUSEL_ALBUM` with 5 image children and permalink https://www.instagram.com/p/DY7ad1KjBxX/. The API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits.
+- Instagram: Published via Instagram API to `ec92009`; Graph verification returned a `CAROUSEL_ALBUM` with 5 image children and permalink https://www.instagram.com/p/DY7ad1KjBxX/. The API-published variant used images 4-8 because images 1-3 were panorama crops outside Instagram Graph aspect-ratio limits. Post-publish correction: caption URL is not clickable on Instagram; set the profile website link to the Cascais campaign and use profile-link caption wording for future posts.
 - Pinterest: Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.
 - Threads: Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.
 

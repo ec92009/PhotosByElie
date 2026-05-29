@@ -106,6 +106,10 @@ function caption(manifest) {
   return String(manifest.caption || manifest.description || "").trim();
 }
 
+function captionHasRawUrl(text) {
+  return /\bhttps?:\/\/\S+/i.test(String(text || ""));
+}
+
 function resolvedManifestPath() {
   const raw = args.get("manifest");
   if (!raw) fail("--manifest is required for dry-run and publish.");
@@ -162,6 +166,7 @@ function facebookDryRun(manifest, resolvedPageId) {
 
 function instagramDryRun(manifest, resolvedIgUserId) {
   const items = mediaItems(manifest);
+  const postCaption = caption(manifest);
   if (items.length > 10) fail("Instagram carousel publishing supports at most 10 images.");
   const mediaContainers = items.map((item, index) => {
     const imageUrl = publicImageUrl(item);
@@ -174,7 +179,7 @@ function instagramDryRun(manifest, resolvedIgUserId) {
       },
       endpoint: `/${resolvedIgUserId || "<META_IG_USER_ID>"}/media`,
       body: items.length === 1
-        ? { image_url: imageUrl, caption: caption(manifest) }
+        ? { image_url: imageUrl, caption: postCaption }
         : { image_url: imageUrl, is_carousel_item: true },
       result_placeholder: `{creation_id_${index + 1}}`,
     };
@@ -189,7 +194,7 @@ function instagramDryRun(manifest, resolvedIgUserId) {
       body: {
         media_type: "CAROUSEL",
         children: mediaContainers.map((_, index) => `{creation_id_${index + 1}}`),
-        caption: caption(manifest),
+        caption: postCaption,
       },
       publish_endpoint: `/${resolvedIgUserId || "<META_IG_USER_ID>"}/media_publish`,
       publish_body: { creation_id: "{carousel_creation_id}" },
@@ -202,7 +207,10 @@ function instagramDryRun(manifest, resolvedIgUserId) {
     image_count: mediaContainers.length,
     graph_version: GRAPH_VERSION,
     graph_base: INSTAGRAM_GRAPH_BASE,
-    note: "Live publish creates media containers, then publishes a single image or carousel container.",
+    note: "Live publish creates media containers, then publishes a single image or carousel container. Instagram feed captions do not make raw URLs clickable; use the profile website link for campaign destinations.",
+    warnings: [
+      ...(captionHasRawUrl(postCaption) ? ["Caption contains a raw URL. Instagram will show it as plain text, not a clickable link."] : []),
+    ],
     media_containers: mediaContainers,
     publish: carouselOrSingle,
   };

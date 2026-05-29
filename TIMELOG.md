@@ -138,8 +138,9 @@ Clock state: running
 | 2026-05-29 | 19:35 CEST | 19:35 CEST | 0:00 | Normalized Owner button typography and centering. |
 | 2026-05-29 | 19:45 CEST | 19:47 CEST | 0:02 | Restored gallery thumbnail loading after caption sampling forced CORS mode, and replaced the black caption fallback. |
 | 2026-05-29 | 19:47 CEST | 22:43 CEST | 0:28 | Added persistent caption colors to the catalog/import flow, backfilled all photo masters from previews, and collapsed mobile gallery filters behind Search; slow backfill/runtime waiting excluded. |
+| 2026-05-29 | 22:43 CEST | 22:52 CEST | 0:03 | Verified the GitHub Pages deploy, fixed the public SQLite caption-color decode order, and bumped the cache version. |
 
 ## Totals
 
-Active collaboration time used: 9:34
+Active collaboration time used: 9:37
 Remaining budget: not set

@@ -3,7 +3,7 @@
   "generated_at": "2026-05-29T03:06:07Z",
   "source_policy": "Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.",
   "status": {
-    "facebook": "prepared_live_campaign_checked_not_published",
+    "facebook": "published",
     "instagram": "prepared_live_campaign_checked_not_published",
     "pinterest": "prepared_authenticated_confirmed_not_published",
     "threads": "prepared_live_campaign_checked_not_published"
@@ -12,7 +12,7 @@
     {
       "date": "2026-05-29",
       "platform": "Facebook",
-      "status": "prepared_live_campaign_checked_not_published",
+      "status": "published",
       "account": "Photos By Elie Facebook Page",
       "post_type": "multi_photo",
       "title": "Bilbao Guggenheim Titanium and River",
@@ -22,10 +22,10 @@
       "recommended_upload_set": "images",
       "available_count": 8,
       "notes": [
-        "Images are downloaded public watermarked R2 previews staged for browser upload.",
-        "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned \"This content isn't available right now\"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.",
-        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.",
-        "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
+        "Images are public watermarked R2 previews staged for browser upload and published through the Meta Pages API.",
+        "Published to Photos By Elie Facebook Page via Meta Pages API at 2026-05-29T15:09:45Z; post ID 1146747141854670_122102167911334672.",
+        "Graph verification returned 8 photo attachments and permalink https://www.facebook.com/122102168061334672/posts/122102167911334672.",
+        "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
       ],
       "items": [
         {
@@ -166,12 +166,56 @@
         }
       ],
       "browser_check": {
-        "checked_at": "2026-05-29T03:14:36Z",
-        "result": "Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned \"This content isn't available right now\"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made."
+        "checked_at": "2026-05-29T15:10:20Z",
+        "result": "Published via Meta Pages API and verified by Graph API. Permalink: https://www.facebook.com/122102168061334672/posts/122102167911334672"
       },
       "deployment_check": {
         "checked_at": "2026-05-29T03:14:36Z",
         "result": "GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a."
+      },
+      "published": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie Facebook Page",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122102167911334672",
+        "published_at": "2026-05-29T15:09:45Z",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102167911334672",
+        "image_count": 8,
+        "verified_at": "2026-05-29T15:10:20Z",
+        "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+        "uploaded_photo_ids": [
+          "122102167491334672",
+          "122102167539334672",
+          "122102167581334672",
+          "122102167641334672",
+          "122102167707334672",
+          "122102167755334672",
+          "122102167803334672",
+          "122102167869334672"
+        ]
+      },
+      "api_publish": {
+        "status": "published",
+        "platform": "facebook",
+        "account": "Photos By Elie Facebook Page",
+        "page_id": "1146747141854670",
+        "post_id": "1146747141854670_122102167911334672",
+        "published_at": "2026-05-29T15:09:45Z",
+        "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102167911334672",
+        "image_count": 8,
+        "verified_at": "2026-05-29T15:10:20Z",
+        "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+        "uploaded_photo_ids": [
+          "122102167491334672",
+          "122102167539334672",
+          "122102167581334672",
+          "122102167641334672",
+          "122102167707334672",
+          "122102167755334672",
+          "122102167803334672",
+          "122102167869334672"
+        ]
       }
     },
     {
@@ -590,5 +634,29 @@
   "api_check": {
     "checked_at": "2026-05-29T03:14:36Z",
     "result": "No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens."
+  },
+  "published": {
+    "facebook": {
+      "status": "published",
+      "platform": "facebook",
+      "account": "Photos By Elie Facebook Page",
+      "page_id": "1146747141854670",
+      "post_id": "1146747141854670_122102167911334672",
+      "published_at": "2026-05-29T15:09:45Z",
+      "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102167911334672",
+      "image_count": 8,
+      "verified_at": "2026-05-29T15:10:20Z",
+      "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments.",
+      "uploaded_photo_ids": [
+        "122102167491334672",
+        "122102167539334672",
+        "122102167581334672",
+        "122102167641334672",
+        "122102167707334672",
+        "122102167755334672",
+        "122102167803334672",
+        "122102167869334672"
+      ]
+    }
   }
 }

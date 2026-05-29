@@ -6,17 +6,20 @@ Prepared from public SQLite catalog rows and public R2 watermarked previews only
 
 ## Publishing Status
 
-- facebook: prepared_live_campaign_checked_not_published; see Browser Checks.
+- facebook: published; see Publish Checks.
 - instagram: prepared_live_campaign_checked_not_published; see Browser Checks.
 - pinterest: prepared_authenticated_confirmed_not_published; see Browser Checks.
 - threads: prepared_live_campaign_checked_not_published; see Browser Checks.
 
 ## FACEBOOK - Bilbao Guggenheim Titanium and River
 
-- Account/status: Photos By Elie Facebook Page; prepared_live_campaign_checked_not_published.
+- Account/status: Photos By Elie Facebook Page; published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river
+- Published URL: https://www.facebook.com/122102168061334672/posts/122102167911334672
+- Facebook post ID: 1146747141854670_122102167911334672
+- Published at: 2026-05-29T15:09:45Z
 
 Caption:
 
@@ -117,9 +120,9 @@ Selected media:
 | 3 | `20180517-2138-00495-cd8355432a` | 20180517 2138 00495 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2138-00495-cd8355432a_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2138-00495-cd8355432a | /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-05-29/cascais-atlantic-evening/images/03-20180517-2138-00495-cd8355432a-cascais-atlantic-evening.jpg |
 | 4 | `20180517-2236-00501-42b08a2940` | 20180517 2236 00501 | https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180517-2236-00501-42b08a2940_1800.jpg | https://ec92009.github.io/PhotosByElie/photo.html?id=20180517-2236-00501-42b08a2940 | /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-05-29/cascais-atlantic-evening/images/04-20180517-2236-00501-42b08a2940-cascais-atlantic-evening.jpg |
 
-## Browser Checks
+## Publish Checks
 
-- Facebook: Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned "This content isn't available right now"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.
+- Facebook: Published via Meta Pages API to Photos By Elie Page ID `1146747141854670`; Graph verification returned 8 photo attachments and permalink https://www.facebook.com/122102168061334672/posts/122102167911334672. Built-in Browser verification loaded the Facebook permalink and showed the Photos By Elie post with the Bilbao caption and photo attachments.
 - Instagram: Built-in Browser navigation to Instagram @ec92009 did not complete reliably in the available browser session; no login/profile/composer state could be safely confirmed, so no Instagram upload/publish attempt was made.
 - Pinterest: Built-in Browser reached Pinterest @photosbyelie without login prompts and opened Create Pin. Not published because the available browser API could not set files into the native upload control, and final board/upload confirmation remains action-time/manual.
 - Threads: Built-in Browser navigation to Threads @ec92009 did not complete reliably in the available browser session; no Threads composer/profile state could be safely confirmed, so no Threads upload/publish attempt was made.
@@ -127,4 +130,4 @@ Selected media:
 ## Deployment Check
 
 - GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
-- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.
+- Meta OAuth token is now saved outside the repo at ~/.config/photosbyelie/meta-token.json and was used for the Facebook API publish. Pinterest and Threads token files were still not present during this package run.

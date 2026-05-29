@@ -1,11 +1,14 @@
 # Facebook - Bilbao Guggenheim Titanium and River
 
 - Date: 2026-05-29
-- Status: prepared_live_campaign_checked_not_published
+- Status: published
 - Account/profile/board: Photos By Elie Facebook Page
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-bilbao-guggenheim-titanium-river-2026-05-29
 - Image count: 8
 - Local images: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-05-29/bilbao-guggenheim-titanium-river/images
+- Published URL: https://www.facebook.com/122102168061334672/posts/122102167911334672
+- Facebook post ID: 1146747141854670_122102167911334672
+- Published at: 2026-05-29T15:09:45Z
 
 ## Caption
 
@@ -28,11 +31,12 @@ Bilbao in titanium, river light, and museum color: Guggenheim curves, glass inte
 
 ## Notes
 
-- Images are downloaded public watermarked R2 previews staged for browser upload.
+- Images are public watermarked R2 previews staged for browser upload and published through the Meta Pages API.
+- Published to Photos By Elie Facebook Page via Meta Pages API at 2026-05-29T15:09:45Z; post ID `1146747141854670_122102167911334672`.
+- Graph verification returned 8 photo attachments and permalink https://www.facebook.com/122102168061334672/posts/122102167911334672.
 
-## Browser Check
+## Publish Check
 
-
-- Built-in Browser is logged into Facebook, but https://www.facebook.com/PhotosByElie returned "This content isn't available right now"; the Photos By Elie Page target could not be confirmed, so no Facebook composer/publish attempt was made.
+- Published via Meta Pages API and verified by Graph API. Permalink: https://www.facebook.com/122102168061334672/posts/122102167911334672.
+- Built-in Browser verification loaded the Facebook permalink and showed the Photos By Elie post with the Bilbao caption and photo attachments.
 - GitHub Pages deployment succeeded; all three new campaign JSON URLs returned HTTP 200 with v90.1 cache busting. Campaign commit pushed: f0a4fd9a.
-- No local API OAuth token files were present at ~/.config/photosbyelie/meta-token.json, pinterest-token.json, or threads-token.json. API dry-runs succeeded, but live API publishing is unavailable without tokens.

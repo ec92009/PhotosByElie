@@ -354,7 +354,7 @@
           data-photo-href="${href}"
         >
           <a class="mock-photo ${photo.className || ""} ${image ? "has-image" : ""} ${isVideo ? "is-video" : ""}" href="${href}" data-home-result-link ${window.photosByEliePhotoAspectStyle?.(photo) || ""}>
-            ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" crossorigin="anonymous" data-photo-card-image/>` : ""}
+            ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" data-photo-card-image/>` : ""}
             ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
             ${window.photosByElieGalleryCard?.originBadgeHtml?.(origin, originLabel, isVideo) || `<span class="photo-origin-badge is-${escapeHtml(badgeOrigin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>`}
           </a>

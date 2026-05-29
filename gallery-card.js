@@ -118,7 +118,7 @@
     const photoAspectStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const photoOpenLabel = `Open ${title}`;
     const mediaHtml = `
-      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" crossorigin="anonymous" data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
+      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
       ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
       ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       ${originBadgeHtml(origin, originLabel, isVideo)}

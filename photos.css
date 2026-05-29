@@ -253,7 +253,7 @@
   letter-spacing:0;
 }
 .campaign-gallery.mock-gallery{
-  --gallery-columns:5;
+  --gallery-default-columns:3;
 }
 .campaign-search{
   margin:0;
@@ -5680,7 +5680,7 @@ html[data-theme="light"] .detail-preview.has-image::after{
     font-size:clamp(2.8rem,16vw,4.6rem);
   }
   .campaign-gallery.mock-gallery{
-    --gallery-columns:2;
+    --gallery-default-columns:2;
   }
   .detail-layout.is-landscape .detail-preview{
     width:100%;

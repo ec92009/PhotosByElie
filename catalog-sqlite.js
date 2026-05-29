@@ -421,11 +421,11 @@
       "focal_length",
       "source_file_id",
       "location",
-      "caption_color",
       "gps_latitude",
       "gps_longitude",
       "created_at",
       "updated_at",
+      "caption_color",
     ], "index");
     const mediaAssets = reader.table(roots, "media_assets", ["media_id", "asset_type_id", "width", "height", "duration_seconds", "bytes", "format_id"], "index");
 

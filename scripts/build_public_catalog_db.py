@@ -453,11 +453,11 @@ def create_schema(conn: sqlite3.Connection) -> None:
           focal_length        TEXT,
           source_file_id      INTEGER NOT NULL,
           location            TEXT,
-          caption_color       TEXT CHECK (caption_color IS NULL OR caption_color GLOB '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]'),
           gps_latitude        REAL CHECK (gps_latitude IS NULL OR gps_latitude BETWEEN -90 AND 90),
           gps_longitude       REAL CHECK (gps_longitude IS NULL OR gps_longitude BETWEEN -180 AND 180),
           created_at          TEXT,
           updated_at          TEXT,
+          caption_color       TEXT CHECK (caption_color IS NULL OR caption_color GLOB '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]'),
           FOREIGN KEY (collection_id) REFERENCES collections(collection_id),
           FOREIGN KEY (media_type_id) REFERENCES media_types(media_type_id),
           FOREIGN KEY (camera_id) REFERENCES cameras(camera_id),
@@ -1068,11 +1068,11 @@ def write_db(repo_root: Path, output: Path, source: str = "auto") -> dict[str, i
             INSERT INTO media_items (
               media_id, collection_id, sort_index, media_type_id, camera_id, lens_id, title,
               description, keyword_ids, source_origin_id, captured_at, exposure, focal_length,
-              source_file_id, location, caption_color, gps_latitude, gps_longitude, created_at, updated_at
+              source_file_id, location, gps_latitude, gps_longitude, created_at, updated_at, caption_color
             ) VALUES (
               :media_id, :collection_id, :sort_index, :media_type_id, :camera_id, :lens_id, :title,
               :description, :keyword_ids, :source_origin_id, :captured_at, :exposure, :focal_length,
-              :source_file_id, :location, :caption_color, :gps_latitude, :gps_longitude, :created_at, :updated_at
+              :source_file_id, :location, :gps_latitude, :gps_longitude, :created_at, :updated_at, :caption_color
             )
             """,
             media_rows,

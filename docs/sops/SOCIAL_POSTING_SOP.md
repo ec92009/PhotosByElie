@@ -7,6 +7,7 @@ Use this workflow when the `pbe-daily-social-posts` automation prepares social p
 - Use only public PhotosByElie catalog data, public R2 preview URLs, and existing watermarked social/export assets.
 - Do not use private masters, unwatermarked private renders, buyer downloads, Owner-only metadata, ignored Owner review JSON, passwords, tokens, cookies, or API secrets in public posts.
 - Prepare a first-party PhotosByElie destination before posting. Prefer a campaign page; use a gallery URL only when a campaign is unnecessary or cannot be generated safely.
+- After adding or changing campaign manifests under `assets/campaigns/`, run `npm run campaigns:index` so the homepage pinned collections shelf is refreshed newest-first before publishing social links.
 - Pinterest packages must contain exactly 5 images. Facebook and Instagram packages should contain 5 to 10 images.
 
 ## Facebook Page Post In Built-In Browser

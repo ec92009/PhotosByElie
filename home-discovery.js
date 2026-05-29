@@ -19,6 +19,7 @@
   let visibleLimit = pageSize;
   let latestMatches = [];
   let selectedIndex = 0;
+  let showAllRenderToken = 0;
 
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -353,9 +354,9 @@
           data-photo-href="${href}"
         >
           <a class="mock-photo ${photo.className || ""} ${image ? "has-image" : ""} ${isVideo ? "is-video" : ""}" href="${href}" data-home-result-link ${window.photosByEliePhotoAspectStyle?.(photo) || ""}>
-            ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy"/>` : ""}
+            ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" crossorigin="anonymous" data-photo-card-image/>` : ""}
             ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
-            <span class="photo-origin-badge is-${escapeHtml(badgeOrigin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>
+            ${window.photosByElieGalleryCard?.originBadgeHtml?.(origin, originLabel, isVideo) || `<span class="photo-origin-badge is-${escapeHtml(badgeOrigin)}" title="${escapeHtml(originLabel)}">${escapeHtml(originShortLabel)}</span>`}
           </a>
           ${likedStore() ? `
             <div class="gallery-card-actions">
@@ -607,12 +608,28 @@
     renderResults();
   });
   moreButton?.addEventListener("click", () => {
+    showAllRenderToken += 1;
     visibleLimit += pageSize;
     renderResults();
   });
   showAllButton?.addEventListener("click", () => {
-    visibleLimit = latestMatches.length;
-    renderResults();
+    const token = showAllRenderToken + 1;
+    showAllRenderToken = token;
+    const addNextChunk = () => {
+      if (token !== showAllRenderToken) return;
+      if (visibleLimit >= latestMatches.length) {
+        if (showAllButton) showAllButton.disabled = false;
+        return;
+      }
+      visibleLimit = Math.min(latestMatches.length, visibleLimit + pageSize);
+      renderResults();
+      if (showAllButton) {
+        showAllButton.disabled = visibleLimit < latestMatches.length;
+        showAllButton.textContent = visibleLimit < latestMatches.length ? `Showing ${visibleLimit}/${latestMatches.length}` : t("home.show_all");
+      }
+      if (visibleLimit < latestMatches.length) window.setTimeout(addNextChunk, 0);
+    };
+    addNextChunk();
   });
   window.addEventListener("photosbyelie:languagechange", () => {
     populateCollectionOptions(window.photosByElieData || window.photosByElieHomeData || {});

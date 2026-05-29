@@ -10,24 +10,37 @@
     getPhotos = () => [],
     densityKey = defaultDensityKey,
     fitModeKey = defaultFitModeKey,
+    defaultDensity = defaultDensityColumns(),
+    defaultFitMode = "fill",
+    ignoreSavedLayout = false,
     dimensionsFor = (photo) => window.photosByEliePreviewDimensions?.(photo),
     isPanorama = (photo) => window.photosByEliePhotoIsPanorama?.(photo),
   } = {}) => {
     let pendingLayout = 0;
-    let fitMode = localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit";
+    const params = new URLSearchParams(window.location.search);
+    const initialDensity = Number(params.get("columns") || params.get("grid"));
+    let densityOverride = Number.isFinite(initialDensity) && initialDensity > 0 ? initialDensity : null;
+    const requestedFit = String(params.get("fit") || params.get("view") || "").toLowerCase();
+    const savedFitMode = ignoreSavedLayout ? "" : localStorage.getItem(fitModeKey);
+    let fitMode = requestedFit === "fit" || requestedFit === "fill"
+      ? requestedFit
+      : savedFitMode === "fit" || savedFitMode === "fill"
+        ? savedFitMode
+        : defaultFitMode === "fit" ? "fit" : "fill";
 
     const clampDensityColumns = (columns) => {
       const numericColumns = Number(columns);
       return Math.min(
-        Math.max(Number.isFinite(numericColumns) ? numericColumns : defaultDensityColumns(), 1),
+        Math.max(Number.isFinite(numericColumns) ? numericColumns : defaultDensity, 1),
         maxDensityColumns()
       );
     };
 
     const preferredDensityColumns = () => {
+      if (densityOverride !== null) return clampDensityColumns(densityOverride);
       const savedDensity = localStorage.getItem(densityKey);
       const savedValue = savedDensity === null ? NaN : Number(savedDensity);
-      return clampDensityColumns(Number.isInteger(savedValue) ? savedValue : defaultDensityColumns());
+      return clampDensityColumns(!ignoreSavedLayout && Number.isInteger(savedValue) ? savedValue : defaultDensity);
     };
 
     const cancelPreviewLayout = () => {
@@ -73,6 +86,7 @@
     };
 
     const setDensityColumns = (columns) => {
+      densityOverride = null;
       const nextColumns = clampDensityColumns(columns);
       localStorage.setItem(densityKey, String(nextColumns));
       return nextColumns;
@@ -93,7 +107,8 @@
     };
 
     const syncFromStorage = () => {
-      fitMode = localStorage.getItem(fitModeKey) === "fill" ? "fill" : "fit";
+      if (ignoreSavedLayout) return;
+      fitMode = localStorage.getItem(fitModeKey) === "fit" ? "fit" : "fill";
     };
 
     const applyPreviewLayout = (photos = getPhotos()) => {

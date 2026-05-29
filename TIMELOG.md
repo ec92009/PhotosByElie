@@ -127,8 +127,9 @@ Clock state: running
 | 2026-05-29 | 15:58 CEST | 16:06 CEST | 0:08 | Removed duplicated Real Estate property prefixes from default photo titles/output display, raised the Real Estate header opacity, and made the desktop bottom action bar step-aware. |
 | 2026-05-29 | 17:03 CEST | 17:58 CEST | 0:55 | Completed Meta API social publishing: recorded the Facebook API post/comment, connected Instagram Login, published the Cascais carousel, and updated package/API docs. |
 | 2026-05-29 | 17:58 CEST | 18:08 CEST | 0:10 | Corrected the Instagram caption-link workflow after confirming caption URLs are not clickable, added profile-link guidance, and warned on raw Instagram URLs in API dry runs. |
+| 2026-05-29 | 18:08 CEST | 18:28 CEST | 0:20 | Added newest-first campaign shelf indexing, default 3-column Fill gallery entry, progressive Show all rendering, icon origin badges, and sampled caption colors. |
 
 ## Totals
 
-Active collaboration time used: 8:11
+Active collaboration time used: 8:31
 Remaining budget: not set

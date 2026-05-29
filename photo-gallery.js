@@ -49,6 +49,7 @@ let renderedGalleryPhotos = [];
 let visibleLimit = pageSize;
 let moreButton = null;
 let showAllButton = null;
+let showAllRenderToken = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
@@ -392,16 +393,33 @@ const ensureGalleryMoreButton = () => {
     };
   };
   moreButton.addEventListener("click", () => {
+    showAllRenderToken += 1;
     const restoreScroll = preserveScrollAfterRender();
     visibleLimit += pageSize;
     renderGallery({ scrollSelection: false });
     restoreScroll();
   });
   showAllButton.addEventListener("click", () => {
+    const token = showAllRenderToken + 1;
+    showAllRenderToken = token;
     const restoreScroll = preserveScrollAfterRender();
-    visibleLimit = filteredVisiblePhotos().length;
-    renderGallery({ scrollSelection: false });
-    restoreScroll();
+    const addNextChunk = () => {
+      if (token !== showAllRenderToken) return;
+      const total = filteredVisiblePhotos().length;
+      if (visibleLimit >= total) {
+        if (showAllButton) showAllButton.disabled = false;
+        return;
+      }
+      visibleLimit = Math.min(total, visibleLimit + pageSize);
+      renderGallery({ scrollSelection: false });
+      restoreScroll();
+      if (showAllButton) {
+        showAllButton.disabled = visibleLimit < total;
+        showAllButton.textContent = visibleLimit < total ? `Showing ${visibleLimit}/${total}` : t("home.show_all");
+      }
+      if (visibleLimit < total) window.setTimeout(addNextChunk, 0);
+    };
+    addNextChunk();
   });
 };
 

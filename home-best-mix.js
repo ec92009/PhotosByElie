@@ -102,7 +102,11 @@
           .searchParams.get("c") || "";
       } catch {}
 
-      const frames = campaignPreviewFrames[campaignId] || [];
+      let renderedFrames = [];
+      try {
+        renderedFrames = JSON.parse(card.dataset.previewFrames || "[]");
+      } catch {}
+      const frames = Array.isArray(renderedFrames) && renderedFrames.length ? renderedFrames : campaignPreviewFrames[campaignId] || [];
       if (!image || frames.length < 2) return;
       card.dataset.previewFrameCount = String(frames.length);
 
@@ -251,6 +255,7 @@
 
   setupDiscoveryStatusText();
   setupFeaturedPreviewCyclers();
+  window.addEventListener("photosbyelie:featuredcampaignsrendered", setupFeaturedPreviewCyclers);
 
   const initialKey = [...sections.entries()]
     .find(([, section]) => `#${section.id}` === window.location.hash)?.[0];

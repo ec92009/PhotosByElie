@@ -611,8 +611,18 @@
     return `${minutes}:${String(remainder).padStart(2, "0")}`;
   };
 
-  const titleFor = (photo) => state.editedTitles[photo?.id] || photo?.editableTitle || photo?.title || photo?.id || "";
   const albumTitleFor = (photo) => photo?.albumTitle || photo?.caption || photo?.album || "Property";
+  const stripPropertyTitlePrefix = (photo, title) => {
+    const albumTitle = String(albumTitleFor(photo) || "").trim();
+    const rawTitle = String(title || "").trim();
+    if (!albumTitle || !rawTitle) return rawTitle;
+    const prefix = `${albumTitle} - `;
+    return rawTitle.toLowerCase().startsWith(prefix.toLowerCase())
+      ? rawTitle.slice(prefix.length).trim()
+      : rawTitle;
+  };
+  const defaultTitleFor = (photo) => stripPropertyTitlePrefix(photo, photo?.editableTitle || photo?.title || photo?.id || "");
+  const titleFor = (photo) => stripPropertyTitlePrefix(photo, state.editedTitles[photo?.id] || defaultTitleFor(photo));
   const projectIdFor = (photo) => photo?.albumSlug || "project";
   const projectTitleFor = (photo) => albumTitleFor(photo);
   const projectOptions = () => state.albums.map((album, index) => ({
@@ -1952,6 +1962,12 @@
       button.hidden = state.wizardStep !== 4;
       button.disabled = selected === 0;
     });
+    document.querySelectorAll("[data-re-download-pdf], [data-re-download-slideshow]").forEach((button) => {
+      button.hidden = state.wizardStep !== 4;
+    });
+    document.querySelectorAll("[data-re-clear-selection]").forEach((button) => {
+      button.hidden = state.wizardStep === 0 || selected === 0;
+    });
   };
 
   const syncDensityControls = () => {
@@ -2176,7 +2192,7 @@
     if (!photo) return;
     const previousTitle = titleFor(photo);
     const clean = String(value || "").trim();
-    const fallback = photo.editableTitle || photo.title || photo.id;
+    const fallback = defaultTitleFor(photo);
     if (!clean || clean === fallback) {
       delete state.editedTitles[photoId];
     } else {

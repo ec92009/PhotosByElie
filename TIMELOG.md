@@ -124,8 +124,9 @@ Clock state: running
 | 2026-05-29 | 14:51 CEST | 14:54 CEST | 0:03 | Changed desktop Real Estate video downloads to skip the native Safari share sheet while preserving mobile share behavior. |
 | 2026-05-29 | 15:35 CEST | 15:40 CEST | 0:05 | Added per-client Owner Real Estate row login buttons and fixed the wrong-client login path. |
 | 2026-05-29 | 15:45 CEST | 15:48 CEST | 0:03 | Made Owner Real Estate row login buttons seed the local client session and open directly into the review. |
+| 2026-05-29 | 15:58 CEST | 16:06 CEST | 0:08 | Removed duplicated Real Estate property prefixes from default photo titles/output display, raised the Real Estate header opacity, and made the desktop bottom action bar step-aware. |
 
 ## Totals
 
-Active collaboration time used: 6:58
+Active collaboration time used: 7:06
 Remaining budget: not set

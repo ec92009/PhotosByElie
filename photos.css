@@ -6274,6 +6274,7 @@ body[data-real-estate]{
   --glass-panel-bg:color-mix(in srgb,var(--bg) 96%,transparent);
   --glass-card-bg:color-mix(in srgb,var(--surface) 98%,transparent);
   --glass-card-hover-bg:color-mix(in srgb,var(--surface) 100%,transparent);
+  --glass-topbar-alpha:.86;
   --glass-border:color-mix(in srgb,var(--text) 18%,transparent);
   --glass-copy-shadow:none;
 }

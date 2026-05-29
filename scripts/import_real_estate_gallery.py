@@ -481,7 +481,7 @@ def build_manifest(
             total_source_bytes += source_bytes
             identity = real_estate_photo_identity(customer, album_name, source)
             photo_id = identity["photoId"]
-            default_title = f"{album_title} - {photo_index:02d}"
+            default_title = f"{photo_index:02d}"
             media_type = identity["mediaType"]
             emit_import_event(
                 progress_json,

@@ -309,6 +309,35 @@
     } catch {}
   };
 
+  const readStorageFlag = (key) => {
+    try {
+      if (JSON.parse(localStorage.getItem(key) || "false")) return true;
+    } catch {}
+    try {
+      if (JSON.parse(sessionStorage.getItem(key) || "false")) return true;
+    } catch {}
+    try {
+      return document.cookie
+        .split(";")
+        .map((item) => item.trim())
+        .includes(`${encodeURIComponent(key)}=1`);
+    } catch {
+      return false;
+    }
+  };
+
+  const writeStorageFlag = (key) => {
+    try {
+      localStorage.setItem(key, "true");
+    } catch {}
+    try {
+      sessionStorage.setItem(key, "true");
+    } catch {}
+    try {
+      document.cookie = `${encodeURIComponent(key)}=1; max-age=31536000; path=/; SameSite=Lax`;
+    } catch {}
+  };
+
   const workflow = () => state.payload?.cloudPdfWorkflow || {};
   const selectionStoreKey = () => workflow().selectionStoreKey || `photosbyelie-real-estate-liked-${state.gallery?.key || "default"}`;
   const titleStoreKey = () => workflow().titleStoreKey || `photosbyelie-real-estate-titles-${state.gallery?.key || "default"}`;
@@ -367,14 +396,18 @@
 
   const showHelp = ({ force = false } = {}) => {
     if (!elements.helpDialog || !state.unlocked) return;
-    const alreadyDismissed = readJson(helpDismissedGlobalKey, false) || readJson(helpDismissedKey(), false);
+    const alreadyDismissed = readStorageFlag(helpDismissedGlobalKey) || readStorageFlag(helpDismissedKey());
     if (!force && (alreadyDismissed || state.selectedOrder.length > 0)) return;
+    if (!force) {
+      writeStorageFlag(helpDismissedGlobalKey);
+      writeStorageFlag(helpDismissedKey());
+    }
     openDialog(elements.helpDialog);
   };
 
   const dismissHelp = () => {
-    writeJson(helpDismissedGlobalKey, true);
-    writeJson(helpDismissedKey(), true);
+    writeStorageFlag(helpDismissedGlobalKey);
+    writeStorageFlag(helpDismissedKey());
     closeDialog(elements.helpDialog);
   };
 
@@ -5557,8 +5590,8 @@
       if (event.target === elements.helpDialog) dismissHelp();
     });
     elements.helpDialog?.addEventListener("close", () => {
-      writeJson(helpDismissedGlobalKey, true);
-      writeJson(helpDismissedKey(), true);
+      writeStorageFlag(helpDismissedGlobalKey);
+      writeStorageFlag(helpDismissedKey());
     });
     document.addEventListener("keydown", (event) => {
       if (!elements.dialog?.open) return;

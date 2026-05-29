@@ -118,8 +118,9 @@ Clock state: running
 | 2026-05-29 | 09:18 CEST | 09:23 CEST | 0:05 | Saved Real Estate selections before output actions and added an obvious close control to browser video previews. |
 | 2026-05-29 | 09:35 CEST | 09:43 CEST | 0:08 | Returned browser video previews to the Real Estate Output step and removed the sticky mobile Output footer controls. |
 | 2026-05-29 | 10:53 CEST | 10:58 CEST | 0:05 | Fixed Real Estate iPhone video export getting stuck after recording the final slide by adding MediaRecorder finalization safeguards. |
+| 2026-05-29 | 11:02 CEST | 11:06 CEST | 0:04 | Hardened Real Estate help modal first-visit dismissal for iPhone/WebApp storage behavior. |
 
 ## Totals
 
-Active collaboration time used: 6:33
+Active collaboration time used: 6:37
 Remaining budget: not set

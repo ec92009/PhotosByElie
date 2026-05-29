@@ -1131,8 +1131,8 @@ html[data-theme="light"] .photo-art.has-photo::after{
 .owner-real-estate-table td:nth-child(8){
   position:sticky;
   right:0;
-  width:76px;
-  min-width:76px;
+  width:142px;
+  min-width:142px;
   background:var(--surface);
   box-shadow:-1px 0 0 var(--line);
   text-align:center;
@@ -1240,6 +1240,27 @@ html[data-theme="light"] .photo-art.has-photo::after{
   width:16px;
   height:16px;
   pointer-events:none;
+}
+.owner-real-estate-login-button{
+  min-width:58px;
+  height:32px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface);
+  color:var(--text);
+  cursor:pointer;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:850;
+  letter-spacing:0;
+  line-height:1;
+  padding:0 10px;
+}
+.owner-real-estate-login-button:hover,
+.owner-real-estate-login-button:focus-visible{
+  border-color:color-mix(in srgb,#2f8f5b 56%,var(--line));
+  background:color-mix(in srgb,#2f8f5b 10%,var(--surface));
+  color:color-mix(in srgb,#2f8f5b 84%,var(--text));
 }
 .owner-card-real-estate :disabled{
   cursor:progress;

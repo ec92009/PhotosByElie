@@ -1082,12 +1082,13 @@
   };
 
   const updateRealEstateLinks = (client) => {
+    const versionHref = (href) => window.photosByElieVersionedHref?.(href) || href;
     if (realEstateLocalLink) {
-      realEstateLocalLink.href = client?.localContextExists ? client.localReviewUrl : "./real-estate.html?logout=1";
+      realEstateLocalLink.href = versionHref(client?.localContextExists ? client.localReviewUrl : "./real-estate.html?logout=1");
       realEstateLocalLink.toggleAttribute("aria-disabled", !client?.localContextExists);
     }
     if (realEstatePublicLink) {
-      realEstatePublicLink.href = client?.publicContextExists ? client.publicReviewUrl : "./real-estate.html?logout=1";
+      realEstatePublicLink.href = versionHref(client?.publicContextExists ? client.publicReviewUrl : "./real-estate.html?logout=1");
       realEstatePublicLink.toggleAttribute("aria-disabled", !client?.publicContextExists);
     }
   };
@@ -1245,6 +1246,7 @@
               <div class="owner-real-estate-row-actions">
                 <button class="owner-real-estate-icon-button" type="button" data-owner-re-row-action="edit" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Edit ${escapeHtml(rowLabel)}" title="Edit client">${realEstateRowIcon("pen")}</button>
                 <button class="owner-real-estate-icon-button is-danger" type="button" data-owner-re-row-action="delete" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Delete ${escapeHtml(rowLabel)}" title="Delete client">${realEstateRowIcon("trash")}</button>
+                <button class="owner-real-estate-login-button" type="button" data-owner-re-row-action="login" data-owner-re-client-id="${escapeHtml(client.id)}" aria-label="Open login for ${escapeHtml(rowLabel)}" title="Open client login"${client.localContextExists && !client.isDraft ? "" : " disabled"}>Login</button>
               </div>
             </td>
           </tr>
@@ -1441,6 +1443,22 @@
     } finally {
       setRealEstateBusy(false);
     }
+  };
+
+  const openRealEstateClientLogin = (clientId) => {
+    const client = realEstateClients.find((item) => item.id === clientId);
+    if (!client || client.isDraft) {
+      setRealEstateStatus("Save this real estate client before opening login.");
+      return;
+    }
+    if (!client.localContextExists || !client.localReviewUrl) {
+      setRealEstateStatus(`${client.customer || "Client"} needs a local context before login can open. Press RE import or Publish context first.`);
+      return;
+    }
+    markRealEstateRowSelected(client.id);
+    renderRealEstateClients();
+    setRealEstateStatus(`Opening ${client.customer || client.id} login...`);
+    window.open(window.photosByElieVersionedHref?.(client.localReviewUrl) || client.localReviewUrl, "_blank", "noopener");
   };
 
   const runRealEstateClientAction = async (action) => {
@@ -3741,6 +3759,10 @@
       const clientId = rowAction.dataset.ownerReClientId || "";
       if (rowAction.dataset.ownerReRowAction === "delete") {
         deleteRealEstateClient(clientId);
+        return;
+      }
+      if (rowAction.dataset.ownerReRowAction === "login") {
+        openRealEstateClientLogin(clientId);
         return;
       }
       markRealEstateRowSelected(clientId);

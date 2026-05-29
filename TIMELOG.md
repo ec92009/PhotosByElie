@@ -121,8 +121,9 @@ Clock state: running
 | 2026-05-29 | 11:02 CEST | 11:06 CEST | 0:04 | Hardened Real Estate help modal first-visit dismissal for iPhone/WebApp storage behavior. |
 | 2026-05-29 | 13:39 CEST | 13:44 CEST | 0:05 | Explained the Real Estate mobile action bar and hid it with the site footer across phone-sized Real Estate steps. |
 | 2026-05-29 | 14:43 CEST | 14:48 CEST | 0:05 | Routed Real Estate video recording still-frame loads through Worker media URLs with 1800px and 900px fallbacks. |
+| 2026-05-29 | 14:51 CEST | 14:54 CEST | 0:03 | Changed desktop Real Estate video downloads to skip the native Safari share sheet while preserving mobile share behavior. |
 
 ## Totals
 
-Active collaboration time used: 6:47
+Active collaboration time used: 6:50
 Remaining budget: not set

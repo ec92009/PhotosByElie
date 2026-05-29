@@ -3022,9 +3022,16 @@
       : null
   );
 
-  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true, reservedWindow = null }) => {
+  const shouldUseNativeFileShare = () => {
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches === true;
+    const phoneWidth = window.matchMedia?.("(max-width: 900px)")?.matches === true;
+    const touchTablet = Number(navigator.maxTouchPoints || 0) > 1 && (window.innerWidth || 0) <= 1180;
+    return coarsePointer || phoneWidth || touchTablet;
+  };
+
+  const shareOrOpenBlob = async ({ blob, filename, title, text, openFallback = true, reservedWindow = null, allowNativeShare = true }) => {
     const file = fileForShare(blob, filename);
-    if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
+    if (allowNativeShare && file && navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
         const sharePromise = navigator.share({
           title,
@@ -3947,6 +3954,7 @@
           title: "Photos By Elie video",
           text: "Photos By Elie slideshow video file",
           openFallback: false,
+          allowNativeShare: shouldUseNativeFileShare(),
         });
         if (recordProduct) saveLocalDeliverable({ type: "video", batch, filename: saved.filename, bytes: saved.bytes });
       }

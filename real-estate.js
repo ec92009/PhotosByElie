@@ -279,6 +279,7 @@
   const projectStoreKey = () => workflow().projectStoreKey || `photosbyelie-real-estate-projects-${state.gallery?.key || "default"}`;
   const authStoreKey = () => `photosbyelie-real-estate-session-${state.gallery?.key || "default"}`;
   const credentialSessionKey = () => `photosbyelie-real-estate-credentials-${state.gallery?.key || "default"}`;
+  const helpDismissedGlobalKey = "photosbyelie-real-estate-help-dismissed";
   const helpDismissedKey = () => `photosbyelie-real-estate-help-dismissed-${state.gallery?.key || "default"}`;
   const localDeliverablesStoreKey = () => `photosbyelie-real-estate-products-${state.gallery?.key || "default"}`;
 
@@ -330,12 +331,13 @@
 
   const showHelp = ({ force = false } = {}) => {
     if (!elements.helpDialog || !state.unlocked) return;
-    const alreadyDismissed = readJson(helpDismissedKey(), false);
+    const alreadyDismissed = readJson(helpDismissedGlobalKey, false) || readJson(helpDismissedKey(), false);
     if (!force && (alreadyDismissed || state.selectedOrder.length > 0)) return;
     openDialog(elements.helpDialog);
   };
 
   const dismissHelp = () => {
+    writeJson(helpDismissedGlobalKey, true);
     writeJson(helpDismissedKey(), true);
     closeDialog(elements.helpDialog);
   };
@@ -5441,6 +5443,7 @@
       if (event.target === elements.helpDialog) dismissHelp();
     });
     elements.helpDialog?.addEventListener("close", () => {
+      writeJson(helpDismissedGlobalKey, true);
       writeJson(helpDismissedKey(), true);
     });
     document.addEventListener("keydown", (event) => {

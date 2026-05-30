@@ -1,9 +1,78 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-05-29T16:21:29.404Z",
-  "campaign_count": 17,
+  "generated_at": "2026-05-30T11:15:30.224Z",
+  "campaign_count": 20,
   "campaigns": [
+    {
+      "id": "pinterest-pisa-marble-and-leaning-tower-2026-05-30",
+      "source": "Pinterest",
+      "title": "Pisa Marble and Leaning Tower",
+      "description": "Five Photos By Elie frames from Pisa, selected for the Leaning Tower, marble facades, baptistery curves, and clear Italian architectural detail for travel and wall-art browsing.",
+      "date": "2026-05-30",
+      "href": "./campaign.html?c=pinterest-pisa-marble-and-leaning-tower-2026-05-30",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-pisa-marble-and-leaning-tower-2026-05-30",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1197-0132d88761_900.jpg",
+      "imageAlt": "IMG 1197",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1197-0132d88761_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1199-0ebd1a5044_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1205-4ca5e788f0_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1208-d059e156dc_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-1213-7276413ecc_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780139721081
+    },
+    {
+      "id": "instagram-lisbon-monastery-stone-and-light-2026-05-30",
+      "source": "Instagram",
+      "title": "Lisbon Monastery Stone and Light",
+      "description": "A Photos By Elie carousel set from Lisbon, focused on ribbed stone vaults, chapel glow, carved details, cloister geometry, and print-friendly monastery atmosphere.",
+      "date": "2026-05-30",
+      "href": "./campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1317-00594-407fa2a7b2_900.jpg",
+      "imageAlt": "20180519 1317 00594",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1317-00594-407fa2a7b2_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1323-00609-8acf5ae002_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1326-00611-4b92cde21c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1328-00612-3bbc44d831_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1329-00614-04486d9b61_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1337-00615-a2dda38e79_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1346-00618-d2b7edc2d4_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180519-1346-00619-fc41df1f05_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780139721080
+    },
+    {
+      "id": "facebook-madrid-printing-presses-and-pattern-2026-05-30",
+      "source": "Facebook",
+      "title": "Madrid Printing Presses and Pattern",
+      "description": "A focused Photos By Elie set from Madrid built around printmaking presses, metal rollers, type trays, paper texture, and quiet museum craft for editorial wall-art browsing.",
+      "date": "2026-05-30",
+      "href": "./campaign.html?c=facebook-madrid-printing-presses-and-pattern-2026-05-30",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-madrid-printing-presses-and-pattern-2026-05-30",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1033-00799-03b029177d_900.jpg",
+      "imageAlt": "20180522 1033 00799",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1033-00799-03b029177d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1033-00797-a563e73274_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1035-00802-7491e004e7_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1035-00803-ae8db6aa18_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1036-00806-7408b3d491_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1036-00807-8bd9eaf4d8_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1040-00812-426f67b68e_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1040-00814-8742b3330d_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780139721080
+    },
     {
       "id": "facebook-bilbao-guggenheim-titanium-river-2026-05-29",
       "source": "Facebook",
@@ -102,17 +171,10 @@
       "date": "2026-05-28",
       "href": "./campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
       "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-seville-cathedral-stone-and-light-2026-05-28",
-      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_900.jpg",
-      "imageAlt": "Seville Cathedral",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144116-00202-458ddfb0f9_900.jpg",
+      "imageAlt": "Seville Cathedral Stone and Light",
       "previewImageUrls": [
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-143445-00194-7c53cb988c_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144056-00196-2bb992f935_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144104-00198-33e6b76326_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144107-00199-5a9fcbe82c_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144110-00200-c72445afa9_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144113-00201-1470369a47_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144116-00202-458ddfb0f9_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144118-00203-3e8a805cc4_900.jpg"
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20240307-144116-00202-458ddfb0f9_900.jpg"
       ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
@@ -339,7 +401,6 @@
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6236-5c34056e1e_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6235-b7ffbc497f_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6232-938119802e_900.jpg",
-        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6230-1c5d28735e_900.jpg",
         "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/img-6229-38dd061aae_900.jpg"
       ],
       "primaryPhotoCount": 8,

@@ -1,7 +1,7 @@
 {
   "date": "2026-05-30",
   "platform": "Threads",
-  "status": "prepared_for_api_publish",
+  "status": "prepared_no_api_token",
   "account": "ec92009 via Instagram login",
   "post_type": "carousel",
   "title": "Lisbon Monastery Stone and Light",
@@ -12,7 +12,9 @@
   "recommended_upload_set": "images",
   "available_count": 4,
   "notes": [
-    "Threads package uses a 4-image subset derived from the Instagram set."
+    "Threads package uses a 4-image subset derived from the Instagram set.",
+    "Threads token file is missing; package remains ready for browser/manual posting with link preview removal if needed.",
+    "GitHub Pages served all three new campaign JSON URLs with HTTP 200, and live campaign.html returned v91.1 for all three social destinations."
   ],
   "items": [
     {

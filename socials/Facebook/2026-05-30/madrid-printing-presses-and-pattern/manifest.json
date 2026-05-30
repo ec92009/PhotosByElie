@@ -1,7 +1,7 @@
 {
   "date": "2026-05-30",
   "platform": "Facebook",
-  "status": "prepared_for_api_publish",
+  "status": "published",
   "account": "Photos By Elie Facebook Page",
   "post_type": "multi_photo",
   "title": "Madrid Printing Presses and Pattern",
@@ -11,7 +11,9 @@
   "recommended_upload_set": "images",
   "available_count": 8,
   "notes": [
-    "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing."
+    "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.",
+    "Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check was blocked by Facebook login/content visibility in the in-app browser.",
+    "GitHub Pages served all three new campaign JSON URLs with HTTP 200, and live campaign.html returned v91.1 for all three social destinations."
   ],
   "items": [
     {
@@ -150,5 +152,29 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180522-1040-00814-8742b3330d",
       "local_staged_path": "socials/Facebook/2026-05-30/madrid-printing-presses-and-pattern/images/08-20180522-1040-00814-8742b3330d-madrid-printing-presses-and-pattern.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie Facebook Page",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122102467419334672",
+    "published_at": "2026-05-30T11:19:22+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102467419334672",
+    "image_count": 8,
+    "verified_at": "2026-05-30T11:23:03Z",
+    "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check was blocked by Facebook login/content visibility in the in-app browser."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie Facebook Page",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122102467419334672",
+    "published_at": "2026-05-30T11:19:22+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102467419334672",
+    "image_count": 8,
+    "verified_at": "2026-05-30T11:23:03Z",
+    "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check was blocked by Facebook login/content visibility in the in-app browser."
+  }
 }

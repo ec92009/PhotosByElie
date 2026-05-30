@@ -21,3 +21,8 @@ Four Lisbon frames: chapel doors, cloister geometry, and quiet monastery scale f
 - `manifest.json`: structured package manifest.
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
+
+## Publish Check
+
+- Not published: no local Threads API token file was present.
+- Manual route: post the 4 staged images with `caption.txt`; remove any automatic link preview if it shows generic or off-theme campaign metadata.

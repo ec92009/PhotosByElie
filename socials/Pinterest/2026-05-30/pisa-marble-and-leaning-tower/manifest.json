@@ -1,7 +1,7 @@
 {
   "date": "2026-05-30",
   "platform": "Pinterest",
-  "status": "prepared_manual_publish",
+  "status": "prepared_no_api_token",
   "account": "@photosbyelie",
   "post_type": "standard_image_pins",
   "title": "Pisa Marble and Leaning Tower",
@@ -15,7 +15,9 @@
   "recommended_upload_set": "images",
   "available_count": 5,
   "notes": [
-    "Pinterest package is capped at exactly 5 images for the current platform limit."
+    "Pinterest package is capped at exactly 5 images for the current platform limit.",
+    "Pinterest token file is missing; package remains ready for manual Pin Builder upload to the Italy Travel Photography board.",
+    "GitHub Pages served all three new campaign JSON URLs with HTTP 200, and live campaign.html returned v91.1 for all three social destinations."
   ],
   "items": [
     {

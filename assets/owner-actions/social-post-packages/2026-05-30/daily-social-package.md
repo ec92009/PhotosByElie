@@ -6,17 +6,19 @@ Prepared from public SQLite catalog rows and public R2 watermarked previews only
 
 ## Publishing Status
 
-- facebook: prepared_for_api_publish; publishing checks pending.
-- instagram: prepared_for_api_publish; publishing checks pending.
-- threads: prepared_for_api_publish; publishing checks pending.
-- pinterest: prepared_manual_publish; publishing checks pending.
+- facebook: published.
+- instagram: published.
+- threads: prepared_no_api_token.
+- pinterest: prepared_no_api_token.
 
 ## FACEBOOK - Madrid Printing Presses and Pattern
 
-- Account/status: Photos By Elie Facebook Page; prepared_for_api_publish.
+- Account/status: Photos By Elie Facebook Page; published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-madrid-printing-presses-and-pattern-2026-05-30
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-05-30/madrid-printing-presses-and-pattern
+- Published URL: https://www.facebook.com/122102168061334672/posts/122102467419334672
+- Facebook post ID: 1146747141854670_122102467419334672
 
 Caption:
 
@@ -39,15 +41,18 @@ Selected media:
 
 ## INSTAGRAM - Lisbon Monastery Stone and Light
 
-- Account/status: ec92009; prepared_for_api_publish.
+- Account/status: ec92009; published.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-30/lisbon-monastery-stone-and-light
+- Published URL: https://www.instagram.com/p/DY9f-Z-jEyF/
+- Instagram media ID: 17973092202028780
+- Link behavior: raw caption URL is plain text on Instagram.
 
 Caption:
 
 ```text
-Lisbon in stone and chapel light: ribbed vaults, gold detail, cloister geometry, and quiet monastery scale selected for Photos By Elie. Browse the edit from the profile link.
+Lisbon in stone and chapel light: ribbed vaults, gold detail, cloister geometry, and quiet monastery scale selected for Photos By Elie. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30
 
 #PhotosByElie #Lisbon #PortugalTravel #TravelPhotography #WallArt #ArchitecturePhotography
 ```
@@ -67,7 +72,7 @@ Selected media:
 
 ## THREADS - Lisbon Monastery Stone and Light
 
-- Account/status: ec92009 via Instagram login; prepared_for_api_publish.
+- Account/status: ec92009 via Instagram login; prepared_no_api_token.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30
 - Image count: 4
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-05-30/lisbon-monastery-stone-and-light
@@ -92,7 +97,7 @@ Selected media:
 
 ## PINTEREST - Pisa Marble and Leaning Tower
 
-- Account/status: @photosbyelie; prepared_manual_publish.
+- Account/status: @photosbyelie; prepared_no_api_token.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-pisa-marble-and-leaning-tower-2026-05-30
 - Image count: 5
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-05-30/pisa-marble-and-leaning-tower
@@ -119,8 +124,11 @@ Selected media:
 
 ## Publish Checks
 
-- Pending: API/browser publishing has not been attempted yet.
+- Facebook: published; Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check was blocked by Facebook login/content visibility in the in-app browser. https://www.facebook.com/122102168061334672/posts/122102467419334672
+- Instagram: published; Instagram Graph returned CAROUSEL_ALBUM, permalink, account username, caption, timestamp, and 8 child images. Built-in Browser permalink check showed the public post text. https://www.instagram.com/p/DY9f-Z-jEyF/
+- Pinterest: prepared_no_api_token; No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Browser upload/final board confirmation remains manual.
+- Threads: prepared_no_api_token; No ~/.config/photosbyelie/threads-token.json was present; API publishing unavailable. Browser/manual posting remains required.
 
 ## Deployment Check
 
-- Pending: campaigns generated locally; commit/push and live URL checks still pending.
+- GitHub Pages served all three new campaign JSON URLs with HTTP 200, and live campaign.html returned v91.1 for all three social destinations. Commit `37a74e44`.

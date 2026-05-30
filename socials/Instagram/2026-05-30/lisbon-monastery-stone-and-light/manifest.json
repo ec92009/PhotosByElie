@@ -1,19 +1,21 @@
 {
   "date": "2026-05-30",
   "platform": "Instagram",
-  "status": "prepared_for_api_publish",
+  "status": "published",
   "account": "ec92009",
   "post_type": "carousel",
   "title": "Lisbon Monastery Stone and Light",
   "destination_url": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30",
   "campaign_id": "instagram-lisbon-monastery-stone-and-light-2026-05-30",
-  "caption": "Lisbon in stone and chapel light: ribbed vaults, gold detail, cloister geometry, and quiet monastery scale selected for Photos By Elie. Browse the edit from the profile link.\n\n#PhotosByElie #Lisbon #PortugalTravel #TravelPhotography #WallArt #ArchitecturePhotography",
+  "caption": "Lisbon in stone and chapel light: ribbed vaults, gold detail, cloister geometry, and quiet monastery scale selected for Photos By Elie. Browse the edit: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-lisbon-monastery-stone-and-light-2026-05-30\n\n#PhotosByElie #Lisbon #PortugalTravel #TravelPhotography #WallArt #ArchitecturePhotography",
   "recommended_upload_set": "images",
   "available_count": 8,
   "notes": [
     "Images are public watermarked R2 previews staged for Instagram Graph API publishing.",
     "All selected images are within the Instagram feed aspect-ratio guardrail.",
-    "Caption avoids raw URLs because Instagram feed captions render them as plain text; set profile website link to the campaign when posting manually."
+    "Caption avoids raw URLs because Instagram feed captions render them as plain text; set profile website link to the campaign when posting manually.",
+    "Instagram Graph returned CAROUSEL_ALBUM, permalink, account username, caption, timestamp, and 8 child images. Built-in Browser permalink check showed the public post text.",
+    "GitHub Pages served all three new campaign JSON URLs with HTTP 200, and live campaign.html returned v91.1 for all three social destinations."
   ],
   "items": [
     {
@@ -152,5 +154,31 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180519-1346-00619-fc41df1f05",
       "local_staged_path": "socials/Instagram/2026-05-30/lisbon-monastery-stone-and-light/images/08-20180519-1346-00619-fc41df1f05-lisbon-monastery-stone-and-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "ig_user_id": "17841400866970070",
+    "media_id": "17973092202028780",
+    "published_at": "2026-05-30T11:21:22+0000",
+    "permalink_url": "https://www.instagram.com/p/DY9f-Z-jEyF/",
+    "image_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "verified_at": "2026-05-30T11:23:03Z",
+    "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, account username, caption, timestamp, and 8 child images. Built-in Browser permalink check showed the public post text."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "instagram",
+    "account": "ec92009",
+    "ig_user_id": "17841400866970070",
+    "media_id": "17973092202028780",
+    "published_at": "2026-05-30T11:21:22+0000",
+    "permalink_url": "https://www.instagram.com/p/DY9f-Z-jEyF/",
+    "image_count": 8,
+    "media_type": "CAROUSEL_ALBUM",
+    "verified_at": "2026-05-30T11:23:03Z",
+    "verification": "Instagram Graph returned CAROUSEL_ALBUM, permalink, account username, caption, timestamp, and 8 child images. Built-in Browser permalink check showed the public post text."
+  }
 }

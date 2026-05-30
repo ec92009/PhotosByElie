@@ -21,3 +21,8 @@ Pisa marble, tower geometry, and clear Italian architectural detail from Photos 
 - `manifest.json`: structured package manifest.
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
+
+## Publish Check
+
+- Not published: no local Pinterest API token file was present.
+- Manual route: open Pinterest Pin Builder, select `Italy Travel Photography`, upload exactly the 5 staged images, use the title/description/alt text in `manifest.json`, and set the destination URL to the campaign.

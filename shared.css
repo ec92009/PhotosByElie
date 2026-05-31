@@ -134,7 +134,7 @@ a:hover{
 .shell{width:min(1480px,calc(100dvw - (var(--page-gutter) * 2)));margin:auto}
 .topbar{
   position:sticky;top:0;z-index:80;
-  display:flex;gap:10px;align-items:center;justify-content:flex-start;
+  display:flex;column-gap:10px;row-gap:8px;align-items:center;justify-content:flex-start;
   flex-wrap:wrap;
   padding:12px var(--panel-inline);
   backdrop-filter:blur(var(--glass-heavy-blur));
@@ -144,7 +144,8 @@ a:hover{
   box-shadow:var(--glass-panel-shadow);
   text-shadow:var(--glass-copy-shadow);
 }
-.brand{order:1;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+.brand{order:2;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap;min-width:0;max-width:calc(100% - 132px);overflow:hidden;text-overflow:ellipsis}
+.brand .site-logo{flex:0 0 auto}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
 .header-back-button{
   order:1;
@@ -165,10 +166,10 @@ a:hover{
   backdrop-filter:blur(var(--glass-light-blur));
   -webkit-backdrop-filter:blur(var(--glass-light-blur));
 }
-.mobile-header-back{display:none}
-.version-switch{order:2;flex:1 1 calc(100% - 220px);min-width:0}
-.site-version-badge{order:3}
-.header-controls{order:4;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:0;flex:1 1 auto;flex-wrap:wrap}
+.mobile-header-back{display:inline-flex}
+.version-switch{order:4;flex:1 1 100%;min-width:0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+.site-version-badge{order:3;margin-left:auto;flex:0 0 auto}
+.header-controls{order:5;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:0;flex:1 1 100%;width:100%;flex-wrap:wrap}
 .site-version-badge{
   display:inline-flex;
   align-items:center;
@@ -177,7 +178,7 @@ a:hover{
   letter-spacing:.02em;
   white-space:nowrap;
 }
-.header-action-links{display:inline-flex;align-items:center;gap:6px}
+.header-action-links{order:1;display:inline-flex;align-items:center;gap:6px;margin-right:auto}
 .header-action-link{
   display:inline-grid;
   place-items:center;
@@ -228,6 +229,18 @@ html[data-theme="dark"] .mode-light { display: none; }
 .theme-toggle,.language-toggle { font-weight: 700; text-align: center; cursor:pointer; }
 .theme-toggle { width: 68px; }
 .language-toggle { min-width: 92px; }
+.language-toggle{order:2}
+.theme-toggle{order:3}
+.header-controls > .gallery-top-button{
+  order:4;
+  flex:0 0 38px;
+  margin-right:calc(100% - 38px);
+}
+.header-controls > .gallery-view-controls{
+  order:5;
+  flex:1 1 100%;
+  width:100%;
+}
 html[data-theme="dark"] .version-switch,
 html[data-theme="dark"] .theme-toggle,
 html[data-theme="dark"] .language-toggle,
@@ -539,8 +552,7 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .panel{padding:14px}
   .grid{grid-template-columns:1fr}
   .about-grid{grid-template-columns:1fr}
-  .topbar{flex-wrap:wrap;column-gap:8px;row-gap:8px;padding:10px var(--panel-inline);align-items:center}
-  .mobile-header-back{display:inline-flex}
+  .topbar{column-gap:8px;padding:10px var(--panel-inline)}
   .topbar > .header-back-button{
     order:1;
     width:38px;
@@ -548,43 +560,9 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
     flex:0 0 38px;
     font-size:1.3rem;
   }
-  .brand{
-    order:2;
-    width:auto;
-    max-width:calc(100% - 128px);
-    flex:0 1 auto;
-    min-width:0;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-    font-size:clamp(.82rem,4vw,.95rem);
-  }
-  .brand .site-logo{flex:0 0 auto}
-  .site-version-badge{
-    order:3;
-    align-self:center;
-    margin-left:auto;
-    flex:0 0 auto;
-  }
-  .version-switch{order:4;flex:1 1 100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  .brand{font-size:clamp(.82rem,4vw,.95rem)}
+  .site-version-badge{align-self:center}
   .commerce-page .brand{font-size:clamp(1.05rem,5.2vw,1.35rem)}
-  .header-controls{order:5;width:100%;flex:1 1 100%;margin-left:0;justify-content:flex-end;align-items:center}
-  .header-action-links{
-    order:1;
-    margin-right:auto;
-  }
-  .language-toggle{order:2}
-  .theme-toggle{order:3}
-  .header-controls > .gallery-top-button{
-    order:4;
-    flex:0 0 38px;
-    margin-right:calc(100% - 38px);
-  }
-  .header-controls > .gallery-view-controls{
-    order:5;
-    flex:1 1 100%;
-    width:100%;
-  }
   .panel,.card,.carousel-wrap,.carousel-item{min-width:0}
   .lead,.card p,h1{overflow-wrap:anywhere}
 }

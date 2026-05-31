@@ -20,3 +20,11 @@ Portugal Atlantic edge: cliff paths, sea color, wind-shaped rock, and clean hori
 - `manifest.json`: structured package manifest.
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
+
+## Publish Check
+
+- Published via Instagram Graph API to `ec92009` at `2026-05-31T03:17:20+0000`.
+- Media ID: `18105056062801016`
+- Permalink: https://www.instagram.com/p/DY_NXnVAr0X/
+- Graph verification returned `CAROUSEL_ALBUM` with 8 child images. Browser permalink check showed the caption, with a login prompt also present.
+- Caption uses profile-link wording and contains no raw campaign URL.

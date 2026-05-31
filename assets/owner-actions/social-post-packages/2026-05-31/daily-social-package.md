@@ -6,14 +6,16 @@ Prepared from public SQLite catalog rows and public R2 watermarked previews only
 
 ## Publishing Status
 
-- facebook: prepared_for_api_publish.
-- instagram: prepared_for_api_publish.
-- threads: prepared_for_api_publish.
+- facebook: published.
+- instagram: published.
+- threads: prepared_no_api_token.
 - pinterest: prepared_no_api_token.
 
 ## FACEBOOK - Paris Seine and Notre-Dame Light
 
-- Account/status: Photos By Elie Facebook Page; prepared_for_api_publish.
+- Account/status: Photos By Elie Facebook Page; published.
+- Published URL: https://www.facebook.com/122102168061334672/posts/122102631699334672
+- Facebook post ID: 1146747141854670_122102631699334672
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-paris-seine-notre-dame-light-2026-05-31
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-05-31/paris-seine-notre-dame-light
@@ -39,7 +41,9 @@ Selected media:
 
 ## INSTAGRAM - Colares Atlantic Cliffs
 
-- Account/status: ec92009; prepared_for_api_publish.
+- Account/status: ec92009; published.
+- Published URL: https://www.instagram.com/p/DY_NXnVAr0X/
+- Instagram media ID: 18105056062801016
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-colares-atlantic-cliffs-2026-05-31
 - Image count: 8
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-05-31/colares-atlantic-cliffs
@@ -67,7 +71,7 @@ Selected media:
 
 ## THREADS - Colares Atlantic Cliffs
 
-- Account/status: ec92009 via Instagram login; prepared_for_api_publish.
+- Account/status: ec92009 via Instagram login; prepared_no_api_token.
 - Destination: https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-colares-atlantic-cliffs-2026-05-31
 - Image count: 4
 - Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-05-31/colares-atlantic-cliffs
@@ -128,4 +132,11 @@ Selected media:
 
 ## Deployment Check
 
-- Campaign index rebuilt with 23 campaigns and visible site bumped to v92.1. Commit/push and GitHub Pages verification pending.
+- GitHub Pages served all three new campaign JSON URLs with HTTP 200, and live campaign.html returned v92.1 for all three social destinations. Commit `7b1bfe1d`.
+
+## Final Publishing Results
+
+- Facebook: published via Meta Pages API, 8 images, https://www.facebook.com/122102168061334672/posts/122102631699334672
+- Instagram: published via Instagram Graph API, 8 images, https://www.instagram.com/p/DY_NXnVAr0X/
+- Threads: prepared_no_api_token; No ~/.config/photosbyelie/threads-token.json was present; API publishing unavailable. Browser/manual posting remains required, with link preview removal if needed.
+- Pinterest: prepared_no_api_token; No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm California Travel Photography or another suitable board before posting.

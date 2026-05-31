@@ -1,7 +1,7 @@
 {
   "date": "2026-05-31",
   "platform": "Threads",
-  "status": "prepared_for_api_publish",
+  "status": "prepared_no_api_token",
   "account": "ec92009 via Instagram login",
   "post_type": "carousel",
   "title": "Colares Atlantic Cliffs",
@@ -12,7 +12,8 @@
   "available_count": 4,
   "notes": [
     "Threads package uses a 4-image subset derived from the Instagram set.",
-    "Threads dry run passed for 4 public HTTPS images, but no Threads user id/token is configured for live publish."
+    "Threads dry run passed for 4 public HTTPS images, but no Threads user id/token is configured for live publish.",
+    "No ~/.config/photosbyelie/threads-token.json was present; API publishing unavailable. Browser/manual posting remains required, with link preview removal if needed."
   ],
   "items": [
     {

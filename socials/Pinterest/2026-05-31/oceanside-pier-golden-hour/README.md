@@ -22,3 +22,7 @@ Oceanside pier light, Pacific geometry, and warm California atmosphere from Phot
 - `manifest.json`: structured package manifest.
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
+
+## Publish Check
+
+- Prepared only: No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm California Travel Photography or another suitable board before posting.

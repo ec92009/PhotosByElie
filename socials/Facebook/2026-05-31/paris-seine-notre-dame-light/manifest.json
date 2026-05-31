@@ -1,7 +1,7 @@
 {
   "date": "2026-05-31",
   "platform": "Facebook",
-  "status": "prepared_for_api_publish",
+  "status": "published",
   "account": "Photos By Elie Facebook Page",
   "post_type": "multi_photo",
   "title": "Paris Seine and Notre-Dame Light",
@@ -12,7 +12,8 @@
   "available_count": 8,
   "notes": [
     "Images are public watermarked R2 previews staged for browser upload and Meta Pages API publishing.",
-    "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan."
+    "Facebook dry run passed for 8 public HTTPS images and Meta Pages multi-photo post plan.",
+    "Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check opened but showed login/unavailable content, so Graph verification is authoritative."
   ],
   "items": [
     {
@@ -151,5 +152,29 @@
       "public_photo_url": "https://ec92009.github.io/PhotosByElie/photo.html?id=20180511-1409-00373-957584364a",
       "local_staged_path": "socials/Facebook/2026-05-31/paris-seine-notre-dame-light/images/08-20180511-1409-00373-957584364a-paris-seine-notre-dame-light.jpg"
     }
-  ]
+  ],
+  "published": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122102631699334672",
+    "published_at": "2026-05-31T03:14:49+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102631699334672",
+    "image_count": 8,
+    "verified_at": "2026-05-31T03:18:48Z",
+    "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check opened but showed login/unavailable content, so Graph verification is authoritative."
+  },
+  "api_publish": {
+    "status": "published",
+    "platform": "facebook",
+    "account": "Photos By Elie",
+    "page_id": "1146747141854670",
+    "post_id": "1146747141854670_122102631699334672",
+    "published_at": "2026-05-31T03:14:49+0000",
+    "permalink_url": "https://www.facebook.com/122102168061334672/posts/122102631699334672",
+    "image_count": 8,
+    "verified_at": "2026-05-31T03:18:48Z",
+    "verification": "Meta Graph returned the post permalink, message, and 8 photo attachments. Browser permalink check opened but showed login/unavailable content, so Graph verification is authoritative."
+  }
 }

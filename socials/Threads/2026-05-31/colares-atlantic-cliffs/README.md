@@ -21,3 +21,7 @@ Four Colares frames: Atlantic cliffs, sea color, and clean coastal geometry from
 - `manifest.json`: structured package manifest.
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
+
+## Publish Check
+
+- Prepared only: No ~/.config/photosbyelie/threads-token.json was present; API publishing unavailable. Browser/manual posting remains required, with link preview removal if needed.

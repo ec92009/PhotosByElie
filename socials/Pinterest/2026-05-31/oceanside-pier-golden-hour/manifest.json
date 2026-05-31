@@ -12,7 +12,8 @@
   "available_count": 5,
   "notes": [
     "Pinterest package is capped at exactly 5 images for the current platform limit.",
-    "Pinterest dry run passed with exactly 5 Pins for the California Travel Photography board recommendation; no Pinterest API token/board id is configured for live publish."
+    "Pinterest dry run passed with exactly 5 Pins for the California Travel Photography board recommendation; no Pinterest API token/board id is configured for live publish.",
+    "No ~/.config/photosbyelie/pinterest-token.json was present; API publishing unavailable. Manual Pin Builder upload remains required; confirm California Travel Photography or another suitable board before posting."
   ],
   "items": [
     {

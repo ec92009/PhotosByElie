@@ -18,3 +18,10 @@ Paris in layered river light: Notre-Dame, Seine quays, passing boats, bookstalls
 - `manifest.json`: structured package manifest.
 
 Prepared from public SQLite catalog rows and public R2 watermarked previews only. No private masters, buyer downloads, Owner-only metadata, ignored Owner review JSON, or secrets were used.
+
+## Publish Check
+
+- Published via Meta Pages API to Photos By Elie Page ID `1146747141854670` at `2026-05-31T03:14:49+0000`.
+- Post ID: `1146747141854670_122102631699334672`
+- Permalink: https://www.facebook.com/122102168061334672/posts/122102631699334672
+- Graph verification returned 8 photo attachments. Browser permalink check showed login/unavailable content.

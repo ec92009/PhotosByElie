@@ -391,8 +391,14 @@ const writeGalleryReturnState = () => {
 };
 const backLink = document.querySelector("[data-back-link]");
 backLink.setAttribute("href", versionedHref(detailBackHref()));
-backLink.dataset.i18n = detailBackLabelKey();
-backLink.textContent = t(detailBackLabelKey());
+backLink.dataset.i18nAriaLabel = detailBackLabelKey();
+backLink.setAttribute("aria-label", t(detailBackLabelKey()));
+if (backLink.classList.contains("header-back-button")) {
+  delete backLink.dataset.i18n;
+} else {
+  backLink.dataset.i18n = detailBackLabelKey();
+  backLink.textContent = t(detailBackLabelKey());
+}
 
 let previousPhotoHref = "";
 let nextPhotoHref = "";
@@ -402,6 +408,7 @@ const navigateToPhotoHref = (href) => {
 
 const ensureDetailBottomActions = () => {
   const detailMain = document.querySelector(".detail-main");
+  if (document.querySelector(".header-back-button[data-back-link]")) return;
   if (!detailMain || document.querySelector("[data-detail-bottom-actions]")) return;
   const bottomActions = document.createElement("nav");
   bottomActions.className = "panel mobile-bottom-actions detail-bottom-actions";
@@ -443,6 +450,12 @@ document.querySelectorAll("[data-back-link], [data-bottom-back-link]").forEach((
 });
 
 const metadataRoot = document.querySelector("[data-photo-metadata]");
+const metadataToggle = document.querySelector("[data-photo-info-toggle]");
+metadataToggle?.addEventListener("click", () => {
+  const expanded = metadataToggle.getAttribute("aria-expanded") !== "true";
+  metadataToggle.setAttribute("aria-expanded", String(expanded));
+  if (metadataRoot) metadataRoot.hidden = !expanded;
+});
 const renderMetadataRows = () => {
   const hiddenLabels = new Set(["preview file", "software", "color profile"]);
   const metadata = Array.isArray(photo.metadata)
@@ -454,7 +467,11 @@ const renderMetadataRows = () => {
     ...(!hasDurationRow && videoDurationLabel ? [{ label: "Duration", value: videoDurationLabel }] : []),
     ...metadata,
   ].filter((item) => item.label && item.value);
-  metadataRoot.hidden = rows.length === 0;
+  metadataRoot.hidden = true;
+  if (metadataToggle) {
+    metadataToggle.hidden = rows.length === 0;
+    metadataToggle.setAttribute("aria-expanded", "false");
+  }
   metadataRoot.replaceChildren(...rows.map((item) => {
     const row = document.createElement("div");
     const label = document.createElement("dt");

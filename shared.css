@@ -146,6 +146,25 @@ a:hover{
 }
 .brand{order:1;display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
 .site-logo{width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.22);object-fit:cover}
+.header-back-button{
+  order:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--glass-pill-bg);
+  color:var(--text);
+  font-size:1.45rem;
+  font-weight:800;
+  line-height:1;
+  text-decoration:none;
+  backdrop-filter:blur(var(--glass-light-blur));
+  -webkit-backdrop-filter:blur(var(--glass-light-blur));
+}
 .version-switch{order:2;flex:1 1 calc(100% - 220px);min-width:0}
 .site-version-badge{order:3}
 .header-controls{order:4;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:0;flex:1 1 auto;flex-wrap:wrap}
@@ -521,6 +540,11 @@ a:focus-visible,button:focus-visible{outline:2px solid color-mix(in srgb,var(--b
   .about-grid{grid-template-columns:1fr}
   .topbar{flex-wrap:wrap;gap:8px;padding:10px var(--panel-inline);align-items:flex-start}
   .brand{order:1;width:100%;max-width:100%;font-size:clamp(.82rem,4vw,.95rem);flex:1 1 100%;min-width:0;overflow:visible;text-overflow:clip;white-space:normal}
+  .topbar:has(.header-back-button) .brand{
+    width:auto;
+    flex:0 1 calc(100% - 58px);
+    max-width:calc(100% - 58px);
+  }
   .site-version-badge{order:2;align-self:center}
   .version-switch{order:3;flex:1 1 0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
   .commerce-page .brand{font-size:clamp(1.05rem,5.2vw,1.35rem)}

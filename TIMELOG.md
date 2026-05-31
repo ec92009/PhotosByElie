@@ -139,8 +139,13 @@ Clock state: running
 | 2026-05-29 | 19:45 CEST | 19:47 CEST | 0:02 | Restored gallery thumbnail loading after caption sampling forced CORS mode, and replaced the black caption fallback. |
 | 2026-05-29 | 19:47 CEST | 22:43 CEST | 0:28 | Added persistent caption colors to the catalog/import flow, backfilled all photo masters from previews, and collapsed mobile gallery filters behind Search; slow backfill/runtime waiting excluded. |
 | 2026-05-29 | 22:43 CEST | 22:52 CEST | 0:03 | Verified the GitHub Pages deploy, fixed the public SQLite caption-color decode order, and bumped the cache version. |
+| 2026-05-30 | 21:11 CEST | 22:10 CEST | 0:45 | Registered the Photos By Elie domain trio, configured photos-by-elie.com email routing aliases, and pointed the domain at GitHub Pages; checkout/waiting time excluded. |
+| 2026-05-31 | 07:42 CEST | 07:47 CEST | 0:05 | Unstuck GitHub Pages certificate provisioning for photos-by-elie.com, enabled HTTPS enforcement, and verified apex/www redirects. |
+| 2026-05-31 | 13:27 CEST | 13:32 CEST | 0:01 | Requested iPhone gallery header spacing cleanup and side-by-side Back/Search actions; background implementation time excluded. |
+| 2026-05-31 | 13:34 CEST | 13:35 CEST | 0:01 | Requested home Collections open above pinned collections and no iPhone keyboard shortcut hints; background implementation time excluded. |
+| 2026-05-31 | 13:41 CEST | 13:51 CEST | 0:01 | Requested Search everywhere wording and compact header back controls; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 9:37
+Active collaboration time used: 10:30
 Remaining budget: not set

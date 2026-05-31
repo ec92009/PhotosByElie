@@ -3971,10 +3971,12 @@ body[data-gallery] .topbar,
 body[data-fixed-header] .topbar{
   position:fixed;
   inset:0 0 auto;
-  width:min(1480px,calc(100dvw - (var(--page-gutter) * 2)));
+  width:100dvw;
+  max-width:none;
   margin-inline:auto;
   column-gap:14px;
   row-gap:8px;
+  border-inline:0;
 }
 body[data-gallery] .brand,
 body[data-fixed-header] .brand{

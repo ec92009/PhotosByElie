@@ -1,9 +1,78 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-05-30T11:15:30.224Z",
-  "campaign_count": 20,
+  "generated_at": "2026-05-31T03:09:42.393Z",
+  "campaign_count": 23,
   "campaigns": [
+    {
+      "id": "pinterest-oceanside-pier-golden-hour-2026-05-31",
+      "source": "Pinterest",
+      "title": "Oceanside Pier Golden Hour",
+      "description": "Five Photos By Elie frames from Oceanside, California, selected for pier structure, warm Pacific light, beach texture, and relaxed coastal atmosphere for travel and wall-art browsing.",
+      "date": "2026-05-31",
+      "href": "./campaign.html?c=pinterest-oceanside-pier-golden-hour-2026-05-31",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-oceanside-pier-golden-hour-2026-05-31",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1814-00238-2ad3a506a8_900.jpg",
+      "imageAlt": "20180505 1814 00238",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1814-00238-2ad3a506a8_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1807-18428-ec308418ff_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1814-00239-54fc56737b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1815-00240-4cb65b1f8c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180505-1822-00244-d9950f99e1_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780196964044
+    },
+    {
+      "id": "instagram-colares-atlantic-cliffs-2026-05-31",
+      "source": "Instagram",
+      "title": "Colares Atlantic Cliffs",
+      "description": "A Photos By Elie carousel set from Colares, Portugal, focused on Atlantic cliffs, sea color, path geometry, wind-shaped rock, and print-friendly coastal atmosphere.",
+      "date": "2026-05-31",
+      "href": "./campaign.html?c=instagram-colares-atlantic-cliffs-2026-05-31",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-colares-atlantic-cliffs-2026-05-31",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1200-00686-c6eba24915_900.jpg",
+      "imageAlt": "20180520 1200 00686",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1200-00686-c6eba24915_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1154-00684-fc9320d34c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1157-00685-4bc7f88fad_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1211-00705-56157d137d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1202-00689-4e89cc4a74_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1202-00690-fb31060c05_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1204-00694-937eb7fb9b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1204-00696-41785153f3_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780196964043
+    },
+    {
+      "id": "facebook-paris-seine-notre-dame-light-2026-05-31",
+      "source": "Facebook",
+      "title": "Paris Seine and Notre-Dame Light",
+      "description": "A focused Photos By Elie set from Paris built around Notre-Dame, Seine quays, passing boats, bookstalls, and warm architectural light for classic travel wall-art browsing.",
+      "date": "2026-05-31",
+      "href": "./campaign.html?c=facebook-paris-seine-notre-dame-light-2026-05-31",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-paris-seine-notre-dame-light-2026-05-31",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1408-00371-a6f83947e2_900.jpg",
+      "imageAlt": "Notre Dame de Paris vue du Quai Montebello, Bouquinistes",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1408-00371-a6f83947e2_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1109-00348-29e52a789c_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1120-00361-edit-e178f03aa6_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1120-00362-26e0c5732b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1129-00366-7adb449fbf_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1140-00367-8ba499e834_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1205-00368-3481c74f91_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180511-1409-00373-957584364a_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780196964042
+    },
     {
       "id": "pinterest-pisa-marble-and-leaning-tower-2026-05-30",
       "source": "Pinterest",

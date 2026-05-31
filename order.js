@@ -19,6 +19,7 @@ const copyBrowserLink = document.querySelector("[data-copy-browser-link]");
 const orderLookup = document.querySelector("[data-order-lookup]");
 const orderLookupId = document.querySelector("[data-order-lookup-id]");
 const orderLookupEmail = document.querySelector("[data-order-lookup-email]");
+const orderSupportLinks = document.querySelectorAll("[data-order-support-link]");
 let currentZipPath = "";
 let currentDownloadHref = "";
 let refreshTimer = null;
@@ -78,6 +79,19 @@ const currentParams = () => new URLSearchParams(window.location.search);
 const orderId = () => currentParams().get("id") || checkoutState().orderId || "";
 const buyerEmail = () => currentParams().get("email") || checkoutState().email || "";
 const checkoutSessionId = () => currentParams().get("session_id") || checkoutState().checkoutSessionId || "";
+const supportHrefFor = (order = {}) => {
+  const url = new URL("./support.html", window.location.href);
+  const id = order.id || orderId();
+  const email = order.buyerEmail || buyerEmail();
+  const sessionId = order.checkoutSessionId || checkoutSessionId();
+  if (id) url.searchParams.set("id", id);
+  if (email) url.searchParams.set("email", email);
+  if (sessionId) url.searchParams.set("session_id", sessionId);
+  return url.href;
+};
+const syncOrderSupportLinks = (order = {}) => {
+  orderSupportLinks.forEach((link) => link.setAttribute("href", supportHrefFor(order)));
+};
 const moneyFromCents = (value, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(Number(value || 0) / 100);
 
@@ -260,6 +274,7 @@ const scheduleOrderRefresh = (order) => {
 
 const renderOrder = (order) => {
   syncEmbeddedBrowserWarning();
+  syncOrderSupportLinks(order);
   syncOrderLookup(false);
   currentDeliveryFiles = deliveryRowsFor(order);
   const copy = phaseCopy(order);
@@ -414,6 +429,7 @@ const loadOrder = async () => {
   const id = orderId();
   const email = buyerEmail();
   const sessionId = checkoutSessionId();
+  syncOrderSupportLinks();
   if (sessionId) {
     status.textContent = t("order.refreshing");
     try {

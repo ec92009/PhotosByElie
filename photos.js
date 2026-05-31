@@ -344,7 +344,7 @@ const translations = {
     'support.refunds_title': 'Refund and delivery issues',
     'support.refunds_1': 'If a file cannot be delivered, a duplicate charge appears, or the wrong resolution was purchased by mistake, email support with the order ID.',
     'support.refunds_2': 'Refunds are reviewed case by case. Delivery failures and duplicate charges are treated as support issues first.',
-    'support.refunds_3': 'Support email: ec92009@gmail.com.',
+    'support.refunds_3': 'Support email: support@photos-by-elie.com.',
     'product.digital': 'Digital asset',
     'product.print': 'Print',
     'product.frame': 'Frame',
@@ -810,7 +810,7 @@ const translations = {
     'support.refunds_title': 'Remboursements et problemes de livraison',
     'support.refunds_1': 'Si un fichier ne peut pas etre livre, si un frais en double apparait, ou si une mauvaise resolution a ete achetee par erreur, envoyez un email avec le numero de commande.',
     'support.refunds_2': 'Les remboursements sont examines au cas par cas. Les echecs de livraison et frais en double sont traites comme problemes de support en premier.',
-    'support.refunds_3': 'Email support : ec92009@gmail.com.',
+    'support.refunds_3': 'Email support : support@photos-by-elie.com.',
     'product.digital': 'Fichier numerique',
     'product.print': 'Tirage',
     'product.frame': 'Cadre',
@@ -1276,7 +1276,7 @@ const translations = {
     'support.refunds_title': 'Reembolsos y problemas de entrega',
     'support.refunds_1': 'Si un archivo no puede entregarse, aparece un cargo duplicado, o compraste una resolucion equivocada por error, envia un email con el ID del pedido.',
     'support.refunds_2': 'Los reembolsos se revisan caso por caso. Errores de entrega y cargos duplicados se tratan primero como problemas de soporte.',
-    'support.refunds_3': 'Email soporte: ec92009@gmail.com.',
+    'support.refunds_3': 'Email soporte: support@photos-by-elie.com.',
     'product.digital': 'Archivo digital',
     'product.print': 'Copia',
     'product.frame': 'Marco',
@@ -1430,6 +1430,7 @@ const applyTranslations = () => {
   setFromDataset('[data-i18n-placeholder]', 'i18nPlaceholder', (element, value) => element.setAttribute('placeholder', value));
   setFromDataset('[data-i18n-aria-label]', 'i18nAriaLabel', (element, value) => element.setAttribute('aria-label', value));
   setFromDataset('[data-i18n-title]', 'i18nTitle', (element, value) => element.setAttribute('title', value));
+  syncSupportEmailDrafts();
 };
 
 window.photosByElieI18n = {
@@ -1437,6 +1438,74 @@ window.photosByElieI18n = {
   language: () => root.dataset.language || 'en',
   apply: applyTranslations,
 };
+
+const supportEmailAddress = 'support@photos-by-elie.com';
+const readSupportJson = (keyName, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(keyName) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+};
+
+const supportMoneyFromCents = (value, currency = 'usd') =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: String(currency || 'usd').toUpperCase() }).format(Number(value || 0) / 100);
+
+const supportBasketSummary = () => {
+  const items = readSupportJson('photosbyelie-basket', []);
+  if (!Array.isArray(items) || !items.length) return ['Basket: no local basket items found'];
+  const lines = [`Basket: ${items.length} item${items.length === 1 ? '' : 's'}`];
+  items.slice(0, 8).forEach((item, index) => {
+    const options = Array.isArray(item.options) ? item.options : [];
+    const optionText = options.map((option) => option.label || option.id).filter(Boolean).join(', ') || 'No selected products';
+    lines.push(`${index + 1}. ${item.title || item.photoId || 'Untitled photo'} (${item.photoId || 'no photo ID'})`);
+    lines.push(`   Collection: ${item.collection || 'unknown'}`);
+    lines.push(`   Products: ${optionText}`);
+  });
+  if (items.length > 8) lines.push(`...and ${items.length - 8} more local basket item${items.length - 8 === 1 ? '' : 's'}`);
+  return lines;
+};
+
+const supportOrderDraft = () => {
+  const params = new URLSearchParams(window.location.search);
+  const checkoutState = readSupportJson('photosbyelie-mock-checkout', {});
+  const order = checkoutState?.lastResponse?.order || {};
+  const orderId = params.get('id') || checkoutState.orderId || order.id || '';
+  const email = params.get('email') || checkoutState.email || order.buyerEmail || '';
+  const sessionId = params.get('session_id') || checkoutState.checkoutSessionId || checkoutState.lastResponse?.checkout?.sessionId || '';
+  const status = order.status || '';
+  const currency = order.currency || 'usd';
+  const total = order.amountExpected ? supportMoneyFromCents(order.amountExpected, currency) : '';
+  const paid = order.amountPaid ? supportMoneyFromCents(order.amountPaid, currency) : '';
+  const subject = `Photos By Elie support${orderId ? ` - ${orderId}` : ''}`;
+  const lines = [
+    'Hello Photos By Elie,',
+    '',
+    'I need help with this order.',
+    '',
+    `Order ID: ${orderId || '[please add order ID]'}`,
+    `Checkout email: ${email || '[please add checkout email]'}`,
+    `Checkout session: ${sessionId || '[not available]'}`,
+    `Order status: ${status || '[not available]'}`,
+    `Expected total: ${total || '[not available]'}`,
+    `Paid total: ${paid || '[not available]'}`,
+    `Support page: ${window.location.href}`,
+    '',
+    ...supportBasketSummary(),
+    '',
+    'What happened:',
+    '',
+  ];
+  return { subject, body: lines.join('\n') };
+};
+
+const syncSupportEmailDrafts = () => {
+  document.querySelectorAll('[data-support-email]').forEach((link) => {
+    const draft = supportOrderDraft();
+    link.setAttribute('href', `mailto:${supportEmailAddress}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`);
+  });
+};
+
 const rawSourceTypes = new Set(['DNG', 'NEF', 'CR2', 'CR3', 'ARW', 'RAF', 'ORF', 'RW2', 'RAW', 'PEF', 'SRW', 'RWL']);
 const localHostnames = new Set(['localhost', '127.0.0.1', '::1']);
 const desktopInputQuery = window.matchMedia?.('(hover: hover) and (pointer: fine)');

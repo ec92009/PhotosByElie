@@ -1439,7 +1439,7 @@ window.photosByElieI18n = {
   apply: applyTranslations,
 };
 
-const supportEmailAddress = 'ec92009@gmail.com';
+const supportEmailAddress = 'orders@photos-by-elie.com';
 const readSupportJson = (keyName, fallback) => {
   try {
     return JSON.parse(localStorage.getItem(keyName) || JSON.stringify(fallback));

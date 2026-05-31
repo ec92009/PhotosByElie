@@ -1453,7 +1453,7 @@ const supportMoneyFromCents = (value, currency = 'usd') =>
 
 const supportBasketSummary = () => {
   const items = readSupportJson('photosbyelie-basket', []);
-  if (!Array.isArray(items) || !items.length) return ['Basket: no local basket items found'];
+  if (!Array.isArray(items) || !items.length) return [];
   const lines = [`Basket: ${items.length} item${items.length === 1 ? '' : 's'}`];
   items.slice(0, 8).forEach((item, index) => {
     const options = Array.isArray(item.options) ? item.options : [];
@@ -1478,22 +1478,30 @@ const supportOrderDraft = () => {
   const total = order.amountExpected ? supportMoneyFromCents(order.amountExpected, currency) : '';
   const paid = order.amountPaid ? supportMoneyFromCents(order.amountPaid, currency) : '';
   const subject = `Photos By Elie support${orderId ? ` - ${orderId}` : ''}`;
+  const orderLines = [
+    orderId ? `Order ID: ${orderId}` : '',
+    email ? `Checkout email: ${email}` : '',
+    sessionId ? `Checkout session: ${sessionId}` : '',
+    status ? `Order status: ${status}` : '',
+    total ? `Expected total: ${total}` : '',
+    paid ? `Paid total: ${paid}` : '',
+    `Support page: ${window.location.href}`,
+  ].filter(Boolean);
+  const basketLines = supportBasketSummary();
   const lines = [
     'Hello Photos By Elie,',
     '',
-    'I need help with this order.',
+    orderId
+      ? 'Please review this order and help refresh or recover the download delivery if needed.'
+      : 'Please help me with my Photos By Elie order or download delivery.',
     '',
-    `Order ID: ${orderId || '[please add order ID]'}`,
-    `Checkout email: ${email || '[please add checkout email]'}`,
-    `Checkout session: ${sessionId || '[not available]'}`,
-    `Order status: ${status || '[not available]'}`,
-    `Expected total: ${total || '[not available]'}`,
-    `Paid total: ${paid || '[not available]'}`,
-    `Support page: ${window.location.href}`,
+    'Order details from my browser:',
+    ...orderLines,
     '',
-    ...supportBasketSummary(),
+    ...(basketLines.length ? ['Local basket details:', ...basketLines, ''] : []),
+    'I am contacting support from the Photos By Elie support page so the order details above should help identify the purchase.',
     '',
-    'What happened:',
+    'Thank you.',
     '',
   ];
   return { subject, body: lines.join('\n') };

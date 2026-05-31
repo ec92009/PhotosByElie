@@ -344,7 +344,7 @@ const translations = {
     'support.refunds_title': 'Refund and delivery issues',
     'support.refunds_1': 'If a file cannot be delivered, a duplicate charge appears, or the wrong resolution was purchased by mistake, email support with the order ID.',
     'support.refunds_2': 'Refunds are reviewed case by case. Delivery failures and duplicate charges are treated as support issues first.',
-    'support.refunds_3': 'Support email: support@photos-by-elie.com.',
+    'support.refunds_3': 'Use the Email support button from your order page for delivery help.',
     'product.digital': 'Digital asset',
     'product.print': 'Print',
     'product.frame': 'Frame',
@@ -810,7 +810,7 @@ const translations = {
     'support.refunds_title': 'Remboursements et problemes de livraison',
     'support.refunds_1': 'Si un fichier ne peut pas etre livre, si un frais en double apparait, ou si une mauvaise resolution a ete achetee par erreur, envoyez un email avec le numero de commande.',
     'support.refunds_2': 'Les remboursements sont examines au cas par cas. Les echecs de livraison et frais en double sont traites comme problemes de support en premier.',
-    'support.refunds_3': 'Email support : support@photos-by-elie.com.',
+    'support.refunds_3': 'Utilisez le bouton Email support depuis votre page commande pour l aide livraison.',
     'product.digital': 'Fichier numerique',
     'product.print': 'Tirage',
     'product.frame': 'Cadre',
@@ -1276,7 +1276,7 @@ const translations = {
     'support.refunds_title': 'Reembolsos y problemas de entrega',
     'support.refunds_1': 'Si un archivo no puede entregarse, aparece un cargo duplicado, o compraste una resolucion equivocada por error, envia un email con el ID del pedido.',
     'support.refunds_2': 'Los reembolsos se revisan caso por caso. Errores de entrega y cargos duplicados se tratan primero como problemas de soporte.',
-    'support.refunds_3': 'Email soporte: support@photos-by-elie.com.',
+    'support.refunds_3': 'Usa el boton Email soporte desde la pagina del pedido para ayuda de entrega.',
     'product.digital': 'Archivo digital',
     'product.print': 'Copia',
     'product.frame': 'Marco',
@@ -1439,7 +1439,7 @@ window.photosByElieI18n = {
   apply: applyTranslations,
 };
 
-const supportEmailAddress = 'support@photos-by-elie.com';
+const supportEmailAddress = 'ec92009@gmail.com';
 const readSupportJson = (keyName, fallback) => {
   try {
     return JSON.parse(localStorage.getItem(keyName) || JSON.stringify(fallback));
@@ -1454,15 +1454,17 @@ const supportMoneyFromCents = (value, currency = 'usd') =>
 const supportBasketSummary = () => {
   const items = readSupportJson('photosbyelie-basket', []);
   if (!Array.isArray(items) || !items.length) return [];
-  const lines = [`Basket: ${items.length} item${items.length === 1 ? '' : 's'}`];
+  const lines = [`Selected files (${items.length} item${items.length === 1 ? '' : 's'})`];
   items.slice(0, 8).forEach((item, index) => {
     const options = Array.isArray(item.options) ? item.options : [];
     const optionText = options.map((option) => option.label || option.id).filter(Boolean).join(', ') || 'No selected products';
-    lines.push(`${index + 1}. ${item.title || item.photoId || 'Untitled photo'} (${item.photoId || 'no photo ID'})`);
+    if (index) lines.push('');
+    lines.push(`${index + 1}. ${item.title || item.photoId || 'Untitled photo'}`);
+    lines.push(`   Photo ID: ${item.photoId || 'no photo ID'}`);
     lines.push(`   Collection: ${item.collection || 'unknown'}`);
-    lines.push(`   Products: ${optionText}`);
+    lines.push(`   Purchased product${options.length === 1 ? '' : 's'}: ${optionText}`);
   });
-  if (items.length > 8) lines.push(`...and ${items.length - 8} more local basket item${items.length - 8 === 1 ? '' : 's'}`);
+  if (items.length > 8) lines.push('', `Plus ${items.length - 8} more item${items.length - 8 === 1 ? '' : 's'} in the local basket.`);
   return lines;
 };
 
@@ -1478,24 +1480,26 @@ const supportOrderDraft = () => {
   const total = order.amountExpected ? supportMoneyFromCents(order.amountExpected, currency) : '';
   const paid = order.amountPaid ? supportMoneyFromCents(order.amountPaid, currency) : '';
   const hasOrderContext = Boolean(orderId || email || sessionId || status || total || paid);
-  const subject = `Photos By Elie support${orderId ? ` - ${orderId}` : ''}`;
+  const subject = orderId
+    ? `Photos By Elie download support - ${orderId}`
+    : 'Photos By Elie download support';
   const orderLines = [
     orderId ? `Order ID: ${orderId}` : '',
     email ? `Checkout email: ${email}` : '',
-    sessionId ? `Checkout session: ${sessionId}` : '',
-    status ? `Order status: ${status}` : '',
+    sessionId ? `Stripe Checkout session: ${sessionId}` : '',
+    status ? `Status shown on site: ${status}` : '',
     total ? `Expected total: ${total}` : '',
     paid ? `Paid total: ${paid}` : '',
-    `Support page: ${window.location.href}`,
   ].filter(Boolean);
   const basketLines = supportBasketSummary();
   const intro = hasOrderContext
     ? [
-      orderId
-        ? 'Please review this order and help refresh or recover the download delivery if needed.'
-        : 'Please help me recover my Photos By Elie order or download delivery using the details below.',
+      'I just completed a Photos By Elie checkout and need help with the download delivery for this order.',
       '',
-      'Order details from my browser:',
+      'What I need',
+      'Please check the order status and send or re-enable the download links for the purchased files.',
+      '',
+      'Order details',
       ...orderLines,
       '',
     ]
@@ -1511,9 +1515,12 @@ const supportOrderDraft = () => {
     'Hello Photos By Elie,',
     '',
     ...intro,
-    ...(basketLines.length ? ['Local basket details:', ...basketLines, ''] : []),
+    ...(basketLines.length ? [...basketLines, ''] : []),
+    'Reference',
+    `Support page: ${window.location.href}`,
+    '',
     hasOrderContext
-      ? 'I am contacting support from the Photos By Elie support page so the details above should help identify the purchase.'
+      ? 'The details above came from the Photos By Elie support/order pages and should identify the purchase.'
       : 'I am contacting support from the Photos By Elie support page and would like download recovery instructions.',
     '',
     'Thank you.',

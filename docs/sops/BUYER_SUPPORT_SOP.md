@@ -151,7 +151,11 @@ Thanks for sending the order details. I found order <ORDER_ID> in the Photos By 
 I could not find a completed Stripe payment for the Stripe reference shown on that order:
 <STRIPE_CHECKOUT_SESSION>
 
-If you believe this order was paid, please forward the Stripe receipt email or send the exact payment details, including payment date/time, checkout email, card brand, and last 4 digits. Once I can verify a completed payment, I will recover the download delivery.
+If you believe this order was paid, please search your email, including spam or junk, for a receipt with this subject:
+
+Your Photos By Elie receipt
+
+Please forward that receipt email, or send the exact payment details, including payment date/time, checkout email, card brand, and last 4 digits. Once I can verify a completed payment, I will recover the download delivery.
 
 Thank you,
 Photos By Elie Support
@@ -170,7 +174,11 @@ I did find a separate successful Photos By Elie payment under your email for thi
 You can recover that paid order here:
 https://photos-by-elie.com/order.html?id=<PAID_ORDER_ID>&email=<URL_ENCODED_CHECKOUT_EMAIL>
 
-If you believe <REQUESTED_ORDER_ID> was also paid, please forward the Stripe receipt for that payment and I will investigate further.
+If you believe <REQUESTED_ORDER_ID> was also paid, please search your email, including spam or junk, for a receipt with this subject:
+
+Your Photos By Elie receipt
+
+Please forward that receipt email and I will investigate further.
 
 Thank you,
 Photos By Elie Support

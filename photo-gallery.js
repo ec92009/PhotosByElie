@@ -288,9 +288,8 @@ const ensureGalleryFilterControls = () => {
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
-    ${isSelectionGallery ? "" : `
     <label><span data-i18n="gallery.date_from">Date from</span><input type="date" data-gallery-filter="dateFrom"/></label>
-    <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-gallery-filter="dateTo"/></label>`}
+    <label><span data-i18n="gallery.date_to">Date to</span><input type="date" data-gallery-filter="dateTo"/></label>
     <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
       <option value="all" data-i18n="gallery.all_media">All media</option>
       <option value="photo" data-i18n="gallery.photos">Photos</option>

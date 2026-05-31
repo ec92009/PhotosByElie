@@ -19,7 +19,7 @@ const selectionPhotos = () => selectionGalleryCollections
   .flatMap((key) => window.photosByElieData?.[key]?.photos || []);
 const makeSelectionGallery = () => ({
   number: "",
-  title: "Search everywhere",
+  title: "Search",
   description: "",
   accent: "selection-gallery",
   photos: selectionPhotos(),

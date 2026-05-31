@@ -144,8 +144,9 @@ Clock state: running
 | 2026-05-31 | 13:27 CEST | 13:32 CEST | 0:01 | Requested iPhone gallery header spacing cleanup and side-by-side Back/Search actions; background implementation time excluded. |
 | 2026-05-31 | 13:34 CEST | 13:35 CEST | 0:01 | Requested home Collections open above pinned collections and no iPhone keyboard shortcut hints; background implementation time excluded. |
 | 2026-05-31 | 13:41 CEST | 13:51 CEST | 0:01 | Requested Search everywhere wording and compact header back controls; background implementation time excluded. |
+| 2026-05-31 | 13:54 CEST | 13:55 CEST | 0:01 | Requested the gallery back control share the Grid/Fit header row; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 10:30
+Active collaboration time used: 10:31
 Remaining budget: not set

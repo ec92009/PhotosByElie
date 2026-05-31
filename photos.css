@@ -5666,6 +5666,29 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
 }
 @media (max-width:760px){
+  body[data-gallery] .gallery-hero{
+    min-height:0;
+    padding-block:clamp(22px,6dvh,44px);
+    justify-content:flex-start;
+  }
+  body[data-gallery] .gallery-hero h1{
+    font-size:clamp(3.6rem,18vw,5rem);
+  }
+  body[data-gallery] .gallery-hero .cta{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    gap:10px;
+    align-items:stretch;
+  }
+  body[data-gallery] .gallery-hero .cta .btn{
+    min-height:46px;
+    padding-inline:clamp(12px,3vw,16px);
+    white-space:nowrap;
+  }
+  body[data-gallery] .gallery-hero .cta .gallery-filter-toggle{
+    width:auto;
+    margin-top:0;
+  }
   .photo-hero,
   .detail-layout,
   .purchase-panel{

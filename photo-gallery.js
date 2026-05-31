@@ -337,8 +337,13 @@ const ensureGalleryFilterControls = () => {
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
   `;
-  filterTarget.after(filterToggle);
-  filterToggle.after(filterBar);
+  if (galleryActions) {
+    galleryActions.append(filterToggle);
+    galleryActions.after(filterBar);
+  } else {
+    filterTarget.after(filterToggle);
+    filterToggle.after(filterBar);
+  }
   window.photosByElieI18n?.apply?.();
   syncFilterControls();
   filterToggle.addEventListener("click", () => {

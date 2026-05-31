@@ -262,9 +262,6 @@
   if (initialKey) {
     setActiveSection(initialKey, { scroll: false });
   } else {
-    sections.forEach((section, sectionKey) => {
-      section.classList.add("is-best-mix-section-collapsed");
-      if (sectionKey === "search") setDiscoveryExpanded(false);
-    });
+    setActiveSection(sections.has("collections") ? "collections" : "", { scroll: false });
   }
 })();

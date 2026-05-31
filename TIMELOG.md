@@ -163,8 +163,9 @@ Clock state: running
 | 2026-05-31 | 15:59 CEST | 16:00 CEST | 0:01 | Requested shortening Search everywhere labels to Search sitewide; background implementation time excluded. |
 | 2026-05-31 | 16:01 CEST | 16:03 CEST | 0:02 | Requested applying the same row-based header layout to wide screens throughout the site; background implementation time excluded. |
 | 2026-05-31 | 16:06 CEST | 16:07 CEST | 0:01 | Requested support email help requests use orders@photos-by-elie.com; background implementation time excluded. |
+| 2026-05-31 | 16:42 CEST | 16:43 CEST | 0:01 | Requested a buyer support SOP for parsing help emails, reconciling PBE orders with Stripe, and choosing safe recovery replies; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 10:51
+Active collaboration time used: 10:52
 Remaining budget: not set

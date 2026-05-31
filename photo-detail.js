@@ -85,19 +85,6 @@ const productLabel = (option) => {
   };
   return t(keyById[option?.id] || "", {}) || window.photosByElieProductLabel?.(option) || option?.label || "";
 };
-const productDetail = (option) => {
-  if (option?.detail) return option.detail;
-  const detailKeyById = {
-    "jpg-6mp": "product.jpg_6_detail",
-    "jpg-3mp": "product.jpg_3_detail",
-    "jpg-1mp": "product.jpg_1_detail",
-  };
-  if (detailKeyById[option?.id]) return t(detailKeyById[option.id]);
-  if (option?.type === "print") return t("product.print_detail");
-  const source = window.photosByElieOriginalSize?.(photo) || "";
-  if (source) return t("product.original", { source });
-  return t("product.full_detail");
-};
 const frameLabel = (frame) => ({
   none: t("product.no_frame"),
   white: t("product.white_frame"),
@@ -494,62 +481,6 @@ const syncTitleUi = () => {
   document.querySelector("[data-photo-preview] img")?.setAttribute("alt", photo.title);
 };
 
-const ensureOwnerMetadataEditor = () => {
-  if (!localModerationEnabled || document.querySelector("[data-owner-metadata-editor]")) return;
-  const editor = document.createElement("form");
-  editor.className = "owner-metadata-editor";
-  editor.dataset.ownerMetadataEditor = "";
-  editor.innerHTML = `
-    <label>
-      <span>Title</span>
-      <input type="text" value="" data-owner-title/>
-    </label>
-    <label>
-      <span>Keywords</span>
-      <textarea rows="3" data-owner-keywords></textarea>
-    </label>
-    <button class="btn secondary" type="submit">Save metadata</button>
-  `;
-  const titleInput = editor.querySelector("[data-owner-title]");
-  const keywordInput = editor.querySelector("[data-owner-keywords]");
-  titleInput.value = photo.title || "";
-  keywordInput.value = metadataValue(photo, "Keywords");
-  const exitMetadataEditState = () => {
-    if (document.activeElement === titleInput || document.activeElement === keywordInput) {
-      document.activeElement.blur();
-    }
-  };
-  [titleInput, keywordInput].forEach((input) => {
-    input.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey) return;
-      event.preventDefault();
-      editor.requestSubmit();
-    });
-  });
-  editor.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = editor.querySelector("button");
-    button.disabled = true;
-    try {
-      const title = titleInput.value.trim();
-      const keywords = uniqueKeywords(splitKeywordText(keywordInput.value)).join(", ");
-      await hiddenActions.updatePhotoMetadata?.(photo.id, { title, keywords });
-      photo.title = title;
-      setMetadataValue(photo, "Metadata title", title);
-      setMetadataValue(photo, "Keywords", keywords);
-      syncTitleUi();
-      renderMetadataRows();
-      status.textContent = "";
-    } catch (error) {
-      status.textContent = error?.message || "Could not save metadata.";
-    } finally {
-      exitMetadataEditState();
-      button.disabled = false;
-    }
-  });
-  metadataRoot.before(editor);
-};
-
 const openOwnerMetadataModal = (field) => {
   if (!localModerationEnabled || !photo) return;
   const isKeywords = field === "keywords";
@@ -623,10 +554,6 @@ const openOwnerMetadataModal = (field) => {
     setMetadataValue(photo, "Keywords", keywordValue);
     syncTitleUi();
     renderMetadataRows();
-    const inlineTitleInput = document.querySelector("[data-owner-title]");
-    const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
-    if (inlineTitleInput) inlineTitleInput.value = titleValue;
-    if (inlineKeywordInput) inlineKeywordInput.value = keywordValue;
     status.textContent = "Saving metadata...";
     try {
       await hiddenActions.updatePhotoMetadata?.(photo.id, { title: titleValue, keywords: keywordValue });
@@ -637,10 +564,6 @@ const openOwnerMetadataModal = (field) => {
       setMetadataValue(photo, "Keywords", previousKeywords);
       syncTitleUi();
       renderMetadataRows();
-      const inlineTitleInput = document.querySelector("[data-owner-title]");
-      const inlineKeywordInput = document.querySelector("[data-owner-keywords]");
-      if (inlineTitleInput) inlineTitleInput.value = previousTitle;
-      if (inlineKeywordInput) inlineKeywordInput.value = previousKeywords;
       status.textContent = error?.message || "Could not save metadata.";
     }
   });
@@ -652,7 +575,6 @@ const openOwnerMetadataModal = (field) => {
 };
 
 renderMetadataRows();
-ensureOwnerMetadataEditor();
 
 const preview = document.querySelector("[data-photo-preview]");
 const detailLayout = document.querySelector(".detail-layout");
@@ -938,7 +860,6 @@ document.querySelector("[data-resolution-list]").innerHTML = availableResolution
       <input type="checkbox" data-resolution value="${option.id}" ${selectedIds.has(option.id) ? "checked" : ""}/>
       <span>
         <strong>${productLabel(option)}</strong>
-        <small>${productDetail(option)}</small>
       </span>
       <b>${formatMoney(option.price)}</b>
     </label>

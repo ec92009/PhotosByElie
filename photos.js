@@ -2220,7 +2220,6 @@ window.photosByEliePositionGalleryViewControls = (viewControls) => {
 };
 
 const ensureHeaderActionLinks = () => {
-  if (document.body?.matches?.("[data-real-estate]")) return;
   const controls = document.querySelector('.header-controls');
   if (!controls || controls.querySelector('[data-header-actions]')) return;
   const showBuyAction = document.body?.classList.contains('commerce-page');

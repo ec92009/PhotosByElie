@@ -159,8 +159,9 @@ Clock state: running
 | 2026-05-31 | 15:23 CEST | 15:24 CEST | 0:01 | Requested hiding the Support email button until order context exists; background implementation time excluded. |
 | 2026-05-31 | 15:26 CEST | 15:27 CEST | 0:01 | Requested post-purchase support emails be less compact and avoid the bounced support alias; background implementation time excluded. |
 | 2026-05-31 | 15:32 CEST | 15:33 CEST | 0:01 | Requested mobile gallery date filter fields stop overlapping; background implementation time excluded. |
+| 2026-05-31 | 15:48 CEST | 15:50 CEST | 0:02 | Requested a sitewide mobile-only header row structure with back, breadcrumbs, actions, and optional view controls; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 10:45
+Active collaboration time used: 10:47
 Remaining budget: not set

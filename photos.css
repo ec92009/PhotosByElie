@@ -4198,7 +4198,13 @@ html[data-theme="light"] body[data-gallery] .gallery-hero{
   }
   .topbar .gallery-density-control input,
   .gallery-view-controls.is-header-mounted .gallery-density-control input{
-    width:58px;
+    flex:1 1 auto;
+    min-width:0;
+    width:100%;
+  }
+  .topbar .gallery-density-control b,
+  .gallery-view-controls.is-header-mounted .gallery-density-control b{
+    flex:0 0 auto;
   }
   .topbar .gallery-fit-control,
   .gallery-view-controls.is-header-mounted .gallery-fit-control{

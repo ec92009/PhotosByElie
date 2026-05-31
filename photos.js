@@ -1477,6 +1477,7 @@ const supportOrderDraft = () => {
   const currency = order.currency || 'usd';
   const total = order.amountExpected ? supportMoneyFromCents(order.amountExpected, currency) : '';
   const paid = order.amountPaid ? supportMoneyFromCents(order.amountPaid, currency) : '';
+  const hasOrderContext = Boolean(orderId || email || sessionId || status || total || paid);
   const subject = `Photos By Elie support${orderId ? ` - ${orderId}` : ''}`;
   const orderLines = [
     orderId ? `Order ID: ${orderId}` : '',
@@ -1488,18 +1489,32 @@ const supportOrderDraft = () => {
     `Support page: ${window.location.href}`,
   ].filter(Boolean);
   const basketLines = supportBasketSummary();
+  const intro = hasOrderContext
+    ? [
+      orderId
+        ? 'Please review this order and help refresh or recover the download delivery if needed.'
+        : 'Please help me recover my Photos By Elie order or download delivery using the details below.',
+      '',
+      'Order details from my browser:',
+      ...orderLines,
+      '',
+    ]
+    : [
+      'Please help me find or recover my Photos By Elie order/download delivery.',
+      '',
+      'I do not have the order details on this device. Please look for a recent Photos By Elie checkout associated with this sending email address, or let me know what you need from my Stripe receipt/card statement to identify the order.',
+      '',
+      `Support page: ${window.location.href}`,
+      '',
+    ];
   const lines = [
     'Hello Photos By Elie,',
     '',
-    orderId
-      ? 'Please review this order and help refresh or recover the download delivery if needed.'
-      : 'Please help me with my Photos By Elie order or download delivery.',
-    '',
-    'Order details from my browser:',
-    ...orderLines,
-    '',
+    ...intro,
     ...(basketLines.length ? ['Local basket details:', ...basketLines, ''] : []),
-    'I am contacting support from the Photos By Elie support page so the order details above should help identify the purchase.',
+    hasOrderContext
+      ? 'I am contacting support from the Photos By Elie support page so the details above should help identify the purchase.'
+      : 'I am contacting support from the Photos By Elie support page and would like download recovery instructions.',
     '',
     'Thank you.',
     '',

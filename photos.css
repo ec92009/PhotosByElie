@@ -4151,6 +4151,9 @@ html[data-theme="light"] body[data-gallery] .gallery-hero{
     gap:6px;
     justify-content:flex-end;
   }
+  body[data-support] .header-controls:has(.header-back-button){
+    justify-content:flex-end;
+  }
   body[data-fixed-header] .header-action-links{
     gap:4px;
   }
@@ -4184,6 +4187,14 @@ html[data-theme="light"] body[data-gallery] .gallery-hero{
     font-size:1.3rem;
   }
   body[data-fixed-header] .header-controls .header-back-button{
+    order:-1;
+    width:38px;
+    height:38px;
+    flex:0 0 38px;
+    margin-right:auto;
+    font-size:1.3rem;
+  }
+  body[data-support] .header-controls .header-back-button{
     order:-1;
     width:38px;
     height:38px;

@@ -1519,12 +1519,13 @@ const supportOrderDraft = () => {
     'Thank you.',
     '',
   ];
-  return { subject, body: lines.join('\n') };
+  return { subject, body: lines.join('\n'), hasOrderContext };
 };
 
 const syncSupportEmailDrafts = () => {
   document.querySelectorAll('[data-support-email]').forEach((link) => {
     const draft = supportOrderDraft();
+    link.hidden = !draft.hasOrderContext;
     link.setAttribute('href', `mailto:${supportEmailAddress}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`);
   });
 };

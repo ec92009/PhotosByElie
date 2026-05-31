@@ -156,8 +156,9 @@ Clock state: running
 | 2026-05-31 | 15:09 CEST | 15:10 CEST | 0:01 | Requested a back button in the Support header; background implementation time excluded. |
 | 2026-05-31 | 15:11 CEST | 15:12 CEST | 0:01 | Requested support email drafts avoid buyer-facing placeholders and expand the request text; background implementation time excluded. |
 | 2026-05-31 | 15:20 CEST | 15:21 CEST | 0:01 | Requested Support back button move to the usual controls row and no-order email drafts be useful; background implementation time excluded. |
+| 2026-05-31 | 15:23 CEST | 15:24 CEST | 0:01 | Requested hiding the Support email button until order context exists; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 10:42
+Active collaboration time used: 10:43
 Remaining budget: not set

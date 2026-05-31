@@ -4229,6 +4229,10 @@ body.commerce-page[data-fixed-header] .basket-total-band{
   justify-content:center;
   margin-top:10px;
 }
+body[data-gallery="selection"] .gallery-hero .cta:empty{
+  display:none;
+  margin-top:0;
+}
 .gallery-filter-bar label{
   display:grid;
   flex:1 1 124px;
@@ -5713,6 +5717,10 @@ html[data-theme="light"] .detail-preview.has-image::after{
   }
   body[data-gallery] .gallery-hero h1{
     font-size:clamp(3.6rem,18vw,5rem);
+  }
+  body[data-gallery="selection"] .gallery-hero h1{
+    max-width:none;
+    font-size:clamp(2.7rem,13vw,4rem);
   }
   body[data-gallery] .gallery-hero .cta{
     display:grid;

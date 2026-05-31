@@ -284,6 +284,7 @@ const ensureGalleryFilterControls = () => {
   filterBar = document.createElement("form");
   filterBar.id = "gallery-filter-bar";
   filterBar.className = "gallery-filter-bar";
+  if (isSelectionGallery) filterBar.classList.add("is-open", "is-selection-filter-open");
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
@@ -337,7 +338,9 @@ const ensureGalleryFilterControls = () => {
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
   `;
-  if (galleryActions) {
+  if (galleryActions && isSelectionGallery) {
+    galleryActions.after(filterBar);
+  } else if (galleryActions) {
     galleryActions.append(filterToggle);
     galleryActions.after(filterBar);
   } else {
@@ -346,10 +349,12 @@ const ensureGalleryFilterControls = () => {
   }
   window.photosByElieI18n?.apply?.();
   syncFilterControls();
-  filterToggle.addEventListener("click", () => {
-    filterBar.classList.toggle("is-open");
-    syncFilterToggle();
-  });
+  if (!isSelectionGallery) {
+    filterToggle.addEventListener("click", () => {
+      filterBar.classList.toggle("is-open");
+      syncFilterToggle();
+    });
+  }
   filterBar.addEventListener("submit", (event) => {
     event.preventDefault();
   });

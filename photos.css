@@ -5804,6 +5804,9 @@ html[data-theme="light"] .detail-preview.has-image::after{
     flex:1 1 calc(50% - 6px);
     max-width:none;
   }
+  .gallery-filter-bar label:has(input[type="date"]){
+    flex-basis:100%;
+  }
   body[data-gallery="selection"] .gallery-filter-bar label:has(input[type="date"]){
     flex-basis:100%;
   }

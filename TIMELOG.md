@@ -148,8 +148,9 @@ Clock state: running
 | 2026-05-31 | 13:56 CEST | 13:57 CEST | 0:01 | Requested the gallery frosted header background extend to the viewport edges; background implementation time excluded. |
 | 2026-05-31 | 14:06 CEST | 14:10 CEST | 0:01 | Requested Search everywhere open its filter panel by default and remove the small Search toggle; background implementation time excluded. |
 | 2026-05-31 | 14:25 CEST | 14:29 CEST | 0:01 | Requested photo technical metadata be hidden behind an Info button; background implementation time excluded. |
+| 2026-05-31 | 14:31 CEST | 14:35 CEST | 0:01 | Requested Search everywhere remove date filters and detail header back align left; background implementation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 10:34
+Active collaboration time used: 10:35
 Remaining budget: not set

@@ -3,7 +3,7 @@ main = "worker/deployed-worker.mjs"
 compatibility_date = "2026-05-08"
 
 [vars]
-PUBLIC_SITE_URL = "https://ec92009.github.io/PhotosByElie"
+PUBLIC_SITE_URL = "https://photos-by-elie.com"
 MOCK_STRIPE_ENABLED = "true"
 KV_PREFIX = "pbe"
 CHECKOUT_SESSION_TTL_DAYS = "90"

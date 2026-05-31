@@ -605,7 +605,7 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
     ORDERS_KV: createFakeKv(),
     PRIVATE_MEDIA: privateR2,
     DELIVERY_MEDIA: privateR2,
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
@@ -852,7 +852,7 @@ test("deployed Worker blocks checkout when private delivery files are missing", 
     ORDERS_KV: createFakeKv(),
     PRIVATE_MEDIA: createFakeR2(),
     DELIVERY_MEDIA: createFakeR2(),
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
@@ -1042,7 +1042,7 @@ test("deployed Worker serves public R2 previews through the media route", async 
     PRIVATE_MEDIA: createFakeR2(),
     PUBLIC_MEDIA: publicR2,
     DELIVERY_MEDIA: createFakeR2(),
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const response = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), env);
@@ -1065,7 +1065,7 @@ test("deployed Worker serves public R2 media byte ranges", async () => {
     PRIVATE_MEDIA: createFakeR2(),
     PUBLIC_MEDIA: publicR2,
     DELIVERY_MEDIA: createFakeR2(),
-    PUBLIC_SITE_URL: "https://ec92009.github.io/PhotosByElie",
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
   const response = await deployedWorker.fetch(new Request("https://worker.test/media/assets/music/slideshow-guitar/pixabay/sample.mp3", {

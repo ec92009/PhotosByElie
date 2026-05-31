@@ -463,7 +463,7 @@ export const createPhotosByElieWorker = ({
         updatedAt: createdAt,
       });
     }
-    const receiptDescription = `Photos By Elie order ${orderId}. Download or recover files at ${ordersUrl} with this order number and checkout email.`;
+    const receiptDescription = `Photos By Elie order ${orderId}. Download or recover files at ${ordersUrl} using this order number and checkout email.`;
 
     const lineItems = items.flatMap((item) => item.products.map((product) => ({
       photoId: item.photoId,

@@ -165,8 +165,9 @@ Clock state: running
 | 2026-05-31 | 16:06 CEST | 16:07 CEST | 0:01 | Requested support email help requests use orders@photos-by-elie.com; background implementation time excluded. |
 | 2026-05-31 | 16:42 CEST | 16:43 CEST | 0:01 | Requested a buyer support SOP for parsing help emails, reconciling PBE orders with Stripe, and choosing safe recovery replies; background implementation time excluded. |
 | 2026-05-31 | 16:48 CEST | 16:48 CEST | 0:00 | Requested support templates tell customers to search for the Photos By Elie receipt email, including spam. |
+| 2026-05-31 | 16:53 CEST | 16:56 CEST | 0:03 | Updated the live checkout Worker receipt recovery URL to the photos-by-elie.com domain and identified Stripe public details as the remaining receipt contact source. |
 
 ## Totals
 
-Active collaboration time used: 10:52
+Active collaboration time used: 10:55
 Remaining budget: not set

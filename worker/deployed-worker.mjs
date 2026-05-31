@@ -164,7 +164,7 @@ export default {
       return publicMediaResponse(request, env);
     }
 
-    const publicSiteUrl = env.PUBLIC_SITE_URL || "https://ec92009.github.io/PhotosByElie";
+    const publicSiteUrl = env.PUBLIC_SITE_URL || "https://photos-by-elie.com";
     const downloadTokenTtlSeconds = daysToSeconds(env.DOWNLOAD_TOKEN_TTL_DAYS, 30);
     const downloadTokenMaxDownloads = positiveInt(env.DOWNLOAD_TOKEN_MAX_DOWNLOADS, 100);
     const realStripeEnabled = Boolean(env.STRIPE_SECRET_KEY);

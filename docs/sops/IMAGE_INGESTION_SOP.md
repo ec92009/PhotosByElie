@@ -27,7 +27,7 @@ Do not use this SOP for repo-only documentation edits, CSS-only page polish, or 
 Run from the repo root:
 
 ```bash
-cd /Users/ecohen/Dev/photosByElie
+cd /Users/ecohen/Dev/PhotosByElie
 ```
 
 Required command-line tools:

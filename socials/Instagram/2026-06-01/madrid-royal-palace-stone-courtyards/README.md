@@ -7,7 +7,7 @@
 - Instagram media ID: 17941806441229169
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01
 - Image count: 8
-- Local package: /Users/ecohen/Dev/photosByElie/socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Instagram/2026-06-01/madrid-royal-palace-stone-courtyards
 
 ## Caption
 

@@ -6,7 +6,7 @@ Date: 2026-05-27
 
 - Repo: `/Users/ecohen/Dev/PhotosByElie`
 - Branch: `main`
-- Current visible build: `v89.6`
+- Current visible build: `v93.2`
 - Local Owner page: use the Dock launcher or the active helper port near 8000; current working preview is `http://localhost:8000/owner.html?v=88.2`.
 - Public site: `https://ec92009.github.io/PhotosByElie/`
 - Deployed Worker: `https://photosbyelie-checkout-mock.ec92009.workers.dev`

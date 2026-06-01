@@ -5,7 +5,7 @@
 - Account: @photosbyelie
 - Destination: https://photos-by-elie.com/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01
 - Image count: 5
-- Local package: /Users/ecohen/Dev/photosByElie/socials/Pinterest/2026-06-01/belem-river-stone-details
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Pinterest/2026-06-01/belem-river-stone-details
 - Board recommendation: Portugal Travel Photography
 - Pin title: Belem Lisbon River Stone Wall Art
 - Description: Five Photos By Elie photographs from Belem, Lisbon, selected for pale stone, river atmosphere, formal travel detail, and polished wall-art browsing.

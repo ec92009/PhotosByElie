@@ -7,7 +7,7 @@
 - Facebook post ID: 1146747141854670_122102925093334672
 - Destination: https://photos-by-elie.com/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01
 - Image count: 8
-- Local package: /Users/ecohen/Dev/photosByElie/socials/Facebook/2026-06-01/toulouse-cloisters-brick-light
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Facebook/2026-06-01/toulouse-cloisters-brick-light
 
 ## Caption
 

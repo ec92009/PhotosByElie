@@ -6,7 +6,7 @@ for tool_dir in /opt/homebrew/bin /usr/local/bin /opt/homebrew/sbin /usr/local/s
 done
 export PATH
 
-REPO_ROOT="${PBE_REPO_ROOT:-/Users/ecohen/Dev/photosByElie}"
+REPO_ROOT="${PBE_REPO_ROOT:-/Users/ecohen/Dev/PhotosByElie}"
 LOCK_DIR="$REPO_ROOT/.review-logs/cloud-media-sweep.lock"
 LOG_ROOT="$REPO_ROOT/.review-logs"
 IMPORT_CACHE_ROOT="${PBE_IMPORT_CACHE_ROOT:-tmp/import-cache}"

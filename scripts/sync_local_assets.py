@@ -22,15 +22,11 @@ DEFAULT_PATHS = (
 KNOWN_PEERS = {
     "max": (
         Path("/Volumes/MHD2/Users/ecohen/Dev/PhotosByElie"),
-        Path("/Volumes/MHD2/Users/ecohen/Dev/photosByElie"),
         Path("/Volumes/Max/Users/ecohen/Dev/PhotosByElie"),
-        Path("/Volumes/Max/Users/ecohen/Dev/photosByElie"),
     ),
     "david": (
         Path("/Volumes/David/Users/ecohen/Dev/PhotosByElie"),
-        Path("/Volumes/David/Users/ecohen/Dev/photosByElie"),
         Path("/Volumes/Macintosh HD/Users/ecohen/Dev/PhotosByElie"),
-        Path("/Volumes/Macintosh HD/Users/ecohen/Dev/photosByElie"),
     ),
 }
 

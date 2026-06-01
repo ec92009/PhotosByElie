@@ -5,7 +5,7 @@
 - Account: ec92009 via Instagram login
 - Destination: https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01
 - Image count: 4
-- Local package: /Users/ecohen/Dev/photosByElie/socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards
+- Local package: /Users/ecohen/Dev/PhotosByElie/socials/Threads/2026-06-01/madrid-royal-palace-stone-courtyards
 - Link preview note: Remove any automatic link preview if it shows generic or off-theme campaign metadata before posting.
 
 ## Caption

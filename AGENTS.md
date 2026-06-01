@@ -1,6 +1,14 @@
+Before making changes, also read parent instruction files at `~/AGENTS.md` and `~/Dev/AGENTS.md` if they exist, then apply this repo file last.
+
 # AGENTS.md
 
 Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
+
+## Parent Instruction Order
+
+- Read `~/AGENTS.md` if it exists.
+- Read `~/Dev/AGENTS.md` if it exists.
+- Apply this repo file last.
 
 ## Response Protocol
 

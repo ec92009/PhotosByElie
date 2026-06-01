@@ -1,9 +1,78 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-05-31T03:09:42.393Z",
-  "campaign_count": 23,
+  "generated_at": "2026-06-01T03:06:04.380Z",
+  "campaign_count": 26,
   "campaigns": [
+    {
+      "id": "pinterest-belem-river-stone-details-2026-06-01",
+      "source": "Pinterest",
+      "title": "Belem River Stone Details",
+      "description": "A five-image Photos By Elie Pinterest set from Belem, Lisbon, selected for pale stone, river atmosphere, formal travel detail, and clean wall-art browsing.",
+      "date": "2026-06-01",
+      "href": "./campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=pinterest-belem-river-stone-details-2026-06-01",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00716-eebddf7bbb_900.jpg",
+      "imageAlt": "20180520 1536 00716",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00716-eebddf7bbb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1535-00715-795e204a97_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1536-00717-f1d52929b5_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1545-00719-e98749030b_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180520-1552-00720-23215109c7_900.jpg"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780283163496
+    },
+    {
+      "id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
+      "source": "Instagram",
+      "title": "Madrid Royal Palace Stone and Courtyards",
+      "description": "A Photos By Elie Madrid set built around Royal Palace stonework, courtyard geometry, carved details, and formal facade light for polished travel wall-art browsing.",
+      "date": "2026-06-01",
+      "href": "./campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_900.jpg",
+      "imageAlt": "20180522 1326 00893",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00893-75d36d95eb_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1333-00896-18f955bb6f_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1326-00894-70f247c8bf_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1325-00892-5b9c7eef8a_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00889-84c3a77b96_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1322-00888-08ac194d19_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1309-00886-84c424a432_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180522-1304-00881-db5009c014_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780283162162
+    },
+    {
+      "id": "facebook-toulouse-cloisters-brick-light-2026-06-01",
+      "source": "Facebook",
+      "title": "Toulouse Cloisters and Brick Light",
+      "description": "A focused Photos By Elie set from Toulouse, selected for cloister rhythm, warm brick, historic arcades, and quiet French architectural light as finished wall-art candidates.",
+      "date": "2026-06-01",
+      "href": "./campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01",
+      "publicUrl": "https://ec92009.github.io/PhotosByElie/campaign.html?c=facebook-toulouse-cloisters-brick-light-2026-06-01",
+      "imageUrl": "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1226-07867-136188a2c1_900.jpg",
+      "imageAlt": "Cloitre des Jacobins, Toulouse, France",
+      "previewImageUrls": [
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1226-07867-136188a2c1_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111102-1227-05325-ab56a019a3_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111106-0808-27995-c4cfb5f5c1_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20111106-0808-28027-8a497c25e6_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160707-1531-17313-pano-59addf66f9_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20160709-1822-24599-pano-f6bb14796e_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00940-636b34659d_900.jpg",
+        "https://pub-a6e07fdd880f4869b4be0e9346cabdc2.r2.dev/expo/20180524-1746-00941-72deedae61_900.jpg"
+      ],
+      "primaryPhotoCount": 8,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1780283160356
+    },
     {
       "id": "pinterest-oceanside-pier-golden-hour-2026-05-31",
       "source": "Pinterest",

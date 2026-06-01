@@ -44,9 +44,16 @@ const [collectionKey, collection] = collectionEntry || ["france", fallbackCollec
 const photo = promotedPhoto || collection.photos.find((item) => item.id === photoId) || collection.photos[0] || null;
 const photoIndex = photo ? collection.photos.findIndex((item) => item.id === photo.id) : -1;
 const resolutions = window.photosByElieResolutions || [];
-const availableResolutions = photo && window.photosByElieAvailableResolutions
+const priceAscending = (options = []) => options.map((option, index) => ({ option, index }))
+  .sort((left, right) => {
+    const priceDelta = (Number(left.option?.price) || 0) - (Number(right.option?.price) || 0);
+    const sortDelta = (Number(left.option?.sortOrder) || 0) - (Number(right.option?.sortOrder) || 0);
+    return priceDelta || sortDelta || left.index - right.index;
+  })
+  .map(({ option }) => option);
+const availableResolutions = priceAscending(photo && window.photosByElieAvailableResolutions
   ? window.photosByElieAvailableResolutions(photo, resolutions)
-  : resolutions;
+  : resolutions);
 const basketStore = window.photosByElieBasket;
 const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
